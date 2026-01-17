@@ -44,7 +44,14 @@
         "rest_seconds_range": [150, 240],
         "intensity_pct_of_total_load_range": [0.85, 0.95]
       },
-
+"exercise_selection": {
+  "library": "catalog/exercises/v1/exercises.json",
+  "match_all_tags": ["finger_strength", "max_hang", "main_exercise"],
+  "prefer_exercise_ids": ["max_hang_7s", "max_hang_5s", "max_hang_ladder"],
+  "diversity_rules": {
+    "avoid_same_exercise_within_days": 7
+  }
+},
       "variables": {
         "grip_options": ["half_crimp", "open_hand"],
         "preferred_grip": "half_crimp",
