@@ -1,0 +1,76 @@
+{
+  "id": "finger_max_strength",
+  "name": "Finger Strength – Max Hangs",
+  "version": "1.0",
+  "category": "strength",
+  "sports": ["climbing"],
+  "disciplines": ["boulder", "lead", "mixed"],
+
+  "compatible_slots": ["medium", "long"],
+  "requires_environment": {
+    "equipment_any_of": ["hangboard", "fingerboard"]
+  },
+
+  "goals": ["increase_max_finger_force"],
+
+  "stress_tags": {
+    "fingers": "high",
+    "cns": "medium",
+    "elbow": "medium",
+    "skin": "medium"
+  },
+
+  "scheduling_rules": {
+    "max_per_week": 2,
+    "min_rest_days_after": 1,
+    "avoid_if_yesterday_stress_tags_any_of": ["fingers:high"]
+  },
+
+  "blocks": [
+    {
+      "block_id": "warmup",
+      "type": "warmup",
+      "duration_min": 12,
+      "notes": "Progressive warm-up: easy hangs, recruitment, 2–3 progressive sets."
+    },
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "protocol_family": "max_hangs",
+      "prescription": {
+        "sets_range": [5, 8],
+        "hang_seconds_range": [5, 10],
+        "rest_seconds_range": [150, 240],
+        "intensity_pct_of_5s_max_range": [0.85, 0.95]
+      },
+      "variables": {
+        "grip_options": ["half_crimp", "open_hand"],
+        "edge_mm_options": [10, 12, 15],
+        "load_method": ["added_weight", "assistance"]
+      },
+      "safety_notes": [
+        "Stop if sharp pain in fingers/elbow.",
+        "Avoid full crimp unless explicitly safe."
+      ]
+    },
+    {
+      "block_id": "accessory",
+      "type": "accessory",
+      "duration_min": 12,
+      "menu": [
+        { "exercise_tag": "elbow_prehab", "priority": "high" },
+        { "exercise_tag": "scapular_strength", "priority": "medium" }
+      ]
+    },
+    {
+      "block_id": "cooldown",
+      "type": "cooldown",
+      "duration_min": 5,
+      "notes": "Light mobility + easy forearm flush."
+    }
+  ],
+
+  "default_user_overrides": {
+    "notes": "If elbow is active, keep pulling accessory light and prefer more rest."
+  }
+}
