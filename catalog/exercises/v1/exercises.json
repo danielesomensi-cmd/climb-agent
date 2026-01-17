@@ -1,0 +1,153 @@
+{
+  "version": "1.0",
+  "exercises": [
+    {
+      "id": "elbow_wrist_extensor_eccentric",
+      "name": "Wrist Extensor Eccentrics",
+      "category": "prehab",
+      "equipment": ["dumbbell"],
+      "time_min": 6,
+      "tags": ["elbow_prehab", "tendon", "low_risk"],
+      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
+      "prescription_defaults": { "sets": 3, "reps": 12, "tempo": "3-1-1", "rest_seconds": 60 }
+    },
+    {
+      "id": "elbow_pronation_supination",
+      "name": "Pronation / Supination Rotations",
+      "category": "prehab",
+      "equipment": ["dumbbell", "hammer"],
+      "time_min": 6,
+      "tags": ["elbow_prehab", "forearm", "low_risk"],
+      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
+      "prescription_defaults": { "sets": 3, "reps": 10, "rest_seconds": 45 }
+    },
+    {
+      "id": "scapular_pullups",
+      "name": "Scapular Pull-ups",
+      "category": "strength_accessory",
+      "equipment": ["pullup_bar"],
+      "time_min": 6,
+      "tags": ["scapular_strength", "shoulder_health", "pull"],
+      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "none" },
+      "prescription_defaults": { "sets": 3, "reps": 8, "rest_seconds": 60 }
+    },
+    {
+      "id": "band_external_rotation",
+      "name": "Band External Rotation",
+      "category": "prehab",
+      "equipment": ["band"],
+      "time_min": 6,
+      "tags": ["shoulder_prehab", "rotator_cuff", "low_risk"],
+      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
+      "prescription_defaults": { "sets": 3, "reps": 15, "rest_seconds": 45 }
+    },
+    {
+      "id": "finger_recruitment_pulls",
+      "name": "Recruitment Pulls (Hangboard)",
+      "category": "warmup_specific",
+      "equipment": ["hangboard"],
+      "time_min": 6,
+      "tags": ["finger_warmup", "recruitment", "hangboard"],
+      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "low" },
+      "prescription_defaults": { "sets": 3, "reps": 5, "rest_seconds": 45, "notes": "Short controlled pulls, not max." }
+    },
+    {
+      "id": "dead_hang_easy",
+      "name": "Easy Dead Hangs (Warm-up)",
+      "category": "warmup_specific",
+      "equipment": ["hangboard"],
+      "time_min": 6,
+      "tags": ["finger_warmup", "hangboard"],
+      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "low" },
+      "prescription_defaults": { "sets": 3, "hang_seconds": 10, "rest_seconds": 50, "notes": "Very easy intensity." }
+    },
+
+    {
+      "id": "max_hang_5s",
+      "name": "Max Hang (5s)",
+      "category": "main_strength",
+      "equipment": ["hangboard"],
+      "time_min": 20,
+      "tags": ["finger_strength", "max_hang", "hangboard", "main_exercise"],
+      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
+      "load_model": {
+        "type": "total_load",
+        "definition": "total_load = bodyweight + external_load",
+        "supports": ["added_weight", "assistance"]
+      },
+      "prescription_defaults": {
+        "sets": 6,
+        "hang_seconds": 5,
+        "rest_seconds": 180,
+        "intensity_pct_of_total_load": 0.9,
+        "setup_fields": ["edge_mm", "grip", "load_method"]
+      }
+    },
+    {
+      "id": "max_hang_7s",
+      "name": "Max Hang (7s)",
+      "category": "main_strength",
+      "equipment": ["hangboard"],
+      "time_min": 20,
+      "tags": ["finger_strength", "max_hang", "hangboard", "main_exercise"],
+      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
+      "load_model": {
+        "type": "total_load",
+        "definition": "total_load = bodyweight + external_load",
+        "supports": ["added_weight", "assistance"]
+      },
+      "prescription_defaults": {
+        "sets": 6,
+        "hang_seconds": 7,
+        "rest_seconds": 180,
+        "intensity_pct_of_total_load": 0.88,
+        "setup_fields": ["edge_mm", "grip", "load_method"]
+      }
+    },
+    {
+      "id": "max_hang_ladder",
+      "name": "Max Hang Ladder (3-step)",
+      "category": "main_strength",
+      "equipment": ["hangboard"],
+      "time_min": 22,
+      "tags": ["finger_strength", "max_hang", "ladder", "hangboard", "main_exercise"],
+      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
+      "load_model": {
+        "type": "total_load",
+        "definition": "total_load = bodyweight + external_load",
+        "supports": ["added_weight", "assistance"]
+      },
+      "prescription_defaults": {
+        "steps": [
+          { "hang_seconds": 5, "intensity_pct_of_total_load": 0.85 },
+          { "hang_seconds": 5, "intensity_pct_of_total_load": 0.9 },
+          { "hang_seconds": 5, "intensity_pct_of_total_load": 0.95 }
+        ],
+        "rest_seconds": 180,
+        "rounds": 3,
+        "setup_fields": ["edge_mm", "grip", "load_method"]
+      }
+    },
+
+    {
+      "id": "core_hollow_hold",
+      "name": "Hollow Body Hold",
+      "category": "core",
+      "equipment": ["mat"],
+      "time_min": 8,
+      "tags": ["core", "anti_extension", "low_risk"],
+      "stress_tags": { "fingers": "none", "elbow": "none", "cns": "low", "skin": "none" },
+      "prescription_defaults": { "sets": 4, "hold_seconds": 30, "rest_seconds": 45 }
+    },
+    {
+      "id": "core_l_sit",
+      "name": "L-Sit (Parallettes or Floor)",
+      "category": "core",
+      "equipment": ["parallettes", "floor"],
+      "time_min": 10,
+      "tags": ["core", "hip_flexors", "compression"],
+      "stress_tags": { "fingers": "none", "elbow": "low", "cns": "low", "skin": "none" },
+      "prescription_defaults": { "sets": 5, "hold_seconds": 15, "rest_seconds": 60 }
+    }
+  ]
+}
