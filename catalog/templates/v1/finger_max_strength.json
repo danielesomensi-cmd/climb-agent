@@ -52,6 +52,24 @@
     "avoid_same_exercise_within_days": 7
   }
 },
+{
+  "block_id": "core",
+  "type": "optional_accessory",
+  "duration_min": 10,
+  "exercise_selection": {
+    "library": "catalog/exercises/v1/exercises.json",
+    "match_all_tags": ["core"],
+    "prefer_exercise_ids": ["core_hollow_hold", "core_l_sit"],
+    "diversity_rules": {
+      "avoid_same_exercise_within_days": 3
+    }
+  },
+  "notes": "Include core if time allows and it does not reduce main set quality."
+},
+
+
+
+
       "variables": {
         "grip_options": ["half_crimp", "open_hand"],
         "preferred_grip": "half_crimp",
