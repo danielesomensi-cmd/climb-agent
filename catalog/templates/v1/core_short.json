@@ -1,0 +1,54 @@
+{
+  "id": "core_short",
+  "name": "Core (Short Module)",
+  "version": "1.0",
+  "category": "core_module",
+  "sports": ["climbing"],
+  "disciplines": ["boulder", "lead", "mixed"],
+
+  "compatible_slots": ["short", "medium", "long"],
+  "requires_environment": {
+    "equipment_any_of": ["mat", "parallettes", "floor"]
+  },
+
+  "goals": ["improve_core_tension", "improve_body_control"],
+
+  "stress_tags": {
+    "fingers": "none",
+    "cns": "low",
+    "elbow": "low",
+    "skin": "none"
+  },
+
+  "scheduling_rules": {
+    "max_per_week": 4,
+    "min_rest_days_after": 0,
+    "notes": "Safe to add as secondary module after primary training. Keep quality high; stop before form breaks."
+  },
+
+  "blocks": [
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "duration_min": 12,
+
+      "exercise_selection": {
+        "library": "catalog/exercises/v1/exercises.json",
+        "match_all_tags": ["core"],
+        "prefer_exercise_ids": ["core_hollow_hold", "core_l_sit"],
+        "diversity_rules": {
+          "avoid_same_exercise_within_days": 2
+        }
+      },
+
+      "prescription": {
+        "sets_range": [4, 6],
+        "rest_seconds_range": [45, 75]
+      },
+
+      "execution_notes": "Choose 1 main core exercise. Work with crisp form. Leave 1–2 reps/seconds in reserve."
+    }
+  ],
+
+  "module_notes": "Short, low-stress core module intended for add-on usage. Can be combined with finger strength or bouldering days without compromising primary stimulus."
+}
