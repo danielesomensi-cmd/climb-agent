@@ -1,0 +1,65 @@
+{
+  "id": "general_warmup",
+  "name": "General Warm-up (Module)",
+  "version": "1.0",
+  "category": "warmup_module",
+  "sports": ["climbing"],
+  "disciplines": ["boulder", "lead", "mixed"],
+
+  "compatible_slots": ["short", "medium", "long"],
+  "requires_environment": {
+    "equipment_any_of": ["none", "band", "mat"]
+  },
+
+  "goals": ["increase_body_temperature", "improve_joint_readiness", "activate_shoulders"],
+
+  "stress_tags": {
+    "fingers": "none",
+    "cns": "low",
+    "elbow": "low",
+    "skin": "none"
+  },
+
+  "scheduling_rules": {
+    "max_per_day": 2,
+    "notes": "Can be used before any session. Skip if already warm (e.g., after jogging or easy climbing)."
+  },
+
+  "blocks": [
+    {
+      "block_id": "pulse_raise",
+      "type": "warmup_general",
+      "duration_min": 4,
+      "options": [
+        "brisk_walk",
+        "easy_jog",
+        "jumping_jacks",
+        "air_squats_flow"
+      ],
+      "notes": "Goal: raise body temperature and breathing rate slightly. Keep easy."
+    },
+    {
+      "block_id": "mobility",
+      "type": "mobility",
+      "duration_min": 4,
+      "focus": ["thoracic_spine", "hips", "ankles"],
+      "notes": "Dynamic mobility only. No long static stretches."
+    },
+    {
+      "block_id": "upper_activation",
+      "type": "activation",
+      "duration_min": 4,
+      "exercise_selection": {
+        "library": "catalog/exercises/v1/exercises.json",
+        "match_any_tags": ["scapular_strength", "shoulder_prehab"],
+        "prefer_exercise_ids": ["scapular_pullups", "band_external_rotation"],
+        "diversity_rules": {
+          "avoid_same_exercise_within_days": 1
+        }
+      },
+      "notes": "Light scap/rotator cuff activation. Keep it submaximal."
+    }
+  ],
+
+  "module_notes": "General body warm-up. Use before primary modules (finger strength, bouldering, endurance). Specific finger warm-up belongs inside the relevant finger/hangboard module."
+}
