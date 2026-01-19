@@ -1,0 +1,128 @@
+{
+  "schema_version": "1.2",
+  "user": {
+    "user_id": "dani",
+    "name": "Daniele",
+    "timezone": "Europe/Brussels",
+    "units": { "weight": "kg", "distance": "km", "edge": "mm" }
+  },
+
+  "body": {
+    "weight_kg": 77.0,
+    "height_cm": 182,
+    "body_fat_pct": 19,
+    "updated_at": "2026-01-19"
+  },
+
+  "goals": {
+    "primary": {
+      "sport": "climbing",
+      "time_horizon": "season",
+      "focus": ["boulder", "sport"],
+      "targets": [
+        { "metric": "sport_worked", "value": "8b", "context": "outdoor", "by_date": "2026-06-30" },
+        { "metric": "sport_onsight", "value": "7c", "context": "outdoor", "by_date": "2026-06-30" },
+        { "metric": "boulder_worked", "value": "8A", "context": "outdoor", "by_date": "2026-06-30" },
+        { "metric": "boulder_onsight", "value": "7B", "context": "outdoor", "by_date": "2026-06-30" }
+      ]
+    },
+    "secondary": [
+      { "metric": "bodyweight_kg", "value": 75.0, "by_date": "2026-04-30" },
+      { "metric": "longevity", "value": "injury_resilience", "by_date": "2026-12-31" }
+    ]
+  },
+
+  "performance": {
+    "current_level": {
+      "sport": {
+        "worked": { "grade": "8a+", "notes": "Worked / redpoint level" },
+        "onsight": { "grade": "7b", "notes": "Onsight level (first try)" }
+      },
+      "boulder": {
+        "worked": { "grade": "7C", "notes": "Worked / projects level" },
+        "onsight": { "grade": "7A+", "notes": "Flash/onsight style equivalent" }
+      },
+      "gym_reference": {
+        "kilter": {
+          "benchmark": {
+            "grade": "7B",
+            "angle_deg": 40,
+            "style": "few_go / flash_possible",
+            "notes": "Benchmark: 7B @40°, in few tries (flash possible)."
+          }
+        }
+      },
+      "updated_at": "2026-01-19"
+    },
+
+    "personal_bests": [
+      {
+        "discipline": "sport",
+        "style": "worked",
+        "grade": "8a+",
+        "route": "Herman Buhl",
+        "location": "Berdorf",
+        "date": "2025-06-09",
+        "notes": "Completed"
+      }
+    ]
+  },
+
+  "limitations": {
+    "active_flags": ["elbow_left_tendon"],
+    "details": [
+      {
+        "id": "elbow_left_tendon",
+        "area": "elbow",
+        "side": "left",
+        "severity": "mild",
+        "notes": "Irritation risk with high intensity pulling/hangs.",
+        "updated_at": "2026-01-19"
+      }
+    ]
+  },
+
+  "equipment": {
+    "home": ["hangboard", "pullup_bar", "dumbbells", "bands", "mat"],
+    "gyms": [
+      { "gym_id": "blocx", "name": "Blocx", "equipment": ["spray_wall", "kilter_board", "hangboard", "weights"] }
+    ]
+  },
+
+  "tests": {
+    "max_strength": [
+      {
+        "test_id": "max_hang_5s_total_load",
+        "exercise_id": "max_hang_5s",
+        "date": "2026-01-13",
+        "setup": { "edge_mm": 20, "grip": "half_crimp", "hang_seconds": 5, "load_method": "added_weight" },
+        "bodyweight_kg": 77.0,
+        "external_load_kg": 25.0,
+        "total_load_kg": 102.0,
+        "confidence": "high",
+        "freshness_policy": { "stale_after_days": 90 }
+      }
+    ]
+  },
+
+  "working_loads": {
+    "rules": {
+      "feedback_scale": ["easy", "ok", "hard"],
+      "adjustment_policy": {
+        "easy": { "action": "increase", "pct_range": [0.05, 0.1] },
+        "ok": { "action": "micro_increase_or_hold", "pct_range": [0.0, 0.05] },
+        "hard": { "action": "hold_or_decrease", "pct_range": [-0.05, 0.0] }
+      }
+    },
+    "entries": []
+  },
+
+  "history_index": {
+    "session_log_format": "jsonl",
+    "session_log_paths": ["data/logs/sessions_2026.jsonl"],
+    "notes": "Long history lives in JSONL logs. Keep only a short rolling window in user_state."
+  },
+
+  "recent_sessions_window_days": 14,
+  "recent_sessions": []
+}
