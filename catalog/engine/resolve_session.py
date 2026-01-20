@@ -122,6 +122,10 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
                     equipment = norm_list_str(g.get("equipment"))
                     break
 
+    # Always-available "virtual equipment"
+    if "floor" not in equipment:
+        equipment.append("floor")
+
     return location, equipment
 
 
