@@ -1,15 +1,13 @@
 {
   "id": "general_warmup",
   "name": "General Warm-up (Module)",
-  "version": "1.0",
+  "version": "v1",
   "category": "warmup_module",
-  "sports": ["climbing"],
-  "disciplines": ["boulder", "lead", "mixed"],
+  "sport": "climbing",
+  "discipline": ["boulder", "sport", "mixed"],
 
   "compatible_slots": ["short", "medium", "long"],
-  "requires_environment": {
-    "equipment_any_of": ["none", "band", "mat"]
-  },
+  "required_environment": { "any_of": ["home", "gym"] },
 
   "goals": ["increase_body_temperature", "improve_joint_readiness", "activate_shoulders"],
 
@@ -20,46 +18,93 @@
     "skin": "none"
   },
 
-  "scheduling_rules": {
+  "schedule_rules": {
     "max_per_day": 2,
-    "notes": "Can be used before any session. Skip if already warm (e.g., after jogging or easy climbing)."
+    "notes": "Use before primary modules. Skip if already warm (easy climbing/jogging)."
   },
 
   "blocks": [
     {
       "block_id": "pulse_raise",
       "type": "warmup_general",
-      "duration_min": 4,
-      "options": [
-        "brisk_walk",
-        "easy_jog",
-        "jumping_jacks",
-        "air_squats_flow"
-      ],
-      "notes": "Goal: raise body temperature and breathing rate slightly. Keep easy."
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_all": ["stim:warmup_general"],
+            "exclude_tags_any": ["stim:finger_max_strength"]
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_any": ["stim:mobility", "stim:prehab_shoulder", "stim:scapular_strength"],
+              "exclude_tags_any": ["stim:finger_max_strength"]
+            }
+          }
+        ]
+      },
+      "prescription": {
+        "duration_min_range": [4, 8],
+        "notes": [
+          "Goal: raise body temperature and breathing rate slightly. Keep easy."
+        ]
+      }
     },
+
     {
       "block_id": "mobility",
       "type": "mobility",
-      "duration_min": 4,
-      "focus": ["thoracic_spine", "hips", "ankles"],
-      "notes": "Dynamic mobility only. No long static stretches."
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_all": ["stim:mobility"],
+            "exclude_tags_any": ["stim:finger_max_strength"]
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_any": ["stim:prehab_shoulder", "stim:prehab_elbow"],
+              "exclude_tags_any": ["stim:finger_max_strength"]
+            }
+          }
+        ]
+      },
+      "prescription": {
+        "duration_min_range": [4, 8],
+        "notes": [
+          "Dynamic mobility only. No long static stretches."
+        ]
+      }
     },
+
     {
       "block_id": "upper_activation",
       "type": "activation",
-      "duration_min": 4,
-      "exercise_selection": {
-        "library": "catalog/exercises/v1/exercises.json",
-        "match_any_tags": ["scapular_strength", "shoulder_prehab"],
-        "prefer_exercise_ids": ["scapular_pullups", "band_external_rotation"],
-        "diversity_rules": {
-          "avoid_same_exercise_within_days": 1
-        }
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_any": ["stim:scapular_strength", "stim:prehab_shoulder"],
+            "exclude_tags_any": ["stim:finger_max_strength"]
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_all": ["stim:prehab_elbow"],
+              "exclude_tags_any": ["stim:finger_max_strength"]
+            }
+          }
+        ]
       },
-      "notes": "Light scap/rotator cuff activation. Keep it submaximal."
+      "prescription": {
+        "notes": [
+          "Light scap/rotator cuff activation. Keep it submaximal."
+        ]
+      }
     }
   ],
 
-  "module_notes": "General body warm-up. Use before primary modules (finger strength, bouldering, endurance). Specific finger warm-up belongs inside the relevant finger/hangboard module."
+  "module_notes": "General body warm-up. Use before primary modules. Specific finger warm-up belongs inside finger/hangboard modules."
 }
+
