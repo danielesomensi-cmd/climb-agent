@@ -1,17 +1,18 @@
 {
   "id": "core_short",
-  "name": "Core (Short Module)",
+  "name": "Core Short (Module)",
   "version": "1.0",
   "category": "core_module",
   "sports": ["climbing"],
   "disciplines": ["boulder", "lead", "mixed"],
 
   "compatible_slots": ["short", "medium", "long"],
+
   "requires_environment": {
-    "equipment_any_of": ["mat", "parallettes", "floor"]
+    "equipment_any_of": ["mat", "floor", "parallettes"]
   },
 
-  "goals": ["improve_core_tension", "improve_body_control"],
+  "goals": ["trunk_stiffness", "anti_extension", "hip_flexor_strength"],
 
   "stress_tags": {
     "fingers": "none",
@@ -21,9 +22,9 @@
   },
 
   "scheduling_rules": {
-    "max_per_week": 4,
-    "min_rest_days_after": 0,
-    "notes": "Safe to add as secondary module after primary training. Keep quality high; stop before form breaks."
+    "max_per_day": 1,
+    "avoid_if": ["severe_shoulder_pain"],
+    "notes": "Good as add-on after climbing or finger strength. Keep quality high; stop if lumbar compensation."
   },
 
   "blocks": [
@@ -34,21 +35,36 @@
 
       "exercise_selection": {
         "library": "catalog/exercises/v1/exercises.json",
-        "match_all_tags": ["core"],
-        "prefer_exercise_ids": ["core_hollow_hold", "core_l_sit"],
+
+        "primary": {
+          "match_all_tags": ["stim:core"],
+          "exclude_any_tags": ["tool:hangboard", "protocol:max_hang", "stim:finger_max_strength"],
+          "prefer_exercise_ids": ["core_hollow_hold", "core_l_sit"]
+        },
+
+        "fallback": [
+          {
+            "match_any_tags": ["stim:core"],
+            "exclude_any_tags": ["tool:hangboard", "protocol:max_hang", "stim:finger_max_strength"]
+          }
+        ],
+
         "diversity_rules": {
           "avoid_same_exercise_within_days": 2
         }
       },
 
-      "prescription": {
-        "sets_range": [4, 6],
-        "rest_seconds_range": [45, 75]
-      },
-
-      "execution_notes": "Choose 1 main core exercise. Work with crisp form. Leave 1–2 reps/seconds in reserve."
+      "prescription_overrides": {
+        "sets_range": [3, 5],
+        "rest_seconds_range": [45, 75],
+        "notes": [
+          "Pick 1 core exercise. If time allows, add a second set block in future versions.",
+          "Keep pelvis posterior tilt (no arching). Stop 1 rep before form breaks."
+        ]
+      }
     }
   ],
 
-  "module_notes": "Short, low-stress core module intended for add-on usage. Can be combined with finger strength or bouldering days without compromising primary stimulus."
+  "module_notes": "Short core add-on. Minimal selection rules to avoid accidental finger exercises."
 }
+
