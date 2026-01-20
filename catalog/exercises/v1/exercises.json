@@ -151,6 +151,34 @@
       "prescription_defaults": { "sets": 5, "hold_seconds": 15, "rest_seconds": 60 }
     },
 
+{
+  "id": "mobility_thoracic_shoulders_flow",
+  "name": "Thoracic & Shoulder Mobility Flow",
+  "category": "mobility",
+  "equipment": ["none", "mat"],
+  "time_min": 5,
+  "tags": [
+    "stim:mobility",
+    "stim:warmup_general",
+    "joint_preparation",
+    "low_risk"
+  ],
+  "stress_tags": {
+    "fingers": "none",
+    "elbow": "low",
+    "cns": "low",
+    "skin": "none"
+  },
+  "prescription_defaults": {
+    "sets": 1,
+    "duration_seconds": 300,
+    "notes": "Dynamic flow: thoracic rotations, arm circles, scapular CARs. No static stretching."
+  }
+},
+
+
+
+
     {
       "id": "general_pulse_raise",
       "name": "Pulse Raise (Light)",
