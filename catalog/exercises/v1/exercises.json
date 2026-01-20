@@ -7,7 +7,7 @@
       "category": "prehab",
       "equipment": ["dumbbell"],
       "time_min": 6,
-      "tags": ["elbow_prehab", "tendon", "low_risk"],
+      "tags": ["stim:prehab_elbow", "tool:dumbbell", "risk:low", "area:forearm"],
       "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
       "prescription_defaults": { "sets": 3, "reps": 12, "tempo": "3-1-1", "rest_seconds": 60 }
     },
@@ -17,7 +17,7 @@
       "category": "prehab",
       "equipment": ["dumbbell", "hammer"],
       "time_min": 6,
-      "tags": ["elbow_prehab", "forearm", "low_risk"],
+      "tags": ["stim:prehab_elbow", "tool:dumbbell", "risk:low", "area:forearm"],
       "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
       "prescription_defaults": { "sets": 3, "reps": 10, "rest_seconds": 45 }
     },
@@ -27,7 +27,7 @@
       "category": "strength_accessory",
       "equipment": ["pullup_bar"],
       "time_min": 6,
-      "tags": ["scapular_strength", "shoulder_health", "pull"],
+      "tags": ["stim:scapular_strength", "tool:pullup_bar", "pattern:pull", "risk:low", "area:shoulder"],
       "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "none" },
       "prescription_defaults": { "sets": 3, "reps": 8, "rest_seconds": 60 }
     },
@@ -37,7 +37,7 @@
       "category": "prehab",
       "equipment": ["band"],
       "time_min": 6,
-      "tags": ["shoulder_prehab", "rotator_cuff", "low_risk"],
+      "tags": ["stim:prehab_shoulder", "tool:band", "risk:low", "area:rotator_cuff"],
       "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
       "prescription_defaults": { "sets": 3, "reps": 15, "rest_seconds": 45 }
     },
@@ -47,7 +47,7 @@
       "category": "warmup_specific",
       "equipment": ["hangboard"],
       "time_min": 6,
-      "tags": ["finger_warmup", "recruitment", "hangboard"],
+      "tags": ["stim:warmup_specific", "stim:fingers", "tool:hangboard", "pattern:pull", "risk:low"],
       "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "low" },
       "prescription_defaults": { "sets": 3, "reps": 5, "rest_seconds": 45, "notes": "Short controlled pulls, not max." }
     },
@@ -57,18 +57,18 @@
       "category": "warmup_specific",
       "equipment": ["hangboard"],
       "time_min": 6,
-      "tags": ["finger_warmup", "hangboard"],
+      "tags": ["stim:warmup_specific", "stim:fingers", "tool:hangboard", "pattern:isometric", "risk:low"],
       "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "low" },
       "prescription_defaults": { "sets": 3, "hang_seconds": 10, "rest_seconds": 50, "notes": "Very easy intensity." }
     },
-
     {
       "id": "max_hang_5s",
       "name": "Max Hang (5s)",
       "category": "main_strength",
       "equipment": ["hangboard"],
       "time_min": 20,
-      "tags": ["finger_strength", "max_hang", "hangboard", "main_exercise"],
+      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:max_hang", "main"],
+      "attributes": { "edge_mm": 20, "grip": "half_crimp" },
       "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
       "load_model": {
         "type": "total_load",
@@ -89,7 +89,8 @@
       "category": "main_strength",
       "equipment": ["hangboard"],
       "time_min": 20,
-      "tags": ["finger_strength", "max_hang", "hangboard", "main_exercise"],
+      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:max_hang", "main"],
+      "attributes": { "edge_mm": 20, "grip": "half_crimp" },
       "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
       "load_model": {
         "type": "total_load",
@@ -110,7 +111,8 @@
       "category": "main_strength",
       "equipment": ["hangboard"],
       "time_min": 22,
-      "tags": ["finger_strength", "max_hang", "ladder", "hangboard", "main_exercise"],
+      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:ladder", "main"],
+      "attributes": { "edge_mm": 20, "grip": "half_crimp" },
       "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
       "load_model": {
         "type": "total_load",
@@ -128,14 +130,13 @@
         "setup_fields": ["edge_mm", "grip", "load_method"]
       }
     },
-
     {
       "id": "core_hollow_hold",
       "name": "Hollow Body Hold",
       "category": "core",
       "equipment": ["mat"],
       "time_min": 8,
-      "tags": ["core", "anti_extension", "low_risk"],
+      "tags": ["stim:core_anti_extension", "tool:mat", "risk:low", "pattern:isometric"],
       "stress_tags": { "fingers": "none", "elbow": "none", "cns": "low", "skin": "none" },
       "prescription_defaults": { "sets": 4, "hold_seconds": 30, "rest_seconds": 45 }
     },
@@ -145,9 +146,31 @@
       "category": "core",
       "equipment": ["parallettes", "floor"],
       "time_min": 10,
-      "tags": ["core", "hip_flexors", "compression"],
+      "tags": ["stim:core_compression", "tool:parallettes", "tool:floor", "pattern:isometric"],
       "stress_tags": { "fingers": "none", "elbow": "low", "cns": "low", "skin": "none" },
       "prescription_defaults": { "sets": 5, "hold_seconds": 15, "rest_seconds": 60 }
+    },
+
+    {
+      "id": "general_pulse_raise",
+      "name": "Pulse Raise (Light)",
+      "category": "warmup_general",
+      "equipment": ["bodyweight"],
+      "time_min": 5,
+      "tags": ["stim:warmup_general", "tool:bodyweight", "risk:low"],
+      "stress_tags": { "fingers": "none", "elbow": "none", "cns": "low", "skin": "none" },
+      "prescription_defaults": { "duration_min": 6, "notes": "Light jogging in place + arm swings." }
+    },
+    {
+      "id": "pangullich_ladders_easy",
+      "name": "Pangullich Ladders (Controlled)",
+      "category": "main_strength",
+      "equipment": ["pangullich"],
+      "time_min": 15,
+      "tags": ["stim:finger_max_strength", "tool:pangullich", "pattern:pull", "protocol:ladders", "main"],
+      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "low" },
+      "prescription_defaults": { "sets": 5, "reps": 6, "rest_seconds": 150, "notes": "Controlled ladders, avoid cutting feet." }
     }
   ]
 }
+
