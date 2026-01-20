@@ -67,7 +67,7 @@
       "category": "main_strength",
       "equipment": ["hangboard"],
       "time_min": 20,
-      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:max_hang", "main"],
+      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:max_hang", "role:main"],
       "attributes": { "edge_mm": 20, "grip": "half_crimp" },
       "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
       "load_model": {
@@ -89,7 +89,7 @@
       "category": "main_strength",
       "equipment": ["hangboard"],
       "time_min": 20,
-      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:max_hang", "main"],
+      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:max_hang", "role:main"],
       "attributes": { "edge_mm": 20, "grip": "half_crimp" },
       "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
       "load_model": {
@@ -111,7 +111,7 @@
       "category": "main_strength",
       "equipment": ["hangboard"],
       "time_min": 22,
-      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:ladder", "main"],
+      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:ladder", "role:main"],
       "attributes": { "edge_mm": 20, "grip": "half_crimp" },
       "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
       "load_model": {
@@ -209,7 +209,7 @@
       "category": "main_strength",
       "equipment": ["pangullich"],
       "time_min": 15,
-      "tags": ["stim:finger_max_strength", "tool:pangullich", "pattern:pull", "protocol:ladders", "main"],
+      "tags": ["stim:finger_max_strength", "tool:pangullich", "pattern:pull", "protocol:ladders", "role:main"],
       "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "low" },
       "prescription_defaults": { "sets": 5, "reps": 6, "rest_seconds": 150, "notes": "Controlled ladders, avoid cutting feet." }
     }
