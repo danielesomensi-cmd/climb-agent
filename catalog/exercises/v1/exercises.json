@@ -136,7 +136,7 @@
       "category": "core",
       "equipment": ["mat"],
       "time_min": 8,
-      "tags": ["stim:core_anti_extension", "tool:mat", "risk:low", "pattern:isometric"],
+      "tags": [ "stim:core","stim:core_anti_extension", "tool:mat", "risk:low", "pattern:isometric"],
       "stress_tags": { "fingers": "none", "elbow": "none", "cns": "low", "skin": "none" },
       "prescription_defaults": { "sets": 4, "hold_seconds": 30, "rest_seconds": 45 }
     },
@@ -146,7 +146,7 @@
       "category": "core",
       "equipment": ["parallettes", "floor"],
       "time_min": 10,
-      "tags": ["stim:core_compression", "tool:parallettes", "tool:floor", "pattern:isometric"],
+      "tags": [ "stim:core","stim:core_compression", "tool:parallettes", "tool:floor", "pattern:isometric"],
       "stress_tags": { "fingers": "none", "elbow": "low", "cns": "low", "skin": "none" },
       "prescription_defaults": { "sets": 5, "hold_seconds": 15, "rest_seconds": 60 }
     },
