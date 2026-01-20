@@ -1,107 +1,133 @@
 {
   "id": "finger_max_strength",
-  "name": "Finger Strength – Max Hangs (Module)",
-  "version": "1.2",
-  "category": "strength_module",
-  "sports": ["climbing"],
-  "disciplines": ["boulder", "lead", "mixed"],
-
-  "compatible_slots": ["medium", "long"],
-  "requires_environment": {
-    "equipment_any_of": ["hangboard", "fingerboard"]
+  "version": "v1",
+  "name": "Finger Max Strength",
+  "category": "strength",
+  "sport": "climbing",
+  "discipline": ["boulder", "sport"],
+  "compatible_slots": ["lunch_short", "evening_long"],
+  "required_environment": {
+    "any_of": ["home", "gym"]
   },
-
-  "goals": ["increase_max_finger_force"],
-
   "stress_tags": {
     "fingers": "high",
     "cns": "medium",
-    "elbow": "medium",
+    "elbows": "medium",
     "skin": "medium"
   },
-
-  "scheduling_rules": {
+  "schedule_rules": {
     "max_per_week": 2,
-    "min_rest_days_after": 1,
-    "avoid_if_yesterday_stress_tags_any_of": ["fingers:high"]
+    "min_rest_days": 1,
+    "avoid_if_yesterday_stress_any_of": [
+      { "tag": "stress:fingers:high" }
+    ]
   },
 
   "blocks": [
     {
       "block_id": "warmup_specific",
       "type": "warmup_specific",
-      "duration_min": 12,
-      "notes": "Specific hangboard warm-up: easy hangs + recruitment + 2–3 progressive sets."
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_all": ["stim:warmup_specific", "stim:fingers"],
+            "required_tags_any": ["tool:hangboard", "tool:pangullich"]
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_all": ["stim:warmup_general"],
+              "exclude_tags_any": ["stim:prehab_elbow"]
+            }
+          }
+        ]
+      },
+      "prescription": {
+        "notes": [
+          "Progressive recruitment for fingers and shoulders.",
+          "Stay well below failure. Focus on tissue prep."
+        ],
+        "duration_min_range": [8, 15]
+      }
     },
+
     {
       "block_id": "main",
       "type": "main_set",
-      "protocol_family": "max_hangs",
-
-      "exercise_selection": {
-        "library": "catalog/exercises/v1/exercises.json",
-        "match_all_tags": ["finger_strength", "max_hang", "main_exercise"],
-        "prefer_exercise_ids": ["max_hang_7s", "max_hang_5s", "max_hang_ladder"],
-        "diversity_rules": {
-          "avoid_same_exercise_within_days": 7
-        }
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_all": ["stim:finger_max_strength"],
+            "required_tags_any": ["tool:hangboard"],
+            "exclude_tags_any": ["stim:prehab_elbow", "stim:warmup_general", "stim:warmup_specific"]
+          },
+          "preferences": {
+            "preferred_edge_mm": 20,
+            "preferred_grip": "half_crimp"
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_all": ["stim:finger_max_strength"],
+              "required_tags_any": ["tool:pangullich"],
+              "exclude_tags_any": ["stim:prehab_elbow", "stim:warmup_general", "stim:warmup_specific"]
+            }
+          },
+          {
+            "filters": {
+              "required_tags_all": ["stim:finger_max_strength"],
+              "required_tags_any": ["tool:board", "tool:campus"],
+              "exclude_tags_any": ["stim:prehab_elbow", "stim:warmup_general", "stim:warmup_specific"]
+            }
+          },
+          {
+            "filters": {
+              "required_tags_all": ["stim:prehab_elbow"],
+              "required_tags_any": ["tool:bands", "tool:dumbbells", "tool:bodyweight"]
+            }
+          }
+        ]
       },
-
       "prescription": {
         "sets_range": [5, 8],
         "hang_seconds_range": [5, 10],
         "rest_seconds_range": [150, 240],
-        "intensity_pct_of_total_load_range": [0.85, 0.95]
-      },
-
-      "variables": {
-        "grip_options": ["half_crimp", "open_hand"],
-        "preferred_grip": "half_crimp",
-
-        "edge_mm_options": [8, 10, 12, 15, 20],
-        "preferred_edge_mm": 20,
-
-        "load_method": ["added_weight", "assistance"],
-        "preferred_load_method": "added_weight"
-      },
-
-      "intensity_reference": {
-        "reference_test_id": "max_hang_5s_total_load",
-        "definition": "total_load = bodyweight + external_load",
-        "same_setup_required": true,
-        "setup_fields": ["edge_mm", "grip", "load_method"],
-        "if_missing": {
-          "action": "estimate_then_schedule_test",
-          "estimation_confidence": "low",
-          "schedule_test_within_days": 14
-        }
-      },
-
-      "safety_notes": [
-        "Stop if sharp pain in fingers or elbow.",
-        "Avoid full crimp unless explicitly allowed.",
-        "If intensity feels inconsistent, downgrade load or schedule a proper test."
-      ]
+        "intensity_pct_of_total_load_range": [0.85, 0.95],
+        "notes": [
+          "Target: high quality efforts, no grinding. Stop if form breaks.",
+          "Prefer 20mm half crimp baseline when available; override only if needed.",
+          "Rest fully (2.5–4 min)."
+        ]
+      }
     },
+
     {
       "block_id": "cooldown_prehab_light",
       "type": "cooldown_prehab",
-      "duration_min": 12,
-      "exercise_selection": {
-        "library": "catalog/exercises/v1/exercises.json",
-        "match_any_tags": ["elbow_prehab", "scapular_strength"],
-        "prefer_exercise_ids": [
-          "elbow_wrist_extensor_eccentric",
-          "elbow_pronation_supination",
-          "scapular_pullups"
-        ],
-        "diversity_rules": {
-          "avoid_same_exercise_within_days": 2
-        }
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_any": ["stim:prehab_elbow", "stim:shoulder_health"],
+            "exclude_tags_any": ["stim:finger_max_strength"]
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_all": ["stim:mobility"],
+              "required_tags_any": ["tool:bodyweight", "tool:bands"]
+            }
+          }
+        ]
       },
-      "notes": "Light prehab after main set: elbow/scapular work + forearm flush. Keep it easy."
+      "prescription": {
+        "duration_min_range": [6, 12],
+        "notes": [
+          "Keep it light. Aim to feel better after than before."
+        ]
+      }
     }
-  ],
-
-  "module_notes": "Standalone module: specific warm-up + main finger strength + light prehab/cooldown. Do not include core/cardio/aesthetics here; those are separate modules combined at session/day level."
+  ]
 }
