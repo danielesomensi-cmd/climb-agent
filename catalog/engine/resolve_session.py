@@ -365,6 +365,21 @@ def resolve_session(
             block_id = b.get("block_id") or b.get("id") or f"{template_id}_block_{len(blocks_out)+1}"
             block_uid = f"{template_id}.{block_id}"
             block_type = b.get("type") or b.get("category") or "main"
+            mode = norm_str(b.get("mode") or "")
+
+            # If block is instruction-only, do NOT select exercises
+            if mode == "instruction_only":
+                blocks_out.append({
+                    "block_uid": block_uid,
+                    "block_id": block_id,
+                    "type": block_type,
+                    "template_id": template_id,
+                    "selected_exercises": []
+                })
+                continue
+
+
+
 
             explicit_ex_id = b.get("exercise_id")
             selection = b.get("selection") or {}
