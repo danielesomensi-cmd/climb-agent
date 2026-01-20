@@ -152,6 +152,20 @@
     },
 
 {
+  "id": "pulse_raise_activity",
+  "name": "Pulse raise (choose: brisk walk / easy jog / jumping jacks)",
+  "category": "warmup_general",
+  "equipment": ["none"],
+  "time_min": 4,
+  "tags": ["stim:warmup_general", "risk:very_low"],
+  "stress_tags": { "elbow": "none", "fingers": "none", "cns": "low", "skin": "none" },
+  "prescription_defaults": { "duration_min_range": [4, 8], "notes": "Keep easy." }
+},
+
+
+
+
+{
   "id": "mobility_thoracic_shoulders_flow",
   "name": "Thoracic & Shoulder Mobility Flow",
   "category": "mobility",
