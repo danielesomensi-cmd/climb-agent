@@ -144,6 +144,7 @@ def resolve_session(
 
         for b in blocks:
             block_id = b.get("block_id") or b.get("id") or f"{template_id}_block_{len(blocks_out)+1}"
+            block_uid = f"{template_id}.{block_id}"
             block_type = b.get("type") or b.get("category") or "main"
 
             # Selection logic:
@@ -192,6 +193,9 @@ def resolve_session(
                     "exercise_id": ex_id,
                     "variant": variant,
                     "prescription": merged_prescription,
+                    # NEW: join key for UI
+                    "block_uid": block_uid,
+                  
                     "source": {
                         "picked_by": "resolver_v0.1",
                         "template_id": template_id,
@@ -207,6 +211,7 @@ def resolve_session(
                 })
 
             blocks_out.append({
+                "block_uid": block_uid,         
                 "block_id": block_id,
                 "type": block_type,
                 "template_id": template_id,
