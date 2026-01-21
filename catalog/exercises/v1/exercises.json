@@ -1,6 +1,42 @@
 {
   "version": "1.1",
   "exercises": [
+   
+    {
+  "id": "finger_warmup_generic",
+  "name": "Finger Warm-up (No Equipment)",
+  "category": "warmup_specific",
+  "time_min": 5,
+
+  "role": ["warmup", "activation"],
+  "domain": ["finger_strength"],
+  "pattern": "wrist_extension",
+  "intensity_level": "low",
+  "fatigue_cost": 1,
+  "recency_group": "finger_warmup_generic",
+
+  "equipment_required": [],
+  "location_allowed": ["home", "gym", "outdoor"],
+
+  "contraindications": [],
+  "prescription_defaults": {
+    "duration_min_range": [5, 8],
+    "notes": [
+      "Tendon glides + open/close pulses + wrist circles.",
+      "Goal: warmth and readiness, not pump. Stay easy."
+    ]
+  },
+
+  "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "none" }
+},
+
+
+    
+    
+    
+    
+    
+    
     {
       "id": "elbow_wrist_extensor_eccentric",
       "name": "Wrist Extensor Eccentrics",
@@ -322,6 +358,10 @@
 
       "stress_tags": { "fingers": "none", "elbow": "low", "cns": "low", "skin": "none" }
     },
+    
+    
+    
+    
     {
       "id": "general_pulse_raise",
       "name": "Pulse Raise (Light)",
