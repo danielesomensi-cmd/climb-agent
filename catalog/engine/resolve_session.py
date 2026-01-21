@@ -55,6 +55,91 @@ def norm_list_str(x: Any) -> List[str]:
 def get_ex_id(ex: Dict[str, Any]) -> str:
     return ex.get("exercise_id") or ex.get("id") or "unknown_exercise"
 
+def ex_roles(ex: Dict[str, Any]) -> List[str]:
+    return norm_list_str(ex.get("role"))
+
+def ex_domains(ex: Dict[str, Any]) -> List[str]:
+    return norm_list_str(ex.get("domain"))
+
+def ex_location_allowed(ex: Dict[str, Any]) -> List[str]:
+    return norm_list_str(ex.get("location_allowed"))
+
+def ex_equipment_required(ex: Dict[str, Any]) -> List[str]:
+    return norm_list_str(ex.get("equipment_required"))
+
+def pick_best_exercise_p0(
+    *,
+    exercises: List[Dict[str, Any]],
+    location: str,
+    available_equipment: List[str],
+    role_req: Any,
+    domain_req: Any,
+) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
+    """
+    P0: hard filters only:
+      - location_allowed includes location
+      - equipment_required subset of available_equipment
+      - role matches (ANY)
+      - domain matches only if it doesn't zero candidates (ANY)
+    Deterministic tie-break: exercise_id
+    """
+    loc = norm_str(location)
+    avail = set(norm_list_str(available_equipment))
+
+    role_set = set(norm_list_str(role_req))
+    dom_set = set(norm_list_str(domain_req))
+
+    trace = {"counts": {}}
+
+    # Stage 0
+    base0 = exercises[:]
+    trace["counts"]["start"] = len(base0)
+
+    # Stage 1: location_allowed
+    base1 = [e for e in base0 if loc in set(ex_location_allowed(e))]
+    trace["counts"]["after_location"] = len(base1)
+
+    # Stage 2: equipment_required subset
+    base2 = []
+    for e in base1:
+        req = set(ex_equipment_required(e))
+        if req and not req.issubset(avail):
+            continue
+        base2.append(e)
+    trace["counts"]["after_equipment"] = len(base2)
+
+    # Stage 3: role (ANY match)
+    base3 = base2
+    if role_set:
+        base3 = []
+        for e in base2:
+            if not set(ex_roles(e)).isdisjoint(role_set):
+                base3.append(e)
+    trace["counts"]["after_role"] = len(base3)
+
+    if not base3:
+        trace["domain_filter_applied"] = False
+        return None, trace
+
+    # Stage 4: domain only if it doesn't zero
+    trace["domain_filter_applied"] = False
+    if dom_set:
+        base4 = []
+        for e in base3:
+            if not set(ex_domains(e)).isdisjoint(dom_set):
+                base4.append(e)
+        if base4:
+            base3 = base4
+            trace["domain_filter_applied"] = True
+    trace["counts"]["after_domain"] = len(base3)
+
+    # Deterministic pick
+    base3.sort(key=lambda e: norm_str(get_ex_id(e)))
+    return (base3[0] if base3 else None), trace
+
+
+
+
 
 def get_ex_tags(ex: Dict[str, Any]) -> List[str]:
     # tags are simple strings; stress_tags may be dict or list
@@ -115,12 +200,22 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
         eq = user_state.get("equipment") or {}
         if location == "home":
             equipment = norm_list_str(eq.get("home"))
-        else:
+             
+        elif location == "gym":
+            # gym_id drives gym equipment (NOT location)
+            gym_id = None
+            if isinstance(session.get("context"), dict):
+                gym_id = session["context"].get("gym_id")
+            if user_state and not gym_id:
+                gym_id = (user_state.get("context") or {}).get("gym_id")
+            gym_id = norm_str(gym_id) if gym_id else None
+
             gyms = eq.get("gyms") or []
             for g in gyms:
-                if norm_str(g.get("gym_id")) == location or norm_str(g.get("name")) == location:
+                if gym_id and norm_str(g.get("gym_id")) == gym_id:
                     equipment = norm_list_str(g.get("equipment"))
                     break
+
 
     # Always-available "virtual equipment"
     if "floor" not in equipment:
@@ -296,11 +391,18 @@ def resolve_session(
     session_path: str,
     templates_dir: str,
     exercises_path: str,
-    out_path: str
+    out_path: str,
+    *,
+    user_state_override: Optional[Dict[str, Any]] = None,
+    write_output: bool = True
 ) -> Dict[str, Any]:
-    user_state = load_user_state(repo_root)
+    user_state = user_state_override if user_state_override is not None else load_user_state(repo_root)
 
     session = load_json(os.path.join(repo_root, session_path))
+    session_ctx = session.get("context") if isinstance(session.get("context"), dict) else {}
+    user_ctx = user_state.get("context") if isinstance(user_state.get("context"), dict) else {}
+    gym_id = session_ctx.get("gym_id") or user_ctx.get("gym_id")
+
     exercises_raw = load_json(os.path.join(repo_root, exercises_path))
     exercises = ensure_exercise_list(exercises_raw)
 
@@ -395,59 +497,25 @@ def resolve_session(
                 )
                 chosen_by = "explicit_exercise_id"
             else:
-                # B-mode: selection can have primary + fallbacks
-                # accepted shapes:
-                # selection = { "filters": {...} }  (legacy)
-                # selection = { "primary": { "filters": {...}, "preferences": {...} },
-                #               "fallbacks": [ { "filters": {...} }, ... ] }
-                primary = None
-                fallbacks = []
+                # P0: hard-filter only selection based on v1 schema (role/domain)
+                role_req = b.get("role")
+                domain_req = b.get("domain")
 
-                if isinstance(selection, dict) and "primary" in selection:
-                    primary = selection.get("primary")
-                    fallbacks = selection.get("fallbacks") or []
+                trace = {}
+                if role_req is None:
+                    selected_ex = None
+                    chosen_by = "p0_missing_role"
+                    trace = {"error": "Missing block.role (P0 requires role for selection)."}
                 else:
-                    primary = selection  # legacy
+                    selected_ex, trace = pick_best_exercise_p0(
+                        exercises=exercises,
+                        location=location,
+                        available_equipment=available_equipment,
+                        role_req=role_req,
+                        domain_req=domain_req,
+                    )
+                    chosen_by = "p0_hard_filters"
 
-                def extract_filters(sel_obj: Any) -> Dict[str, Any]:
-                    if isinstance(sel_obj, dict):
-                        f = sel_obj.get("filters") or sel_obj
-                        return f if isinstance(f, dict) else {}
-                    return {}
-
-                # allow block-specific preferences override (optional)
-                block_prefs = dict(prefs)
-                if isinstance(primary, dict):
-                    p2 = primary.get("preferences")
-                    if isinstance(p2, dict):
-                        # Example: {"preferred_edge_mm": 20, "preferred_grip": "half_crimp"}
-                        block_prefs.update(p2)
-
-                # try primary
-                primary_filters = extract_filters(primary)
-                selected_ex = pick_best_exercise(
-                    exercises=exercises,
-                    filters=primary_filters,
-                    available_equipment=available_equipment,
-                    prefs=block_prefs,
-                    recent_ex_ids=recent_ex_ids
-                )
-                chosen_by = "primary" if selected_ex else None
-
-                # try fallbacks in order
-                if not selected_ex and isinstance(fallbacks, list):
-                    for i, fb in enumerate(fallbacks, start=1):
-                        fb_filters = extract_filters(fb)
-                        selected_ex = pick_best_exercise(
-                            exercises=exercises,
-                            filters=fb_filters,
-                            available_equipment=available_equipment,
-                            prefs=block_prefs,
-                            recent_ex_ids=recent_ex_ids
-                        )
-                        if selected_ex:
-                            chosen_by = f"fallback_{i}"
-                            break
 
             if selected_ex:
                 instance_counter += 1
@@ -485,11 +553,16 @@ def resolve_session(
                     "prescription": merged
                 })
 
+            status = "selected" if selected_list else "skipped"
+            message = None if selected_list else "No candidates after hard filters (P0)."
+
             blocks_out.append({
                 "block_uid": block_uid,
                 "block_id": block_id,
                 "type": block_type,
                 "template_id": template_id,
+                "status": status,
+                "message": message,
                 "selected_exercises": selected_list
             })
 
@@ -498,6 +571,7 @@ def resolve_session(
         "generated_at": now_iso(),
         "context": {
             "location": location,
+            "gym_id": gym_id,
             "available_equipment": available_equipment
         },
         "session": {
@@ -513,10 +587,32 @@ def resolve_session(
         }
     }
 
+    # ---------------------------
+    # P0 contract: resolution_status
+    # ---------------------------
+    blocks = session_instance.get("resolved_session", {}).get("blocks", [])
+    session_instance["resolution_status"] = "failed" if any(
+        b.get("status") == "failed" for b in blocks
+    ) else "success"
+
+    # ---------------------------
+    # P0 contract: no silent blocks (central normalization)
+    # ---------------------------
+    for b in session_instance.get("resolved_session", {}).get("blocks", []):
+        # If status not set, infer deterministically from selection
+        if b.get("status") is None:
+            sel = b.get("selected_exercises") or []
+            b["status"] = "selected" if sel else "skipped"
+            if "message" not in b:
+                b["message"] = None if sel else "No candidates after hard filters (P0)."
+
+
     out_full = os.path.join(repo_root, out_path)
-    os.makedirs(os.path.dirname(out_full), exist_ok=True)
-    with open(out_full, "w", encoding="utf-8") as f:
+    if write_output:
+      os.makedirs(os.path.dirname(out_full), exist_ok=True)
+      with open(out_full, "w", encoding="utf-8") as f:
         json.dump(session_instance, f, ensure_ascii=False, indent=2)
+
 
     return session_instance
 

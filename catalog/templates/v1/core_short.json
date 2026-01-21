@@ -7,6 +7,9 @@
     {
       "block_id": "main",
       "type": "main_set",
+      "role": ["accessory"],
+      "domain": ["core"],
+
       "selection": {
         "filters": {
           "required_tags_all": ["stim:core"],

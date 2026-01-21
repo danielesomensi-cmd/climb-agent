@@ -38,6 +38,8 @@
       "block_id": "upper_activation",
       "type": "activation",
       "mode": "select_one",
+      "role": ["activation", "prehab"],
+      "domain": ["prehab_shoulder"],  
       "selection": {
         "primary": {
           "filters": {
