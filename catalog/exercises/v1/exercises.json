@@ -1,75 +1,152 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "exercises": [
     {
       "id": "elbow_wrist_extensor_eccentric",
       "name": "Wrist Extensor Eccentrics",
       "category": "prehab",
-      "equipment": ["dumbbell"],
       "time_min": 6,
-      "tags": ["stim:prehab_elbow", "tool:dumbbell", "risk:low", "area:forearm"],
-      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
-      "prescription_defaults": { "sets": 3, "reps": 12, "tempo": "3-1-1", "rest_seconds": 60 }
+
+      "role": ["prehab"],
+      "domain": ["prehab_elbow"],
+      "pattern": "wrist_extension",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "prehab_elbow_extensors",
+
+      "equipment_required": ["dumbbell"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": [],
+      "prescription_defaults": { "sets": 3, "reps": 12, "tempo": "3-1-1", "rest_seconds": 60 },
+
+      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" }
     },
     {
       "id": "elbow_pronation_supination",
       "name": "Pronation / Supination Rotations",
       "category": "prehab",
-      "equipment": ["dumbbell", "hammer"],
       "time_min": 6,
-      "tags": ["stim:prehab_elbow", "tool:dumbbell", "risk:low", "area:forearm"],
-      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
-      "prescription_defaults": { "sets": 3, "reps": 10, "rest_seconds": 45 }
+
+      "role": ["prehab"],
+      "domain": ["prehab_elbow"],
+      "pattern": "forearm_pronation",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "prehab_elbow_pronation_supination",
+
+      "equipment_required": ["dumbbell"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": [],
+      "prescription_defaults": { "sets": 3, "reps": 10, "rest_seconds": 45 },
+
+      "notes": "Can also be done with a hammer-like object; in v1 we treat it as dumbbell-equivalent.",
+      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" }
     },
     {
       "id": "scapular_pullups",
       "name": "Scapular Pull-ups",
       "category": "strength_accessory",
-      "equipment": ["pullup_bar"],
       "time_min": 6,
-      "tags": ["stim:scapular_strength", "tool:pullup_bar", "pattern:pull", "risk:low", "area:shoulder"],
-      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "none" },
-      "prescription_defaults": { "sets": 3, "reps": 8, "rest_seconds": 60 }
+
+      "role": ["activation", "accessory"],
+      "domain": ["prehab_shoulder", "strength_general"],
+      "pattern": "pull_vertical",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "scapular_control_pull",
+
+      "equipment_required": ["pullup_bar"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": [],
+      "prescription_defaults": { "sets": 3, "reps": 8, "rest_seconds": 60 },
+
+      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "none" }
     },
     {
       "id": "band_external_rotation",
       "name": "Band External Rotation",
       "category": "prehab",
-      "equipment": ["band"],
       "time_min": 6,
-      "tags": ["stim:prehab_shoulder", "tool:band", "risk:low", "area:rotator_cuff"],
-      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" },
-      "prescription_defaults": { "sets": 3, "reps": 15, "rest_seconds": 45 }
+
+      "role": ["prehab"],
+      "domain": ["prehab_shoulder"],
+      "pattern": "rotation",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "prehab_shoulder_rotator_cuff",
+
+      "equipment_required": ["band"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": [],
+      "prescription_defaults": { "sets": 3, "reps": 15, "rest_seconds": 45 },
+
+      "stress_tags": { "elbow": "low", "fingers": "none", "cns": "low", "skin": "none" }
     },
     {
       "id": "finger_recruitment_pulls",
       "name": "Recruitment Pulls (Hangboard)",
       "category": "warmup_specific",
-      "equipment": ["hangboard"],
       "time_min": 6,
-      "tags": ["stim:warmup_specific", "stim:fingers", "tool:hangboard", "pattern:pull", "risk:low"],
-      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "low" },
-      "prescription_defaults": { "sets": 3, "reps": 5, "rest_seconds": 45, "notes": "Short controlled pulls, not max." }
+
+      "role": ["warmup", "activation"],
+      "domain": ["finger_strength"],
+      "pattern": "pull_vertical",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "finger_warmup_recruitment",
+
+      "equipment_required": ["hangboard"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": ["elbow_sensitive"],
+      "prescription_defaults": { "sets": 3, "reps": 5, "rest_seconds": 45, "notes": "Short controlled pulls, not max." },
+
+      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "low" }
     },
     {
       "id": "dead_hang_easy",
       "name": "Easy Dead Hangs (Warm-up)",
       "category": "warmup_specific",
-      "equipment": ["hangboard"],
       "time_min": 6,
-      "tags": ["stim:warmup_specific", "stim:fingers", "tool:hangboard", "pattern:isometric", "risk:low"],
-      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "low" },
-      "prescription_defaults": { "sets": 3, "hang_seconds": 10, "rest_seconds": 50, "notes": "Very easy intensity." }
+
+      "role": ["warmup"],
+      "domain": ["finger_strength"],
+      "pattern": "isometric_hang",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "finger_warmup_easy_hang",
+
+      "equipment_required": ["hangboard"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": ["elbow_sensitive"],
+      "prescription_defaults": { "sets": 3, "hang_seconds": 10, "rest_seconds": 50, "notes": "Very easy intensity." },
+
+      "stress_tags": { "elbow": "low", "fingers": "low", "cns": "low", "skin": "low" }
     },
     {
       "id": "max_hang_5s",
       "name": "Max Hang (5s)",
       "category": "main_strength",
-      "equipment": ["hangboard"],
       "time_min": 20,
-      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:max_hang", "role:main"],
+
+      "role": ["main"],
+      "domain": ["finger_strength"],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "finger_max_hang",
+
+      "equipment_required": ["hangboard"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": ["elbow_sensitive"],
       "attributes": { "edge_mm": 20, "grip": "half_crimp" },
-      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
+
       "load_model": {
         "type": "total_load",
         "definition": "total_load = bodyweight + external_load",
@@ -81,17 +158,29 @@
         "rest_seconds": 180,
         "intensity_pct_of_total_load": 0.9,
         "setup_fields": ["edge_mm", "grip", "load_method"]
-      }
+      },
+
+      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" }
     },
     {
       "id": "max_hang_7s",
       "name": "Max Hang (7s)",
       "category": "main_strength",
-      "equipment": ["hangboard"],
       "time_min": 20,
-      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:max_hang", "role:main"],
+
+      "role": ["main"],
+      "domain": ["finger_strength"],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "finger_max_hang",
+
+      "equipment_required": ["hangboard"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": ["elbow_sensitive"],
       "attributes": { "edge_mm": 20, "grip": "half_crimp" },
-      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
+
       "load_model": {
         "type": "total_load",
         "definition": "total_load = bodyweight + external_load",
@@ -103,17 +192,29 @@
         "rest_seconds": 180,
         "intensity_pct_of_total_load": 0.88,
         "setup_fields": ["edge_mm", "grip", "load_method"]
-      }
+      },
+
+      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" }
     },
     {
       "id": "max_hang_ladder",
       "name": "Max Hang Ladder (3-step)",
       "category": "main_strength",
-      "equipment": ["hangboard"],
       "time_min": 22,
-      "tags": ["stim:finger_max_strength", "tool:hangboard", "pattern:isometric", "protocol:ladder", "role:main"],
+
+      "role": ["main"],
+      "domain": ["finger_strength"],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "finger_max_hang",
+
+      "equipment_required": ["hangboard"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": ["elbow_sensitive"],
       "attributes": { "edge_mm": 20, "grip": "half_crimp" },
-      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" },
+
       "load_model": {
         "type": "total_load",
         "definition": "total_load = bodyweight + external_load",
@@ -128,91 +229,140 @@
         "rest_seconds": 180,
         "rounds": 3,
         "setup_fields": ["edge_mm", "grip", "load_method"]
-      }
+      },
+
+      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "medium" }
     },
     {
       "id": "core_hollow_hold",
       "name": "Hollow Body Hold",
       "category": "core",
-      "equipment": ["mat"],
       "time_min": 8,
-      "tags": [ "stim:core","stim:core_anti_extension", "tool:mat", "risk:low", "pattern:isometric"],
-      "stress_tags": { "fingers": "none", "elbow": "none", "cns": "low", "skin": "none" },
-      "prescription_defaults": { "sets": 4, "hold_seconds": 30, "rest_seconds": 45 }
+
+      "role": ["accessory"],
+      "domain": ["core"],
+      "pattern": "anti_extension",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_anti_extension",
+
+      "equipment_required": [],
+      "location_allowed": ["home", "gym", "outdoor"],
+
+      "contraindications": [],
+      "prescription_defaults": { "sets": 4, "hold_seconds": 30, "rest_seconds": 45 },
+
+      "stress_tags": { "fingers": "none", "elbow": "none", "cns": "low", "skin": "none" }
     },
     {
       "id": "core_l_sit",
-      "name": "L-Sit (Parallettes or Floor)",
+      "name": "L-Sit (Floor)",
       "category": "core",
-      "equipment": ["parallettes", "floor"],
       "time_min": 10,
-      "tags": [ "stim:core","stim:core_compression", "tool:parallettes", "tool:floor", "pattern:isometric"],
-      "stress_tags": { "fingers": "none", "elbow": "low", "cns": "low", "skin": "none" },
-      "prescription_defaults": { "sets": 5, "hold_seconds": 15, "rest_seconds": 60 }
+
+      "role": ["accessory"],
+      "domain": ["core"],
+      "pattern": "anti_extension",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "core_compression",
+
+      "equipment_required": [],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": ["shoulder_sensitive"],
+      "prescription_defaults": { "sets": 5, "hold_seconds": 15, "rest_seconds": 60 },
+
+      "notes": "Parallettes removed in v1; floor variant only.",
+      "stress_tags": { "fingers": "none", "elbow": "low", "cns": "low", "skin": "none" }
     },
+    {
+      "id": "pulse_raise_activity",
+      "name": "Pulse raise (choose: brisk walk / easy jog / jumping jacks)",
+      "category": "warmup_general",
+      "time_min": 4,
 
-{
-  "id": "pulse_raise_activity",
-  "name": "Pulse raise (choose: brisk walk / easy jog / jumping jacks)",
-  "category": "warmup_general",
-  "equipment": ["none"],
-  "time_min": 4,
-  "tags": ["stim:warmup_general", "risk:very_low"],
-  "stress_tags": { "elbow": "none", "fingers": "none", "cns": "low", "skin": "none" },
-  "prescription_defaults": { "duration_min_range": [4, 8], "notes": "Keep easy." }
-},
+      "role": ["warmup"],
+      "domain": ["aerobic_capacity"],
+      "pattern": "carry",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "warmup_pulse_raise",
 
+      "equipment_required": [],
+      "location_allowed": ["home", "gym", "outdoor"],
 
+      "contraindications": [],
+      "prescription_defaults": { "duration_min_range": [4, 8], "notes": "Keep easy." },
 
+      "stress_tags": { "elbow": "none", "fingers": "none", "cns": "low", "skin": "none" }
+    },
+    {
+      "id": "mobility_thoracic_shoulders_flow",
+      "name": "Thoracic & Shoulder Mobility Flow",
+      "category": "mobility",
+      "time_min": 5,
 
-{
-  "id": "mobility_thoracic_shoulders_flow",
-  "name": "Thoracic & Shoulder Mobility Flow",
-  "category": "mobility",
-  "equipment": ["none", "mat"],
-  "time_min": 5,
-  "tags": [
-    "stim:mobility",
-    "stim:warmup_general",
-    "joint_preparation",
-    "low_risk"
-  ],
-  "stress_tags": {
-    "fingers": "none",
-    "elbow": "low",
-    "cns": "low",
-    "skin": "none"
-  },
-  "prescription_defaults": {
-    "sets": 1,
-    "duration_seconds": 300,
-    "notes": "Dynamic flow: thoracic rotations, arm circles, scapular CARs. No static stretching."
-  }
-},
+      "role": ["warmup"],
+      "domain": ["mobility"],
+      "pattern": "mobility_shoulders",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "mobility_shoulders_thoracic",
 
+      "equipment_required": [],
+      "location_allowed": ["home", "gym", "outdoor"],
 
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "duration_seconds": 300,
+        "notes": "Dynamic flow: thoracic rotations, arm circles, scapular CARs. No static stretching."
+      },
 
-
+      "stress_tags": { "fingers": "none", "elbow": "low", "cns": "low", "skin": "none" }
+    },
     {
       "id": "general_pulse_raise",
       "name": "Pulse Raise (Light)",
       "category": "warmup_general",
-      "equipment": ["bodyweight"],
       "time_min": 5,
-      "tags": ["stim:warmup_general", "tool:bodyweight", "risk:low"],
-      "stress_tags": { "fingers": "none", "elbow": "none", "cns": "low", "skin": "none" },
-      "prescription_defaults": { "duration_min": 6, "notes": "Light jogging in place + arm swings." }
+
+      "role": ["warmup"],
+      "domain": ["aerobic_capacity"],
+      "pattern": "carry",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "warmup_pulse_raise",
+
+      "equipment_required": [],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": [],
+      "prescription_defaults": { "duration_min": 6, "notes": "Light jogging in place + arm swings." },
+
+      "stress_tags": { "fingers": "none", "elbow": "none", "cns": "low", "skin": "none" }
     },
     {
       "id": "pangullich_ladders_easy",
       "name": "Pangullich Ladders (Controlled)",
       "category": "main_strength",
-      "equipment": ["pangullich"],
       "time_min": 15,
-      "tags": ["stim:finger_max_strength", "tool:pangullich", "pattern:pull", "protocol:ladders", "role:main"],
-      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "low" },
-      "prescription_defaults": { "sets": 5, "reps": 6, "rest_seconds": 150, "notes": "Controlled ladders, avoid cutting feet." }
+
+      "role": ["main"],
+      "domain": ["finger_strength"],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "finger_max_hang",
+
+      "equipment_required": ["pangullich"],
+      "location_allowed": ["home", "gym"],
+
+      "contraindications": ["elbow_sensitive"],
+      "prescription_defaults": { "sets": 5, "reps": 6, "rest_seconds": 150, "notes": "Controlled ladders, avoid cutting feet." },
+
+      "stress_tags": { "fingers": "high", "elbow": "medium", "cns": "medium", "skin": "low" }
     }
   ]
 }
-
