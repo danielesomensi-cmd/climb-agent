@@ -1,3 +1,11 @@
+
+import sys
+from pathlib import Path as _Path
+# Colab-friendly: add repo root to sys.path so `import catalog...` works
+_REPO_ROOT = _Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 import json, os
 from copy import deepcopy
 
