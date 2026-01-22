@@ -408,6 +408,8 @@ def resolve_session(
 
     # context: location/equipment
     location, available_equipment = get_location_equipment(user_state, session)
+    # Remove implicit/obvious equipment
+    available_equipment = [e for e in available_equipment if norm_str(e) != "floor"]
 
     # Equipment implications (v1): if any weight subtype is present, expose canonical 'weight'.
     weight_subtypes = {"dumbbell", "kettlebell", "barbell"}
@@ -507,7 +509,7 @@ def resolve_session(
                 chosen_by = "explicit_exercise_id"
             else:
                 # P0: hard-filter only selection based on v1 schema (role/domain)
-                role_req = b.get("role")
+                role_req = b.get("role") or b.get("type")  # fallback: block.type already encodes phase
                 domain_req = b.get("domain")
 
                 trace = {}

@@ -1,0 +1,15 @@
+{
+  "id": "finger_home_hb",
+  "version": "1.0",
+  "context": {
+    "location": "home",
+    "gym_id": null
+  },
+  "modules": [
+    {
+      "template_id": "finger_max_strength",
+      "version": "v1",
+      "required": true
+    }
+  ]
+}

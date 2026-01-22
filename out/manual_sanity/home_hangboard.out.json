@@ -1,0 +1,70 @@
+{
+  "session_instance_version": "1.1",
+  "generated_at": "2026-01-22T10:12:35",
+  "context": {
+    "location": "home",
+    "gym_id": null,
+    "available_equipment": [
+      "hangboard",
+      "pullup_bar",
+      "dumbbell",
+      "band",
+      "floor",
+      "weight"
+    ]
+  },
+  "session": {
+    "session_id": "finger_home_hb",
+    "session_version": "1.0",
+    "source_path": "out/manual_sanity/__session__home_hangboard.json"
+  },
+  "resolved_session": {
+    "resolver_version": "0.2",
+    "modules": [
+      {
+        "template_id": "finger_max_strength",
+        "version": "v1"
+      }
+    ],
+    "blocks": [
+      {
+        "block_uid": "finger_max_strength.warmup_specific",
+        "block_id": "warmup_specific",
+        "type": "warmup_specific",
+        "template_id": "finger_max_strength",
+        "status": "skipped",
+        "message": "No candidates after hard filters (P0).",
+        "p0_trace": {
+          "error": "Missing block.role (P0 requires role for selection)."
+        },
+        "selected_exercises": []
+      },
+      {
+        "block_uid": "finger_max_strength.main",
+        "block_id": "main",
+        "type": "main_set",
+        "template_id": "finger_max_strength",
+        "status": "skipped",
+        "message": "No candidates after hard filters (P0).",
+        "p0_trace": {
+          "error": "Missing block.role (P0 requires role for selection)."
+        },
+        "selected_exercises": []
+      },
+      {
+        "block_uid": "finger_max_strength.cooldown_prehab_light",
+        "block_id": "cooldown_prehab_light",
+        "type": "cooldown_prehab",
+        "template_id": "finger_max_strength",
+        "status": "skipped",
+        "message": "No candidates after hard filters (P0).",
+        "p0_trace": {
+          "error": "Missing block.role (P0 requires role for selection)."
+        },
+        "selected_exercises": []
+      }
+    ],
+    "exercise_instances": []
+  },
+  "resolution_status": "success"
+}
