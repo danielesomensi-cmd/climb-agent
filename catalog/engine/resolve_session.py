@@ -409,6 +409,12 @@ def resolve_session(
     # context: location/equipment
     location, available_equipment = get_location_equipment(user_state, session)
 
+    # Equipment implications (v1): if any weight subtype is present, expose canonical 'weight'.
+    weight_subtypes = {"dumbbell", "kettlebell", "barbell"}
+    if any(w in available_equipment for w in weight_subtypes) and "weight" not in available_equipment:
+        available_equipment.append("weight")
+
+
     # recent history (MVP)
     recent_ex_ids = load_recent_exercise_ids(repo_root)
 
@@ -469,6 +475,8 @@ def resolve_session(
             block_type = b.get("type") or b.get("category") or "main"
             mode = norm_str(b.get("mode") or "")
 
+            trace = {}
+
             # If block is instruction-only, do NOT select exercises
             if mode == "instruction_only":
                 blocks_out.append({
@@ -476,6 +484,7 @@ def resolve_session(
                     "block_id": block_id,
                     "type": block_type,
                     "template_id": template_id,
+                    "p0_trace": trace,
                     "selected_exercises": []
                 })
                 continue
@@ -563,6 +572,7 @@ def resolve_session(
                 "template_id": template_id,
                 "status": status,
                 "message": message,
+                "p0_trace": trace,
                 "selected_exercises": selected_list
             })
 

@@ -2,3 +2,11 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 output/
+
+# local backups
+*.bak
+*.bak*
+
+# local backups
+*.bak
+*.bak*
