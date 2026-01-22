@@ -55,8 +55,20 @@ def norm_list_str(x: Any) -> List[str]:
 def get_ex_id(ex: Dict[str, Any]) -> str:
     return ex.get("exercise_id") or ex.get("id") or "unknown_exercise"
 
+
 def ex_roles(ex: Dict[str, Any]) -> List[str]:
-    return norm_list_str(ex.get("role"))
+    out = []
+    out += norm_list_str(ex.get("role"))
+    out += norm_list_str(ex.get("roles"))  # legacy support
+    # dedup preservando ordine
+    seen = set()
+    res = []
+    for x in out:
+        if x not in seen:
+            seen.add(x)
+            res.append(x)
+    return res
+
 
 def ex_domains(ex: Dict[str, Any]) -> List[str]:
     return norm_list_str(ex.get("domain"))
@@ -123,15 +135,28 @@ def pick_best_exercise_p0(
 
     # Stage 4: domain only if it doesn't zero
     trace["domain_filter_applied"] = False
+
+    # Default: if domain is not applied, after_domain == len(base3)
+    trace["counts"]["after_domain"] = len(base3)
+
     if dom_set:
         base4 = []
         for e in base3:
             if not set(ex_domains(e)).isdisjoint(dom_set):
                 base4.append(e)
+
+        # Apply domain only if it doesn't zero (P0 rule)
         if base4:
-            base3 = base4
             trace["domain_filter_applied"] = True
-    trace["counts"]["after_domain"] = len(base3)
+            trace["counts"]["after_domain"] = len(base4)
+            base3 = base4
+        else:
+            # domain would zero, so keep base3 unchanged
+            trace["domain_filter_applied"] = False
+            trace["counts"]["after_domain"] = len(base3)
+
+
+
 
     # Deterministic pick
     base3.sort(key=lambda e: norm_str(get_ex_id(e)))
@@ -477,7 +502,9 @@ def resolve_session(
             block_type = b.get("type") or b.get("category") or "main"
             mode = norm_str(b.get("mode") or "")
 
-            trace = {}
+
+
+            trace = {"counts": {}, "domain_filter_applied": None}
 
             # If block is instruction-only, do NOT select exercises
             if mode == "instruction_only":
@@ -486,7 +513,10 @@ def resolve_session(
                     "block_id": block_id,
                     "type": block_type,
                     "template_id": template_id,
+                    "status": "selected",
+                    "message": "Instruction-only block (no exercise selection).",
                     "p0_trace": trace,
+                    "filter_trace": {"p_stage": "P0", **trace, "note": "instruction_only: no selection performed"},
                     "selected_exercises": []
                 })
                 continue
@@ -507,16 +537,19 @@ def resolve_session(
                     None
                 )
                 chosen_by = "explicit_exercise_id"
+                trace = {"counts": {}, "domain_filter_applied": None, "note": "explicit_exercise_id: bypassed P0 filters"}
+
+           
             else:
                 # P0: hard-filter only selection based on v1 schema (role/domain)
-                role_req = b.get("role") or b.get("type")  # fallback: block.type already encodes phase
+                role_req = b.get("role")   # P0 requires explicit block.role; block.type is NOT a selector input
                 domain_req = b.get("domain")
 
                 trace = {}
                 if role_req is None:
                     selected_ex = None
                     chosen_by = "p0_missing_role"
-                    trace = {"error": "Missing block.role (P0 requires role for selection)."}
+                    trace = {"counts": {}, "domain_filter_applied": None, "error": "Missing block.role (P0 requires role for selection)."}
                 else:
                     selected_ex, trace = pick_best_exercise_p0(
                         exercises=exercises,
@@ -575,6 +608,7 @@ def resolve_session(
                 "status": status,
                 "message": message,
                 "p0_trace": trace,
+                "filter_trace": {"p_stage": "P0", **(trace or {"counts": {}, "domain_filter_applied": None})},
                 "selected_exercises": selected_list
             })
 

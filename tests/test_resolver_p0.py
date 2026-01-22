@@ -72,6 +72,16 @@ class TestResolverP0Determinism(unittest.TestCase):
     def setUpClass(cls):
         cls.base_user_state = load_json(os.path.join(REPO_ROOT, "data", "user_state.json"))
 
+    def assert_filter_trace_present(self, out: dict):
+        for b in out["resolved_session"]["blocks"]:
+            self.assertIn("filter_trace", b, f"Missing filter_trace: {b.get('block_uid')}")
+            ft = b["filter_trace"]
+            self.assertIn("p_stage", ft, f"Missing filter_trace.p_stage: {b.get('block_uid')}")
+            self.assertIn("counts", ft, f"Missing filter_trace.counts: {b.get('block_uid')}")
+
+
+
+
     def run_resolve(self, user_state_override: dict, session_obj: dict):
         rel_session_path = os.path.join("catalog", "sessions", "v1", f"__test__{session_obj['id']}.json")
         abs_session_path = os.path.join(REPO_ROOT, rel_session_path)
@@ -113,6 +123,8 @@ class TestResolverP0Determinism(unittest.TestCase):
         out = self.run_resolve(us, sess)
         self.assertEqual(out["resolution_status"], "success")
         self.assert_no_silent_blocks(out)
+        self.assert_filter_trace_present(out)
+
 
     def test_home_hangboard_required_finger(self):
         us = make_user_state(self.base_user_state, location="home", gym_id=None)
@@ -125,6 +137,8 @@ class TestResolverP0Determinism(unittest.TestCase):
         out = self.run_resolve(us, sess)
         self.assertEqual(out["resolution_status"], "success")
         self.assert_no_silent_blocks(out)
+        self.assert_filter_trace_present(out)
+
 
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
         self.assertTrue(any(i for i in ids), "No exercises resolved at all.")
@@ -164,6 +178,7 @@ class TestResolverP0Determinism(unittest.TestCase):
         out = self.run_resolve(us, sess)
         self.assertEqual(out["resolution_status"], "success")
         self.assert_no_silent_blocks(out)
+        self.assert_filter_trace_present(out)
         self.assertIn("pangullich", out["context"]["available_equipment"])
 
     def test_outdoor_optional_finger(self):
@@ -191,6 +206,8 @@ class TestResolverP0Determinism(unittest.TestCase):
         out = self.run_resolve(us, sess)
         self.assertEqual(out["resolution_status"], "success")
         self.assert_no_silent_blocks(out)
+        self.assert_filter_trace_present(out)
+
 
 
 if __name__ == "__main__":

@@ -10,3 +10,4 @@ output/
 # local backups
 *.bak
 *.bak*
+tmp/
