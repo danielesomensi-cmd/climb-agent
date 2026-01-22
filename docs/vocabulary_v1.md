@@ -44,6 +44,7 @@ Allowed `equipment` values:
  an equipment value. Use an empty list: `equipment_required: []`.
 - If an exercise can be performed with multiple tools, express it via multiple exercises or an explicit policy (future).
 - User inventory MUST use these canonical IDs (no aliases in v1).
+- `pangullich`
 
 ---
 
@@ -116,6 +117,22 @@ Canonical context fields:
 
 Rule:
 - If `location="gym"`, `gym_id` MUST be present for downstream policies.
+
+---
+
+### 2.3 Role (phase of session)
+
+`role` describes *where the exercise sits within a session* (phase), not what it trains.
+
+Allowed `role` values:
+- `warmup`
+- `activation`
+- `main`
+- `accessory`
+- `conditioning`
+- `technique`
+- `prehab`
+- `cooldown`
 
 ---
 
