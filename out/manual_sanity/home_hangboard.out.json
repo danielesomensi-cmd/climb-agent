@@ -1,6 +1,6 @@
 {
   "session_instance_version": "1.1",
-  "generated_at": "2026-01-22T10:12:35",
+  "generated_at": "2026-01-22T10:26:46",
   "context": {
     "location": "home",
     "gym_id": null,
@@ -9,7 +9,6 @@
       "pullup_bar",
       "dumbbell",
       "band",
-      "floor",
       "weight"
     ]
   },
@@ -35,7 +34,13 @@
         "status": "skipped",
         "message": "No candidates after hard filters (P0).",
         "p0_trace": {
-          "error": "Missing block.role (P0 requires role for selection)."
+          "counts": {
+            "start": 16,
+            "after_location": 16,
+            "after_equipment": 15,
+            "after_role": 0
+          },
+          "domain_filter_applied": false
         },
         "selected_exercises": []
       },
@@ -47,7 +52,13 @@
         "status": "skipped",
         "message": "No candidates after hard filters (P0).",
         "p0_trace": {
-          "error": "Missing block.role (P0 requires role for selection)."
+          "counts": {
+            "start": 16,
+            "after_location": 16,
+            "after_equipment": 15,
+            "after_role": 0
+          },
+          "domain_filter_applied": false
         },
         "selected_exercises": []
       },
@@ -59,7 +70,13 @@
         "status": "skipped",
         "message": "No candidates after hard filters (P0).",
         "p0_trace": {
-          "error": "Missing block.role (P0 requires role for selection)."
+          "counts": {
+            "start": 16,
+            "after_location": 16,
+            "after_equipment": 15,
+            "after_role": 0
+          },
+          "domain_filter_applied": false
         },
         "selected_exercises": []
       }
