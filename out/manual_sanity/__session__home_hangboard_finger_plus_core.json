@@ -1,0 +1,13 @@
+{
+  "session": "/content/climb-agent/out/manual_sanity/_tpl_home_hangboard_finger_plus_core.json",
+  "context": {
+    "location": "home",
+    "available_equipment": [
+      "hangboard",
+      "pullup_bar",
+      "dumbbell",
+      "band",
+      "weight"
+    ]
+  }
+}

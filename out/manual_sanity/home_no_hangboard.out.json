@@ -1,6 +1,6 @@
 {
   "session_instance_version": "1.1",
-  "generated_at": "2026-01-22T10:26:46",
+  "generated_at": "2026-01-22T16:02:40",
   "context": {
     "location": "home",
     "gym_id": null,
@@ -29,18 +29,45 @@
         "block_id": "warmup_specific",
         "type": "warmup_specific",
         "template_id": "finger_max_strength",
-        "status": "skipped",
-        "message": "No candidates after hard filters (P0).",
+        "status": "selected",
+        "message": null,
         "p0_trace": {
           "counts": {
             "start": 16,
             "after_location": 16,
             "after_equipment": 8,
-            "after_role": 0
+            "after_role": 4,
+            "after_domain": 1
           },
-          "domain_filter_applied": false
+          "domain_filter_applied": true
         },
-        "selected_exercises": []
+        "filter_trace": {
+          "p_stage": "P0",
+          "counts": {
+            "start": 16,
+            "after_location": 16,
+            "after_equipment": 8,
+            "after_role": 4,
+            "after_domain": 1
+          },
+          "domain_filter_applied": true
+        },
+        "selected_exercises": [
+          {
+            "exercise_id": "finger_warmup_generic",
+            "variant": {},
+            "prescription": {
+              "duration_min_range": [
+                8,
+                15
+              ],
+              "notes": [
+                "Progressive recruitment for fingers and shoulders.",
+                "Stay well below failure. Focus on tissue prep."
+              ]
+            }
+          }
+        ]
       },
       {
         "block_uid": "finger_max_strength.main",
@@ -58,16 +85,8 @@
           },
           "domain_filter_applied": false
         },
-        "selected_exercises": []
-      },
-      {
-        "block_uid": "finger_max_strength.cooldown_prehab_light",
-        "block_id": "cooldown_prehab_light",
-        "type": "cooldown_prehab",
-        "template_id": "finger_max_strength",
-        "status": "skipped",
-        "message": "No candidates after hard filters (P0).",
-        "p0_trace": {
+        "filter_trace": {
+          "p_stage": "P0",
           "counts": {
             "start": 16,
             "after_location": 16,
@@ -77,9 +96,101 @@
           "domain_filter_applied": false
         },
         "selected_exercises": []
+      },
+      {
+        "block_uid": "finger_max_strength.cooldown_prehab_light",
+        "block_id": "cooldown_prehab_light",
+        "type": "cooldown_prehab",
+        "template_id": "finger_max_strength",
+        "status": "selected",
+        "message": null,
+        "p0_trace": {
+          "counts": {
+            "start": 16,
+            "after_location": 16,
+            "after_equipment": 8,
+            "after_role": 1,
+            "after_domain": 1
+          },
+          "domain_filter_applied": false
+        },
+        "filter_trace": {
+          "p_stage": "P0",
+          "counts": {
+            "start": 16,
+            "after_location": 16,
+            "after_equipment": 8,
+            "after_role": 1,
+            "after_domain": 1
+          },
+          "domain_filter_applied": false
+        },
+        "selected_exercises": [
+          {
+            "exercise_id": "band_external_rotation",
+            "variant": {},
+            "prescription": {
+              "sets": 3,
+              "reps": 15,
+              "rest_seconds": 45,
+              "duration_min_range": [
+                6,
+                12
+              ],
+              "notes": [
+                "Keep it light. Aim to feel better after than before."
+              ]
+            }
+          }
+        ]
       }
     ],
-    "exercise_instances": []
+    "exercise_instances": [
+      {
+        "instance_id": "warmup_specific_01",
+        "exercise_id": "finger_warmup_generic",
+        "variant": {},
+        "prescription": {
+          "duration_min_range": [
+            8,
+            15
+          ],
+          "notes": [
+            "Progressive recruitment for fingers and shoulders.",
+            "Stay well below failure. Focus on tissue prep."
+          ]
+        },
+        "block_uid": "finger_max_strength.warmup_specific",
+        "source": {
+          "picked_by": "resolver_v0.2/p0_hard_filters",
+          "template_id": "finger_max_strength",
+          "block_id": "warmup_specific"
+        }
+      },
+      {
+        "instance_id": "cooldown_prehab_light_02",
+        "exercise_id": "band_external_rotation",
+        "variant": {},
+        "prescription": {
+          "sets": 3,
+          "reps": 15,
+          "rest_seconds": 45,
+          "duration_min_range": [
+            6,
+            12
+          ],
+          "notes": [
+            "Keep it light. Aim to feel better after than before."
+          ]
+        },
+        "block_uid": "finger_max_strength.cooldown_prehab_light",
+        "source": {
+          "picked_by": "resolver_v0.2/p0_hard_filters",
+          "template_id": "finger_max_strength",
+          "block_id": "cooldown_prehab_light"
+        }
+      }
+    ]
   },
   "resolution_status": "success"
 }

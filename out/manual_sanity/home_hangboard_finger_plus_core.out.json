@@ -1,0 +1,27 @@
+{
+  "session_instance_version": "1.1",
+  "generated_at": "2026-01-22T16:59:38",
+  "context": {
+    "location": "home",
+    "gym_id": null,
+    "available_equipment": [
+      "hangboard",
+      "pullup_bar",
+      "dumbbell",
+      "band",
+      "weight"
+    ]
+  },
+  "session": {
+    "session_id": "__session__home_hangboard_finger_plus_core",
+    "session_version": "v1",
+    "source_path": "/content/climb-agent/out/manual_sanity/__session__home_hangboard_finger_plus_core.json"
+  },
+  "resolved_session": {
+    "resolver_version": "0.2",
+    "modules": [],
+    "blocks": [],
+    "exercise_instances": []
+  },
+  "resolution_status": "success"
+}

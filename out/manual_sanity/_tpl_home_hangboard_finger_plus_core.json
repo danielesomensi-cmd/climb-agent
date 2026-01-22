@@ -1,0 +1,238 @@
+{
+  "id": "tpl_home_hangboard_finger_plus_core",
+  "name": "Template: Home hangboard finger + core",
+  "version": "1.0",
+  "category": "composed_template",
+  "blocks": [
+    {
+      "block_id": "finger__warmup_specific",
+      "type": "warmup_specific",
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_all": [
+              "stim:warmup_specific",
+              "stim:fingers"
+            ],
+            "required_tags_any": [
+              "tool:hangboard",
+              "tool:pangullich"
+            ]
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_all": [
+                "stim:warmup_general"
+              ],
+              "exclude_tags_any": [
+                "stim:prehab_elbow"
+              ]
+            }
+          }
+        ]
+      },
+      "prescription": {
+        "notes": [
+          "Progressive recruitment for fingers and shoulders.",
+          "Stay well below failure. Focus on tissue prep."
+        ],
+        "duration_min_range": [
+          8,
+          15
+        ]
+      },
+      "role": [
+        "warmup"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "source_template_id": "finger_max_strength",
+      "source_block_id": "warmup_specific"
+    },
+    {
+      "block_id": "finger__main",
+      "type": "main_set",
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_all": [
+              "stim:finger_max_strength"
+            ],
+            "required_tags_any": [
+              "tool:hangboard"
+            ],
+            "exclude_tags_any": [
+              "stim:prehab_elbow",
+              "stim:warmup_general",
+              "stim:warmup_specific"
+            ]
+          },
+          "preferences": {
+            "preferred_edge_mm": 20,
+            "preferred_grip": "half_crimp"
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_all": [
+                "stim:finger_max_strength"
+              ],
+              "required_tags_any": [
+                "tool:pangullich"
+              ],
+              "exclude_tags_any": [
+                "stim:prehab_elbow",
+                "stim:warmup_general",
+                "stim:warmup_specific"
+              ]
+            }
+          },
+          {
+            "filters": {
+              "required_tags_all": [
+                "stim:finger_max_strength"
+              ],
+              "required_tags_any": [
+                "tool:board",
+                "tool:campus"
+              ],
+              "exclude_tags_any": [
+                "stim:prehab_elbow",
+                "stim:warmup_general",
+                "stim:warmup_specific"
+              ]
+            }
+          },
+          {
+            "filters": {
+              "required_tags_all": [
+                "stim:prehab_elbow"
+              ],
+              "required_tags_any": [
+                "tool:bands",
+                "tool:dumbbells",
+                "tool:bodyweight"
+              ]
+            }
+          }
+        ]
+      },
+      "prescription": {
+        "sets_range": [
+          5,
+          8
+        ],
+        "hang_seconds_range": [
+          5,
+          10
+        ],
+        "rest_seconds_range": [
+          150,
+          240
+        ],
+        "intensity_pct_of_total_load_range": [
+          0.85,
+          0.95
+        ],
+        "notes": [
+          "Target: high quality efforts, no grinding. Stop if form breaks.",
+          "Prefer 20mm half crimp baseline when available; override only if needed.",
+          "Rest fully (2.5–4 min)."
+        ]
+      },
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "source_template_id": "finger_max_strength",
+      "source_block_id": "main"
+    },
+    {
+      "block_id": "finger__cooldown_prehab_light",
+      "type": "cooldown_prehab",
+      "selection": {
+        "primary": {
+          "filters": {
+            "required_tags_any": [
+              "stim:prehab_elbow",
+              "stim:shoulder_health"
+            ],
+            "exclude_tags_any": [
+              "stim:finger_max_strength"
+            ]
+          }
+        },
+        "fallbacks": [
+          {
+            "filters": {
+              "required_tags_all": [
+                "stim:mobility"
+              ],
+              "required_tags_any": [
+                "tool:bodyweight",
+                "tool:bands"
+              ]
+            }
+          }
+        ]
+      },
+      "prescription": {
+        "duration_min_range": [
+          6,
+          12
+        ],
+        "notes": [
+          "Keep it light. Aim to feel better after than before."
+        ]
+      },
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_elbow"
+      ],
+      "source_template_id": "finger_max_strength",
+      "source_block_id": "cooldown_prehab_light"
+    },
+    {
+      "block_id": "core__main",
+      "type": "main_set",
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "selection": {
+        "filters": {
+          "required_tags_all": [
+            "stim:core"
+          ],
+          "exclude_tags_any": [
+            "tool:hangboard",
+            "protocol:max_hang",
+            "stim:finger_max_strength"
+          ]
+        }
+      },
+      "prescription": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "rest_seconds_range": [
+          45,
+          75
+        ]
+      },
+      "source_template_id": "core_short",
+      "source_block_id": "main"
+    }
+  ]
+}
