@@ -31,23 +31,17 @@ Allowed `equipment` values:
 
 - `hangboard`
 - `pullup_bar`
-- `dumbbell`
-- `kettlebell`
-- `barbell`
-- `bench`
 - `band`
-- `ring`
-- `campus_rung`
-- `fingerboard_portable`
-- `board_kilter`
-- `board_moon`
-- `board_system`
-- `spraywall`
-- `rope_wall`
-- `pangullich`
-
-Rules:
+- `weight` *(canonical generic weight: counterweight, dumbbells, kettlebells, barbells)*
+- `dumbbell` *(subtype; prefer `weight` unless strictly required)*
+- `kettlebell` *(subtype; prefer `weight` unRules:
 - Do **not** use `"none"` as an equipment value. Use an empty list: `equipment_required: []`.
+- Do **not** use `"floor"` as an equipment value (it is implicit).
+- Prefer `weight` for generic loading. Use `dumbbell/kettlebell/barbell` only if the exercise truly requires that implement.
+- User inventory may list subtypes; resolver may expose canonical `weight` when any subtype is present.
+- If an exercise can be performed with multiple tools, express it via multiple exercises or an explicit policy (future).
+- User inventory MUST use these canonical IDs (no aliases in v1).
+ an equipment value. Use an empty list: `equipment_required: []`.
 - If an exercise can be performed with multiple tools, express it via multiple exercises or an explicit policy (future).
 - User inventory MUST use these canonical IDs (no aliases in v1).
 
@@ -81,12 +75,15 @@ Notes:
 
 `domain` describes *what is being trained*.
 
-Allowed `domain` values:
+Allowed `domain` values (v1.1, backwards-compatible):
 
-- `finger_strength`
+- `finger_strength`  *(legacy umbrella; OK to keep)*
+- `finger_max_strength`
+- `finger_strength_endurance`
+- `finger_aerobic_endurance`
 - `power`
 - `power_endurance`
-- `strength_general`
+- `strength_general` *(antagonists + legs + general strength work)*
 - `aerobic_capacity`
 - `anaerobic_capacity`
 - `core`
@@ -96,9 +93,17 @@ Allowed `domain` values:
 - `prehab_wrist`
 - `technique_boulder`
 - `technique_lead`
+- `technique_footwork`
+
+Guidelines:
+- Use `domain` for the *primary adaptation* (capacity/skill), not for individual muscles.
+- Use `pattern` (e.g., `push`, `squat`, `hinge`) to target “chest/shoulders/legs” without exploding the domain vocabulary.
+- Technique drills (e.g., silent feet, “use both feet”, no readjust) should use:
+  - `domain: technique_footwork`
+  - `role: technique`
+  - `pattern: technique_drill`
 
 ---
-
 ### 2.3 Gym specificity (context)
 
 Because `gym` must become a specific gym, gym specificity is expressed in the session context, not in `location`.
@@ -140,6 +145,8 @@ Allowed `pattern` values:
 - `mobility_spine`
 - `mobility_shoulders`
 - `mobility_hips`
+- `technique_drill`
+
 
 ---
 
