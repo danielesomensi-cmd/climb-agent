@@ -11,3 +11,4 @@ output/
 *.bak
 *.bak*
 tmp/
+out/manual_sanity/
