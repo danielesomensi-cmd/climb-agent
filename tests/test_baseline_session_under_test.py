@@ -36,9 +36,26 @@ class TestBaselineSessionUnderTest(unittest.TestCase):
         self.assertEqual(blocks[uid].get("status"), "selected", f"{uid} not selected")
         self.assertIn("filter_trace", blocks[uid], f"{uid} missing filter_trace")
 
+    def assert_instruction_only(self, out, uid: str, must_have_keys=()):
+        blocks = {b["block_uid"]: b for b in out["resolved_session"]["blocks"]}
+        self.assertIn(uid, blocks, f"Missing {uid}")
+        b = blocks[uid]
+        self.assertEqual(b.get("status"), "selected", f"{uid} not selected")
+        self.assertEqual(b.get("selected_exercises"), [], f"{uid} should have no selected_exercises")
+        self.assertIn("filter_trace", b, f"{uid} missing filter_trace")
+        self.assertIn("instructions", b, f"{uid} missing instructions")
+        for k in must_have_keys:
+            self.assertIn(k, b["instructions"], f"{uid} instructions missing key: {k}")
+
     def test_home_hangboard(self):
         out = run_case("home", None)
         self.assertEqual(out.get("resolution_status"), "success")
+        self.assertEqual(out.get("context", {}).get("location"), "home")
+        self.assert_instruction_only(out, "general_warmup.pulse_raise", must_have_keys=("options","duration_min_range"))
+        self.assert_instruction_only(out, "general_warmup.mobility", must_have_keys=("focus","duration_min_range"))
+        self.assertEqual(out.get("context", {}).get("location"), "home")
+        self.assert_instruction_only(out, "general_warmup.pulse_raise", must_have_keys=("options","duration_min_range"))
+        self.assert_instruction_only(out, "general_warmup.mobility", must_have_keys=("focus","duration_min_range"))
         self.assert_selected(out, "finger_max_strength.warmup_specific")
         self.assert_selected(out, "finger_max_strength.main")
         self.assert_selected(out, "finger_max_strength.cooldown_prehab_light")
