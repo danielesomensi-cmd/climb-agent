@@ -2,13 +2,15 @@
   "schema_version": "1.3",
   "user": {
     "user_id": "dani",
-    "name": "Daniele",
+    "name": "Daniele Somensi",
     "timezone": "Europe/Brussels",
     "units": {
       "weight": "kg",
       "distance": "km",
       "edge": "mm"
-    }
+    },
+    "id": "daniele_somensi",
+    "preferred_name": "Dani"
   },
   "defaults": {
     "location": "home"

@@ -54,3 +54,31 @@ inside `exercise_instances[*]`:
 - `suggested.rationale`
 
 User-specific baselines MUST live in `data/user_state.json` (not in templates).
+
+<!-- BEGIN: SESSION_LOGGING_CONTRACTS -->
+## Session logging contracts (v1)
+
+### Canonical log
+- Append-only file: `data/logs/session_logs.jsonl`
+- Each line is one JSON object conforming to `data/schemas/session_log_entry.v1.json`
+- Must include: `user.id` and at least one item in `exercise_outcomes[]`
+
+### Validation and quarantine (zero data loss)
+- On append, validate against JSON Schema:
+  - Valid → append to `data/logs/session_logs.jsonl`
+  - Invalid → append to `data/logs/session_logs_rejected.jsonl` with `errors[]` + original entry
+- The append command exits non-zero on invalid entries (so failures are visible in gates / CI).
+
+### Outcome actual fields (core)
+- `actual.status`: `planned|done|skipped|modified` (default `planned` in templates)
+- Optional feedback fields:
+  - `actual.difficulty_label`: `easy|ok|hard|too_hard` (nullable)
+  - `actual.enjoyment`: `dislike|neutral|like` (nullable)
+- Load fields:
+  - `actual.used_added_weight_kg` / `actual.used_assistance_kg`
+  - `actual.used_total_load_kg` auto-filled on append when `planned.suggested.based_on.bodyweight_kg` is available
+
+### Determinism
+- Logging must be deterministic and append-only.
+- No baseline auto-update at append-time (future: candidate update pipeline with manual approval).
+<!-- END: SESSION_LOGGING_CONTRACTS -->
