@@ -47,6 +47,15 @@ class TestBaselineSessionUnderTest(unittest.TestCase):
         for k in must_have_keys:
             self.assertIn(k, b["instructions"], f"{uid} instructions missing key: {k}")
 
+
+    def assert_has_suggested_load(self, out, exercise_id: str):
+        insts = out.get("resolved_session", {}).get("exercise_instances", [])
+        inst = next((x for x in insts if x.get("exercise_id") == exercise_id), None)
+        self.assertIsNotNone(inst, f"Missing exercise_instance for {exercise_id}")
+        self.assertIn("suggested", inst, f"{exercise_id} missing suggested")
+        sug = inst.get("suggested") or {}
+        self.assertIn("target_total_load_kg", sug)
+        self.assertTrue(("added_weight_kg" in sug) or ("assistance_kg" in sug))
     def test_home_hangboard(self):
         out = run_case("home", None)
         self.assertEqual(out.get("resolution_status"), "success")
@@ -60,6 +69,8 @@ class TestBaselineSessionUnderTest(unittest.TestCase):
         self.assert_selected(out, "finger_max_strength.main")
         self.assert_selected(out, "finger_max_strength.cooldown_prehab_light")
         self.assert_selected(out, "core_short.main")
+        self.assert_has_suggested_load(out, "max_hang_5s")
+
 
     def test_gym_blocx(self):
         out = run_case("gym", "blocx")

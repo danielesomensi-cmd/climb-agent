@@ -27,3 +27,30 @@
 2) python -m py_compile catalog/engine/resolve_session.py
 3) python -m unittest discover -s tests -p "test_*.py" -v
 4) python scripts/run_baseline_session.py
+
+## Context resolution (P0 expectation)
+- `context.location` priority:
+  1) session.context.location (if key exists)
+  2) user_state_override.context.location (if key exists)
+  3) user_state.defaults.location (optional)
+  4) fallback: "home"
+- `context.gym_id` is independent from location; it must NOT force location="gym".
+
+## instruction_only output contract
+- status="selected"
+- selected_exercises=[]
+- filter_trace.counts={}
+- include "instructions" if template contains any of:
+  duration_min_range, options, focus, notes, prescription
+
+## Load parameterization (P0.5) — suggested fields
+For load-based exercises (e.g., hangboard max hangs), the resolver may add a deterministic `suggested` object
+inside `exercise_instances[*]`:
+
+- `suggested.target_total_load_kg`
+- `suggested.added_weight_kg` OR `suggested.assistance_kg`
+- `suggested.setup` (edge_mm, grip, load_method)
+- `suggested.based_on` (bodyweight_kg, max_total_load_kg)
+- `suggested.rationale`
+
+User-specific baselines MUST live in `data/user_state.json` (not in templates).

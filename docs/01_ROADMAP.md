@@ -13,3 +13,17 @@
 
 ## Later
 - planner + multi-session/day + load settimanale + nutrizione + UI app
+
+## Next (closed loop MVP)
+- Execute → Log:
+  capture outcomes per exercise_instance (weight/assist, reps/time, RPE, pain flags, notes)
+  append to data/logs/*.jsonl (session_log_entry schema)
+- Update:
+  update user_state (recency, last_performed, simple fatigue/pain signals)
+  keep P0 unchanged (no ranking yet)
+
+### Closed loop: Execute → Log → Update (user-specific)
+- Store user identity in `data/user_state.json` under `user.{id,name}`.
+- Log executed sessions to `data/logs/session_logs.jsonl` (one JSON per session), including:
+  planned (suggested) vs actual (used weight/assist, sets done, RPE, notes).
+- Maintain baseline history in `data/logs/baseline_history.jsonl` when max_total_load_kg is updated.

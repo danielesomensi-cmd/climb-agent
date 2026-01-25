@@ -4,66 +4,110 @@
     "user_id": "dani",
     "name": "Daniele",
     "timezone": "Europe/Brussels",
-    "units": { "weight": "kg", "distance": "km", "edge": "mm" }
+    "units": {
+      "weight": "kg",
+      "distance": "km",
+      "edge": "mm"
+    }
   },
-
   "defaults": {
     "location": "home"
   },
-
   "context": {
     "location": "home",
     "gym_id": null
   },
-
   "body": {
     "weight_kg": 77.0,
     "height_cm": 182,
     "body_fat_pct": 19,
     "updated_at": "2026-01-19"
   },
-
   "goals": {
     "primary": {
       "sport": "climbing",
       "time_horizon": "season",
-      "focus": ["boulder", "sport"],
+      "focus": [
+        "boulder",
+        "sport"
+      ],
       "targets": [
-        { "metric": "sport_worked", "value": "8b", "context": "outdoor", "by_date": "2026-06-30" },
-        { "metric": "sport_onsight", "value": "7c", "context": "outdoor", "by_date": "2026-06-30" },
-        { "metric": "boulder_worked", "value": "8A", "context": "outdoor", "by_date": "2026-06-30" },
-        { "metric": "boulder_onsight", "value": "7B", "context": "outdoor", "by_date": "2026-06-30" }
+        {
+          "metric": "sport_worked",
+          "value": "8b",
+          "context": "outdoor",
+          "by_date": "2026-06-30"
+        },
+        {
+          "metric": "sport_onsight",
+          "value": "7c",
+          "context": "outdoor",
+          "by_date": "2026-06-30"
+        },
+        {
+          "metric": "boulder_worked",
+          "value": "8A",
+          "context": "outdoor",
+          "by_date": "2026-06-30"
+        },
+        {
+          "metric": "boulder_onsight",
+          "value": "7B",
+          "context": "outdoor",
+          "by_date": "2026-06-30"
+        }
       ]
     },
     "secondary": [
-      { "metric": "bodyweight_kg", "value": 75.0, "by_date": "2026-04-30" },
-      { "metric": "longevity", "value": "injury_resilience", "by_date": "2026-12-31" }
+      {
+        "metric": "bodyweight_kg",
+        "value": 75.0,
+        "by_date": "2026-04-30"
+      },
+      {
+        "metric": "longevity",
+        "value": "injury_resilience",
+        "by_date": "2026-12-31"
+      }
     ]
   },
-
   "performance": {
     "current_level": {
       "sport": {
-        "worked": { "grade": "8a+", "notes": "Worked / redpoint level" },
-        "onsight": { "grade": "7b", "notes": "Onsight level (first try)" }
+        "worked": {
+          "grade": "8a+",
+          "notes": "Worked / redpoint level"
+        },
+        "onsight": {
+          "grade": "7b",
+          "notes": "Onsight level (first try)"
+        }
       },
       "boulder": {
-        "worked": { "grade": "7C", "notes": "Worked / projects level" },
-        "onsight": { "grade": "7A+", "notes": "Flash/onsight style equivalent" }
+        "worked": {
+          "grade": "7C",
+          "notes": "Worked / projects level"
+        },
+        "onsight": {
+          "grade": "7A+",
+          "notes": "Flash/onsight style equivalent"
+        }
       },
       "gym_reference": {
         "kilter": {
           "benchmark": {
             "grade": "7B",
             "angle_deg": 40,
-            "style": { "tries": "few", "flash_possible": true },
+            "style": {
+              "tries": "few",
+              "flash_possible": true
+            },
             "notes": "Benchmark: 7B @40°, in few tries (flash possible)."
           }
         }
       },
       "updated_at": "2026-01-19"
     },
-
     "personal_bests": [
       {
         "discipline": "sport",
@@ -76,9 +120,10 @@
       }
     ]
   },
-
   "limitations": {
-    "active_flags": ["elbow_left_tendon"],
+    "active_flags": [
+      "elbow_left_tendon"
+    ],
     "details": [
       {
         "id": "elbow_left_tendon",
@@ -90,43 +135,76 @@
       }
     ]
   },
-
   "equipment": {
-    "home": ["hangboard", "pullup_bar", "dumbbell", "band"],
+    "home": [
+      "hangboard",
+      "pullup_bar",
+      "dumbbell",
+      "band"
+    ],
     "gyms": [
       {
         "gym_id": "blocx",
         "name": "Blocx",
-        "equipment": ["spraywall", "board_kilter", "hangboard", "dumbbell", "barbell", "bench"]
+        "equipment": [
+          "spraywall",
+          "board_kilter",
+          "hangboard",
+          "dumbbell",
+          "barbell",
+          "bench"
+        ]
       }
     ]
   },
-
   "tests": {
     "max_strength": [
       {
         "test_id": "max_hang_5s_total_load",
         "exercise_id": "max_hang_5s",
         "date": "2026-01-13",
-        "setup": { "edge_mm": 20, "grip": "half_crimp", "hang_seconds": 5, "load_method": "added_weight" },
+        "setup": {
+          "edge_mm": 20,
+          "grip": "half_crimp",
+          "hang_seconds": 5,
+          "load_method": "added_weight"
+        },
         "bodyweight_kg": 77.0,
         "external_load_kg": 25.0,
         "total_load_kg": 102.0,
-        "quality": { "setup_validated": true, "effort_rpe": 9.5, "form_ok": true, "notes": "Clean reps." },
+        "quality": {
+          "setup_validated": true,
+          "effort_rpe": 9.5,
+          "form_ok": true,
+          "notes": "Clean reps."
+        },
         "confidence": "high",
-        "freshness_policy": { "stale_after_days": 90 }
+        "freshness_policy": {
+          "stale_after_days": 90
+        }
       },
       {
         "test_id": "weighted_pullup_1rm_external",
         "exercise_id": "weighted_pullup",
         "date": "2026-01-13",
-        "setup": { "rep_scheme": "1RM", "grip": "pronated", "rom": "full" },
+        "setup": {
+          "rep_scheme": "1RM",
+          "grip": "pronated",
+          "rom": "full"
+        },
         "bodyweight_kg": 77.0,
         "external_load_kg": 45.0,
         "total_load_kg": 122.0,
-        "quality": { "setup_validated": true, "effort_rpe": 9.5, "form_ok": true, "notes": "No kip." },
+        "quality": {
+          "setup_validated": true,
+          "effort_rpe": 9.5,
+          "form_ok": true,
+          "notes": "No kip."
+        },
         "confidence": "medium",
-        "freshness_policy": { "stale_after_days": 120 }
+        "freshness_policy": {
+          "stale_after_days": 120
+        }
       }
     ],
     "endurance": [
@@ -137,7 +215,10 @@
         "setup": {
           "edge_mm": 20,
           "grip": "half_crimp",
-          "duty_cycle": { "hang_s": 7, "rest_s": 3 },
+          "duty_cycle": {
+            "hang_s": 7,
+            "rest_s": 3
+          },
           "intensity_pct_of_max_total_load": 0.6,
           "failure_definition": "cannot_complete_7s_or_grip_change"
         },
@@ -148,10 +229,20 @@
           "assistance_method": "pulley",
           "assistance_notes": "Negative external load means assistance; implement via pulley/band."
         },
-        "result": { "metric": "reps_completed", "value": 24 },
-        "quality": { "setup_validated": true, "effort_rpe": 9.0, "form_ok": true, "notes": "Stopped on failure definition." },
+        "result": {
+          "metric": "reps_completed",
+          "value": 24
+        },
+        "quality": {
+          "setup_validated": true,
+          "effort_rpe": 9.0,
+          "form_ok": true,
+          "notes": "Stopped on failure definition."
+        },
         "confidence": "medium",
-        "freshness_policy": { "stale_after_days": 60 }
+        "freshness_policy": {
+          "stale_after_days": 60
+        }
       }
     ],
     "isometrics": [
@@ -159,24 +250,73 @@
         "test_id": "lockoff_90deg_time",
         "exercise_id": "lockoff_90deg",
         "date": "2026-01-19",
-        "setup": { "arm": "right", "angle_deg": 90, "external_load_kg": 0.0 },
-        "result": { "metric": "seconds", "value": 80 },
-        "quality": { "setup_validated": true, "effort_rpe": 9.0, "form_ok": true, "notes": "Shoulder limited, not core." },
+        "setup": {
+          "arm": "right",
+          "angle_deg": 90,
+          "external_load_kg": 0.0
+        },
+        "result": {
+          "metric": "seconds",
+          "value": 80
+        },
+        "quality": {
+          "setup_validated": true,
+          "effort_rpe": 9.0,
+          "form_ok": true,
+          "notes": "Shoulder limited, not core."
+        },
         "confidence": "medium",
-        "freshness_policy": { "stale_after_days": 90 }
+        "freshness_policy": {
+          "stale_after_days": 90
+        }
       }
     ]
   },
-
   "working_loads": {
     "rules": {
-      "feedback_scale": ["very_easy", "easy", "ok", "hard", "very_hard"],
+      "feedback_scale": [
+        "very_easy",
+        "easy",
+        "ok",
+        "hard",
+        "very_hard"
+      ],
       "adjustment_policy": {
-        "very_easy": { "action": "big_increase", "pct_range": [0.1, 0.2] },
-        "easy": { "action": "increase", "pct_range": [0.05, 0.1] },
-        "ok": { "action": "micro_increase_or_hold", "pct_range": [0.0, 0.05] },
-        "hard": { "action": "hold_or_decrease", "pct_range": [-0.05, 0.0] },
-        "very_hard": { "action": "decrease", "pct_range": [-0.15, -0.05] }
+        "very_easy": {
+          "action": "big_increase",
+          "pct_range": [
+            0.1,
+            0.2
+          ]
+        },
+        "easy": {
+          "action": "increase",
+          "pct_range": [
+            0.05,
+            0.1
+          ]
+        },
+        "ok": {
+          "action": "micro_increase_or_hold",
+          "pct_range": [
+            0.0,
+            0.05
+          ]
+        },
+        "hard": {
+          "action": "hold_or_decrease",
+          "pct_range": [
+            -0.05,
+            0.0
+          ]
+        },
+        "very_hard": {
+          "action": "decrease",
+          "pct_range": [
+            -0.15,
+            -0.05
+          ]
+        }
       },
       "override_policy": {
         "allow_manual_next_load": true,
@@ -185,13 +325,30 @@
     },
     "entries": []
   },
-
   "history_index": {
     "session_log_format": "jsonl",
-    "session_log_paths": ["data/logs/sessions_2026.jsonl"],
+    "session_log_paths": [
+      "data/logs/sessions_2026.jsonl"
+    ],
     "notes": "Long history lives in JSONL logs. Keep only a short rolling window in user_state."
   },
-
   "recent_sessions_window_days": 14,
-  "recent_sessions": []
+  "recent_sessions": [],
+  "bodyweight_kg": 77.0,
+  "baselines": {
+    "hangboard": [
+      {
+        "baseline_id": "hb_20mm_half_crimp_5s",
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "hang_seconds": 5,
+        "load_method": "added_weight",
+        "max_total_load_kg": 102.0,
+        "last_tested_date": "2026-01-10",
+        "protocol_version": "max_hang_5s.v1",
+        "confidence": 0.6,
+        "notes": "Bootstrap conservative. Replace with real 20mm/5s test ASAP."
+      }
+    ]
+  }
 }

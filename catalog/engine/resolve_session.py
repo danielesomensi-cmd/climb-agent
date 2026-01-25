@@ -40,6 +40,71 @@ def norm_str(x: Any) -> str:
     return str(x).strip().lower()
 
 
+# ---------------------------
+# P0.5: Load parameterization (deterministic, explainable)
+# ---------------------------
+def _round_to_step(x: float, step: float = 0.5) -> float:
+    return round(x / step) * step
+
+def _pick_hangboard_baseline(user_state: Dict[str, Any], edge_mm: int, grip: str, hang_seconds: int) -> Optional[Dict[str, Any]]:
+    baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
+    for b in baselines:
+        if int(b.get("edge_mm", -1)) == int(edge_mm) and str(b.get("grip","")).strip().lower() == str(grip).strip().lower() and int(b.get("hang_seconds",-1)) == int(hang_seconds):
+            return b
+    return baselines[0] if baselines else None
+
+def suggest_max_hang_load(user_state: Optional[Dict[str, Any]], prescription: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    '''
+    Given user_state baselines (max_total_load_kg) and prescription intensity,
+    return suggested target_total_load_kg and added_weight_kg / assistance_kg.
+    '''
+    if not user_state:
+        return None
+    bw = user_state.get("bodyweight_kg")
+    if bw is None:
+        return None
+
+    intensity = prescription.get("intensity_pct_of_total_load")
+    if intensity is None:
+        return None
+
+    # Defaults (deterministic)
+    edge_mm = 20
+    grip = "half_crimp"
+    hang_seconds = int(prescription.get("hang_seconds") or prescription.get("hang_seconds_range", [5])[0] or 5)
+
+    b = _pick_hangboard_baseline(user_state, edge_mm=edge_mm, grip=grip, hang_seconds=hang_seconds)
+    if not b:
+        return None
+
+    max_total = b.get("max_total_load_kg")
+    if max_total is None:
+        return None
+
+    target_total = float(intensity) * float(max_total)
+    added = target_total - float(bw)
+
+    out = {
+        "baseline_id": b.get("baseline_id"),
+        "protocol_version": b.get("protocol_version", "max_hang_5s.v1"),
+        "based_on": {"max_total_load_kg": float(max_total), "bodyweight_kg": float(bw)},
+        "setup": {"edge_mm": int(b.get("edge_mm", edge_mm)), "grip": b.get("grip", grip), "load_method": b.get("load_method", "added_weight")},
+        "intensity_pct_of_total_load": float(intensity),
+        "target_total_load_kg": _round_to_step(target_total, 0.5),
+        "added_weight_kg": 0.0,
+        "assistance_kg": 0.0,
+        "rationale": "target_total_load = intensity_pct * max_total_load; added = target_total - bodyweight; rounded to 0.5kg"
+    }
+
+    if added >= 0:
+        out["added_weight_kg"] = _round_to_step(added, 0.5)
+        out["assistance_kg"] = 0.0
+    else:
+        out["added_weight_kg"] = 0.0
+        out["assistance_kg"] = _round_to_step(-added, 0.5)
+
+    return out
+
 def as_list(x: Any) -> List[Any]:
     if x is None:
         return []
@@ -508,6 +573,7 @@ def resolve_session(
 
             # If block is instruction-only, do NOT select exercises
             if mode == "instruction_only":
+                instructions = {k: b[k] for k in ("duration_min_range", "options", "focus", "notes", "prescription") if k in b}
                 blocks_out.append({
                     "block_uid": block_uid,
                     "block_id": block_id,
@@ -515,6 +581,7 @@ def resolve_session(
                     "template_id": template_id,
                     "status": "selected",
                     "message": "Instruction-only block (no exercise selection).",
+                    "instructions": instructions,
                     "p0_trace": trace,
                     "filter_trace": {"p_stage": "P0", **trace, "note": "instruction_only: no selection performed"},
                     "selected_exercises": []
@@ -588,6 +655,10 @@ def resolve_session(
                         "block_id": block_id
                     }
                 }
+                if ex_id == "max_hang_5s":
+                    sug = suggest_max_hang_load(user_state, merged)
+                    if sug:
+                        inst["suggested"] = sug
                 exercise_instances.append(inst)
                 recent_ex_ids.append(norm_str(ex_id))  # update “recent” inside this resolution too
 
