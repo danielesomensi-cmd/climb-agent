@@ -1,88 +1,17 @@
 {
-  "schema_version": "1.0",
-  "description": "Exercise outcome schema for session logs (JSONL). Designed for working-load updates, constraints, and UX simplicity.",
-
-  "enums": {
-    "difficulty": ["very_easy", "easy", "ok", "hard", "very_hard"],
-    "status": ["skipped", "partial", "completed"],
-    "skin": ["good", "ok", "bad"],
-    "equipment_assistance": ["none", "pulley", "band", "counterweight"]
-  },
-
-  "required_fields": [
-    "instance_id",
-    "exercise_id",
-    "status",
-    "performed",
-    "completed_as_prescribed",
-    "feedback"
-  ],
-
-  "field_notes": {
-    "instance_id": "Must match resolved_session.exercise_instances[].instance_id",
-    "exercise_id": "Catalog exercise id (ex: max_hang_5s).",
-    "performed": "True if user attempted the exercise at least once.",
-    "completed_as_prescribed": "True if sets/reps/time were completed as prescribed without meaningful changes.",
-    "status": "completed/partial/skipped.",
-    "actual": "Optional. Present when performed. Used for analytics and updating max/working loads.",
-    "feedback": "Always present (even if skipped) to capture reason and constraints signals.",
-    "next_time_override": "Optional. Used when auto-adjustments are insufficient."
-  },
-
-  "example": {
-    "instance_id": "finger_main_01",
-    "exercise_id": "max_hang_5s",
-
-    "status": "completed",
-    "performed": true,
-    "completed_as_prescribed": true,
-
-    "variant": { "edge_mm": 20, "grip": "half_crimp" },
-
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["exercise_id", "planned"],
+  "properties": {
+    "exercise_id": { "type": "string", "minLength": 1 },
+    "planned": { "type": "object", "additionalProperties": true },
     "actual": {
-      "sets_completed": 6,
-      "reps_completed": null,
-      "hang_seconds": 5,
-      "rest_seconds": 180,
-
-      "bodyweight_kg": 77.0,
-      "external_load_kg": 18.0,
-      "total_load_kg": 95.0,
-
-      "assistance": {
-        "method": "none",
-        "value_kg": 0.0
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "status": { "type": "string", "enum": ["planned", "done", "skipped", "modified"] }
       }
-    },
-
-    "feedback": {
-      "difficulty": "ok",
-      "rpe": 8.5,
-
-      "pain": {
-        "elbow_left": 1,
-        "elbow_right": 0,
-        "fingers": 2,
-        "shoulder_left": 0,
-        "shoulder_right": 0,
-        "lower_back": 0
-      },
-
-      "skin": "ok",
-      "form_breakdown": false,
-      "notes": "Last set close to limit but clean."
-    },
-
-    "next_time_override": {
-      "manual_next_external_load_kg": null,
-      "manual_next_total_load_kg": null,
-      "manual_next_rest_seconds": null,
-      "notes": null
-    },
-
-    "data_quality": {
-      "user_edited": true,
-      "missing_fields": []
     }
   }
 }

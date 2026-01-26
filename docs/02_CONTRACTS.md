@@ -64,6 +64,7 @@ User-specific baselines MUST live in `data/user_state.json` (not in templates).
 - Must include: `user.id` and at least one item in `exercise_outcomes[]`
 
 ### Validation and quarantine (zero data loss)
+- Requires Python dependency: `jsonschema` (Colab: `pip install jsonschema`).
 - On append, validate against JSON Schema:
   - Valid → append to `data/logs/session_logs.jsonl`
   - Invalid → append to `data/logs/session_logs_rejected.jsonl` with `errors[]` + original entry
@@ -76,7 +77,7 @@ User-specific baselines MUST live in `data/user_state.json` (not in templates).
   - `actual.enjoyment`: `dislike|neutral|like` (nullable)
 - Load fields:
   - `actual.used_added_weight_kg` / `actual.used_assistance_kg`
-  - `actual.used_total_load_kg` auto-filled on append when `planned.suggested.based_on.bodyweight_kg` is available
+- `actual.used_total_load_kg` auto-filled on append when bodyweight is available (priority: `entry.user.bodyweight_kg`, then `data/user_state.json`). Formula: BW + `used_added_weight_kg` - `used_assistance_kg`.
 
 ### Determinism
 - Logging must be deterministic and append-only.

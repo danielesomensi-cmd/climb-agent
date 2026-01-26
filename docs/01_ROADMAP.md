@@ -36,7 +36,7 @@
 - **S3 — schema validation + quarantine (zero data loss)** on append:
   - Valid entries → `data/logs/session_logs.jsonl`
   - Invalid entries → `data/logs/session_logs_rejected.jsonl` with `errors[]` + original entry
-- **Derived field autofill** on append: `actual.used_total_load_kg` computed when possible (from `bodyweight_kg` + `used_added_weight_kg` / `used_assistance_kg`).
+  - **Derived field autofill** on append: `actual.used_total_load_kg` computed when possible (BW source: `entry.user.bodyweight_kg` preferred, else `data/user_state.json`; formula: BW + `used_added_weight_kg` - `used_assistance_kg`).
 
 ### Next (1–3 sessions)
 - **UI-0 (Colab Gradio)**: load latest log template, fill actual fields, validate, append, show last entry + mini stats.

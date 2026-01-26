@@ -1,124 +1,27 @@
 {
-  "log_version": "1.0",
-
-  "id_format": "YYYYMMDD_<slot>_<session_id>_<index>",
-  "example_id": "20260119_evening_strength_long_01",
-
-  "required_fields": [
-    "id",
-    "date",
-    "slot",
-    "location",
-    "session_plan",
-    "resolved_session",
-    "exercise_outcomes",
-    "outcome",
-    "load_summary"
-  ],
-
-  "example_entry": {
-    "id": "20260119_evening_strength_long_01",
-    "date": "2026-01-19",
-    "timezone": "Europe/Brussels",
-
-    "slot": "evening",
-    "location": "gym",
-    "gym_id": "blocx",
-
-    "session_plan": {
-      "session_id": "strength_long",
-      "session_version": "v1",
-      "intent": ["finger_strength"],
-      "planned_duration_min": 75,
-      "notes": "Avoid consecutive finger stress. Elbow prehab mandatory."
-    },
-
-    "resolved_session": {
-      "resolver_version": "0.1",
-      "modules": [
-        { "template_id": "general_warmup", "version": "v1" },
-        { "template_id": "finger_max_strength", "version": "v1" },
-        { "template_id": "core_short", "version": "v1" }
-      ],
-      "exercise_instances": [
-        {
-          "instance_id": "finger_main_01",
-          "exercise_id": "max_hang_5s",
-          "variant": { "edge_mm": 20, "grip": "half_crimp" },
-          "prescription": {
-            "sets": 6,
-            "hang_seconds": 5,
-            "rest_seconds": 180,
-            "target_total_load_kg": 95.0,
-            "load_method": "added_weight"
-          }
-        }
-      ]
-    },
-
-    "exercise_outcomes": [
-      {
-        "instance_id": "finger_main_01",
-        "performed": true,
-        "completed_as_prescribed": true,
-
-        "actual": {
-          "sets_completed": 6,
-          "hang_seconds": 5,
-          "rest_seconds": 180,
-          "bodyweight_kg": 77.0,
-          "external_load_kg": 18.0,
-          "total_load_kg": 95.0
-        },
-
-        "feedback": {
-          "difficulty": "ok",
-          "rpe": 8.5,
-          "pain": {
-            "elbow_left": 1,
-            "fingers": 2,
-            "shoulder": 0
-          },
-          "skin": "ok",
-          "notes": "Last set close to limit but clean."
-        },
-
-        "next_time_override": {
-          "manual_next_external_load_kg": null,
-          "notes": null
-        }
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "user", "exercise_outcomes"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "session_log_entry.v1" },
+    "logged_at": { "type": "string" },
+    "user": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": ["string", "null"] },
+        "bodyweight_kg": { "type": ["number", "null"] }
       }
-    ],
-
-    "outcome": {
-      "status": "completed",
-      "duration_min": 70,
-      "session_rpe": 8.0,
-      "energy": "ok",
-      "sleep_quality": "ok",
-      "notes": "Good quality session. Elbow fine."
     },
-
-    "load_summary": {
-      "stress_tags": {
-        "fingers": "high",
-        "cns": "medium",
-        "elbow": "medium",
-        "skin": "medium"
-      },
-      "load_score": {
-        "fingers": 9,
-        "cns": 6,
-        "elbow": 5,
-        "skin": 4
-      },
-      "computed_by": "engine_v0.1"
-    },
-
-    "future_extensions": {
-      "nutrition_snapshot": "reserved",
-      "hrv": "reserved",
-      "wearables": "reserved"
+    "session": { "type": "object", "additionalProperties": true },
+    "context": { "type": "object", "additionalProperties": true },
+    "exercise_outcomes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "exercise_outcome.v1.json" }
     }
   }
 }

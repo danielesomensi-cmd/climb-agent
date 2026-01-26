@@ -3,6 +3,14 @@ import time
 from copy import deepcopy
 from pathlib import Path
 
+# --- bootstrap repo root on sys.path ---
+import sys
+from pathlib import Path
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+# --- end bootstrap ---
+
 from catalog.engine.resolve_session import resolve_session
 
 REPO_ROOT = "/content/climb-agent"
