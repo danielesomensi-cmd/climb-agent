@@ -1,3 +1,17 @@
+## UI-0 prerequisite: log template generation (Colab verified)
+UI-0 loads the latest template from `out/log_templates/`.
+
+Pipeline:
+1) `python scripts/run_baseline_session.py`
+2) `python scripts/generate_latest_log_template.py`
+3) Python cell: `!python -u scripts/ui_day_view_gradio.py --server_port 7862`
+4) Python cell: `output.serve_kernel_port_as_iframe(7862, width=1200, height=800)`
+
+## S3 quarantine (zero data loss)
+- Valid -> append to `data/logs/sessions_2026.jsonl`
+- Invalid -> append to `data/logs/session_logs_rejected.jsonl` with `errors[]` + original entry
+- On invalid, append exits non-zero (gate visibility)
+
 # Contracts
 
 ## P0 Resolver contract (non negoziabile)

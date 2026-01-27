@@ -1,54 +1,47 @@
-# Roadmap — climb-agent
+# ROADMAP — climb-agent
 
-## Now (P0 baseline)
-- P0 resolver deterministico + spiegabile
-- baseline session under test (una sessione reale nel repo)
-- 2 contesti: home+hangboard, gym+blocx
+## Stato attuale (sintesi)
+- Resolver P0 deterministico e spiegabile (hard filters + tie-break stabile).
+- Logging Option B: template -> compile actual -> append (S3 quarantine).
+- UI-0 (Gradio) gira in Colab ma va documentata correttamente (run in Python cell, non in %%bash).
 
-## Next
-- Structured I/O: session_request.v1 / session_instance.v1
+---
 
-## Next+ (P1 ranking)
-- deterministico su shortlist P0 (recency/intensity/fatigue cost), design-first
+## Next steps (locked order)
+### A) Stabilizzazione “Dev UX” (bloccante)
+1) **Allineare docs ↔ repo** (source of truth = file nel repo)
+2) **UI-0 Colab-safe** (no black-box, no share tunnel, path guardrail)
+3) **Integrity/Gates** sempre in ordine
 
-## Later
-- planner + multi-session/day + load settimanale + nutrizione + UI app
+### B) UI-0 (end-to-end) (bloccante per usare il sistema)
+- Pipeline: baseline resolve → template → UI → S3 append → mini stats
+- Output attesi:
+  - un template in `out/log_templates/`
+  - UI che carica template e consente edit actual
+  - append valida e scrive su `data/logs/sessions_2026.jsonl`
+  - invalid quarantena su `data/logs/session_logs_rejected.jsonl`
 
-## Next (closed loop MVP)
-- Execute → Log:
-  capture outcomes per exercise_instance (weight/assist, reps/time, RPE, pain flags, notes)
-  append to data/logs/*.jsonl (session_log_entry schema)
-- Update:
-  update user_state (recency, last_performed, simple fatigue/pain signals)
-  keep P0 unchanged (no ranking yet)
+### C) Planner long-term (non bloccante oggi)
+- `planner_profile.json`: disponibilità, obiettivi, preferenze (stabile, “user intent”)
+- Macro-cycle (28d/12w) con periodizzazione stile Hörst (forza → power → endurance → peak/deload)
+- `planner_state.json`: derivato dai log (recency/fatigue flags) **senza** auto-update baseline
 
-### Closed loop: Execute → Log → Update (user-specific)
-- Store user identity in `data/user_state.json` under `user.{id,name}`.
-- Log executed sessions to `data/logs/session_logs.jsonl` (one JSON per session), including:
-  planned (suggested) vs actual (used weight/assist, sets done, RPE, notes).
-- Maintain baseline history in `data/logs/baseline_history.jsonl` when max_total_load_kg is updated.
+### D) P1 ranking (non bloccante)
+- ranking deterministico su shortlist (recency/intensity/fatigue/preference/phase)
+- si può implementare dopo: oggi non impedisce l’uso del sistema
 
-<!-- BEGIN: FUTURE_FACING_ROADMAP -->
-## Closed-loop logging (Option B) — status and validation
+---
 
-### Done (today)
-- **S2 — `actual.status`** added to log templates: `planned|done|skipped|modified` (default `planned`).
-- **S3 — schema validation + quarantine (zero data loss)** on append:
-  - Valid entries → `data/logs/session_logs.jsonl`
-  - Invalid entries → `data/logs/session_logs_rejected.jsonl` with `errors[]` + original entry
-  - **Derived field autofill** on append: `actual.used_total_load_kg` computed when possible (BW source: `entry.user.bodyweight_kg` preferred, else `data/user_state.json`; formula: BW + `used_added_weight_kg` - `used_assistance_kg`).
+## Issues aperti (da chiudere)
+### 1) Colab UI non va lanciata in `%%bash`
+- In Colab l’output di processi long-running (server) in `%%bash` spesso non streamma → “sembra bloccato”.
+- Standard: lanciare la UI con una cella Python: `!python -u ...` e aprire con `serve_kernel_port_as_iframe`.
 
-### Next (1–3 sessions)
-- **UI-0 (Colab Gradio)**: load latest log template, fill actual fields, validate, append, show last entry + mini stats.
-- **Minimal analytics script** (read last N logs): adherence (% done), preference counts (`enjoyment`), difficulty distribution (`difficulty_label`).
-- **Planner state snapshot** (`data/planner_state.json`): recency counters + fatigue flags derived from logs (no baseline auto-update yet).
+### 2) Path / working directory
+- Standard: sempre `cd /content/climb-agent` prima di ogni comando.
+- Guardrail consigliato nello script UI per evitare path tipo `/content/scripts/...`.
 
-### Medium term (2–6 weeks): toward a dynamic planner
-- **P1 deterministic ranking** over P0 shortlist: recency penalty, fatigue penalty, preference penalty, phase alignment.
-- **Constraints**: no consecutive max finger strength days; protect performance days; minimum rest windows.
-- **Baseline update pipeline**: start with “candidate updates” (manual approval), then consider optional automation.
+### 3) Naming e file presence
+- Uniformare i nomi degli script (es. `generate_latest_log_template.py` vs altri).
+- Aggiungere `scripts/check_repo_integrity.py` per fallire subito se manca un file richiesto.
 
-### Long term (3–4 months): periodization + expansion
-- Introduce macrocycle phases (base / strength / power-endurance / peak / deload) with phase-weighted ranking.
-- Expand exercises/templates only for coverage (added-weight, assistance, reps+load, time-based, instruction-only).
-<!-- END: FUTURE_FACING_ROADMAP -->
