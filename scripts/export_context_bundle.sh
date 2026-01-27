@@ -28,6 +28,9 @@ add_if_exists "docs/*.md"
 add_if_exists "scripts/*.py"
 add_if_exists "scripts/*.sh"
 
+# Config
+add_if_exists "config/*.json"
+
 # Engine + catalogs
 add_if_exists "catalog/engine/*.py"
 add_if_exists "catalog/exercises/v1/*.json"

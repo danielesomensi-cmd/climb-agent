@@ -73,14 +73,14 @@ User-specific baselines MUST live in `data/user_state.json` (not in templates).
 ## Session logging contracts (v1)
 
 ### Canonical log
-- Append-only file: `data/logs/session_logs.jsonl`
+- Append-only file: `data/logs/sessions_2026.jsonl`
 - Each line is one JSON object conforming to `data/schemas/session_log_entry.v1.json`
 - Must include: `user.id` and at least one item in `exercise_outcomes[]`
 
 ### Validation and quarantine (zero data loss)
 - Requires Python dependency: `jsonschema` (Colab: `pip install jsonschema`).
 - On append, validate against JSON Schema:
-  - Valid → append to `data/logs/session_logs.jsonl`
+  - Valid → append to `data/logs/sessions_2026.jsonl`
   - Invalid → append to `data/logs/session_logs_rejected.jsonl` with `errors[]` + original entry
 - The append command exits non-zero on invalid entries (so failures are visible in gates / CI).
 

@@ -163,7 +163,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo_root", default=".")
     ap.add_argument("--log_template_path", required=True)
-    ap.add_argument("--log_path", default="data/logs/session_logs.jsonl")
+    ap.add_argument("--log_path", default="data/logs/sessions_2026.jsonl")
     ap.add_argument("--rejected_log_path", default="data/logs/session_logs_rejected.jsonl")
     ap.add_argument("--schema_path", default="data/schemas/session_log_entry.v1.json")
     ap.add_argument("--user_state_path", default="data/user_state.json")

@@ -280,11 +280,11 @@ def main():
 
     print('UI: launching gradio server...', flush=True)
     demo.launch(
-        server_name='0.0.0.0',
+        server_name='127.0.0.1',
         server_port=args.server_port,
         share=False,
         show_error=True,
-        prevent_thread_lock=True,
+        prevent_thread_lock=False,
     )
 if __name__ == "__main__":
     main()

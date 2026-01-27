@@ -12,7 +12,7 @@ def latest_resolved(glob_pat: str) -> Path | None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--resolved_glob", default="out/manual_sanity/*.json")
+    ap.add_argument("--resolved_glob", default="out/manual_sanity/*_[0-9]*.json")
     ap.add_argument("--out_dir", default="out/log_templates")
     ap.add_argument("--user_state_path", default="data/user_state.json")
     args = ap.parse_args()

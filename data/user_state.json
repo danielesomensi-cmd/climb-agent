@@ -330,7 +330,7 @@
   "history_index": {
     "session_log_format": "jsonl",
     "session_log_paths": [
-      "data/logs/session_logs.jsonl"
+      "data/logs/sessions_2026.jsonl"
     ],
     "notes": "Long history lives in JSONL logs. Keep only a short rolling window in user_state."
   },
