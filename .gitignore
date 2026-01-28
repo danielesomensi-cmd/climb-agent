@@ -12,3 +12,13 @@ output/
 *.bak*
 tmp/
 out/manual_sanity/
+
+# --- generated / local artifacts ---
+out/
+data/logs/*.jsonl
+data/logs/_bak/
+out/ui_gradio.log
+out/tmp_sessions/
+.pytest_cache/
+__pycache__/
+*.pyc
