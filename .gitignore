@@ -22,3 +22,10 @@ out/tmp_sessions/
 .pytest_cache/
 __pycache__/
 *.pyc
+
+# --- generated artifacts (must not be tracked) ---
+out/context_bundles/
+out/log_templates/
+out/manual_sanity/
+out/ui_gradio.log
+data/logs/*.jsonl
