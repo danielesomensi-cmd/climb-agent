@@ -1,0 +1,11 @@
+{
+  "schema_version": "session_log_entry.v1",
+  "user": { "id": "dani" },
+  "exercise_outcomes": [
+    {
+      "exercise_id": "demo_exercise",
+      "planned": { "sets": 1 },
+      "actual": { "status": 123 }
+    }
+  ]
+}

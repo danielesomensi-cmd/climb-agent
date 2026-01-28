@@ -1,0 +1,12 @@
+{
+  "schema_version": "session_log_entry.v1",
+  "logged_at": "2026-01-28T12:00:00",
+  "user": { "id": "dani", "name": "Daniele" },
+  "exercise_outcomes": [
+    {
+      "exercise_id": "demo_exercise",
+      "planned": { "sets": 1, "notes": "fixture" },
+      "actual": { "status": "done" }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "schema_version": "session_log_entry.v1",
+  "user": { "id": "dani" },
+  "exercise_outcomes": { "not": "an array" }
+}
