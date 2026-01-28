@@ -1,0 +1,55 @@
+{
+  "id": "general_strength_accessories",
+  "version": "v1",
+  "name": "General Strength Accessories",
+  "category": "strength",
+  "sport": "climbing",
+  "required_environment": {
+    "any_of": [
+      "home",
+      "gym"
+    ]
+  },
+  "stress_tags": {
+    "fingers": "none",
+    "cns": "low",
+    "elbows": "low",
+    "skin": "none"
+  },
+  "blocks": [
+    {
+      "block_id": "accessory",
+      "type": "accessory",
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "prescription": {
+        "notes": [
+          "Antagonists/legs. Moderate effort."
+        ]
+      }
+    },
+    {
+      "block_id": "core",
+      "type": "accessory",
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "prescription": {
+        "notes": [
+          "Optional core."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    }
+  ]
+}

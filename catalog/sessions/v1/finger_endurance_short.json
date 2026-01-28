@@ -1,0 +1,24 @@
+{
+  "id": "finger_endurance_short",
+  "version": "1.0",
+  "context": {
+    "location": "home"
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "version": "v1",
+      "required": true
+    },
+    {
+      "template_id": "finger_strength_endurance",
+      "version": "v1",
+      "required": true
+    },
+    {
+      "template_id": "core_short",
+      "version": "v1",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "deload_recovery",
+  "version": "1.0",
+  "context": {
+    "location": "home"
+  },
+  "modules": [
+    {
+      "template_id": "deload_recovery",
+      "version": "v1",
+      "required": true
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "id": "gym_power_bouldering",
+  "version": "v1",
+  "name": "Gym Power (Limit Bouldering)",
+  "category": "power",
+  "sport": "climbing",
+  "required_environment": {
+    "any_of": [
+      "gym"
+    ]
+  },
+  "stress_tags": {
+    "fingers": "high",
+    "cns": "high",
+    "elbows": "medium",
+    "skin": "high"
+  },
+  "blocks": [
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power"
+      ],
+      "prescription": {
+        "notes": [
+          "Limit bouldering. Long rests. Quality > volume."
+        ]
+      }
+    },
+    {
+      "block_id": "core",
+      "type": "accessory",
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "prescription": {
+        "notes": [
+          "Optional core finisher."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    },
+    {
+      "block_id": "prehab",
+      "type": "prehab",
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_shoulder"
+      ],
+      "prescription": {
+        "notes": [
+          "Cuff/scap maintenance."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    }
+  ]
+}

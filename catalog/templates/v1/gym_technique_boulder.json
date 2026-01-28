@@ -1,0 +1,54 @@
+{
+  "id": "gym_technique_boulder",
+  "version": "v1",
+  "name": "Gym Technique (Boulder Drills)",
+  "category": "technique",
+  "sport": "climbing",
+  "required_environment": {
+    "any_of": [
+      "gym"
+    ]
+  },
+  "stress_tags": {
+    "fingers": "low",
+    "cns": "low",
+    "elbows": "low",
+    "skin": "low"
+  },
+  "blocks": [
+    {
+      "block_id": "technique",
+      "type": "technique",
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_boulder"
+      ],
+      "prescription": {
+        "notes": [
+          "Silent feet, hips, breathing. Keep easy."
+        ]
+      }
+    },
+    {
+      "block_id": "prehab",
+      "type": "prehab",
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_shoulder"
+      ],
+      "prescription": {
+        "notes": [
+          "Optional."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    }
+  ]
+}

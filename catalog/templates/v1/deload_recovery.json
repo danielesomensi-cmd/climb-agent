@@ -1,0 +1,97 @@
+{
+  "id": "deload_recovery",
+  "version": "v1",
+  "name": "Deload / Recovery",
+  "category": "recovery",
+  "sport": "climbing",
+  "required_environment": {
+    "any_of": [
+      "home",
+      "gym"
+    ]
+  },
+  "stress_tags": {
+    "fingers": "low",
+    "cns": "low",
+    "elbows": "low",
+    "skin": "none"
+  },
+  "blocks": [
+    {
+      "block_id": "mobility",
+      "type": "mobility",
+      "role": [
+        "warmup"
+      ],
+      "domain": [
+        "mobility"
+      ],
+      "prescription": {
+        "notes": [
+          "Move well; no fatigue."
+        ],
+        "duration_min_range": [
+          10,
+          25
+        ]
+      }
+    },
+    {
+      "block_id": "prehab_elbow",
+      "type": "prehab",
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_elbow"
+      ],
+      "prescription": {
+        "notes": [
+          "Light maintenance."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    },
+    {
+      "block_id": "prehab_shoulder",
+      "type": "prehab",
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_shoulder"
+      ],
+      "prescription": {
+        "notes": [
+          "Light maintenance."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    },
+    {
+      "block_id": "core",
+      "type": "accessory",
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "prescription": {
+        "notes": [
+          "Optional easy core."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    }
+  ]
+}

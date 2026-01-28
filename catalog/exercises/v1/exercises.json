@@ -651,6 +651,340 @@
         "cns": "medium",
         "skin": "low"
       }
+    },
+    {
+      "id": "repeater_hang_7_3",
+      "name": "Hangboard Repeaters 7/3 (Strength-Endurance)",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength_endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "finger_repeaters",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "protocol": "7s_on/3s_off",
+        "reps_per_set_range": [
+          6,
+          10
+        ],
+        "sets_range": [
+          3,
+          5
+        ],
+        "rest_seconds_range": [
+          90,
+          180
+        ],
+        "intensity_notes": [
+          "Aim ~60–75% max hang load; stop before form breaks."
+        ]
+      },
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "high",
+        "cns": "medium",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "density_hang_10_10",
+      "name": "Hangboard Density 10/10 (Aerobic Base)",
+      "category": "main_strength",
+      "time_min": 25,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_aerobic_endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "finger_density_hangs",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "protocol": "10s_on/10s_off",
+        "total_minutes_range": [
+          10,
+          20
+        ],
+        "intensity_notes": [
+          "Low pump target; stay conversational; no pain."
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "medium",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "id": "gym_limit_bouldering",
+      "name": "Limit Bouldering (Power)",
+      "category": "main_strength",
+      "time_min": 45,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power",
+        "technique_boulder"
+      ],
+      "pattern": "climbing_limit_boulder",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "gym_limit_bouldering",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          6,
+          12
+        ],
+        "rest_seconds_range": [
+          180,
+          360
+        ],
+        "notes": [
+          "Pick problems at/above limit. Long rests. Stop before sloppy attempts."
+        ]
+      },
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "high"
+      }
+    },
+    {
+      "id": "gym_power_endurance_4x4",
+      "name": "4x4 Bouldering (Power-Endurance)",
+      "category": "main_strength",
+      "time_min": 40,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance",
+        "anaerobic_capacity"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "gym_4x4",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "rounds_range": [
+          2,
+          4
+        ],
+        "work_minutes_range": [
+          3,
+          6
+        ],
+        "rest_minutes_range": [
+          2,
+          4
+        ],
+        "notes": [
+          "Sustainable hard. Keep form. No ‘death sprint’ on round 1."
+        ]
+      },
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "high",
+        "cns": "medium",
+        "skin": "high"
+      }
+    },
+    {
+      "id": "gym_arc_easy_volume",
+      "name": "ARC / Easy Volume (Aerobic Endurance)",
+      "category": "main_strength",
+      "time_min": 45,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "gym_arc",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "total_minutes_range": [
+          25,
+          45
+        ],
+        "notes": [
+          "Very low pump. Continuous movement. If pump rises, downgrade."
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "medium",
+        "cns": "low",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "gym_technique_boulder_drills",
+      "name": "Technique Boulder Drills (Footwork / Efficiency)",
+      "category": "strength_accessory",
+      "time_min": 30,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_boulder",
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "gym_technique_drills",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "notes": [
+          "Silent feet, no readjust, hip-in, breathing. Keep it easy."
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "id": "pushups",
+      "name": "Push-ups (Antagonist Push)",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "pushups",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          8,
+          20
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "split_squat",
+      "name": "Split Squat (Single-leg)",
+      "category": "strength_accessory",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "split_squat",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          6,
+          12
+        ]
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      }
     }
   ]
 }

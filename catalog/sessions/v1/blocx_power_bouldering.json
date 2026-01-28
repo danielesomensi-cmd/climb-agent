@@ -1,0 +1,25 @@
+{
+  "id": "blocx_power_bouldering",
+  "version": "1.0",
+  "context": {
+    "location": "gym",
+    "gym_id": "blocx"
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "version": "v1",
+      "required": true
+    },
+    {
+      "template_id": "gym_power_bouldering",
+      "version": "v1",
+      "required": true
+    },
+    {
+      "template_id": "core_short",
+      "version": "v1",
+      "required": false
+    }
+  ]
+}

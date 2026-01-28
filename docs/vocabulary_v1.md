@@ -164,6 +164,11 @@ Allowed `pattern` values:
 - `mobility_hips`
 - `technique_drill`
 
+- `climbing_limit_boulder`
+- `climbing_intervals`
+- `climbing_continuous`
+- `climbing_routes`
+
 
 ---
 

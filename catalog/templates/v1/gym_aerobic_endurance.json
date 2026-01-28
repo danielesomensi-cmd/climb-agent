@@ -1,0 +1,54 @@
+{
+  "id": "gym_aerobic_endurance",
+  "version": "v1",
+  "name": "Gym Aerobic Endurance (ARC / Volume)",
+  "category": "endurance",
+  "sport": "climbing",
+  "required_environment": {
+    "any_of": [
+      "gym"
+    ]
+  },
+  "stress_tags": {
+    "fingers": "medium",
+    "cns": "low",
+    "elbows": "low",
+    "skin": "medium"
+  },
+  "blocks": [
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "prescription": {
+        "notes": [
+          "Easy continuous volume. Low pump."
+        ]
+      }
+    },
+    {
+      "block_id": "mobility",
+      "type": "cooldown",
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "mobility"
+      ],
+      "prescription": {
+        "notes": [
+          "Optional."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    }
+  ]
+}

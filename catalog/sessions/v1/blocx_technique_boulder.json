@@ -1,0 +1,20 @@
+{
+  "id": "blocx_technique_boulder",
+  "version": "1.0",
+  "context": {
+    "location": "gym",
+    "gym_id": "blocx"
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "version": "v1",
+      "required": true
+    },
+    {
+      "template_id": "gym_technique_boulder",
+      "version": "v1",
+      "required": true
+    }
+  ]
+}

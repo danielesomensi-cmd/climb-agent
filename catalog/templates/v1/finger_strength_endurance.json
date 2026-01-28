@@ -1,0 +1,78 @@
+{
+  "id": "finger_strength_endurance",
+  "version": "v1",
+  "name": "Finger Strength-Endurance",
+  "category": "endurance",
+  "sport": "climbing",
+  "required_environment": {
+    "any_of": [
+      "home",
+      "gym"
+    ]
+  },
+  "stress_tags": {
+    "fingers": "high",
+    "cns": "medium",
+    "elbows": "medium",
+    "skin": "medium"
+  },
+  "blocks": [
+    {
+      "block_id": "warmup_specific",
+      "type": "warmup_specific",
+      "role": [
+        "warmup"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "prescription": {
+        "notes": [
+          "Progressive finger recruitment. Stay easy."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    },
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength_endurance"
+      ],
+      "prescription": {
+        "notes": [
+          "Repeaters focus. Stop before form breaks."
+        ],
+        "sets_range": [
+          3,
+          5
+        ]
+      }
+    },
+    {
+      "block_id": "prehab",
+      "type": "prehab",
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_elbow"
+      ],
+      "prescription": {
+        "notes": [
+          "Keep elbows happy."
+        ],
+        "duration_min_range": [
+          6,
+          12
+        ]
+      }
+    }
+  ]
+}
