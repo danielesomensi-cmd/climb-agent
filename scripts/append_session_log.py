@@ -49,29 +49,8 @@ def minimal_validate(entry: Dict[str, Any]) -> List[str]:
     return errs
 
 
-def schema_validate(entry: Dict[str, Any], schema_path: Path) -> List[str]:
-    try:
-        import jsonschema  # type: ignore
-    except Exception:
-        return ["jsonschema not installed (required for S3). Install: pip install jsonschema"]
-
-    schema = read_json(schema_path)
-    schema_path = schema_path.resolve()  # absolute for as_uri()
-    base_uri = schema_path.parent.as_uri() + "/"
-
-    # NOTE: RefResolver is deprecated (warning is fine for now)
-    resolver = jsonschema.RefResolver(base_uri=base_uri, referrer=schema)  # type: ignore
-    v = jsonschema.Draft7Validator(schema, resolver=resolver)
-
-    errs: List[str] = []
-    for err in sorted(v.iter_errors(entry), key=lambda e: list(e.path)):
-        loc = ".".join([str(x) for x in err.path]) if err.path else "<root>"
-        errs.append(f"{loc}: {err.message}")
-    return errs
-
-
-def normalize(entry: Dict[str, Any]) -> Dict[str, Any]:
-    entry.setdefault("schema_version", "session_log_entry.v1")
+def normalize_v1(entry: Dict[str, Any]) -> Dict[str, Any]:
+    # IMPORTANT: do NOT set schema_version here (no silent upgrade)
     entry.setdefault("logged_at", now_iso())
 
     outs = entry.get("exercise_outcomes")
@@ -82,7 +61,7 @@ def normalize(entry: Dict[str, Any]) -> Dict[str, Any]:
             actual = o.get("actual")
             if actual is None or not isinstance(actual, dict):
                 actual = {}
-            actual.setdefault("status", "planned")  # S2 default
+            actual.setdefault("status", "planned")  # default
             o["actual"] = actual
     return entry
 
@@ -154,9 +133,52 @@ def autofill_used_total_load_kg(entry: Dict[str, Any], bw: Optional[float]) -> N
         o["actual"] = actual
 
 
-def quarantine(entry: Dict[str, Any], errors: List[str], rejected_path: Path) -> None:
-    payload = {"rejected_at": now_iso(), "errors": errors, "entry": entry}
+def quarantine_invalid(entry: Dict[str, Any], errors: List[str], rejected_path: Path) -> None:
+    payload = {"rejected_at": now_iso(), "reason": "invalid", "errors": errors, "entry": entry}
     append_jsonl(rejected_path, payload)
+
+
+def quarantine_legacy(entry: Dict[str, Any], reason: str, legacy_path: Path) -> None:
+    payload = {"quarantined_at": now_iso(), "reason": reason, "entry": entry}
+    append_jsonl(legacy_path, payload)
+
+
+def schema_validate_v1(entry: Dict[str, Any], schema_path: Path) -> List[str]:
+    """
+    Use the local schema registry validator (preferred).
+    Falls back to jsonschema basic resolver if needed.
+    """
+    try:
+        # robust import (works when running as file)
+        try:
+            from scripts.validate_log_entry import validate_entry as _validate_entry
+        except ModuleNotFoundError:
+            repo_root = Path(__file__).resolve().parents[1]
+            if str(repo_root) not in sys.path:
+                sys.path.insert(0, str(repo_root))
+            from scripts.validate_log_entry import validate_entry as _validate_entry  # type: ignore
+
+        schemas_dir = str(schema_path.resolve().parent)
+        errs = _validate_entry(entry, schemas_dir=schemas_dir, schema_key=None)
+        return errs
+    except Exception as e:
+        # fallback: keep old behavior
+        try:
+            import jsonschema  # type: ignore
+        except Exception:
+            return [f"jsonschema not available and validate_log_entry failed: {e}"]
+
+        schema = read_json(schema_path)
+        schema_path = schema_path.resolve()
+        base_uri = schema_path.parent.as_uri() + "/"
+        resolver = jsonschema.RefResolver(base_uri=base_uri, referrer=schema)  # type: ignore
+        v = jsonschema.Draft7Validator(schema, resolver=resolver)
+
+        errs: List[str] = []
+        for err in sorted(v.iter_errors(entry), key=lambda er: list(er.path)):
+            loc = ".".join([str(x) for x in err.path]) if err.path else "<root>"
+            errs.append(f"{loc}: {err.message}")
+        return errs
 
 
 def main() -> int:
@@ -167,24 +189,41 @@ def main() -> int:
     ap.add_argument("--rejected_log_path", default="data/logs/session_logs_rejected.jsonl")
     ap.add_argument("--schema_path", default="data/schemas/session_log_entry.v1.json")
     ap.add_argument("--user_state_path", default="data/user_state.json")
+
+    # Step-3 hardening: legacy routing
+    ap.add_argument("--bak_dir", default="data/logs/_bak")
+    ap.add_argument("--legacy_log_name", default="legacy_session_logs.jsonl")
+
     args = ap.parse_args()
 
     repo = Path(args.repo_root)
     entry = read_json(Path(args.log_template_path))
-    entry = normalize(entry)
 
-    # Autofill before validation/append
+    # --- Hard gate: only v1 goes to main/rejected. Everything else is legacy.
+    sv = entry.get("schema_version")
+    if not isinstance(sv, str) or sv.strip() != "session_log_entry.v1":
+        legacy_path = repo / args.bak_dir / args.legacy_log_name
+        reason = "missing_schema_version" if not isinstance(sv, str) else f"schema_version_not_v1:{sv}"
+        quarantine_legacy(entry, reason, legacy_path)
+        print(f"Legacy log entry routed to: {legacy_path}", file=sys.stderr)
+        return 3
+
+    # V1 normalize + autofill
+    entry = normalize_v1(entry)
     bw = get_bodyweight_kg(entry, repo / args.user_state_path)
     autofill_used_total_load_kg(entry, bw)
 
+    # Validate
     errors: List[str] = []
     errors.extend(minimal_validate(entry))
-    errors.extend(schema_validate(entry, repo / args.schema_path))
+
+    schema_abs = (repo / args.schema_path)  # works with absolute schema_path too
+    errors.extend(schema_validate_v1(entry, schema_abs))
 
     if errors:
-        quarantine(entry, errors, repo / args.rejected_log_path)
+        quarantine_invalid(entry, errors, repo / args.rejected_log_path)
         print("Invalid log entry (quarantined).", file=sys.stderr)
-        for e in errors:
+        for e in errors[:50]:
             print(f"- {e}", file=sys.stderr)
         return 2
 
