@@ -2,46 +2,39 @@
 
 ## Stato attuale (sintesi)
 - Resolver P0 deterministico e spiegabile (hard filters + tie-break stabile).
-- Logging Option B: template -> compile actual -> append (S3 quarantine).
-- UI-0 (Gradio) gira in Colab ma va documentata correttamente (run in Python cell, non in %%bash).
+- Log pipeline hardened (schema_version gating + quarantine + tests).
+- UI-0 Gradio in Colab (template → actual → append).
+- Libreria sessioni/templates ampliata (blocx power/aerobic/technique + finger endurance + deload).
 
 ---
 
 ## Next steps (locked order)
-### A) Stabilizzazione “Dev UX” (bloccante)
-1) **Allineare docs ↔ repo** (source of truth = file nel repo)
-2) **UI-0 Colab-safe** (no black-box, no share tunnel, path guardrail)
-3) **Integrity/Gates** sempre in ordine
 
-### B) UI-0 (end-to-end) (bloccante per usare il sistema)
-- Pipeline: baseline resolve → template → UI → S3 append → mini stats
-- Output attesi:
-  - un template in `out/log_templates/`
-  - UI che carica template e consente edit actual
-  - append valida e scrive su `data/logs/sessions_2026.jsonl`
-  - invalid quarantena su `data/logs/session_logs_rejected.jsonl`
+### A) Manual sanity + UI E2E (bloccante operativo)
+**DoD**
+- manual sanity produce `.out.json` leggibili e sensati
+- UI legge template, scrive actual, append va su log principale (reject solo per invalid)
 
-### C) Planner long-term (non bloccante oggi)
-- `planner_profile.json`: disponibilità, obiettivi, preferenze (stabile, “user intent”)
-- Macro-cycle (28d/12w) con periodizzazione stile Hörst (forza → power → endurance → peak/deload)
-- `planner_state.json`: derivato dai log (recency/fatigue flags) **senza** auto-update baseline
+### B) Planner v1 (12–16 settimane) — focus adesso (alta ROI)
+**DoD**
+- genera un piano deterministico (macro-fasi + schedule settimanale)
+- supporta planning modes (strength/endurance/peak/maintenance)
+- produce `plan.json` + “explain” (perché questa sessione quel giorno)
+- non dipende da P1 ranking
 
-### D) P1 ranking (non bloccante)
-- ranking deterministico su shortlist (recency/intensity/fatigue/preference/phase)
-- si può implementare dopo: oggi non impedisce l’uso del sistema
+### C) Replanner v1 (realtà-first)
+**DoD**
+- se salti un giorno o fai outdoor: rischedula senza rompere vincoli
+- mantiene “budget settimanale” (hard/finger caps)
+- preserva deload e spacing minimo hard-days
 
----
+### D) Progression v1 (loads/maxes)
+**DoD**
+- aggiorna working loads / maxes da actual (status + RPE + load)
+- persist su `data/user_state.json`
 
-## Issues aperti (da chiudere)
-### 1) Colab UI non va lanciata in `%%bash`
-- In Colab l’output di processi long-running (server) in `%%bash` spesso non streamma → “sembra bloccato”.
-- Standard: lanciare la UI con una cella Python: `!python -u ...` e aprire con `serve_kernel_port_as_iframe`.
+### E) Analytics loop (minimo)
+- aderenza, trend load, flags (fatigue/pain), rolling summary
 
-### 2) Path / working directory
-- Standard: sempre `cd /content/climb-agent` prima di ogni comando.
-- Guardrail consigliato nello script UI per evitare path tipo `/content/scripts/...`.
-
-### 3) Naming e file presence
-- Uniformare i nomi degli script (es. `generate_latest_log_template.py` vs altri).
-- Aggiungere `scripts/check_repo_integrity.py` per fallire subito se manca un file richiesto.
-
+### Deferred
+- P1 ranking (recency/intensity/fatigue) → dopo Planner/Replanner/Progression.

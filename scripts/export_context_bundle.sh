@@ -24,6 +24,8 @@ add_if_exists () {
 
 # Core docs + code
 add_if_exists "README.md"
+add_if_exists "STATUS.md"
+add_if_exists "pytest.ini"
 add_if_exists "docs/*.md"
 add_if_exists "scripts/*.py"
 add_if_exists "scripts/*.sh"
@@ -41,7 +43,9 @@ add_if_exists "catalog/sessions/v1/*.json"
 add_if_exists "tests/test_*.py"
 add_if_exists "data/schemas/*.json"
 add_if_exists "data/user_state.json"
-add_if_exists "data/logs/*.jsonl"
+if [[ "${INCLUDE_LOGS:-0}" == "1" ]]; then
+  add_if_exists "data/logs/*.jsonl"
+fi
 
 # Helpful outputs (if present)
 add_if_exists "out/manual_sanity/*.json"
