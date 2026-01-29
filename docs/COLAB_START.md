@@ -33,3 +33,13 @@ Python cell:
 ## 3) Hygiene (importante)
 - Non committare `data/logs/*.jsonl` e `out/`
 - Se qualcosa “sembra duplicato” (es. bundle unzip dentro repo), pulire `out/` e rieseguire gates.
+<!-- CLIMB_AGENT_UI_DAY_VIEW_SECTION_V1 -->
+
+## Gradio UI Day View — Note operative (anti-errori)
+- In Colab: **mai spezzare** i comandi. Ogni procedura in **UNA sola cella**.
+- Se è bash: prima riga `%%bash`.
+- Evita heredoc con delimiter comuni (`PY`, `MD`, ecc.). Se il delimiter compare nel testo, bash tronca lo script.
+  - Usa delimiter unici tipo `__DOC_WRITE__`, `__RESOLVE__`, ecc.
+  - Oppure (preferito): scrivi i `.md` via Python `Path(...).write_text()`.
+
+Runbook UI: vedi `docs/UI_DAY_VIEW_GRADIO.md`.

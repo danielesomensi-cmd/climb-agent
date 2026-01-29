@@ -111,7 +111,7 @@ def planned_summary(outcome: Dict[str, Any]) -> str:
             return ", ".join(parts)
     return ""
 
-def build_entry_from_form(template: Dict[str, Any], rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _ui_build_entry_from_form(template: Dict[str, Any], rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     entry = json.loads(json.dumps(template))  # deep copy
     outs = entry.get("exercise_outcomes") or []
     if not isinstance(outs, list):
@@ -148,6 +148,106 @@ def build_entry_from_form(template: Dict[str, Any], rows: List[Dict[str, Any]]) 
         outs[i] = o
 
     entry["exercise_outcomes"] = outs
+    return entry
+
+
+# CLIMB_AGENT_UI_CONTRACT_V1: single UI input contract + robust parsing (prevents mis-ordered values and schema-invalid status)
+_ALLOWED_STATUS = {'planned','done','skipped','modified'}
+_UI_FIELDS = ['status','used_added_weight_kg','used_assistance_kg','sets_done','rpe','difficulty_label','enjoyment','notes','pain_flags']
+
+def _ui_str(x):
+    if x is None:
+        return ""
+    return x.strip() if isinstance(x, str) else str(x).strip()
+
+def _ui_norm_status(x):
+    x = _ui_str(x)
+    return x if x in _ALLOWED_STATUS else "planned"
+
+def _ui_safe_float(x, default=0.0):
+    x = _ui_str(x)
+    if x == "":
+        return float(default)
+    try:
+        return float(x)
+    except Exception:
+        return float(default)
+
+def _ui_safe_int(x, default=0):
+    x = _ui_str(x)
+    if x == "":
+        return int(default)
+    try:
+        return int(float(x))
+    except Exception:
+        return int(default)
+
+def _ui_pain_list(x):
+    # Accept list, CSV string, or empty
+    if x is None:
+        return []
+    if isinstance(x, list):
+        return [_ui_str(v) for v in x if _ui_str(v)]
+    x = _ui_str(x)
+    if not x:
+        return []
+    parts = [p.strip() for p in x.replace(";", ",").split(",")]
+    return [p for p in parts if p]
+
+def _ui_build_entry_from_form(template, rows):
+    """Robust builder.
+    rows can be:
+      - list[dict] with keys in _UI_FIELDS
+      - flat list/tuple of values interleaved per-row:
+        [status1, added1, assist1, sets1, rpe1, diff1, enjoy1, notes1, pain1, status2, ...]
+    """
+    exos = template.get("exercise_outcomes") or []
+    n = len(exos)
+    F = len(_UI_FIELDS)
+
+    # Normalize incoming rows
+    if isinstance(rows, (tuple, list)) and rows and isinstance(rows[0], dict):
+        row_dicts = rows
+    else:
+        flat = list(rows) if isinstance(rows, (tuple, list)) else [rows]
+        needed = n * F
+        if len(flat) < needed:
+            flat = flat + [""] * (needed - len(flat))
+        else:
+            flat = flat[:needed]
+        row_dicts = []
+        for i in range(n):
+            chunk = flat[i*F:(i+1)*F]
+            row_dicts.append(dict(zip(_UI_FIELDS, chunk)))
+
+    entry = dict(template)
+    entry["schema_version"] = "session_log_entry.v1"
+    entry["exercise_outcomes"] = []
+
+    # bodyweight for derived total load
+    bw = 0.0
+    try:
+        bw = float((entry.get("user") or {}).get("bodyweight_kg") or 0.0)
+    except Exception:
+        bw = 0.0
+
+    for exo, r in zip(exos, row_dicts):
+        actual = {}
+        actual["status"] = _ui_norm_status(r.get("status"))
+        actual["used_added_weight_kg"] = _ui_safe_float(r.get("used_added_weight_kg"), 0.0)
+        actual["used_assistance_kg"] = _ui_safe_float(r.get("used_assistance_kg"), 0.0)
+        actual["sets_done"] = _ui_safe_int(r.get("sets_done"), 0)
+        actual["rpe"] = _ui_safe_float(r.get("rpe"), 0.0)
+        actual["enjoyment"] = _ui_safe_float(r.get("enjoyment"), 0.0)
+        actual["difficulty_label"] = _ui_str(r.get("difficulty_label"))
+        actual["notes"] = _ui_str(r.get("notes"))
+        actual["pain_flags"] = _ui_pain_list(r.get("pain_flags"))
+        actual["used_total_load_kg"] = float(bw) + float(actual["used_added_weight_kg"]) - float(actual["used_assistance_kg"])
+
+        out = dict(exo)
+        out["actual"] = actual
+        entry["exercise_outcomes"].append(out)
+
     return entry
 
 def main():
@@ -242,7 +342,7 @@ def main():
                 row["pain_flags"] = vals[idx]; idx += 1
                 rows.append(row)
 
-            entry = build_entry_from_form(template, rows)
+            entry = _ui_build_entry_from_form(template, rows)
             rc, so, se = run_append(entry, log_path, rejected_path)
 
             if rc == 0:
@@ -274,7 +374,7 @@ def main():
 
         btn.click(
             fn=on_append,
-            inputs=[*status_dd, *added, *assist, *sets_done, *rpe, *diff, *enjoy, *notes, *pain],
+            inputs=[*sum(zip(status_dd, added, assist, sets_done, rpe, diff, enjoy, notes, pain), ())],
             outputs=[out_status, out_last, out_stats]
         )
 
