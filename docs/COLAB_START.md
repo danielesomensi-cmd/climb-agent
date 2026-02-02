@@ -9,6 +9,10 @@ Shell (`%%bash`):
 - `cd /content/climb-agent`
 - `pwd`
 
+## 0.5) Dipendenze Python
+Shell (`%%bash`):
+- `pip install -r requirements.txt`
+
 ## 1) Gates end-to-end (ordine vincolante)
 Shell (`%%bash`):
 - `bash scripts/check_all.sh`
