@@ -22,13 +22,6 @@ def _read_json(p: Path) -> Any:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-def load_json(rel_path: str) -> Any:
-    p = REPO_ROOT / rel_path
-    if not p.exists():
-        raise FileNotFoundError(f"Missing JSON file: {p}")
-    return _read_json(p)
-
-
 def looks_like_ex_catalog(data: Any) -> bool:
     # dict with "exercises": [...]
     if isinstance(data, dict) and isinstance(data.get("exercises"), list) and len(data["exercises"]) > 0:
@@ -156,27 +149,23 @@ def mk_context(location: str, equipment: List[str]) -> Dict[str, Any]:
     }
 
 
-def call_resolver(session_template: Any, context: Dict[str, Any], out_path: Path) -> Any:
+def call_resolver(session_path: str, out_path: str, exercises_path: str) -> Any:
     import importlib
     mod = importlib.import_module("catalog.engine.resolve_session")
 
     if not hasattr(mod, "resolve_session") or not callable(mod.resolve_session):
         raise RuntimeError("catalog.engine.resolve_session.resolve_session() not found")
 
-    templates_dir = REPO_ROOT / "catalog" / "templates" / "v1"
+    templates_dir = REPO_ROOT / "catalog" / "templates"
     if not templates_dir.exists():
         raise RuntimeError(f"templates_dir not found: {templates_dir}")
 
-    exercises_path = find_exercises_catalog()
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Print once, but only if running from main (we print in main too)
     return mod.resolve_session(
-        session_template,
-        context,
-        str(templates_dir),
-        str(exercises_path),
-        str(out_path),
+        repo_root=str(REPO_ROOT),
+        session_path=session_path,
+        templates_dir=str(templates_dir.relative_to(REPO_ROOT)),
+        exercises_path=exercises_path,
+        out_path=out_path,
     )
 
 
@@ -187,12 +176,33 @@ class Scenario:
     context: Dict[str, Any]
 
 
-def run_one(sc: Scenario, out_dir: Path) -> None:
-    tpl = load_json(sc.template_path)
-    out_path = out_dir / f"{sc.name}.json"
-    res = call_resolver(tpl, sc.context, out_path=out_path)
+def _session_from_template(template_path: str, context: Dict[str, Any], name: str) -> Dict[str, Any]:
+    template_path_obj = Path(template_path)
+    template_id = template_path_obj.stem
+    template_version = template_path_obj.parent.name
+    return {
+        "id": f"manual_{name}",
+        "version": "1.0",
+        "context": context,
+        "modules": [
+            {"template_id": template_id, "version": template_version, "required": True},
+        ],
+    }
 
-    out_path.write_text(json.dumps(res, indent=2, ensure_ascii=False), encoding="utf-8")
+
+def run_one(sc: Scenario, out_dir: Path, session_dir: Path, exercises_rel: str) -> None:
+    session = _session_from_template(sc.template_path, sc.context, sc.name)
+    session_path = session_dir / f"__session__{sc.name}.json"
+    session_path.parent.mkdir(parents=True, exist_ok=True)
+    session_path.write_text(json.dumps(session, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    out_path = out_dir / f"{sc.name}.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    res = call_resolver(
+        session_path=str(session_path.relative_to(REPO_ROOT)),
+        out_path=str(out_path.relative_to(REPO_ROOT)),
+        exercises_path=exercises_rel,
+    )
 
     blocks = extract_blocks(res)
     print(f"\n================ SCENARIO: {sc.name} ================")
@@ -222,16 +232,18 @@ def run_one(sc: Scenario, out_dir: Path) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out_dir", default="out/manual_scenarios", help="Output directory for JSON dumps")
+    ap.add_argument("--out_dir", default="out/manual_sanity", help="Output directory for JSON dumps")
     args = ap.parse_args()
 
     out_dir = REPO_ROOT / args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
+    session_dir = REPO_ROOT / "out" / "manual_sanity"
 
     # Resolve exercises catalog once and print it (for transparency)
     ex_path = find_exercises_catalog()
     print("=== Using exercises catalog ===")
     print(str(ex_path.relative_to(REPO_ROOT)))
+    exercises_rel = str(ex_path.relative_to(REPO_ROOT))
 
     # Stable equipment sets (must match vocabulary)
     EQ_HOME_NO_HB = ["band", "dumbbell", "pullup_bar"]
@@ -248,7 +260,7 @@ def main() -> int:
     ]
 
     for sc in scenarios:
-        run_one(sc, out_dir)
+        run_one(sc, out_dir, session_dir, exercises_rel)
 
     print("\nDONE. Full outputs in:", out_dir)
     return 0

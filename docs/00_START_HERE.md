@@ -23,6 +23,10 @@ Se un path o una regola cambia, si aggiorna **qui**.
 In Colab, shell = cella `%%bash`:
 - `bash scripts/check_all.sh`
 
+## Dipendenze Python
+Shell (`%%bash`):
+- `pip install -r requirements.txt`
+
 ## New Chat Kit (cosa allegare)
 Standard: allega **un solo zip** (context bundle) che contiene:
 - `README.md`, `STATUS.md`, `pytest.ini`
