@@ -74,6 +74,13 @@ Rules:
 - reschedule missed high-priority sessions within 7–10 days
 - downgrade/replace if fatigue/pain flags
 
+Replanner v0 (cluster cooldown, deterministico):
+- cluster_key(exercise) = domain|role|equipment_required|pattern/movement (campi ordinati, forma stabile).
+- user_state.cooldowns.per_cluster["<cluster_key>"] conserva until_date/reason/last_updated.
+- Se feedback "hard/too_hard/fail" aggiorna il cooldown del cluster per +1/+2 giorni.
+- In resolver: per ogni block “main”, se target_date <= until_date, evita l’exercise main del cluster.
+- Fallback deterministico: candidate nello stesso domain+equipment (role != main preferito), ordinati per id; nessun ranking P1.
+
 ## Nota sulla libreria sessioni
 Per iniziare **basta** l’attuale libreria.
 Se manca qualcosa: aggiungere una session placeholder “outdoor performance day” e “rest/recovery”.

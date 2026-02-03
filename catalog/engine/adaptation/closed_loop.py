@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, Optional
+
+from catalog.engine.cluster_utils import cluster_key_for_exercise, parse_date
 
 
 DEFAULT_RULES = {
@@ -62,6 +64,9 @@ def update_user_state_adjustments(
     user_state: Dict[str, Any],
     exercise_id: str,
     outcome: Dict[str, Any],
+    *,
+    exercises_by_id: Optional[Dict[str, Dict[str, Any]]] = None,
+    feedback_date: Optional[str] = None,
 ) -> Dict[str, Any]:
     difficulty = outcome.get("difficulty")
     if difficulty is None:
@@ -90,5 +95,28 @@ def update_user_state_adjustments(
         "streak": next_streak,
         "last_update": _now_iso(),
     }
+
+    cooldown_days = 0
+    if difficulty in {"fail", "too_hard"}:
+        cooldown_days = 2
+    elif difficulty == "hard":
+        cooldown_days = 1
+
+    if cooldown_days and exercises_by_id:
+        date_value = feedback_date or outcome.get("date") or outcome.get("target_date")
+        if date_value is None:
+            date_value = (outcome.get("actual") or {}).get("date")
+        base_date = parse_date(date_value)
+        exercise = exercises_by_id.get(exercise_id)
+        if base_date and exercise:
+            until_date = base_date + timedelta(days=cooldown_days)
+            cooldowns = user_state.setdefault("cooldowns", {})
+            per_cluster = cooldowns.setdefault("per_cluster", {})
+            cluster_key = cluster_key_for_exercise(exercise)
+            per_cluster[cluster_key] = {
+                "until_date": until_date.isoformat(),
+                "reason": f"difficulty:{difficulty}",
+                "last_updated": base_date.isoformat(),
+            }
 
     return user_state
