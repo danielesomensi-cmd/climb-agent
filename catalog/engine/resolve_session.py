@@ -48,6 +48,57 @@ def norm_str(x: Any) -> str:
 def _round_to_step(x: float, step: float = 0.5) -> float:
     return round(x / step) * step
 
+def _apply_load_override(
+    prescription: Dict[str, Any],
+    *,
+    user_state: Optional[Dict[str, Any]],
+    exercise_id: str,
+    rounding_step: float = 0.5,
+) -> Dict[str, Any]:
+    if not user_state:
+        return prescription
+    if "load_kg" not in prescription:
+        return prescription
+
+    overrides = user_state.setdefault("overrides", {})
+    per_exercise = overrides.setdefault("per_exercise", {})
+    override = per_exercise.get(exercise_id)
+    if not isinstance(override, dict):
+        return prescription
+
+    mode = override.get("mode")
+    if mode not in {"absolute_load_kg", "delta_kg", "multiplier"}:
+        return prescription
+
+    value = override.get("value")
+    if value is None:
+        return prescription
+
+    base_load = float(prescription["load_kg"])
+    if mode == "absolute_load_kg":
+        adjusted = float(value)
+    elif mode == "delta_kg":
+        adjusted = base_load + float(value)
+    else:
+        adjusted = base_load * float(value)
+
+    updated = dict(prescription)
+    updated["load_kg"] = _round_to_step(adjusted, rounding_step)
+
+    expires = override.get("expires") or {}
+    if expires.get("type") == "occurrences":
+        try:
+            remaining = int(expires.get("n", 0))
+        except (TypeError, ValueError):
+            remaining = 0
+        remaining -= 1
+        if remaining <= 0:
+            per_exercise.pop(exercise_id, None)
+        else:
+            override["expires"] = {**expires, "n": remaining}
+
+    return updated
+
 def _pick_hangboard_baseline(user_state: Dict[str, Any], edge_mm: int, grip: str, hang_seconds: int) -> Optional[Dict[str, Any]]:
     baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
     for b in baselines:
@@ -732,6 +783,12 @@ def resolve_session(
                 if replanner_note and replanner_note.get("reason") == "cluster_cooldown_downshift":
                     merged.setdefault("multiplier", 1.0)
                     merged["multiplier"] = float(merged["multiplier"]) * 0.9
+
+                merged = _apply_load_override(
+                    merged,
+                    user_state=user_state,
+                    exercise_id=ex_id,
+                )
 
                 inst = {
                     "instance_id": instance_id,
