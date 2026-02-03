@@ -11,3 +11,5 @@ python scripts/colab_fastlane.py \
 ```
 
 > Nota: Codex NON pusha; push sempre da Colab con fastlane.
+
+> smoke test fastlane
