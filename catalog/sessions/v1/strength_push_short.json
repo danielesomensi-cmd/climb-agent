@@ -1,0 +1,27 @@
+{
+  "id": "strength_push_short",
+  "name": "Strength Push Day (Short)",
+  "version": "1.0",
+  "context": {
+    "location": "home"
+  },
+  "notes": "Short push session: 1 main push exercise plus 1–2 assistance pushes.",
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "version": "v1",
+      "required": true
+    },
+    {
+      "template_id": "general_strength_accessories",
+      "version": "v1",
+      "required": true,
+      "notes": "Bias selection toward push patterns for a main push and assistance work."
+    },
+    {
+      "template_id": "core_short",
+      "version": "v1",
+      "required": false
+    }
+  ]
+}
