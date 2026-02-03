@@ -3,6 +3,8 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+from catalog.engine.cluster_utils import cluster_key_for_exercise, parse_date
+
 
 # ---------------------------
 # IO helpers
@@ -115,6 +117,12 @@ def as_list(x: Any) -> List[Any]:
 
 def norm_list_str(x: Any) -> List[str]:
     return [norm_str(v) for v in as_list(x) if norm_str(v)]
+
+
+def ex_patterns(ex: Dict[str, Any]) -> List[str]:
+    if "pattern" in ex:
+        return norm_list_str(ex.get("pattern"))
+    return norm_list_str(ex.get("movement"))
 
 
 def get_ex_id(ex: Dict[str, Any]) -> str:
@@ -351,6 +359,56 @@ def load_recent_exercise_ids(repo_root: str, days_window: int = 5) -> List[str]:
     return recent[-100:]
 
 
+def _cooldown_until_date(user_state: Optional[Dict[str, Any]], cluster_key: str) -> Optional[str]:
+    if not user_state:
+        return None
+    cooldowns = user_state.get("cooldowns") or {}
+    per_cluster = cooldowns.get("per_cluster") or {}
+    entry = per_cluster.get(cluster_key) or {}
+    return entry.get("until_date")
+
+
+def _find_cooldown_fallback(
+    exercises: List[Dict[str, Any]],
+    current_ex: Dict[str, Any],
+    available_equipment: List[str],
+) -> Optional[Dict[str, Any]]:
+    current_domain = sorted(norm_list_str(current_ex.get("domain")))
+    current_eq = sorted(norm_list_str(current_ex.get("equipment_required")))
+    current_pattern = sorted(ex_patterns(current_ex))
+
+    avail = set(norm_list_str(available_equipment))
+
+    def same_domain_equipment(ex: Dict[str, Any]) -> bool:
+        if sorted(norm_list_str(ex.get("domain"))) != current_domain:
+            return False
+        if sorted(norm_list_str(ex.get("equipment_required"))) != current_eq:
+            return False
+        req = set(ex_equipment_required(ex))
+        return not req or req.issubset(avail)
+
+    def same_cluster(ex: Dict[str, Any]) -> bool:
+        if not same_domain_equipment(ex):
+            return False
+        return sorted(ex_patterns(ex)) == current_pattern
+
+    candidates = [
+        ex for ex in exercises
+        if same_cluster(ex) and "main" not in set(ex_roles(ex))
+    ]
+    if not candidates:
+        candidates = [
+            ex for ex in exercises
+            if same_domain_equipment(ex) and set(ex_roles(ex)) & {"assistant", "secondary"}
+        ]
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda e: norm_str(get_ex_id(e)))
+    return candidates[0]
+
+
 # ---------------------------
 # Filtering + Scoring
 # ---------------------------
@@ -492,6 +550,7 @@ def resolve_session(
     session_ctx = session.get("context") if isinstance(session.get("context"), dict) else {}
     user_ctx = user_state.get("context") if isinstance(user_state.get("context"), dict) else {}
     gym_id = session_ctx.get("gym_id") or user_ctx.get("gym_id")
+    target_date = parse_date(session_ctx.get("target_date") or session_ctx.get("date"))
 
     exercises_raw = load_json(os.path.join(repo_root, exercises_path))
     exercises = ensure_exercise_list(exercises_raw)
@@ -628,6 +687,33 @@ def resolve_session(
                     chosen_by = "p0_hard_filters"
 
 
+            replanner_note = None
+            if selected_ex and norm_str(block_type) == "main" and target_date:
+                cluster_key = cluster_key_for_exercise(selected_ex)
+                until_date_value = _cooldown_until_date(user_state, cluster_key)
+                until_date = parse_date(until_date_value)
+                if until_date and target_date <= until_date:
+                    fallback_ex = _find_cooldown_fallback(
+                        exercises=exercises,
+                        current_ex=selected_ex,
+                        available_equipment=available_equipment,
+                    )
+                    if fallback_ex:
+                        replanner_note = {
+                            "cooldown_cluster": cluster_key,
+                            "until_date": until_date.isoformat(),
+                            "fallback_exercise_id": get_ex_id(fallback_ex),
+                            "reason": "cluster_cooldown_fallback",
+                        }
+                        selected_ex = fallback_ex
+                    else:
+                        replanner_note = {
+                            "cooldown_cluster": cluster_key,
+                            "until_date": until_date.isoformat(),
+                            "reason": "cluster_cooldown_downshift",
+                            "multiplier": 0.9,
+                        }
+
             if selected_ex:
                 instance_counter += 1
                 instance_id = f"{block_id}_{instance_counter:02d}"
@@ -643,6 +729,10 @@ def resolve_session(
                 if isinstance(prescription, dict):
                     merged.update(prescription)
 
+                if replanner_note and replanner_note.get("reason") == "cluster_cooldown_downshift":
+                    merged.setdefault("multiplier", 1.0)
+                    merged["multiplier"] = float(merged["multiplier"]) * 0.9
+
                 inst = {
                     "instance_id": instance_id,
                     "exercise_id": ex_id,
@@ -655,6 +745,8 @@ def resolve_session(
                         "block_id": block_id
                     }
                 }
+                if replanner_note:
+                    inst["replanner"] = replanner_note
                 if ex_id == "max_hang_5s":
                     sug = suggest_max_hang_load(user_state, merged)
                     if sug:
