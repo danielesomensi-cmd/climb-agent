@@ -985,6 +985,502 @@
         "cns": "low",
         "skin": "none"
       }
+    },
+    {
+      "id": "pullup",
+      "name": "Pull-up",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "pullup_variants",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          6
+        ],
+        "reps_range": [
+          3,
+          8
+        ],
+        "rest_seconds_range": [
+          120,
+          180
+        ]
+      },
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "low",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "chinup",
+      "name": "Chin-up",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "pullup_variants",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          4,
+          10
+        ],
+        "rest_seconds_range": [
+          90,
+          150
+        ]
+      },
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "scapular_pullup",
+      "name": "Scapular Pull-up",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "scapular_control",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "scapular_control_pull",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          6,
+          10
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "inverted_row",
+      "name": "Inverted Row",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_horizontal",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "horizontal_pull",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          6,
+          12
+        ],
+        "rest_seconds_range": [
+          75,
+          120
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "band_assisted_pullup",
+      "name": "Band-assisted Pull-up",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "pullup_variants",
+      "equipment_required": [
+        "pullup_bar",
+        "band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          5,
+          10
+        ],
+        "rest_seconds_range": [
+          90,
+          150
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "dip",
+      "name": "Dip",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "dip_variants",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          6
+        ],
+        "reps_range": [
+          4,
+          10
+        ],
+        "rest_seconds_range": [
+          120,
+          180
+        ]
+      },
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "none",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "pushup",
+      "name": "Push-up",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "pushup_variants",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          8,
+          20
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "pike_pushup",
+      "name": "Pike Push-up",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "pushup_variants",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          6,
+          12
+        ],
+        "rest_seconds_range": [
+          90,
+          150
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "bench_press",
+      "name": "Bench Press",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "bench_press",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          4,
+          8
+        ],
+        "rest_seconds_range": [
+          120,
+          180
+        ]
+      },
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "none",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "overhead_press",
+      "name": "Overhead Press",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "overhead_press",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          6,
+          10
+        ],
+        "rest_seconds_range": [
+          90,
+          150
+        ]
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "plank",
+      "name": "Plank",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "core_anti_extension",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "hold_seconds_range": [
+          20,
+          45
+        ],
+        "rest_seconds_range": [
+          30,
+          60
+        ]
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      }
     }
   ]
 }
