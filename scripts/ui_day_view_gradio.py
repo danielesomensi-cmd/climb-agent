@@ -260,7 +260,11 @@ def main():
     args = ap.parse_args()
 
     print('UI: importing gradio...', flush=True)
+    try:
     import gradio as gr
+except ModuleNotFoundError:
+    raise SystemExit('gradio is not installed. Run: pip install -r requirements-ui.txt')
+
     print('UI: gradio imported', flush=True)
 
 
@@ -380,9 +384,9 @@ def main():
 
     print('UI: launching gradio server...', flush=True)
     demo.launch(
-        server_name='127.0.0.1',
+        server_name='0.0.0.0',
         server_port=args.server_port,
-        share=False,
+        share=True,
         show_error=True,
         prevent_thread_lock=False,
     )
