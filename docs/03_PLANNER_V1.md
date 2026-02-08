@@ -81,6 +81,26 @@ Replanner v0 (cluster cooldown, deterministico):
 - In resolver: per ogni block “main”, se target_date <= until_date, evita l’exercise main del cluster.
 - Fallback deterministico: candidate nello stesso domain+equipment (role != main preferito), ordinati per id; nessun ranking P1.
 
+## Usage (deterministic planner/replanner V1)
+Generate a week plan:
+
+```bash
+python scripts/plan_week.py --start-date 2026-01-05 --mode balanced --out out/plans/plan_week.json
+```
+
+Apply tomorrow override + recovery ripple (next 2 days):
+
+```bash
+python scripts/plan_day_override.py \
+  --plan out/plans/plan_week.json \
+  --reference-date 2026-01-05 \
+  --intent strength \
+  --location gym \
+  --out out/plans/plan_week_override.json
+```
+
+Both scripts produce deterministic JSON files under `out/plans/`.
+
 ## Nota sulla libreria sessioni
 Per iniziare **basta** l’attuale libreria.
 Se manca qualcosa: aggiungere una session placeholder “outdoor performance day” e “rest/recovery”.
