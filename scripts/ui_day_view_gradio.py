@@ -260,7 +260,7 @@ def main():
     args = ap.parse_args()
 
     print('UI: importing gradio...', flush=True)
-    try:
+try:
     import gradio as gr
 except ModuleNotFoundError:
     raise SystemExit('gradio is not installed. Run: pip install -r requirements-ui.txt')
