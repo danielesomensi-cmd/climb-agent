@@ -66,6 +66,10 @@ Deve essere **interleaved** per riga:
 
 ---
 
+> Note: For interactive use in Colab, start the UI in a Python cell (see docs/COLAB_START.md).
+> The one-cell smoke path uses bash+nohup as an automation exception.
+
+
 ## SMOKE PATH MINIMO (end-to-end) — **UNA SOLA CELLE**
 Questo blocco:
 1) pulisce runtime,
