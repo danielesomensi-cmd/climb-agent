@@ -28,6 +28,10 @@ SESSION_LIBRARY: Dict[str, SessionSpec] = {
     "deload_recovery": SessionSpec("deload_recovery", "recovery", 5, ("home", "gym", "outdoor"), False, False),
 }
 
+GYM_EQUIPMENT_REQUIREMENTS: Dict[str, Tuple[str, ...]] = {
+    "gym_power_bouldering": ("gym_boulder", "spraywall", "board_kilter"),
+}
+
 MODE_QUEUES: Dict[str, Tuple[str, ...]] = {
     "balanced": (
         "strength_long",
@@ -127,19 +131,35 @@ def _select_default_gym_id(
     slot_gym_id: Optional[str],
     default_gym_id: Optional[str],
     gyms: Sequence[Dict[str, Any]],
+    required_any: Optional[Sequence[str]] = None,
 ) -> str:
+    required = set(required_any or [])
+
+    def _supports(gym: Dict[str, Any]) -> bool:
+        if not required:
+            return True
+        equipment_raw = gym.get("equipment")
+        if equipment_raw in (None, []):
+            return True
+        equipment = set(equipment_raw)
+        return bool(equipment.intersection(required))
+
+    by_id = {gym.get("gym_id"): gym for gym in gyms if isinstance(gym.get("gym_id"), str)}
+
     if slot_gym_id:
-        return slot_gym_id
+        slot_gym = by_id.get(slot_gym_id)
+        if slot_gym is None or _supports(slot_gym):
+            return slot_gym_id
     if default_gym_id:
-        return default_gym_id
-    if gyms:
-        first_gym_id = gyms[0].get("gym_id")
-        if isinstance(first_gym_id, str) and first_gym_id:
-            return first_gym_id
+        default_gym = by_id.get(default_gym_id)
+        if default_gym is None or _supports(default_gym):
+            return default_gym_id
     for gym in gyms:
         gym_id = gym.get("gym_id")
-        if gym_id == "work_gym":
-            return "work_gym"
+        if isinstance(gym_id, str) and gym_id and _supports(gym):
+            return gym_id
+    if "work_gym" in by_id and _supports(by_id["work_gym"]):
+        return "work_gym"
     raise ValueError("Unable to resolve gym_id deterministically for gym location")
 
 
@@ -222,10 +242,12 @@ def generate_week_plan(
 
             gym_id = None
             if location == "gym":
+                required_any = GYM_EQUIPMENT_REQUIREMENTS.get(candidate.session_id)
                 gym_id = _select_default_gym_id(
                     slot_gym_id=slot_info.get("gym_id"),
                     default_gym_id=pref_default_gym_id,
                     gyms=gyms or [],
+                    required_any=required_any,
                 )
 
             explain = [

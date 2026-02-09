@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_version", "event_type"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "plan_event.v1"},
+    "event_version": {"type": "integer", "const": 1},
+    "event_type": {
+      "type": "string",
+      "enum": ["mark_done", "mark_skipped", "move_session", "set_availability"]
+    },
+    "date": {"type": "string"},
+    "slot": {"type": "string", "enum": ["morning", "lunch", "evening"]},
+    "session_ref": {"type": "string"},
+    "outcomes": {"type": "object", "additionalProperties": true},
+    "reason": {"type": "string"},
+    "from_date": {"type": "string"},
+    "from_slot": {"type": "string", "enum": ["morning", "lunch", "evening"]},
+    "to_date": {"type": "string"},
+    "to_slot": {"type": "string", "enum": ["morning", "lunch", "evening"]},
+    "availability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "weekday": {"type": "string", "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]},
+        "slot": {"type": "string", "enum": ["morning", "lunch", "evening"]},
+        "available": {"type": "boolean"},
+        "locations": {"type": "array", "items": {"type": "string"}},
+        "preferred_location": {"type": ["string", "null"]},
+        "gym_id": {"type": ["string", "null"]}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"event_type": {"const": "mark_done"}}},
+      "then": {
+        "required": ["date"],
+        "anyOf": [{"required": ["session_ref"]}, {"required": ["slot"]}]
+      }
+    },
+    {
+      "if": {"properties": {"event_type": {"const": "mark_skipped"}}},
+      "then": {
+        "required": ["date"],
+        "anyOf": [{"required": ["session_ref"]}, {"required": ["slot"]}]
+      }
+    },
+    {
+      "if": {"properties": {"event_type": {"const": "move_session"}}},
+      "then": {"required": ["from_date", "from_slot", "to_date", "to_slot"]}
+    },
+    {
+      "if": {"properties": {"event_type": {"const": "set_availability"}}},
+      "then": {
+        "required": ["availability"],
+        "anyOf": [{"required": ["date"]}, {"properties": {"availability": {"required": ["weekday"]}}}]
+      }
+    }
+  ]
+}
