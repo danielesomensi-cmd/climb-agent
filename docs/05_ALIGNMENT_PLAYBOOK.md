@@ -1,5 +1,30 @@
 # Alignment Playbook (repo ↔ docs ↔ workflow)
 
+## Agent Ops Contract (must-follow)
+
+**Read first (always):**
+- docs/00_START_HERE.md
+- docs/02_CONTRACTS.md
+- docs/vocabulary_v1.md
+- docs/COLAB_START.md (Colab workflow)
+- docs/UI_DAY_VIEW_GRADIO.md (only if UI work)
+
+**Non-negotiables**
+- Source of truth = repo + docs contracts. If it’s not in code/docs, it’s not true.
+- No push from Codex/agents. Only prepare changes; human pushes from Colab.
+- In Colab: shell commands go in **one single** `%%bash` cell (do not split).
+- UI: interactive runs in **Python cell** (see docs/COLAB_START.md). Bash+nohup allowed **only** for smoke tests (see UI runbook).
+- Gates: run `bash scripts/check_all.sh` before declaring done.
+- Vocabulary: `docs/vocabulary_v1.md` is source of truth; `python scripts/audit_vocabulary.py` must pass.
+
+**Docs update rule**
+If you change workflow, gates, schemas, vocabulary, or folder layout, you must update the relevant docs in the same change:
+- 00_START_HERE.md (entrypoint + bundle rules)
+- 02_CONTRACTS.md (behavioral contracts)
+- COLAB_START.md / UI_DAY_VIEW_GRADIO.md (runbooks)
+- vocabulary_v1.md (if tags/equipment/patterns change)
+
+
 **Source of truth = repo.** Se non è nel codice o nei contratti docs, non è “vero”.
 
 ## 0) Pre-flight (sempre)
