@@ -45,3 +45,9 @@
 
 ### Deferred
 - P1 ranking (recency/intensity/fatigue) → dopo Planner/Replanner/Progression.
+
+
+## Status update
+- Planner v1: implemented and deterministic.
+- Replanner v1: implemented deterministic override/ripple.
+- Closed-loop V1: implemented (resolve planned day + log done/skipped + user_state recency/fatigue updates).

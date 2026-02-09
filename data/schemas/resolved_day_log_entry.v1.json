@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "resolved_day_log_entry.v1",
+  "type": "object",
+  "required": [
+    "log_version",
+    "date",
+    "status",
+    "session_ids",
+    "summary"
+  ],
+  "properties": {
+    "log_version": {"const": "closed_loop.v1"},
+    "date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "status": {"type": "string", "enum": ["done", "skipped"]},
+    "plan_version": {"type": ["string", "null"]},
+    "start_date": {"type": ["string", "null"]},
+    "location": {"type": ["string", "null"]},
+    "gym_id": {"type": ["string", "null"]},
+    "session_ids": {"type": "array", "items": {"type": "string"}},
+    "resolved_ref": {"type": ["string", "null"]},
+    "planned": {"type": "array"},
+    "actual": {"type": "object"},
+    "notes": {"type": "string"},
+    "summary": {
+      "type": "object",
+      "required": ["session_count", "status", "categories", "session_ids"],
+      "properties": {
+        "session_count": {"type": "integer", "minimum": 0},
+        "status": {"type": "string", "enum": ["done", "skipped"]},
+        "categories": {"type": "array", "items": {"type": "string"}},
+        "session_ids": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}

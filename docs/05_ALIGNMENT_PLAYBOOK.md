@@ -10,6 +10,12 @@
 - docs/UI_DAY_VIEW_GRADIO.md (only if UI work)
 
 **Non-negotiables**
+
+- `data/user_state.json` is the canonical user state store (do not create parallel profile/state files).
+- Resolver behavior in `catalog/engine/resolve_session.py` is frozen unless a task explicitly requests behavior changes.
+- Always run gates + vocabulary audit + tests before handoff.
+- Always update docs whenever contracts/schemas/paths/workflow are changed.
+- Always generate `git format-patch` output and NEVER push from agent environments.
 - Source of truth = repo + docs contracts. If it’s not in code/docs, it’s not true.
 - No push from Codex/agents. Only prepare changes; human pushes from Colab.
 - In Colab: shell commands go in **one single** `%%bash` cell (do not split).
