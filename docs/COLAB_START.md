@@ -17,6 +17,22 @@ Shell (`%%bash`):
 Shell (`%%bash`):
 - `bash scripts/check_all.sh`
 
+## Standard Patch Workflow (patch → apply → test → PAT push)
+
+Preferred: use `scripts/colab_fastlane.py` from a **Python cell**.
+
+Example:
+```python
+import os
+os.chdir("/content/climb-agent")
+!python scripts/colab_fastlane.py \
+  --branch <your-branch> \
+  --patch <path/to/changes.patch> \
+  --commit_msg "<message>" \
+  --run "pytest -q"
+
+
+
 ## 2) UI-0 (Day View) — pipeline corretta (Colab verified)
 
 ### A) Genera baseline + template
