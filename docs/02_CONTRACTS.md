@@ -97,3 +97,9 @@ User-specific baselines MUST live in `data/user_state.json` (not in templates).
 - Logging must be deterministic and append-only.
 - No baseline auto-update at append-time (future: candidate update pipeline with manual approval).
 <!-- END: SESSION_LOGGING_CONTRACTS -->
+
+
+## Closed-loop V1 contract
+- Canonical user state path: `data/user_state.json` (no parallel user profile files).
+- Resolver P0 behavior in `catalog/engine/resolve_session.py` must remain unchanged unless explicitly requested.
+- Day logs append to canonical sessions JSONL path (prefer `data/logs/sessions_2026.jsonl`).

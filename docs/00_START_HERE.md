@@ -45,3 +45,8 @@ Shell (`%%bash`):
 2) Copia zip su: `/content/drive/MyDrive/climb-agent_bundles/`
 3) Scarica da drive.google.com → MyDrive → `climb-agent_bundles/`
 4) Nella nuova chat: allega lo zip + incolla un prompt breve (stato + next task).
+
+
+## Alignment entrypoint
+- Must-read operational contract: `docs/05_ALIGNMENT_PLAYBOOK.md#agent-ops-contract`.
+- Closed-loop deterministic flow reference: `docs/04_CLOSED_LOOP_V1.md`.

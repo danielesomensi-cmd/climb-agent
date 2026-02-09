@@ -109,3 +109,23 @@ Se manca qualcosa: aggiungere una session placeholder “outdoor performance day
 - `data/schemas/planner_plan.v1.json`
 - `catalog/engine/planner_v1.py` (deterministico)
 - `tests/test_planner_v1.py` (snapshot tests)
+
+
+## End-to-end deterministic loop (Planner → Resolver → Log → User State)
+1) Plan week:
+```bash
+python scripts/plan_week.py --start-date 2026-01-05 --mode balanced --out out/plans/plan_week.json
+```
+2) Optional override/replanning:
+```bash
+python scripts/plan_day_override.py --plan out/plans/plan_week.json --reference-date 2026-01-05 --intent recovery --location home --out out/plans/plan_week_override.json
+```
+3) Resolve one planned date into concrete blocks/exercises:
+```bash
+python scripts/resolve_planned_day.py --plan out/plans/plan_week.json --date 2026-01-05 --out out/plans/plan_week__2026-01-05__resolved.json
+```
+4) Mark execution outcome and close the loop:
+```bash
+python scripts/log_resolved_day.py --resolved out/plans/plan_week__2026-01-05__resolved.json --status done --notes "session completed"
+```
+This updates `data/logs/sessions_2026.jsonl` and `data/user_state.json` deterministically.
