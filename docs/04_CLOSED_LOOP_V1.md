@@ -56,3 +56,18 @@ Log done/skipped day + update user state:
 ```bash
 python scripts/log_resolved_day.py --resolved out/plans/plan_week__2026-01-05__resolved.json --status done --notes "felt good" --outcome-json '{"rpe":"hard"}'
 ```
+
+End-to-end test run with tmp state/log (keeps repo data clean):
+```bash
+python scripts/resolve_planned_day.py \
+  --plan out/plans/plan_week.json \
+  --date 2026-01-05 \
+  --user-state /tmp/user_state.e2e.json \
+  --out /tmp/resolved_day.e2e.json
+
+python scripts/log_resolved_day.py \
+  --resolved /tmp/resolved_day.e2e.json \
+  --status done \
+  --user-state /tmp/user_state.e2e.json \
+  --log-path /tmp/sessions.e2e.jsonl
+```

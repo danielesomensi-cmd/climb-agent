@@ -100,3 +100,78 @@ def test_resolve_planned_day_fails_for_gym_session_without_gym_id(tmp_path: Path
     proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
     assert proc.returncode != 0
     assert "must include non-null gym_id" in proc.stderr
+
+
+def test_resolve_planned_day_respects_user_state_for_gym_equipment(tmp_path: Path):
+    user_state_path = tmp_path / "user_state.json"
+    plan_path = tmp_path / "plan_week.json"
+    out_path = tmp_path / "resolved.json"
+
+    user_state = {
+        "schema_version": "1.4",
+        "equipment": {
+            "home": [],
+            "gyms": [
+                {
+                    "gym_id": "blocx",
+                    "name": "BlocX",
+                    "equipment": ["campus_board"]
+                }
+            ]
+        }
+    }
+    user_state_path.write_text(json.dumps(user_state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    plan = {
+        "plan_version": "planner.v1",
+        "start_date": "2026-01-05",
+        "weeks": [
+            {
+                "week_index": 1,
+                "days": [
+                    {
+                        "date": "2026-01-05",
+                        "weekday": "mon",
+                        "sessions": [
+                            {
+                                "slot": "evening",
+                                "session_id": "gym_power_bouldering",
+                                "location": "gym",
+                                "gym_id": "blocx",
+                                "intent": "power"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+    plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    cmd = [
+        sys.executable,
+        "scripts/resolve_planned_day.py",
+        "--plan",
+        str(plan_path),
+        "--date",
+        "2026-01-05",
+        "--user-state",
+        str(user_state_path),
+        "--out",
+        str(out_path),
+    ]
+    subprocess.run(cmd, check=True)
+
+    resolved = json.loads(out_path.read_text(encoding="utf-8"))
+    session = resolved["sessions"][0]
+    exercise_ids = {ei.get("exercise_id") for ei in session.get("exercise_instances") or []}
+    assert "gym_limit_bouldering" not in exercise_ids
+
+    target_blocks = [
+        b for b in (session.get("resolved_blocks") or [])
+        if b.get("block_id") == "main_limit_bouldering"
+    ]
+    if target_blocks:
+        block = target_blocks[0]
+        assert block.get("status") == "skipped"
+        assert block.get("message") == "No candidates after hard filters (P0)."
