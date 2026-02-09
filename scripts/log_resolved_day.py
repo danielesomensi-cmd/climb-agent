@@ -33,6 +33,7 @@ def main() -> int:
     parser.add_argument("--notes", default="")
     parser.add_argument("--outcome-json", default=None)
     parser.add_argument("--user-state", default="data/user_state.json")
+    parser.add_argument("--log-path", default=None)
     args = parser.parse_args()
 
     resolved_path = Path(args.resolved)
@@ -43,7 +44,7 @@ def main() -> int:
     state = ensure_planning_defaults(load_user_state(user_state_path))
 
     log_entry = build_log_entry(resolved_day=resolved_day, status=args.status, notes=args.notes, outcomes=outcomes)
-    log_path = canonical_sessions_log_path(state)
+    log_path = Path(args.log_path) if args.log_path else canonical_sessions_log_path(state)
     append_jsonl(log_path, log_entry)
 
     updated = apply_day_result_to_user_state(state, resolved_day=resolved_day, status=args.status)

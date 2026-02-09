@@ -42,7 +42,7 @@ def _validate_planned_session(session_entry: Dict[str, Any]) -> None:
         sid = session_entry.get("session_id")
         raise ValueError(f"Planned gym session must include non-null gym_id: session_id={sid}")
 
-def _resolve_single(session_entry: Dict[str, Any], date_value: str) -> Dict[str, Any]:
+def _resolve_single(session_entry: Dict[str, Any], date_value: str, user_state: Dict[str, Any]) -> Dict[str, Any]:
     _validate_planned_session(session_entry)
     sid = session_entry["session_id"]
     source = REPO_ROOT / _session_file(sid)
@@ -67,6 +67,7 @@ def _resolve_single(session_entry: Dict[str, Any], date_value: str) -> Dict[str,
             templates_dir="catalog/templates",
             exercises_path="catalog/exercises/v1/exercises.json",
             out_path="out/tmp/ignore.json",
+            user_state_override=user_state,
             write_output=False,
         )
     finally:
@@ -98,6 +99,7 @@ def main() -> int:
     parser.add_argument("--plan", required=True)
     parser.add_argument("--date", required=True)
     parser.add_argument("--out", default=None)
+    parser.add_argument("--user-state", default="data/user_state.json")
     args = parser.parse_args()
 
     plan_path = Path(args.plan)
@@ -107,7 +109,10 @@ def main() -> int:
     plan_name = plan_path.stem
     out_path = Path(args.out) if args.out else Path("out/plans") / f"{plan_name}__{args.date}__resolved.json"
 
-    sessions: List[Dict[str, Any]] = [_resolve_single(s, args.date) for s in day.get("sessions") or []]
+    user_state_path = REPO_ROOT / args.user_state
+    user_state = _read_json(user_state_path)
+
+    sessions: List[Dict[str, Any]] = [_resolve_single(s, args.date, user_state) for s in day.get("sessions") or []]
     artifact = {
         "resolved_day_version": "1.0",
         "resolved_ref": f"{plan_name}__{args.date}__resolved.json",

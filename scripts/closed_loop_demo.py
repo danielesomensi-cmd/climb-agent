@@ -38,9 +38,11 @@ def main() -> None:
     parser.add_argument("--difficulty", default="ok")
     parser.add_argument("--exercise_id", default="weighted_pullup")
     parser.add_argument("--rounding_step", type=float, default=0.5)
+    parser.add_argument("--user-state", default="data/user_state.json")
+    parser.add_argument("--log-path", default=None)
     args = parser.parse_args()
 
-    user_state = load_json(REPO_ROOT / "data" / "user_state.json")
+    user_state = load_json(REPO_ROOT / args.user_state)
     baseline_load = pick_baseline_load(user_state, args.exercise_id)
 
     adjustments = user_state.get("adjustments") or {}
@@ -62,6 +64,9 @@ def main() -> None:
     print("multiplier_before:", multiplier_before)
     print("proposed_load_before:", proposed_before)
     print("difficulty:", args.difficulty)
+    print("user_state_path:", str(args.user_state))
+    if args.log_path:
+        print("log_path:", str(args.log_path))
     print("multiplier_after:", multiplier_after)
     print("proposed_load_after:", proposed_after)
 
