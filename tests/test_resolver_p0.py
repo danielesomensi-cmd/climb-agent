@@ -67,6 +67,17 @@ def make_session_file(
     }
 
 
+def make_gym_power_bouldering_session_file(*, session_id: str, context_gym_id: str | None):
+    return {
+        "id": session_id,
+        "version": "1.0",
+        "context": {"location": "gym", "gym_id": context_gym_id},
+        "modules": [
+            {"template_id": "gym_power_bouldering", "version": "v1", "required": True}
+        ],
+    }
+
+
 class TestResolverP0Determinism(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -208,6 +219,47 @@ class TestResolverP0Determinism(unittest.TestCase):
         self.assert_no_silent_blocks(out)
         self.assert_filter_trace_present(out)
 
+
+    def _resolve_gym_power_with_equipment(self, equipment: list[str], session_id: str):
+        us = make_user_state(
+            self.base_user_state,
+            location="gym",
+            gym_id="blocx",
+            gym_equipment_override={"blocx": equipment},
+        )
+        sess = make_gym_power_bouldering_session_file(session_id=session_id, context_gym_id="blocx")
+        return self.run_resolve(us, sess)
+
+    def _main_block(self, out: dict) -> dict:
+        return next(b for b in out["resolved_session"]["blocks"] if b.get("block_uid") == "gym_power_bouldering.main")
+
+    def test_gym_limit_bouldering_selected_with_spraywall(self):
+        out = self._resolve_gym_power_with_equipment(["spraywall"], "gym_spraywall")
+        self.assertEqual(out["resolution_status"], "success")
+        ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
+        self.assertIn("gym_limit_bouldering", ids)
+
+    def test_gym_limit_bouldering_selected_with_board_kilter(self):
+        out = self._resolve_gym_power_with_equipment(["board_kilter"], "gym_board_kilter")
+        self.assertEqual(out["resolution_status"], "success")
+        ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
+        self.assertIn("gym_limit_bouldering", ids)
+
+    def test_gym_limit_bouldering_selected_with_gym_boulder(self):
+        out = self._resolve_gym_power_with_equipment(["gym_boulder"], "gym_gym_boulder")
+        self.assertEqual(out["resolution_status"], "success")
+        ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
+        self.assertIn("gym_limit_bouldering", ids)
+
+    def test_gym_limit_bouldering_skipped_without_required_any_equipment(self):
+        out = self._resolve_gym_power_with_equipment(["hangboard"], "gym_no_limit_tools")
+        self.assertEqual(out["resolution_status"], "success")
+        ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
+        self.assertNotIn("gym_limit_bouldering", ids)
+        self.assertIn("density_hang_10_10", ids)
+        main_block = self._main_block(out)
+        self.assertEqual(main_block.get("status"), "selected")
+        self.assertEqual(main_block.get("selected_exercises", [])[0].get("exercise_id"), "density_hang_10_10")
 
 
 if __name__ == "__main__":

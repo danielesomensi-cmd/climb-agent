@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-01-21
+Last updated: 2026-02-09
 
 ---
 
@@ -34,17 +34,18 @@ Allowed `equipment` values:
 - `band`
 - `weight` *(canonical generic weight: counterweight, dumbbells, kettlebells, barbells)*
 - `dumbbell` *(subtype; prefer `weight` unless strictly required)*
-- `kettlebell` *(subtype; prefer `weight` unRules:
+- `kettlebell` *(subtype; prefer `weight` unless strictly required)*
+- `pangullich`
+- `spraywall`
+- `board_kilter`
+- `gym_boulder` *(gym has a boulder area with set problems; not board, not spraywall)*
+
+Rules:
 - Do **not** use `"none"` as an equipment value. Use an empty list: `equipment_required: []`.
 - Do **not** use `"floor"` as an equipment value (it is implicit).
 - Prefer `weight` for generic loading. Use `dumbbell/kettlebell/barbell` only if the exercise truly requires that implement.
 - User inventory may list subtypes; resolver may expose canonical `weight` when any subtype is present.
-- If an exercise can be performed with multiple tools, express it via multiple exercises or an explicit policy (future).
 - User inventory MUST use these canonical IDs (no aliases in v1).
- an equipment value. Use an empty list: `equipment_required: []`.
-- If an exercise can be performed with multiple tools, express it via multiple exercises or an explicit policy (future).
-- User inventory MUST use these canonical IDs (no aliases in v1).
-- `pangullich`
 
 ---
 
@@ -227,12 +228,14 @@ Rules:
 
 Canonical exercise fields:
 
-- `equipment_required`: array of canonical equipment IDs (may be empty)
+- `equipment_required`: array of canonical equipment IDs (may be empty; AND semantics)
+- `equipment_required_any`: optional array of canonical equipment IDs (OR semantics)
 - `location_allowed`: array of `home|gym|outdoor` (or omit to mean all)
 
 Rules:
-- If `equipment_required` is non-empty, all items must be present in user inventory for compatibility in v1.
-- Do not use OR logic in v1 (future capability).
+- `equipment_required` (if present) must be a subset of available equipment.
+- `equipment_required_any` (if present and non-empty) requires at least one listed item to be available.
+- If both are present, exercises must satisfy both constraints (`ALL` from `equipment_required` AND `ANY` from `equipment_required_any`).
 
 ---
 

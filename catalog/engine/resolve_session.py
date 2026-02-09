@@ -203,6 +203,9 @@ def ex_location_allowed(ex: Dict[str, Any]) -> List[str]:
 def ex_equipment_required(ex: Dict[str, Any]) -> List[str]:
     return norm_list_str(ex.get("equipment_required"))
 
+def ex_equipment_required_any(ex: Dict[str, Any]) -> List[str]:
+    return norm_list_str(ex.get("equipment_required_any"))
+
 def pick_best_exercise_p0(
     *,
     exercises: List[Dict[str, Any]],
@@ -215,6 +218,7 @@ def pick_best_exercise_p0(
     P0: hard filters only:
       - location_allowed includes location
       - equipment_required subset of available_equipment
+      - equipment_required_any has at least one available item
       - role matches (ANY)
       - domain matches only if it doesn't zero candidates (ANY)
     Deterministic tie-break: exercise_id
@@ -235,11 +239,14 @@ def pick_best_exercise_p0(
     base1 = [e for e in base0 if loc in set(ex_location_allowed(e))]
     trace["counts"]["after_location"] = len(base1)
 
-    # Stage 2: equipment_required subset
+    # Stage 2: equipment hard constraints
     base2 = []
     for e in base1:
         req = set(ex_equipment_required(e))
         if req and not req.issubset(avail):
+            continue
+        req_any = ex_equipment_required_any(e)
+        if req_any and set(req_any).isdisjoint(avail):
             continue
         base2.append(e)
     trace["counts"]["after_equipment"] = len(base2)
@@ -426,6 +433,7 @@ def _find_cooldown_fallback(
 ) -> Optional[Dict[str, Any]]:
     current_domain = sorted(norm_list_str(current_ex.get("domain")))
     current_eq = sorted(norm_list_str(current_ex.get("equipment_required")))
+    current_eq_any = sorted(norm_list_str(current_ex.get("equipment_required_any")))
     current_pattern = sorted(ex_patterns(current_ex))
 
     avail = set(norm_list_str(available_equipment))
@@ -435,8 +443,13 @@ def _find_cooldown_fallback(
             return False
         if sorted(norm_list_str(ex.get("equipment_required"))) != current_eq:
             return False
+        if sorted(norm_list_str(ex.get("equipment_required_any"))) != current_eq_any:
+            return False
         req = set(ex_equipment_required(ex))
-        return not req or req.issubset(avail)
+        if req and not req.issubset(avail):
+            return False
+        req_any = ex_equipment_required_any(ex)
+        return not req_any or not set(req_any).isdisjoint(avail)
 
     def same_cluster(ex: Dict[str, Any]) -> bool:
         if not same_domain_equipment(ex):

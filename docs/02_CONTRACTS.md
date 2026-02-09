@@ -18,6 +18,7 @@ Pipeline:
 - Hard filters only:
   - location_allowed
   - equipment_required subset di available_equipment
+  - equipment_required_any intersects available_equipment (if present/non-empty)
   - role ANY match (block.role richiesto per selection)
   - domain solo se non azzera (se azzera: non applicarlo)
 - No random. Tie-break stabile su exercise_id.

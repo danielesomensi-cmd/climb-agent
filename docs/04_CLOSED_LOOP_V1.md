@@ -32,6 +32,17 @@ Reference schema: `data/schemas/resolved_day_log_entry.v1.json`.
   - `stimulus_recency.{finger_strength,boulder_power,endurance,complementaries}`
   - `fatigue_proxy` counters (`done/skipped/hard/finger/endurance totals`, `last_updated_date`)
 
+## Equipment compatibility in resolver (P0)
+- `equipment_required`: AND semantics. Every listed item must be in `context.available_equipment`.
+- `equipment_required_any`: OR semantics. At least one listed item must be in `context.available_equipment`.
+- If both are present, both constraints apply (`ALL` from `equipment_required` + `ANY` from `equipment_required_any`).
+
+### How `available_equipment` is determined from `user_state`
+- Location is resolved from session context first (`session.context.location`), then override/default fallbacks.
+- For `location="home"`: resolver uses `user_state.equipment.home`.
+- For `location="gym"`: resolver requires `gym_id` and uses `user_state.equipment.gyms[*]` matching that `gym_id`.
+- Resolver normalizes the final list deterministically (e.g., removes `floor`, can expose canonical `weight` if subtypes are present).
+
 ## CLI
 Initialize/upgrade user state (idempotent):
 ```bash
