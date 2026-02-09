@@ -10,6 +10,13 @@
 
 ## Next steps (locked order)
 
+### P0 hygiene track (parallel, small PRs)
+- Manual sanity scenarios: keep out/manual_sanity outputs readable
+- Explainability: add per-block filter_trace counts (no silent skips)
+- Data-first cleanup: remove/archive legacy selection.filters where unused
+
+
+
 ### A) Manual sanity + UI E2E (bloccante operativo)
 **DoD**
 - manual sanity produce `.out.json` leggibili e sensati
