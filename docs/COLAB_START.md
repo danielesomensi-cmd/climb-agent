@@ -32,6 +32,29 @@ os.chdir("/content/climb-agent")
   --run "pytest -q"
 
 
+Notes:
+
+Keep origin clean (no embedded creds). Fastlane should sanitize + restore.
+
+Always do a preflight (git push --dry-run) before pushing with PAT.
+
+Avoid pasting long diffs in chat: prefer .patch files generated locally in Colab (git format-patch).
+
+
+---
+
+### 3.3 `docs/02_CONTRACTS.md` — rendi i gates non duplicati
+Sostituisci la sezione “Gates” con:
+
+```md
+## Gates (canonical)
+Canonical gate runner: `bash scripts/check_all.sh` (see docs/05_ALIGNMENT_PLAYBOOK.md).
+
+Manual fallback (only if needed):
+1) python scripts/audit_vocabulary.py
+2) pytest -q
+3) python scripts/run_baseline_session.py
+
 
 ## 2) UI-0 (Day View) — pipeline corretta (Colab verified)
 
