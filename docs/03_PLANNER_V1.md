@@ -106,6 +106,27 @@ Replanner v0 (cluster cooldown, deterministico):
 - Fallback deterministico: candidate nello stesso domain+equipment (role != main preferito), ordinati per id; nessun ranking P1.
 
 ## Usage (deterministic planner/replanner V1)
+
+Event-driven replanning (V1):
+
+```bash
+python scripts/replan_week.py \
+  --plan out/plans/plan_week.json \
+  --event out/plans/event.json \
+  --out out/plans/plan_week_replanned.json
+```
+
+Or with a stream of events:
+
+```bash
+python scripts/replan_week.py \
+  --plan out/plans/plan_week.json \
+  --events out/plans/events.jsonl \
+  --out out/plans/plan_week_replanned.json
+```
+
+See `docs/06_REPLANNING_V1.md` for deterministic move/skip/done rules and refill policy.
+
 Generate a week plan:
 
 ```bash

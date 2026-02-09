@@ -145,3 +145,25 @@ def test_no_planned_gym_session_has_null_gym_id_and_no_gym_prefixed_session_id()
             if session["location"] == "gym":
                 assert session.get("gym_id") is not None
             assert not re.match(r"^(blocx|bkl|arlon|coque)_", session["session_id"])
+
+
+def test_power_boulder_session_requires_supported_gym_equipment():
+    availability = _availability()
+    availability["tue"]["evening"]["gym_id"] = "tiny_gym"
+    plan = generate_week_plan(
+        start_date="2026-01-05",
+        mode="balanced",
+        availability=availability,
+        allowed_locations=["home", "gym", "outdoor"],
+        default_gym_id="tiny_gym",
+        gyms=[
+            {"gym_id": "tiny_gym", "equipment": ["barbell"]},
+            {"gym_id": "work_gym", "equipment": ["gym_boulder"]},
+        ],
+    )
+
+    for day in plan["weeks"][0]["days"]:
+        for session in day["sessions"]:
+            if session["session_id"] == "gym_power_bouldering":
+                assert session["location"] == "gym"
+                assert session["gym_id"] == "work_gym"
