@@ -61,6 +61,9 @@ def check_exercises(allowed):
         for eq in norm_list(e.get("equipment") or e.get("equipment_required")):
             if allowed["equipment"] and eq not in allowed["equipment"]:
                 bad.append(("exercise_equipment", ex_id, eq))
+        for eq in norm_list(e.get("equipment_required_any")):
+            if allowed["equipment"] and eq not in allowed["equipment"]:
+                bad.append(("exercise_equipment", ex_id, eq))
         # domain (string or list)
         for d in norm_list(e.get("domain")):
             if allowed["domain"] and d not in allowed["domain"]:
@@ -93,7 +96,7 @@ def check_templates_and_sessions(allowed):
             def walk(node):
                 if isinstance(node, dict):
                     for k, v in node.items():
-                        if k in ("equipment_required", "equipment"):
+                        if k in ("equipment_required", "equipment", "equipment_required_any"):
                             for eq in norm_list(v):
                                 if allowed["equipment"] and eq not in allowed["equipment"]:
                                     bad.append(("template_equipment", str(p), eq))

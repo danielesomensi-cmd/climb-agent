@@ -786,7 +786,12 @@
         "fingers": "high",
         "cns": "high",
         "skin": "high"
-      }
+      },
+      "equipment_required_any": [
+        "spraywall",
+        "board_kilter",
+        "gym_boulder"
+      ]
     },
     {
       "id": "gym_power_endurance_4x4",
