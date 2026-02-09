@@ -14,7 +14,7 @@ def test_resolve_planned_day_is_stable(tmp_path: Path):
     out_a = tmp_path / "resolved_a.json"
     out_b = tmp_path / "resolved_b.json"
 
-    plan = generate_week_plan(start_date="2026-01-05", availability={}, allowed_locations=["home", "gym", "outdoor"])
+    plan = generate_week_plan(start_date="2026-01-05", availability={}, allowed_locations=["home", "gym", "outdoor"], default_gym_id="work_gym")
     plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
 
     cmd = [
@@ -43,7 +43,7 @@ def test_log_update_user_state_counters():
         "plan": {"plan_version": "planner.v1", "start_date": "2026-01-05"},
         "sessions": [
             {"session_id": "strength_long", "intent": "strength", "tags": {"hard": True, "finger": True}},
-            {"session_id": "blocx_power_endurance", "intent": "power_endurance", "tags": {"hard": True, "finger": False}},
+            {"session_id": "gym_power_endurance", "intent": "power_endurance", "tags": {"hard": True, "finger": False}},
         ],
     }
 
@@ -55,3 +55,48 @@ def test_log_update_user_state_counters():
     skipped = apply_day_result_to_user_state(done, resolved_day=resolved_day, status="skipped")
     assert skipped["stimulus_recency"]["finger_strength"]["last_skipped_date"] == "2026-01-05"
     assert skipped["fatigue_proxy"]["skipped_sessions_total"] == 2
+
+
+def test_resolve_planned_day_fails_for_gym_session_without_gym_id(tmp_path: Path):
+    plan_path = tmp_path / "plan_week.json"
+    out_path = tmp_path / "resolved.json"
+
+    plan = {
+        "plan_version": "planner.v1",
+        "start_date": "2026-01-05",
+        "weeks": [
+            {
+                "week_index": 1,
+                "days": [
+                    {
+                        "date": "2026-01-05",
+                        "weekday": "mon",
+                        "sessions": [
+                            {
+                                "slot": "evening",
+                                "session_id": "gym_power_bouldering",
+                                "location": "gym",
+                                "gym_id": None,
+                                "intent": "power",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    plan_path.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    cmd = [
+        sys.executable,
+        "scripts/resolve_planned_day.py",
+        "--plan",
+        str(plan_path),
+        "--date",
+        "2026-01-05",
+        "--out",
+        str(out_path),
+    ]
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    assert proc.returncode != 0
+    assert "must include non-null gym_id" in proc.stderr

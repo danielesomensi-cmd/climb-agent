@@ -1,0 +1,25 @@
+{
+  "id": "gym_aerobic_endurance",
+  "version": "1.0",
+  "context": {
+    "location": "gym",
+    "gym_id": null
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "version": "v1",
+      "required": true
+    },
+    {
+      "template_id": "gym_aerobic_endurance",
+      "version": "v1",
+      "required": true
+    },
+    {
+      "template_id": "core_short",
+      "version": "v1",
+      "required": false
+    }
+  ]
+}
