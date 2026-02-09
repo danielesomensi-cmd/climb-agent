@@ -1,6 +1,10 @@
-from __future__ import annotations
-
+import re
+import json
+import subprocess
+import sys
 from datetime import datetime
+from pathlib import Path
+
 
 from catalog.engine.planner_v1 import generate_week_plan
 from catalog.engine.replanner_v1 import apply_day_override
@@ -24,6 +28,7 @@ def test_planner_is_deterministic():
         mode="balanced",
         availability=_availability(),
         allowed_locations=["home", "gym", "outdoor"],
+        default_gym_id="work_gym",
     )
     plan_a = generate_week_plan(**kwargs)
     plan_b = generate_week_plan(**kwargs)
@@ -37,6 +42,7 @@ def test_planner_respects_hard_and_finger_constraints():
         availability=_availability(),
         allowed_locations=["home", "gym", "outdoor"],
         hard_cap_per_week=3,
+        default_gym_id="work_gym",
     )
     days = plan["weeks"][0]["days"]
     hard_days = []
@@ -63,6 +69,7 @@ def test_replanner_override_updates_tomorrow_and_ripple():
         mode="balanced",
         availability=_availability(),
         allowed_locations=["home", "gym", "outdoor"],
+        default_gym_id="work_gym",
     )
     updated = apply_day_override(
         plan,
@@ -78,3 +85,63 @@ def test_replanner_override_updates_tomorrow_and_ripple():
     day3 = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-08")
     for day in (day2, day3):
         assert all(not s["tags"]["hard"] for s in day["sessions"])
+
+
+def test_plan_week_uses_user_state_availability_and_default_gym_id(tmp_path: Path):
+    user_state = {
+        "availability": {
+            "mon": {
+                "lunch": {
+                    "available": True,
+                    "locations": ["gym", "home"],
+                    "preferred_location": "gym",
+                    "gym_id": "work_gym",
+                },
+                "evening": {"available": False},
+                "morning": {"available": False},
+            }
+        },
+        "planning_prefs": {"hard_day_cap_per_week": 3, "default_gym_id": "blocx"},
+        "equipment": {"gyms": [{"gym_id": "work_gym"}, {"gym_id": "blocx"}]},
+    }
+    us_path = tmp_path / "user_state.json"
+    out_path = tmp_path / "plan.json"
+    us_path.write_text(json.dumps(user_state), encoding="utf-8")
+
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/plan_week.py",
+            "--start-date",
+            "2026-01-05",
+            "--mode",
+            "balanced",
+            "--user-state",
+            str(us_path),
+            "--out",
+            str(out_path),
+        ],
+        check=True,
+    )
+
+    plan = json.loads(out_path.read_text(encoding="utf-8"))
+    monday = next(day for day in plan["weeks"][0]["days"] if day["date"] == "2026-01-05")
+    assert monday["sessions"][0]["slot"] == "lunch"
+    assert monday["sessions"][0]["location"] == "gym"
+    assert monday["sessions"][0]["gym_id"] == "work_gym"
+
+
+def test_no_planned_gym_session_has_null_gym_id_and_no_gym_prefixed_session_id():
+    plan = generate_week_plan(
+        start_date="2026-01-05",
+        mode="balanced",
+        availability=_availability(),
+        allowed_locations=["home", "gym", "outdoor"],
+        default_gym_id="work_gym",
+    )
+
+    for day in plan["weeks"][0]["days"]:
+        for session in day["sessions"]:
+            if session["location"] == "gym":
+                assert session.get("gym_id") is not None
+            assert not re.match(r"^(blocx|bkl|arlon|coque)_", session["session_id"])

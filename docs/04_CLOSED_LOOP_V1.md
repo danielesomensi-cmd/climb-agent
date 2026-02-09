@@ -4,6 +4,7 @@
 Closed-loop V1 closes: planner day -> resolver output -> day log append -> `data/user_state.json` update.
 
 ## Contracts
+- planned gym sessions now require non-null `gym_id`; resolver guardrail fails fast otherwise.
 - Canonical user state store: `data/user_state.json` (`schema_version: "1.4"`).
 - Canonical session log path: from `history_index.session_log_paths` (prefer `data/logs/sessions_2026.jsonl`).
 - Log schema version: `log_version: "closed_loop.v1"`.
@@ -25,7 +26,7 @@ Reference schema: `data/schemas/resolved_day_log_entry.v1.json`.
 - Added planning inputs:
   - `planning_prefs.target_training_days_per_week` (default 4)
   - `planning_prefs.hard_day_cap_per_week` (default 3)
-  - `availability.<weekday>.<slot>.{available, preferred_location, gym_id}`
+  - `availability.<weekday>.<slot>.{available, locations?, preferred_location, gym_id}`
   - ensure `equipment.gyms[]` contains `gym_id="work_gym"`.
 - Added recency/fatigue state:
   - `stimulus_recency.{finger_strength,boulder_power,endurance,complementaries}`

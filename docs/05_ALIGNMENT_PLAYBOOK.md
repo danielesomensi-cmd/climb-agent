@@ -12,6 +12,7 @@
 **Non-negotiables**
 
 - `data/user_state.json` is the canonical user state store (do not create parallel profile/state files).
+- Planner availability contract is backward compatible (`locations[]` legacy + `preferred_location`/`gym_id` extended); gym sessions in plans must carry non-null `gym_id`.
 - Resolver behavior in `catalog/engine/resolve_session.py` is frozen unless a task explicitly requests behavior changes.
 - Always run gates + vocabulary audit + tests before handoff.
 - Always update docs whenever contracts/schemas/paths/workflow are changed.

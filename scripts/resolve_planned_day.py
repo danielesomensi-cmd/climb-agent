@@ -35,7 +35,15 @@ def _session_file(session_id: str) -> Path:
     return Path("catalog/sessions/v1") / f"{session_id}.json"
 
 
+
+
+def _validate_planned_session(session_entry: Dict[str, Any]) -> None:
+    if session_entry.get("location") == "gym" and not session_entry.get("gym_id"):
+        sid = session_entry.get("session_id")
+        raise ValueError(f"Planned gym session must include non-null gym_id: session_id={sid}")
+
 def _resolve_single(session_entry: Dict[str, Any], date_value: str) -> Dict[str, Any]:
+    _validate_planned_session(session_entry)
     sid = session_entry["session_id"]
     source = REPO_ROOT / _session_file(sid)
     if not source.exists():
