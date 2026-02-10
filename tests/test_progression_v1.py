@@ -98,6 +98,53 @@ def test_load_based_progression_changes_next_target():
     assert second_hang["suggested"]["suggested_external_load_kg"] > x
 
 
+
+
+def test_max_hang_override_precedence_and_total_recompute_with_missing_setup_in_prescription():
+    user_state = _base_user_state()
+    user_state["working_loads"]["entries"].append(
+        {
+            "exercise_id": "max_hang_5s",
+            "key": "max_hang_5s|edge_mm=20|grip=half_crimp|load_method=added_weight",
+            "setup": {"edge_mm": 20, "grip": "half_crimp", "load_method": "added_weight"},
+            "next_external_load_kg": 16.0,
+            "next_total_load_kg": 99.0,
+            "updated_at": "2026-01-05",
+        }
+    )
+
+    day = {
+        "date": "2026-01-06",
+        "sessions": [
+            {
+                "session_id": "strength_long",
+                "intent": "strength",
+                "location": "home",
+                "gym_id": None,
+                "tags": {"hard": True, "finger": True},
+                "exercise_instances": [
+                    {
+                        "exercise_id": "max_hang_5s",
+                        "prescription": {"sets": 6, "hang_seconds": 5, "intensity_pct_of_total_load": 0.9},
+                        "suggested": {
+                            "schema_version": "progression_targets.v1",
+                            "suggested_external_load_kg": 15.0,
+                            "edge_mm": 20,
+                            "grip": "half_crimp",
+                            "load_method": "added_weight",
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+
+    out = inject_targets(day, user_state)
+    suggested = out["sessions"][0]["exercise_instances"][0]["suggested"]
+    assert suggested["suggested_external_load_kg"] == 16.0
+    assert suggested["suggested_total_load_kg"] == 93.0
+
+
 def test_boulder_grade_progression_changes_next_target():
     user_state = _base_user_state()
     resolved_day = _resolved_day_for_progression()

@@ -51,6 +51,11 @@ def _relevant_setup(exercise_id: str, source: Dict[str, Any]) -> Dict[str, Any]:
     return {}
 
 
+def _progression_setup_and_key(exercise_id: str, source: Dict[str, Any]) -> Tuple[Dict[str, Any], str]:
+    setup = _relevant_setup(exercise_id, source)
+    return setup, _setup_key(exercise_id, setup)
+
+
 def _setup_key(exercise_id: str, setup: Dict[str, Any]) -> str:
     if exercise_id == "max_hang_5s":
         pairs = [
@@ -152,7 +157,7 @@ def _working_entries(user_state: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 
 def _find_working_load_entry(user_state: Dict[str, Any], exercise_id: str, setup: Dict[str, Any]) -> Dict[str, Any]:
-    key = _setup_key(exercise_id, setup)
+    _, key = _progression_setup_and_key(exercise_id, setup)
     entries = _working_entries(user_state)
     for item in entries:
         if str(item.get("key") or "") == key:
@@ -164,12 +169,25 @@ def _find_working_load_entry(user_state: Dict[str, Any], exercise_id: str, setup
 
 
 def _best_entry(user_state: Dict[str, Any], exercise_id: str, setup: Dict[str, Any], date_value: str, freshness_days: int = 60) -> Optional[Dict[str, Any]]:
-    key = _setup_key(exercise_id, setup)
+    _, key = _progression_setup_and_key(exercise_id, setup)
+    fresh_matching: List[Dict[str, Any]] = []
+    fresh_by_exercise: List[Dict[str, Any]] = []
     for item in _working_entries(user_state):
-        if str(item.get("key") or "") != key:
+        if str(item.get("exercise_id") or "") != exercise_id:
             continue
-        if _is_fresh(item.get("updated_at"), date_value, freshness_days):
-            return item
+        if not _is_fresh(item.get("updated_at"), date_value, freshness_days):
+            continue
+        fresh_by_exercise.append(item)
+        if str(item.get("key") or "") == key:
+            fresh_matching.append(item)
+
+    if fresh_matching:
+        fresh_matching.sort(key=lambda e: (str(e.get("updated_at") or ""), str(e.get("key") or "")), reverse=True)
+        return fresh_matching[0]
+
+    meaningful_setup = any(v not in (None, "") for v in setup.values())
+    if not meaningful_setup and len(fresh_by_exercise) == 1:
+        return fresh_by_exercise[0]
     return None
 
 
@@ -205,12 +223,17 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             if ex_id in LOAD_BASED_EXERCISES:
                 if ex_id == "max_hang_5s":
                     suggested.update(_max_hang_suggested(user_state, prescription))
-                    setup = _relevant_setup(ex_id, prescription)
+                    inject_source = dict(prescription)
+                    inject_source.update(inst.get("suggested") or {})
+                    setup, _ = _progression_setup_and_key(ex_id, inject_source)
                     entry = _best_entry(user_state, ex_id, setup, out.get("date") or "")
+                    bodyweight = float(user_state.get("bodyweight_kg") or ((user_state.get("body") or {}).get("weight_kg") or 0.0))
+
                     if entry and entry.get("next_external_load_kg") is not None:
-                        suggested["suggested_external_load_kg"] = _round_half_step(float(entry["next_external_load_kg"]))
+                        external = _round_half_step(float(entry["next_external_load_kg"]))
+                        suggested["suggested_external_load_kg"] = external
+                        suggested["suggested_total_load_kg"] = _round_half_step(bodyweight + external)
                     elif entry and entry.get("next_total_load_kg") is not None:
-                        bodyweight = float(user_state.get("bodyweight_kg") or ((user_state.get("body") or {}).get("weight_kg") or 0.0))
                         total = _round_half_step(float(entry["next_total_load_kg"]))
                         suggested["suggested_total_load_kg"] = total
                         suggested["suggested_external_load_kg"] = _round_half_step(total - bodyweight)
@@ -218,6 +241,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         pct = _rule_midpoint_pct(user_state, str(entry.get("last_feedback_label") or "ok"))
                         next_external = _round_half_step(float(suggested.get("suggested_external_load_kg") or 0.0) * (1.0 + pct))
                         suggested["suggested_external_load_kg"] = next_external
+                        suggested["suggested_total_load_kg"] = _round_half_step(bodyweight + next_external)
                         write_entry = _find_working_load_entry(user_state, ex_id, setup)
                         write_entry["next_external_load_kg"] = next_external
                         write_entry["updated_at"] = out.get("date")
@@ -390,13 +414,13 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             next_load = _round_half_step(base * (1.0 + pct))
             setup_source = dict(planned_prescription)
             setup_source.update(item)
-            setup = _relevant_setup(exercise_id, setup_source)
+            setup, setup_key = _progression_setup_and_key(exercise_id, setup_source)
 
             entry = _find_working_load_entry(updated, exercise_id, setup)
             entry.update(
                 {
                     "exercise_id": exercise_id,
-                    "key": _setup_key(exercise_id, setup),
+                    "key": setup_key,
                     "setup": setup,
                     "last_completed": bool(item.get("completed", False)),
                     "last_feedback_label": feedback_label,
@@ -431,12 +455,12 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 user_state=updated,
             )
             next_grade = step_grade(used_grade, _grade_delta_for_feedback(feedback_label))
-            setup = {"surface": surface_selected}
+            setup, setup_key = _progression_setup_and_key(exercise_id, {"surface": surface_selected})
             entry = _find_working_load_entry(updated, exercise_id, setup)
             entry.update(
                 {
                     "exercise_id": exercise_id,
-                    "key": _setup_key(exercise_id, setup),
+                    "key": setup_key,
                     "setup": setup,
                     "surface_selected": surface_selected,
                     "last_feedback_label": feedback_label,
