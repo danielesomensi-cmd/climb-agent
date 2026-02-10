@@ -120,6 +120,7 @@ def build_log_entry(*, resolved_day: Dict[str, Any], status: str, notes: str | N
         "session_ids": session_ids,
     }
     return {
+        "schema_version": "resolved_day_log_entry.v1",
         "log_version": "closed_loop.v1",
         "date": date,
         "status": status,
@@ -131,6 +132,7 @@ def build_log_entry(*, resolved_day: Dict[str, Any], status: str, notes: str | N
         "resolved_ref": resolved_day.get("resolved_ref"),
         "planned": resolved_day.get("sessions") or [],
         "actual": outcomes or {},
+        "actual_feedback_v1": (outcomes or {}).get("exercise_feedback_v1") or [],
         "notes": notes or "",
         "summary": summary,
     }

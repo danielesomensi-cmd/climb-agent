@@ -20,6 +20,7 @@ from catalog.engine.closed_loop_v1 import (
     load_user_state,
     save_user_state,
 )
+from catalog.engine.progression_v1 import apply_feedback
 
 
 def _read_json(path: Path) -> Dict[str, Any]:
@@ -48,6 +49,7 @@ def main() -> int:
     append_jsonl(log_path, log_entry)
 
     updated = apply_day_result_to_user_state(state, resolved_day=resolved_day, status=args.status)
+    updated = apply_feedback(log_entry, updated)
     save_user_state(user_state_path, updated)
 
     print(f"Appended log: {log_path}")
