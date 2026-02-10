@@ -2,20 +2,68 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "additionalProperties": true,
-  "required": ["exercise_id", "planned"],
+  "required": [
+    "exercise_id",
+    "planned"
+  ],
   "properties": {
-    "exercise_id": { "type": "string", "minLength": 1 },
-    "planned": { "type": "object", "additionalProperties": true },
+    "exercise_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "planned": {
+      "type": "object",
+      "additionalProperties": true
+    },
     "actual": {
       "type": "object",
       "additionalProperties": true,
       "properties": {
-        "status": { "type": "string", "enum": ["planned", "done", "skipped", "modified"] },
+        "status": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "done",
+            "skipped",
+            "modified"
+          ]
+        },
         "difficulty": {
           "type": "string",
-          "enum": ["too_easy", "easy", "ok", "hard", "too_hard", "fail"]
+          "enum": [
+            "too_easy",
+            "easy",
+            "ok",
+            "hard",
+            "too_hard",
+            "fail"
+          ]
         },
-        "rpe": { "type": "number" }
+        "rpe": {
+          "type": "number"
+        },
+        "completed": {
+          "type": "boolean"
+        },
+        "feedback_label": {
+          "type": "string",
+          "enum": [
+            "very_easy",
+            "easy",
+            "ok",
+            "hard",
+            "very_hard"
+          ]
+        },
+        "used_external_load_kg": {
+          "type": "number"
+        },
+        "used_total_load_kg": {
+          "type": "number"
+        },
+        "used_grade": {
+          "type": "string"
+        }
       }
     }
   }

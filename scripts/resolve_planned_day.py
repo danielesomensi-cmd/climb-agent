@@ -12,6 +12,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from catalog.engine.resolve_session import resolve_session
+from catalog.engine.progression_v1 import inject_targets
 
 
 def _read_json(path: Path) -> Dict[str, Any]:
@@ -132,6 +133,8 @@ def main() -> int:
             "resolved_session_count": len(sessions),
         },
     }
+
+    artifact = inject_targets(artifact, user_state)
 
     _write_json(out_path, artifact)
     print(f"Wrote resolved day: {out_path}")

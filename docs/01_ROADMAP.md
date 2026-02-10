@@ -35,10 +35,11 @@
 - mantiene “budget settimanale” (hard/finger caps)
 - preserva deload e spacing minimo hard-days
 
-### D) Progression v1 (loads/maxes)
+### D) Progression v1 (usable daily loop) — next milestone
 **DoD**
-- aggiorna working loads / maxes da actual (status + RPE + load)
-- persist su `data/user_state.json`
+- dopo resolve: target eseguibili deterministici (load + boulder grade) in post-processing
+- dopo feedback: update deterministico `working_loads` su `data/user_state.json`
+- backward compatibility: campi opzionali e versioning esplicito nei payload
 
 ### E) Analytics loop (minimo)
 - aderenza, trend load, flags (fatigue/pain), rolling summary
@@ -52,4 +53,4 @@
 - Replanner v1: implemented deterministic override/ripple + event-driven replanning (`scripts/replan_week.py`, `plan_event.v1`).
 - Closed-loop V1: implemented (resolve planned day + log done/skipped + user_state recency/fatigue updates).
 
-- Next milestone: Replanning V2 (cross-week backlog carry + fatigue-aware replacement policy).
+- Next milestone: Progression v1 (usable daily loop).
