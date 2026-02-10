@@ -40,6 +40,8 @@
 - dopo resolve: target eseguibili deterministici (load + boulder grade) in post-processing
 - dopo feedback: update deterministico `working_loads` su `data/user_state.json`
 - backward compatibility: campi opzionali e versioning esplicito nei payload
+- separation rule: massimali ufficiali aggiornati solo tramite sessioni `test_*` validate
+- minimal retest queue + planner insertion entro finestra settimanale quando dovuto
 
 ### E) Analytics loop (minimo)
 - aderenza, trend load, flags (fatigue/pain), rolling summary
@@ -53,4 +55,5 @@
 - Replanner v1: implemented deterministic override/ripple + event-driven replanning (`scripts/replan_week.py`, `plan_event.v1`).
 - Closed-loop V1: implemented (resolve planned day + log done/skipped + user_state recency/fatigue updates).
 
+- Progression v1: implemented with deterministic setup/surface keys, next-target overrides, and minimal test queue -> test session insertion.
 - Next milestone: Replanning V2 (cross-week backlog carry + fatigue-aware replacement policy).

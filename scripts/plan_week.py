@@ -62,6 +62,7 @@ def main() -> int:
         planning_prefs=planning_prefs,
         default_gym_id=planning_prefs.get("default_gym_id"),
         gyms=((user_state or {}).get("equipment") or {}).get("gyms") or [],
+        test_queue=(user_state or {}).get("test_queue") or [],
     )
 
     out_path = Path(args.out)

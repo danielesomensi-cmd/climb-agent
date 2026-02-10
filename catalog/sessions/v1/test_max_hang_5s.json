@@ -1,0 +1,41 @@
+{
+  "id": "test_max_hang_5s",
+  "name": "Test Session — Max Hang 5s Total Load",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "finger_max_strength",
+    "secondary_goals": [],
+    "notes": "Deterministic v1 test session for max_hang_5s total load baseline refresh."
+  },
+  "compatibility": {
+    "slot": [
+      "short",
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "time_budget": {
+    "target_duration_min": 40,
+    "hard_cap_min": 60
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "template_id": "finger_max_strength",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary"
+    }
+  ],
+  "tags": {
+    "test": true
+  },
+  "test_id": "max_hang_5s_total_load"
+}

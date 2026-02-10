@@ -35,9 +35,8 @@ def _base_user_state() -> dict:
     }
 
 
-def test_inject_targets_deterministic():
-    user_state = _base_user_state()
-    resolved_day = {
+def _resolved_day_for_progression() -> dict:
+    return {
         "date": "2026-01-05",
         "sessions": [
             {
@@ -48,35 +47,165 @@ def test_inject_targets_deterministic():
                 "tags": {"hard": True},
                 "exercise_instances": [
                     {"exercise_id": "gym_limit_bouldering", "prescription": {}},
-                    {"exercise_id": "pullup", "prescription": {"sets": 4, "reps": 5}},
-                    {"exercise_id": "max_hang_5s", "prescription": {"sets": 6, "hang_seconds": 5, "intensity_pct_of_total_load": 0.9}},
+                    {"exercise_id": "max_hang_5s", "prescription": {"sets": 6, "hang_seconds": 5, "intensity_pct_of_total_load": 0.9, "edge_mm": 20, "grip": "half_crimp", "load_method": "added_weight"}},
                 ],
             }
         ],
     }
+
+
+def test_inject_targets_deterministic():
+    user_state = _base_user_state()
+    resolved_day = _resolved_day_for_progression()
 
     out_a = inject_targets(deepcopy(resolved_day), deepcopy(user_state))
     out_b = inject_targets(deepcopy(resolved_day), deepcopy(user_state))
     assert out_a == out_b
 
 
+def test_load_based_progression_changes_next_target():
+    user_state = _base_user_state()
+    resolved_day = _resolved_day_for_progression()
+
+    first = inject_targets(deepcopy(resolved_day), deepcopy(user_state))
+    max_hang = next(i for i in first["sessions"][0]["exercise_instances"] if i["exercise_id"] == "max_hang_5s")
+    x = float(max_hang["suggested"]["suggested_external_load_kg"])
+
+    log_entry = {
+        "date": "2026-01-05",
+        "planned": first["sessions"],
+        "actual": {
+            "exercise_feedback_v1": [
+                {
+                    "exercise_id": "max_hang_5s",
+                    "completed": True,
+                    "feedback_label": "easy",
+                    "used_external_load_kg": x,
+                    "used_total_load_kg": 77.0 + x,
+                    "edge_mm": 20,
+                    "grip": "half_crimp",
+                    "load_method": "added_weight",
+                }
+            ]
+        },
+    }
+    updated_state = apply_feedback(log_entry, user_state)
+
+    second_day = deepcopy(resolved_day)
+    second_day["date"] = "2026-01-06"
+    second = inject_targets(second_day, updated_state)
+    second_hang = next(i for i in second["sessions"][0]["exercise_instances"] if i["exercise_id"] == "max_hang_5s")
+    assert second_hang["suggested"]["suggested_external_load_kg"] > x
+
+
+def test_boulder_grade_progression_changes_next_target():
+    user_state = _base_user_state()
+    resolved_day = _resolved_day_for_progression()
+
+    first = inject_targets(deepcopy(resolved_day), deepcopy(user_state))
+    limit = next(i for i in first["sessions"][0]["exercise_instances"] if i["exercise_id"] == "gym_limit_bouldering")
+    base_grade = limit["suggested"]["suggested_boulder_target"]["target_grade"]
+
+    log_entry = {
+        "date": "2026-01-05",
+        "planned": first["sessions"],
+        "actual": {
+            "exercise_feedback_v1": [
+                {
+                    "exercise_id": "gym_limit_bouldering",
+                    "completed": True,
+                    "feedback_label": "very_hard",
+                    "used_grade": "7B",
+                    "surface_selected": "board_kilter",
+                }
+            ]
+        },
+    }
+    updated_state = apply_feedback(log_entry, user_state)
+
+    second_day = deepcopy(resolved_day)
+    second_day["date"] = "2026-01-06"
+    second = inject_targets(second_day, updated_state)
+    limit_2 = next(i for i in second["sessions"][0]["exercise_instances"] if i["exercise_id"] == "gym_limit_bouldering")
+    new_grade = limit_2["suggested"]["suggested_boulder_target"]["target_grade"]
+
+    assert normalize_font_grade(base_grade) is not None
+    assert new_grade == "7A"
+
+
 def test_working_load_update_from_feedback():
     user_state = _base_user_state()
     log_easy = {
         "date": "2026-01-05",
+        "planned": [{"exercise_instances": [{"exercise_id": "pullup", "prescription": {}}]}],
         "actual": {"exercise_feedback_v1": [{"exercise_id": "pullup", "completed": True, "feedback_label": "easy", "used_external_load_kg": 10.0}]},
     }
     updated_easy = apply_feedback(log_easy, user_state)
-    easy_next = next(e for e in updated_easy["working_loads"]["entries"] if e["exercise_id"] == "pullup")["next_external_load_kg"]
+    easy_next = next(e for e in updated_easy["working_loads"]["entries"] if e["exercise_id"] == "pullup" and e.get("key") == "pullup")["next_external_load_kg"]
     assert easy_next == 11.0
 
     log_hard = {
         "date": "2026-01-06",
+        "planned": [{"exercise_instances": [{"exercise_id": "pullup", "prescription": {}}]}],
         "actual": {"exercise_feedback_v1": [{"exercise_id": "pullup", "completed": True, "feedback_label": "very_hard", "used_external_load_kg": 10.0}]},
     }
     updated_hard = apply_feedback(log_hard, user_state)
-    hard_next = next(e for e in updated_hard["working_loads"]["entries"] if e["exercise_id"] == "pullup")["next_external_load_kg"]
+    hard_next = next(e for e in updated_hard["working_loads"]["entries"] if e["exercise_id"] == "pullup" and e.get("key") == "pullup")["next_external_load_kg"]
     assert hard_next == 9.0
+
+
+def test_two_hard_feedbacks_enqueue_retest_and_retest_updates_official_test():
+    user_state = _base_user_state()
+    resolved_day = _resolved_day_for_progression()
+    first = inject_targets(deepcopy(resolved_day), deepcopy(user_state))
+
+    log_hard_1 = {
+        "date": "2026-01-05",
+        "planned": first["sessions"],
+        "actual": {
+            "exercise_feedback_v1": [
+                {
+                    "exercise_id": "max_hang_5s",
+                    "completed": True,
+                    "feedback_label": "very_hard",
+                    "used_external_load_kg": 14.5,
+                    "used_total_load_kg": 91.5,
+                    "edge_mm": 20,
+                    "grip": "half_crimp",
+                    "load_method": "added_weight",
+                }
+            ]
+        },
+    }
+    after_1 = apply_feedback(log_hard_1, user_state)
+    assert (after_1.get("test_queue") or []) == []
+
+    log_hard_2 = deepcopy(log_hard_1)
+    log_hard_2["date"] = "2026-01-06"
+    after_2 = apply_feedback(log_hard_2, after_1)
+    queue = after_2.get("test_queue") or []
+    assert len(queue) == 1
+    assert queue[0]["test_id"] == "max_hang_5s_total_load"
+    assert queue[0]["recommended_by_date"] == "2026-01-13"
+
+    test_log = {
+        "date": "2026-01-13",
+        "planned": [{"session_id": "test_max_hang_5s", "tags": {"test": True}}],
+        "actual": {
+            "exercise_feedback_v1": [
+                {
+                    "exercise_id": "max_hang_5s",
+                    "completed": True,
+                    "feedback_label": "ok",
+                    "used_total_load_kg": 105.0,
+                }
+            ]
+        },
+    }
+    after_test = apply_feedback(test_log, after_2)
+    assert after_test["baselines"]["hangboard"][0]["max_total_load_kg"] == 105.0
+    max_strength_tests = after_test["tests"]["max_strength"]
+    assert any(t["test_id"] == "max_hang_5s_total_load" and t["total_load_kg"] == 105.0 for t in max_strength_tests)
 
 
 def test_font_grade_stepper():
@@ -90,7 +219,6 @@ def test_font_grade_stepper():
 
 def test_gym_limit_bouldering_requires_surface(tmp_path):
     repo_root = str(tmp_path.parent)
-    # reuse real repo path through cwd
     from pathlib import Path
     repo_root = str(Path(__file__).resolve().parents[1])
 
@@ -116,6 +244,7 @@ def test_gym_limit_bouldering_requires_surface(tmp_path):
     target = limit.get("suggested", {}).get("suggested_boulder_target")
     assert target is not None
     assert target["surface_options"] == ["spraywall"]
+    assert target["surface_selected"] == "spraywall"
     assert normalize_font_grade(target["target_grade"]) is not None
 
     no = run_with_equipment(["hangboard"])
