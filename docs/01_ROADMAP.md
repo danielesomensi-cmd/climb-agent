@@ -53,4 +53,4 @@
 - Replanner v1: implemented deterministic override/ripple + event-driven replanning (`scripts/replan_week.py`, `plan_event.v1`).
 - Closed-loop V1: implemented (resolve planned day + log done/skipped + user_state recency/fatigue updates).
 
-- Next milestone: Progression v1 (usable daily loop).
+- Next milestone: Replanning V2 (cross-week backlog carry + fatigue-aware replacement policy).
