@@ -35,10 +35,11 @@
 - mantiene “budget settimanale” (hard/finger caps)
 - preserva deload e spacing minimo hard-days
 
-### D) Progression v1 (loads/maxes)
+### D) Progression v1 (usable daily loop) — next milestone
 **DoD**
-- aggiorna working loads / maxes da actual (status + RPE + load)
-- persist su `data/user_state.json`
+- dopo resolve: target eseguibili deterministici (load + boulder grade) in post-processing
+- dopo feedback: update deterministico `working_loads` su `data/user_state.json`
+- backward compatibility: campi opzionali e versioning esplicito nei payload
 
 ### E) Analytics loop (minimo)
 - aderenza, trend load, flags (fatigue/pain), rolling summary
