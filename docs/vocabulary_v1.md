@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-02-09
+Last updated: 2026-02-10
 
 ---
 
@@ -255,6 +255,47 @@ If present, resolver must avoid selecting these exercises when user_state indica
 ## 3) Templates schema (panoramic, v1)
 
 Templates are reusable modules. A template MUST be self-contained (i.e., it can produce a full session_instance by itself).
+
+---
+
+## 4) Progression / feedback vocabulary (v1)
+
+### 4.1 Feedback labels
+
+Canonical `feedback_label` values:
+
+- `very_easy`
+- `easy`
+- `ok`
+- `hard`
+- `very_hard`
+
+These values are used by `actual.exercise_feedback_v1[]` and by progression state (`last_feedback_label`).
+
+### 4.2 Grade surfaces
+
+Canonical boulder surfaces for progression targeting:
+
+- `board_kilter`
+- `spraywall`
+- `gym_boulder`
+
+Used in:
+- `suggested.suggested_boulder_target.surface_options[]`
+- `suggested.suggested_boulder_target.surface_selected`
+- progression keying for grade-based updates.
+
+### 4.3 Test queue contract keys
+
+When present, `user_state.test_queue[]` entries use canonical keys:
+
+- `test_id`
+- `recommended_by_date` (`YYYY-MM-DD`)
+- `reason`
+- `created_at` (`YYYY-MM-DD`)
+
+Current canonical `test_id` introduced in v1:
+- `max_hang_5s_total_load`
 
 ### 3.1 Template structure
 

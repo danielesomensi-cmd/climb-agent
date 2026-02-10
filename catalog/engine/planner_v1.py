@@ -26,6 +26,7 @@ SESSION_LIBRARY: Dict[str, SessionSpec] = {
     "gym_technique_boulder": SessionSpec("gym_technique_boulder", "technique", 3, ("gym", "outdoor"), False, False),
     "general_strength_short": SessionSpec("general_strength_short", "accessory", 4, ("home", "gym"), False, False),
     "deload_recovery": SessionSpec("deload_recovery", "recovery", 5, ("home", "gym", "outdoor"), False, False),
+    "test_max_hang_5s": SessionSpec("test_max_hang_5s", "strength", 1, ("home", "gym"), True, True),
 }
 
 GYM_EQUIPMENT_REQUIREMENTS: Dict[str, Tuple[str, ...]] = {
@@ -191,6 +192,28 @@ def _availability_summary(normalized: Dict[str, Dict[str, Dict[str, Any]]]) -> D
     return summary
 
 
+def _window_end(start_date: str) -> date:
+    return _parse_date(start_date) + timedelta(days=6)
+
+
+def _test_candidates(test_queue: Optional[List[Dict[str, Any]]], start_date: str) -> List[Dict[str, Any]]:
+    if not test_queue:
+        return []
+    end = _window_end(start_date)
+    in_window = []
+    for item in test_queue:
+        test_id = str(item.get("test_id") or "")
+        if test_id != "max_hang_5s_total_load":
+            continue
+        rec_by = item.get("recommended_by_date")
+        if not isinstance(rec_by, str):
+            continue
+        rec_day = _parse_date(rec_by)
+        if rec_day <= end:
+            in_window.append(item)
+    return sorted(in_window, key=lambda x: (str(x.get("recommended_by_date") or ""), str(x.get("test_id") or ""), str(x.get("created_at") or "")))
+
+
 def generate_week_plan(
     *,
     start_date: str,
@@ -201,6 +224,7 @@ def generate_week_plan(
     planning_prefs: Optional[Dict[str, Any]] = None,
     default_gym_id: Optional[str] = None,
     gyms: Optional[List[Dict[str, Any]]] = None,
+    test_queue: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     if mode not in MODE_QUEUES:
         raise ValueError(f"Unsupported mode: {mode}")
@@ -216,11 +240,47 @@ def generate_week_plan(
     last_finger_date: Optional[date] = None
     queue_index = 0
 
+    test_candidates = _test_candidates(test_queue, start_date)
+    remaining_tests = list(test_candidates)
+
     for offset in range(7):
         current_date = start + timedelta(days=offset)
         day_key = _weekday_key(current_date)
         day_availability = normalized[day_key]
         sessions: List[Dict[str, Any]] = []
+
+        if remaining_tests:
+            slot_info = day_availability["morning"]
+            if slot_info["available"]:
+                test_spec = SESSION_LIBRARY["test_max_hang_5s"]
+                if hard_days < hard_cap_per_week and not (last_finger_date and (current_date - last_finger_date).days <= 1):
+                    test_location = _pick_location(test_spec, slot_info, locations)
+                    if test_location:
+                        test_gym_id = None
+                        if test_location == "gym":
+                            test_gym_id = _select_default_gym_id(
+                                slot_gym_id=slot_info.get("gym_id"),
+                                default_gym_id=pref_default_gym_id,
+                                gyms=gyms or [],
+                            )
+                        sessions.append(
+                            _make_session_entry(
+                                test_spec,
+                                test_location,
+                                "morning",
+                                [
+                                    "test_queue_due_within_week",
+                                    f"recommended_by={remaining_tests[0].get('recommended_by_date')}",
+                                    "deterministic test insertion",
+                                ],
+                                test_gym_id,
+                            )
+                        )
+                        sessions[-1]["tags"]["test"] = True
+                        sessions[-1]["test_id"] = "max_hang_5s_total_load"
+                        hard_days += 1
+                        last_finger_date = current_date
+                        remaining_tests.pop(0)
 
         for slot in ("evening", "morning", "lunch"):
             if len(sessions) >= 3 or queue_index >= len(queue):

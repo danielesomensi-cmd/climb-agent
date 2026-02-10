@@ -16,6 +16,7 @@ Closed-loop V1 closes: planner day -> resolver output -> day log append -> `data
 - `session_ids[]`
 - `planned` (resolved/planned sessions snapshot)
 - `actual` (optional outcomes object)
+- `actual_feedback_v1` (mirrors `actual.exercise_feedback_v1`)
 - `notes`
 - `summary` (deterministic derived summary: count + categories + ids)
 
@@ -31,6 +32,39 @@ Reference schema: `data/schemas/resolved_day_log_entry.v1.json`.
 - Added recency/fatigue state:
   - `stimulus_recency.{finger_strength,boulder_power,endurance,complementaries}`
   - `fatigue_proxy` counters (`done/skipped/hard/finger/endurance totals`, `last_updated_date`)
+- Added progression state:
+  - `working_loads.entries[]` keyed deterministically by exercise + setup/surface
+  - `progression_counters.*` for deterministic streak counting
+  - `test_queue[]` for upcoming retest recommendations
+
+## Progression feedback contract (v1)
+Input source: `actual.exercise_feedback_v1[]`.
+
+Per-item expected fields:
+- common: `exercise_id`, `feedback_label`, `completed`
+- load-based: `used_total_load_kg` or `used_external_load_kg`
+- grade-based: `used_grade`, optional `surface_selected`
+
+Effects:
+- updates `working_loads.entries[]` next targets used by next `inject_targets`.
+- does not rewrite official max/baseline from normal sessions.
+- queues retest in `test_queue` on deterministic hard/easy streak thresholds.
+
+## Test sessions (minimal planning integration)
+- If `test_queue.recommended_by_date` falls within planned week, planner may insert `test_max_hang_5s`.
+- Inserted session respects existing constraints:
+  - hard cap per week
+  - no consecutive finger days
+- Test session carries deterministic markers:
+  - `session_id: "test_max_hang_5s"`
+  - `tags.test = true`
+  - `test_id = "max_hang_5s_total_load"`
+
+## Official tests update path
+Only explicit test session logging updates official maxima:
+- logging `test_*` with `max_hang_5s` + `used_total_load_kg` updates:
+  - `user_state.tests.max_strength[]`
+  - `user_state.baselines.hangboard[0].max_total_load_kg`
 
 ## Equipment compatibility in resolver (P0)
 - `equipment_required`: AND semantics. Every listed item must be in `context.available_equipment`.

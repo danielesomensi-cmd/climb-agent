@@ -167,3 +167,44 @@ def test_power_boulder_session_requires_supported_gym_equipment():
             if session["session_id"] == "gym_power_bouldering":
                 assert session["location"] == "gym"
                 assert session["gym_id"] == "work_gym"
+
+
+def test_test_queue_inserts_test_max_hang_session_with_constraints():
+    plan = generate_week_plan(
+        start_date="2026-01-05",
+        mode="balanced",
+        availability=_availability(),
+        allowed_locations=["home", "gym", "outdoor"],
+        hard_cap_per_week=3,
+        default_gym_id="work_gym",
+        test_queue=[
+            {
+                "test_id": "max_hang_5s_total_load",
+                "recommended_by_date": "2026-01-08",
+                "reason": "two_recent_hard_feedback_on_max_hang_5s",
+                "created_at": "2026-01-06",
+            }
+        ],
+    )
+
+    days = plan["weeks"][0]["days"]
+    inserted = [
+        (day["date"], session)
+        for day in days
+        for session in day["sessions"]
+        if session["session_id"] == "test_max_hang_5s"
+    ]
+    assert len(inserted) == 1
+    test_date, test_session = inserted[0]
+    assert test_session["slot"] == "morning"
+    assert test_session["tags"]["test"] is True
+    assert test_session["test_id"] == "max_hang_5s_total_load"
+
+    hard_days = [day for day in days if any(s["tags"]["hard"] for s in day["sessions"])]
+    assert len(hard_days) <= 3
+
+    finger_days = [day["date"] for day in days if any(s["tags"]["finger"] for s in day["sessions"])]
+    for prev, cur in zip(finger_days, finger_days[1:]):
+        prev_date = datetime.strptime(prev, "%Y-%m-%d").date()
+        cur_date = datetime.strptime(cur, "%Y-%m-%d").date()
+        assert (cur_date - prev_date).days > 1
