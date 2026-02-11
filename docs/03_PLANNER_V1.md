@@ -150,10 +150,10 @@ Both scripts produce deterministic JSON files under `out/plans/`.
 Per iniziare **basta** l’attuale libreria.
 Se manca qualcosa: aggiungere una session placeholder “outdoor performance day” e “rest/recovery”.
 
-## Next deliverables (codice + contratti)
-- `data/schemas/planner_plan.v1.json`
-- `catalog/engine/planner_v1.py` (deterministico)
-- `tests/test_planner_v1.py` (snapshot tests)
+## Next deliverables (updated)
+- Extend planner quality constraints and replanning heuristics.
+- Keep resolver behavior frozen unless explicitly requested.
+- Evolve daily-loop UX (`scripts/daily_loop.py`, `scripts/ui_daily_loop_gradio.py`) without breaking deterministic contracts.
 
 
 ## End-to-end deterministic loop (Planner → Resolver → Log → User State)
@@ -174,3 +174,5 @@ python scripts/resolve_planned_day.py --plan out/plans/plan_week.json --date 202
 python scripts/log_resolved_day.py --resolved out/plans/plan_week__2026-01-05__resolved.json --status done --notes "session completed"
 ```
 This updates `data/logs/sessions_2026.jsonl` and `data/user_state.json` deterministically.
+
+Determinism note: daily-loop snapshots/log payloads avoid wall-clock metadata; date-derived fields are used for reproducible artifacts.

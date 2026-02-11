@@ -65,6 +65,19 @@ For each resolved exercise instance:
   - `target_grade`
   - `intensity_label`
 
+## Feedback contract (canonical + legacy mapping)
+
+Canonical field is `feedback_label` in:
+- `very_easy|easy|ok|hard|very_hard`
+
+`difficulty` / `difficulty_label` are legacy-compat only and are deterministically mapped:
+- `too_easy -> very_easy`
+- `easy -> easy`
+- `ok -> ok`
+- `hard -> hard`
+- `too_hard|fail -> very_hard`
+- unknown/missing -> `ok`
+
 ## apply_feedback contract
 
 Input: `log_entry.actual.exercise_feedback_v1[]`.
@@ -113,7 +126,9 @@ Queued records:
 - `test_id`
 - `recommended_by_date`
 - `reason`
-- `created_at`
+- `created_at` (equal to feedback/log date, deterministic)
+
+Deterministic dedupe policy (simple): skip enqueue for the same `test_id` if an existing queue item has `created_at` within ±21 days.
 
 ## Determinism guarantees
 - stable key construction

@@ -34,8 +34,8 @@ Reference schema: `data/schemas/resolved_day_log_entry.v1.json`.
   - `fatigue_proxy` counters (`done/skipped/hard/finger/endurance totals`, `last_updated_date`)
 - Added progression state:
   - `working_loads.entries[]` keyed deterministically by exercise + setup/surface
-  - `progression_counters.*` for deterministic streak counting
-  - `test_queue[]` for upcoming retest recommendations
+  - `progression_counters.*` for deterministic streak counting (lazy-init to `{}` if missing)
+  - `test_queue[]` for upcoming retest recommendations (lazy-init to `[]` if missing)
 
 ## Progression feedback contract (v1)
 Input source: `actual.exercise_feedback_v1[]`.
@@ -77,31 +77,28 @@ Only explicit test session logging updates official maxima:
 - For `location="gym"`: resolver requires `gym_id` and uses `user_state.equipment.gyms[*]` matching that `gym_id`.
 - Resolver normalizes the final list deterministically (e.g., removes `floor`, can expose canonical `weight` if subtypes are present).
 
-## CLI
-Initialize/upgrade user state (idempotent):
+## Daily loop CLI (deterministic)
+Preview one day with resolved exercises + progression targets:
 ```bash
-python scripts/init_user_state_planning.py --user-state data/user_state.json
-```
-Resolve one planned day:
-```bash
-python scripts/resolve_planned_day.py --plan out/plans/plan_week.json --date 2026-01-05 --out out/plans/plan_week__2026-01-05__resolved.json
-```
-Log done/skipped day + update user state:
-```bash
-python scripts/log_resolved_day.py --resolved out/plans/plan_week__2026-01-05__resolved.json --status done --notes "felt good" --outcome-json '{"rpe":"hard"}'
-```
-
-End-to-end test run with tmp state/log (keeps repo data clean):
-```bash
-python scripts/resolve_planned_day.py \
+python scripts/daily_loop.py preview \
   --plan out/plans/plan_week.json \
   --date 2026-01-05 \
   --user-state /tmp/user_state.e2e.json \
   --out /tmp/resolved_day.e2e.json
-
-python scripts/log_resolved_day.py \
-  --resolved /tmp/resolved_day.e2e.json \
-  --status done \
-  --user-state /tmp/user_state.e2e.json \
-  --log-path /tmp/sessions.e2e.jsonl
 ```
+
+Apply feedback + append closed_loop.v1 log + update user_state:
+```bash
+python scripts/daily_loop.py apply \
+  --resolved /tmp/resolved_day.e2e.json \
+  --feedback /tmp/feedback.e2e.json \
+  --user-state /tmp/user_state.e2e.json \
+  --log /tmp/sessions.e2e.jsonl \
+  --out-user-state /tmp/user_state.e2e.json
+```
+
+`feedback.e2e.json` uses canonical `exercise_feedback_v1[].feedback_label`; legacy `difficulty` fields are mapped deterministically.
+
+## UI (minimum working day view)
+- Script: `scripts/ui_daily_loop_gradio.py`
+- Default smoke paths are in `/tmp` (safe for real testing; does not touch tracked `data/user_state.json` or `data/logs/*.jsonl` unless explicitly enabled).
