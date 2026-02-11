@@ -10,7 +10,7 @@
 - baseline metric(s):
   - e.g. pullup_1rm / pullup_2rm / max_hang_10mm_kg / etc
 - last 3 outcomes:
-  - [date] exercise: ... | prescribed: ... | actual: ... | difficulty: ...
+  - [date] exercise: ... | prescribed: ... | actual: ... | feedback_label: ...
 - current constraints:
   - location:
   - equipment:
@@ -23,7 +23,8 @@
 
 ## FEEDBACK (what happened)
 - actual load/reps/sets:
-- difficulty: (too_easy | easy | ok | hard | too_hard | fail)
+- feedback_label (canonical): (very_easy | easy | ok | hard | very_hard)
+- legacy difficulty (optional compat only): (too_easy | easy | ok | hard | too_hard | fail)
 - notes: (optional)
 
 ## OUTPUT (what changed)
@@ -36,7 +37,7 @@
 - baseline update:
   - updated? (yes/no) + why
 - safety flags:
-  - (e.g., “too_hard twice in a row → deload”)
+  - (e.g., “hard/very_hard twice in a row -> retest queued +7d”)
 
 ## Notes / next action
 - what to test next:
