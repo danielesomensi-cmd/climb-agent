@@ -51,6 +51,7 @@
 
 
 ## Status update
+- Profile Intake v1: added deterministic bootstrap flow for daily usability (`profile_intake.v1` schema + apply script + tests).
 - Planner v1: implemented and deterministic.
 - Replanner v1: implemented deterministic override/ripple + event-driven replanning (`scripts/replan_week.py`, `plan_event.v1`).
 - Closed-loop V1: implemented (resolve planned day + log done/skipped + user_state recency/fatigue updates).

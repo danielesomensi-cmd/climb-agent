@@ -1,0 +1,87 @@
+{
+  "schema_version": "profile_intake.v1",
+  "equipment": {
+    "gyms": [
+      {
+        "gym_id": "arlon",
+        "name": "Arlon",
+        "equipment": [
+          "gym_boulder",
+          "hangboard",
+          "spraywall"
+        ]
+      },
+      {
+        "gym_id": "bkl",
+        "name": "BKL",
+        "equipment": [
+          "gym_boulder",
+          "hangboard"
+        ]
+      },
+      {
+        "gym_id": "blocx",
+        "name": "Blocx",
+        "equipment": [
+          "board_kilter",
+          "gym_boulder",
+          "hangboard",
+          "spraywall",
+          "weight"
+        ]
+      },
+      {
+        "gym_id": "coque",
+        "name": "Coque",
+        "equipment": [
+          "gym_boulder",
+          "hangboard",
+          "weight"
+        ]
+      },
+      {
+        "gym_id": "work_gym",
+        "name": "Work Gym",
+        "equipment": [
+          "gym_boulder",
+          "hangboard",
+          "weight"
+        ]
+      }
+    ]
+  },
+  "availability": {
+    "mon": {
+      "evening": {
+        "available": true,
+        "gym_id": "blocx",
+        "preferred_location": "gym"
+      }
+    },
+    "thu": {
+      "lunch": {
+        "available": true,
+        "gym_id": "work_gym",
+        "preferred_location": "gym"
+      }
+    },
+    "wed": {
+      "morning": {
+        "available": false,
+        "preferred_location": "home"
+      }
+    }
+  },
+  "planning_prefs": {
+    "default_gym_id": "blocx",
+    "hard_day_cap_per_week": 3,
+    "target_training_days_per_week": 4
+  },
+  "defaults": {
+    "location": "home"
+  },
+  "context": {
+    "gym_id": "blocx",
+    "location": "gym"
+  }
+}

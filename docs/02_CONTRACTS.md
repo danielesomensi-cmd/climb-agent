@@ -88,7 +88,8 @@ User-specific baselines MUST live in `data/user_state.json` (not in templates).
 ### Outcome actual fields (core)
 - `actual.status`: `planned|done|skipped|modified` (default `planned` in templates)
 - Optional feedback fields:
-  - `actual.difficulty_label`: `easy|ok|hard|too_hard` (nullable)
+  - `actual.feedback_label` (canonical): `very_easy|easy|ok|hard|very_hard` (nullable)
+  - `actual.difficulty_label` (legacy, backward-compat only): `easy|ok|hard|too_hard` (nullable)
   - `actual.enjoyment`: `dislike|neutral|like` (nullable)
 - Load fields:
   - `actual.used_added_weight_kg` / `actual.used_assistance_kg`
