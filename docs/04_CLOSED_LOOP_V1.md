@@ -102,3 +102,15 @@ python scripts/daily_loop.py apply \
 ## UI (minimum working day view)
 - Script: `scripts/ui_daily_loop_gradio.py`
 - Default smoke paths are in `/tmp` (safe for real testing; does not touch tracked `data/user_state.json` or `data/logs/*.jsonl` unless explicitly enabled).
+- "Use real paths" is opt-in; default path inputs are `/tmp/user_state.json` and `/tmp/closed_loop.jsonl`.
+
+### Colab UI launch (daily loop)
+```bash
+pip install -r requirements-ui.txt
+python -m scripts.ui_daily_loop_gradio --server_port 7862
+```
+
+```python
+from google.colab import output
+output.serve_kernel_port_as_iframe(7862, height=900)
+```
