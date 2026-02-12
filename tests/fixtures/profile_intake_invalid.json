@@ -1,0 +1,10 @@
+{
+  "schema_version": "profile_intake.v1",
+  "availability": {
+    "mon": {
+      "evening": {
+        "preferred_location": "gym"
+      }
+    }
+  }
+}
