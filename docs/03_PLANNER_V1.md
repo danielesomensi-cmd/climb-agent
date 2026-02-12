@@ -79,12 +79,12 @@ Normalization guarantees every slot has:
 `preferred_location` is treated as a hard preference inside allowed + feasible locations.
 
 ## Deterministic gym_id rule
-When planner emits a session with `location="gym"`, `gym_id` is resolved deterministically in order:
-1. `availability.<weekday>.<slot>.gym_id`
-2. `planning_prefs.default_gym_id` (from `user_state.planning_prefs` or `user_state.planning.planning_prefs`)
-3. `equipment.gyms[0].gym_id`
-4. `work_gym` if present
-5. deterministic error
+When planner emits a session with `location="gym"`, `gym_id` is resolved deterministically as follows:
+1. If `availability.<weekday>.<slot>.gym_id` exists, use it unconditionally (slot override).
+2. Otherwise, select among compatible `equipment.gyms[]` using required session equipment:
+   - choose minimum `priority`
+   - tie-break lexicographically by `gym_id`
+3. If no compatible gym exists, fail deterministically.
 
 `profile_snapshot` includes compact `planning_prefs` and `availability_summary` for reproducible debugging.
 

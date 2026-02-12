@@ -147,28 +147,6 @@ def test_no_planned_gym_session_has_null_gym_id_and_no_gym_prefixed_session_id()
             assert not re.match(r"^(blocx|bkl|arlon|coque)_", session["session_id"])
 
 
-def test_power_boulder_session_requires_supported_gym_equipment():
-    availability = _availability()
-    availability["tue"]["evening"]["gym_id"] = "tiny_gym"
-    plan = generate_week_plan(
-        start_date="2026-01-05",
-        mode="balanced",
-        availability=availability,
-        allowed_locations=["home", "gym", "outdoor"],
-        default_gym_id="tiny_gym",
-        gyms=[
-            {"gym_id": "tiny_gym", "equipment": ["barbell"]},
-            {"gym_id": "work_gym", "equipment": ["gym_boulder"]},
-        ],
-    )
-
-    for day in plan["weeks"][0]["days"]:
-        for session in day["sessions"]:
-            if session["session_id"] == "gym_power_bouldering":
-                assert session["location"] == "gym"
-                assert session["gym_id"] == "work_gym"
-
-
 def test_test_queue_inserts_test_max_hang_session_with_constraints():
     plan = generate_week_plan(
         start_date="2026-01-05",
@@ -208,3 +186,77 @@ def test_test_queue_inserts_test_max_hang_session_with_constraints():
         prev_date = datetime.strptime(prev, "%Y-%m-%d").date()
         cur_date = datetime.strptime(cur, "%Y-%m-%d").date()
         assert (cur_date - prev_date).days > 1
+
+
+def test_availability_slot_gym_id_override_is_always_used():
+    availability = {
+        "mon": {"evening": {"available": True, "locations": ["gym"], "gym_id": "tiny_gym"}},
+        "tue": {"evening": {"available": False}},
+        "wed": {"evening": {"available": False}},
+        "thu": {"morning": {"available": False}},
+        "fri": {"evening": {"available": False}},
+        "sat": {"morning": {"available": False}},
+        "sun": {"available": False},
+    }
+    plan = generate_week_plan(
+        start_date="2026-01-05",
+        mode="balanced",
+        availability=availability,
+        allowed_locations=["home", "gym", "outdoor"],
+        default_gym_id="coque",
+        gyms=[
+            {"gym_id": "tiny_gym", "equipment": ["weight"], "priority": 9},
+            {"gym_id": "coque", "equipment": ["gym_routes", "gym_boulder"], "priority": 1},
+        ],
+    )
+    monday = next(day for day in plan["weeks"][0]["days"] if day["date"] == "2026-01-05")
+    evening_sessions = [s for s in monday["sessions"] if s["location"] == "gym" and s["slot"] == "evening"]
+    assert evening_sessions
+    assert all(s["gym_id"] == "tiny_gym" for s in evening_sessions)
+
+
+def test_session_requiring_gym_routes_skips_gyms_without_routes():
+    availability = _availability()
+    availability["wed"] = {"evening": {"available": True, "locations": ["gym"]}}
+    plan = generate_week_plan(
+        start_date="2026-01-05",
+        mode="balanced",
+        availability=availability,
+        allowed_locations=["home", "gym", "outdoor"],
+        gyms=[
+            {"gym_id": "bkl", "equipment": ["gym_boulder", "spraywall"], "priority": 1},
+            {"gym_id": "coque", "equipment": ["gym_routes", "gym_boulder"], "priority": 2},
+            {"gym_id": "blocx", "equipment": ["gym_boulder"], "priority": 3},
+        ],
+    )
+    sessions = [
+        s
+        for day in plan["weeks"][0]["days"]
+        for s in day["sessions"]
+        if s["session_id"] == "gym_power_endurance"
+    ]
+    assert sessions
+    assert all(s["gym_id"] == "coque" for s in sessions)
+
+
+def test_gym_selection_tie_breaks_by_gym_id_on_equal_priority():
+    availability = _availability()
+    availability["mon"]["evening"].pop("gym_id", None)
+    plan = generate_week_plan(
+        start_date="2026-01-05",
+        mode="balanced",
+        availability=availability,
+        allowed_locations=["home", "gym", "outdoor"],
+        gyms=[
+            {"gym_id": "zeta", "equipment": ["gym_boulder"], "priority": 1},
+            {"gym_id": "alpha", "equipment": ["gym_boulder"], "priority": 1},
+            {"gym_id": "coque", "equipment": ["gym_routes", "gym_boulder"], "priority": 2},
+        ],
+    )
+    boulder = [
+        s
+        for day in plan["weeks"][0]["days"]
+        for s in day["sessions"]
+        if s["session_id"] == "gym_power_bouldering"
+    ][0]
+    assert boulder["gym_id"] == "alpha"
