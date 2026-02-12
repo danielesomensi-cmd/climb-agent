@@ -1,60 +1,14 @@
 {
-  "schema_version": "profile_intake.v1",
-  "equipment": {
-    "gyms": [
-      {
-        "gym_id": "arlon",
-        "name": "Arlon",
-        "equipment": [
-          "gym_boulder",
-          "hangboard",
-          "spraywall"
-        ]
-      },
-      {
-        "gym_id": "bkl",
-        "name": "BKL",
-        "equipment": [
-          "gym_boulder",
-          "hangboard"
-        ]
-      },
-      {
-        "gym_id": "blocx",
-        "name": "Blocx",
-        "equipment": [
-          "board_kilter",
-          "gym_boulder",
-          "hangboard",
-          "spraywall",
-          "weight"
-        ]
-      },
-      {
-        "gym_id": "coque",
-        "name": "Coque",
-        "equipment": [
-          "gym_boulder",
-          "hangboard",
-          "weight"
-        ]
-      },
-      {
-        "gym_id": "work_gym",
-        "name": "Work Gym",
-        "equipment": [
-          "gym_boulder",
-          "hangboard",
-          "weight"
-        ]
-      }
-    ]
-  },
   "availability": {
     "mon": {
       "evening": {
         "available": true,
         "gym_id": "blocx",
+        "preferred_location": "gym"
+      },
+      "lunch": {
+        "available": true,
+        "gym_id": "work_gym",
         "preferred_location": "gym"
       }
     },
@@ -72,16 +26,76 @@
       }
     }
   },
+  "context": {
+    "gym_id": "blocx",
+    "location": "gym"
+  },
+  "defaults": {
+    "location": "home"
+  },
+  "equipment": {
+    "gyms": [
+      {
+        "equipment": [
+          "gym_boulder",
+          "spraywall",
+          "pangullich",
+          "weight"
+        ],
+        "gym_id": "bkl",
+        "name": "BKL",
+        "priority": 1
+      },
+      {
+        "equipment": [
+          "gym_routes",
+          "gym_boulder",
+          "pangullich",
+          "board_kilter"
+        ],
+        "gym_id": "coque",
+        "name": "Coque",
+        "priority": 2
+      },
+      {
+        "equipment": [
+          "gym_routes",
+          "gym_boulder",
+          "spraywall",
+          "weight",
+          "pangullich",
+          "hangboard"
+        ],
+        "gym_id": "arlon",
+        "name": "Arlon",
+        "priority": 3
+      },
+      {
+        "equipment": [
+          "board_kilter",
+          "hangboard",
+          "pangullich",
+          "spraywall",
+          "gym_boulder"
+        ],
+        "gym_id": "blocx",
+        "name": "Blocx",
+        "priority": 4
+      },
+      {
+        "equipment": [
+          "weight"
+        ],
+        "gym_id": "work_gym",
+        "name": "Work Gym",
+        "priority": 5
+      }
+    ]
+  },
   "planning_prefs": {
     "default_gym_id": "blocx",
     "hard_day_cap_per_week": 3,
     "target_training_days_per_week": 4
   },
-  "defaults": {
-    "location": "home"
-  },
-  "context": {
-    "gym_id": "blocx",
-    "location": "gym"
-  }
+  "schema_version": "profile_intake.v1"
 }

@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-02-10
+Last updated: 2026-02-12
 
 ---
 
@@ -39,6 +39,7 @@ Allowed `equipment` values:
 - `spraywall`
 - `board_kilter`
 - `gym_boulder` *(gym has a boulder area with set problems; not board, not spraywall)*
+- `gym_routes` *(gym has route walls / rope climbing terrain)*
 
 Rules:
 - Do **not** use `"none"` as an equipment value. Use an empty list: `equipment_required: []`.

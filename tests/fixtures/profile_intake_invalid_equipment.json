@@ -1,0 +1,14 @@
+{
+  "schema_version": "profile_intake.v1",
+  "equipment": {
+    "gyms": [
+      {
+        "gym_id": "x",
+        "name": "X",
+        "equipment": [
+          "not_vocab"
+        ]
+      }
+    ]
+  }
+}

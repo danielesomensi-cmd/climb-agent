@@ -61,3 +61,10 @@ def test_profile_intake_schema_validation_fails_for_invalid_payload():
 
     with pytest.raises(IntakeError, match="Schema validation failed"):
         apply_profile_intake(intake, _base_user_state())
+
+
+def test_profile_intake_rejects_equipment_outside_vocabulary():
+    intake = _load_fixture("profile_intake_invalid_equipment.json")
+
+    with pytest.raises(IntakeError, match="Schema validation failed"):
+        apply_profile_intake(intake, _base_user_state())

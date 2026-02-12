@@ -29,8 +29,9 @@ SESSION_LIBRARY: Dict[str, SessionSpec] = {
     "test_max_hang_5s": SessionSpec("test_max_hang_5s", "strength", 1, ("home", "gym"), True, True),
 }
 
-GYM_EQUIPMENT_REQUIREMENTS: Dict[str, Tuple[str, ...]] = {
-    "gym_power_bouldering": ("gym_boulder", "spraywall", "board_kilter"),
+GYM_CAPABILITY_REQUIREMENTS_ANY: Dict[str, Tuple[str, ...]] = {
+    "gym_power_bouldering": ("gym_boulder",),
+    "gym_power_endurance": ("gym_routes",),
 }
 
 MODE_QUEUES: Dict[str, Tuple[str, ...]] = {
@@ -132,35 +133,67 @@ def _select_default_gym_id(
     slot_gym_id: Optional[str],
     default_gym_id: Optional[str],
     gyms: Sequence[Dict[str, Any]],
-    required_any: Optional[Sequence[str]] = None,
+    equipment_required: Optional[Sequence[str]] = None,
 ) -> str:
-    required = set(required_any or [])
+    required = set(equipment_required or [])
+
+    by_id = {
+        gym.get("gym_id"): gym
+        for gym in gyms
+        if isinstance(gym.get("gym_id"), str) and gym.get("gym_id")
+    }
+
+    def _equipment_for(gym: Dict[str, Any]) -> Optional[set[str]]:
+        equipment_raw = gym.get("equipment")
+        if equipment_raw in (None, []):
+            return None
+        return set(equipment_raw)
 
     def _supports(gym: Dict[str, Any]) -> bool:
         if not required:
             return True
-        equipment_raw = gym.get("equipment")
-        if equipment_raw in (None, []):
+        equipment = _equipment_for(gym)
+        if equipment is None:
             return True
-        equipment = set(equipment_raw)
-        return bool(equipment.intersection(required))
-
-    by_id = {gym.get("gym_id"): gym for gym in gyms if isinstance(gym.get("gym_id"), str)}
+        return required.issubset(equipment)
 
     if slot_gym_id:
-        slot_gym = by_id.get(slot_gym_id)
-        if slot_gym is None or _supports(slot_gym):
-            return slot_gym_id
-    if default_gym_id:
-        default_gym = by_id.get(default_gym_id)
-        if default_gym is None or _supports(default_gym):
+        return slot_gym_id
+
+    if not gyms:
+        if default_gym_id:
             return default_gym_id
+        return "work_gym"
+
+    candidates: List[Tuple[int, str]] = []
     for gym in gyms:
         gym_id = gym.get("gym_id")
-        if isinstance(gym_id, str) and gym_id and _supports(gym):
-            return gym_id
-    if "work_gym" in by_id and _supports(by_id["work_gym"]):
-        return "work_gym"
+        if not isinstance(gym_id, str) or not gym_id:
+            continue
+        if default_gym_id and gym_id == default_gym_id:
+            continue
+        if not _supports(gym):
+            continue
+        priority = gym.get("priority")
+        if not isinstance(priority, int):
+            priority = 999_999
+        candidates.append((priority, gym_id))
+
+    default_gym = by_id.get(default_gym_id) if default_gym_id else None
+    if default_gym is not None and _supports(default_gym):
+        priority = default_gym.get("priority")
+        if not isinstance(priority, int):
+            priority = 999_999
+        candidates.append((priority, default_gym_id))
+
+    if candidates:
+        candidates.sort(key=lambda item: (item[0], item[1]))
+        return candidates[0][1]
+
+    if required:
+        raise ValueError(
+            f"Unable to resolve gym_id deterministically for required equipment: {sorted(required)}"
+        )
     raise ValueError("Unable to resolve gym_id deterministically for gym location")
 
 
@@ -302,12 +335,12 @@ def generate_week_plan(
 
             gym_id = None
             if location == "gym":
-                required_any = GYM_EQUIPMENT_REQUIREMENTS.get(candidate.session_id)
+                required_equipment = GYM_CAPABILITY_REQUIREMENTS_ANY.get(candidate.session_id)
                 gym_id = _select_default_gym_id(
                     slot_gym_id=slot_info.get("gym_id"),
                     default_gym_id=pref_default_gym_id,
                     gyms=gyms or [],
-                    required_any=required_any,
+                    equipment_required=required_equipment,
                 )
 
             explain = [

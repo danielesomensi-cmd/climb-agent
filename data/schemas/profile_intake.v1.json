@@ -1,67 +1,15 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "profile_intake.v1.json",
-  "title": "Profile Intake v1",
-  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "additionalProperties": false,
-  "required": [
-    "schema_version"
-  ],
   "properties": {
-    "schema_version": {
-      "const": "profile_intake.v1"
-    },
-    "equipment": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "gyms": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "gym_id",
-              "name",
-              "equipment"
-            ],
-            "properties": {
-              "gym_id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "name": {
-                "type": "string",
-                "minLength": 1
-              },
-              "equipment": {
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "availability": {
-      "type": "object",
       "additionalProperties": {
-        "type": "object",
         "additionalProperties": {
-          "type": "object",
           "additionalProperties": false,
-          "required": [
-            "available"
-          ],
           "properties": {
             "available": {
               "type": "boolean"
-            },
-            "preferred_location": {
-              "type": "string"
             },
             "gym_id": {
               "type": [
@@ -70,58 +18,126 @@
               ]
             },
             "locations": {
-              "type": "array",
               "items": {
                 "type": "string"
-              }
+              },
+              "type": "array"
+            },
+            "preferred_location": {
+              "type": "string"
             }
-          }
-        }
-      }
-    },
-    "planning_prefs": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "target_training_days_per_week": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 7
+          },
+          "required": [
+            "available"
+          ],
+          "type": "object"
         },
-        "hard_day_cap_per_week": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 7
-        },
-        "default_gym_id": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "defaults": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "location": {
-          "type": "string"
-        }
-      }
+        "type": "object"
+      },
+      "type": "object"
     },
     "context": {
-      "type": "object",
       "additionalProperties": false,
       "properties": {
-        "location": {
-          "type": "string"
-        },
         "gym_id": {
           "type": [
             "string",
             "null"
           ]
+        },
+        "location": {
+          "type": "string"
         }
-      }
+      },
+      "type": "object"
+    },
+    "defaults": {
+      "additionalProperties": false,
+      "properties": {
+        "location": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "equipment": {
+      "additionalProperties": false,
+      "properties": {
+        "gyms": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "equipment": {
+                "items": {
+                  "enum": [
+                    "hangboard",
+                    "pullup_bar",
+                    "band",
+                    "weight",
+                    "dumbbell",
+                    "kettlebell",
+                    "pangullich",
+                    "spraywall",
+                    "board_kilter",
+                    "gym_boulder",
+                    "gym_routes"
+                  ],
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "gym_id": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "name": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "priority": {
+                "minimum": 1,
+                "type": "integer"
+              }
+            },
+            "required": [
+              "gym_id",
+              "name",
+              "equipment"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "planning_prefs": {
+      "additionalProperties": false,
+      "properties": {
+        "default_gym_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "hard_day_cap_per_week": {
+          "maximum": 7,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "target_training_days_per_week": {
+          "maximum": 7,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "schema_version": {
+      "const": "profile_intake.v1"
     }
-  }
+  },
+  "required": [
+    "schema_version"
+  ],
+  "title": "Profile Intake v1",
+  "type": "object"
 }

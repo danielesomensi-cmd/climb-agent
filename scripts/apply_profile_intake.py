@@ -23,6 +23,7 @@ VOCAB_EQUIPMENT = {
     "spraywall",
     "board_kilter",
     "gym_boulder",
+    "gym_routes",
 }
 PROTECTED_TOP_LEVEL_KEYS = ("baselines", "tests", "history_index")
 
