@@ -1,15 +1,38 @@
 # climb-agent
-Climbing training GOD
 
-## UI-0 (Colab)
+Deterministic climbing training engine. Generates personalised weekly plans, resolves sessions into concrete exercises, and adapts progression via closed-loop feedback — no LLM in the loop.
 
-**Important (Colab):**
-- Run Gradio in a **Python cell**, not `%%bash` (Colab often looks “stuck” on long-running servers).
-- Bind to `127.0.0.1` (not `0.0.0.0`) to make Colab proxy/iframe reliable.
-- Ensure `prevent_thread_lock=False` so the process stays alive.
+## Quick start
 
-Verified pipeline:
-1) `%%bash`: `python scripts/run_baseline_session.py`
-2) `%%bash`: `python scripts/generate_latest_log_template.py`
-3) Python: start UI (keep process alive)
-4) Python: `output.serve_kernel_port_as_iframe(...)`
+```bash
+python -m venv .venv && source .venv/bin/activate
+pip install -r backend/requirements.txt
+python -m pytest backend/tests -q
+```
+
+## Repository layout
+
+```
+backend/
+  engine/            # Core planning, resolving, progression, replanning
+    adaptation/      # Closed-loop adaptation logic
+  api/               # FastAPI application (health + planned endpoints)
+  catalog/           # Exercises, sessions, templates (v1 JSON data)
+  data/              # User state + JSON schemas
+  tests/             # Pytest suite + fixtures
+frontend/            # Future frontend app
+docs/                # Domain vocabulary
+_archive/            # Legacy scripts, docs, config (kept for reference)
+```
+
+## Running the API
+
+```bash
+uvicorn backend.api.main:app --reload
+```
+
+## Running tests
+
+```bash
+python -m pytest backend/tests -q
+```

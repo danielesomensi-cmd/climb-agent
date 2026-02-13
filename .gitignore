@@ -1,31 +1,26 @@
 __pycache__/
 *.pyc
-.ipynb_checkpoints/
-output/
-
-# local backups
-*.bak
-*.bak*
-
-# local backups
-*.bak
-*.bak*
-tmp/
-out/manual_sanity/
-
-# --- generated / local artifacts ---
-out/
-data/logs/*.jsonl
-data/logs/_bak/
-out/ui_gradio.log
-out/tmp_sessions/
 .pytest_cache/
-__pycache__/
-*.pyc
+.ipynb_checkpoints/
 
-# --- generated artifacts (must not be tracked) ---
-out/context_bundles/
-out/log_templates/
-out/manual_sanity/
-out/ui_gradio.log
-data/logs/*.jsonl
+# virtual env
+.venv/
+
+# environment
+.env
+
+# build / generated artifacts
+out/
+output/
+tmp/
+data/logs/
+
+# local backups
+*.bak
+*.bak*
+
+# archive (legacy, not tracked)
+_archive/
+
+# frontend
+frontend/node_modules/
