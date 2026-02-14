@@ -1,0 +1,10 @@
+[project]
+name = "climb-agent"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+pythonpath = ["."]
+addopts = "-q"
+norecursedirs = ["out", "data/logs", ".git", ".venv", "_archive"]
