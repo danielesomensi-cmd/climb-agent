@@ -1,6 +1,6 @@
 # BACKLOG — climb-agent
 
-> Ultimo aggiornamento: 2026-02-15 (post fix cluster E2E)
+> Ultimo aggiornamento: 2026-02-15 (post Cluster 2 fixes)
 
 Feature da implementare nelle prossime fasi. Per ognuna: titolo, descrizione,
 fase suggerita, dipendenze.
@@ -10,7 +10,7 @@ fase suggerita, dipendenze.
 ## B1. Sessione core standalone
 
 - **Descrizione**: Sessione `core_conditioning_home.json` per slot pranzo (30-45min). Intensity "low"/"medium", dominio core + prehab. Ab wheel, hollow hold, pallof press, dead bug, front lever progressions.
-- **Fase suggerita**: Cluster 2 o inizio Fase 2
+- **Fase suggerita**: Inizio Fase 2
 - **Dipendenze**: Nessuna (il catalogo esercizi ha già gli esercizi core)
 - **Note**: Va nel pool di tutte le fasi come complementare (Pass 2)
 
@@ -18,8 +18,8 @@ fase suggerita, dipendenze.
 
 - **Descrizione**: Sessioni tipo `projecting_outdoor`, `volume_outdoor`. Intent "outdoor" nel replanner. Outdoor NON è una sessione risolta dall'engine: è logging di quello che l'utente fa in falesia, con gradi/stile/tentativi.
 - **Fase suggerita**: Fase 2 (tracking)
-- **Dipendenze**: Replanner phase-aware (B5), trip planning, feedback contract
-- **Note**: Integrazione con trip planning (deload pre-trip). Il logging outdoor ha uno schema diverso dalle sessioni indoor resolved.
+- **Dipendenze**: Trip planning, feedback contract
+- **Note**: Integrazione con trip planning (deload pre-trip ora funzionante). Il logging outdoor ha uno schema diverso dalle sessioni indoor resolved.
 
 ## B3. Validazione piano vs letteratura
 
@@ -28,7 +28,7 @@ fase suggerita, dipendenze.
   - Lattice Training — finger training frequency e protocolli
   - Eva López — periodizzazione finger strength
 - **Output**: Report "allineato" vs "devia e perché"
-- **Fase suggerita**: Dopo Cluster 1, prima di Fase 2 (validazione)
+- **Fase suggerita**: Dopo Cluster 2, prima di Fase 2 (validazione)
 - **Dipendenze**: Nessuna (analisi documentale)
 
 ## B4. Load score / fatica settimanale
@@ -39,24 +39,20 @@ fase suggerita, dipendenze.
 - **Dipendenze**: `load_model_hint` nelle sessioni (parziale, vedi strength_long)
 - **Note**: Serve per: monitoraggio overtraining, input per adaptive deload, visualizzazione nella UI
 
-## B5. Replanner phase-aware + intent completi [F6, F7]
+## ~~B5. Replanner phase-aware + intent completi [F6, F7]~~ DONE
 
-- **Descrizione**: replanner_v1 usa planner_v1 SESSION_LIBRARY, non conosce macrociclo. Intent mancanti: core, prehab, flexibility, outdoor, projecting. Il replanner deve consultare il session_pool della fase corrente.
-- **Fase suggerita**: Cluster 2
-- **Dipendenze**: B1 (core session), B2 (outdoor sessions)
+- **Risolto in**: Cluster 2, commit fix(F6,F7)
+- **Stato**: Replanner ora usa planner_v2 `_SESSION_META`, 12 intent mappati, `phase_id` propagato
 
-## B6. PE assessment — repeater test + no double counting [F5]
+## ~~B6. PE assessment — repeater test + no double counting [F5]~~ DONE
 
-- **Descrizione**: `_compute_power_endurance()` non usa il repeater test oggettivo (24 reps a 60% max, in user_state.tests.endurance). Double counting: gap RP-OS + penalty self_eval pump_too_early.
-- **Fase suggerita**: Cluster 2
-- **Dipendenze**: Nessuna
-- **Note**: Il repeater test esiste già in user_state. Aggiungere benchmark per grado (es. 8b target → 30+ reps expected)
+- **Risolto in**: Cluster 2, commit fix(F5)
+- **Stato**: `_compute_power_endurance()` usa repeater test (40%) + gap (40%) + self_eval (20%). Penalty ridotte.
 
-## B7. Validazioni edge case [F8, F9, F10]
+## ~~B7. Validazioni edge case [F8, F9, F10]~~ DONE
 
-- **Descrizione**:
-  - Pre-trip deload reale (non solo annotazione) — inserire settimana di deload prima del trip
-  - Validazione goal ≤ current → warning o errore
-  - Floor minimo 2 settimane per fase (1w solo per deload)
-- **Fase suggerita**: Cluster 2
-- **Dipendenze**: Nessuna
+- **Risolto in**: Cluster 2, commits fix(F9), fix(F10), fix(F8)
+- **Stato**:
+  - Goal validation: warning se target ≤ current o gap > 8 half-grades
+  - Floor minimo: 2 settimane per fase non-deload
+  - Pre-trip deload: `pretrip_dates` blocca sessioni hard, flag nel piano
