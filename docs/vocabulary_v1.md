@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-02-12
+Last updated: 2026-02-15
 
 ---
 
@@ -39,10 +39,13 @@ Allowed `equipment` values:
 - `foam_roller`
 - `resistance_band` *(generic elastic band; distinct from `band` which is for pull-up assistance)*
 - `ab_wheel`
+- `bench` *(flat/incline bench for pressing and rows)*
+- `barbell` *(subtype; prefer `weight` unless strictly required)*
 - `rings` *(gymnastic rings)*
 - `pinch_block` *(loadable pinch training block)*
 - `spraywall`
 - `board_kilter`
+- `board_moonboard`
 - `gym_boulder` *(gym has a boulder area with set problems; not board, not spraywall)*
 - `gym_routes` *(gym has route walls / rope climbing terrain)*
 
@@ -302,6 +305,7 @@ Legacy compatibility is deterministic and one-way (`difficulty` is legacy, `feed
 Canonical boulder surfaces for progression targeting:
 
 - `board_kilter`
+- `board_moonboard`
 - `spraywall`
 - `gym_boulder`
 
