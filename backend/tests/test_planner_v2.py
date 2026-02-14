@@ -187,6 +187,27 @@ class TestPlannerV2LunchSlots(unittest.TestCase):
             self.assertEqual(mon["sessions"][0]["slot"], "lunch")
 
 
+class TestPlannerV2ClimbingFirst(unittest.TestCase):
+    """Tests for climbing-first session ordering (F11 fix)."""
+
+    def test_no_evening_only_complementary(self):
+        """No day should have only a complementary session in the evening slot
+        while primary climbing sessions are still unplaced."""
+        for phase_id in ("base", "strength_power", "power_endurance", "performance"):
+            plan = generate_phase_week(**_make_kwargs(phase_id,
+                planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+            days = plan["weeks"][0]["days"]
+            for d in days:
+                if not d["sessions"]:
+                    continue
+                for s in d["sessions"]:
+                    explains = s.get("explain", [])
+                    # Complementary sessions should prefer lunch, not evening
+                    if "pass2:complementary" in explains:
+                        self.assertNotEqual(s["slot"], "evening",
+                            f"{phase_id}: complementary {s['session_id']} placed in evening on {d['weekday']}")
+
+
 class TestPlannerV2FingerMaintenance(unittest.TestCase):
     """Tests for finger_maintenance_home in Base phase (F3 fix)."""
 
