@@ -57,6 +57,17 @@ _PULLING_BENCHMARK: Dict[str, float] = {
     "9a": 2.15, "9a+": 2.25,
 }
 
+# Repeater test (7:3 duty cycle, 20mm, 60% max total load): expected reps for grade
+_PE_REPEATER_BENCHMARK: Dict[str, int] = {
+    "7a": 18, "7a+": 20,
+    "7b": 22, "7b+": 24,
+    "7c": 26, "7c+": 28,
+    "8a": 30, "8a+": 32,
+    "8b": 34, "8b+": 36,
+    "8c": 38, "8c+": 40,
+    "9a": 42, "9a+": 44,
+}
+
 
 def _clamp(value: float, lo: float = 0.0, hi: float = 100.0) -> int:
     return int(max(lo, min(hi, round(value))))
@@ -145,27 +156,60 @@ def _compute_pulling_strength(
 def _compute_power_endurance(
     grades: Dict[str, Any],
     self_eval: Dict[str, Any],
+    tests: Optional[Dict[str, Any]] = None,
+    target_grade: str = "7c+",
 ) -> int:
+    """Compute power endurance score.
+
+    Weighted components:
+    - Repeater test (objective): 40% when available
+    - RP-OS gap: 40% (or 60% without repeater)
+    - Self-eval: 20% (or 40% without repeater)
+    """
+    tests = tests or {}
+
+    # --- Gap score ---
     lead_rp = grades.get("lead_max_rp")
     lead_os = grades.get("lead_max_os")
 
     if lead_rp and lead_os and lead_rp in _GRADE_INDEX and lead_os in _GRADE_INDEX:
         gap = grade_gap(lead_rp, lead_os)
         if gap <= 2:
-            score = 75.0
+            gap_score = 75.0
         elif gap <= 4:
-            score = 55.0
+            gap_score = 55.0
         elif gap <= 6:
-            score = 40.0
+            gap_score = 40.0
         else:
-            score = 30.0
+            gap_score = 30.0
     else:
-        score = 50.0
+        gap_score = 50.0
 
+    # --- Repeater score (objective) ---
+    repeater_reps = tests.get("repeater_7_3_max_sets_20mm")
+    has_repeater = repeater_reps is not None and isinstance(repeater_reps, (int, float))
+
+    if has_repeater:
+        benchmark = _benchmark_for(_PE_REPEATER_BENCHMARK, target_grade)
+        repeater_score = (repeater_reps / benchmark) * 100
+        repeater_score = min(100.0, max(0.0, repeater_score))
+    else:
+        repeater_score = 0.0
+
+    # --- Self-eval modifier (reduced penalties to avoid double counting) ---
+    eval_modifier = 0.0
     if self_eval.get("primary_weakness") == "pump_too_early":
-        score -= 15
+        eval_modifier = -8.0
     elif self_eval.get("secondary_weakness") == "pump_too_early":
-        score -= 8
+        eval_modifier = -4.0
+
+    # --- Weighted combination ---
+    if has_repeater:
+        # 40% repeater + 40% gap + 20% self_eval influence
+        score = repeater_score * 0.4 + gap_score * 0.4 + (gap_score + eval_modifier) * 0.2
+    else:
+        # 60% gap + 40% self_eval influence
+        score = gap_score * 0.6 + (gap_score + eval_modifier) * 0.4
 
     return _clamp(score)
 
@@ -274,7 +318,7 @@ def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any])
 
     finger = _compute_finger_strength(tests, body, self_eval, target_grade, current_grade)
     pulling = _compute_pulling_strength(tests, body, self_eval, target_grade, current_grade)
-    pe = _compute_power_endurance(grades, self_eval)
+    pe = _compute_power_endurance(grades, self_eval, tests, target_grade)
     technique = _compute_technique(grades, self_eval)
     endurance = _compute_endurance(pe, experience, self_eval)
     body_comp = _compute_body_composition(body, finger)

@@ -196,5 +196,79 @@ class TestAssessmentProfile(unittest.TestCase):
         self.assertGreater(p1["body_composition"], p2["body_composition"])
 
 
+class TestPERepeaterIntegration(unittest.TestCase):
+    """Tests for PE repeater test integration + no double counting (F5 fix)."""
+
+    def test_pe_with_repeater_data(self):
+        """Repeater data should influence PE score."""
+        # Without repeater
+        no_rep = _make_assessment(lead_max_rp="8a+", lead_max_os="7b")
+        # With repeater
+        with_rep = _make_assessment(lead_max_rp="8a+", lead_max_os="7b")
+        with_rep["tests"]["repeater_7_3_max_sets_20mm"] = 30  # good score for 7c+ target
+
+        goal = _make_goal("7c+", "7b")
+        p1 = compute_assessment_profile(no_rep, goal)
+        p2 = compute_assessment_profile(with_rep, goal)
+        # With a decent repeater score, PE should be higher
+        self.assertGreater(p2["power_endurance"], p1["power_endurance"])
+
+    def test_pe_repeater_low_reps(self):
+        """Low repeater reps → lower PE score than gap alone would suggest."""
+        assessment = _make_assessment(
+            lead_max_rp="7b", lead_max_os="7a+",  # gap=1 → gap_score=75
+            primary_weakness="cant_hold_hard_moves",
+            secondary_weakness=None,
+        )
+        assessment["tests"]["repeater_7_3_max_sets_20mm"] = 10  # very low
+
+        goal = _make_goal("8b", "7b")
+        profile = compute_assessment_profile(assessment, goal)
+        # Low repeater should pull score down despite good gap
+        self.assertLess(profile["power_endurance"], 60)
+
+    def test_pe_no_double_counting_pump(self):
+        """Self-eval penalty for pump_too_early should be reduced (no double counting)."""
+        # With repeater data, the penalty is only 20% weight (reduced from full penalty)
+        assessment = _make_assessment(
+            lead_max_rp="7b", lead_max_os="6c+",  # gap=3 → gap_score=55
+            primary_weakness="pump_too_early",
+        )
+        assessment["tests"]["repeater_7_3_max_sets_20mm"] = 22
+
+        # Without pump weakness
+        no_pump = _make_assessment(
+            lead_max_rp="7b", lead_max_os="6c+",
+            primary_weakness="cant_hold_hard_moves",
+        )
+        no_pump["tests"]["repeater_7_3_max_sets_20mm"] = 22
+
+        goal = _make_goal("7c+", "7b")
+        with_pump = compute_assessment_profile(assessment, goal)
+        without_pump = compute_assessment_profile(no_pump, goal)
+        # Pump penalty should exist but be small (reduced from -15 to -8, weighted at 20%)
+        diff = without_pump["power_endurance"] - with_pump["power_endurance"]
+        self.assertGreater(diff, 0, "Pump weakness should still reduce PE score")
+        self.assertLess(diff, 10, "Pump penalty should be small to avoid double counting")
+
+    def test_pe_deterministic_with_repeater(self):
+        """PE with repeater data must be deterministic."""
+        assessment = _make_assessment(lead_max_rp="8a+", lead_max_os="7b")
+        assessment["tests"]["repeater_7_3_max_sets_20mm"] = 24
+        goal = _make_goal("8b", "8a+")
+        p1 = compute_assessment_profile(assessment, goal)
+        p2 = compute_assessment_profile(assessment, goal)
+        self.assertEqual(p1["power_endurance"], p2["power_endurance"])
+
+    def test_pe_without_repeater_still_works(self):
+        """PE without repeater data should still compute correctly (backward compatible)."""
+        assessment = _make_assessment(lead_max_rp="7b", lead_max_os="6c+")
+        # repeater is None by default in _make_assessment
+        goal = _make_goal("7c+", "7b")
+        profile = compute_assessment_profile(assessment, goal)
+        self.assertGreater(profile["power_endurance"], 0)
+        self.assertLessEqual(profile["power_endurance"], 100)
+
+
 if __name__ == "__main__":
     unittest.main()
