@@ -83,6 +83,33 @@ Data paths are relative to the repo root:
 Equipment marked in `equipment_required` is truly mandatory (cannot do the exercise without it).
 Optional equipment is mentioned in `prescription_defaults.notes` only.
 
+## Macrocycle engine (Fase 1)
+
+The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
+
+### Modules
+
+- `backend/engine/assessment_v1.py` — 6-axis profile computation (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition). Each axis 0-100, benchmark-based when test data available, grade-estimated otherwise.
+- `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip).
+- `backend/engine/planner_v2.py` — Phase-aware weekly planner. Selects sessions from the phase's session pool, respects domain weights, enforces intensity caps and constraints (no consecutive finger days, hard day cap).
+
+### Flow
+
+```
+user_state.assessment + user_state.goal
+    → compute_assessment_profile()    [assessment_v1]
+    → generate_macrocycle()           [macrocycle_v1]
+    → generate_phase_week()           [planner_v2, per week]
+    → resolve_session()               [resolve_session, per session]
+```
+
+### Schema additions (user_state.json v1.5)
+
+- `goal`: goal_type, discipline, target_grade, target_style, current_grade, deadline
+- `assessment`: body, experience, grades, tests, self_eval, profile (6-axis)
+- `trips[]`: name, start_date, end_date, discipline, priority
+- `macrocycle`: null until generated
+
 ## Testing
 
 Tests live in `backend/tests/`. The `conftest.py` adds the repo root to `sys.path` so `import backend.*` works. Run with:

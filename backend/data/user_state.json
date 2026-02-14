@@ -310,7 +310,56 @@
   },
   "recent_sessions": [],
   "recent_sessions_window_days": 14,
-  "schema_version": "1.4",
+  "goal": {
+    "goal_type": "lead_grade",
+    "discipline": "lead",
+    "target_grade": "7c+",
+    "target_style": "redpoint",
+    "current_grade": "7b",
+    "deadline": "2026-06-30",
+    "override_mode": null,
+    "created_at": "2026-02-14"
+  },
+  "assessment": {
+    "last_assessed": "2026-02-14",
+    "body": {
+      "weight_kg": 77.0,
+      "height_cm": 182,
+      "body_fat_pct": 19
+    },
+    "experience": {
+      "climbing_years": 5,
+      "structured_training_years": 1
+    },
+    "grades": {
+      "boulder_max_rp": "7C",
+      "lead_max_rp": "8a+",
+      "lead_max_os": "7b"
+    },
+    "tests": {
+      "max_hang_20mm_5s_total_kg": 102.0,
+      "weighted_pullup_1rm_total_kg": 122.0,
+      "max_pullups_bodyweight": null,
+      "repeater_7_3_max_sets_20mm": null,
+      "last_test_date": "2026-01-13"
+    },
+    "self_eval": {
+      "primary_weakness": "pump_too_early",
+      "secondary_weakness": "technique_errors"
+    },
+    "profile": null
+  },
+  "trips": [
+    {
+      "name": "Arco primavera",
+      "start_date": "2026-04-18",
+      "end_date": "2026-04-21",
+      "discipline": "lead",
+      "priority": "high"
+    }
+  ],
+  "macrocycle": null,
+  "schema_version": "1.5",
   "stimulus_recency": {
     "boulder_power": {
       "done_count": 1,

@@ -439,29 +439,23 @@ L'LLM è l'interfaccia umana, non il cervello.
 
 ## 13. Roadmap
 
-### Fase 0: Dati + API (1-2 settimane)
+### Fase 0: Dati + API (1-2 settimane) ✅
 - [x] Caricare questo doc nel repo (`docs/DESIGN_GOAL_MACROCICLO_v1.1.md`)
-- [ ] Aggiornare CLAUDE.md con riferimento a questo doc
+- [x] Aggiornare CLAUDE.md con riferimento a questo doc
+- [x] Ampliare catalogo esercizi (da 35 a ~102)
+- [x] Ampliare catalogo sessioni (da 17 a ~28)
 - [ ] API FastAPI: implementare tutti gli endpoint
-- [ ] Ampliare catalogo esercizi (da 35 a ~80-100)
-  - Esercizi lead-specific: interval climbing, vie lunghe, tattica
-  - Esercizi PE: 4x4, circuit, threshold climbing
-  - Esercizi outdoor logging
-  - Più varianti forza generale e prehab
-- [ ] Ampliare catalogo sessioni (da 17 a ~30-40)
-  - Sessioni lead PE, lead tecnica, outdoor log
-  - Sessioni test PE
-  - Sessioni brevi (pranzo): hangboard, core, mobility
 - [ ] Aggiungere planning mode: `lead_focus`
 
-### Fase 1: Macrociclo engine (2-3 settimane)
-- [ ] Schema goal in user_state
-- [ ] Assessment engine: domande onboarding + profilo debolezze (radar 6 assi)
-- [ ] Macrociclo generator: goal + assessment → fasi con pesi e durate
-- [ ] DUP: distribuzione concurrent dentro ogni fase
-- [ ] Deload: programmato + adattivo + pre-trip
-- [ ] Adattività: readiness, overreach, plateau detection
-- [ ] Test per tutto il macrociclo engine
+### Fase 1: Macrociclo engine (2-3 settimane) ✅
+- [x] Schema goal in user_state (`user_state.json` v1.5)
+- [x] Assessment engine: `assessment_v1.py` — profilo 6 assi (0-100)
+- [x] Macrociclo generator: `macrocycle_v1.py` — Hörst 4-3-2-1 con DUP
+- [x] Planner v2: `planner_v2.py` — planner phase-aware
+- [x] Deload: programmato + adattivo + pre-trip
+- [x] Vocabulary update (§5.1-5.6)
+- [x] Test per tutto il macrociclo engine (assessment, macrocycle, planner_v2)
+- [ ] Adattività avanzata: readiness, overreach, plateau detection
 
 ### Fase 2: Tracking + extras (1-2 settimane)
 - [ ] Schema outdoor session log

@@ -402,3 +402,66 @@ Example (illustrative only):
     }
   ]
 }
+
+---
+
+## 5) Goal & Assessment vocabulary (v1)
+
+### 5.1 Goal types
+
+Allowed `goal_type` values:
+
+- `lead_grade` *(implemented in v1)*
+- `boulder_grade` *(future)*
+- `all_round` *(future)*
+- `outdoor_season` *(future)*
+- `maintenance` *(future)*
+
+### 5.2 Target styles
+
+Allowed `target_style` values:
+
+- `redpoint`
+- `onsight`
+
+### 5.3 Override modes
+
+Allowed `override_mode` values:
+
+- `null` *(no override)*
+- `force_phase`
+- `force_deload`
+
+### 5.4 Self-evaluation weakness options
+
+Allowed `self_eval` weakness values (used in `assessment.self_eval.primary_weakness` and `secondary_weakness`):
+
+- `pump_too_early` — forearm pump limits climbing before strength does
+- `cant_hold_hard_moves` — lack of max strength or power on crux moves
+- `cant_read_routes` — poor route reading and beta finding
+- `technique_errors` — falling due to poor body positioning or movement quality
+- `fingers_give_out` — finger strength is the limiting factor
+- `cant_manage_rests` — poor ability to recover on rests during routes
+- `lack_power` — insufficient explosive power for dynamic moves
+- `injury_prone` — frequent injuries or niggles limiting training
+
+### 5.5 Macrocycle phases
+
+Allowed `phase_id` values:
+
+- `base` — Endurance Base (aerobic, volume, technique)
+- `strength_power` — Strength & Power (max hang, limit boulder, general strength)
+- `power_endurance` — Power Endurance (4x4, intervals, threshold)
+- `performance` — Performance (limit climbing, projecting, outdoor)
+- `deload` — Deload (recovery, mobility, prehab)
+
+### 5.6 Assessment profile axes
+
+The 6 normalized axes (0-100) of the assessment radar:
+
+- `finger_strength`
+- `pulling_strength`
+- `power_endurance`
+- `technique`
+- `endurance`
+- `body_composition`
