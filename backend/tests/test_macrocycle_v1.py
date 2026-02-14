@@ -230,6 +230,30 @@ class TestDeloadFunctions(unittest.TestCase):
         self.assertFalse(should_trigger_adaptive_deload(["very_hard", "very_hard"]))
 
 
+class TestPhaseDurationFloors(unittest.TestCase):
+    """Tests for minimum phase duration floors (F10 fix)."""
+
+    def test_non_deload_phases_min_2_weeks(self):
+        profile = _make_profile()
+        durations = _compute_phase_durations(profile, 12)
+        for phase_id in ("base", "strength_power", "power_endurance", "performance"):
+            self.assertGreaterEqual(durations[phase_id], 2,
+                                    f"Phase {phase_id} has {durations[phase_id]} weeks, expected >= 2")
+
+    def test_short_macrocycle_still_respects_floors(self):
+        profile = _make_profile()
+        durations = _compute_phase_durations(profile, 10)
+        self.assertEqual(sum(durations.values()), 10)
+        for phase_id in ("strength_power", "power_endurance", "performance"):
+            self.assertGreaterEqual(durations[phase_id], 2,
+                                    f"Phase {phase_id} has {durations[phase_id]} weeks in 10w macrocycle")
+
+    def test_deload_min_1_week(self):
+        profile = _make_profile()
+        durations = _compute_phase_durations(profile, 12)
+        self.assertGreaterEqual(durations["deload"], 1)
+
+
 class TestGoalValidation(unittest.TestCase):
     """Tests for goal validation warnings (F9 fix)."""
 

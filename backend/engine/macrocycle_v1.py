@@ -161,6 +161,11 @@ def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> 
             durations[extend_phase] += 1
             durations[shrink_phase] -= 1
 
+    # Enforce floor: min 2 weeks per non-deload phase, min 1 for deload
+    for phase_id in ("base", "strength_power", "power_endurance", "performance"):
+        durations[phase_id] = max(2, durations[phase_id])
+    durations["deload"] = max(1, durations["deload"])
+
     # Scale to total_weeks
     current_total = sum(durations.values())
     if current_total != total_weeks:
