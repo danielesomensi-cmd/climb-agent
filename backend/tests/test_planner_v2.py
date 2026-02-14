@@ -187,5 +187,64 @@ class TestPlannerV2LunchSlots(unittest.TestCase):
             self.assertEqual(mon["sessions"][0]["slot"], "lunch")
 
 
+class TestPlannerV2PoolCycling(unittest.TestCase):
+    """Tests for pool cycling and distribution (F2/F13 fix)."""
+
+    def test_target_training_days_respected(self):
+        """With target=6, at least 5 days should have sessions (non-deload)."""
+        plan = generate_phase_week(**_make_kwargs("base",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        days_with_sessions = sum(1 for d in days if d["sessions"])
+        self.assertGreaterEqual(days_with_sessions, 5,
+                                f"Only {days_with_sessions} days with sessions, expected ≥5")
+
+    def test_sessions_distributed_not_concentrated(self):
+        """Sessions should not all be in the first 3 days."""
+        plan = generate_phase_week(**_make_kwargs("base",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        first_3_sessions = sum(1 for d in days[:3] if d["sessions"])
+        last_4_sessions = sum(1 for d in days[3:] if d["sessions"])
+        self.assertGreater(last_4_sessions, 0,
+                           "All sessions concentrated in first 3 days")
+
+    def test_hard_days_have_spacing(self):
+        """Hard sessions should not be on consecutive days."""
+        plan = generate_phase_week(**_make_kwargs("strength_power",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        hard_offsets = []
+        for i, d in enumerate(days):
+            if any(s["tags"]["hard"] for s in d["sessions"]):
+                hard_offsets.append(i)
+        for prev, cur in zip(hard_offsets, hard_offsets[1:]):
+            self.assertGreater(cur - prev, 1,
+                               f"Consecutive hard days at offset {prev} and {cur}")
+
+    def test_pool_cycles_when_small(self):
+        """Even a small pool should produce sessions across the week."""
+        plan = generate_phase_week(**_make_kwargs("power_endurance",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        days_with_sessions = sum(1 for d in days if d["sessions"])
+        self.assertGreaterEqual(days_with_sessions, 5,
+                                f"Only {days_with_sessions} days with sessions, expected ≥5")
+
+    def test_two_pass_labels_present(self):
+        """Plan should have both pass1 and pass2 labels (when complementary is needed)."""
+        plan = generate_phase_week(**_make_kwargs("strength_power",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        all_explains = []
+        for d in days:
+            for s in d["sessions"]:
+                all_explains.extend(s.get("explain", []))
+        has_pass1 = any("pass1" in e for e in all_explains)
+        has_pass2 = any("pass2" in e for e in all_explains)
+        self.assertTrue(has_pass1, "No pass1 (primary) sessions found")
+        self.assertTrue(has_pass2, "No pass2 (complementary) sessions found")
+
+
 if __name__ == "__main__":
     unittest.main()
