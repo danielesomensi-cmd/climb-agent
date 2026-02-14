@@ -15,6 +15,30 @@ LOAD_BASED_EXERCISES = {"max_hang_5s", "weighted_pullup", "pullup"}
 GRADE_BASED_EXERCISES = {"gym_limit_bouldering"}
 SURFACE_PRIORITY = ("board_kilter", "spraywall", "gym_boulder")
 VALID_FEEDBACK = {"very_easy", "easy", "ok", "hard", "very_hard"}
+LEGACY_DIFFICULTY_MAP = {
+    "too_easy": "very_easy",
+    "easy": "easy",
+    "ok": "ok",
+    "hard": "hard",
+    "too_hard": "very_hard",
+    "fail": "very_hard",
+}
+
+
+
+def canonical_feedback_label(item: Dict[str, Any]) -> str:
+    feedback = str(item.get("feedback_label") or "").strip().lower()
+    if feedback in VALID_FEEDBACK:
+        return feedback
+
+    legacy = str(item.get("difficulty") or item.get("difficulty_label") or "").strip().lower()
+    if legacy in LEGACY_DIFFICULTY_MAP:
+        return LEGACY_DIFFICULTY_MAP[legacy]
+
+    if bool(item.get("too_hard")) or bool(item.get("fail")):
+        return "very_hard"
+
+    return "ok"
 
 
 def _round_half_step(value: float) -> float:
@@ -328,9 +352,18 @@ def _enqueue_test(user_state: Dict[str, Any], *, test_id: str, date_value: str, 
     queue = _ensure_test_queue(user_state)
     created = _parse_day(date_value)
     by_date = (created + timedelta(days=offset_days)).date().isoformat() if created else date_value
-    exists = any(str(item.get("test_id") or "") == test_id for item in queue)
-    if exists:
-        return
+
+    dedupe_window_days = 21
+    for item in queue:
+        if str(item.get("test_id") or "") != test_id:
+            continue
+        existing_created = _parse_day(str(item.get("created_at") or ""))
+        if created is None or existing_created is None:
+            if str(item.get("created_at") or "") == date_value:
+                return
+            continue
+        if abs((created - existing_created).days) <= dedupe_window_days:
+            return
     queue.append(
         {
             "test_id": test_id,
@@ -384,6 +417,10 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
     bodyweight = float(updated.get("bodyweight_kg") or ((updated.get("body") or {}).get("weight_kg") or 0.0))
 
     counters = updated.setdefault("progression_counters", {})
+    if not isinstance(counters, dict):
+        counters = {}
+        updated["progression_counters"] = counters
+    _ensure_test_queue(updated)
     max_hang_hard = int(counters.get("max_hang_5s_hard_streak") or 0)
     max_hang_easy = int(counters.get("max_hang_5s_easy_streak") or 0)
 
@@ -391,9 +428,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         exercise_id = str(item.get("exercise_id") or "").strip()
         if not exercise_id:
             continue
-        feedback_label = str(item.get("feedback_label") or "ok").strip().lower()
-        if feedback_label not in VALID_FEEDBACK:
-            feedback_label = "ok"
+        feedback_label = canonical_feedback_label(item)
 
         session, planned_inst = _lookup_planned_instance(log_entry, exercise_id)
         planned_prescription = (planned_inst.get("prescription") or {}) if planned_inst else {}

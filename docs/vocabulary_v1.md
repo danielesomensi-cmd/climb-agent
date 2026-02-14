@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-02-10
+Last updated: 2026-02-12
 
 ---
 
@@ -39,6 +39,7 @@ Allowed `equipment` values:
 - `spraywall`
 - `board_kilter`
 - `gym_boulder` *(gym has a boulder area with set problems; not board, not spraywall)*
+- `gym_routes` *(gym has route walls / rope climbing terrain)*
 
 Rules:
 - Do **not** use `"none"` as an equipment value. Use an empty list: `equipment_required: []`.
@@ -272,6 +273,16 @@ Canonical `feedback_label` values:
 
 These values are used by `actual.exercise_feedback_v1[]` and by progression state (`last_feedback_label`).
 
+Legacy compatibility is deterministic and one-way (`difficulty` is legacy, `feedback_label` is canonical):
+- `too_easy` -> `very_easy`
+- `easy` -> `easy`
+- `ok` -> `ok`
+- `hard` -> `hard`
+- `too_hard` -> `very_hard`
+- `fail` -> `very_hard`
+- legacy booleans (`too_hard=true` or `fail=true`) -> `very_hard`
+- unknown/missing feedback -> `ok`
+
 ### 4.2 Grade surfaces
 
 Canonical boulder surfaces for progression targeting:
@@ -292,7 +303,7 @@ When present, `user_state.test_queue[]` entries use canonical keys:
 - `test_id`
 - `recommended_by_date` (`YYYY-MM-DD`)
 - `reason`
-- `created_at` (`YYYY-MM-DD`)
+- `created_at` (`YYYY-MM-DD`, derived from feedback/log date; no wall-clock)
 
 Current canonical `test_id` introduced in v1:
 - `max_hang_5s_total_load`
