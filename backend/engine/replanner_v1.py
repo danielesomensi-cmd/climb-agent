@@ -4,16 +4,22 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from backend.engine.planner_v1 import SESSION_LIBRARY, generate_week_plan
+from backend.engine.planner_v2 import _SESSION_META, generate_phase_week
 
+# Phase-aware intent → session_id mapping (uses planner_v2 session catalog)
 INTENT_TO_SESSION = {
-    "rest": "deload_recovery",
-    "recovery": "deload_recovery",
-    "technique": "gym_technique_boulder",
+    "rest": "regeneration_easy",
+    "recovery": "yoga_recovery",
+    "technique": "technique_focus_gym",
     "strength": "strength_long",
-    "power": "gym_power_bouldering",
-    "power_endurance": "gym_power_endurance",
-    "aerobic_endurance": "gym_aerobic_endurance",
+    "power": "power_contact_gym",
+    "power_endurance": "power_endurance_gym",
+    "aerobic_endurance": "endurance_aerobic_gym",
+    "core": "complementary_conditioning",
+    "prehab": "prehab_maintenance",
+    "flexibility": "flexibility_full",
+    "finger_maintenance": "finger_maintenance_home",
+    "finger_max": "finger_strength_home",
 }
 SLOTS = ("morning", "lunch", "evening")
 
@@ -68,10 +74,18 @@ def _slots_from_day(day: Dict[str, Any]) -> set[str]:
     return {s.get("slot") for s in (day.get("sessions") or []) if s.get("slot") in SLOTS}
 
 
+def _meta_for(session_id: str) -> Dict[str, Any]:
+    """Get session metadata from planner_v2's _SESSION_META."""
+    return _SESSION_META.get(session_id, {
+        "hard": False, "finger": False, "intensity": "low",
+        "climbing": False, "location": ("home", "gym"),
+    })
+
+
 def _build_fill_session(plan: Dict[str, Any], day: Dict[str, Any], slot: str, *, kind: str) -> Dict[str, Any]:
-    # deterministic conservative fill
-    session_key = "deload_recovery" if kind == "recovery" else "general_strength_short"
-    spec = SESSION_LIBRARY[session_key]
+    # deterministic conservative fill using planner_v2 sessions
+    session_id = "regeneration_easy" if kind == "recovery" else "complementary_conditioning"
+    meta = _meta_for(session_id)
     location = "home"
     gym_id = None
     if any(s.get("location") == "gym" for s in day.get("sessions") or []):
@@ -79,13 +93,12 @@ def _build_fill_session(plan: Dict[str, Any], day: Dict[str, Any], slot: str, *,
         gym_id = _default_gym_id_from_plan(plan)
     return {
         "slot": slot,
-        "session_id": spec.session_id,
+        "session_id": session_id,
         "location": location,
         "gym_id": gym_id,
-        "intent": spec.intent,
-        "priority": spec.priority,
+        "intensity": meta["intensity"],
         "constraints_applied": ["replanner_fill"],
-        "tags": {"hard": spec.hard, "finger": spec.finger},
+        "tags": {"hard": meta["hard"], "finger": meta["finger"]},
         "explain": ["deterministic refill", f"fill_kind={kind}"],
     }
 
@@ -99,12 +112,11 @@ def _enforce_caps(plan: Dict[str, Any]) -> None:
             for session in day.get("sessions") or []:
                 tags = session.get("tags") or {}
                 if tags.get("hard"):
-                    recovery_spec = SESSION_LIBRARY["deload_recovery"]
+                    recovery_meta = _meta_for("regeneration_easy")
                     session.update(
                         {
-                            "session_id": recovery_spec.session_id,
-                            "intent": recovery_spec.intent,
-                            "priority": recovery_spec.priority,
+                            "session_id": "regeneration_easy",
+                            "intensity": recovery_meta["intensity"],
                             "tags": {"hard": False, "finger": False},
                             "constraints_applied": ["hard_cap_downshift"],
                             "explain": ["hard cap exceeded after replanning", "deterministic downshift"],
@@ -121,12 +133,11 @@ def _enforce_no_consecutive_finger(plan: Dict[str, Any]) -> None:
         if has_finger and last_finger_date and (cur - last_finger_date).days <= 1:
             for session in day.get("sessions") or []:
                 if (session.get("tags") or {}).get("finger"):
-                    recovery_spec = SESSION_LIBRARY["deload_recovery"]
+                    recovery_meta = _meta_for("regeneration_easy")
                     session.update(
                         {
-                            "session_id": recovery_spec.session_id,
-                            "intent": recovery_spec.intent,
-                            "priority": recovery_spec.priority,
+                            "session_id": "regeneration_easy",
+                            "intensity": recovery_meta["intensity"],
                             "tags": {"hard": False, "finger": False},
                             "constraints_applied": ["finger_spacing_downshift"],
                             "explain": ["no consecutive finger days", "deterministic downshift"],
@@ -191,12 +202,20 @@ def apply_events(
                     for key in ("available", "locations", "preferred_location", "gym_id"):
                         if key in av:
                             availability[weekday][slot][key] = av[key]
-                regenerated = generate_week_plan(
+                snapshot = updated.get("profile_snapshot") or {}
+                phase_id = snapshot.get("phase_id", "base")
+                from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _build_session_pool, _adjust_domain_weights
+                base_weights = _BASE_WEIGHTS.get(phase_id, _BASE_WEIGHTS["base"])
+                domain_weights = snapshot.get("domain_weights", base_weights)
+                session_pool = _build_session_pool(phase_id)
+                regenerated = generate_phase_week(
+                    phase_id=phase_id,
+                    domain_weights=domain_weights,
+                    session_pool=session_pool,
                     start_date=updated["start_date"],
-                    mode=((updated.get("profile_snapshot") or {}).get("mode") or "balanced"),
                     availability=availability,
-                    allowed_locations=((updated.get("profile_snapshot") or {}).get("allowed_locations") or ["home", "gym", "outdoor"]),
-                    hard_cap_per_week=int(((updated.get("profile_snapshot") or {}).get("hard_cap_per_week") or 3)),
+                    allowed_locations=snapshot.get("allowed_locations", ["home", "gym"]),
+                    hard_cap_per_week=int(snapshot.get("hard_cap_per_week", 3)),
                     planning_prefs=planning_prefs,
                     default_gym_id=((planning_prefs or {}).get("default_gym_id")),
                     gyms=gyms,
@@ -218,48 +237,50 @@ def apply_day_override(
     location: str,
     reference_date: str,
     slot: str = "evening",
+    phase_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     updated = deepcopy(plan)
     ref = _parse_date(reference_date)
     tomorrow = ref + timedelta(days=1)
     tomorrow_key = tomorrow.isoformat()
 
-    session_key = INTENT_TO_SESSION.get(intent)
-    if session_key is None:
+    session_id = INTENT_TO_SESSION.get(intent)
+    if session_id is None:
         raise ValueError(f"Unsupported override intent: {intent}")
 
-    spec = SESSION_LIBRARY[session_key]
+    meta = _meta_for(session_id)
+    effective_phase = phase_id or (updated.get("profile_snapshot") or {}).get("phase_id", "base")
     tomorrow_day = _find_day(updated, tomorrow_key)
     gym_id = _default_gym_id_from_plan(updated) if location == "gym" else None
     tomorrow_day["sessions"] = [
         {
             "slot": slot,
-            "session_id": spec.session_id,
+            "session_id": session_id,
             "location": location,
             "gym_id": gym_id,
-            "intent": spec.intent,
-            "priority": 1,
+            "phase_id": effective_phase,
+            "intensity": meta["intensity"],
             "constraints_applied": ["manual_override"],
-            "tags": {"hard": spec.hard, "finger": spec.finger},
+            "tags": {"hard": meta["hard"], "finger": meta["finger"]},
             "explain": ["user day override applied", f"override_intent={intent}"],
         }
     ]
 
-    if spec.hard or spec.finger:
+    if meta["hard"] or meta["finger"]:
+        recovery_meta = _meta_for("regeneration_easy")
         for delta in (2, 3):
             ripple_day = _find_day(updated, (ref + timedelta(days=delta)).isoformat())
             next_sessions = []
             for session in ripple_day.get("sessions", []):
                 if session.get("tags", {}).get("hard"):
-                    recovery_spec = SESSION_LIBRARY["deload_recovery"]
                     next_sessions.append(
                         {
                             "slot": session.get("slot", "evening"),
-                            "session_id": recovery_spec.session_id,
+                            "session_id": "regeneration_easy",
                             "location": session.get("location", location),
                             "gym_id": session.get("gym_id", gym_id),
-                            "intent": recovery_spec.intent,
-                            "priority": 5,
+                            "phase_id": effective_phase,
+                            "intensity": recovery_meta["intensity"],
                             "constraints_applied": ["recovery_ripple"],
                             "tags": {"hard": False, "finger": False},
                             "explain": ["downgraded after hard override", f"source_day={tomorrow_key}"],

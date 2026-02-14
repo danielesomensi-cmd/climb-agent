@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import datetime
 
 from backend.engine.planner_v1 import generate_week_plan
-from backend.engine.replanner_v1 import apply_events
+from backend.engine.replanner_v1 import INTENT_TO_SESSION, apply_day_override, apply_events
+from backend.engine.planner_v2 import _SESSION_META, generate_phase_week
+from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _build_session_pool, _adjust_domain_weights
 
 
 def _availability():
@@ -111,6 +113,74 @@ def test_mark_skipped_hard_day_replaces_with_recovery():
 
     monday_updated = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-05")
     slot_session = next(s for s in monday_updated["sessions"] if s["slot"] == hard_session["slot"])
-    assert slot_session["session_id"] == "deload_recovery"
-    assert slot_session["intent"] == "recovery"
+    assert slot_session["session_id"] == "regeneration_easy"
     assert _count_hard_days(updated) <= 3
+
+
+# ---------- Phase-aware replanner tests (F6/F7 fix) ----------
+
+def _v2_plan_snapshot(phase_id="base"):
+    profile = {"finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
+               "technique": 50, "endurance": 40, "body_composition": 65}
+    base_weights = _BASE_WEIGHTS[phase_id]
+    domain_weights = _adjust_domain_weights(base_weights, profile)
+    session_pool = _build_session_pool(phase_id)
+    return generate_phase_week(
+        phase_id=phase_id,
+        domain_weights=domain_weights,
+        session_pool=session_pool,
+        start_date="2026-01-05",
+        availability=_availability(),
+        allowed_locations=["home", "gym"],
+        hard_cap_per_week=3,
+        planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+        default_gym_id="work_gym",
+        gyms=[{"gym_id": "work_gym", "equipment": ["gym_boulder", "board_kilter"]}],
+    )
+
+
+def test_intent_to_session_all_map_to_valid_sessions():
+    """All intents must map to sessions known in _SESSION_META."""
+    for intent, session_id in INTENT_TO_SESSION.items():
+        assert session_id in _SESSION_META, f"Intent '{intent}' maps to unknown session '{session_id}'"
+
+
+def test_intent_to_session_has_new_intents():
+    """Phase-aware replanner should support new intents (F6/F7)."""
+    expected_intents = {"core", "prehab", "flexibility", "finger_maintenance", "finger_max"}
+    for intent in expected_intents:
+        assert intent in INTENT_TO_SESSION, f"Missing intent: {intent}"
+
+
+def test_day_override_with_phase_id():
+    """apply_day_override should accept and propagate phase_id."""
+    plan = _v2_plan_snapshot("strength_power")
+    updated = apply_day_override(
+        plan,
+        intent="technique",
+        location="gym",
+        reference_date="2026-01-05",
+        slot="evening",
+        phase_id="strength_power",
+    )
+    tomorrow = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
+    override_session = tomorrow["sessions"][0]
+    assert override_session["session_id"] == "technique_focus_gym"
+    assert override_session["phase_id"] == "strength_power"
+
+
+def test_day_override_recovery_ripple():
+    """Hard override should downgrade following days to regeneration_easy."""
+    plan = _v2_plan_snapshot("strength_power")
+    updated = apply_day_override(
+        plan,
+        intent="strength",
+        location="home",
+        reference_date="2026-01-05",
+        phase_id="strength_power",
+    )
+    # Check ripple days (day+2, day+3) have no hard sessions
+    for ripple_date in ("2026-01-07", "2026-01-08"):
+        ripple_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == ripple_date)
+        for s in ripple_day["sessions"]:
+            assert not s["tags"]["hard"], f"Hard session on ripple day {ripple_date}"
