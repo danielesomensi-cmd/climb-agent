@@ -208,6 +208,7 @@ def generate_phase_week(
     default_gym_id: Optional[str] = None,
     gyms: Optional[List[Dict[str, Any]]] = None,
     intensity_cap: Optional[str] = None,
+    pretrip_dates: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -228,6 +229,8 @@ def generate_phase_week(
         default_gym_id: Default gym for gym sessions.
         gyms: List of gym dicts with equipment.
         intensity_cap: Phase intensity cap (overrides PHASE_INTENSITY_CAP if provided).
+        pretrip_dates: List of YYYY-MM-DD dates that are in pre-trip deload window.
+            Hard/max sessions are blocked on these dates.
 
     Returns:
         Week plan dict compatible with planner.v1 format.
@@ -237,6 +240,11 @@ def generate_phase_week(
     cap = intensity_cap or PHASE_INTENSITY_CAP.get(phase_id, "max")
     prefs = planning_prefs or {}
     effective_hard_cap = min(hard_cap_per_week, prefs.get("hard_day_cap_per_week", hard_cap_per_week))
+
+    # Build set of pre-trip deload dates for fast lookup
+    pretrip_set: set = set()
+    for d_str in (pretrip_dates or []):
+        pretrip_set.add(_parse_date(d_str))
 
     if phase_id == "deload":
         effective_hard_cap = 0
@@ -290,6 +298,10 @@ def generate_phase_week(
 
         sid = primary_pool[primary_idx % len(primary_pool)]
         meta = _SESSION_META[sid]
+
+        # Pre-trip deload: no hard/max sessions on pretrip dates
+        if day_dates[offset] in pretrip_set and (meta["hard"] or meta["intensity"] == "max"):
+            continue
 
         # Hard day cap
         if meta["hard"] and hard_days >= effective_hard_cap:
@@ -375,11 +387,14 @@ def generate_phase_week(
     # Build plan_days
     plan_days: List[Dict[str, Any]] = []
     for offset in range(7):
-        plan_days.append({
+        day_entry: Dict[str, Any] = {
             "date": day_dates[offset].isoformat(),
             "weekday": day_keys[offset],
             "sessions": day_sessions[offset],
-        })
+        }
+        if day_dates[offset] in pretrip_set:
+            day_entry["pretrip_deload"] = True
+        plan_days.append(day_entry)
 
     finger_days_count = len(finger_day_offsets)
     week_plan = {

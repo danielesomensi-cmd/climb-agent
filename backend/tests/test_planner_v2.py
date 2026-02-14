@@ -291,5 +291,39 @@ class TestPlannerV2PoolCycling(unittest.TestCase):
         self.assertTrue(has_pass2, "No pass2 (complementary) sessions found")
 
 
+class TestPlannerV2PretripDeload(unittest.TestCase):
+    """Tests for pre-trip deload (F8 fix)."""
+
+    def test_pretrip_dates_block_hard_sessions(self):
+        """Hard sessions should not be placed on pretrip deload dates."""
+        # Mark Wed-Fri as pretrip dates
+        pretrip = ["2026-03-04", "2026-03-05", "2026-03-06"]
+        plan = generate_phase_week(**_make_kwargs("strength_power", pretrip_dates=pretrip))
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            if d["date"] in pretrip:
+                for s in d["sessions"]:
+                    self.assertFalse(s["tags"]["hard"],
+                        f"Hard session {s['session_id']} on pretrip date {d['date']}")
+
+    def test_pretrip_dates_marked_in_plan(self):
+        """Days in pretrip window should have pretrip_deload=True flag."""
+        pretrip = ["2026-03-04", "2026-03-05"]
+        plan = generate_phase_week(**_make_kwargs("base", pretrip_dates=pretrip))
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            if d["date"] in pretrip:
+                self.assertTrue(d.get("pretrip_deload"),
+                    f"Missing pretrip_deload flag on {d['date']}")
+            else:
+                self.assertNotIn("pretrip_deload", d)
+
+    def test_no_pretrip_dates_no_flags(self):
+        """Without pretrip_dates, no days should have the flag."""
+        plan = generate_phase_week(**_make_kwargs("base"))
+        for d in plan["weeks"][0]["days"]:
+            self.assertNotIn("pretrip_deload", d)
+
+
 if __name__ == "__main__":
     unittest.main()
