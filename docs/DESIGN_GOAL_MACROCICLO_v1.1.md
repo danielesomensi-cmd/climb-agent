@@ -360,7 +360,71 @@ append-only esistente (JSONL).
 
 ---
 
-## 11. Decisioni tecniche (approvate)
+## 11. LLM Coach: layer conversazionale
+
+### 11.1 Principio architetturale
+
+L'engine resta **100% deterministico e rule-based** — zero LLM nel
+loop decisionale. L'LLM (Claude Sonnet) è un layer conversazionale
+SOPRA il motore: suggerisce, spiega, analizza, ma non modifica
+direttamente piani o stato. Ogni azione concreta passa dall'engine.
+
+```
+Utente ↔ LLM Coach ↔ API Backend ↔ Engine deterministico
+              ↑
+     Riceve in context:
+     - user_state (profilo, assessment, goal)
+     - piano corrente (macrociclo, settimana, sessione di oggi)
+     - log recenti (ultime 2 settimane)
+     - citazioni disponibili
+```
+
+### 11.2 Casi d'uso
+
+**Onboarding guidato:**
+L'LLM conduce l'assessment iniziale come una conversazione naturale
+con un coach, non un form. Raccoglie le risposte e le struttura
+per l'engine.
+
+**Coaching pre-sessione:**
+"Oggi mi sento stanco" → l'LLM vede fatigue_proxy, piano di oggi,
+feedback recenti → suggerisce: "scala l'intensità" o "fai recovery"
+
+**Analisi post-sessione:**
+"Come è andata?" → l'utente racconta a parole → l'LLM compila il
+feedback strutturato (gradi fatti, RPE, note) per il sistema
+
+**Discussione climbing:**
+"Vado ad Arco settimana prossima, come mi preparo?" → l'LLM conosce
+il piano, il livello, le debolezze → suggerisce adattamenti
+
+**Citazioni e motivazione:**
+Contestuali alla sessione, alla fase, al mood dell'utente
+
+### 11.3 Implementazione tecnica
+
+- **Modello**: Claude Sonnet (costo basso, velocità buona)
+- **API key**: gestita nel backend come variabile d'ambiente,
+  l'utente non vede nulla e non deve configurare niente
+- **System prompt**: dinamico, costruito dal backend iniettando
+  il contesto dell'utente (user_state, piano, log) ad ogni chiamata
+- **Endpoint**: `POST /chat` con messaggio utente + history recente
+- **Limiti di sicurezza**: l'LLM non può modificare user_state,
+  piano o log direttamente. Può solo suggerire azioni che l'utente
+  conferma e l'engine esegue
+
+### 11.4 Cosa NON fa l'LLM
+
+- Non genera piani (lo fa l'engine)
+- Non calcola progressioni (lo fa progression_v1)
+- Non modifica il macrociclo (lo fa il macrocycle generator)
+- Non sceglie esercizi (lo fa il resolver)
+
+L'LLM è l'interfaccia umana, non il cervello.
+
+---
+
+## 12. Decisioni tecniche (approvate)
 
 | Decisione | Scelta | Motivazione |
 |-----------|--------|-------------|
@@ -369,13 +433,14 @@ append-only esistente (JSONL).
 | **Assessment** | Ogni 6 settimane | Mini-test integrati in sessioni normali, non invasivo |
 | **Logging outdoor** | Integrato nella day view | Stessa interfaccia indoor/outdoor, outdoor aggiunge location+condizioni |
 | **Feedback** | Granulare per esercizio | Piano vs realtà: l'utente registra gradi fatti, carichi usati, serie completate |
+| **LLM Coach** | Claude Sonnet, key nel backend | Layer conversazionale sopra engine deterministico, utente non configura nulla |
 
 ---
 
-## 12. Roadmap
+## 13. Roadmap
 
 ### Fase 0: Dati + API (1-2 settimane)
-- [ ] Caricare questo doc nel repo (`docs/DESIGN_GOAL_MACROCICLO_v1.md`)
+- [x] Caricare questo doc nel repo (`docs/DESIGN_GOAL_MACROCICLO_v1.1.md`)
 - [ ] Aggiornare CLAUDE.md con riferimento a questo doc
 - [ ] API FastAPI: implementare tutti gli endpoint
 - [ ] Ampliare catalogo esercizi (da 35 a ~80-100)
@@ -414,6 +479,20 @@ append-only esistente (JSONL).
 - [ ] Outdoor log view (integrato nella day view)
 - [ ] Onboarding/Assessment wizard
 - [ ] Report view: grafici progressi (Recharts)
+
+### Fase 3.5: LLM Coach layer (1-2 settimane)
+- [ ] Integrazione API Anthropic (Claude Sonnet) nel backend
+- [ ] System prompt dinamico: inietta user_state + piano corrente + log recenti
+- [ ] Endpoint `/chat`: conversazione con contesto completo dell'utente
+- [ ] Casi d'uso:
+  - Onboarding conversazionale (assessment guidato dal coach)
+  - Coaching pre-sessione ("oggi mi sento stanco, che faccio?")
+  - Analisi post-sessione ("come è andata?" → feedback strutturato)
+  - Discussione climbing libera ("vado ad Arco, come mi preparo?")
+  - Suggerimenti e citazioni motivazionali contestuali
+- [ ] API key gestita nel backend (env var), utente non vede nulla
+- [ ] Limiti: l'LLM suggerisce e conversa, NON modifica il piano
+  direttamente. Ogni modifica passa dall'engine deterministico
 
 ### Fase 4: Evoluzione (ongoing)
 - [ ] Più tipi di goal (boulder, all-round, outdoor_season)
