@@ -38,7 +38,7 @@ backend/
   data/              # user_state.json + JSON schemas for log validation
   tests/             # Pytest suite with fixtures/
 frontend/            # Placeholder for future frontend
-docs/                # vocabulary_v1.md — domain term definitions
+docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md — domain docs & design goals
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```
 
