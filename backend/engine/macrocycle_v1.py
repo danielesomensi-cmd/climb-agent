@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from backend.engine.assessment_v1 import _GRADE_INDEX, grade_gap
+
 # ---------------------------------------------------------------------------
 # Phase definitions
 # ---------------------------------------------------------------------------
@@ -248,6 +250,32 @@ def _check_pretrip_overlap(
 # Main generator
 # ---------------------------------------------------------------------------
 
+def _validate_goal(goal: Dict[str, Any]) -> List[str]:
+    """Validate goal and return warnings."""
+    warnings = []
+    target = goal.get("target_grade")
+    current = goal.get("current_grade")
+
+    if target and current and target in _GRADE_INDEX and current in _GRADE_INDEX:
+        gap = grade_gap(target, current)
+        if gap <= 0:
+            warnings.append(
+                f"target_grade ({target}) is not harder than current_grade ({current}). "
+                "Consider setting a more ambitious target."
+            )
+        elif gap > 8:
+            warnings.append(
+                f"target_grade ({target}) is {gap} half-grades above current_grade ({current}). "
+                "A single macrocycle may not be sufficient."
+            )
+    elif target and target not in _GRADE_INDEX:
+        warnings.append(f"Unknown target_grade: {target}")
+    elif current and current not in _GRADE_INDEX:
+        warnings.append(f"Unknown current_grade: {current}")
+
+    return warnings
+
+
 def generate_macrocycle(
     goal: Dict[str, Any],
     assessment_profile: Dict[str, int],
@@ -267,6 +295,7 @@ def generate_macrocycle(
     Returns:
         Macrocycle dict with phases, domain weights, session pools, etc.
     """
+    goal_warnings = _validate_goal(goal)
     durations = _compute_phase_durations(assessment_profile, total_weeks)
     trips = user_state.get("trips") or []
 
@@ -321,7 +350,7 @@ def generate_macrocycle(
 
     end_date = start + timedelta(weeks=total_weeks) - timedelta(days=1)
 
-    return {
+    result = {
         "macrocycle_version": "macrocycle.v1",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "start_date": start_date,
@@ -336,6 +365,9 @@ def generate_macrocycle(
         "total_weeks": total_weeks,
         "phases": phases,
     }
+    if goal_warnings:
+        result["warnings"] = goal_warnings
+    return result
 
 
 def _phase_notes(phase_id: str) -> str:

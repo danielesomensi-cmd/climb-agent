@@ -7,6 +7,7 @@ from backend.engine.macrocycle_v1 import (
     PHASE_INTENSITY_CAP,
     _compute_phase_durations,
     _adjust_domain_weights,
+    _validate_goal,
     _BASE_WEIGHTS,
     _build_session_pool,
     generate_macrocycle,
@@ -227,6 +228,47 @@ class TestDeloadFunctions(unittest.TestCase):
 
     def test_should_not_trigger_adaptive_deload_short(self):
         self.assertFalse(should_trigger_adaptive_deload(["very_hard", "very_hard"]))
+
+
+class TestGoalValidation(unittest.TestCase):
+    """Tests for goal validation warnings (F9 fix)."""
+
+    def test_goal_target_below_current_warns(self):
+        goal = {"target_grade": "7a", "current_grade": "7b"}
+        warnings = _validate_goal(goal)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("not harder", warnings[0])
+
+    def test_goal_target_equals_current_warns(self):
+        goal = {"target_grade": "7b", "current_grade": "7b"}
+        warnings = _validate_goal(goal)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("not harder", warnings[0])
+
+    def test_goal_target_above_current_no_warning(self):
+        goal = {"target_grade": "7c+", "current_grade": "7b"}
+        warnings = _validate_goal(goal)
+        self.assertEqual(len(warnings), 0)
+
+    def test_goal_very_ambitious_warns(self):
+        goal = {"target_grade": "9a", "current_grade": "7a"}
+        warnings = _validate_goal(goal)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("may not be sufficient", warnings[0])
+
+    def test_macrocycle_with_bad_goal_has_warnings(self):
+        profile = _make_profile()
+        goal = _make_goal()
+        goal["target_grade"] = "7a"  # below current 7b
+        mc = generate_macrocycle(goal, profile, _make_user_state(), "2026-03-02")
+        self.assertIn("warnings", mc)
+        self.assertGreater(len(mc["warnings"]), 0)
+
+    def test_macrocycle_with_good_goal_no_warnings(self):
+        profile = _make_profile()
+        goal = _make_goal()  # 7c+ target, 7b current — fine
+        mc = generate_macrocycle(goal, profile, _make_user_state(), "2026-03-02")
+        self.assertNotIn("warnings", mc)
 
 
 if __name__ == "__main__":
