@@ -213,6 +213,7 @@ def pick_best_exercise_p0(
     available_equipment: List[str],
     role_req: Any,
     domain_req: Any,
+    pattern_req: Any = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -221,6 +222,7 @@ def pick_best_exercise_p0(
       - equipment_required_any has at least one available item
       - role matches (ANY)
       - domain matches only if it doesn't zero candidates (ANY)
+      - pattern matches only if it doesn't zero candidates (ANY)
     Deterministic tie-break: exercise_id
     """
     loc = norm_str(location)
@@ -228,6 +230,7 @@ def pick_best_exercise_p0(
 
     role_set = set(norm_list_str(role_req))
     dom_set = set(norm_list_str(domain_req))
+    pat_set = set(norm_list_str(pattern_req))
 
     trace = {"counts": {}}
 
@@ -262,12 +265,11 @@ def pick_best_exercise_p0(
 
     if not base3:
         trace["domain_filter_applied"] = False
+        trace["pattern_filter_applied"] = False
         return None, trace
 
     # Stage 4: domain only if it doesn't zero
     trace["domain_filter_applied"] = False
-
-    # Default: if domain is not applied, after_domain == len(base3)
     trace["counts"]["after_domain"] = len(base3)
 
     if dom_set:
@@ -276,18 +278,31 @@ def pick_best_exercise_p0(
             if not set(ex_domains(e)).isdisjoint(dom_set):
                 base4.append(e)
 
-        # Apply domain only if it doesn't zero (P0 rule)
         if base4:
             trace["domain_filter_applied"] = True
             trace["counts"]["after_domain"] = len(base4)
             base3 = base4
         else:
-            # domain would zero, so keep base3 unchanged
             trace["domain_filter_applied"] = False
             trace["counts"]["after_domain"] = len(base3)
 
+    # Stage 5: pattern only if it doesn't zero
+    trace["pattern_filter_applied"] = False
+    trace["counts"]["after_pattern"] = len(base3)
 
+    if pat_set:
+        base5 = []
+        for e in base3:
+            if not set(ex_patterns(e)).isdisjoint(pat_set):
+                base5.append(e)
 
+        if base5:
+            trace["pattern_filter_applied"] = True
+            trace["counts"]["after_pattern"] = len(base5)
+            base3 = base5
+        else:
+            trace["pattern_filter_applied"] = False
+            trace["counts"]["after_pattern"] = len(base3)
 
     # Deterministic pick
     base3.sort(key=lambda e: norm_str(get_ex_id(e)))
@@ -596,6 +611,149 @@ def pick_best_exercise(
 
 
 # ---------------------------
+# Inline block resolution
+# ---------------------------
+def _resolve_inline_block(
+    *,
+    mod: Dict[str, Any],
+    exercises: List[Dict[str, Any]],
+    location: str,
+    available_equipment: List[str],
+    prefs: Dict[str, Any],
+    recent_ex_ids: List[str],
+    user_state: Optional[Dict[str, Any]],
+    target_date: Any,
+    blocks_out: List[Dict[str, Any]],
+    exercise_instances: List[Dict[str, Any]],
+    instance_counter: int,
+) -> int:
+    """Resolve an inline block (module with block_id + selection, no template_id).
+
+    Uses selection.primary.filters to find a matching exercise via P0 hard filters.
+    Supported filter keys: role, domain, pattern (all non-zeroing ANY-match).
+
+    Returns the updated instance_counter.
+    """
+    block_id = mod["block_id"]
+    block_uid = f"inline.{block_id}"
+    module_role = mod.get("module_role") or "main"
+
+    selection = mod.get("selection") or {}
+    primary = selection.get("primary") or {}
+    filters = primary.get("filters") or {}
+
+    role_req = filters.get("role")
+    domain_req = filters.get("domain")
+    pattern_req = filters.get("pattern")
+
+    selected_ex, trace = pick_best_exercise_p0(
+        exercises=exercises,
+        location=location,
+        available_equipment=available_equipment,
+        role_req=role_req,
+        domain_req=domain_req,
+        pattern_req=pattern_req,
+    )
+    chosen_by = "p0_inline_block"
+
+    # Cooldown fallback (same logic as template blocks)
+    replanner_note = None
+    if selected_ex and norm_str(module_role) in ("primary", "main") and target_date:
+        cluster_key = cluster_key_for_exercise(selected_ex)
+        until_date_value = _cooldown_until_date(user_state, cluster_key)
+        until_date = parse_date(until_date_value)
+        if until_date and target_date <= until_date:
+            fallback_ex = _find_cooldown_fallback(
+                exercises=exercises,
+                current_ex=selected_ex,
+                available_equipment=available_equipment,
+            )
+            if fallback_ex:
+                replanner_note = {
+                    "cooldown_cluster": cluster_key,
+                    "until_date": until_date.isoformat(),
+                    "fallback_exercise_id": get_ex_id(fallback_ex),
+                    "reason": "cluster_cooldown_fallback",
+                }
+                selected_ex = fallback_ex
+            else:
+                replanner_note = {
+                    "cooldown_cluster": cluster_key,
+                    "until_date": until_date.isoformat(),
+                    "reason": "cluster_cooldown_downshift",
+                    "multiplier": 0.9,
+                }
+
+    selected_list: List[Dict[str, Any]] = []
+    if selected_ex:
+        instance_counter += 1
+        instance_id = f"{block_id}_{instance_counter:02d}"
+        ex_id = get_ex_id(selected_ex)
+
+        prescription = mod.get("prescription") or {}
+        ex_defaults = selected_ex.get("defaults") or selected_ex.get("prescription_defaults") or {}
+        merged: Dict[str, Any] = {}
+        if isinstance(ex_defaults, dict):
+            merged.update(ex_defaults)
+        if isinstance(prescription, dict):
+            merged.update(prescription)
+
+        if replanner_note and replanner_note.get("reason") == "cluster_cooldown_downshift":
+            merged.setdefault("multiplier", 1.0)
+            merged["multiplier"] = float(merged["multiplier"]) * 0.9
+
+        merged = _apply_load_override(
+            merged,
+            user_state=user_state,
+            exercise_id=ex_id,
+        )
+
+        inst = {
+            "instance_id": instance_id,
+            "exercise_id": ex_id,
+            "variant": {},
+            "prescription": merged,
+            "block_uid": block_uid,
+            "source": {
+                "picked_by": f"resolver_v0.2/{chosen_by}",
+                "template_id": None,
+                "block_id": block_id,
+            },
+        }
+        if replanner_note:
+            inst["replanner"] = replanner_note
+        if ex_id == "max_hang_5s":
+            sug = suggest_max_hang_load(user_state, merged)
+            if sug:
+                inst["suggested"] = sug
+        exercise_instances.append(inst)
+        recent_ex_ids.append(norm_str(ex_id))
+
+        selected_list.append({
+            "exercise_id": ex_id,
+            "variant": {},
+            "prescription": merged,
+        })
+
+    status = "selected" if selected_list else "skipped"
+    message = None if selected_list else "No candidates after hard filters (P0 inline)."
+
+    blocks_out.append({
+        "block_uid": block_uid,
+        "block_id": block_id,
+        "type": module_role,
+        "template_id": None,
+        "status": status,
+        "message": message,
+        "p0_trace": trace,
+        "filter_trace": {"p_stage": "P0", **(trace or {"counts": {}, "domain_filter_applied": None})},
+        "selected_exercises": selected_list,
+    })
+
+    return instance_counter
+
+
+# ---------------------------
 # Resolve session (B + fallback)
 # ---------------------------
 def resolve_session(
@@ -661,9 +819,26 @@ def resolve_session(
             template_id = mod
             template_version = "v1"
         elif isinstance(mod, dict):
-            template_id = mod.get("template_id") or mod.get("id") or mod.get("name")
+            template_id = mod.get("template_id")
             template_version = mod.get("version") or mod.get("template_version") or "v1"
         else:
+            continue
+
+        # Inline block: has block_id + selection but no template_id
+        if not template_id and isinstance(mod, dict) and mod.get("block_id") and mod.get("selection"):
+            instance_counter = _resolve_inline_block(
+                mod=mod,
+                exercises=exercises,
+                location=location,
+                available_equipment=available_equipment,
+                prefs=prefs,
+                recent_ex_ids=recent_ex_ids,
+                user_state=user_state,
+                target_date=target_date,
+                blocks_out=blocks_out,
+                exercise_instances=exercise_instances,
+                instance_counter=instance_counter,
+            )
             continue
 
         if not template_id:

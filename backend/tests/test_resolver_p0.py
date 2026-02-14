@@ -266,5 +266,70 @@ class TestResolverP0Determinism(unittest.TestCase):
         self.assertEqual(main_block.get("selected_exercises", [])[0].get("exercise_id"), "density_hang_10_10")
 
 
+class TestResolverInlineBlocks(unittest.TestCase):
+    """Tests for inline block resolution (F1 fix)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.base_user_state = load_json(os.path.join(REPO_ROOT, "backend", "data", "user_state.json"))
+
+    def _resolve_real_session(self, session_id: str, location: str = "gym", gym_id: str = "blocx"):
+        us = make_user_state(self.base_user_state, location=location, gym_id=gym_id)
+        return resolve_session(
+            repo_root=REPO_ROOT,
+            session_path=f"backend/catalog/sessions/v1/{session_id}.json",
+            templates_dir="backend/catalog/templates",
+            exercises_path="backend/catalog/exercises/v1/exercises.json",
+            out_path="output/__test_inline_out.json",
+            user_state_override=us,
+            write_output=False,
+        )
+
+    def test_inline_block_power_endurance_gym(self):
+        out = self._resolve_real_session("power_endurance_gym")
+        self.assertEqual(out["resolution_status"], "success")
+        n = len(out["resolved_session"]["exercise_instances"])
+        self.assertGreaterEqual(n, 3, f"power_endurance_gym: {n} exercises, expected ≥3")
+        # Must have an inline-resolved PE exercise
+        inline_blocks = [b for b in out["resolved_session"]["blocks"] if b.get("block_uid", "").startswith("inline.")]
+        self.assertGreater(len(inline_blocks), 0, "No inline blocks resolved")
+
+    def test_inline_block_technique_focus_gym(self):
+        out = self._resolve_real_session("technique_focus_gym")
+        self.assertEqual(out["resolution_status"], "success")
+        n = len(out["resolved_session"]["exercise_instances"])
+        self.assertGreaterEqual(n, 3, f"technique_focus_gym: {n} exercises, expected ≥3")
+
+    def test_inline_block_endurance_aerobic_gym(self):
+        out = self._resolve_real_session("endurance_aerobic_gym")
+        self.assertEqual(out["resolution_status"], "success")
+        n = len(out["resolved_session"]["exercise_instances"])
+        self.assertGreaterEqual(n, 3, f"endurance_aerobic_gym: {n} exercises, expected ≥3")
+
+    def test_inline_block_prehab_maintenance_home(self):
+        out = self._resolve_real_session("prehab_maintenance", location="home", gym_id=None)
+        self.assertEqual(out["resolution_status"], "success")
+        n = len(out["resolved_session"]["exercise_instances"])
+        self.assertGreaterEqual(n, 3, f"prehab_maintenance: {n} exercises, expected ≥3")
+        # All blocks should be inline
+        for b in out["resolved_session"]["blocks"]:
+            self.assertTrue(b["block_uid"].startswith("inline."), f"Expected inline block: {b['block_uid']}")
+
+    def test_inline_block_deterministic(self):
+        out_a = self._resolve_real_session("prehab_maintenance", location="home", gym_id=None)
+        out_b = self._resolve_real_session("prehab_maintenance", location="home", gym_id=None)
+        ids_a = [e["exercise_id"] for e in out_a["resolved_session"]["exercise_instances"]]
+        ids_b = [e["exercise_id"] for e in out_b["resolved_session"]["exercise_instances"]]
+        self.assertEqual(ids_a, ids_b, "Inline block resolution is not deterministic")
+
+    def test_inline_block_has_filter_trace(self):
+        out = self._resolve_real_session("prehab_maintenance", location="home", gym_id=None)
+        for b in out["resolved_session"]["blocks"]:
+            self.assertIn("filter_trace", b, f"Missing filter_trace: {b.get('block_uid')}")
+            ft = b["filter_trace"]
+            self.assertIn("p_stage", ft)
+            self.assertIn("counts", ft)
+
+
 if __name__ == "__main__":
     unittest.main()
