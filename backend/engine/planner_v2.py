@@ -43,6 +43,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "handstand_practice": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "complementary_conditioning": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "regeneration_easy": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym", "outdoor")},
+    "finger_maintenance_home": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",)},
 }
 
 _INTENSITY_ORDER = {"low": 0, "medium": 1, "high": 2, "max": 3}

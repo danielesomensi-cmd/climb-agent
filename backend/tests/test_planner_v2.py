@@ -187,6 +187,30 @@ class TestPlannerV2LunchSlots(unittest.TestCase):
             self.assertEqual(mon["sessions"][0]["slot"], "lunch")
 
 
+class TestPlannerV2FingerMaintenance(unittest.TestCase):
+    """Tests for finger_maintenance_home in Base phase (F3 fix)."""
+
+    def test_base_phase_has_finger_sessions(self):
+        plan = generate_phase_week(**_make_kwargs("base",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        finger_sessions = [s for d in days for s in d["sessions"] if s["tags"]["finger"]]
+        self.assertGreater(len(finger_sessions), 0,
+                           "Base phase has no finger sessions")
+
+    def test_finger_maintenance_is_medium_intensity(self):
+        plan = generate_phase_week(**_make_kwargs("base",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        finger_sessions = [s for d in days for s in d["sessions"]
+                          if s["tags"]["finger"] and s["session_id"] == "finger_maintenance_home"]
+        self.assertGreater(len(finger_sessions), 0,
+                           "No finger_maintenance_home in Base phase")
+        for s in finger_sessions:
+            self.assertEqual(s["intensity"], "medium",
+                             f"finger_maintenance_home should be medium, got {s['intensity']}")
+
+
 class TestPlannerV2PoolCycling(unittest.TestCase):
     """Tests for pool cycling and distribution (F2/F13 fix)."""
 

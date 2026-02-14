@@ -65,6 +65,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
     "base": {
         "endurance_aerobic_gym": "primary",
         "technique_focus_gym": "primary",
+        "finger_maintenance_home": "primary",
         "finger_strength_home": "primary",
         "prehab_maintenance": "primary",
         "flexibility_full": "available",

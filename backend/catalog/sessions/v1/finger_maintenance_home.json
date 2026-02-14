@@ -1,0 +1,69 @@
+{
+  "id": "finger_maintenance_home",
+  "name": "Finger Maintenance (Home — Submaximal Repeaters)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "finger_strength_endurance",
+    "secondary_goals": [
+      "finger_strength",
+      "prehab_wrist"
+    ],
+    "notes": "Submaximal finger session for Base phase. Repeaters at 70-80% of max, not max hangs. Maintains finger strength without exceeding medium intensity cap."
+  },
+  "compatibility": {
+    "slot": [
+      "lunch_short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 30,
+    "hard_cap_min": 45
+  },
+  "modules": [
+    {
+      "block_id": "finger_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Finger warmup: tendon glides, easy hangs, progressive loading.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["warmup"],
+            "domain": ["finger_strength"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "template_id": "finger_strength_endurance",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Submaximal repeaters at 70-80% max total load. Maintenance stimulus."
+    },
+    {
+      "block_id": "finger_extensor_prehab",
+      "required": false,
+      "priority": 50,
+      "module_role": "cooldown",
+      "notes": "Finger extensor training + forearm stretches.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_wrist"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    }
+  ]
+}
