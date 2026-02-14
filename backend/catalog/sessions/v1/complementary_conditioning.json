@@ -1,0 +1,60 @@
+{
+  "id": "complementary_conditioning",
+  "name": "Complementary Conditioning (Carries + Crawls + TGU)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "strength_general",
+    "secondary_goals": [
+      "core",
+      "mobility"
+    ],
+    "notes": "General conditioning: Turkish get-ups, farmer carries, bear crawls. Home or gym. 30-40 min."
+  },
+  "compatibility": {
+    "slot": [
+      "short",
+      "lunch_short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 35,
+    "hard_cap_min": 45
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "conditioning_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Turkish get-up + farmer's carry + bear crawl. Circuit style or sequential.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory", "conditioning"],
+            "domain": ["strength_general", "core"],
+            "pattern": ["rotation", "carry"],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "template_id": "core_short",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "id": "yoga_recovery",
+  "name": "Yoga / Recovery Flow (Rest Day)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "flexibility",
+    "secondary_goals": [
+      "mobility"
+    ],
+    "notes": "Yin yoga / recovery flow. Short, gentle. Home, rest day. Very low fatigue."
+  },
+  "compatibility": {
+    "slot": [
+      "short",
+      "lunch_short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 25,
+    "hard_cap_min": 30
+  },
+  "modules": [
+    {
+      "block_id": "stretch_flow",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Full body stretch flow + active hip mobility. Breathe deeply, hold long.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown", "warmup"],
+            "domain": ["flexibility", "mobility"],
+            "pattern": ["flexibility_passive", "flexibility_active"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    }
+  ]
+}

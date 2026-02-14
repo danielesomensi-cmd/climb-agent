@@ -58,6 +58,31 @@ Data paths are relative to the repo root:
 "backend/data/user_state.json"
 ```
 
+## Catalog status (post Fase 0 expansion)
+
+- **Exercises**: ~102 in `backend/catalog/exercises/v1/exercises.json`
+- **Sessions**: ~28 in `backend/catalog/sessions/v1/`
+- **Templates**: 11 in `backend/catalog/templates/v1/` (unchanged)
+
+### Exercise categories covered
+- Finger strength: max hang, repeaters, long duration, min edge, pinch, density, one-arm
+- Power & contact strength: campus (laddering, bumps, dynos), limit bouldering, board bouldering
+- Power endurance: 4x4, linked boulders, route intervals, ARC, threshold
+- Endurance/regeneration: continuity climbing, easy laps, easy traverse
+- Pulling strength: pullup variants (weighted, L-sit, archer, typewriter, one-arm), rows, lock-offs
+- Push/antagonist: pushups, dips, pike pushup, shoulder press, ring pushup, bench, face pull
+- Core: hollow hold, L-sit, front lever, hanging leg raise, ab wheel, pallof, side plank, dead bug, windshield wipers, toes-to-bar
+- Prehab: wrist curls, forearm rotation, rotator cuff, scapular pullups, finger extensors, elbow eccentrics, shoulder CARs
+- Technique drills: silent feet, no readjust, downclimbing, slow climbing, flag practice
+- Flexibility: hip opener, shoulder stretch, forearm stretch, full body flow, active hip mobility
+- Complementary - handstand: wall hold, wall walk-up, shoulder taps, freestanding, HSPU
+- Complementary - conditioning: jump rope, TGU, farmer carry, bear crawl, band pull-apart
+
+### Equipment note
+`pangullich` has been renamed to `campus_board` as canonical equipment ID.
+Equipment marked in `equipment_required` is truly mandatory (cannot do the exercise without it).
+Optional equipment is mentioned in `prescription_defaults.notes` only.
+
 ## Testing
 
 Tests live in `backend/tests/`. The `conftest.py` adds the repo root to `sys.path` so `import backend.*` works. Run with:

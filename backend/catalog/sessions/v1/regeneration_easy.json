@@ -1,0 +1,68 @@
+{
+  "id": "regeneration_easy",
+  "name": "Regeneration (Easy Climbing + Stretch)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "regeneration",
+    "secondary_goals": [
+      "flexibility"
+    ],
+    "notes": "Ultra-easy continuity climbing for active recovery. Very low fatigue. Use on recovery days or after hard blocks."
+  },
+  "compatibility": {
+    "slot": [
+      "short",
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 50,
+    "hard_cap_min": 60
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "continuity_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Continuity climbing or easy route laps. Must feel trivially easy. Chat-pace effort.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "domain": ["regeneration"],
+            "role": ["main"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "light_stretch",
+      "required": false,
+      "priority": 50,
+      "module_role": "cooldown",
+      "notes": "Forearm stretches + hip opener. 5-10 min.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility", "prehab_wrist"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    }
+  ]
+}

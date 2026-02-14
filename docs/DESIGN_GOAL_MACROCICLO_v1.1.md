@@ -479,6 +479,40 @@ L'LLM è l'interfaccia umana, non il cervello.
 - [ ] Outdoor log view (integrato nella day view)
 - [ ] Onboarding/Assessment wizard
 - [ ] Report view: grafici progressi (Recharts)
+- [ ] Guided session mode: timer per esercizi, rest timer automatico, beep/vibrazione
+- [ ] Feedback automatico tempi (effettivo vs pianificato → closed loop)
+
+#### Sessione guidata con timer (Guided Session Mode)
+
+La UI deve supportare un'esperienza "sessione guidata" step-by-step:
+
+1. L'utente apre la sessione risolta e la esegue passo-passo
+2. Per ogni esercizio vede: nome, set/reps/tempo previsti, notes
+3. Preme **Start** → parte timer (countdown per esercizi a tempo, cronometro per esercizi a reps)
+4. Per esercizi a tempo (hang 7s, hollow hold 30s) → countdown con beep/vibrazione
+5. Quando finisce il set → preme **Done** → parte automaticamente il **rest timer**
+6. Il rest timer mostra il tempo di recupero effettivo vs pianificato:
+   - Verde: dentro il range previsto
+   - Giallo: 20%+ oltre il previsto
+   - Rosso: 50%+ oltre il previsto
+7. Quando il rest finisce → beep/vibrazione → propone set o esercizio successivo
+8. Alla fine della sessione → schermata riepilogo con tempi reali vs pianificati
+
+**Dati catturati automaticamente dal timer:**
+- Tempo effettivo per set e per esercizio
+- Rest effettivo vs rest previsto
+- Durata totale sessione vs durata stimata
+- Skip/modifiche (se l'utente salta un set o cambia esercizio)
+
+**Note tecniche:**
+- I dati per pilotare i timer sono già nei `prescription_defaults`: `rest_seconds`, `hold_seconds`, `duration_min`, `sets`, `reps`
+- React: `useState` + `useEffect` con `setInterval`
+- Web APIs: `Notification` + `Vibration` per alert, `Wake Lock API` per schermo acceso
+- PWA: funziona anche offline (sessione risolta già nel client)
+
+Questo feedback (tempo effettivo vs pianificato) alimenta il closed loop:
+se un utente riposa sistematicamente più del previsto, potrebbe indicare
+carico troppo alto o pattern da correggere.
 
 ### Fase 3.5: LLM Coach layer (1-2 settimane)
 - [ ] Integrazione API Anthropic (Claude Sonnet) nel backend

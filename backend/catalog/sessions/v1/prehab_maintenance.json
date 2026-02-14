@@ -1,0 +1,98 @@
+{
+  "id": "prehab_maintenance",
+  "name": "Prehab Maintenance (Daily)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "prehab_shoulder",
+    "secondary_goals": [
+      "prehab_elbow",
+      "prehab_wrist"
+    ],
+    "notes": "Rotator cuff + elbow prehab + finger extensors. 15-20 min. Can be done daily. Home."
+  },
+  "compatibility": {
+    "slot": [
+      "short",
+      "lunch_short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 18,
+    "hard_cap_min": 25
+  },
+  "modules": [
+    {
+      "block_id": "shoulder_cars",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Shoulder CARs to warm up joints.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["warmup", "prehab"],
+            "domain": ["prehab_shoulder", "mobility"],
+            "pattern": ["mobility_shoulders"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "rotator_cuff",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Rotator cuff external rotation + band pull-apart.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_shoulder"],
+            "pattern": ["scapular_control"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "elbow_prehab",
+      "required": true,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Elbow eccentric curl (Tyler twist) + wrist extensors.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_elbow"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "finger_extensors",
+      "required": true,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "Finger extensor training with rubber band.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_wrist"],
+            "pattern": ["wrist_extension"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    }
+  ]
+}

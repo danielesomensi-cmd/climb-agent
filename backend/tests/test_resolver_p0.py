@@ -168,12 +168,12 @@ class TestResolverP0Determinism(unittest.TestCase):
         self.assert_no_silent_blocks(out)
         self.assertEqual(out["context"]["gym_id"], "blocx")
 
-    def test_gym_blocx_plus_pangullich(self):
+    def test_gym_blocx_plus_campus_board(self):
         gyms = self.base_user_state.get("equipment", {}).get("gyms", [])
         blocx = next((g for g in gyms if g.get("gym_id") == "blocx"), None)
         base_eq = deepcopy(blocx.get("equipment", []) if blocx else [])
-        if "pangullich" not in base_eq:
-            base_eq.append("pangullich")
+        if "campus_board" not in base_eq:
+            base_eq.append("campus_board")
 
         us = make_user_state(
             self.base_user_state,
@@ -191,7 +191,7 @@ class TestResolverP0Determinism(unittest.TestCase):
         self.assertEqual(out["resolution_status"], "success")
         self.assert_no_silent_blocks(out)
         self.assert_filter_trace_present(out)
-        self.assertIn("pangullich", out["context"]["available_equipment"])
+        self.assertIn("campus_board", out["context"]["available_equipment"])
 
     def test_outdoor_optional_finger(self):
         us = make_user_state(self.base_user_state, location="outdoor", gym_id=None)
@@ -244,7 +244,10 @@ class TestResolverP0Determinism(unittest.TestCase):
         out = self._resolve_gym_power_with_equipment(["board_kilter"], "gym_board_kilter")
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
-        self.assertIn("gym_limit_bouldering", ids)
+        self.assertTrue(
+            "gym_limit_bouldering" in ids or "board_limit_boulders" in ids,
+            f"Expected a limit bouldering exercise, got {ids}",
+        )
 
     def test_gym_limit_bouldering_selected_with_gym_boulder(self):
         out = self._resolve_gym_power_with_equipment(["gym_boulder"], "gym_gym_boulder")

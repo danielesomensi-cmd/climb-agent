@@ -1,0 +1,79 @@
+{
+  "id": "handstand_practice",
+  "name": "Handstand Practice (Skill Session)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "handstand_skill",
+    "secondary_goals": [
+      "prehab_shoulder",
+      "core"
+    ],
+    "notes": "Handstand progression work. Skill-focused, not conditioning. Home or gym. 20-30 min."
+  },
+  "compatibility": {
+    "slot": [
+      "short",
+      "lunch_short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 25,
+    "hard_cap_min": 35
+  },
+  "modules": [
+    {
+      "block_id": "wrist_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Wrist circles, wrist extension/flexion on floor, light shoulder CARs.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["warmup", "prehab"],
+            "domain": ["prehab_wrist", "prehab_shoulder", "mobility"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "handstand_drills",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Wall handstand hold, wall walk-up, shoulder taps, or freestanding practice. Select based on level.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "domain": ["handstand_skill"],
+            "role": ["accessory"],
+            "pattern": ["handstand"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "shoulder_prehab",
+      "required": false,
+      "priority": 50,
+      "module_role": "cooldown",
+      "notes": "Shoulder CARs + band pull-apart. 3-5 min.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_shoulder"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    }
+  ]
+}

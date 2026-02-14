@@ -1,0 +1,84 @@
+{
+  "id": "technique_focus_gym",
+  "name": "Technique Focus (Gym — Drills + Intentional Climbing)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "technique_footwork",
+    "secondary_goals": [
+      "technique_boulder",
+      "technique_lead",
+      "aerobic_capacity"
+    ],
+    "notes": "Dedicated technique session. Drills then easy intentional climbing. Low physical stress, high cognitive focus."
+  },
+  "compatibility": {
+    "slot": [
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 90,
+    "hard_cap_min": 100
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "technique_drills_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Silent feet, no readjust, downclimbing, slow climbing, flag practice. Select 2-3 drills.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["technique"],
+            "pattern": ["technique_drill"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "easy_climbing_volume",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary",
+      "notes": "Easy climbing applying drills learned. Well below onsight. Focus quality of movement.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "domain": ["aerobic_capacity", "regeneration"],
+            "role": ["main"],
+            "pattern": ["climbing_continuous", "climbing_routes"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "cooldown",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility"]
+          }
+        }
+      }
+    }
+  ]
+}

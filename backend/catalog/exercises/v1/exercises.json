@@ -616,7 +616,7 @@
     },
     {
       "id": "pangullich_ladders_easy",
-      "name": "Pangullich Ladders (Controlled)",
+      "name": "Campus Board Ladders (Controlled)",
       "category": "main_strength",
       "time_min": 15,
       "role": [
@@ -628,9 +628,9 @@
       "pattern": "pull_vertical",
       "intensity_level": "high",
       "fatigue_cost": 8,
-      "recency_group": "finger_max_hang",
+      "recency_group": "campus_ladders",
       "equipment_required": [
-        "pangullich"
+        "campus_board"
       ],
       "location_allowed": [
         "home",
@@ -831,7 +831,7 @@
           4
         ],
         "notes": [
-          "Sustainable hard. Keep form. No ‘death sprint’ on round 1."
+          "Sustainable hard. Keep form. No 'death sprint' on round 1."
         ]
       },
       "stress_tags": {
@@ -1145,12 +1145,11 @@
       "intensity_level": "medium",
       "fatigue_cost": 4,
       "recency_group": "horizontal_pull",
-      "equipment_required": [
-        "pullup_bar"
-      ],
+      "equipment_required": [],
       "location_allowed": [
         "home",
-        "gym"
+        "gym",
+        "outdoor"
       ],
       "contraindications": [
         "shoulder_sensitive"
@@ -1167,7 +1166,8 @@
         "rest_seconds_range": [
           75,
           120
-        ]
+        ],
+        "notes": "Rings, low bar, or TRX. Easier than pullup. Great for shoulder health."
       },
       "stress_tags": {
         "elbow": "low",
@@ -1356,17 +1356,17 @@
     {
       "id": "bench_press",
       "name": "Bench Press",
-      "category": "main_strength",
+      "category": "strength_accessory",
       "time_min": 12,
       "role": [
-        "main"
+        "accessory"
       ],
       "domain": [
         "strength_general"
       ],
       "pattern": "push",
-      "intensity_level": "high",
-      "fatigue_cost": 6,
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
       "recency_group": "bench_press",
       "equipment_required": [
         "weight"
@@ -1483,6 +1483,2762 @@
       "stress_tags": {
         "elbow": "none",
         "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+
+    {
+      "id": "long_duration_hang",
+      "name": "Long Duration Hang (Injury Prevention)",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_aerobic_endurance"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "finger_long_duration_hang",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "hang_seconds": 40,
+        "rest_seconds": 120,
+        "notes": "Large edge (25-35mm). 30-45s hangs. Low intensity, focus on tissue loading and injury prevention."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "min_edge_hang",
+      "name": "Min Edge Hang (Small Edge, Bodyweight)",
+      "category": "main_strength",
+      "time_min": 18,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_max_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "finger_max_hang",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 5,
+        "hang_seconds": 7,
+        "rest_seconds": 180,
+        "notes": "14-16mm edge, bodyweight only. Half crimp. Progress by reducing edge size."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "high"
+      }
+    },
+    {
+      "id": "pinch_block_training",
+      "name": "Pinch Block Training",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "finger_pinch",
+      "equipment_required": [
+        "pinch_block"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 5,
+        "hold_seconds": 8,
+        "rest_seconds": 150,
+        "notes": "Loadable pinch block. Progress via added weight. Full thumb wrap."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "low"
+      }
+    },
+    {
+      "id": "one_arm_hang_assisted",
+      "name": "One-Arm Hang (Assisted)",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_max_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "finger_max_hang",
+      "equipment_required": [
+        "hangboard",
+        "band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "hang_seconds": 5,
+        "rest_seconds": 240,
+        "notes": "One arm with pulley or band assistance. 20mm edge. Half crimp. Advanced only."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "high",
+        "cns": "high",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "density_hangs",
+      "name": "Density Hangs (Volume Repeaters)",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength_endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "finger_density_hangs",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "protocol": "10s_on/5s_off",
+        "total_minutes_range": [
+          8,
+          15
+        ],
+        "notes": "Ratio hang:rest for volume. Moderate edge (20mm). ~50-60% max load. Stop if pump exceeds moderate."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      }
+    },
+
+    {
+      "id": "campus_laddering_feet_off",
+      "name": "Campus Laddering (Feet Off)",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "campus_ladders",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": 4,
+        "rest_seconds": 180,
+        "notes": "Half crimp. No skipping rungs. Sprint speed. Stop when speed drops."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "high",
+        "cns": "high",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "campus_laddering_feet_on",
+      "name": "Campus Laddering (Feet On Wall)",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "campus_ladders",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 6,
+        "rest_seconds": 120,
+        "notes": "Feet on wall for assistance. Good intermediate progression. Focus on contact quality."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "campus_bumps",
+      "name": "Campus Bumps (Touch-and-Go)",
+      "category": "main_strength",
+      "time_min": 18,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "campus_bumps",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 4,
+        "rest_seconds": 180,
+        "notes": "Touch-and-go on higher rung, one arm at a time. Focus explosive contact."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "high",
+        "cns": "high",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "campus_double_dyno",
+      "name": "Campus Double Dyno",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength",
+        "power"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "campus_dynos",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 3,
+        "rest_seconds": 240,
+        "notes": "Advanced only. 5+ years climbing minimum. Double dyno on campus. Full rest between sets."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "high",
+        "cns": "high",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "limit_bouldering",
+      "name": "Limit Bouldering (Deadpoint/Latching Focus)",
+      "category": "main_strength",
+      "time_min": 45,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power"
+      ],
+      "pattern": "climbing_limit_boulder",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "gym_limit_bouldering",
+      "equipment_required": [
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          6,
+          10
+        ],
+        "rest_seconds_range": [
+          180,
+          360
+        ],
+        "notes": "3-7 moves at limit. Focus deadpoint and latching. Full rest. Stop when quality drops."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "high",
+        "skin": "high"
+      }
+    },
+    {
+      "id": "board_limit_boulders",
+      "name": "Board Limit Boulders (Kilter/Moon/Tension)",
+      "category": "main_strength",
+      "time_min": 45,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power"
+      ],
+      "pattern": "climbing_limit_boulder",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "board_limit_boulders",
+      "equipment_required": [
+        "board_kilter"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          5,
+          10
+        ],
+        "rest_seconds_range": [
+          180,
+          360
+        ],
+        "notes": "Also works on Moon Board, Tension Board. 3-5 attempts per problem, full rest between."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "high",
+        "skin": "high"
+      }
+    },
+    {
+      "id": "power_pullups_explosive",
+      "name": "Explosive Pull-ups (Power)",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "pullup_variants",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          4,
+          6
+        ],
+        "reps_range": [
+          3,
+          5
+        ],
+        "rest_seconds_range": [
+          150,
+          210
+        ],
+        "notes": "Explosive pull, hands leave the bar. Full rest. Quality over quantity."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "high",
+        "skin": "none"
+      }
+    },
+
+    {
+      "id": "four_by_four_bouldering",
+      "name": "4x4 Bouldering (Power-Endurance)",
+      "category": "main_strength",
+      "time_min": 40,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "gym_4x4",
+      "equipment_required": [
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "rounds": 4,
+        "reps": 4,
+        "rest_seconds": 300,
+        "notes": "Choose grade where you fail on rep 3-4. Not rep 1-2 (too hard) or complete all 4 easily (too easy)."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "high"
+      }
+    },
+    {
+      "id": "linked_boulders",
+      "name": "Linked Boulders (No Pause)",
+      "category": "main_strength",
+      "time_min": 35,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "gym_linked_boulders",
+      "equipment_required": [
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "rest_seconds_range": [
+          240,
+          360
+        ],
+        "notes": "Link 3-5 boulders without pause. Moderate grade. Rest fully between sets."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "high"
+      }
+    },
+    {
+      "id": "route_intervals",
+      "name": "Route Intervals (Timed Rest)",
+      "category": "main_strength",
+      "time_min": 35,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "gym_route_intervals",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          4,
+          6
+        ],
+        "rest_seconds_range": [
+          120,
+          300
+        ],
+        "notes": "Climb route sections with timed rest. Grade 1-2 below onsight. Focus sustained effort."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "arc_training",
+      "name": "ARC Training (Continuous Low Intensity)",
+      "category": "main_strength",
+      "time_min": 30,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "low",
+      "fatigue_cost": 4,
+      "recency_group": "gym_arc",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "total_minutes_range": [
+          20,
+          30
+        ],
+        "notes": "Well below onsight grade. Zero pump. If you feel pump, go easier."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes"
+      ]
+    },
+    {
+      "id": "threshold_climbing",
+      "name": "Threshold Climbing (Sustained Sub-Onsight)",
+      "category": "main_strength",
+      "time_min": 35,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "gym_threshold",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "total_minutes_range": [
+          20,
+          35
+        ],
+        "notes": "Just below onsight grade. Sustained effort. Moderate pump acceptable."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "medium"
+      }
+    },
+
+    {
+      "id": "continuity_climbing",
+      "name": "Continuity Climbing (Ultra-Easy Volume)",
+      "category": "endurance",
+      "time_min": 30,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "regeneration"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "gym_continuity",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "total_minutes_range": [
+          20,
+          40
+        ],
+        "notes": "Grade VERY far below onsight. Must feel trivially easy. Chat-pace effort. Lattice 5x3 style."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes"
+      ]
+    },
+    {
+      "id": "easy_route_laps",
+      "name": "Easy Route Laps (Recovery)",
+      "category": "endurance",
+      "time_min": 30,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "regeneration"
+      ],
+      "pattern": "climbing_routes",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "gym_easy_laps",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          4,
+          8
+        ],
+        "rest_seconds_range": [
+          120,
+          180
+        ],
+        "notes": "Repeated laps on easy routes. Focus recovery, blood flow, and movement quality."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "id": "arc_easy_traverse",
+      "name": "ARC Easy Traverse (Continuous)",
+      "category": "endurance",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "gym_arc",
+      "equipment_required": [
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "total_minutes_range": [
+          15,
+          20
+        ],
+        "notes": "Easy traverses, 15-20 min continuous. Zero pump. Focus fluid movement."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+
+    {
+      "id": "weighted_pullup",
+      "name": "Weighted Pull-up",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "pullup_variants",
+      "equipment_required": [
+        "pullup_bar",
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          4,
+          6
+        ],
+        "reps_range": [
+          3,
+          6
+        ],
+        "rest_seconds_range": [
+          150,
+          240
+        ],
+        "notes": "Added weight via belt or vest. Progress load, not reps."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "l_sit_pullup",
+      "name": "L-Sit Pull-up",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general",
+        "core"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "pullup_variants",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          3,
+          8
+        ],
+        "rest_seconds_range": [
+          120,
+          180
+        ],
+        "notes": "Maintain L-sit throughout. If core fails first, reduce reps."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "archer_pullup",
+      "name": "Archer Pull-up",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "pullup_variants",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          3,
+          6
+        ],
+        "rest_seconds_range": [
+          120,
+          180
+        ],
+        "notes": "Asymmetric pullup. Alternate sides. One arm pulls, other assists on bar."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "lock_off_isometric",
+      "name": "Lock-off Isometric (Multi-Angle)",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "pullup_lock_off",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "hold_seconds": 7,
+        "rest_seconds": 120,
+        "notes": "Hold 5-10s at each angle. 90°, 120°, full lock. 3-5 sets per angle."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "one_arm_pullup_assisted",
+      "name": "One-Arm Pull-up (Assisted)",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "pullup_one_arm",
+      "equipment_required": [
+        "pullup_bar",
+        "band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          1,
+          3
+        ],
+        "rest_seconds_range": [
+          180,
+          300
+        ],
+        "notes": "Band or pulley assistance. Advanced. Focus controlled full ROM."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "high",
+        "cns": "high",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "barbell_row",
+      "name": "Barbell Row",
+      "category": "strength_accessory",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_horizontal",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "horizontal_pull",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          6,
+          10
+        ],
+        "rest_seconds_range": [
+          90,
+          150
+        ],
+        "notes": "Barbell or dumbbell row. Controlled eccentric."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "typewriter_pullup",
+      "name": "Typewriter Pull-up",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "pullup_variants",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          3,
+          6
+        ],
+        "rest_seconds_range": [
+          120,
+          180
+        ],
+        "notes": "Pull to top, traverse laterally at top position. Alternate direction."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+
+    {
+      "id": "dips",
+      "name": "Dips (Parallel Bars or Rings)",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "dip_variants",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          5,
+          12
+        ],
+        "rest_seconds_range": [
+          90,
+          150
+        ],
+        "notes": "Use parallel bars, rings, or sturdy chair. Bodyweight or weighted."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "shoulder_press",
+      "name": "Shoulder Press (Overhead)",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "overhead_press",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          6,
+          10
+        ],
+        "rest_seconds_range": [
+          90,
+          150
+        ],
+        "notes": "Dumbbells or barbell. Standing or seated."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "ring_pushup",
+      "name": "Ring Push-up",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "pushup_variants",
+      "equipment_required": [
+        "rings"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          6,
+          15
+        ],
+        "rest_seconds_range": [
+          60,
+          120
+        ],
+        "notes": "Instability from rings increases demand. Turn rings out at top."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "face_pull",
+      "name": "Face Pull (Band)",
+      "category": "prehab",
+      "time_min": 6,
+      "role": [
+        "accessory",
+        "prehab"
+      ],
+      "domain": [
+        "prehab_shoulder"
+      ],
+      "pattern": "scapular_control",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "prehab_shoulder_rotator_cuff",
+      "equipment_required": [
+        "resistance_band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          15,
+          20
+        ],
+        "rest_seconds": 45,
+        "notes": "Also excellent as prehab. 3-4 sets, 15-20 reps."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+
+    {
+      "id": "front_lever_tuck",
+      "name": "Front Lever (Tuck Progression)",
+      "category": "core",
+      "time_min": 10,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "hold_seconds_range": [
+          8,
+          15
+        ],
+        "rest_seconds_range": [
+          90,
+          150
+        ],
+        "notes": "Tuck, advanced tuck, or one-leg. Progress toward full. Maintain hollow body."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "hanging_leg_raise",
+      "name": "Hanging Leg Raise",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "core_compression",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          6,
+          12
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "Straight legs to bar. Control the negative. No kipping."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "ab_wheel_rollout",
+      "name": "Ab Wheel Rollout",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "core_anti_extension",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          6,
+          12
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "Ab wheel recommended; towel on smooth floor works too."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "pallof_press",
+      "name": "Pallof Press (Anti-Rotation)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_rotation",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_anti_rotation",
+      "equipment_required": [
+        "resistance_band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          8,
+          12
+        ],
+        "rest_seconds_range": [
+          45,
+          60
+        ],
+        "notes": "Press and hold. Resist rotation. Alternate sides."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "side_plank",
+      "name": "Side Plank",
+      "category": "core",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_lateral_flexion",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "core_anti_lateral_flexion",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          2,
+          3
+        ],
+        "hold_seconds_range": [
+          20,
+          40
+        ],
+        "rest_seconds": 30,
+        "notes": "Each side. Stack feet or stagger. Hips high."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "dead_bug",
+      "name": "Dead Bug",
+      "category": "core",
+      "time_min": 6,
+      "role": [
+        "warmup",
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "core_anti_extension",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          2,
+          3
+        ],
+        "reps_range": [
+          8,
+          12
+        ],
+        "rest_seconds": 30,
+        "notes": "Slow and controlled. Press low back into floor. Breathe out on extension."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "windshield_wipers",
+      "name": "Windshield Wipers (Hanging)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "rotation",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_rotation",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          4,
+          8
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "Controlled rotation. Legs to bar, rotate side to side."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "toes_to_bar",
+      "name": "Toes to Bar",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_compression",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          5,
+          10
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "Strict form. No kipping. Full compression at top."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+
+    {
+      "id": "wrist_curl",
+      "name": "Wrist Curl (Flexion)",
+      "category": "prehab",
+      "time_min": 5,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_wrist"
+      ],
+      "pattern": "wrist_flexion",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "prehab_wrist_curls",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 15,
+        "rest_seconds": 30,
+        "notes": "Light dumbbell. Slow and controlled. Forearm on knee."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "reverse_wrist_curl",
+      "name": "Reverse Wrist Curl (Extension)",
+      "category": "prehab",
+      "time_min": 5,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_wrist"
+      ],
+      "pattern": "wrist_extension",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "prehab_wrist_curls",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 15,
+        "rest_seconds": 30,
+        "notes": "Light dumbbell. Slow and controlled. Forearm on knee, palm down."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "forearm_pronation_supination",
+      "name": "Forearm Pronation/Supination",
+      "category": "prehab",
+      "time_min": 5,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_elbow"
+      ],
+      "pattern": "forearm_pronation",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "prehab_elbow_pronation_supination",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "rest_seconds": 30,
+        "notes": "Hammer or light dumbbell. Slow and controlled."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "rotator_cuff_external_rotation",
+      "name": "Rotator Cuff External Rotation (Band)",
+      "category": "prehab",
+      "time_min": 6,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_shoulder"
+      ],
+      "pattern": "scapular_control",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "prehab_shoulder_rotator_cuff",
+      "equipment_required": [
+        "resistance_band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 15,
+        "rest_seconds": 30,
+        "notes": "Elbow pinned to side. Slow external rotation. Light band."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "scapular_pullup_prehab",
+      "name": "Scapular Pull-up (Prehab/Activation)",
+      "category": "prehab",
+      "time_min": 6,
+      "role": [
+        "prehab",
+        "activation"
+      ],
+      "domain": [
+        "prehab_shoulder"
+      ],
+      "pattern": "scapular_control",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "scapular_control_pull",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "rest_seconds": 45,
+        "notes": "Depression and elevation only. No arm bend. Focus scapular control."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "finger_extensor_training",
+      "name": "Finger Extensor Training (Rubber Band)",
+      "category": "prehab",
+      "time_min": 4,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_wrist"
+      ],
+      "pattern": "wrist_extension",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "prehab_finger_extensors",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          15,
+          20
+        ],
+        "rest_seconds": 20,
+        "notes": "Rubber band around fingers. 3-4 sets, 15-20 reps. Daily if desired."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "elbow_eccentric_curl",
+      "name": "Elbow Eccentric Curl (Tyler Twist)",
+      "category": "prehab",
+      "time_min": 6,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_elbow"
+      ],
+      "pattern": "forearm_supination",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "prehab_elbow_extensors",
+      "equipment_required": [
+        "resistance_band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 15,
+        "rest_seconds": 30,
+        "notes": "Slow eccentric. Key exercise for elbow tendinopathy prevention. Tyler twist / reverse Tyler twist."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "shoulder_car",
+      "name": "Shoulder CARs (Controlled Articular Rotation)",
+      "category": "prehab",
+      "time_min": 4,
+      "role": [
+        "warmup",
+        "prehab"
+      ],
+      "domain": [
+        "prehab_shoulder",
+        "mobility"
+      ],
+      "pattern": "mobility_shoulders",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "prehab_shoulder_cars",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 3,
+        "rest_seconds": 15,
+        "notes": "Full range. Slow and controlled. 3 reps each direction per arm."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+
+    {
+      "id": "silent_feet_drill",
+      "name": "Silent Feet Drill",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "technique_footwork_drills",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          15,
+          25
+        ],
+        "notes": "Climb well below onsight. Focus: zero noise on footplacements."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes"
+      ]
+    },
+    {
+      "id": "no_readjust_drill",
+      "name": "No Readjust Drill",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "technique_footwork_drills",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          15,
+          25
+        ],
+        "notes": "Place foot once, no adjustment. Forces precision. Well below onsight grade."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes"
+      ]
+    },
+    {
+      "id": "downclimbing_drill",
+      "name": "Downclimbing Drill",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 4,
+      "recency_group": "technique_footwork_drills",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          15,
+          25
+        ],
+        "notes": "Climb up, climb down controlled. Every route/boulder. Builds eccentric strength and awareness."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes"
+      ]
+    },
+    {
+      "id": "slow_climbing",
+      "name": "Slow Climbing (Count to 3)",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_lead"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "technique_pacing_drills",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          15,
+          25
+        ],
+        "notes": "Count to 3 between every move. Forces reading, breathing, and deliberate movement."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes"
+      ]
+    },
+    {
+      "id": "flag_practice",
+      "name": "Flag Practice (Inside/Outside/Drop Knee)",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_boulder"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          15,
+          25
+        ],
+        "notes": "Inside flag, outside flag, drop knee practice. Easy boulders. Focus body tension and balance."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+
+    {
+      "id": "hip_opener_flow",
+      "name": "Hip Opener Flow (Frog/Pigeon/90-90)",
+      "category": "flexibility",
+      "time_min": 12,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "flexibility_hips",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          10,
+          15
+        ],
+        "notes": "Hold each position 45-60s. Breathe deeply. Post-session or rest day."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "shoulder_stretch_flow",
+      "name": "Shoulder Stretch Flow (Pec/Cross-body/Sleeper)",
+      "category": "flexibility",
+      "time_min": 10,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "flexibility_shoulders",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          8,
+          12
+        ],
+        "notes": "Pec stretch, cross-body, sleeper stretch. Hold 45-60s each."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "forearm_stretches",
+      "name": "Forearm Stretches (Wrist Extension/Flexion)",
+      "category": "flexibility",
+      "time_min": 4,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "prehab_wrist",
+        "flexibility"
+      ],
+      "pattern": "wrist_extension",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "flexibility_forearms",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          2,
+          4
+        ],
+        "notes": "Essential after every climbing session. 2-3 min minimum. Wrist extension and flexion on floor."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "full_body_stretch_flow",
+      "name": "Full Body Stretch Flow (Yin-inspired)",
+      "category": "flexibility",
+      "time_min": 18,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "flexibility_full_body",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          15,
+          20
+        ],
+        "notes": "Yin-yoga inspired. Hips, shoulders, spine, hamstrings. Hold 60s+ per position."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "active_hip_mobility",
+      "name": "Active Hip Mobility (CARs/High Step/Frog)",
+      "category": "flexibility",
+      "time_min": 10,
+      "role": [
+        "warmup",
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_active",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "flexibility_hips_active",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          8,
+          12
+        ],
+        "notes": "High step drill, hip CARs, active frog. Dynamic, controlled movement."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+
+    {
+      "id": "wall_handstand_hold",
+      "name": "Wall Handstand Hold (Belly-to-Wall)",
+      "category": "complementary",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "handstand_skill",
+        "strength_general"
+      ],
+      "pattern": "handstand",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "handstand_holds",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "wrist_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "hold_seconds_range": [
+          20,
+          30
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "Belly-to-wall. Arms straight, shoulders elevated. 3-4 x 20-30s."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "wall_walk_up",
+      "name": "Wall Walk-up",
+      "category": "complementary",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "handstand_skill"
+      ],
+      "pattern": "handstand",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "handstand_walkup",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "wrist_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          2,
+          4
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "Walk up from pushup position to handstand at wall. Controlled descent."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "handstand_shoulder_taps",
+      "name": "Handstand Shoulder Taps (Wall)",
+      "category": "complementary",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "handstand_skill",
+        "core"
+      ],
+      "pattern": "handstand",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "handstand_holds",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "wrist_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "reps_range": [
+          4,
+          8
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "In handstand at wall, tap opposite shoulder. Anti-rotation + stability."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "freestanding_handstand_practice",
+      "name": "Freestanding Handstand Practice",
+      "category": "complementary",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "handstand_skill"
+      ],
+      "pattern": "handstand",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "handstand_freestanding",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "wrist_sensitive"
+      ],
+      "prescription_defaults": {
+        "duration_min_range": [
+          10,
+          15
+        ],
+        "notes": "Skill practice. Many short attempts, full rest. Quality over quantity."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "handstand_pushup_wall",
+      "name": "Handstand Push-up (Wall)",
+      "category": "complementary",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general",
+        "handstand_skill"
+      ],
+      "pattern": "push",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "handstand_hspu",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "wrist_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          3,
+          8
+        ],
+        "rest_seconds_range": [
+          120,
+          180
+        ],
+        "notes": "Wall-supported HSPU. Full ROM. Head to floor. Control the negative."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+
+    {
+      "id": "jump_rope",
+      "name": "Jump Rope (Cardio Conditioning)",
+      "category": "conditioning",
+      "time_min": 8,
+      "role": [
+        "warmup",
+        "conditioning"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "carry",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "warmup_pulse_raise",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "duration_min_range": [
+          5,
+          10
+        ],
+        "notes": "Jump rope recommended but optional. Good pulse raiser alternative."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "turkish_getup",
+      "name": "Turkish Get-up",
+      "category": "conditioning",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general",
+        "core"
+      ],
+      "pattern": "rotation",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "conditioning_tgu",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          5
+        ],
+        "reps_range": [
+          2,
+          3
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "Kettlebell or dumbbell. Alternate sides. Slow and controlled. Full body coordination."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "farmers_carry",
+      "name": "Farmer's Carry",
+      "category": "conditioning",
+      "time_min": 8,
+      "role": [
+        "conditioning"
+      ],
+      "domain": [
+        "strength_general",
+        "core"
+      ],
+      "pattern": "carry",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "conditioning_carries",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "duration_seconds_range": [
+          30,
+          60
+        ],
+        "rest_seconds_range": [
+          60,
+          90
+        ],
+        "notes": "Heavy dumbbells or kettlebells. Walk with control. Suitcase carry for anti-lateral flexion."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "bear_crawl",
+      "name": "Bear Crawl",
+      "category": "conditioning",
+      "time_min": 6,
+      "role": [
+        "warmup",
+        "conditioning"
+      ],
+      "domain": [
+        "core",
+        "mobility"
+      ],
+      "pattern": "carry",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "conditioning_crawls",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          3,
+          4
+        ],
+        "duration_seconds_range": [
+          20,
+          40
+        ],
+        "rest_seconds_range": [
+          30,
+          45
+        ],
+        "notes": "Quadrupedia. Shoulder stability + coordination. Knees off ground. Slow and controlled."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "band_pull_apart",
+      "name": "Band Pull-apart (Scapular Daily)",
+      "category": "prehab",
+      "time_min": 4,
+      "role": [
+        "prehab",
+        "warmup"
+      ],
+      "domain": [
+        "prehab_shoulder"
+      ],
+      "pattern": "scapular_control",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "prehab_shoulder_rotator_cuff",
+      "equipment_required": [
+        "resistance_band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          2,
+          3
+        ],
+        "reps_range": [
+          15,
+          20
+        ],
+        "rest_seconds": 20,
+        "notes": "Can do daily. 2-3 sets of 15-20. Essential for shoulder health."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
         "cns": "low",
         "skin": "none"
       }

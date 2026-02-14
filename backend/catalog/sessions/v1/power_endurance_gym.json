@@ -1,0 +1,73 @@
+{
+  "id": "power_endurance_gym",
+  "name": "Power Endurance (Gym — Lead Focus)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "power_endurance",
+    "secondary_goals": [
+      "anaerobic_capacity",
+      "core"
+    ],
+    "notes": "4x4 bouldering, linked boulders, or route intervals. Lead-climber focused. High skin and pump cost."
+  },
+  "compatibility": {
+    "slot": [
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 100,
+    "hard_cap_min": 120
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "pe_climbing_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "4x4 bouldering, linked boulders, or route intervals. Select based on available equipment and training phase.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "domain": ["power_endurance"],
+            "role": ["main"],
+            "pattern": ["climbing_intervals"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "core_short",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary"
+    },
+    {
+      "block_id": "cooldown",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown",
+      "notes": "Forearm stretches + full body light stretch.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility", "prehab_wrist"]
+          }
+        }
+      }
+    }
+  ]
+}

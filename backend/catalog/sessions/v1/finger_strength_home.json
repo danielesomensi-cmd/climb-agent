@@ -1,0 +1,69 @@
+{
+  "id": "finger_strength_home",
+  "name": "Finger Strength (Home — Hangboard Only)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "finger_max_strength",
+    "secondary_goals": [
+      "finger_strength_endurance",
+      "prehab_wrist"
+    ],
+    "notes": "Short hangboard-only session. Lunch slot. Max hangs or repeaters + finger extensor prehab."
+  },
+  "compatibility": {
+    "slot": [
+      "lunch_short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 35,
+    "hard_cap_min": 45
+  },
+  "modules": [
+    {
+      "block_id": "finger_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Finger warmup: tendon glides, easy hangs, progressive loading.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["warmup"],
+            "domain": ["finger_strength"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "template_id": "finger_max_strength",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Max hangs or repeaters. Primary stimulus."
+    },
+    {
+      "block_id": "finger_extensor_prehab",
+      "required": false,
+      "priority": 50,
+      "module_role": "cooldown",
+      "notes": "Finger extensor training + forearm stretches.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_wrist"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "id": "flexibility_full",
+  "name": "Full Flexibility Session (Rest Day)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "flexibility",
+    "secondary_goals": [
+      "mobility"
+    ],
+    "notes": "Complete stretching session for rest days. Yin-yoga inspired. Very low fatigue."
+  },
+  "compatibility": {
+    "slot": [
+      "short",
+      "lunch_short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 35,
+    "hard_cap_min": 45
+  },
+  "modules": [
+    {
+      "block_id": "light_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Light pulse raise or joint circles. 3-5 min.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["warmup"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "stretch_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Full body stretch flow + hip opener + shoulder stretch. Hold positions 60s+.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility"],
+            "pattern": ["flexibility_passive"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    }
+  ]
+}

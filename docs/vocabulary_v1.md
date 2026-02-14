@@ -35,7 +35,12 @@ Allowed `equipment` values:
 - `weight` *(canonical generic weight: counterweight, dumbbells, kettlebells, barbells)*
 - `dumbbell` *(subtype; prefer `weight` unless strictly required)*
 - `kettlebell` *(subtype; prefer `weight` unless strictly required)*
-- `pangullich`
+- `campus_board` *(campus board / pangullich — `pangullich` is a legacy alias that maps to this ID)*
+- `foam_roller`
+- `resistance_band` *(generic elastic band; distinct from `band` which is for pull-up assistance)*
+- `ab_wheel`
+- `rings` *(gymnastic rings)*
+- `pinch_block` *(loadable pinch training block)*
 - `spraywall`
 - `board_kilter`
 - `gym_boulder` *(gym has a boulder area with set problems; not board, not spraywall)*
@@ -94,6 +99,10 @@ Allowed `domain` values (v1.1, backwards-compatible):
 - `prehab_elbow`
 - `prehab_shoulder`
 - `prehab_wrist`
+- `contact_strength` *(rate of force development — campus board exercises)*
+- `regeneration` *(ultra-easy climbing for active recovery)*
+- `flexibility` *(passive and active stretching, yoga)*
+- `handstand_skill` *(inversion skill and overhead stability)*
 - `technique_boulder`
 - `technique_lead`
 - `technique_footwork`
@@ -165,6 +174,11 @@ Allowed `pattern` values:
 - `mobility_shoulders`
 - `mobility_hips`
 - `technique_drill`
+- `campus_ladder` *(campus board movement patterns)*
+- `handstand` *(inversions, overhead push)*
+- `compression` *(pike, L-sit to pike, toes-to-bar, hanging leg raise)*
+- `flexibility_passive` *(static stretching, yin yoga)*
+- `flexibility_active` *(active mobility, CARs, dynamic flow)*
 
 - `climbing_limit_boulder`
 - `climbing_intervals`

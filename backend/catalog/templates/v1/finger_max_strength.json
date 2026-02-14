@@ -46,7 +46,7 @@
             ],
             "required_tags_any": [
               "tool:hangboard",
-              "tool:pangullich"
+              "tool:campus_board"
             ]
           }
         },
@@ -110,7 +110,7 @@
                 "stim:finger_max_strength"
               ],
               "required_tags_any": [
-                "tool:pangullich"
+                "tool:campus_board"
               ],
               "exclude_tags_any": [
                 "stim:prehab_elbow",

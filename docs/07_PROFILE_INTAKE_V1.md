@@ -55,7 +55,7 @@ La procedura è deterministic by construction:
 1) Validazione JSON Schema (`profile_intake.v1`).
 2) Validazione vocabolario canonico (`docs/vocabulary_v1.md`) per:
    - location (`home|gym|outdoor`)
-   - equipment (insieme chiuso v1: `hangboard`, `pullup_bar`, `band`, `weight`, `dumbbell`, `kettlebell`, `pangullich`, `spraywall`, `board_kilter`, `gym_boulder`, `gym_routes`)
+   - equipment (insieme chiuso v1: `hangboard`, `pullup_bar`, `band`, `weight`, `dumbbell`, `kettlebell`, `campus_board`, `spraywall`, `board_kilter`, `gym_boulder`, `gym_routes`)
 
 Su errore, lo script fallisce esplicitamente con messaggio diagnostico.
 

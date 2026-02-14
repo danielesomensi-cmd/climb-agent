@@ -1,0 +1,82 @@
+{
+  "id": "endurance_aerobic_gym",
+  "name": "Aerobic Endurance + Technique (Gym)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "aerobic_capacity",
+    "secondary_goals": [
+      "technique_footwork",
+      "technique_lead"
+    ],
+    "notes": "ARC training, threshold climbing, and/or technique drills. Low-to-medium intensity. Good for base building."
+  },
+  "compatibility": {
+    "slot": [
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 90,
+    "hard_cap_min": 100
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "aerobic_climbing_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "ARC training or threshold climbing. Continuous low-intensity climbing. Zero to moderate pump.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "domain": ["aerobic_capacity"],
+            "role": ["main"],
+            "pattern": ["climbing_continuous"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "technique_drills",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary",
+      "notes": "Technique drills: silent feet, no readjust, slow climbing. Easy grade.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["technique"],
+            "pattern": ["technique_drill"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "cooldown",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility"]
+          }
+        }
+      }
+    }
+  ]
+}

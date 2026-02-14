@@ -316,7 +316,7 @@ def get_ex_tags(ex: Dict[str, Any]) -> List[str]:
 
 
 def get_ex_equipment(ex: Dict[str, Any]) -> List[str]:
-    # equipment as list of strings (e.g., ["hangboard", "pangullich"])
+    # equipment as list of strings (e.g., ["hangboard", "campus_board"])
     return norm_list_str(ex.get("equipment"))
 
 

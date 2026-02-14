@@ -1,0 +1,83 @@
+{
+  "id": "power_contact_gym",
+  "name": "Power & Contact Strength (Gym)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "contact_strength",
+    "secondary_goals": [
+      "power",
+      "strength_general"
+    ],
+    "notes": "Campus board work and/or limit bouldering. High CNS demand — schedule with full rest before and after."
+  },
+  "compatibility": {
+    "slot": [
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 100,
+    "hard_cap_min": 120
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "campus_or_limit_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Campus exercises (laddering, bumps) OR limit bouldering. Choose based on equipment and phase. Do NOT combine both at max intensity in same session.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "domain": ["contact_strength", "power"],
+            "role": ["main"],
+            "intensity_max": "max"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "antagonist_accessories",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary",
+      "notes": "Light antagonist work: pushups, dips, or face pulls. Keep volume low — main session is demanding.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "pattern": ["push", "scapular_control"],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "cooldown",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown",
+      "notes": "Forearm stretches + light shoulder mobility. 5-10 min.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility", "prehab_wrist"]
+          }
+        }
+      }
+    }
+  ]
+}
