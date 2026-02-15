@@ -118,9 +118,9 @@ function TodayContent() {
       const result = await applyEvents({
         events: [
           {
-            type: "session_done",
+            event_type: "mark_done",
             date: targetDate,
-            session_id: sessionId,
+            session_ref: sessionId,
           },
         ],
         week_plan: weekPlan,
@@ -142,9 +142,9 @@ function TodayContent() {
       const result = await applyEvents({
         events: [
           {
-            type: "session_skipped",
+            event_type: "mark_skipped",
             date: targetDate,
-            session_id: sessionId,
+            session_ref: sessionId,
           },
         ],
         week_plan: weekPlan,
@@ -159,11 +159,20 @@ function TodayContent() {
   async function handleFeedbackSubmit(feedback: Record<string, string>) {
     if (!feedbackSessionId) return;
     try {
+      const feedbackItems = Object.entries(feedback).map(
+        ([exercise_id, feedback_label]) => ({
+          exercise_id,
+          feedback_label,
+          completed: true,
+        })
+      );
       await postFeedback({
         log_entry: {
           date: targetDate,
           session_id: feedbackSessionId,
-          exercise_feedback: feedback,
+          actual: {
+            exercise_feedback_v1: feedbackItems,
+          },
         },
         status: "done",
       });
@@ -175,15 +184,29 @@ function TodayContent() {
     }
   }
 
-  // Exercises for the feedback dialog (simplified: using session_id as placeholder)
-  const feedbackExercises = feedbackSessionId
-    ? [
-        {
-          exercise_id: feedbackSessionId,
-          name: feedbackSessionId.replace(/_/g, " "),
-        },
-      ]
-    : [];
+  // Extract exercises from the resolved session for the feedback dialog
+  const feedbackExercises: Array<{ exercise_id: string; name: string }> =
+    (() => {
+      if (!feedbackSessionId || !dayPlan) return [];
+      const session = dayPlan.sessions.find(
+        (s) => s.session_id === feedbackSessionId
+      );
+      if (!session?.resolved) return [];
+      const resolved = session.resolved as Record<string, unknown>;
+      const resolvedSession = resolved.resolved_session as
+        | Record<string, unknown>
+        | undefined;
+      const instances = (resolvedSession?.exercise_instances ?? []) as Array<
+        Record<string, unknown>
+      >;
+      return instances.map((ex) => ({
+        exercise_id: (ex.exercise_id as string) ?? "",
+        name:
+          (ex.name as string) ??
+          (ex.exercise_id as string)?.replace(/_/g, " ") ??
+          "",
+      }));
+    })();
 
   const title = isViewingToday ? "Today" : formatDateSubtitle(targetDate);
   const subtitle = isViewingToday

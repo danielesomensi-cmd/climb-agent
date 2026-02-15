@@ -169,6 +169,33 @@ def test_day_override_with_phase_id():
     assert override_session["phase_id"] == "strength_power"
 
 
+def test_day_override_target_date_ripple():
+    """Override Wednesday with explicit target_date, verify Thursday gets downgraded via ripple."""
+    plan = _v2_plan_snapshot("strength_power")
+    updated = apply_day_override(
+        plan,
+        intent="strength",
+        location="gym",
+        reference_date="2026-01-05",
+        target_date="2026-01-07",
+        phase_id="strength_power",
+    )
+    # Wednesday should have the override session
+    wed = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-07")
+    assert wed["sessions"][0]["session_id"] == INTENT_TO_SESSION["strength"]
+    assert wed["sessions"][0]["phase_id"] == "strength_power"
+
+    # Thursday (ripple day +1) should have no hard sessions
+    thu = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-08")
+    for s in thu["sessions"]:
+        assert not s["tags"]["hard"], f"Hard session still present on ripple day 2026-01-08"
+
+    # Friday (ripple day +2) should also have no hard sessions
+    fri = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-09")
+    for s in fri["sessions"]:
+        assert not s["tags"]["hard"], f"Hard session still present on ripple day 2026-01-09"
+
+
 def test_day_override_recovery_ripple():
     """Hard override should downgrade following days to regeneration_easy."""
     plan = _v2_plan_snapshot("strength_power")
