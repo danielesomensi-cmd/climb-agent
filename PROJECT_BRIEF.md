@@ -1,49 +1,51 @@
 # climb-agent — Project Brief
 
-> Ultimo aggiornamento: 2026-02-15 (post Fase 1.5 — E2E fixes)
-> Source of truth dettagliata: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
+> Last updated: 2026-02-15 (post Phase 3 — UI)
+> Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
 
-## Cos'è
+## What it is
 
-Motore di pianificazione allenamento arrampicata. Deterministico (stessi input → stessi output), closed-loop (feedback → adattamento), nessun LLM nel loop decisionale.
+Climbing training planning engine. Deterministic (same inputs → same outputs), closed-loop (feedback → adaptation), no LLM in the decision loop.
 
-Risponde alla domanda: **"Dato il mio goal, i miei punti deboli, e quanto tempo ho, cosa devo fare oggi?"**
-
----
-
-## Stato attuale
-
-| Area | Quantità | Note |
-|------|----------|------|
-| Esercizi | 102 | 12 categorie (finger, power, PE, endurance, pull, push, core, prehab, technique, flexibility, handstand, conditioning) |
-| Sessioni | 29 | gym evening, home lunch, recovery, flexibility, prehab, conditioning, finger maintenance |
-| Template | 11 | invariati da v1 |
-| Test | 155 | tutti verdi (post E2E fix Cluster 1+2) |
-| user_state | v1.5 | goal, assessment (6 assi + repeater test), trips, macrocycle |
+Answers the question: **"Given my goal, my weaknesses, and my available time, what should I do today?"**
 
 ---
 
-## Architettura: il flusso completo
+## Current state
+
+| Area | Count | Notes |
+|------|-------|-------|
+| Exercises | 102 | 12 categories (finger, power, PE, endurance, pull, push, core, prehab, technique, flexibility, handstand, conditioning) |
+| Sessions | 29 | gym evening, home lunch, recovery, flexibility, prehab, conditioning, finger maintenance |
+| Templates | 11 | unchanged from v1 |
+| Tests | 179 | all green (post Phase 3) |
+| user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
+| API endpoints | 14 | 9 routers + health (FastAPI, CORS for Next.js) |
+| Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
+
+---
+
+## Architecture: the full flow
 
 ```
-Assessment (6 dimensioni → profilo radar 0-100)
+Assessment (6 dimensions → radar profile 0-100)
   → Goal (lead_grade v1, target + deadline)
-  → Macrocycle (Hörst 4-3-2-1 + DUP, 10-13 settimane, 5 fasi)
+  → Macrocycle (Hörst 4-3-2-1 + DUP, 10-13 weeks, 5 phases)
   → Week (planner_v2 phase-aware, domain weights + session pool)
-  → Session (resolver seleziona esercizi concreti con carichi)
-  → Feedback (granulare per esercizio, piano vs realtà)
-  → Adattamento (closed-loop, multiplier-based)
+  → Session (resolver selects concrete exercises with loads)
+  → Feedback (granular per exercise, plan vs actual)
+  → Adaptation (closed-loop, multiplier-based)
 ```
 
-In codice:
+In code:
 
 ```
 compute_assessment_profile()    [assessment_v1]
 → generate_macrocycle()         [macrocycle_v1]
-→ generate_phase_week()         [planner_v2, per settimana]
-→ resolve_session()             [resolve_session, per sessione]
+→ generate_phase_week()         [planner_v2, per week]
+→ resolve_session()             [resolve_session, per session]
 ```
 
 ---
@@ -53,111 +55,164 @@ compute_assessment_profile()    [assessment_v1]
 ```
 backend/
   engine/
-    assessment_v1.py       ← Profilo 6 assi (0-100) con benchmark per grado
-    macrocycle_v1.py        ← Generator Hörst 4-3-2-1 + DUP + deload
-    planner_v1.py           ← Planner settimanale originale (mode-based)
-    planner_v2.py           ← Planner phase-aware (usa macrociclo)
-    resolve_session.py      ← Resolver sessioni → esercizi concreti
-    progression_v1.py       ← Progressione carichi
+    assessment_v1.py       ← 6-axis profile (0-100) with grade-based benchmarks
+    macrocycle_v1.py        ← Hörst 4-3-2-1 + DUP + deload generator
+    planner_v1.py           ← Original weekly planner (mode-based)
+    planner_v2.py           ← Phase-aware planner (uses macrocycle)
+    resolve_session.py      ← Session resolver → concrete exercises
+    progression_v1.py       ← Load progression
     replanner_v1.py         ← Replanning (day override + ripple)
     closed_loop_v1.py       ← Closed-loop feedback processing
     adaptation/             ← Closed-loop (multiplier-based adjustments)
-  api/                      ← FastAPI skeleton (health endpoint)
+  api/
+    main.py                 ← FastAPI app (9 routers + health)
+    models.py               ← Pydantic request/response models
+    deps.py                 ← Shared dependencies (state loading, date helpers)
+    routers/
+      state.py              ← GET/PUT/DELETE /api/state
+      catalog.py            ← GET /api/catalog/exercises, /api/catalog/sessions
+      onboarding.py         ← GET /api/onboarding/defaults, POST /api/onboarding/complete
+      assessment.py         ← POST /api/assessment/compute
+      macrocycle.py         ← POST /api/macrocycle/generate
+      week.py               ← GET /api/week/{week_num} (auto-resolves sessions)
+      session.py            ← POST /api/session/resolve
+      replanner.py          ← POST /api/replanner/override, /api/replanner/events
+      feedback.py           ← POST /api/feedback
   catalog/
-    exercises/v1/           ← 102 esercizi (JSON)
-    sessions/v1/            ← 29 sessioni (JSON)
-    templates/v1/           ← 11 template (JSON)
+    exercises/v1/           ← 102 exercises (JSON)
+    sessions/v1/            ← 29 sessions (JSON)
+    templates/v1/           ← 11 templates (JSON)
   data/
-    user_state.json         ← Source of truth utente (v1.5)
-    schemas/                ← JSON schemas per validazione log
-  tests/                    ← 155 test pytest
-frontend/                   ← Da costruire (Next.js PWA)
+    user_state.json         ← User source of truth (v1.5)
+    schemas/                ← JSON schemas for log validation
+  tests/                    ← 179 pytest tests
+frontend/
+  src/
+    app/
+      layout.tsx            ← Root layout (lang="en", dark mode)
+      page.tsx              ← Entry point (redirects to /today or /onboarding)
+      (main)/               ← Authenticated pages (with bottom nav)
+        today/page.tsx      ← Today's sessions with mark done/skipped
+        week/page.tsx       ← Weekly grid + day detail cards
+        plan/page.tsx       ← Macrocycle timeline + radar chart
+        session/[id]/       ← Session detail with resolved exercises
+        settings/page.tsx   ← Profile, goal, equipment, actions
+      onboarding/           ← 10-step onboarding wizard
+        welcome → profile → experience → grades → goals →
+        weaknesses → tests → limitations → locations →
+        availability → trips → review (generates plan)
+    components/
+      layout/               ← TopBar, BottomNav, DarkModeToggle
+      onboarding/           ← OnboardingContext, RadarChart, StepIndicator
+      training/             ← DayCard, SessionCard, ExerciseCard, WeekGrid,
+                              MacrocycleTimeline, FeedbackDialog
+    lib/
+      api.ts                ← API client (14 endpoint functions)
+      types.ts              ← TypeScript interfaces
+      hooks/use-state.ts    ← useUserState hook
 docs/
-  vocabulary_v1.md          ← Vocabolario chiuso (aggiornato §5.1-5.6)
-  DESIGN_GOAL_MACROCICLO_v1.1.md ← Design completo + roadmap
-PROJECT_BRIEF.md            ← Questo file
-CLAUDE.md                   ← Contesto per Claude Code
+  vocabulary_v1.md          ← Closed vocabulary (updated §5.1-5.6)
+  DESIGN_GOAL_MACROCICLO_v1.1.md ← Complete design + roadmap
+  BACKLOG.md                ← Feature backlog (B1-B14)
+_archive/                   ← Legacy scripts, docs, config (do not modify)
+PROJECT_BRIEF.md            ← This file
+CLAUDE.md                   ← Context for Claude Code
 ```
 
 ---
 
-## Decisioni tecniche approvate
+## Approved technical decisions
 
-| Decisione | Scelta |
-|-----------|--------|
-| Persistenza | JSON/JSONL (no database) |
-| Frontend | Next.js + React + Tailwind CSS (PWA mobile-first) |
-| Assessment | Ogni 6 settimane, benchmark per grado target |
-| Periodizzazione | Hörst 4-3-2-1 con DUP concurrent training |
-| Deload | Misto: programmato + adattivo + pre-trip |
-| Outdoor logging | Integrato nella day view |
-| Feedback | Granulare per esercizio (5 livelli: very_easy → very_hard) |
-| LLM Coach | Claude Sonnet come layer conversazionale (Fase 3.5) |
-| Equipment | `equipment_required` solo per attrezzi indispensabili, opzionali in notes |
-| Guided Session Mode | Timer UI con rest timer colorato (spec in design doc, Fase 3) |
-
----
-
-## Principi non negoziabili
-
-1. **Determinismo totale**: stessi input → stessi output, zero random
-2. **user_state.json** è la source of truth utente (no file paralleli)
-3. **Log append-only**, entry invalide in quarantena, mai cancellate
-4. **Massimali ufficiali** aggiornati SOLO da sessioni test esplicite
-5. **Vocabolario chiuso** (`docs/vocabulary_v1.md`) — no valori nuovi senza aggiornamento
-6. **Hard filters P0** nel resolver non si toccano senza richiesta esplicita
+| Decision | Choice |
+|----------|--------|
+| Persistence | JSON/JSONL (no database) |
+| Frontend | Next.js 14 + React + Tailwind CSS + shadcn/ui (PWA mobile-first) |
+| Assessment | Every 6 weeks, benchmarks by target grade |
+| Periodization | Hörst 4-3-2-1 with DUP concurrent training |
+| Deload | Mixed: programmed + adaptive + pre-trip |
+| Outdoor logging | Integrated in day view |
+| Feedback | Granular per exercise (5 levels: very_easy → very_hard) |
+| LLM Coach | Claude Sonnet as conversational layer (Phase 3.5) |
+| Equipment | `equipment_required` only for essential gear, optional in notes |
+| Guided Session Mode | Timer UI with colored rest timer (spec in design doc, Phase 3) |
 
 ---
 
-## Comandi
+## Non-negotiable principles
+
+1. **Total determinism**: same inputs → same outputs, zero random
+2. **user_state.json** is the user source of truth (no parallel files)
+3. **Append-only logs**, invalid entries quarantined, never deleted
+4. **Official maxes** updated ONLY from explicit test sessions
+5. **Closed vocabulary** (`docs/vocabulary_v1.md`) — no new values without update
+6. **P0 hard filters** in the resolver are not changed without explicit request
+
+---
+
+## Commands
 
 ```bash
-python -m pytest backend/tests -q          # Test (155 verdi)
-uvicorn backend.api.main:app --reload      # API dev server
-from backend.engine.X import Y             # Import convention
+# Backend tests (179 green)
+source .venv/bin/activate && python -m pytest backend/tests -q
+
+# API dev server
+uvicorn backend.api.main:app --reload
+
+# Frontend dev server
+cd frontend && npm run dev
+
+# Import convention
+from backend.engine.X import Y
 ```
 
 ---
 
 ## Roadmap
 
-### Fase 0: Catalogo ✅
-- 102 esercizi, 29 sessioni, vocabulary aggiornato
+### Phase 0: Catalog ✅
+- 102 exercises, 29 sessions, vocabulary updated
 - pangullich → campus_board, guided session mode spec
 
-### Fase 1: Macrocycle engine ✅
+### Phase 1: Macrocycle engine ✅
 - assessment_v1.py, macrocycle_v1.py, planner_v2.py
 - user_state v1.5 (goal, assessment, trips, macrocycle)
 
-### Fase 1.5: Fix post-E2E ✅
-- 14 finding da test E2E manuale, 13 risolti in 2 cluster
-- Resolver inline blocks, planner 2-pass, PE con repeater test
-- Replanner phase-aware (12 intent), goal validation, pre-trip deload reale
-- 155 test verdi (da 115)
+### Phase 1.5: Post-E2E fixes ✅
+- 14 findings from manual E2E test, 13 resolved in 2 clusters
+- Resolver inline blocks, planner 2-pass, PE with repeater test
+- Replanner phase-aware (12 intents), goal validation, real pre-trip deload
+- 155 tests green (from 115)
 
-### Fase 1.75: Arricchimento sessioni 🔲
-- Sessioni serali da 5-7 blocchi, template nuovi (pulling, antagonist, limit boulder)
-- Core e antagonisti standard, load score, validazione vs letteratura
+### Phase 1.75: Session enrichment 🔲
+- Evening sessions with 5-7 blocks, new templates (pulling, antagonist, limit boulder)
+- Core and antagonists standard, load score, literature validation
 
-### Fase 2: Tracking + extras (PROSSIMA)
-- Feedback granulare, logging climbing, trip planning
-- Citazioni motivazionali, report engine
+### Phase 2: Tracking + extras 🔲
+- Granular feedback, climbing logging, trip planning
+- Motivational quotes, report engine
 
-### Fase 3: UI (Next.js PWA)
-- Day/week/feedback view, onboarding wizard
-- Guided session mode con timer
-- Report con grafici (Recharts)
+### Phase 3: UI (Next.js PWA) ✅
+- FastAPI REST API: 9 routers, 14 endpoints, CORS for Next.js
+- Onboarding wizard: 10-step flow generating assessment + macrocycle
+- Main views: Today (mark done/skipped + feedback), Week (grid + detail), Plan (radar + timeline), Session (resolved exercises), Settings (regenerate/reset)
+- 6 live-testing fixes: auto-resolve sessions, English translation, 7-day availability, gym priority, preview next day, day click navigation
+- Mobile-first with shadcn/ui components, dark mode, PWA manifest
 
-### Fase 3.5: LLM Coach
-- Claude Sonnet conversazionale sopra engine deterministico
+### Phase 3.1: UI polish + outdoor + equipment 🔲
+- B9: Add cable_machine, leg_press to gym equipment
+- B10: Outdoor climbing spots as location type
+- B11: Configurable test protocols
 
-### Fase 4: Evoluzione
-- Più goal types, report annuale, multi-macrociclo, notifiche
+### Phase 3.5: LLM Coach 🔲
+- Claude Sonnet conversational layer on top of deterministic engine
+
+### Phase 4: Evolution 🔲
+- More goal types, annual report, multi-macrocycle, notifications
 
 ---
 
-## Come lavoriamo
+## How we work
 
-- **Claude Code (terminale Mac)**: implementazione, file, commit, push
-- **Claude.ai (chat)**: pianificazione, discussione, review
-- Ogni fase → aggiornare questo file + test tutti verdi
+- **Claude Code (Mac terminal)**: implementation, files, commit, push
+- **Claude.ai (chat)**: planning, discussion, review
+- Each phase → update this file + all tests green

@@ -128,7 +128,13 @@ def suggest_max_hang_load(user_state: Optional[Dict[str, Any]], prescription: Di
 
     b = _pick_hangboard_baseline(user_state, edge_mm=edge_mm, grip=grip, hang_seconds=hang_seconds)
     if not b:
-        return None
+        # Fallback: derive baseline from assessment test data
+        tests = (user_state.get("assessment") or {}).get("tests") or {}
+        test_total = tests.get("max_hang_20mm_5s_total_kg")
+        if test_total is not None:
+            b = {"max_total_load_kg": float(test_total), "edge_mm": edge_mm, "grip": grip, "hang_seconds": hang_seconds, "load_method": "added_weight", "baseline_id": "from_assessment_test", "protocol_version": "max_hang_5s.v1"}
+        else:
+            return None
 
     max_total = b.get("max_total_load_kg")
     if max_total is None:

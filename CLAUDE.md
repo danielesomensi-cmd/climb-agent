@@ -14,14 +14,17 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests
-python -m pytest backend/tests -q
+# Run all tests (179 green)
+source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
 python -m pytest backend/tests/test_planner_v1.py -q
 
-# Start API dev server
+# Start API dev server (port 8000)
 uvicorn backend.api.main:app --reload
+
+# Start frontend dev server (port 3000)
+cd frontend && npm run dev
 
 # Type-check (if mypy is installed)
 mypy backend/engine/
@@ -33,11 +36,18 @@ mypy backend/engine/
 backend/
   engine/            # Core logic: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI app — health endpoint, future REST API
+  api/               # FastAPI REST API (9 routers, 14 endpoints)
+    main.py          # App setup, CORS, router mounting
+    models.py        # Pydantic request/response models
+    deps.py          # Shared deps (load_state, save_state, next_monday)
+    routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # Pytest suite with fixtures/
-frontend/            # Placeholder for future frontend
+  tests/             # 179 pytest tests with fixtures/
+frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
+  src/app/           # 19 pages: 5 main views + 12 onboarding steps + root + index
+  src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
+  src/lib/           # api.ts (14 endpoint functions), types.ts, hooks/
 docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, BACKLOG.md, e2e_test_results.md
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```
@@ -58,7 +68,62 @@ Data paths are relative to the repo root:
 "backend/data/user_state.json"
 ```
 
-## Catalog status (post Fase 0 expansion)
+## API (Phase 3)
+
+FastAPI app with 9 routers and 14 endpoints + health check.
+
+```bash
+# Start
+uvicorn backend.api.main:app --reload
+
+# Test
+source .venv/bin/activate && python -m pytest backend/tests/test_api.py -q
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| GET | `/api/state` | Get full user state |
+| PUT | `/api/state` | Deep-merge patch into state |
+| DELETE | `/api/state` | Reset state to empty |
+| GET | `/api/catalog/exercises` | List all exercises |
+| GET | `/api/catalog/sessions` | List all session metadata |
+| GET | `/api/onboarding/defaults` | Option lists for onboarding form |
+| POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle |
+| POST | `/api/assessment/compute` | Recompute 6-axis profile |
+| POST | `/api/macrocycle/generate` | Generate new macrocycle |
+| GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
+| POST | `/api/session/resolve` | Resolve a single session to exercises |
+| POST | `/api/replanner/override` | Apply day override (intent-based) |
+| POST | `/api/replanner/events` | Apply events (done/skipped) to week plan |
+| POST | `/api/feedback` | Submit session feedback |
+
+## Frontend (Phase 3)
+
+Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
+
+```bash
+cd frontend && npm run dev    # http://localhost:3000
+```
+
+### Tech stack
+- **Framework**: Next.js 14 (App Router, "use client" for all pages)
+- **Styling**: Tailwind CSS + shadcn/ui components
+- **State**: React hooks (useUserState, useOnboarding context)
+- **API client**: Typed fetch wrapper in `src/lib/api.ts`
+- **PWA**: manifest.json + service worker
+
+### Pages
+- `/today` — Today's sessions, mark done/skipped, post-session feedback
+- `/week` — 7-day grid + scrollable day detail cards
+- `/plan` — Assessment radar chart + macrocycle timeline + phase details
+- `/session/[id]` — Resolved exercises with prescription details
+- `/settings` — Profile summary, regenerate assessment/macrocycle, reset
+- `/onboarding/*` — 10-step wizard: welcome → profile → experience → grades → goals → weaknesses → tests → limitations → locations → availability → trips → review
+
+## Catalog status (post Phase 0 expansion)
 
 - **Exercises**: 102 in `backend/catalog/exercises/v1/exercises.json`
 - **Sessions**: 29 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home)
@@ -83,10 +148,10 @@ Data paths are relative to the repo root:
 Equipment marked in `equipment_required` is truly mandatory (cannot do the exercise without it).
 Optional equipment is mentioned in `prescription_defaults.notes` only.
 
-## Macrocycle engine (Fase 1 + Fase 1.5 E2E fixes)
+## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 155 tests green.
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green.
 
 ### Modules
 
@@ -94,7 +159,7 @@ Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 155 tests green.
 - `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and min 2-week floor per non-deload phase.
 - `backend/engine/planner_v2.py` — Phase-aware weekly planner. 2-pass algorithm: pass 1 places primary/climbing sessions with spacing, pass 2 fills complementary. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles.
 - `backend/engine/replanner_v1.py` — Phase-aware replanner. 12 intents mapped to planner_v2 sessions (was 7 from planner_v1). `apply_day_override` accepts `phase_id`. Imports `_SESSION_META` from planner_v2 (no longer depends on planner_v1 SESSION_LIBRARY).
-- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 29 session files resolve correctly.
+- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 29 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty.
 
 ### Flow
 
@@ -118,5 +183,13 @@ user_state.assessment + user_state.goal
 Tests live in `backend/tests/`. The `conftest.py` adds the repo root to `sys.path` so `import backend.*` works. Run with:
 
 ```bash
-python -m pytest backend/tests -q
+source .venv/bin/activate && python -m pytest backend/tests -q
+```
+
+## Workflow
+
+Always push at end of session:
+
+```bash
+git add -A && git commit -m 'description' && git push
 ```
