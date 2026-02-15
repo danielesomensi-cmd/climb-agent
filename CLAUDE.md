@@ -38,7 +38,7 @@ backend/
   data/              # user_state.json + JSON schemas for log validation
   tests/             # Pytest suite with fixtures/
 frontend/            # Placeholder for future frontend
-docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md — domain docs & design goals
+docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, BACKLOG.md, e2e_test_results.md
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```
 
@@ -60,8 +60,8 @@ Data paths are relative to the repo root:
 
 ## Catalog status (post Fase 0 expansion)
 
-- **Exercises**: ~102 in `backend/catalog/exercises/v1/exercises.json`
-- **Sessions**: ~28 in `backend/catalog/sessions/v1/`
+- **Exercises**: 102 in `backend/catalog/exercises/v1/exercises.json`
+- **Sessions**: 29 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home)
 - **Templates**: 11 in `backend/catalog/templates/v1/` (unchanged)
 
 ### Exercise categories covered
@@ -83,15 +83,18 @@ Data paths are relative to the repo root:
 Equipment marked in `equipment_required` is truly mandatory (cannot do the exercise without it).
 Optional equipment is mentioned in `prescription_defaults.notes` only.
 
-## Macrocycle engine (Fase 1)
+## Macrocycle engine (Fase 1 + Fase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 155 tests green.
 
 ### Modules
 
-- `backend/engine/assessment_v1.py` — 6-axis profile computation (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition). Each axis 0-100, benchmark-based when test data available, grade-estimated otherwise.
-- `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip).
-- `backend/engine/planner_v2.py` — Phase-aware weekly planner. Selects sessions from the phase's session pool, respects domain weights, enforces intensity caps and constraints (no consecutive finger days, hard day cap).
+- `backend/engine/assessment_v1.py` — 6-axis profile computation (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition). Each axis 0-100, benchmark-based when test data available, grade-estimated otherwise. PE score uses repeater test (40%) + RP-OS gap (40%) + self_eval (20%) to avoid double counting.
+- `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and min 2-week floor per non-deload phase.
+- `backend/engine/planner_v2.py` — Phase-aware weekly planner. 2-pass algorithm: pass 1 places primary/climbing sessions with spacing, pass 2 fills complementary. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles.
+- `backend/engine/replanner_v1.py` — Phase-aware replanner. 12 intents mapped to planner_v2 sessions (was 7 from planner_v1). `apply_day_override` accepts `phase_id`. Imports `_SESSION_META` from planner_v2 (no longer depends on planner_v1 SESSION_LIBRARY).
+- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 29 session files resolve correctly.
 
 ### Flow
 
@@ -106,7 +109,7 @@ user_state.assessment + user_state.goal
 ### Schema additions (user_state.json v1.5)
 
 - `goal`: goal_type, discipline, target_grade, target_style, current_grade, deadline
-- `assessment`: body, experience, grades, tests, self_eval, profile (6-axis)
+- `assessment`: body, experience, grades, tests (incl. repeater_7_3_max_sets_20mm), self_eval, profile (6-axis)
 - `trips[]`: name, start_date, end_date, discipline, priority
 - `macrocycle`: null until generated
 

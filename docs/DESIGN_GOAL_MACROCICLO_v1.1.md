@@ -457,6 +457,38 @@ L'LLM è l'interfaccia umana, non il cervello.
 - [x] Test per tutto il macrociclo engine (assessment, macrocycle, planner_v2)
 - [ ] Adattività avanzata: readiness, overreach, plateau detection
 
+### Fase 1.5: Fix post-E2E (completata) ✅
+Test E2E manuale ha prodotto 14 finding (4 P0, 6 P1, 4 P2).
+Risolti in due cluster di fix.
+- [x] Cluster 1: resolver inline blocks, integration test sessioni
+      reali, planner 2-pass con cycling e distribuzione uniforme,
+      finger_maintenance_home, climbing-first ordering
+- [x] Cluster 2: PE assessment con repeater test, replanner
+      phase-aware (12 intent), validazione goal, floor minimo fasi,
+      pre-trip deload reale, vocabulary sync
+- [x] 155 test verdi (da 115)
+- [x] 13/14 finding risolti (F14 outdoor → backlog)
+- [x] docs/BACKLOG.md creato con 7+ item per fasi future
+
+### Fase 1.75: Arricchimento sessioni (da fare)
+Review letteratura (Hörst, Lattice, Eva López, Hooper's Beta) ha
+evidenziato gap tra le sessioni attuali e i programmi reali.
+- [ ] Sessioni serali da 5-7 blocchi (ora 2-3): warmup → finger
+      → pulling → climbing on wall → core → antagonist/prehab
+      → cooldown
+- [ ] Template nuovi: pulling_strength, antagonist_prehab,
+      limit_bouldering
+- [ ] Arricchire sessioni esistenti: pulling in strength_long,
+      core da opzionale a standard, antagonisti in ogni sessione
+      serale
+- [ ] Sessione core standalone per slot pranzo (B1)
+- [ ] Sessione PE serale completa: 4x4/intervals + route volume
+      + core + antagonist
+- [ ] Verifica piano vs letteratura: confronto struttura macrociclo
+      con Hörst 4-3-2-1, Lattice, Eva López
+- [ ] Load score placeholder per sessione (low=20, medium=40,
+      high=65, max=85) + weekly summary
+
 ### Fase 2: Tracking + extras (1-2 settimane)
 - [ ] Schema outdoor session log
 - [ ] Feedback granulare: piano vs realtà per ogni esercizio

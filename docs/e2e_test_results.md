@@ -6,6 +6,9 @@
 > User state: v1.5 (goal: 8b redpoint, current: 8a+, 77kg, 10y experience)
 > Tests: 155 passing
 
+**Post-fix update**: 13/14 finding risolti (Cluster 1 + Cluster 2).
+155 test verdi. F14 (outdoor) nel backlog B2.
+
 ---
 
 ## Test Flow
@@ -90,7 +93,7 @@
 - Resolved by 2-pass algorithm with spacing constraints
 - 5 new tests for distribution
 
-#### F14. Outdoor climbing non supportato — DEFERRED to B2
+#### F14. Outdoor climbing non supportato — 🔲 DEFERRED to B2
 - Intent "outdoor" not yet in replanner (no outdoor sessions exist in catalog)
 - Tracked as backlog item B2
 

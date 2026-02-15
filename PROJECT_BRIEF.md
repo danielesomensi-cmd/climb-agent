@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Ultimo aggiornamento: 2026-02-14 (post Fase 1)
+> Ultimo aggiornamento: 2026-02-15 (post Fase 1.5 — E2E fixes)
 > Source of truth dettagliata: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -17,11 +17,11 @@ Risponde alla domanda: **"Dato il mio goal, i miei punti deboli, e quanto tempo 
 
 | Area | Quantità | Note |
 |------|----------|------|
-| Esercizi | 105 | 12 categorie (finger, power, PE, endurance, pull, push, core, prehab, technique, flexibility, handstand, conditioning) |
-| Sessioni | 28 | gym evening, home lunch, recovery, flexibility, prehab, conditioning |
+| Esercizi | 102 | 12 categorie (finger, power, PE, endurance, pull, push, core, prehab, technique, flexibility, handstand, conditioning) |
+| Sessioni | 29 | gym evening, home lunch, recovery, flexibility, prehab, conditioning, finger maintenance |
 | Template | 11 | invariati da v1 |
-| Test | 115 | tutti verdi (56 base + 17 assessment + 26 macrocycle + 16 planner_v2) |
-| user_state | v1.5 | goal, assessment (6 assi), trips, macrocycle |
+| Test | 155 | tutti verdi (post E2E fix Cluster 1+2) |
+| user_state | v1.5 | goal, assessment (6 assi + repeater test), trips, macrocycle |
 
 ---
 
@@ -64,13 +64,13 @@ backend/
     adaptation/             ← Closed-loop (multiplier-based adjustments)
   api/                      ← FastAPI skeleton (health endpoint)
   catalog/
-    exercises/v1/           ← 105 esercizi (JSON)
-    sessions/v1/            ← 28 sessioni (JSON)
+    exercises/v1/           ← 102 esercizi (JSON)
+    sessions/v1/            ← 29 sessioni (JSON)
     templates/v1/           ← 11 template (JSON)
   data/
     user_state.json         ← Source of truth utente (v1.5)
     schemas/                ← JSON schemas per validazione log
-  tests/                    ← 115 test pytest
+  tests/                    ← 155 test pytest
 frontend/                   ← Da costruire (Next.js PWA)
 docs/
   vocabulary_v1.md          ← Vocabolario chiuso (aggiornato §5.1-5.6)
@@ -112,7 +112,7 @@ CLAUDE.md                   ← Contesto per Claude Code
 ## Comandi
 
 ```bash
-python -m pytest backend/tests -q          # Test (115 verdi)
+python -m pytest backend/tests -q          # Test (155 verdi)
 uvicorn backend.api.main:app --reload      # API dev server
 from backend.engine.X import Y             # Import convention
 ```
@@ -122,13 +122,22 @@ from backend.engine.X import Y             # Import convention
 ## Roadmap
 
 ### Fase 0: Catalogo ✅
-- 105 esercizi, 28 sessioni, vocabulary aggiornato
+- 102 esercizi, 29 sessioni, vocabulary aggiornato
 - pangullich → campus_board, guided session mode spec
 
 ### Fase 1: Macrocycle engine ✅
 - assessment_v1.py, macrocycle_v1.py, planner_v2.py
 - user_state v1.5 (goal, assessment, trips, macrocycle)
-- 59 nuovi test (115 totali)
+
+### Fase 1.5: Fix post-E2E ✅
+- 14 finding da test E2E manuale, 13 risolti in 2 cluster
+- Resolver inline blocks, planner 2-pass, PE con repeater test
+- Replanner phase-aware (12 intent), goal validation, pre-trip deload reale
+- 155 test verdi (da 115)
+
+### Fase 1.75: Arricchimento sessioni 🔲
+- Sessioni serali da 5-7 blocchi, template nuovi (pulling, antagonist, limit boulder)
+- Core e antagonisti standard, load score, validazione vs letteratura
 
 ### Fase 2: Tracking + extras (PROSSIMA)
 - Feedback granulare, logging climbing, trip planning
