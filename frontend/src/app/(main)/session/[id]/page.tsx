@@ -1,0 +1,177 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useParams } from "next/navigation";
+import { TopBar } from "@/components/layout/top-bar";
+import { ExerciseCard } from "@/components/training/exercise-card";
+import { resolveSession } from "@/lib/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import type { ResolvedSession } from "@/lib/types";
+
+/** Formatta il session_id in nome leggibile */
+function formatSessionName(sessionId: string): string {
+  return sessionId
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Formatta secondi di recupero in formato leggibile */
+function formatRest(seconds: number): string {
+  if (seconds >= 60) {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return secs > 0 ? `${mins}m ${secs}s` : `${mins} min`;
+  }
+  return `${seconds}s`;
+}
+
+export default function SessionPage() {
+  const params = useParams();
+  const sessionId = typeof params.id === "string" ? params.id : "";
+
+  const [resolved, setResolved] = useState<ResolvedSession | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSession = useCallback(async () => {
+    if (!sessionId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await resolveSession(sessionId);
+      setResolved(data.resolved);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Errore nel caricamento");
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    fetchSession();
+  }, [fetchSession]);
+
+  const displayName = resolved?.session_name ?? formatSessionName(sessionId);
+
+  return (
+    <>
+      <TopBar
+        title={displayName}
+        subtitle={sessionId.replace(/_/g, " ")}
+        backHref="/today"
+      />
+
+      <main className="mx-auto max-w-2xl space-y-6 p-4">
+        {/* Stato di caricamento */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          </div>
+        )}
+
+        {/* Stato di errore */}
+        {error && !loading && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
+            <p className="text-sm text-destructive">{error}</p>
+            <button
+              onClick={fetchSession}
+              className="mt-2 text-sm font-medium text-primary underline"
+            >
+              Riprova
+            </button>
+          </div>
+        )}
+
+        {/* Sessione risolta: blocchi con esercizi */}
+        {!loading && !error && resolved && (
+          <>
+            {resolved.blocks.map((block, blockIdx) => (
+              <div key={blockIdx} className="space-y-3">
+                {/* Intestazione blocco */}
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-xs">
+                    Blocco {blockIdx + 1}
+                  </Badge>
+                  <span className="text-sm font-medium">
+                    {block.block_name}
+                  </span>
+                </div>
+
+                {/* Esercizi nel blocco */}
+                <div className="space-y-2 pl-2 border-l-2 border-border">
+                  {block.exercises.map((exercise, exIdx) => (
+                    <ExerciseCard key={`${blockIdx}-${exIdx}`} exercise={exercise} />
+                  ))}
+                </div>
+
+                {/* Separatore tra blocchi (escluso l'ultimo) */}
+                {blockIdx < resolved.blocks.length - 1 && (
+                  <Separator className="my-2" />
+                )}
+              </div>
+            ))}
+
+            <Separator />
+
+            {/* Placeholder timer di recupero */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Timer di recupero</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center space-y-3">
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center justify-center h-24 w-24 rounded-full border-4 border-primary/20">
+                    <span className="text-2xl font-mono font-bold text-muted-foreground">
+                      0:00
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Timer di recupero tra le serie. Funzionalita in arrivo.
+                </p>
+
+                {/* Suggerimenti tempi di recupero dagli esercizi */}
+                {resolved.blocks.some((b) =>
+                  b.exercises.some((e) => e.rest_s != null)
+                ) && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Tempi suggeriti
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {Array.from(
+                        new Set(
+                          resolved.blocks
+                            .flatMap((b) => b.exercises)
+                            .filter((e) => e.rest_s != null)
+                            .map((e) => e.rest_s!)
+                        )
+                      )
+                        .sort((a, b) => a - b)
+                        .map((rest) => (
+                          <Badge key={rest} variant="outline" className="text-xs">
+                            {formatRest(rest)}
+                          </Badge>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* Nessuna sessione trovata */}
+        {!loading && !error && !resolved && (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="text-muted-foreground">
+              Sessione non trovata
+            </p>
+          </div>
+        )}
+      </main>
+    </>
+  );
+}

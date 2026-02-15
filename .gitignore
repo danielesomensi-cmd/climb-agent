@@ -24,3 +24,4 @@ _archive/
 
 # frontend
 frontend/node_modules/
+.DS_Store
