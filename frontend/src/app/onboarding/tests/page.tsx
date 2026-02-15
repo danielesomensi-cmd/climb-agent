@@ -30,30 +30,30 @@ const TEST_SECTIONS: TestSection[] = [
     key: "max_hang",
     title: "Max Hang 20mm/5s",
     description:
-      "Appendi a un listello da 20mm per 5 secondi con il massimo peso possibile (half crimp). Includi il tuo peso corporeo nel totale.",
+      "Hang on a 20mm edge for 5 seconds with the maximum possible weight (half crimp). Include your body weight in the total.",
     fieldKey: "max_hang_20mm_5s_total_kg",
-    fieldLabel: "Carico totale (kg)",
-    example: "Es: pesi 77kg + 48kg zavorra = 125kg totale",
+    fieldLabel: "Total load (kg)",
+    example: "E.g.: weigh 77kg + 48kg added = 125kg total",
     unit: "kg",
   },
   {
     key: "weighted_pullup",
     title: "Weighted Pull-up 1RM",
     description:
-      "Il massimo peso con cui riesci a fare una trazione completa.",
+      "The maximum weight you can complete one full pull-up with.",
     fieldKey: "weighted_pullup_1rm_total_kg",
-    fieldLabel: "Carico totale (kg)",
-    example: "Es: pesi 77kg + 45kg = 122kg totale",
+    fieldLabel: "Total load (kg)",
+    example: "E.g.: weigh 77kg + 45kg = 122kg total",
     unit: "kg",
   },
   {
     key: "repeater",
     title: "Repeater 7/3",
     description:
-      "Appendi 7s, riposa 3s, ripeti fino a cedimento al 60% del max hang.",
+      "Hang 7s, rest 3s, repeat to failure at 60% of max hang.",
     fieldKey: "repeater_7_3_max_sets_20mm",
-    fieldLabel: "Ripetizioni",
-    example: "Es: 24 ripetizioni",
+    fieldLabel: "Repetitions",
+    example: "E.g.: 24 reps",
     unit: "reps",
   },
 ];
@@ -92,11 +92,11 @@ export default function TestsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Hai dati oggettivi? (opzionale ma consigliato)
+            Do you have test data? (optional but recommended)
           </CardTitle>
           <CardDescription>
-            Se hai fatto questi test, inserisci i risultati. Miglioreranno
-            significativamente la precisione del tuo profilo.
+            If you've done these tests, enter the results. They will significantly
+            improve the accuracy of your profile.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -108,7 +108,7 @@ export default function TestsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Label htmlFor={`switch-${section.key}`} className="text-xs text-muted-foreground">
-                    Ho questo dato
+                    I have this data
                   </Label>
                   <Switch
                     id={`switch-${section.key}`}
@@ -151,7 +151,7 @@ export default function TestsPage() {
           {anyEnabled && (
             <div className="space-y-2">
               <Label htmlFor="last_test_date">
-                Quando hai fatto i test?
+                When did you take the tests?
               </Label>
               <Input
                 id="last_test_date"
@@ -169,7 +169,7 @@ export default function TestsPage() {
           variant="outline"
           onClick={() => router.push("/onboarding/weaknesses")}
         >
-          Indietro
+          Back
         </Button>
         <div className="flex gap-2">
           <Button
@@ -179,10 +179,10 @@ export default function TestsPage() {
               router.push("/onboarding/limitations");
             }}
           >
-            Salta
+            Skip
           </Button>
           <Button onClick={() => router.push("/onboarding/limitations")}>
-            Avanti
+            Next
           </Button>
         </div>
       </div>

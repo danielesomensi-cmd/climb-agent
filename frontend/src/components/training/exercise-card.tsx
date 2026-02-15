@@ -17,7 +17,7 @@ interface ExerciseCardProps {
   };
 }
 
-/** Formatta il tempo di recupero in modo leggibile */
+/** Format rest time in a human-readable way */
 function formatRest(seconds: number): string {
   if (seconds >= 60) {
     const mins = Math.floor(seconds / 60);
@@ -32,12 +32,12 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
 
   const hasDetails = exercise.tempo || exercise.notes;
 
-  // Riga prescrizione compatta: "3 x 8 @ 10 kg — rec 90s"
+  // Compact prescription line: "3 x 8 @ 10 kg — rest 90s"
   const parts: string[] = [];
   if (exercise.sets != null && exercise.reps != null) {
     parts.push(`${exercise.sets} x ${exercise.reps}`);
   } else if (exercise.sets != null) {
-    parts.push(`${exercise.sets} serie`);
+    parts.push(`${exercise.sets} sets`);
   } else if (exercise.reps != null) {
     parts.push(exercise.reps);
   }
@@ -45,7 +45,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
     parts.push(`${exercise.load_kg} kg`);
   }
   if (exercise.rest_s != null) {
-    parts.push(`rec ${formatRest(exercise.rest_s)}`);
+    parts.push(`rest ${formatRest(exercise.rest_s)}`);
   }
   const prescriptionLine = parts.join(" \u00B7 "); // middle dot separator
 
@@ -82,7 +82,7 @@ export function ExerciseCard({ exercise }: ExerciseCardProps) {
           )}
           {exercise.notes && (
             <p className="text-xs text-muted-foreground">
-              <span className="font-medium">Note:</span> {exercise.notes}
+              <span className="font-medium">Notes:</span> {exercise.notes}
             </p>
           )}
         </CardContent>

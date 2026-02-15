@@ -12,31 +12,31 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { Phase } from "@/lib/types";
 
-/** Etichette italiane per le fasi */
+/** Phase labels */
 const PHASE_LABELS: Record<string, string> = {
   base: "Base",
-  strength_power: "Forza & Potenza",
-  power_endurance: "Resistenza alla Forza",
+  strength_power: "Strength & Power",
+  power_endurance: "Power Endurance",
   performance: "Performance",
-  deload: "Scarico",
+  deload: "Deload",
 };
 
-/** Etichette italiane per i domini */
+/** Domain labels */
 const DOMAIN_LABELS: Record<string, string> = {
-  finger_strength: "Forza dita",
-  pulling_strength: "Forza trazione",
-  power_endurance: "Resistenza alla forza",
-  technique: "Tecnica",
-  endurance: "Resistenza",
-  body_composition: "Composizione corporea",
-  power: "Potenza",
-  strength: "Forza",
-  conditioning: "Condizionamento",
-  flexibility: "Flessibilita",
-  prehab: "Prevenzione",
+  finger_strength: "Finger strength",
+  pulling_strength: "Pulling strength",
+  power_endurance: "Power endurance",
+  technique: "Technique",
+  endurance: "Endurance",
+  body_composition: "Body composition",
+  power: "Power",
+  strength: "Strength",
+  conditioning: "Conditioning",
+  flexibility: "Flexibility",
+  prehab: "Prehab",
 };
 
-/** Calcola la settimana corrente dal macrociclo in base alla data */
+/** Compute the current week of the macrocycle based on the start date */
 function computeCurrentWeek(startDate: string): number {
   const start = new Date(startDate);
   const now = new Date();
@@ -59,17 +59,17 @@ export default function PlanPage() {
 
   return (
     <>
-      <TopBar title="Piano" />
+      <TopBar title="Plan" />
 
       <main className="mx-auto max-w-2xl space-y-6 p-4">
-        {/* Stato di caricamento */}
+        {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         )}
 
-        {/* Stato di errore */}
+        {/* Error state */}
         {error && !loading && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
             <p className="text-sm text-destructive">{error}</p>
@@ -77,34 +77,34 @@ export default function PlanPage() {
               onClick={refresh}
               className="mt-2 text-sm font-medium text-primary underline"
             >
-              Riprova
+              Retry
             </button>
           </div>
         )}
 
-        {/* Nessun macrociclo generato */}
+        {/* No macrocycle generated */}
         {!loading && !error && !macrocycle && (
           <div className="rounded-lg border border-dashed p-8 text-center space-y-4">
             <p className="text-muted-foreground text-lg">
-              Nessun piano generato
+              No plan generated
             </p>
             <p className="text-sm text-muted-foreground">
-              Completa il processo di onboarding per generare il tuo piano di allenamento personalizzato.
+              Complete the onboarding process to generate your personalized training plan.
             </p>
             <Link href="/onboarding/welcome">
-              <Button>Inizia onboarding</Button>
+              <Button>Start onboarding</Button>
             </Link>
           </div>
         )}
 
-        {/* Contenuto principale */}
+        {/* Main content */}
         {!loading && !error && macrocycle && (
           <>
-            {/* Radar Chart del profilo assessment */}
+            {/* Assessment profile radar chart */}
             {profile && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Profilo di valutazione</CardTitle>
+                  <CardTitle className="text-base">Assessment profile</CardTitle>
                 </CardHeader>
                 <CardContent className="flex justify-center">
                   <RadarChart profile={profile} />
@@ -114,13 +114,13 @@ export default function PlanPage() {
 
             <Separator />
 
-            {/* Timeline del macrociclo */}
+            {/* Macrocycle timeline */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Macrociclo</CardTitle>
+                <CardTitle className="text-base">Macrocycle</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {macrocycle.total_weeks} settimane a partire dal{" "}
-                  {new Date(macrocycle.start_date).toLocaleDateString("it-IT", {
+                  {macrocycle.total_weeks} weeks starting from{" "}
+                  {new Date(macrocycle.start_date).toLocaleDateString("en-US", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
@@ -137,10 +137,10 @@ export default function PlanPage() {
 
             <Separator />
 
-            {/* Dettaglio fasi */}
+            {/* Phase details */}
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Dettaglio fasi
+                Phase details
               </h2>
 
               {macrocycle.phases.map((phase: Phase) => {
@@ -159,7 +159,7 @@ export default function PlanPage() {
                         <CardTitle className="text-sm">{label}</CardTitle>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-[10px]">
-                            {phase.duration_weeks} sett.
+                            {phase.duration_weeks} wk
                           </Badge>
                           <Badge variant="secondary" className="text-[10px]">
                             {phase.intensity_cap}
@@ -170,11 +170,11 @@ export default function PlanPage() {
 
                     {isExpanded && (
                       <CardContent className="space-y-4 pt-3">
-                        {/* Pesi dominio */}
+                        {/* Domain weights */}
                         {Object.keys(phase.domain_weights).length > 0 && (
                           <div>
                             <p className="text-xs font-medium text-muted-foreground mb-2">
-                              Pesi dei domini
+                              Domain weights
                             </p>
                             <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                               {Object.entries(phase.domain_weights).map(
@@ -198,11 +198,11 @@ export default function PlanPage() {
                           </div>
                         )}
 
-                        {/* Pool di sessioni */}
+                        {/* Session pool */}
                         {phase.session_pool.length > 0 && (
                           <div>
                             <p className="text-xs font-medium text-muted-foreground mb-2">
-                              Sessioni disponibili
+                              Available sessions
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {phase.session_pool.map((sessionId) => (

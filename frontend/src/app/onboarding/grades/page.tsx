@@ -49,10 +49,10 @@ export default function GradesPage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">I tuoi gradi</CardTitle>
+          <CardTitle className="text-2xl">Your grades</CardTitle>
           <CardDescription>
-            La differenza tra redpoint e onsight ci dice molto sulla tua power
-            endurance e tecnica
+            The gap between redpoint and onsight tells us a lot about your power
+            endurance and technique
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -60,14 +60,14 @@ export default function GradesPage() {
           <div className="space-y-2">
             <Label>Lead Redpoint *</Label>
             <p className="text-xs text-muted-foreground">
-              Il grado piu alto che hai chiuso lavorandoci
+              Your highest grade after working the route
             </p>
             <Select
               value={grades.lead_max_rp}
               onValueChange={(v) => set("lead_max_rp", v)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleziona grado" />
+                <SelectValue placeholder="Select grade" />
               </SelectTrigger>
               <SelectContent>
                 {LEAD_GRADES.map((g) => (
@@ -83,14 +83,14 @@ export default function GradesPage() {
           <div className="space-y-2">
             <Label>Lead Onsight *</Label>
             <p className="text-xs text-muted-foreground">
-              Il grado che riesci a fare a vista
+              The grade you can climb on sight
             </p>
             <Select
               value={grades.lead_max_os}
               onValueChange={(v) => set("lead_max_os", v)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleziona grado" />
+                <SelectValue placeholder="Select grade" />
               </SelectTrigger>
               <SelectContent>
                 {LEAD_GRADES.map((g) => (
@@ -106,14 +106,14 @@ export default function GradesPage() {
           <div className="space-y-2">
             <Label>Boulder Redpoint</Label>
             <p className="text-xs text-muted-foreground">
-              Il tuo grado boulder massimo
+              Your maximum boulder grade
             </p>
             <Select
               value={grades.boulder_max_rp ?? ""}
               onValueChange={(v) => set("boulder_max_rp", v)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleziona grado (opzionale)" />
+                <SelectValue placeholder="Select grade (optional)" />
               </SelectTrigger>
               <SelectContent>
                 {BOULDER_GRADES.map((g) => (
@@ -129,14 +129,14 @@ export default function GradesPage() {
           <div className="space-y-2">
             <Label>Boulder Onsight</Label>
             <p className="text-xs text-muted-foreground">
-              Il grado boulder che fai a vista/flash
+              Your boulder onsight/flash grade
             </p>
             <Select
               value={grades.boulder_max_os ?? ""}
               onValueChange={(v) => set("boulder_max_os", v)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleziona grado (opzionale)" />
+                <SelectValue placeholder="Select grade (optional)" />
               </SelectTrigger>
               <SelectContent>
                 {BOULDER_GRADES.map((g) => (
@@ -155,13 +155,13 @@ export default function GradesPage() {
           variant="outline"
           onClick={() => router.push("/onboarding/experience")}
         >
-          Indietro
+          Back
         </Button>
         <Button
           disabled={!isValid}
           onClick={() => router.push("/onboarding/goals")}
         >
-          Avanti
+          Next
         </Button>
       </div>
     </div>

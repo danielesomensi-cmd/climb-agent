@@ -130,12 +130,12 @@ export default function GoalsPage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Il tuo obiettivo</CardTitle>
+          <CardTitle className="text-2xl">Your goal</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Discipline */}
           <div className="space-y-3">
-            <Label>Disciplina</Label>
+            <Label>Discipline</Label>
             <RadioGroup
               value={discipline}
               onValueChange={(v) => syncAndSetGoal({ discipline: v })}
@@ -154,7 +154,7 @@ export default function GoalsPage() {
 
           {/* Target style */}
           <div className="space-y-3">
-            <Label>Stile obiettivo</Label>
+            <Label>Target style</Label>
             <RadioGroup
               value={targetStyle}
               onValueChange={(v) => syncAndSetGoal({ target_style: v })}
@@ -174,20 +174,20 @@ export default function GoalsPage() {
           {/* Current grade display */}
           {currentGrade && (
             <div className="rounded-md bg-muted px-3 py-2 text-sm">
-              Il tuo grado attuale ({discipline} {targetStyle}):{" "}
+              Your current grade ({discipline} {targetStyle}):{" "}
               <strong>{currentGrade}</strong>
             </div>
           )}
 
           {/* Target grade */}
           <div className="space-y-2">
-            <Label>Grado obiettivo *</Label>
+            <Label>Target grade *</Label>
             <Select
               value={goal.target_grade}
               onValueChange={(v) => setGoal({ target_grade: v, current_grade: currentGrade })}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Seleziona grado" />
+                <SelectValue placeholder="Select grade" />
               </SelectTrigger>
               <SelectContent>
                 {targetGrades.map((g) => (
@@ -201,7 +201,7 @@ export default function GoalsPage() {
 
           {/* Deadline */}
           <div className="space-y-2">
-            <Label htmlFor="deadline">Data obiettivo *</Label>
+            <Label htmlFor="deadline">Target date *</Label>
             <Input
               id="deadline"
               type="date"
@@ -213,12 +213,12 @@ export default function GoalsPage() {
           {/* Warnings */}
           {isAmbitious && (
             <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
-              Obiettivo ambizioso! Il piano sara aggressivo
+              Ambitious goal! The plan will be aggressive
             </div>
           )}
           {isTooLow && (
             <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-600 dark:bg-red-950 dark:text-red-200">
-              L&apos;obiettivo e uguale o inferiore al tuo livello attuale
+              The target is equal to or lower than your current level
             </div>
           )}
         </CardContent>
@@ -229,13 +229,13 @@ export default function GoalsPage() {
           variant="outline"
           onClick={() => router.push("/onboarding/grades")}
         >
-          Indietro
+          Back
         </Button>
         <Button
           disabled={!isValid}
           onClick={() => router.push("/onboarding/weaknesses")}
         >
-          Avanti
+          Next
         </Button>
       </div>
     </div>

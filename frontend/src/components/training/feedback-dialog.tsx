@@ -20,13 +20,13 @@ interface FeedbackDialogProps {
   exercises: Array<{ exercise_id: string; name: string }>;
 }
 
-/** Livelli di difficolta in italiano con mappatura ai valori backend */
+/** Difficulty levels with mapping to backend values */
 const DIFFICULTY_LEVELS = [
-  { value: "very_easy", label: "Molto facile" },
-  { value: "easy", label: "Facile" },
+  { value: "very_easy", label: "Very easy" },
+  { value: "easy", label: "Easy" },
   { value: "ok", label: "Ok" },
-  { value: "hard", label: "Difficile" },
-  { value: "very_hard", label: "Molto difficile" },
+  { value: "hard", label: "Hard" },
+  { value: "very_hard", label: "Very hard" },
 ] as const;
 
 export function FeedbackDialog({
@@ -59,9 +59,9 @@ export function FeedbackDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Feedback sessione</DialogTitle>
+          <DialogTitle>Session feedback</DialogTitle>
           <DialogDescription>
-            Indica la difficolta percepita per ogni esercizio.
+            Rate the perceived difficulty for each exercise.
           </DialogDescription>
         </DialogHeader>
 
@@ -100,10 +100,10 @@ export function FeedbackDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Annulla
+            Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={!allFilled}>
-            Invia feedback
+            Submit feedback
           </Button>
         </DialogFooter>
       </DialogContent>

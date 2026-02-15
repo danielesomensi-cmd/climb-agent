@@ -13,14 +13,14 @@ import {
 } from "@/components/ui/card";
 
 const WEAKNESS_LABELS: Record<string, string> = {
-  pump_too_early: "Pompo troppo presto",
-  fingers_give_out: "Le dita cedono",
-  cant_hold_hard_moves: "Non tengo i movimenti duri",
-  technique_errors: "Errori di tecnica",
-  cant_read_routes: "Non leggo le vie",
-  cant_manage_rests: "Non gestisco i riposi",
-  lack_power: "Manca potenza esplosiva",
-  injury_prone: "Infortuni frequenti",
+  pump_too_early: "I pump out too early",
+  fingers_give_out: "My fingers give out",
+  cant_hold_hard_moves: "Can't hold hard moves",
+  technique_errors: "Technique errors",
+  cant_read_routes: "Can't read routes",
+  cant_manage_rests: "Can't manage rests",
+  lack_power: "Lack explosive power",
+  injury_prone: "Frequent injuries",
 };
 
 function SummaryRow({
@@ -45,7 +45,7 @@ function SummaryRow({
         className="shrink-0 text-xs text-primary hover:underline"
         onClick={() => router.push(editHref)}
       >
-        Modifica
+        Edit
       </button>
     </div>
   );
@@ -99,7 +99,7 @@ export default function ReviewPage() {
         router.push("/today");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Errore durante la generazione del piano");
+      setError(err instanceof Error ? err.message : "Error generating the plan");
       setLoading(false);
     }
   };
@@ -121,8 +121,8 @@ export default function ReviewPage() {
       <div className="mx-auto max-w-lg space-y-6 pt-8">
         <Card>
           <CardContent className="py-12 text-center space-y-4">
-            <p className="text-2xl font-semibold">Piano generato!</p>
-            <p className="text-muted-foreground">Reindirizzamento in corso...</p>
+            <p className="text-2xl font-semibold">Plan generated!</p>
+            <p className="text-muted-foreground">Redirecting...</p>
           </CardContent>
         </Card>
       </div>
@@ -133,68 +133,68 @@ export default function ReviewPage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Riepilogo</CardTitle>
+          <CardTitle className="text-2xl">Summary</CardTitle>
         </CardHeader>
         <CardContent className="divide-y">
-          {/* Profilo */}
+          {/* Profile */}
           <SummaryRow
-            label="Profilo"
+            label="Profile"
             value={`${data.profile.name}, ${data.profile.weight_kg}kg, ${data.profile.height_cm}cm${data.profile.body_fat_pct ? `, ${data.profile.body_fat_pct}% BF` : ""}`}
             editHref="/onboarding/profile"
             router={router}
           />
 
-          {/* Esperienza */}
+          {/* Experience */}
           <SummaryRow
-            label="Esperienza"
-            value={`${data.experience.climbing_years} anni di arrampicata, ${data.experience.structured_training_years} anni allenamento strutturato`}
+            label="Experience"
+            value={`${data.experience.climbing_years} years climbing, ${data.experience.structured_training_years} years structured training`}
             editHref="/onboarding/experience"
             router={router}
           />
 
-          {/* Gradi */}
+          {/* Grades */}
           <SummaryRow
-            label="Gradi"
+            label="Grades"
             value={`Lead RP: ${data.grades.lead_max_rp}, OS: ${data.grades.lead_max_os}${data.grades.boulder_max_rp ? `, Boulder RP: ${data.grades.boulder_max_rp}` : ""}${data.grades.boulder_max_os ? `, OS: ${data.grades.boulder_max_os}` : ""}`}
             editHref="/onboarding/grades"
             router={router}
           />
 
-          {/* Obiettivo */}
+          {/* Goal */}
           <SummaryRow
-            label="Obiettivo"
-            value={`${data.goal.target_grade} ${data.goal.discipline} (${data.goal.target_style}), entro ${data.goal.deadline}`}
+            label="Goal"
+            value={`${data.goal.target_grade} ${data.goal.discipline} (${data.goal.target_style}), by ${data.goal.deadline}`}
             editHref="/onboarding/goals"
             router={router}
           />
 
-          {/* Debolezze */}
+          {/* Weaknesses */}
           <SummaryRow
-            label="Debolezze"
+            label="Weaknesses"
             value={`${WEAKNESS_LABELS[data.self_eval.primary_weakness] ?? data.self_eval.primary_weakness}, ${WEAKNESS_LABELS[data.self_eval.secondary_weakness] ?? data.self_eval.secondary_weakness}`}
             editHref="/onboarding/weaknesses"
             router={router}
           />
 
-          {/* Test */}
+          {/* Tests */}
           <SummaryRow
-            label="Test"
+            label="Tests"
             value={
               testCount === 0
-                ? "Nessun test inserito"
+                ? "No tests entered"
                 : `${testCount}/3 test${testValues ? ` (${testValues})` : ""}`
             }
             editHref="/onboarding/tests"
             router={router}
           />
 
-          {/* Limitazioni */}
+          {/* Limitations */}
           <SummaryRow
-            label="Limitazioni"
+            label="Limitations"
             value={
               data.limitations.length === 0
-                ? "Nessuna"
-                : `${data.limitations.length} limitazione${data.limitations.length > 1 ? "i" : ""}`
+                ? "None"
+                : `${data.limitations.length} limitation${data.limitations.length > 1 ? "s" : ""}`
             }
             editHref="/onboarding/limitations"
             router={router}
@@ -203,15 +203,15 @@ export default function ReviewPage() {
           {/* Location */}
           <SummaryRow
             label="Location"
-            value={`Casa: ${data.equipment.home_enabled ? `${data.equipment.home.length} attrezzi` : "no"}, ${data.equipment.gyms.length} palestra${data.equipment.gyms.length !== 1 ? "e" : ""}`}
+            value={`Home: ${data.equipment.home_enabled ? `${data.equipment.home.length} items` : "no"}, ${data.equipment.gyms.length} gym${data.equipment.gyms.length !== 1 ? "s" : ""}`}
             editHref="/onboarding/locations"
             router={router}
           />
 
-          {/* Disponibilita */}
+          {/* Availability */}
           <SummaryRow
-            label="Disponibilita"
-            value={`${dayCount} giorni, ${slotCount} slot totali`}
+            label="Availability"
+            value={`${dayCount} days, ${slotCount} total slots`}
             editHref="/onboarding/availability"
             router={router}
           />
@@ -221,8 +221,8 @@ export default function ReviewPage() {
             label="Trip"
             value={
               data.trips.length === 0
-                ? "Nessuno"
-                : `${data.trips.length} trip pianificato${data.trips.length > 1 ? "i" : ""}`
+                ? "None"
+                : `${data.trips.length} trip${data.trips.length > 1 ? "s" : ""} planned`
             }
             editHref="/onboarding/trips"
             router={router}
@@ -242,14 +242,14 @@ export default function ReviewPage() {
           onClick={() => router.push("/onboarding/trips")}
           disabled={loading}
         >
-          Indietro
+          Back
         </Button>
         <Button
           size="lg"
           disabled={loading}
           onClick={handleGenerate}
         >
-          {loading ? "Generazione in corso..." : "Genera il tuo piano"}
+          {loading ? "Generating..." : "Generate your plan"}
         </Button>
       </div>
     </div>

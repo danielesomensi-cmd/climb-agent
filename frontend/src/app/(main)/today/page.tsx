@@ -1,40 +1,41 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
 import { getWeek, applyEvents, postFeedback } from "@/lib/api";
 import type { WeekPlan, DayPlan } from "@/lib/types";
 
-/** Nomi dei giorni della settimana in italiano */
-const WEEKDAY_FULL_IT: Record<number, string> = {
-  0: "Domenica",
-  1: "Lunedi",
-  2: "Martedi",
-  3: "Mercoledi",
-  4: "Giovedi",
-  5: "Venerdi",
-  6: "Sabato",
+/** Full weekday names */
+const WEEKDAY_FULL: Record<number, string> = {
+  0: "Sunday",
+  1: "Monday",
+  2: "Tuesday",
+  3: "Wednesday",
+  4: "Thursday",
+  5: "Friday",
+  6: "Saturday",
 };
 
-/** Nomi dei mesi in italiano */
-const MONTH_IT: Record<number, string> = {
-  0: "Gennaio",
-  1: "Febbraio",
-  2: "Marzo",
-  3: "Aprile",
-  4: "Maggio",
-  5: "Giugno",
-  6: "Luglio",
-  7: "Agosto",
-  8: "Settembre",
-  9: "Ottobre",
-  10: "Novembre",
-  11: "Dicembre",
+/** Full month names */
+const MONTH_EN: Record<number, string> = {
+  0: "January",
+  1: "February",
+  2: "March",
+  3: "April",
+  4: "May",
+  5: "June",
+  6: "July",
+  7: "August",
+  8: "September",
+  9: "October",
+  10: "November",
+  11: "December",
 };
 
-/** Restituisce la data odierna in formato YYYY-MM-DD */
+/** Returns today's date in YYYY-MM-DD format */
 function todayISO(): string {
   const d = new Date();
   const y = d.getFullYear();
@@ -43,12 +44,12 @@ function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Formatta la data odierna come "Lunedi 15 Febbraio" */
+/** Formats today's date as "Monday 15 February" */
 function formatTodaySubtitle(): string {
   const d = new Date();
-  const dayName = WEEKDAY_FULL_IT[d.getDay()] ?? "";
+  const dayName = WEEKDAY_FULL[d.getDay()] ?? "";
   const dayNum = d.getDate();
-  const monthName = MONTH_IT[d.getMonth()] ?? "";
+  const monthName = MONTH_EN[d.getMonth()] ?? "";
   return `${dayName} ${dayNum} ${monthName}`;
 }
 
@@ -66,7 +67,7 @@ export default function TodayPage() {
       const data = await getWeek(0);
       setWeekPlan(data.week_plan);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore nel caricamento");
+      setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -76,13 +77,18 @@ export default function TodayPage() {
     fetchWeek();
   }, [fetchWeek]);
 
-  /** Trova il giorno di oggi nel piano settimanale */
+  /** Find today's entry in the weekly plan */
   const today = todayISO();
   const todayPlan: DayPlan | undefined = weekPlan?.weeks
     .flatMap((w) => w.days)
     .find((d) => d.date === today);
 
-  /** Segna una sessione come completata */
+  /** First day after today with sessions */
+  const nextTrainingDay: DayPlan | undefined = weekPlan?.weeks
+    .flatMap((w) => w.days)
+    .find((d) => d.date > today && d.sessions.length > 0);
+
+  /** Mark a session as completed */
   async function handleMarkDone(sessionId: string) {
     if (!weekPlan) return;
     try {
@@ -98,15 +104,15 @@ export default function TodayPage() {
       });
       setWeekPlan(result.week_plan);
 
-      // Apri dialog feedback
+      // Open feedback dialog
       setFeedbackSessionId(sessionId);
       setFeedbackOpen(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore nel salvataggio");
+      setError(e instanceof Error ? e.message : "Failed to save");
     }
   }
 
-  /** Segna una sessione come saltata */
+  /** Mark a session as skipped */
   async function handleMarkSkipped(sessionId: string) {
     if (!weekPlan) return;
     try {
@@ -122,11 +128,11 @@ export default function TodayPage() {
       });
       setWeekPlan(result.week_plan);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Errore nel salvataggio");
+      setError(e instanceof Error ? e.message : "Failed to save");
     }
   }
 
-  /** Invia il feedback della sessione */
+  /** Submit session feedback */
   async function handleFeedbackSubmit(feedback: Record<string, string>) {
     if (!feedbackSessionId) return;
     try {
@@ -139,31 +145,31 @@ export default function TodayPage() {
         status: "done",
       });
     } catch {
-      // Feedback non critico, non blocchiamo l'UX
+      // Non-critical feedback, don't block the UX
     } finally {
       setFeedbackOpen(false);
       setFeedbackSessionId(null);
     }
   }
 
-  // Esercizi per il dialog di feedback (semplificato: usiamo session_id come placeholder)
+  // Exercises for the feedback dialog (simplified: using session_id as placeholder)
   const feedbackExercises = feedbackSessionId
     ? [{ exercise_id: feedbackSessionId, name: feedbackSessionId.replace(/_/g, " ") }]
     : [];
 
   return (
     <>
-      <TopBar title="Oggi" subtitle={formatTodaySubtitle()} />
+      <TopBar title="Today" subtitle={formatTodaySubtitle()} />
 
       <main className="mx-auto max-w-2xl space-y-4 p-4">
-        {/* Stato di caricamento */}
+        {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         )}
 
-        {/* Stato di errore */}
+        {/* Error state */}
         {error && !loading && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
             <p className="text-sm text-destructive">{error}</p>
@@ -171,12 +177,12 @@ export default function TodayPage() {
               onClick={fetchWeek}
               className="mt-2 text-sm font-medium text-primary underline"
             >
-              Riprova
+              Retry
             </button>
           </div>
         )}
 
-        {/* Giorno di oggi */}
+        {/* Today's plan */}
         {!loading && !error && todayPlan && (
           <DayCard
             day={todayPlan}
@@ -185,32 +191,42 @@ export default function TodayPage() {
           />
         )}
 
-        {/* Nessuna sessione oggi (giorno di riposo) */}
+        {/* No sessions today (rest day) */}
         {!loading && !error && todayPlan && todayPlan.sessions.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-muted-foreground">
-              Non ci sono sessioni oggi
+              No sessions today
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Goditi il riposo e recupera per la prossima sessione.
+              Enjoy the rest and recover for the next session.
             </p>
+            {nextTrainingDay && (
+              <Link href="/week" className="mt-3 inline-block text-sm font-medium text-primary underline">
+                Preview next training day ({nextTrainingDay.weekday})
+              </Link>
+            )}
           </div>
         )}
 
-        {/* Piano settimanale non trovato per oggi */}
+        {/* Weekly plan not found for today */}
         {!loading && !error && !todayPlan && weekPlan && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-muted-foreground">
-              Non ci sono sessioni oggi
+              No sessions today
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Nessun piano trovato per la data odierna.
+              No plan found for today.
             </p>
+            {nextTrainingDay && (
+              <Link href="/week" className="mt-3 inline-block text-sm font-medium text-primary underline">
+                Preview next training day ({nextTrainingDay.weekday})
+              </Link>
+            )}
           </div>
         )}
       </main>
 
-      {/* Dialog per il feedback post-sessione */}
+      {/* Post-session feedback dialog */}
       <FeedbackDialog
         open={feedbackOpen}
         onClose={() => {

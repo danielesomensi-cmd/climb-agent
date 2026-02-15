@@ -14,43 +14,43 @@ interface WeaknessItem {
 const WEAKNESSES: WeaknessItem[] = [
   {
     id: "pump_too_early",
-    title: "Pompo troppo presto",
-    description: "I miei avambracci si gonfiano prima che la forza ceda",
+    title: "I pump out too early",
+    description: "My forearms pump before my strength gives out",
   },
   {
     id: "fingers_give_out",
-    title: "Le dita cedono",
-    description: "La forza delle dita e il mio limite principale",
+    title: "My fingers give out",
+    description: "Finger strength is my main limiter",
   },
   {
     id: "cant_hold_hard_moves",
-    title: "Non tengo i movimenti duri",
-    description: "Mi manca forza/potenza sui singoli movimenti crux",
+    title: "Can't hold hard moves",
+    description: "I lack strength/power on single crux moves",
   },
   {
     id: "technique_errors",
-    title: "Errori di tecnica",
-    description: "Cado per posizione del corpo o movimenti sbagliati",
+    title: "Technique errors",
+    description: "I fall due to body position or movement mistakes",
   },
   {
     id: "cant_read_routes",
-    title: "Non leggo le vie",
-    description: "Fatico a trovare la beta e leggere le sequenze",
+    title: "Can't read routes",
+    description: "I struggle to find the beta and read sequences",
   },
   {
     id: "cant_manage_rests",
-    title: "Non gestisco i riposi",
-    description: "Non recupero bene sulle soste",
+    title: "Can't manage rests",
+    description: "I don't recover well on rest stances",
   },
   {
     id: "lack_power",
-    title: "Manca potenza esplosiva",
-    description: "Movimenti dinamici e lanci sono il mio punto debole",
+    title: "Lack explosive power",
+    description: "Dynamic moves and dynos are my weak point",
   },
   {
     id: "injury_prone",
-    title: "Infortuni frequenti",
-    description: "Problemi fisici limitano il mio allenamento",
+    title: "Frequent injuries",
+    description: "Physical issues limit my training",
   },
 ];
 
@@ -119,7 +119,7 @@ export default function WeaknessesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Qual e il tuo punto debole principale?
+            What is your main weakness?
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -140,7 +140,7 @@ export default function WeaknessesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              E la tua seconda debolezza?
+              And your second weakness?
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -162,13 +162,13 @@ export default function WeaknessesPage() {
           variant="outline"
           onClick={() => router.push("/onboarding/goals")}
         >
-          Indietro
+          Back
         </Button>
         <Button
           disabled={!isValid}
           onClick={() => router.push("/onboarding/tests")}
         >
-          Avanti
+          Next
         </Button>
       </div>
     </div>

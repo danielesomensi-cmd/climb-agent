@@ -26,9 +26,9 @@ const DISCIPLINES = [
 ];
 
 const PRIORITIES = [
-  { value: "alta", label: "Alta" },
-  { value: "media", label: "Media" },
-  { value: "bassa", label: "Bassa" },
+  { value: "high", label: "High" },
+  { value: "medium", label: "Medium" },
+  { value: "low", label: "Low" },
 ];
 
 interface Trip {
@@ -47,7 +47,7 @@ export default function TripsPage() {
   const addTrip = () => {
     update("trips", [
       ...trips,
-      { name: "", start_date: "", end_date: "", discipline: "lead", priority: "media" },
+      { name: "", start_date: "", end_date: "", discipline: "lead", priority: "medium" },
     ]);
   };
 
@@ -79,11 +79,11 @@ export default function TripsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Hai trip outdoor in programma?
+            Do you have outdoor trips planned?
           </CardTitle>
           <CardDescription>
-            Se hai una trasferta in falesia pianificata, il piano scarichera
-            automaticamente i giorni prima
+            If you have a crag trip planned, the plan will automatically
+            deload the days before
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -97,25 +97,25 @@ export default function TripsPage() {
                   className="text-destructive"
                   onClick={() => removeTrip(index)}
                 >
-                  Rimuovi
+                  Remove
                 </Button>
               </div>
 
               {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor={`trip-name-${index}`}>Nome / Destinazione</Label>
+                <Label htmlFor={`trip-name-${index}`}>Name / Destination</Label>
                 <Input
                   id={`trip-name-${index}`}
                   value={trip.name}
                   onChange={(e) => setField(index, "name", e.target.value)}
-                  placeholder="Es: Arco, Kalymnos..."
+                  placeholder="E.g.: Arco, Kalymnos..."
                 />
               </div>
 
               {/* Dates */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor={`trip-start-${index}`}>Data inizio</Label>
+                  <Label htmlFor={`trip-start-${index}`}>Start date</Label>
                   <Input
                     id={`trip-start-${index}`}
                     type="date"
@@ -126,7 +126,7 @@ export default function TripsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor={`trip-end-${index}`}>Data fine</Label>
+                  <Label htmlFor={`trip-end-${index}`}>End date</Label>
                   <Input
                     id={`trip-end-${index}`}
                     type="date"
@@ -140,13 +140,13 @@ export default function TripsPage() {
 
               {/* Discipline */}
               <div className="space-y-2">
-                <Label>Disciplina</Label>
+                <Label>Discipline</Label>
                 <Select
                   value={trip.discipline}
                   onValueChange={(v) => setField(index, "discipline", v)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleziona disciplina" />
+                    <SelectValue placeholder="Select discipline" />
                   </SelectTrigger>
                   <SelectContent>
                     {DISCIPLINES.map((d) => (
@@ -160,13 +160,13 @@ export default function TripsPage() {
 
               {/* Priority */}
               <div className="space-y-2">
-                <Label>Priorita</Label>
+                <Label>Priority</Label>
                 <Select
                   value={trip.priority}
                   onValueChange={(v) => setField(index, "priority", v)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleziona priorita" />
+                    <SelectValue placeholder="Select priority" />
                   </SelectTrigger>
                   <SelectContent>
                     {PRIORITIES.map((p) => (
@@ -181,7 +181,7 @@ export default function TripsPage() {
           ))}
 
           <Button variant="outline" className="w-full" onClick={addTrip}>
-            Aggiungi trip
+            Add trip
           </Button>
         </CardContent>
       </Card>
@@ -191,7 +191,7 @@ export default function TripsPage() {
           variant="outline"
           onClick={() => router.push("/onboarding/availability")}
         >
-          Indietro
+          Back
         </Button>
         <div className="flex gap-2">
           {trips.length === 0 && (
@@ -199,14 +199,14 @@ export default function TripsPage() {
               variant="ghost"
               onClick={() => router.push("/onboarding/review")}
             >
-              Nessun trip pianificato
+              No trips planned
             </Button>
           )}
           <Button
             disabled={!isValid}
             onClick={() => router.push("/onboarding/review")}
           >
-            Avanti
+            Next
           </Button>
         </div>
       </div>

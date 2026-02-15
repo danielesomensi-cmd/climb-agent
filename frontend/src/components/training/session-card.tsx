@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, Check, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ExerciseCard } from "@/components/training/exercise-card";
 import type { SessionSlot } from "@/lib/types";
 
 interface SessionCardProps {
@@ -13,19 +14,19 @@ interface SessionCardProps {
   onMarkSkipped?: () => void;
 }
 
-/** Formatta il session_id in modo leggibile: replace _ con spazi, capitalize */
+/** Format session_id into a readable string: replace _ with spaces, capitalize */
 function formatSessionName(sessionId: string): string {
   return sessionId
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/** Mappa slot a etichetta italiana */
+/** Map slot key to display label */
 function formatSlot(slot: string): string {
   const slotMap: Record<string, string> = {
-    morning: "Mattina",
-    afternoon: "Pomeriggio",
-    evening: "Sera",
+    morning: "Morning",
+    afternoon: "Afternoon",
+    evening: "Evening",
   };
   return slotMap[slot] ?? slot;
 }
@@ -42,7 +43,7 @@ export function SessionCard({
 
   return (
     <Card className="gap-0 py-0 overflow-hidden">
-      {/* Header — cliccabile per espandere */}
+      {/* Header — clickable to expand */}
       <CardHeader
         className="cursor-pointer select-none py-3"
         onClick={() => setExpanded((prev) => !prev)}
@@ -58,36 +59,67 @@ export function SessionCard({
           )}
         </div>
 
-        {/* Badge riga */}
+        {/* Badge row */}
         <div className="flex flex-wrap items-center gap-1.5 mt-1">
           <Badge variant="secondary" className="text-[10px]">
-            {session.location === "home" ? "Casa" : session.location}
+            {session.location === "home" ? "Home" : session.location}
           </Badge>
           <Badge variant="outline" className="text-[10px]">
             {formatSlot(session.slot)}
           </Badge>
           {isHard && (
             <Badge className="bg-red-500 text-white text-[10px]">
-              Intensa
+              Hard
             </Badge>
           )}
           {isFinger && (
             <Badge className="bg-orange-500 text-white text-[10px]">
-              Dita
+              Finger
             </Badge>
           )}
         </div>
       </CardHeader>
 
-      {/* Contenuto espanso */}
+      {/* Expanded content */}
       {expanded && (
         <CardContent className="pt-0 pb-3 space-y-3">
-          {/* Placeholder lista esercizi */}
-          <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
-            Esercizi non ancora caricati
-          </div>
+          {/* Exercise list from resolved session */}
+          {(() => {
+            const instances = (
+              session.resolved as Record<string, unknown> | undefined
+            )?.resolved_session as Record<string, unknown> | undefined;
+            const exercises = (instances?.exercise_instances ?? []) as Array<Record<string, unknown>>;
+            if (exercises.length > 0) {
+              return (
+                <div className="space-y-1.5">
+                  {exercises.map((ex, i) => {
+                    const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
+                    return (
+                      <ExerciseCard
+                        key={`${ex.exercise_id}-${i}`}
+                        exercise={{
+                          exercise_id: (ex.exercise_id as string) ?? "",
+                          name: (ex.name as string) ?? (ex.exercise_id as string) ?? "",
+                          sets: prescription.sets as number | undefined,
+                          reps: prescription.reps != null ? String(prescription.reps) : undefined,
+                          load_kg: prescription.load_kg as number | undefined,
+                          rest_s: prescription.rest_s as number | undefined,
+                          notes: prescription.notes as string | undefined,
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            }
+            return (
+              <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                No exercises resolved
+              </div>
+            );
+          })()}
 
-          {/* Pulsanti azione */}
+          {/* Action buttons */}
           <div className="flex items-center gap-2">
             {onMarkDone && (
               <Button
@@ -100,7 +132,7 @@ export function SessionCard({
                 }}
               >
                 <Check className="size-4 mr-1" />
-                Fatto
+                Done
               </Button>
             )}
             {onMarkSkipped && (
@@ -114,7 +146,7 @@ export function SessionCard({
                 }}
               >
                 <X className="size-4 mr-1" />
-                Saltato
+                Skipped
               </Button>
             )}
           </div>

@@ -21,29 +21,29 @@ interface EquipmentItem {
 }
 
 const HOME_EQUIPMENT: EquipmentItem[] = [
-  { id: "hangboard", label: "Hangboard / Trave", description: "Trave da allenamento per le dita" },
-  { id: "pullup_bar", label: "Sbarra trazioni", description: "" },
-  { id: "band", label: "Elastico assistenza", description: "" },
-  { id: "dumbbell", label: "Manubri", description: "" },
+  { id: "hangboard", label: "Hangboard", description: "Finger training board" },
+  { id: "pullup_bar", label: "Pull-up bar", description: "" },
+  { id: "band", label: "Assistance band", description: "" },
+  { id: "dumbbell", label: "Dumbbells", description: "" },
   { id: "kettlebell", label: "Kettlebell", description: "" },
   { id: "ab_wheel", label: "Ab Wheel", description: "" },
-  { id: "rings", label: "Anelli", description: "" },
+  { id: "rings", label: "Rings", description: "" },
   { id: "foam_roller", label: "Foam Roller", description: "" },
-  { id: "resistance_band", label: "Banda elastica", description: "" },
+  { id: "resistance_band", label: "Resistance band", description: "" },
   { id: "pinch_block", label: "Pinch Block", description: "" },
 ];
 
 const GYM_EQUIPMENT: EquipmentItem[] = [
-  { id: "gym_boulder", label: "Area boulder", description: "" },
-  { id: "gym_routes", label: "Vie con corda", description: "" },
+  { id: "gym_boulder", label: "Boulder area", description: "" },
+  { id: "gym_routes", label: "Roped routes", description: "" },
   { id: "spraywall", label: "Spraywall", description: "" },
   { id: "board_kilter", label: "Kilter Board", description: "" },
   { id: "board_moonboard", label: "MoonBoard", description: "" },
   { id: "campus_board", label: "Campus Board", description: "" },
   { id: "hangboard", label: "Hangboard", description: "" },
-  { id: "dumbbell", label: "Manubri", description: "" },
-  { id: "barbell", label: "Bilanciere", description: "" },
-  { id: "bench", label: "Panca", description: "" },
+  { id: "dumbbell", label: "Dumbbells", description: "" },
+  { id: "barbell", label: "Barbell", description: "" },
+  { id: "bench", label: "Bench", description: "" },
 ];
 
 export default function LocationsPage() {
@@ -103,7 +103,7 @@ export default function LocationsPage() {
       {/* Home section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Dove ti alleni?</CardTitle>
+          <CardTitle className="text-2xl">Where do you train?</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center gap-3">
@@ -112,7 +112,7 @@ export default function LocationsPage() {
               checked={equipment.home_enabled}
               onCheckedChange={toggleHomeEnabled}
             />
-            <Label htmlFor="home-enabled">Mi alleno a casa</Label>
+            <Label htmlFor="home-enabled">I train at home</Label>
           </div>
 
           {equipment.home_enabled && (
@@ -145,7 +145,7 @@ export default function LocationsPage() {
               </div>
 
               <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
-                L&apos;hangboard e fondamentale per l&apos;allenamento delle dita
+                A hangboard is essential for finger training
               </div>
             </div>
           )}
@@ -155,30 +155,30 @@ export default function LocationsPage() {
       {/* Gyms section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Palestre</CardTitle>
+          <CardTitle className="text-lg">Gyms</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {equipment.gyms.map((gym, gymIndex) => (
             <div key={gymIndex} className="space-y-4 rounded-lg border p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Palestra {gymIndex + 1}</p>
+                <p className="text-sm font-medium">Gym {gymIndex + 1}</p>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="text-destructive"
                   onClick={() => removeGym(gymIndex)}
                 >
-                  Rimuovi
+                  Remove
                 </Button>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor={`gym-name-${gymIndex}`}>Nome palestra</Label>
+                <Label htmlFor={`gym-name-${gymIndex}`}>Gym name</Label>
                 <Input
                   id={`gym-name-${gymIndex}`}
                   value={gym.name}
                   onChange={(e) => setGymName(gymIndex, e.target.value)}
-                  placeholder="Es: Rockspot Milano"
+                  placeholder="E.g.: My Climbing Gym"
                 />
               </div>
 
@@ -205,11 +205,11 @@ export default function LocationsPage() {
           ))}
 
           <Button variant="outline" className="w-full" onClick={addGym}>
-            Aggiungi palestra
+            Add gym
           </Button>
 
           <p className="text-xs text-muted-foreground">
-            Almeno un&apos;area di arrampicata e necessaria per le sessioni climbing
+            At least one climbing area is required for climbing sessions
           </p>
         </CardContent>
       </Card>
@@ -219,10 +219,10 @@ export default function LocationsPage() {
           variant="outline"
           onClick={() => router.push("/onboarding/limitations")}
         >
-          Indietro
+          Back
         </Button>
         <Button onClick={() => router.push("/onboarding/availability")}>
-          Avanti
+          Next
         </Button>
       </div>
     </div>

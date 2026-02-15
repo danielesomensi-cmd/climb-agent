@@ -36,40 +36,39 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Il tuo profilo</CardTitle>
+          <CardTitle className="text-2xl">Your profile</CardTitle>
           <CardDescription>
-            Il peso ci serve per calcolare i carichi relativi (es. rapporto
-            peso/forza dita)
+            Weight is used to calculate relative loads (e.g. weight-to-finger-strength ratio)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nome *</Label>
+            <Label htmlFor="name">Name *</Label>
             <Input
               id="name"
               value={profile.name}
               onChange={(e) => set("name", e.target.value)}
-              placeholder="Il tuo nome"
+              placeholder="Your name"
             />
           </div>
 
           {/* Preferred name */}
           <div className="space-y-2">
-            <Label htmlFor="preferred_name">Come preferisci essere chiamato</Label>
+            <Label htmlFor="preferred_name">Preferred name</Label>
             <Input
               id="preferred_name"
               value={profile.preferred_name ?? ""}
               onChange={(e) =>
                 set("preferred_name", e.target.value || undefined)
               }
-              placeholder="Soprannome (opzionale)"
+              placeholder="Nickname (optional)"
             />
           </div>
 
           {/* Age */}
           <div className="space-y-2">
-            <Label htmlFor="age">Eta *</Label>
+            <Label htmlFor="age">Age *</Label>
             <Input
               id="age"
               type="number"
@@ -82,7 +81,7 @@ export default function ProfilePage() {
 
           {/* Weight */}
           <div className="space-y-2">
-            <Label htmlFor="weight_kg">Peso (kg) *</Label>
+            <Label htmlFor="weight_kg">Weight (kg) *</Label>
             <Input
               id="weight_kg"
               type="number"
@@ -95,7 +94,7 @@ export default function ProfilePage() {
 
           {/* Height */}
           <div className="space-y-2">
-            <Label htmlFor="height_cm">Altezza (cm) *</Label>
+            <Label htmlFor="height_cm">Height (cm) *</Label>
             <Input
               id="height_cm"
               type="number"
@@ -116,7 +115,7 @@ export default function ProfilePage() {
                   if (!checked) set("body_fat_pct", undefined);
                 }}
               />
-              <Label htmlFor="knows_bf">Lo so: percentuale di grasso corporeo</Label>
+              <Label htmlFor="knows_bf">I know my body fat percentage</Label>
             </div>
             {knowsBf && (
               <div className="space-y-2">
@@ -143,13 +142,13 @@ export default function ProfilePage() {
           variant="outline"
           onClick={() => router.push("/onboarding/welcome")}
         >
-          Indietro
+          Back
         </Button>
         <Button
           disabled={!isValid}
           onClick={() => router.push("/onboarding/experience")}
         >
-          Avanti
+          Next
         </Button>
       </div>
     </div>

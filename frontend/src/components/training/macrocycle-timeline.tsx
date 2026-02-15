@@ -8,7 +8,7 @@ interface MacrocycleTimelineProps {
   currentWeek?: number;
 }
 
-/** Colore di sfondo in base all'energy_system della fase */
+/** Background color based on the phase energy_system */
 const PHASE_COLORS: Record<string, string> = {
   base: "bg-blue-500",
   strength_power: "bg-red-500",
@@ -17,7 +17,7 @@ const PHASE_COLORS: Record<string, string> = {
   deload: "bg-gray-400",
 };
 
-/** Colore di testo per il contenuto della barra */
+/** Text color for bar content */
 const PHASE_TEXT: Record<string, string> = {
   base: "text-white",
   strength_power: "text-white",
@@ -26,13 +26,13 @@ const PHASE_TEXT: Record<string, string> = {
   deload: "text-gray-700",
 };
 
-/** Etichette italiane per i nomi delle fasi */
+/** Labels for phase names */
 const PHASE_LABELS: Record<string, string> = {
   base: "Base",
-  strength_power: "Forza",
-  power_endurance: "Resistenza",
+  strength_power: "Strength",
+  power_endurance: "Power End.",
   performance: "Performance",
-  deload: "Scarico",
+  deload: "Deload",
 };
 
 export function MacrocycleTimeline({
@@ -41,7 +41,7 @@ export function MacrocycleTimeline({
 }: MacrocycleTimelineProps) {
   const totalWeeks = macrocycle.total_weeks;
 
-  // Calcola la posizione cumulativa di partenza di ogni fase
+  // Calculate the cumulative start offset of each phase
   let cumulativeWeeks = 0;
   const phasesWithOffset = macrocycle.phases.map((phase) => {
     const offset = cumulativeWeeks;
@@ -49,13 +49,13 @@ export function MacrocycleTimeline({
     return { ...phase, startWeek: offset };
   });
 
-  // Posizione del marker "settimana corrente" in percentuale
+  // Current-week marker position as a percentage
   const currentWeekPct =
     currentWeek != null ? ((currentWeek - 0.5) / totalWeeks) * 100 : null;
 
   return (
     <div className="w-full space-y-2">
-      {/* Barra orizzontale delle fasi */}
+      {/* Horizontal phase bar */}
       <div className="relative">
         <div className="flex h-10 w-full overflow-hidden rounded-lg">
           {phasesWithOffset.map((phase) => {
@@ -74,7 +74,7 @@ export function MacrocycleTimeline({
                   txtColor
                 )}
                 style={{ width: `${widthPct}%` }}
-                title={`${phase.phase_name} — ${phase.duration_weeks} sett.`}
+                title={`${phase.phase_name} — ${phase.duration_weeks} wk`}
               >
                 {widthPct > 10 ? label : ""}
               </div>
@@ -82,7 +82,7 @@ export function MacrocycleTimeline({
           })}
         </div>
 
-        {/* Marker settimana corrente */}
+        {/* Current week marker */}
         {currentWeekPct != null && (
           <div
             className="absolute -bottom-3 -translate-x-1/2"
@@ -93,7 +93,7 @@ export function MacrocycleTimeline({
         )}
       </div>
 
-      {/* Etichette sotto la barra */}
+      {/* Labels below the bar */}
       <div className="flex pt-2">
         {phasesWithOffset.map((phase) => {
           const widthPct = (phase.duration_weeks / totalWeeks) * 100;
@@ -110,17 +110,17 @@ export function MacrocycleTimeline({
                 {label}
               </p>
               <p className="text-[10px] text-muted-foreground">
-                {phase.duration_weeks} sett.
+                {phase.duration_weeks} wk
               </p>
             </div>
           );
         })}
       </div>
 
-      {/* Indicatore settimana corrente (legenda) */}
+      {/* Current week indicator (legend) */}
       {currentWeek != null && (
         <p className="text-xs text-muted-foreground text-center mt-1">
-          Settimana corrente: {currentWeek} / {totalWeeks}
+          Current week: {currentWeek} / {totalWeeks}
         </p>
       )}
     </div>

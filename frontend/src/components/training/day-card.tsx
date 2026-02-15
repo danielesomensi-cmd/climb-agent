@@ -12,28 +12,28 @@ interface DayCardProps {
   onMarkSkipped?: (sessionId: string) => void;
 }
 
-/** Mappa nome giorno inglese a abbreviazione italiana */
-const WEEKDAY_IT: Record<string, string> = {
-  monday: "Lun",
-  tuesday: "Mar",
-  wednesday: "Mer",
-  thursday: "Gio",
-  friday: "Ven",
-  saturday: "Sab",
-  sunday: "Dom",
+/** Map English weekday name to short English abbreviation */
+const WEEKDAY_EN: Record<string, string> = {
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+  sunday: "Sun",
 };
 
-/** Mappa stato a badge italiano + variante */
+/** Map status to badge label + variant */
 const STATUS_CONFIG: Record<
   string,
   { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
 > = {
-  planned: { label: "Pianificato", variant: "secondary" },
-  done: { label: "Completato", variant: "default" },
-  skipped: { label: "Saltato", variant: "destructive" },
+  planned: { label: "Planned", variant: "secondary" },
+  done: { label: "Completed", variant: "default" },
+  skipped: { label: "Skipped", variant: "destructive" },
 };
 
-/** Controlla se una data (YYYY-MM-DD) corrisponde a oggi */
+/** Check whether a date string (YYYY-MM-DD) corresponds to today */
 function isToday(dateStr: string): boolean {
   const today = new Date();
   const y = today.getFullYear();
@@ -42,11 +42,11 @@ function isToday(dateStr: string): boolean {
   return dateStr === `${y}-${m}-${d}`;
 }
 
-/** Formatta data in formato leggibile italiano: "15 feb" */
+/** Format a date string into a short readable form: "15 Feb" */
 function formatDateShort(dateStr: string): string {
   const months = [
-    "gen", "feb", "mar", "apr", "mag", "giu",
-    "lug", "ago", "set", "ott", "nov", "dic",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
   const parts = dateStr.split("-");
   if (parts.length !== 3) return dateStr;
@@ -58,7 +58,7 @@ function formatDateShort(dateStr: string): string {
 export function DayCard({ day, onMarkDone, onMarkSkipped }: DayCardProps) {
   const today = isToday(day.date);
   const weekdayLabel =
-    WEEKDAY_IT[day.weekday.toLowerCase()] ?? day.weekday;
+    WEEKDAY_EN[day.weekday.toLowerCase()] ?? day.weekday;
   const status = day.status ?? "planned";
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.planned;
 
@@ -86,7 +86,7 @@ export function DayCard({ day, onMarkDone, onMarkSkipped }: DayCardProps) {
       <CardContent className="space-y-2">
         {day.sessions.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">
-            Riposo
+            Rest
           </p>
         ) : (
           day.sessions.map((session) => (

@@ -3,12 +3,12 @@
 import type { AssessmentProfile } from "@/lib/types";
 
 const AXES: { key: keyof AssessmentProfile; label: string }[] = [
-  { key: "finger_strength", label: "Dita" },
-  { key: "pulling_strength", label: "Trazione" },
+  { key: "finger_strength", label: "Fingers" },
+  { key: "pulling_strength", label: "Pulling" },
   { key: "power_endurance", label: "Power End." },
-  { key: "technique", label: "Tecnica" },
-  { key: "endurance", label: "Resistenza" },
-  { key: "body_composition", label: "Composizione" },
+  { key: "technique", label: "Technique" },
+  { key: "endurance", label: "Endurance" },
+  { key: "body_composition", label: "Body Comp." },
 ];
 
 interface RadarChartProps {

@@ -35,6 +35,7 @@ export interface SessionSlot {
   gym_id?: string;
   slot: string;
   tags?: Record<string, boolean>;
+  resolved?: Record<string, unknown> | null;
 }
 
 export interface DayPlan {

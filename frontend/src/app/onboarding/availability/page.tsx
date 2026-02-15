@@ -21,19 +21,19 @@ import {
 } from "@/components/ui/card";
 
 const WEEKDAYS = [
-  { key: "mon", label: "Lun" },
-  { key: "tue", label: "Mar" },
-  { key: "wed", label: "Mer" },
-  { key: "thu", label: "Gio" },
-  { key: "fri", label: "Ven" },
-  { key: "sat", label: "Sab" },
-  { key: "sun", label: "Dom" },
+  { key: "mon", label: "Mon" },
+  { key: "tue", label: "Tue" },
+  { key: "wed", label: "Wed" },
+  { key: "thu", label: "Thu" },
+  { key: "fri", label: "Fri" },
+  { key: "sat", label: "Sat" },
+  { key: "sun", label: "Sun" },
 ];
 
 const SLOTS = [
-  { key: "morning", label: "Mattina" },
-  { key: "lunch", label: "Pranzo" },
-  { key: "evening", label: "Sera" },
+  { key: "morning", label: "Morning" },
+  { key: "lunch", label: "Lunch" },
+  { key: "evening", label: "Evening" },
 ];
 
 type SlotData = { available: boolean; preferred_location: string; gym_id?: string };
@@ -88,7 +88,7 @@ export default function AvailabilityPage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Quando ti alleni?</CardTitle>
+          <CardTitle className="text-2xl">When do you train?</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Grid header */}
@@ -121,7 +121,7 @@ export default function AvailabilityPage() {
                       }`}
                       onClick={() => toggleSlot(day.key, slot.key)}
                     >
-                      {s.available ? "Si" : "-"}
+                      {s.available ? "Yes" : "-"}
                     </button>
 
                     {s.available && (
@@ -138,7 +138,7 @@ export default function AvailabilityPage() {
                               setLocation(day.key, slot.key, "home")
                             }
                           >
-                            Casa
+                            Home
                           </button>
                           <button
                             type="button"
@@ -151,7 +151,7 @@ export default function AvailabilityPage() {
                               setLocation(day.key, slot.key, "gym")
                             }
                           >
-                            Palestra
+                            Gym
                           </button>
                         </div>
 
@@ -163,7 +163,7 @@ export default function AvailabilityPage() {
                             }
                           >
                             <SelectTrigger className="h-6 text-[10px] w-full">
-                              <SelectValue placeholder="Quale?" />
+                              <SelectValue placeholder="Which?" />
                             </SelectTrigger>
                             <SelectContent>
                               {gyms.map((g, i) => (
@@ -171,7 +171,7 @@ export default function AvailabilityPage() {
                                   key={i}
                                   value={g.name || `gym-${i}`}
                                 >
-                                  {g.name || `Palestra ${i + 1}`}
+                                  {g.name || `Gym ${i + 1}`}
                                 </SelectItem>
                               ))}
                             </SelectContent>
@@ -190,34 +190,39 @@ export default function AvailabilityPage() {
       {/* Planning preferences */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Preferenze di allenamento</CardTitle>
+          <CardTitle className="text-lg">Training preferences</CardTitle>
           <CardDescription>
-            Le sessioni dure includono max hang, boulder al limite, power
+            Hard sessions include max hang, limit bouldering, power
             training
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Quanti giorni vuoi allenarti a settimana?</Label>
+              <Label>How many days do you want to train per week?</Label>
               <span className="text-sm font-medium tabular-nums">
                 {planningPrefs.target_training_days_per_week}
               </span>
             </div>
             <Slider
               min={3}
-              max={6}
+              max={7}
               step={1}
               value={[planningPrefs.target_training_days_per_week]}
               onValueChange={([v]) =>
                 setPlanningPref("target_training_days_per_week", v)
               }
             />
+            {planningPrefs.target_training_days_per_week === 7 && (
+              <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                No rest days — not recommended
+              </p>
+            )}
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Massimo sessioni dure per settimana?</Label>
+              <Label>Maximum hard sessions per week?</Label>
               <span className="text-sm font-medium tabular-nums">
                 {planningPrefs.hard_day_cap_per_week}
               </span>
@@ -240,10 +245,10 @@ export default function AvailabilityPage() {
           variant="outline"
           onClick={() => router.push("/onboarding/locations")}
         >
-          Indietro
+          Back
         </Button>
         <Button onClick={() => router.push("/onboarding/trips")}>
-          Avanti
+          Next
         </Button>
       </div>
     </div>

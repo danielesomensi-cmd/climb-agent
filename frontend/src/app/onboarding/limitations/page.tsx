@@ -23,23 +23,23 @@ import {
 } from "@/components/ui/card";
 
 const AREAS = [
-  { value: "gomito", label: "Gomito" },
-  { value: "spalla", label: "Spalla" },
-  { value: "polso", label: "Polso" },
-  { value: "ginocchio", label: "Ginocchio" },
-  { value: "schiena", label: "Schiena" },
+  { value: "elbow", label: "Elbow" },
+  { value: "shoulder", label: "Shoulder" },
+  { value: "wrist", label: "Wrist" },
+  { value: "knee", label: "Knee" },
+  { value: "back", label: "Back" },
 ];
 
 const SIDES = [
-  { value: "sinistro", label: "Sinistro" },
-  { value: "destro", label: "Destro" },
-  { value: "entrambi", label: "Entrambi" },
+  { value: "left", label: "Left" },
+  { value: "right", label: "Right" },
+  { value: "both", label: "Both" },
 ];
 
 const SEVERITIES = [
-  { value: "lieve", label: "Lieve" },
-  { value: "moderato", label: "Moderato" },
-  { value: "severo", label: "Severo" },
+  { value: "mild", label: "Mild" },
+  { value: "moderate", label: "Moderate" },
+  { value: "severe", label: "Severe" },
 ];
 
 interface Limitation {
@@ -100,10 +100,10 @@ export default function LimitationsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Hai infortuni o limitazioni attuali?
+            Do you have current injuries or limitations?
           </CardTitle>
           <CardDescription>
-            Il piano evitera esercizi che aggravano le tue limitazioni
+            The plan will avoid exercises that aggravate your limitations
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -113,7 +113,7 @@ export default function LimitationsPage() {
               checked={hasLimitations}
               onCheckedChange={toggleLimitations}
             />
-            <Label htmlFor="has-limitations">Si, ho qualcosa</Label>
+            <Label htmlFor="has-limitations">Yes, I have something</Label>
           </div>
 
           {hasLimitations && (
@@ -125,7 +125,7 @@ export default function LimitationsPage() {
                 >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">
-                      Limitazione {index + 1}
+                      Limitation {index + 1}
                     </p>
                     <Button
                       variant="ghost"
@@ -133,7 +133,7 @@ export default function LimitationsPage() {
                       className="text-destructive"
                       onClick={() => removeLimitation(index)}
                     >
-                      Rimuovi
+                      Remove
                     </Button>
                   </div>
 
@@ -145,7 +145,7 @@ export default function LimitationsPage() {
                       onValueChange={(v) => setField(index, "area", v)}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Seleziona area" />
+                        <SelectValue placeholder="Select area" />
                       </SelectTrigger>
                       <SelectContent>
                         {AREAS.map((a) => (
@@ -159,13 +159,13 @@ export default function LimitationsPage() {
 
                   {/* Side */}
                   <div className="space-y-2">
-                    <Label>Lato</Label>
+                    <Label>Side</Label>
                     <Select
                       value={lim.side}
                       onValueChange={(v) => setField(index, "side", v)}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Seleziona lato" />
+                        <SelectValue placeholder="Select side" />
                       </SelectTrigger>
                       <SelectContent>
                         {SIDES.map((s) => (
@@ -179,13 +179,13 @@ export default function LimitationsPage() {
 
                   {/* Severity */}
                   <div className="space-y-2">
-                    <Label>Gravita</Label>
+                    <Label>Severity</Label>
                     <Select
                       value={lim.severity}
                       onValueChange={(v) => setField(index, "severity", v)}
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Seleziona gravita" />
+                        <SelectValue placeholder="Select severity" />
                       </SelectTrigger>
                       <SelectContent>
                         {SEVERITIES.map((s) => (
@@ -200,13 +200,13 @@ export default function LimitationsPage() {
                   {/* Notes */}
                   <div className="space-y-2">
                     <Label htmlFor={`notes-${index}`}>
-                      Note (opzionale)
+                      Notes (optional)
                     </Label>
                     <Input
                       id={`notes-${index}`}
                       value={lim.notes ?? ""}
                       onChange={(e) => setField(index, "notes", e.target.value)}
-                      placeholder="Dettagli aggiuntivi..."
+                      placeholder="Additional details..."
                     />
                   </div>
                 </div>
@@ -217,7 +217,7 @@ export default function LimitationsPage() {
                 className="w-full"
                 onClick={addLimitation}
               >
-                Aggiungi altra limitazione
+                Add another limitation
               </Button>
             </>
           )}
@@ -229,7 +229,7 @@ export default function LimitationsPage() {
           variant="outline"
           onClick={() => router.push("/onboarding/tests")}
         >
-          Indietro
+          Back
         </Button>
         <div className="flex gap-2">
           {hasLimitations && (
@@ -241,14 +241,14 @@ export default function LimitationsPage() {
                 router.push("/onboarding/locations");
               }}
             >
-              Salta
+              Skip
             </Button>
           )}
           <Button
             disabled={!isValid}
             onClick={() => router.push("/onboarding/locations")}
           >
-            Avanti
+            Next
           </Button>
         </div>
       </div>

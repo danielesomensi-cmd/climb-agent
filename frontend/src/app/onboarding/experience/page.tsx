@@ -28,13 +28,13 @@ export default function ExperiencePage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">La tua esperienza</CardTitle>
+          <CardTitle className="text-2xl">Your experience</CardTitle>
         </CardHeader>
         <CardContent className="space-y-8">
           {/* Climbing years */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Quanti anni arrampichi?</Label>
+              <Label>How many years have you been climbing?</Label>
               <span className="text-sm font-medium tabular-nums">
                 {exp.climbing_years}
               </span>
@@ -51,7 +51,7 @@ export default function ExperiencePage() {
           {/* Structured training years */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>Da quanti anni fai allenamento strutturato?</Label>
+              <Label>How many years of structured training?</Label>
               <span className="text-sm font-medium tabular-nums">
                 {exp.structured_training_years}
               </span>
@@ -64,7 +64,7 @@ export default function ExperiencePage() {
               onValueChange={([v]) => set("structured_training_years", v)}
             />
             <p className="text-xs text-muted-foreground">
-              Se non hai mai fatto un piano di allenamento, metti 0
+              If you've never followed a training plan, enter 0
             </p>
           </div>
         </CardContent>
@@ -75,10 +75,10 @@ export default function ExperiencePage() {
           variant="outline"
           onClick={() => router.push("/onboarding/profile")}
         >
-          Indietro
+          Back
         </Button>
         <Button onClick={() => router.push("/onboarding/grades")}>
-          Avanti
+          Next
         </Button>
       </div>
     </div>

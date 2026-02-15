@@ -26,7 +26,7 @@ export default function Home() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Caricamento...</div>
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
   }
