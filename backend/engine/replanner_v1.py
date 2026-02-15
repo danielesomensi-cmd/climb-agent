@@ -238,11 +238,17 @@ def apply_day_override(
     reference_date: str,
     slot: str = "evening",
     phase_id: Optional[str] = None,
+    target_date: Optional[str] = None,
+    gym_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     updated = deepcopy(plan)
-    ref = _parse_date(reference_date)
-    tomorrow = ref + timedelta(days=1)
-    tomorrow_key = tomorrow.isoformat()
+
+    # Resolve target day: explicit target_date or reference_date + 1
+    if target_date:
+        target = _parse_date(target_date)
+    else:
+        target = _parse_date(reference_date) + timedelta(days=1)
+    target_key = target.isoformat()
 
     session_id = INTENT_TO_SESSION.get(intent)
     if session_id is None:
@@ -250,14 +256,14 @@ def apply_day_override(
 
     meta = _meta_for(session_id)
     effective_phase = phase_id or (updated.get("profile_snapshot") or {}).get("phase_id", "base")
-    tomorrow_day = _find_day(updated, tomorrow_key)
-    gym_id = _default_gym_id_from_plan(updated) if location == "gym" else None
-    tomorrow_day["sessions"] = [
+    target_day = _find_day(updated, target_key)
+    effective_gym_id = gym_id or (_default_gym_id_from_plan(updated) if location == "gym" else None)
+    target_day["sessions"] = [
         {
             "slot": slot,
             "session_id": session_id,
             "location": location,
-            "gym_id": gym_id,
+            "gym_id": effective_gym_id,
             "phase_id": effective_phase,
             "intensity": meta["intensity"],
             "constraints_applied": ["manual_override"],
@@ -268,8 +274,12 @@ def apply_day_override(
 
     if meta["hard"] or meta["finger"]:
         recovery_meta = _meta_for("regeneration_easy")
-        for delta in (2, 3):
-            ripple_day = _find_day(updated, (ref + timedelta(days=delta)).isoformat())
+        for delta in (1, 2):
+            ripple_key = (target + timedelta(days=delta)).isoformat()
+            try:
+                ripple_day = _find_day(updated, ripple_key)
+            except ValueError:
+                continue
             next_sessions = []
             for session in ripple_day.get("sessions", []):
                 if session.get("tags", {}).get("hard"):
@@ -278,12 +288,12 @@ def apply_day_override(
                             "slot": session.get("slot", "evening"),
                             "session_id": "regeneration_easy",
                             "location": session.get("location", location),
-                            "gym_id": session.get("gym_id", gym_id),
+                            "gym_id": session.get("gym_id", effective_gym_id),
                             "phase_id": effective_phase,
                             "intensity": recovery_meta["intensity"],
                             "constraints_applied": ["recovery_ripple"],
                             "tags": {"hard": False, "finger": False},
-                            "explain": ["downgraded after hard override", f"source_day={tomorrow_key}"],
+                            "explain": ["downgraded after hard override", f"source_day={target_key}"],
                         }
                     )
                 else:
@@ -294,8 +304,11 @@ def apply_day_override(
         {
             "type": "day_override",
             "reference_date": reference_date,
-            "updated_day": tomorrow_key,
-            "ripple_days": [(ref + timedelta(days=2)).isoformat(), (ref + timedelta(days=3)).isoformat()],
+            "target_date": target_key,
+            "ripple_days": [
+                (target + timedelta(days=1)).isoformat(),
+                (target + timedelta(days=2)).isoformat(),
+            ],
         }
     )
     return updated

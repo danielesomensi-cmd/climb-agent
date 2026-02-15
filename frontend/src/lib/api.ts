@@ -82,6 +82,8 @@ export const applyOverride = (data: {
   slot?: string;
   phase_id?: string;
   week_plan: WeekPlan;
+  target_date?: string;
+  gym_id?: string;
 }) =>
   request<{ week_plan: WeekPlan }>("/api/replanner/override", {
     method: "POST",

@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ExerciseCardProps {
   exercise: {
@@ -17,76 +15,58 @@ interface ExerciseCardProps {
   };
 }
 
-/** Format rest time in a human-readable way */
-function formatRest(seconds: number): string {
-  if (seconds >= 60) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
-  }
-  return `${seconds}s`;
+/** Format rest as mm:ss (e.g. 120 → "2:00", 90 → "1:30") */
+function formatRestMMSS(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
 export function ExerciseCard({ exercise }: ExerciseCardProps) {
-  const [expanded, setExpanded] = useState(false);
+  // Build prescription: "4 × 8 @ 25kg — Rest 2:00"
+  const mainParts: string[] = [];
 
-  const hasDetails = exercise.tempo || exercise.notes;
-
-  // Compact prescription line: "3 x 8 @ 10 kg — rest 90s"
-  const parts: string[] = [];
   if (exercise.sets != null && exercise.reps != null) {
-    parts.push(`${exercise.sets} x ${exercise.reps}`);
+    mainParts.push(`${exercise.sets} \u00D7 ${exercise.reps}`);
   } else if (exercise.sets != null) {
-    parts.push(`${exercise.sets} sets`);
+    mainParts.push(`${exercise.sets} sets`);
   } else if (exercise.reps != null) {
-    parts.push(exercise.reps);
+    mainParts.push(exercise.reps);
   }
+
   if (exercise.load_kg != null) {
-    parts.push(`${exercise.load_kg} kg`);
+    mainParts.push(
+      exercise.load_kg > 0 ? `@ ${exercise.load_kg}kg` : "@ bodyweight"
+    );
   }
+
+  let prescriptionLine = mainParts.join(" ");
   if (exercise.rest_s != null) {
-    parts.push(`rest ${formatRest(exercise.rest_s)}`);
+    prescriptionLine += ` \u2014 Rest ${formatRestMMSS(exercise.rest_s)}`;
   }
-  const prescriptionLine = parts.join(" \u00B7 "); // middle dot separator
 
   return (
     <Card className="gap-0 py-0">
-      <CardHeader
-        className={`py-2.5 ${hasDetails ? "cursor-pointer select-none" : ""}`}
-        onClick={() => hasDetails && setExpanded((prev) => !prev)}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <CardTitle className="text-sm truncate">{exercise.name}</CardTitle>
-            {prescriptionLine && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {prescriptionLine}
-              </p>
-            )}
-          </div>
-          {hasDetails &&
-            (expanded ? (
-              <ChevronUp className="size-3.5 shrink-0 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-            ))}
-        </div>
-      </CardHeader>
-
-      {expanded && hasDetails && (
-        <CardContent className="pt-0 pb-2.5 space-y-1">
+      <CardHeader className="py-2.5">
+        <div className="min-w-0">
+          <CardTitle className="text-sm truncate">{exercise.name}</CardTitle>
+          {prescriptionLine && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {prescriptionLine}
+            </p>
+          )}
           {exercise.tempo && (
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium">Tempo:</span> {exercise.tempo}
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+              Tempo: {exercise.tempo}
             </p>
           )}
           {exercise.notes && (
-            <p className="text-xs text-muted-foreground">
-              <span className="font-medium">Notes:</span> {exercise.notes}
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+              {exercise.notes}
             </p>
           )}
-        </CardContent>
-      )}
+        </div>
+      </CardHeader>
     </Card>
   );
 }

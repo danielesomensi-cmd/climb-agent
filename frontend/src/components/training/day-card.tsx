@@ -1,15 +1,26 @@
 "use client";
 
+import Link from "next/link";
+import { Eye, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { SessionCard } from "@/components/training/session-card";
 import type { DayPlan } from "@/lib/types";
 
+interface Gym {
+  name: string;
+  equipment: string[];
+}
+
 interface DayCardProps {
   day: DayPlan;
+  gyms?: Gym[];
   onMarkDone?: (sessionId: string) => void;
   onMarkSkipped?: (sessionId: string) => void;
+  onReplan?: (date: string) => void;
+  showActions?: boolean;
 }
 
 /** Map English weekday name to short English abbreviation */
@@ -55,7 +66,14 @@ function formatDateShort(dateStr: string): string {
   return `${day} ${months[monthIdx] ?? parts[1]}`;
 }
 
-export function DayCard({ day, onMarkDone, onMarkSkipped }: DayCardProps) {
+export function DayCard({
+  day,
+  gyms,
+  onMarkDone,
+  onMarkSkipped,
+  onReplan,
+  showActions = false,
+}: DayCardProps) {
   const today = isToday(day.date);
   const weekdayLabel =
     WEEKDAY_EN[day.weekday.toLowerCase()] ?? day.weekday;
@@ -93,12 +111,36 @@ export function DayCard({ day, onMarkDone, onMarkSkipped }: DayCardProps) {
             <SessionCard
               key={session.session_id}
               session={session}
+              gyms={gyms}
               onMarkDone={onMarkDone ? () => onMarkDone(session.session_id) : undefined}
               onMarkSkipped={
                 onMarkSkipped ? () => onMarkSkipped(session.session_id) : undefined
               }
             />
           ))
+        )}
+
+        {/* Action buttons for week view */}
+        {showActions && (
+          <div className="flex items-center gap-2 pt-1">
+            <Link href={`/today?date=${day.date}`}>
+              <Button size="sm" variant="outline" className="text-xs">
+                <Eye className="size-3.5 mr-1" />
+                View day
+              </Button>
+            </Link>
+            {onReplan && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={() => onReplan(day.date)}
+              >
+                <RefreshCw className="size-3.5 mr-1" />
+                Change plan
+              </Button>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

@@ -8,8 +8,14 @@ import { Button } from "@/components/ui/button";
 import { ExerciseCard } from "@/components/training/exercise-card";
 import type { SessionSlot } from "@/lib/types";
 
+interface Gym {
+  name: string;
+  equipment: string[];
+}
+
 interface SessionCardProps {
   session: SessionSlot;
+  gyms?: Gym[];
   onMarkDone?: () => void;
   onMarkSkipped?: () => void;
 }
@@ -31,8 +37,17 @@ function formatSlot(slot: string): string {
   return slotMap[slot] ?? slot;
 }
 
+/** Resolve location display name — gym_id is the gym name from availability */
+function getLocationLabel(session: SessionSlot, gyms?: Gym[]): string {
+  if (session.location !== "gym") return "Home";
+  if (session.gym_id) return session.gym_id;
+  if (gyms && gyms.length > 0 && gyms[0].name) return gyms[0].name;
+  return "Gym";
+}
+
 export function SessionCard({
   session,
+  gyms,
   onMarkDone,
   onMarkSkipped,
 }: SessionCardProps) {
@@ -40,6 +55,7 @@ export function SessionCard({
 
   const isHard = session.tags?.hard === true;
   const isFinger = session.tags?.finger === true;
+  const locationLabel = getLocationLabel(session, gyms);
 
   return (
     <Card className="gap-0 py-0 overflow-hidden">
@@ -62,7 +78,7 @@ export function SessionCard({
         {/* Badge row */}
         <div className="flex flex-wrap items-center gap-1.5 mt-1">
           <Badge variant="secondary" className="text-[10px]">
-            {session.location === "home" ? "Home" : session.location}
+            {locationLabel}
           </Badge>
           <Badge variant="outline" className="text-[10px]">
             {formatSlot(session.slot)}
@@ -104,6 +120,7 @@ export function SessionCard({
                           reps: prescription.reps != null ? String(prescription.reps) : undefined,
                           load_kg: prescription.load_kg as number | undefined,
                           rest_s: prescription.rest_s as number | undefined,
+                          tempo: prescription.tempo as string | undefined,
                           notes: prescription.notes as string | undefined,
                         }}
                       />

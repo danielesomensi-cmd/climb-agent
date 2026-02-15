@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
-import { getWeek, applyEvents, postFeedback } from "@/lib/api";
+import { getWeek, getState, applyEvents, postFeedback } from "@/lib/api";
 import type { WeekPlan, DayPlan } from "@/lib/types";
 
 /** Full weekday names */
@@ -44,28 +45,51 @@ function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
-/** Formats today's date as "Monday 15 February" */
-function formatTodaySubtitle(): string {
-  const d = new Date();
+/** Formats a date string as "Monday 15 February" */
+function formatDateSubtitle(dateStr: string): string {
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return dateStr;
+  const d = new Date(
+    parseInt(parts[0]),
+    parseInt(parts[1]) - 1,
+    parseInt(parts[2])
+  );
   const dayName = WEEKDAY_FULL[d.getDay()] ?? "";
   const dayNum = d.getDate();
   const monthName = MONTH_EN[d.getMonth()] ?? "";
   return `${dayName} ${dayNum} ${monthName}`;
 }
 
-export default function TodayPage() {
+function TodayContent() {
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get("date");
+  const targetDate = dateParam || todayISO();
+  const isViewingToday = targetDate === todayISO();
+
   const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);
+  const [gyms, setGyms] = useState<
+    Array<{ name: string; equipment: string[] }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
-  const [feedbackSessionId, setFeedbackSessionId] = useState<string | null>(null);
+  const [feedbackSessionId, setFeedbackSessionId] = useState<string | null>(
+    null
+  );
 
-  const fetchWeek = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getWeek(0);
-      setWeekPlan(data.week_plan);
+      const [weekData, stateData] = await Promise.all([
+        getWeek(0),
+        getState(),
+      ]);
+      setWeekPlan(weekData.week_plan);
+      const eq = stateData.equipment as Record<string, unknown> | undefined;
+      setGyms(
+        (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
@@ -74,19 +98,18 @@ export default function TodayPage() {
   }, []);
 
   useEffect(() => {
-    fetchWeek();
-  }, [fetchWeek]);
+    fetchData();
+  }, [fetchData]);
 
-  /** Find today's entry in the weekly plan */
-  const today = todayISO();
-  const todayPlan: DayPlan | undefined = weekPlan?.weeks
+  /** Find target day in the weekly plan */
+  const dayPlan: DayPlan | undefined = weekPlan?.weeks
     .flatMap((w) => w.days)
-    .find((d) => d.date === today);
+    .find((d) => d.date === targetDate);
 
-  /** First day after today with sessions */
+  /** First day after target with sessions */
   const nextTrainingDay: DayPlan | undefined = weekPlan?.weeks
     .flatMap((w) => w.days)
-    .find((d) => d.date > today && d.sessions.length > 0);
+    .find((d) => d.date > targetDate && d.sessions.length > 0);
 
   /** Mark a session as completed */
   async function handleMarkDone(sessionId: string) {
@@ -96,7 +119,7 @@ export default function TodayPage() {
         events: [
           {
             type: "session_done",
-            date: today,
+            date: targetDate,
             session_id: sessionId,
           },
         ],
@@ -120,7 +143,7 @@ export default function TodayPage() {
         events: [
           {
             type: "session_skipped",
-            date: today,
+            date: targetDate,
             session_id: sessionId,
           },
         ],
@@ -138,7 +161,7 @@ export default function TodayPage() {
     try {
       await postFeedback({
         log_entry: {
-          date: today,
+          date: targetDate,
           session_id: feedbackSessionId,
           exercise_feedback: feedback,
         },
@@ -154,12 +177,22 @@ export default function TodayPage() {
 
   // Exercises for the feedback dialog (simplified: using session_id as placeholder)
   const feedbackExercises = feedbackSessionId
-    ? [{ exercise_id: feedbackSessionId, name: feedbackSessionId.replace(/_/g, " ") }]
+    ? [
+        {
+          exercise_id: feedbackSessionId,
+          name: feedbackSessionId.replace(/_/g, " "),
+        },
+      ]
     : [];
+
+  const title = isViewingToday ? "Today" : formatDateSubtitle(targetDate);
+  const subtitle = isViewingToday
+    ? formatDateSubtitle(targetDate)
+    : undefined;
 
   return (
     <>
-      <TopBar title="Today" subtitle={formatTodaySubtitle()} />
+      <TopBar title={title} subtitle={subtitle} />
 
       <main className="mx-auto max-w-2xl space-y-4 p-4">
         {/* Loading state */}
@@ -174,7 +207,7 @@ export default function TodayPage() {
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
             <p className="text-sm text-destructive">{error}</p>
             <button
-              onClick={fetchWeek}
+              onClick={fetchData}
               className="mt-2 text-sm font-medium text-primary underline"
             >
               Retry
@@ -182,43 +215,50 @@ export default function TodayPage() {
           </div>
         )}
 
-        {/* Today's plan */}
-        {!loading && !error && todayPlan && (
+        {/* Day plan */}
+        {!loading && !error && dayPlan && (
           <DayCard
-            day={todayPlan}
+            day={dayPlan}
+            gyms={gyms}
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}
           />
         )}
 
-        {/* No sessions today (rest day) */}
-        {!loading && !error && todayPlan && todayPlan.sessions.length === 0 && (
+        {/* No sessions (rest day) */}
+        {!loading && !error && dayPlan && dayPlan.sessions.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-muted-foreground">
-              No sessions today
+              No sessions {isViewingToday ? "today" : "on this day"}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
               Enjoy the rest and recover for the next session.
             </p>
             {nextTrainingDay && (
-              <Link href="/week" className="mt-3 inline-block text-sm font-medium text-primary underline">
+              <Link
+                href={`/today?date=${nextTrainingDay.date}`}
+                className="mt-3 inline-block text-sm font-medium text-primary underline"
+              >
                 Preview next training day ({nextTrainingDay.weekday})
               </Link>
             )}
           </div>
         )}
 
-        {/* Weekly plan not found for today */}
-        {!loading && !error && !todayPlan && weekPlan && (
+        {/* Weekly plan not found for this date */}
+        {!loading && !error && !dayPlan && weekPlan && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-muted-foreground">
-              No sessions today
+              No sessions {isViewingToday ? "today" : "on this day"}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              No plan found for today.
+              No plan found for this date.
             </p>
             {nextTrainingDay && (
-              <Link href="/week" className="mt-3 inline-block text-sm font-medium text-primary underline">
+              <Link
+                href={`/today?date=${nextTrainingDay.date}`}
+                className="mt-3 inline-block text-sm font-medium text-primary underline"
+              >
                 Preview next training day ({nextTrainingDay.weekday})
               </Link>
             )}
@@ -237,5 +277,19 @@ export default function TodayPage() {
         exercises={feedbackExercises}
       />
     </>
+  );
+}
+
+export default function TodayPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <TodayContent />
+    </Suspense>
   );
 }

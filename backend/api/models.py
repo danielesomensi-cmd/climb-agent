@@ -58,6 +58,8 @@ class OverrideRequest(BaseModel):
     slot: str = "evening"
     phase_id: Optional[str] = None
     week_plan: Optional[Dict[str, Any]] = None
+    target_date: Optional[str] = None
+    gym_id: Optional[str] = None
 
 
 class EventsRequest(BaseModel):

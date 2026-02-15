@@ -108,3 +108,23 @@ suggested phase, dependencies.
 
 - **Resolved in**: Phase 3, Fix 6
 - **Status**: Clicking a day in the week grid scrolls to the detailed day card. Week page shows both grid overview and day-by-day detail.
+
+### ~~B15. Show gym name instead of 'gym'~~ ✅
+
+- **Resolved in**: Phase 3, Fix A
+- **Status**: SessionCard and DayCard accept a `gyms` prop. Location badge shows the actual gym name (from `gym_id` / `equipment.gyms`) instead of generic "gym". Pages fetch state to pass gym data down.
+
+### ~~B16. Exercise card full prescription format~~ ✅
+
+- **Resolved in**: Phase 3, Fix B
+- **Status**: ExerciseCard shows `4 × 8 @ 25kg — Rest 2:00` format. Uses × (multiplication sign), @ for load, — (em dash) before rest, mm:ss rest format. Shows "bodyweight" if load_kg is 0. Tempo and notes always visible (no expand/collapse).
+
+### ~~B17. Date query parameter on Today page~~ ✅
+
+- **Resolved in**: Phase 3, Fix C
+- **Status**: Today page accepts `?date=YYYY-MM-DD` to view any day's plan. "View day" button on each day card in week view links to `/today?date=YYYY-MM-DD`. Title adapts to show day name when viewing a non-today date.
+
+### ~~B18. Replan dialog with auto-resolve~~ ✅
+
+- **Resolved in**: Phase 3, Fix D
+- **Status**: "Change plan" button on each day card in week view opens a replan dialog. Dialog lets user pick location (Home / gym names) and intensity (Rest / Easy / Hard), or skip the day entirely. Backend `POST /api/replanner/override` supports `target_date` and `gym_id` params, and auto-resolves all sessions in the returned week plan. `apply_day_override` updated with ripple day error handling.

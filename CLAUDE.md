@@ -96,7 +96,7 @@ source .venv/bin/activate && python -m pytest backend/tests/test_api.py -q
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
 | GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
 | POST | `/api/session/resolve` | Resolve a single session to exercises |
-| POST | `/api/replanner/override` | Apply day override (intent-based) |
+| POST | `/api/replanner/override` | Apply day override (intent-based, auto-resolves sessions) |
 | POST | `/api/replanner/events` | Apply events (done/skipped) to week plan |
 | POST | `/api/feedback` | Submit session feedback |
 
@@ -116,8 +116,8 @@ cd frontend && npm run dev    # http://localhost:3000
 - **PWA**: manifest.json + service worker
 
 ### Pages
-- `/today` — Today's sessions, mark done/skipped, post-session feedback
-- `/week` — 7-day grid + scrollable day detail cards
+- `/today` — Today's sessions (or any day via `?date=YYYY-MM-DD`), mark done/skipped, post-session feedback
+- `/week` — 7-day grid + scrollable day detail cards + "View day" / "Change plan" buttons + replan dialog
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
 - `/session/[id]` — Resolved exercises with prescription details
 - `/settings` — Profile summary, regenerate assessment/macrocycle, reset

@@ -196,6 +196,7 @@ from backend.engine.X import Y
 - Onboarding wizard: 10-step flow generating assessment + macrocycle
 - Main views: Today (mark done/skipped + feedback), Week (grid + detail), Plan (radar + timeline), Session (resolved exercises), Settings (regenerate/reset)
 - 6 live-testing fixes: auto-resolve sessions, English translation, 7-day availability, gym priority, preview next day, day click navigation
+- 4 usability fixes: gym name display, full prescription format (× @ — Rest mm:ss), date query parameter (?date=), replan dialog with auto-resolve
 - Mobile-first with shadcn/ui components, dark mode, PWA manifest
 
 ### Phase 3.1: UI polish + outdoor + equipment 🔲

@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { TopBar } from "@/components/layout/top-bar";
 import { WeekGrid } from "@/components/training/week-grid";
 import { DayCard } from "@/components/training/day-card";
+import { ReplanDialog } from "@/components/training/replan-dialog";
 import { Badge } from "@/components/ui/badge";
-import { getWeek } from "@/lib/api";
+import { getWeek, getState, applyOverride } from "@/lib/api";
 import type { WeekPlan, DayPlan } from "@/lib/types";
 
 /** English labels for phase names */
@@ -29,21 +30,35 @@ function todayISO(): string {
 export default function WeekPage() {
   const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);
   const [phaseId, setPhaseId] = useState<string | null>(null);
+  const [gyms, setGyms] = useState<
+    Array<{ name: string; equipment: string[] }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [replanDate, setReplanDate] = useState<string | null>(null);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
-    dayRefs.current[date]?.scrollIntoView({ behavior: "smooth", block: "center" });
+    dayRefs.current[date]?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
   }, []);
 
-  const fetchWeek = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getWeek(0);
-      setWeekPlan(data.week_plan);
-      setPhaseId(data.phase_id);
+      const [weekData, stateData] = await Promise.all([
+        getWeek(0),
+        getState(),
+      ]);
+      setWeekPlan(weekData.week_plan);
+      setPhaseId(weekData.phase_id);
+      const eq = stateData.equipment as Record<string, unknown> | undefined;
+      setGyms(
+        (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
@@ -52,8 +67,34 @@ export default function WeekPage() {
   }, []);
 
   useEffect(() => {
-    fetchWeek();
-  }, [fetchWeek]);
+    fetchData();
+  }, [fetchData]);
+
+  /** Handle replan: call override API and update week plan */
+  async function handleReplanApply(data: {
+    intent: string;
+    location: string;
+    gym_id?: string;
+  }) {
+    if (!weekPlan || !replanDate) return;
+    setError(null);
+    try {
+      const result = await applyOverride({
+        intent: data.intent,
+        location: data.location,
+        reference_date: replanDate,
+        target_date: replanDate,
+        gym_id: data.gym_id,
+        phase_id: phaseId ?? undefined,
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update plan");
+    } finally {
+      setReplanDate(null);
+    }
+  }
 
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
@@ -86,7 +127,7 @@ export default function WeekPage() {
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
             <p className="text-sm text-destructive">{error}</p>
             <button
-              onClick={fetchWeek}
+              onClick={fetchData}
               className="mt-2 text-sm font-medium text-primary underline"
             >
               Retry
@@ -96,7 +137,11 @@ export default function WeekPage() {
 
         {/* Weekly grid */}
         {!loading && !error && weekPlan && (
-          <WeekGrid weekPlan={weekPlan} currentDate={today} onDayClick={handleDayClick} />
+          <WeekGrid
+            weekPlan={weekPlan}
+            currentDate={today}
+            onDayClick={handleDayClick}
+          />
         )}
 
         {/* Detailed day list */}
@@ -106,8 +151,18 @@ export default function WeekPage() {
               Daily detail
             </h2>
             {days.map((day) => (
-              <div key={day.date} ref={(el) => { dayRefs.current[day.date] = el; }}>
-                <DayCard day={day} />
+              <div
+                key={day.date}
+                ref={(el) => {
+                  dayRefs.current[day.date] = el;
+                }}
+              >
+                <DayCard
+                  day={day}
+                  gyms={gyms}
+                  showActions
+                  onReplan={(date) => setReplanDate(date)}
+                />
               </div>
             ))}
           </div>
@@ -122,6 +177,15 @@ export default function WeekPage() {
           </div>
         )}
       </main>
+
+      {/* Replan dialog */}
+      <ReplanDialog
+        open={replanDate !== null}
+        date={replanDate ?? ""}
+        gyms={gyms}
+        onClose={() => setReplanDate(null)}
+        onApply={handleReplanApply}
+      />
     </>
   );
 }
