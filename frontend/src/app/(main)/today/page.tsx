@@ -217,7 +217,30 @@ function TodayContent() {
     <>
       <TopBar title={title} subtitle={subtitle} />
 
-      <main className="mx-auto max-w-2xl space-y-4 p-4">
+      {/* Decorative climber illustration — fixed to bottom of viewport */}
+      <div
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-0"
+        style={{ height: "55vh" }}
+        aria-hidden="true"
+      >
+        {/* Gradient fade: transparent at bottom → background color at top */}
+        <div
+          className="absolute inset-0 z-10"
+          style={{
+            background:
+              "linear-gradient(to bottom, var(--background) 0%, transparent 40%)",
+          }}
+        />
+        {/* Image: object-position crops out the "CLIMB AGENT" text at top */}
+        <img
+          src="/daniclimb.jpg"
+          alt=""
+          className="h-full w-full object-cover opacity-20 dark:opacity-15"
+          style={{ objectPosition: "center 25%" }}
+        />
+      </div>
+
+      <main className="relative z-10 mx-auto max-w-2xl space-y-4 p-4">
         {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center py-12">

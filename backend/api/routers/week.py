@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from copy import deepcopy
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException
 
@@ -15,6 +16,7 @@ from backend.api.deps import (
     save_state,
     week_num_to_phase_context,
 )
+from backend.engine.macrocycle_v1 import compute_pretrip_dates
 from backend.engine.planner_v2 import generate_phase_week
 from backend.engine.resolve_session import resolve_session
 
@@ -112,6 +114,13 @@ def get_week(week_num: int):
             week_plan = None
 
     if week_plan is None:
+        # Compute pre-trip deload dates for this week (5 days before + trip start day)
+        week_start = ctx["start_date"]
+        week_end_date = datetime.strptime(week_start, "%Y-%m-%d").date() + timedelta(days=6)
+        pretrip_dates = compute_pretrip_dates(
+            state.get("trips", []), week_start, week_end_date.isoformat()
+        )
+
         try:
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
@@ -124,6 +133,7 @@ def get_week(week_num: int):
                 default_gym_id=default_gym_id,
                 gyms=gyms,
                 intensity_cap=ctx.get("intensity_cap"),
+                pretrip_dates=pretrip_dates if pretrip_dates else None,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")

@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-16
+> Last updated: 2026-02-16 (post §2.1 P0 fixes + §2.2 verified audit)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -33,16 +33,16 @@
 
 ## §2 — Prossimo: Phase 1.75 — Session enrichment + fix
 
-### §2.1 Pre-requisiti: fix P0
+### §2.1 Pre-requisiti: fix P0 ✅
 
 Tre bug bloccanti emersi dall'audit post-fix (docs/audit_post_fix.md).
-Da risolvere PRIMA di qualsiasi enrichment.
+Risolti 2026-02-16. 13 test nuovi in `test_p0_fixes.py`. 201 test verdi.
 
-| ID | Finding | Descrizione | Fix | File |
-|----|---------|-------------|-----|------|
-| NEW-F2 | Equipment climbing mancante | Esercizi climbing (gym_arc_easy_volume, gym_technique_boulder_drills, gym_power_endurance_4x4, board_limit_boulders) hanno equipment_required: []. Servono gym_boulder o gym_routes. | Aggiungere equipment_required ai ~5-10 esercizi climbing | exercises.json |
-| NEW-F5 | Durate fase negative | _compute_phase_durations produce durate negative per total_weeks < 9. Riga 179 sovrascrive il floor di riga 166. | Validare total_weeks ≥ 9, floor nel secondo scaling, mai durate negative | macrocycle_v1.py |
-| NEW-F10 | Trip start_date con sessione HARD | Giorno di partenza trip ha sessione hard. Il window pretrip copre solo i 5 giorni PRIMA, non il giorno stesso. | Includere trip.start_date in pretrip_dates | macrocycle_v1.py o planner_v2.py |
+| ID | Finding | Fix applicato | File |
+|----|---------|---------------|------|
+| NEW-F2 | Equipment climbing mancante | 9 esercizi bouldering → `equipment_required_any: ["gym_boulder", "spraywall", "board_kilter"]` (OR logic). 1 esercizio lead (`slow_climbing`) → `equipment_required: ["gym_routes"]`. | exercises.json |
+| NEW-F5 | Durate fase negative | `_MIN_TOTAL_WEEKS = 9`, ValueError se < 9, floor re-enforced dopo secondo scaling. | macrocycle_v1.py |
+| NEW-F10 | Trip start_date con sessione HARD | `check_pretrip_deload`: `0 <= days_until` (era `0 <`). Nuova `compute_pretrip_dates()` include trip start_date. Wired in `week.py`. | macrocycle_v1.py, week.py |
 
 ### §2.2 Audit sessioni vs letteratura
 
@@ -101,14 +101,21 @@ La struttura dipende dallo stimolo primario della sessione.
 5. Core — 10-15 min
 6. Antagonist/prehab — 10-15 min
 
-#### Stato attuale vs target
+#### Stato attuale vs target (verificato 2026-02-16)
 
-| Sessione attuale | Blocchi attuali | Blocchi target | Gap |
-|-----------------|----------------|----------------|-----|
-| strength_long | ~3 (finger_max, warmup, qualche pulling) | 7 (warmup → finger_max → climbing_jugs → pulling → core → antagonist → cooldown) | Mancano: climbing on jugs, core, antagonist, cooldown |
-| power_contact_gym | ~4 (campus, limit boulder, bench_press senza prescription) | 6 (warmup → limit_boulder → campus → explosive_pull → core → antagonist) | Manca: core, antagonist strutturati. bench_press senza prescription. Sessione scarsa (solo 4 esercizi per 1.5h) |
-| power_endurance_gym | ~3 (4x4, route intervals) | 6 (warmup → finger_repeaters → 4x4 → route_volume → core → antagonist) | Mancano: finger repeaters leggeri, core, antagonist |
-| endurance_aerobic_gym | ~2-3 (ARC, easy laps) | 6 (warmup → ARC → endurance_repeaters → pulling_endurance → core → antagonist) | Mancano: endurance repeaters, pulling, core, antagonist |
+| Sessione attuale | Moduli attuali (verificati) | Blocchi target | Gap |
+|-----------------|----------------------------|----------------|-----|
+| strength_long | 3: general_warmup (template), finger_max_strength (template), core_short (template, optional) | 7 (warmup → finger_max → climbing_jugs → pulling → core → antagonist → cooldown) | Mancano: climbing on jugs, pulling, antagonist, cooldown. Core c'è ma optional. |
+| power_contact_gym | 4: general_warmup (template), campus_or_limit_main (inline), antagonist_accessories (inline, optional), cooldown (inline, optional) | 6 (warmup → limit_boulder → campus → explosive_pull → core → antagonist) | Manca: core. antagonist è generico (bench_press). Nessun explosive_pull dedicato. |
+| power_endurance_gym | 4: general_warmup (template), pe_climbing_main (inline), core_short (template, optional), cooldown (inline, optional) | 6 (warmup → finger_repeaters → 4x4 → route_volume → core → antagonist) | Mancano: finger repeaters leggeri, antagonist. Core c'è ma optional. |
+| endurance_aerobic_gym | 4: general_warmup (template), aerobic_climbing_main (inline), technique_drills (inline, optional), cooldown (inline, optional) | 6 (warmup → ARC → endurance_repeaters → pulling_endurance → core → antagonist) | Mancano: endurance repeaters, pulling, core, antagonist. Ha technique_drills (bonus). |
+
+**Sessioni aggiuntive verificate** (candidati per enrichment futuro):
+- `technique_focus_gym`: 4 moduli (warmup, technique drills inline, core, cooldown) — struttura già buona
+- `gym_power_bouldering`: 3 moduli (template) — potrebbe beneficiare di antagonist/cooldown
+- `gym_aerobic_endurance`: 3 moduli (template) — potrebbe beneficiare di core/cooldown
+- `gym_power_endurance`: 3 moduli (template) — potrebbe beneficiare di antagonist/cooldown
+- `gym_technique_boulder`: 2 moduli (template) — il più scarno, mancano core/antagonist/cooldown
 
 #### Template nuovi necessari
 
@@ -165,7 +172,8 @@ Dopo l'audit (§2.2) e i fix P0 (§2.1):
 
 | ID | Finding | Descrizione | Fix |
 |----|---------|-------------|-----|
-| NEW-F3 | Test sessions mai pianificate | test_max_hang_5s esiste ma non è in _SESSION_META né in nessun pool. Nessun scheduling periodico. assessment.tests mai aggiornato dal closed loop. | Aggiungere a _SESSION_META e pool fine-Base/fine-SP. Creare test_power_endurance. Scheduling ogni N settimane. |
+| NEW-F3a | Test sessions mai pianificate (scheduling) | test_max_hang_5s esiste ma non è in _SESSION_META né in nessun pool. Nessun scheduling periodico. | Aggiungere a _SESSION_META e pool fine-Base/fine-SP. Scheduling ogni N settimane. |
+| NEW-F3b | assessment.tests mai aggiornato dal closed loop | Closed loop aggiorna working_loads ma non assessment.tests dopo sessioni test. | Aggiornare assessment.tests nel closed loop quando sessione è un test. Creare test_power_endurance. |
 | NEW-F4 | Ripple effect troppo conservativo | Dopo override hard/max, il replanner controlla solo giorni +2/+3 e solo sessioni già hard. Sessioni medium lasciate invariate. | Forzare giorno successivo a recovery dopo hard/max override |
 | F6-partial | Intent "projecting" mancante | 11/12 intent funzionano, ma "projecting" (naturale per climber) non è mappato. Variante indoor possibile: limit bouldering. | Aggiungere intent projecting → limit bouldering indoor |
 | NEW-F1 | Prescription climbing vuota | Esercizi climbing hanno solo notes generico. Mancano: grado suggerito, volume, rest. | Aggiungere suggested_grade_offset, volume, rest_between. Resolver calcola grado da current_grade + offset. |
@@ -276,15 +284,16 @@ Tabella unica con TUTTI gli item tracciati.
 | B26 | Test isolation fixtures | ✅ DONE | 3.1 | §1 |
 | B27 | Equipment label single source | TODO | 3.2 | §3 |
 | NEW-F1 | Prescription climbing vuota | TODO | 1.75 | §2.4 |
-| NEW-F2 | Equipment climbing mancante | TODO (P0) | 1.75 | §2.1 |
-| NEW-F3 | Test sessions mai pianificate | TODO | 1.75 | §2.4 |
+| NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
+| NEW-F3a | Test sessions scheduling | TODO | 1.75 | §2.4 |
+| NEW-F3b | assessment.tests closed loop | TODO | 2 | §2.4 |
 | NEW-F4 | Ripple effect conservativo | TODO | 1.75 | §2.4 |
-| NEW-F5 | Durate fase negative | TODO (P0) | 1.75 | §2.1 |
+| NEW-F5 | Durate fase negative | ✅ DONE | 1.75 | §2.1 |
 | NEW-F6 | Warning phase_mismatch | TODO | 3.2 | §3 |
 | NEW-F7 | Finger compensation | TODO | 3.2 | §3 |
 | NEW-F8 | Easy climbing in deload | TODO | 2 | §4 |
 | NEW-F9 | Finger maintenance in PE | TODO | 2 | §4 |
-| NEW-F10 | Trip start_date HARD | TODO (P0) | 1.75 | §2.1 |
+| NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |
 | F6-partial | Intent projecting mancante | TODO | 1.75 | §2.4 |
 
 ---

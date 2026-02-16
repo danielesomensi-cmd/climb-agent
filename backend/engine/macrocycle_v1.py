@@ -129,6 +129,9 @@ _WEAKNESS_ADJUSTMENTS: Dict[str, Tuple[str, str]] = {
 }
 
 
+_MIN_TOTAL_WEEKS = 9  # 4 non-deload phases × 2 weeks + 1 deload
+
+
 def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> Dict[str, int]:
     """Compute phase durations based on assessment profile.
 
@@ -136,7 +139,16 @@ def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> 
         base: 4, strength_power: 3, power_endurance: 2, performance: 2, deload: 1
 
     Adjustments based on weakest axes (score < 50).
+
+    Raises:
+        ValueError: If total_weeks < 9 (minimum structural requirement).
     """
+    if total_weeks < _MIN_TOTAL_WEEKS:
+        raise ValueError(
+            f"total_weeks must be >= {_MIN_TOTAL_WEEKS} "
+            f"(4 phases × 2 weeks + 1 deload), got {total_weeks}"
+        )
+
     durations = {
         "base": 4,
         "strength_power": 3,
@@ -173,10 +185,10 @@ def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> 
         # Add/remove from base phase (most flexible)
         durations["base"] = max(2, durations["base"] + diff)
 
-    # Ensure total sums correctly
+    # Ensure total sums correctly — re-enforce floor after adjustment
     actual_total = sum(durations.values())
     if actual_total != total_weeks:
-        durations["base"] += total_weeks - actual_total
+        durations["base"] = max(2, durations["base"] + total_weeks - actual_total)
 
     return durations
 
@@ -445,7 +457,7 @@ def check_pretrip_deload(
             continue
         trip_start = datetime.strptime(trip_start_str, "%Y-%m-%d").date()
         days_until = (trip_start - current).days
-        if 0 < days_until <= 5:
+        if 0 <= days_until <= 5:
             return {
                 "trigger": "pretrip_deload",
                 "trip_name": trip.get("name"),
@@ -454,6 +466,37 @@ def check_pretrip_deload(
                 "recommendation": "Reduce volume and intensity. No max/high sessions.",
             }
     return None
+
+
+def compute_pretrip_dates(
+    trips: List[Dict[str, Any]],
+    week_start: str,
+    week_end: str,
+) -> List[str]:
+    """Compute all dates in a week range that fall in a pre-trip deload window.
+
+    The window covers the 5 days before a trip AND the trip start_date itself.
+    """
+    w_start = datetime.strptime(week_start, "%Y-%m-%d").date()
+    w_end = datetime.strptime(week_end, "%Y-%m-%d").date()
+    result: List[str] = []
+
+    for trip in (trips or []):
+        t_start_str = trip.get("start_date")
+        if not t_start_str:
+            continue
+        t_start = datetime.strptime(t_start_str, "%Y-%m-%d").date()
+        # Window: 5 days before trip + trip start day itself
+        window_start = t_start - timedelta(days=5)
+        window_end = t_start  # inclusive
+
+        # Add each day in the window that falls within the week
+        d = max(window_start, w_start)
+        while d <= min(window_end, w_end):
+            result.append(d.isoformat())
+            d += timedelta(days=1)
+
+    return sorted(set(result))
 
 
 def should_extend_phase(

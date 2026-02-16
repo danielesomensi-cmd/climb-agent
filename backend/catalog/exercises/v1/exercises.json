@@ -788,9 +788,9 @@
         "skin": "high"
       },
       "equipment_required_any": [
+        "gym_boulder",
         "spraywall",
-        "board_kilter",
-        "gym_boulder"
+        "board_kilter"
       ]
     },
     {
@@ -839,7 +839,12 @@
         "fingers": "high",
         "cns": "medium",
         "skin": "high"
-      }
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter"
+      ]
     },
     {
       "id": "gym_arc_easy_volume",
@@ -875,7 +880,12 @@
         "fingers": "medium",
         "cns": "low",
         "skin": "medium"
-      }
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter"
+      ]
     },
     {
       "id": "gym_technique_boulder_drills",
@@ -908,7 +918,12 @@
         "fingers": "low",
         "cns": "low",
         "skin": "low"
-      }
+      },
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter"
+      ]
     },
     {
       "id": "pushups",
@@ -1487,7 +1502,6 @@
         "skin": "none"
       }
     },
-
     {
       "id": "long_duration_hang",
       "name": "Long Duration Hang (Injury Prevention)",
@@ -1677,7 +1691,6 @@
         "skin": "medium"
       }
     },
-
     {
       "id": "campus_laddering_feet_off",
       "name": "Campus Laddering (Feet Off)",
@@ -1959,7 +1972,6 @@
         "skin": "none"
       }
     },
-
     {
       "id": "four_by_four_bouldering",
       "name": "4x4 Bouldering (Power-Endurance)",
@@ -2110,7 +2122,8 @@
       },
       "equipment_required_any": [
         "gym_boulder",
-        "gym_routes"
+        "spraywall",
+        "board_kilter"
       ]
     },
     {
@@ -2149,7 +2162,6 @@
         "skin": "medium"
       }
     },
-
     {
       "id": "continuity_climbing",
       "name": "Continuity Climbing (Ultra-Easy Volume)",
@@ -2185,7 +2197,8 @@
       },
       "equipment_required_any": [
         "gym_boulder",
-        "gym_routes"
+        "spraywall",
+        "board_kilter"
       ]
     },
     {
@@ -2264,7 +2277,6 @@
         "skin": "low"
       }
     },
-
     {
       "id": "weighted_pullup",
       "name": "Weighted Pull-up",
@@ -2589,7 +2601,6 @@
         "skin": "none"
       }
     },
-
     {
       "id": "dips",
       "name": "Dips (Parallel Bars or Rings)",
@@ -2772,7 +2783,6 @@
         "skin": "none"
       }
     },
-
     {
       "id": "front_lever_tuck",
       "name": "Front Lever (Tuck Progression)",
@@ -3126,7 +3136,6 @@
         "skin": "none"
       }
     },
-
     {
       "id": "wrist_curl",
       "name": "Wrist Curl (Flexion)",
@@ -3420,7 +3429,6 @@
         "skin": "none"
       }
     },
-
     {
       "id": "silent_feet_drill",
       "name": "Silent Feet Drill",
@@ -3456,7 +3464,8 @@
       },
       "equipment_required_any": [
         "gym_boulder",
-        "gym_routes"
+        "spraywall",
+        "board_kilter"
       ]
     },
     {
@@ -3494,7 +3503,8 @@
       },
       "equipment_required_any": [
         "gym_boulder",
-        "gym_routes"
+        "spraywall",
+        "board_kilter"
       ]
     },
     {
@@ -3532,7 +3542,8 @@
       },
       "equipment_required_any": [
         "gym_boulder",
-        "gym_routes"
+        "spraywall",
+        "board_kilter"
       ]
     },
     {
@@ -3550,7 +3561,9 @@
       "intensity_level": "low",
       "fatigue_cost": 3,
       "recency_group": "technique_pacing_drills",
-      "equipment_required": [],
+      "equipment_required": [
+        "gym_routes"
+      ],
       "location_allowed": [
         "gym"
       ],
@@ -3609,7 +3622,6 @@
         "skin": "low"
       }
     },
-
     {
       "id": "hip_opener_flow",
       "name": "Hip Opener Flow (Frog/Pigeon/90-90)",
@@ -3795,7 +3807,6 @@
         "skin": "none"
       }
     },
-
     {
       "id": "wall_handstand_hold",
       "name": "Wall Handstand Hold (Belly-to-Wall)",
@@ -4021,7 +4032,6 @@
         "skin": "none"
       }
     },
-
     {
       "id": "jump_rope",
       "name": "Jump Rope (Cardio Conditioning)",
