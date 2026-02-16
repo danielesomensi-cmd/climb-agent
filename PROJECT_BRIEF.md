@@ -113,7 +113,9 @@ frontend/
 docs/
   vocabulary_v1.md          ← Closed vocabulary (updated §5.1-5.6)
   DESIGN_GOAL_MACROCICLO_v1.1.md ← Complete design + roadmap
-  BACKLOG.md                ← Feature backlog (B1-B26)
+  ROADMAP_v2.md             ← Consolidated roadmap + backlog + audit (authoritative)
+  audit_post_fix.md         ← Historic: post-fix audit results
+  e2e_test_results.md       ← Historic: E2E test findings
 _archive/                   ← Legacy scripts, docs, config (do not modify)
 PROJECT_BRIEF.md            ← This file
 CLAUDE.md                   ← Context for Claude Code
@@ -169,54 +171,20 @@ from backend.engine.X import Y
 
 ## Roadmap
 
-### Phase 0: Catalog ✅
-- 102 exercises, 29 sessions, vocabulary updated
-- pangullich → campus_board, guided session mode spec
+> Dettagli completi: `docs/ROADMAP_v2.md`
 
-### Phase 1: Macrocycle engine ✅
-- assessment_v1.py, macrocycle_v1.py, planner_v2.py
-- user_state v1.5 (goal, assessment, trips, macrocycle)
-
-### Phase 1.5: Post-E2E fixes ✅
-- 14 findings from manual E2E test, 13 resolved in 2 clusters
-- Resolver inline blocks, planner 2-pass, PE with repeater test
-- Replanner phase-aware (12 intents), goal validation, real pre-trip deload
-- 155 tests green (from 115)
-
-### Phase 1.75: Session enrichment 🔲
-- Evening sessions with 5-7 blocks, new templates (pulling, antagonist, limit boulder)
-- Core and antagonists standard, load score, literature validation
-
-### Phase 2: Tracking + extras 🔲
-- Granular feedback, climbing logging, trip planning
-- Motivational quotes, report engine
-
-### Phase 3: UI (Next.js PWA) ✅
-- FastAPI REST API: 9 routers, 14 endpoints, CORS for Next.js
-- Onboarding wizard: 10-step flow generating assessment + macrocycle
-- Main views: Today (mark done/skipped + feedback), Week (grid + detail), Plan (radar + timeline), Session (resolved exercises), Settings (regenerate/reset)
-- 6 live-testing fixes: auto-resolve sessions, English translation, 7-day availability, gym priority, preview next day, day click navigation
-- 4 usability fixes: gym name display, full prescription format (× @ — Rest mm:ss), date query parameter (?date=), replan dialog with auto-resolve
-- Mobile-first with shadcn/ui components, dark mode, PWA manifest
-
-### Phase 3.1: Bug fixes ✅
-- B21: Done button keeps session with status "done" (was removing it)
-- B22: Events endpoint auto-resolves sessions (was missing `_auto_resolve`)
-- B23: Skip sets day status to "skipped" (was staying "planned")
-- B24: Gym equipment labels corrected
-
-### Phase 3.2: UI polish + outdoor + equipment 🔲
-- B10: Outdoor climbing spots as location type
-- B11: Configurable test protocols
-- B19: Quick-add session from week view
-- B20: Edit availability from Settings
-- B25: Adaptive replanning after feedback
-
-### Phase 3.5: LLM Coach 🔲
-- Claude Sonnet conversational layer on top of deterministic engine
-
-### Phase 4: Evolution 🔲
-- More goal types, annual report, multi-macrocycle, notifications
+| Phase | Status | Highlights |
+|-------|--------|------------|
+| 0: Catalog | ✅ | 102 exercises, 29 sessions |
+| 1: Macrocycle engine | ✅ | assessment, macrocycle, planner_v2 |
+| 1.5: Post-E2E fixes | ✅ | 14 findings, 13 resolved, 155→188 tests |
+| 3: UI (Next.js PWA) | ✅ | 15 endpoints, 19 pages, mobile-first dark PWA |
+| 3.1: Bug fixes | ✅ | B21-B24, B9, B26 |
+| **1.75: Session enrichment** | 🔲 | **NEXT** — audit vs literature, 5-7 blocks, fix P0 |
+| 3.2: UI polish + adaptive | 🔲 | B25 adaptive replanning, B19/B20 UI features |
+| 2: Tracking + outdoor | 🔲 | Outdoor logging, reports, motivational quotes |
+| 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
+| 4: Evolution | 🔲 | Multi-goal, annual report, notifications |
 
 ---
 

@@ -48,7 +48,7 @@ frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 19 pages: 5 main views + 12 onboarding steps + root + index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
   src/lib/           # api.ts (14 endpoint functions), types.ts, hooks/
-docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, BACKLOG.md, e2e_test_results.md
+docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, ROADMAP_v2.md, audit_post_fix.md, e2e_test_results.md
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```
 
@@ -185,6 +185,14 @@ Tests live in `backend/tests/`. The `conftest.py` adds the repo root to `sys.pat
 ```bash
 source .venv/bin/activate && python -m pytest backend/tests -q
 ```
+
+## Documentation alignment
+
+- **docs/ROADMAP_v2.md** is the authoritative source for planning (what to do, when, B-items, findings)
+- **PROJECT_BRIEF.md** has a compact roadmap table — update phase statuses after each dev session
+- **docs/DESIGN_GOAL_MACROCICLO_v1.1.md** is the design doc (the "why") — don't put planning here
+- **docs/BACKLOG.md and docs/NEXT_STEPS.md** are archived in _archive/ — do not update
+- After every dev session: update ROADMAP_v2.md states + PROJECT_BRIEF.md phase table
 
 ## Workflow
 
