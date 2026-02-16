@@ -15,7 +15,7 @@ def get_session_path():
     return "backend/catalog/sessions/v1/strength_long.json"
 
 def run_case(location: str, gym_id: str | None):
-    base_us = load_json("backend/data/user_state.json")
+    base_us = load_json("backend/tests/fixtures/test_user_state.json")
     us = deepcopy(base_us)
     us.setdefault("context", {})
     us["context"]["location"] = location

@@ -69,17 +69,20 @@ def test_replanner_override_updates_tomorrow_and_ripple():
         mode="balanced",
         availability=_availability(),
         allowed_locations=["home", "gym", "outdoor"],
+        hard_cap_per_week=4,  # allow room for the override's hard session
         default_gym_id="work_gym",
     )
+    # Use "power" intent (finger=False) to avoid consecutive-finger downgrade
+    # since Monday already has a finger session (strength_long)
     updated = apply_day_override(
         plan,
-        intent="strength",
+        intent="power",
         location="gym",
         reference_date="2026-01-05",
     )
 
     tomorrow = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
-    assert tomorrow["sessions"][0]["session_id"] == "strength_long"
+    assert tomorrow["sessions"][0]["session_id"] == "power_contact_gym"
 
     day2 = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-07")
     day3 = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-08")

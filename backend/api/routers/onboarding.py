@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
 
-from backend.api.deps import REPO_ROOT, load_state, next_monday, save_state
+from backend.api.deps import REPO_ROOT, invalidate_week_cache, load_state, next_monday, save_state
 from backend.api.models import OnboardingData
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
 from backend.engine.macrocycle_v1 import generate_macrocycle
@@ -57,6 +57,8 @@ EQUIPMENT_GYM = [
     {"id": "dumbbell", "label": "Dumbbells", "description": "Dumbbells for strength"},
     {"id": "barbell", "label": "Barbell", "description": "Barbell for heavy strength exercises"},
     {"id": "bench", "label": "Bench", "description": "Bench for press and support exercises"},
+    {"id": "cable_machine", "label": "Cable machine", "description": "Cable pulley machine for pulling and pushing exercises"},
+    {"id": "leg_press", "label": "Leg press", "description": "Machine for lower body pressing exercises"},
 ]
 
 TEST_DESCRIPTIONS = {
@@ -221,6 +223,7 @@ def onboarding_complete(data: OnboardingData):
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
 
     state["macrocycle"] = macrocycle
+    invalidate_week_cache(state)
     save_state(state)
 
     return {"profile": profile, "macrocycle": macrocycle}

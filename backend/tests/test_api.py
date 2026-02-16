@@ -16,7 +16,7 @@ from backend.api.main import app
 client = TestClient(app)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-REAL_STATE_PATH = REPO_ROOT / "backend" / "data" / "user_state.json"
+REAL_STATE_PATH = REPO_ROOT / "backend" / "tests" / "fixtures" / "test_user_state.json"
 
 
 @pytest.fixture(autouse=True)
@@ -259,6 +259,20 @@ class TestMacrocycle:
         r = client.post("/api/macrocycle/generate", json={})
         assert r.status_code == 422
 
+    def test_generate_invalidates_week_cache(self):
+        """Generating a new macrocycle should clear current_week_plan."""
+        self._setup_profile()
+        # Seed a fake cached week plan
+        state = json.loads(deps.STATE_PATH.read_text())
+        state["current_week_plan"] = {"fake": True}
+        deps.STATE_PATH.write_text(json.dumps(state, indent=2))
+
+        r = client.post("/api/macrocycle/generate", json={"total_weeks": 12})
+        assert r.status_code == 200
+
+        state_after = json.loads(deps.STATE_PATH.read_text())
+        assert state_after.get("current_week_plan") is None
+
 
 # -----------------------------------------------------------------------
 # Week
@@ -412,6 +426,55 @@ class TestReplanner:
         recovery_s = next(s for s in updated_day["sessions"] if s["slot"] == session["slot"])
         # Auto-resolve should have populated the "resolved" field
         assert "resolved" in recovery_s
+
+    def test_events_persists_plan_to_state(self):
+        """mark_done via events should persist plan, so GET /api/week/0 returns done status."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        day = next(d for d in days if d.get("sessions"))
+        session = day["sessions"][0]
+
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "mark_done",
+                "date": day["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r.status_code == 200
+
+        # Verify the persisted state has current_week_plan
+        state = json.loads(deps.STATE_PATH.read_text())
+        assert state.get("current_week_plan") is not None
+        cached_day = next(
+            d for d in state["current_week_plan"]["weeks"][0]["days"]
+            if d["date"] == day["date"]
+        )
+        done_s = next(s for s in cached_day["sessions"] if s["session_id"] == session["session_id"])
+        assert done_s["status"] == "done"
+
+    def test_override_persists_plan_to_state(self):
+        """Override should persist plan to state so GET /api/week/0 returns overridden session."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        # Find a day to use as reference
+        ref_day = days[0]
+
+        r = client.post("/api/replanner/override", json={
+            "week_plan": week_plan,
+            "intent": "rest",
+            "location": "home",
+            "reference_date": ref_day["date"],
+            "slot": "evening",
+        })
+        assert r.status_code == 200
+
+        # Verify the persisted state has current_week_plan with the override
+        state = json.loads(deps.STATE_PATH.read_text())
+        assert state.get("current_week_plan") is not None
+        assert state["current_week_plan"].get("weeks") is not None
 
 
 # -----------------------------------------------------------------------

@@ -1,0 +1,465 @@
+{
+  "assessment": {
+    "body": {
+      "body_fat_pct": 19,
+      "height_cm": 182,
+      "weight_kg": 77
+    },
+    "experience": {
+      "climbing_years": 15,
+      "structured_training_years": 8
+    },
+    "grades": {
+      "boulder_max_os": "7A",
+      "boulder_max_rp": "7C",
+      "lead_max_os": "7a+",
+      "lead_max_rp": "8a+"
+    },
+    "last_assessed": "2026-02-16",
+    "profile": {
+      "body_composition": 50,
+      "endurance": 46,
+      "finger_strength": 100,
+      "power_endurance": 51,
+      "pulling_strength": 100,
+      "technique": 30
+    },
+    "self_eval": {
+      "primary_weakness": "technique_errors",
+      "secondary_weakness": "pump_too_early"
+    },
+    "tests": {
+      "last_test_date": "2026-01-13",
+      "max_hang_20mm_5s_total_kg": 125,
+      "max_pullups_bodyweight": null,
+      "repeater_7_3_max_sets_20mm": 24,
+      "weighted_pullup_1rm_total_kg": 140
+    }
+  },
+  "availability": {
+    "fri": {
+      "evening": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "lunch": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "gym"
+      },
+      "morning": {
+        "available": false,
+        "gym_id": null,
+        "preferred_location": "home"
+      }
+    },
+    "mon": {
+      "evening": {
+        "available": true,
+        "gym_id": "BKL",
+        "preferred_location": "gym"
+      },
+      "lunch": {
+        "available": false,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "morning": {
+        "available": false,
+        "preferred_location": "gym"
+      }
+    },
+    "sat": {
+      "evening": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "lunch": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "morning": {
+        "available": false,
+        "gym_id": null,
+        "preferred_location": "gym"
+      }
+    },
+    "sun": {
+      "evening": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "lunch": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "morning": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "home"
+      }
+    },
+    "thu": {
+      "evening": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "gym"
+      },
+      "lunch": {
+        "available": false,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "morning": {
+        "available": false,
+        "gym_id": null,
+        "preferred_location": "home"
+      }
+    },
+    "tue": {
+      "evening": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "gym"
+      },
+      "lunch": {
+        "available": true,
+        "gym_id": "Work Gym",
+        "preferred_location": "gym"
+      },
+      "morning": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "home"
+      }
+    },
+    "wed": {
+      "evening": {
+        "available": false,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "lunch": {
+        "available": false,
+        "gym_id": null,
+        "preferred_location": "home"
+      },
+      "morning": {
+        "available": true,
+        "gym_id": null,
+        "preferred_location": "home"
+      }
+    }
+  },
+  "baselines": {},
+  "body": {
+    "body_fat_pct": 19,
+    "height_cm": 182,
+    "weight_kg": 77
+  },
+  "bodyweight_kg": 77,
+  "equipment": {
+    "gyms": [
+      {
+        "equipment": [
+          "spraywall",
+          "board_kilter",
+          "hangboard",
+          "dumbbell",
+          "barbell",
+          "bench"
+        ],
+        "gym_id": "blocx",
+        "name": "Blocx"
+      },
+      {
+        "equipment": [
+          "dumbbell",
+          "bench",
+          "barbell"
+        ],
+        "gym_id": "work_gym",
+        "name": "Work Gym"
+      },
+      {
+        "equipment": [
+          "gym_boulder",
+          "spraywall",
+          "board_moonboard"
+        ],
+        "gym_id": "bkl",
+        "name": "BKL"
+      }
+    ],
+    "home": [
+      "pullup_bar",
+      "dumbbell",
+      "band",
+      "hangboard"
+    ],
+    "home_enabled": true
+  },
+  "fatigue_proxy": {},
+  "goal": {
+    "created_at": "2026-02-14",
+    "current_grade": "8a+",
+    "deadline": "2026-06-30",
+    "discipline": "lead",
+    "goal_type": "lead_grade",
+    "override_mode": null,
+    "target_grade": "8b",
+    "target_style": "redpoint"
+  },
+  "history_index": {
+    "session_log_format": "jsonl",
+    "session_log_paths": [
+      "data/logs/sessions_2026.jsonl"
+    ]
+  },
+  "limitations": {
+    "active_flags": [
+      "gomito_sinistro"
+    ],
+    "details": [
+      {
+        "area": "gomito",
+        "id": "elbow_left_tendon",
+        "notes": "Irritation risk with high intensity pulling/hangs.",
+        "severity": "lieve",
+        "side": "sinistro",
+        "updated_at": "2026-01-19"
+      }
+    ]
+  },
+  "macrocycle": {
+    "assessment_snapshot": {
+      "body_composition": 50,
+      "endurance": 46,
+      "finger_strength": 100,
+      "power_endurance": 51,
+      "pulling_strength": 100,
+      "technique": 30
+    },
+    "end_date": "2026-05-10",
+    "generated_at": "2026-02-15T21:31:35",
+    "goal_snapshot": {
+      "current_grade": "8a+",
+      "deadline": "2026-06-30",
+      "goal_type": "lead_grade",
+      "target_grade": "8b"
+    },
+    "macrocycle_version": "macrocycle.v1",
+    "phases": [
+      {
+        "domain_weights": {
+          "core_prehab": 0.048,
+          "finger_strength": 0.163,
+          "power_endurance": 0.144,
+          "pulling_strength": 0.115,
+          "technique": 0.24,
+          "volume_climbing": 0.288
+        },
+        "duration_weeks": 4,
+        "end_week": 4,
+        "energy_system": "aerobic",
+        "intensity_cap": "medium",
+        "notes": "Build aerobic base. High volume, low intensity. Focus technique and movement quality.",
+        "phase_id": "base",
+        "phase_name": "Endurance Base",
+        "session_pool": [
+          "endurance_aerobic_gym",
+          "finger_maintenance_home",
+          "finger_strength_home",
+          "prehab_maintenance",
+          "technique_focus_gym",
+          "complementary_conditioning",
+          "flexibility_full",
+          "handstand_practice",
+          "power_endurance_gym",
+          "strength_long"
+        ],
+        "start_week": 1
+      },
+      {
+        "domain_weights": {
+          "core_prehab": 0.096,
+          "finger_strength": 0.308,
+          "power_endurance": 0.096,
+          "pulling_strength": 0.212,
+          "technique": 0.144,
+          "volume_climbing": 0.144
+        },
+        "duration_weeks": 3,
+        "end_week": 7,
+        "energy_system": "anaerobic_alactic",
+        "intensity_cap": "max",
+        "notes": "Max strength development. Max hangs, limit bouldering, general strength. High quality, full rest.",
+        "phase_id": "strength_power",
+        "phase_name": "Strength & Power",
+        "session_pool": [
+          "finger_strength_home",
+          "power_contact_gym",
+          "prehab_maintenance",
+          "strength_long",
+          "complementary_conditioning",
+          "flexibility_full",
+          "handstand_practice",
+          "technique_focus_gym"
+        ],
+        "start_week": 5
+      },
+      {
+        "domain_weights": {
+          "core_prehab": 0.096,
+          "finger_strength": 0.115,
+          "power_endurance": 0.337,
+          "pulling_strength": 0.067,
+          "technique": 0.192,
+          "volume_climbing": 0.192
+        },
+        "duration_weeks": 2,
+        "end_week": 9,
+        "energy_system": "anaerobic_lactic",
+        "intensity_cap": "high",
+        "notes": "Anaerobic capacity. 4x4, intervals, threshold climbing. Tolerate pump, push volume.",
+        "phase_id": "power_endurance",
+        "phase_name": "Power Endurance",
+        "pretrip_deload": [
+          {
+            "deload_from": "2026-04-13",
+            "trip_name": "Arco primavera",
+            "trip_start": "2026-04-18"
+          }
+        ],
+        "session_pool": [
+          "power_endurance_gym",
+          "prehab_maintenance",
+          "endurance_aerobic_gym",
+          "finger_strength_home",
+          "flexibility_full",
+          "handstand_practice",
+          "technique_focus_gym"
+        ],
+        "start_week": 8
+      },
+      {
+        "domain_weights": {
+          "core_prehab": 0.144,
+          "finger_strength": 0.067,
+          "power_endurance": 0.192,
+          "pulling_strength": 0.019,
+          "technique": 0.288,
+          "volume_climbing": 0.288
+        },
+        "duration_weeks": 2,
+        "end_week": 11,
+        "energy_system": "specific",
+        "intensity_cap": "max",
+        "notes": "Peak performance. Limit climbing, projecting, outdoor. Reduce volume, maximize quality.",
+        "phase_id": "performance",
+        "phase_name": "Performance",
+        "session_pool": [
+          "prehab_maintenance",
+          "technique_focus_gym",
+          "finger_strength_home",
+          "flexibility_full",
+          "handstand_practice",
+          "power_contact_gym",
+          "power_endurance_gym"
+        ],
+        "start_week": 10
+      },
+      {
+        "domain_weights": {
+          "core_prehab": 0.227,
+          "finger_strength": 0.045,
+          "power_endurance": 0.114,
+          "pulling_strength": 0.045,
+          "technique": 0.227,
+          "volume_climbing": 0.341
+        },
+        "duration_weeks": 1,
+        "end_week": 12,
+        "energy_system": "recovery",
+        "intensity_cap": "low",
+        "notes": "Recovery. Volume -50%. No max/high intensity. Mobility, prehab, easy climbing only.",
+        "phase_id": "deload",
+        "phase_name": "Deload",
+        "session_pool": [
+          "flexibility_full",
+          "prehab_maintenance",
+          "regeneration_easy",
+          "yoga_recovery",
+          "handstand_practice"
+        ],
+        "start_week": 12
+      }
+    ],
+    "start_date": "2026-02-16",
+    "total_weeks": 12
+  },
+  "performance": {
+    "current_level": {
+      "boulder": {
+        "onsight": {
+          "grade": "7A"
+        },
+        "worked": {
+          "grade": "7C"
+        }
+      },
+      "sport": {
+        "onsight": {
+          "grade": "7a+"
+        },
+        "worked": {
+          "grade": "8a+"
+        }
+      },
+      "updated_at": null
+    }
+  },
+  "planning_prefs": {
+    "hard_day_cap_per_week": 4,
+    "target_training_days_per_week": 6
+  },
+  "progression_counters": {
+    "max_hang_5s_easy_streak": 0,
+    "max_hang_5s_hard_streak": 0
+  },
+  "recent_sessions": [],
+  "recent_sessions_window_days": 14,
+  "schema_version": "1.5",
+  "stimulus_recency": {},
+  "test_queue": [],
+  "tests": {},
+  "trips": [
+    {
+      "discipline": "lead",
+      "end_date": "2026-04-21",
+      "name": "Arco primavera",
+      "priority": "alta",
+      "start_date": "2026-04-18"
+    }
+  ],
+  "user": {
+    "id": "daniele_somensi",
+    "name": "Daniele Somensi",
+    "preferred_name": "Dani",
+    "timezone": "Europe/Brussels",
+    "units": {
+      "distance": "km",
+      "edge": "mm",
+      "weight": "kg"
+    }
+  },
+  "working_loads": {
+    "entries": [],
+    "rules": {}
+  }
+}

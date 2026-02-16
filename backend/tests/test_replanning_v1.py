@@ -240,3 +240,38 @@ def test_day_override_recovery_ripple():
         ripple_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == ripple_date)
         for s in ripple_day["sessions"]:
             assert not s["tags"]["hard"], f"Hard session on ripple day {ripple_date}"
+
+
+def test_day_override_enforces_finger_spacing():
+    """Override with finger_max intent should enforce no consecutive finger days via _reconcile."""
+    plan = _v2_plan_snapshot("strength_power")
+
+    # Place a finger session on Monday by overriding Sunday→Monday
+    plan_with_finger_mon = apply_day_override(
+        plan,
+        intent="finger_max",
+        location="home",
+        reference_date="2026-01-04",  # Sunday
+        target_date="2026-01-05",     # Monday
+        phase_id="strength_power",
+    )
+
+    # Verify Monday has a finger session
+    mon = next(d for d in plan_with_finger_mon["weeks"][0]["days"] if d["date"] == "2026-01-05")
+    assert any((s.get("tags") or {}).get("finger") for s in mon["sessions"]), "Monday should have a finger session"
+
+    # Now override Tuesday with another finger intent
+    plan_with_finger_tue = apply_day_override(
+        plan_with_finger_mon,
+        intent="finger_max",
+        location="home",
+        reference_date="2026-01-05",  # Monday
+        target_date="2026-01-06",     # Tuesday
+        phase_id="strength_power",
+    )
+
+    # _reconcile should have downgraded Tuesday's finger session due to spacing constraint
+    tue = next(d for d in plan_with_finger_tue["weeks"][0]["days"] if d["date"] == "2026-01-06")
+    for s in tue["sessions"]:
+        assert not (s.get("tags") or {}).get("finger"), \
+            "Tuesday finger session should be downgraded by _reconcile (consecutive finger days)"

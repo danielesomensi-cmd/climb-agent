@@ -7,7 +7,7 @@ from copy import deepcopy
 
 from fastapi import APIRouter, HTTPException
 
-from backend.api.deps import REPO_ROOT, load_state
+from backend.api.deps import REPO_ROOT, load_state, save_state
 from backend.api.models import EventsRequest, OverrideRequest
 from backend.engine.replanner_v1 import apply_day_override, apply_events
 from backend.engine.resolve_session import resolve_session
@@ -79,6 +79,10 @@ def override(req: OverrideRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Override failed: {e}")
 
+    # Persist the updated plan so it survives page navigation
+    state["current_week_plan"] = updated
+    save_state(state)
+
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state)
 
@@ -113,6 +117,10 @@ def events(req: EventsRequest):
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Events application failed: {e}")
+
+    # Persist the updated plan so it survives page navigation
+    state["current_week_plan"] = updated
+    save_state(state)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state)

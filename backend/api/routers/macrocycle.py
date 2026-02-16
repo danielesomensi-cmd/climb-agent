@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from backend.api.deps import load_state, next_monday, save_state
+from backend.api.deps import invalidate_week_cache, load_state, next_monday, save_state
 from backend.api.models import MacrocycleRequest
 from backend.engine.macrocycle_v1 import generate_macrocycle
 
@@ -32,6 +32,7 @@ def generate(req: MacrocycleRequest):
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
 
     state["macrocycle"] = macrocycle
+    invalidate_week_cache(state)
     save_state(state)
 
     return {"macrocycle": macrocycle}

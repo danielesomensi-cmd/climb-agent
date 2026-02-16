@@ -48,6 +48,8 @@ Allowed `equipment` values:
 - `board_moonboard`
 - `gym_boulder` *(gym has a boulder area with set problems; not board, not spraywall)*
 - `gym_routes` *(gym has route walls / rope climbing terrain)*
+- `cable_machine` *(cable pulley machine for antagonist and general strength work)*
+- `leg_press` *(machine for lower-body pressing; useful for antagonist/conditioning)*
 
 Rules:
 - Do **not** use `"none"` as an equipment value. Use an empty list: `equipment_required: []`.

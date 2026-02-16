@@ -1,6 +1,6 @@
 # BACKLOG — climb-agent
 
-> Last updated: 2026-02-16 (post Phase 3.1 — bug fixes)
+> Last updated: 2026-02-16 (post Housekeeping session — lifecycle fixes, B9, B26)
 
 Features to implement in upcoming phases. For each: title, description,
 suggested phase, dependencies.
@@ -54,12 +54,6 @@ suggested phase, dependencies.
 - **Suggested phase**: Phase 1.75 (before Phase 2)
 - **Dependencies**: Resolver inline blocks (done), pulling/antagonist exercise catalog (partial, needs expansion)
 
-### B9. Add cable_machine, leg_press to gym equipment
-
-- **Description**: Add `cable_machine` and `leg_press` to vocabulary_v1.md §1.2 and to EQUIPMENT_GYM in `backend/api/routers/onboarding.py`. Many gyms have these; useful for antagonist/conditioning sessions.
-- **Suggested phase**: Phase 3.1
-- **Dependencies**: None
-
 ### B10. Outdoor climbing spots as location type
 
 - **Description**: Allow users to register outdoor climbing spots (e.g. "Berdorf — boulder — weekends") as a new location type. Usable in the availability grid and trip planning. Bridges the gap between indoor training and outdoor tracking.
@@ -83,6 +77,18 @@ suggested phase, dependencies.
 - **Description**: Allow users to modify their weekly availability (days, slots, preferred locations) from the Settings page. Changes trigger plan regeneration for the current week using the replanner's `set_availability` event. Avoids requiring a full re-onboarding to adjust schedule.
 - **Suggested phase**: Phase 3.1
 - **Dependencies**: Settings page (done), set_availability event handler (done)
+
+### B25. Adaptive replanning after feedback
+
+- **Description**: POST /api/feedback currently updates working_loads and stimulus_recency but does NOT trigger replanning. Progression values are used at resolve-time via `inject_targets()`, but plan structure (which sessions where) doesn't adapt. Should re-evaluate week plan after significant feedback (e.g., session rated "very_hard" → consider reducing next hard day).
+- **Suggested phase**: Phase 3.2
+- **Dependencies**: Feedback system (done), replanner event system (done)
+
+### B26. Test isolation — fixture-based state loading
+
+- **Description**: Tests that load `user_state.json` should use a fixture copy (`backend/tests/fixtures/test_user_state.json`) instead of the live data file, so browser onboarding doesn't break tests.
+- **Suggested phase**: Phase 3.1
+- **Dependencies**: None
 
 ---
 
@@ -160,3 +166,13 @@ suggested phase, dependencies.
 
 - **Resolved in**: Phase 3.1, Fix 4
 - **Status**: `gym_boulder` label "Boulder area" → "Bouldering area", `gym_routes` label "Roped routes" → "Lead / Top-rope walls".
+
+### ~~B9. Add cable_machine, leg_press to gym equipment~~ ✅
+
+- **Resolved in**: Housekeeping session
+- **Status**: Added `cable_machine` and `leg_press` to `EQUIPMENT_GYM` in onboarding.py and to vocabulary_v1.md §1.2.
+
+### ~~B26. Test isolation — fixture-based state loading~~ ✅
+
+- **Resolved in**: Housekeeping session
+- **Status**: Created `backend/tests/fixtures/test_user_state.json`. Updated 4 test files (`test_resolver_p0.py`, `test_resolve_real_sessions.py`, `test_baseline_session_under_test.py`, `test_api.py`) to load from fixture instead of live data.

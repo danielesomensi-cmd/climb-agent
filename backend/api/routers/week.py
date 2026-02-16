@@ -2,14 +2,23 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from copy import deepcopy
 
 from fastapi import APIRouter, HTTPException
 
-from backend.api.deps import REPO_ROOT, load_state, week_num_to_phase_context
+from backend.api.deps import (
+    REPO_ROOT,
+    current_phase_and_week,
+    load_state,
+    save_state,
+    week_num_to_phase_context,
+)
 from backend.engine.planner_v2 import generate_phase_week
 from backend.engine.resolve_session import resolve_session
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/week", tags=["week"])
 
@@ -18,48 +27,8 @@ TEMPLATES_DIR = "backend/catalog/templates/v1"
 EXERCISES_PATH = "backend/catalog/exercises/v1/exercises.json"
 
 
-@router.get("/{week_num}")
-def get_week(week_num: int):
-    """Generate the plan for a given week (1-based). week_num=0 → current week."""
-    state = load_state()
-    macrocycle = state.get("macrocycle")
-    if not macrocycle:
-        raise HTTPException(status_code=422, detail="No macrocycle — generate one first")
-
-    try:
-        ctx = week_num_to_phase_context(macrocycle, week_num)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-
-    availability = state.get("availability")
-    planning_prefs = state.get("planning_prefs", {})
-    equipment = state.get("equipment", {})
-    gyms = equipment.get("gyms", [])
-    hard_cap = planning_prefs.get("hard_day_cap_per_week", 3)
-
-    # Determine default gym_id (highest priority first)
-    default_gym_id = None
-    if gyms:
-        sorted_gyms = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
-        default_gym_id = sorted_gyms[0].get("gym_id")
-
-    try:
-        week_plan = generate_phase_week(
-            phase_id=ctx["phase_id"],
-            domain_weights=ctx["domain_weights"],
-            session_pool=ctx["session_pool"],
-            start_date=ctx["start_date"],
-            availability=availability,
-            hard_cap_per_week=hard_cap,
-            planning_prefs=planning_prefs,
-            default_gym_id=default_gym_id,
-            gyms=gyms,
-            intensity_cap=ctx.get("intensity_cap"),
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")
-
-    # Auto-resolve each session so the frontend gets exercises inline
+def _auto_resolve(week_plan: dict, state: dict) -> None:
+    """Resolve all sessions in a week plan inline."""
     for week_block in week_plan.get("weeks", []):
         for day_entry in week_block.get("days", []):
             for session_entry in day_entry.get("sessions", []):
@@ -88,6 +57,84 @@ def get_week(week_num: int):
                     session_entry["resolved"] = resolved
                 except Exception:
                     session_entry["resolved"] = None
+
+
+def _current_week_num(macrocycle: dict) -> int:
+    """Compute the 1-based absolute week number for today."""
+    pi, wi = current_phase_and_week(macrocycle)
+    phases = macrocycle.get("phases") or []
+    cumulative = sum(p.get("duration_weeks", 1) for p in phases[:pi])
+    return cumulative + wi + 1
+
+
+@router.get("/{week_num}")
+def get_week(week_num: int):
+    """Generate the plan for a given week (1-based). week_num=0 → current week."""
+    state = load_state()
+    macrocycle = state.get("macrocycle")
+    if not macrocycle:
+        raise HTTPException(status_code=422, detail="No macrocycle — generate one first")
+
+    try:
+        ctx = week_num_to_phase_context(macrocycle, week_num)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    availability = state.get("availability")
+    planning_prefs = state.get("planning_prefs", {})
+    equipment = state.get("equipment", {})
+    gyms = equipment.get("gyms", [])
+    hard_cap = planning_prefs.get("hard_day_cap_per_week", 3)
+
+    # Determine default gym_id (highest priority first)
+    default_gym_id = None
+    if gyms:
+        sorted_gyms = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
+        default_gym_id = sorted_gyms[0].get("gym_id")
+
+    # For the current week, try to use the cached plan from state
+    is_current_week = (week_num == 0) or (ctx["week_num"] == _current_week_num(macrocycle))
+    week_plan = None
+
+    if is_current_week:
+        try:
+            cached = state.get("current_week_plan")
+            if (
+                cached
+                and cached.get("start_date") == ctx["start_date"]
+                and cached.get("weeks")
+                and len(cached["weeks"]) > 0
+                and cached["weeks"][0].get("days")
+            ):
+                week_plan = cached
+        except Exception:
+            logger.warning("Failed to read cached week plan, regenerating")
+            week_plan = None
+
+    if week_plan is None:
+        try:
+            week_plan = generate_phase_week(
+                phase_id=ctx["phase_id"],
+                domain_weights=ctx["domain_weights"],
+                session_pool=ctx["session_pool"],
+                start_date=ctx["start_date"],
+                availability=availability,
+                hard_cap_per_week=hard_cap,
+                planning_prefs=planning_prefs,
+                default_gym_id=default_gym_id,
+                gyms=gyms,
+                intensity_cap=ctx.get("intensity_cap"),
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")
+
+        # Cache the freshly generated plan for the current week
+        if is_current_week:
+            state["current_week_plan"] = week_plan
+            save_state(state)
+
+    # Auto-resolve each session so the frontend gets exercises inline
+    _auto_resolve(week_plan, state)
 
     return {
         "week_num": ctx["week_num"],

@@ -14,7 +14,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (184 green)
+# Run all tests (188 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -36,14 +36,14 @@ mypy backend/engine/
 backend/
   engine/            # Core logic: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (9 routers, 14 endpoints)
+  api/               # FastAPI REST API (9 routers, 15 endpoints)
     main.py          # App setup, CORS, router mounting
     models.py        # Pydantic request/response models
     deps.py          # Shared deps (load_state, save_state, next_monday)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 184 pytest tests with fixtures/
+  tests/             # 188 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 19 pages: 5 main views + 12 onboarding steps + root + index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
@@ -70,7 +70,7 @@ Data paths are relative to the repo root:
 
 ## API (Phase 3)
 
-FastAPI app with 9 routers and 14 endpoints + health check.
+FastAPI app with 9 routers and 15 endpoints + health check.
 
 ```bash
 # Start

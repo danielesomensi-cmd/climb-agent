@@ -16,7 +16,7 @@ from backend.engine.resolve_session import resolve_session  # noqa: E402
 
 
 def _load_user_state():
-    with open(os.path.join(REPO_ROOT, "backend", "data", "user_state.json")) as f:
+    with open(os.path.join(REPO_ROOT, "backend", "tests", "fixtures", "test_user_state.json")) as f:
         return json.load(f)
 
 

@@ -82,7 +82,7 @@ def make_gym_power_bouldering_session_file(*, session_id: str, context_gym_id: s
 class TestResolverP0Determinism(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.base_user_state = load_json(os.path.join(REPO_ROOT, "backend", "data", "user_state.json"))
+        cls.base_user_state = load_json(os.path.join(REPO_ROOT, "backend", "tests", "fixtures", "test_user_state.json"))
 
     def assert_filter_trace_present(self, out: dict):
         for b in out["resolved_session"]["blocks"]:
@@ -271,7 +271,7 @@ class TestResolverInlineBlocks(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.base_user_state = load_json(os.path.join(REPO_ROOT, "backend", "data", "user_state.json"))
+        cls.base_user_state = load_json(os.path.join(REPO_ROOT, "backend", "tests", "fixtures", "test_user_state.json"))
 
     def _resolve_real_session(self, session_id: str, location: str = "gym", gym_id: str = "blocx"):
         us = make_user_state(self.base_user_state, location=location, gym_id=gym_id)

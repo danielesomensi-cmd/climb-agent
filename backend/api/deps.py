@@ -30,7 +30,13 @@ EMPTY_TEMPLATE: Dict[str, Any] = {
     "working_loads": {"entries": [], "rules": {}},
     "tests": {},
     "body": {},
+    "current_week_plan": None,
 }
+
+
+def invalidate_week_cache(state: Dict[str, Any]) -> None:
+    """Clear the cached week plan. Call after any action that changes plan inputs."""
+    state["current_week_plan"] = None
 
 
 def load_state() -> Dict[str, Any]:

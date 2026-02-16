@@ -305,6 +305,8 @@ def apply_day_override(
                     next_sessions.append(session)
             ripple_day["sessions"] = next_sessions
 
+    _reconcile(updated)
+
     updated.setdefault("adaptations", []).append(
         {
             "type": "day_override",
