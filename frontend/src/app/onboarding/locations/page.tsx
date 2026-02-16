@@ -34,8 +34,8 @@ const HOME_EQUIPMENT: EquipmentItem[] = [
 ];
 
 const GYM_EQUIPMENT: EquipmentItem[] = [
-  { id: "gym_boulder", label: "Boulder area", description: "" },
-  { id: "gym_routes", label: "Roped routes", description: "" },
+  { id: "gym_boulder", label: "Bouldering area", description: "" },
+  { id: "gym_routes", label: "Lead / Top-rope walls", description: "" },
   { id: "spraywall", label: "Spraywall", description: "" },
   { id: "board_kilter", label: "Kilter Board", description: "" },
   { id: "board_moonboard", label: "MoonBoard", description: "" },
@@ -44,6 +44,8 @@ const GYM_EQUIPMENT: EquipmentItem[] = [
   { id: "dumbbell", label: "Dumbbells", description: "" },
   { id: "barbell", label: "Barbell", description: "" },
   { id: "bench", label: "Bench", description: "" },
+  { id: "cable_machine", label: "Cable machine", description: "" },
+  { id: "leg_press", label: "Leg press", description: "" },
 ];
 
 export default function LocationsPage() {
