@@ -34,6 +34,7 @@ export interface SessionSlot {
   location: string;
   gym_id?: string;
   slot: string;
+  status?: "planned" | "done" | "skipped";
   tags?: Record<string, boolean>;
   resolved?: Record<string, unknown> | null;
 }

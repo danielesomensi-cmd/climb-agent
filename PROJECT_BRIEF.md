@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-15 (post Phase 3 — UI)
+> Last updated: 2026-02-16 (post Phase 3.1 — bug fixes)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 102 | 12 categories (finger, power, PE, endurance, pull, push, core, prehab, technique, flexibility, handstand, conditioning) |
 | Sessions | 29 | gym evening, home lunch, recovery, flexibility, prehab, conditioning, finger maintenance |
 | Templates | 11 | unchanged from v1 |
-| Tests | 179 | all green (post Phase 3) |
+| Tests | 183 | all green (post Phase 3.1) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 14 | 9 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
@@ -113,7 +113,7 @@ frontend/
 docs/
   vocabulary_v1.md          ← Closed vocabulary (updated §5.1-5.6)
   DESIGN_GOAL_MACROCICLO_v1.1.md ← Complete design + roadmap
-  BACKLOG.md                ← Feature backlog (B1-B14)
+  BACKLOG.md                ← Feature backlog (B1-B24)
 _archive/                   ← Legacy scripts, docs, config (do not modify)
 PROJECT_BRIEF.md            ← This file
 CLAUDE.md                   ← Context for Claude Code
@@ -152,7 +152,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (179 green)
+# Backend tests (183 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server
@@ -199,10 +199,18 @@ from backend.engine.X import Y
 - 4 usability fixes: gym name display, full prescription format (× @ — Rest mm:ss), date query parameter (?date=), replan dialog with auto-resolve
 - Mobile-first with shadcn/ui components, dark mode, PWA manifest
 
-### Phase 3.1: UI polish + outdoor + equipment 🔲
+### Phase 3.1: Bug fixes ✅
+- B21: Done button keeps session with status "done" (was removing it)
+- B22: Events endpoint auto-resolves sessions (was missing `_auto_resolve`)
+- B23: Skip sets day status to "skipped" (was staying "planned")
+- B24: Gym equipment labels corrected
+
+### Phase 3.2: UI polish + outdoor + equipment 🔲
 - B9: Add cable_machine, leg_press to gym equipment
 - B10: Outdoor climbing spots as location type
 - B11: Configurable test protocols
+- B19: Quick-add session from week view
+- B20: Edit availability from Settings
 
 ### Phase 3.5: LLM Coach 🔲
 - Claude Sonnet conversational layer on top of deterministic engine

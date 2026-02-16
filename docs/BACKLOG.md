@@ -1,6 +1,6 @@
 # BACKLOG — climb-agent
 
-> Last updated: 2026-02-15 (post Phase 3 — UI)
+> Last updated: 2026-02-16 (post Phase 3.1 — bug fixes)
 
 Features to implement in upcoming phases. For each: title, description,
 suggested phase, dependencies.
@@ -72,6 +72,18 @@ suggested phase, dependencies.
 - **Suggested phase**: Phase 3.1
 - **Dependencies**: None
 
+### B19. Quick-add session
+
+- **Description**: Add an extra session to any day/slot from the week view. Suggest session type based on current phase and weekly balance (e.g. recovery if hard cap near, technique if underrepresented). Replanner creates the session inline without regenerating the whole week.
+- **Suggested phase**: Phase 3.1
+- **Dependencies**: Replanner event system (done)
+
+### B20. Edit availability from Settings
+
+- **Description**: Allow users to modify their weekly availability (days, slots, preferred locations) from the Settings page. Changes trigger plan regeneration for the current week using the replanner's `set_availability` event. Avoids requiring a full re-onboarding to adjust schedule.
+- **Suggested phase**: Phase 3.1
+- **Dependencies**: Settings page (done), set_availability event handler (done)
+
 ---
 
 ## DONE
@@ -128,3 +140,23 @@ suggested phase, dependencies.
 
 - **Resolved in**: Phase 3, Fix D
 - **Status**: "Change plan" button on each day card in week view opens a replan dialog. Dialog lets user pick location (Home / gym names) and intensity (Rest / Easy / Hard), or skip the day entirely. Backend `POST /api/replanner/override` supports `target_date` and `gym_id` params, and auto-resolves all sessions in the returned week plan. `apply_day_override` updated with ripple day error handling.
+
+### ~~B21. Done button removes session instead of keeping it~~ ✅
+
+- **Resolved in**: Phase 3.1, Bug 1
+- **Status**: `mark_done` now sets `session.status = "done"` and keeps the session in `day.sessions`. Day status set to "done" when all sessions are done. Constraint functions (`_enforce_caps`, `_enforce_no_consecutive_finger`) skip done sessions. Frontend hides action buttons and shows "Completed" badge.
+
+### ~~B22. Events endpoint missing auto-resolve~~ ✅
+
+- **Resolved in**: Phase 3.1, Bug 2
+- **Status**: `/api/replanner/events` now calls `_auto_resolve()` before returning, matching the `/override` endpoint. Recovery sessions from `mark_skipped` return with resolved exercises.
+
+### ~~B23. Skip doesn't visually update day status~~ ✅
+
+- **Resolved in**: Phase 3.1, Bug 3
+- **Status**: `mark_skipped` now sets `day["status"] = "skipped"` and `recovery["status"] = "skipped"` on the replacement session. DayCard correctly shows "Skipped" badge.
+
+### ~~B24. Gym equipment label corrections~~ ✅
+
+- **Resolved in**: Phase 3.1, Fix 4
+- **Status**: `gym_boulder` label "Boulder area" → "Bouldering area", `gym_routes` label "Roped routes" → "Lead / Top-rope walls".

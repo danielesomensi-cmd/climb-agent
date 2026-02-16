@@ -114,4 +114,7 @@ def events(req: EventsRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Events application failed: {e}")
 
+    # Auto-resolve all sessions so the frontend gets exercises inline
+    _auto_resolve(updated, state)
+
     return {"week_plan": updated}

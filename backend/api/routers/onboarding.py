@@ -47,8 +47,8 @@ EQUIPMENT_HOME = [
 ]
 
 EQUIPMENT_GYM = [
-    {"id": "gym_boulder", "label": "Boulder area", "description": "Gym with bouldering sector and set problems"},
-    {"id": "gym_routes", "label": "Roped routes", "description": "Wall for roped climbing"},
+    {"id": "gym_boulder", "label": "Bouldering area", "description": "Gym with bouldering sector and set problems"},
+    {"id": "gym_routes", "label": "Lead / Top-rope walls", "description": "Wall for roped climbing"},
     {"id": "spraywall", "label": "Spraywall", "description": "Wall with fixed holds for custom boulders"},
     {"id": "board_kilter", "label": "Kilter Board", "description": "Digital board with LED problems"},
     {"id": "board_moonboard", "label": "MoonBoard", "description": "Standardized board with online problems"},

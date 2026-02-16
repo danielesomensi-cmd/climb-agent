@@ -55,6 +55,9 @@ export function SessionCard({
 
   const isHard = session.tags?.hard === true;
   const isFinger = session.tags?.finger === true;
+  const isDone = session.status === "done";
+  const isSkipped = session.status === "skipped";
+  const isFinalized = isDone || isSkipped;
   const locationLabel = getLocationLabel(session, gyms);
 
   return (
@@ -91,6 +94,16 @@ export function SessionCard({
           {isFinger && (
             <Badge className="bg-orange-500 text-white text-[10px]">
               Finger
+            </Badge>
+          )}
+          {isDone && (
+            <Badge className="bg-green-600 text-white text-[10px]">
+              Completed
+            </Badge>
+          )}
+          {isSkipped && (
+            <Badge className="bg-yellow-500 text-white text-[10px]">
+              Skipped
             </Badge>
           )}
         </div>
@@ -136,37 +149,39 @@ export function SessionCard({
             );
           })()}
 
-          {/* Action buttons */}
-          <div className="flex items-center gap-2">
-            {onMarkDone && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkDone();
-                }}
-              >
-                <Check className="size-4 mr-1" />
-                Done
-              </Button>
-            )}
-            {onMarkSkipped && (
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-muted-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onMarkSkipped();
-                }}
-              >
-                <X className="size-4 mr-1" />
-                Skipped
-              </Button>
-            )}
-          </div>
+          {/* Action buttons — hidden for finalized sessions */}
+          {!isFinalized && (
+            <div className="flex items-center gap-2">
+              {onMarkDone && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkDone();
+                  }}
+                >
+                  <Check className="size-4 mr-1" />
+                  Done
+                </Button>
+              )}
+              {onMarkSkipped && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-muted-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkSkipped();
+                  }}
+                >
+                  <X className="size-4 mr-1" />
+                  Skipped
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       )}
     </Card>

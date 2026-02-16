@@ -106,7 +106,7 @@ def _build_fill_session(plan: Dict[str, Any], day: Dict[str, Any], slot: str, *,
 def _enforce_caps(plan: Dict[str, Any]) -> None:
     hard_cap = int(((plan.get("profile_snapshot") or {}).get("hard_cap_per_week") or 3))
     days = plan["weeks"][0]["days"]
-    hard_days = [d for d in days if any((s.get("tags") or {}).get("hard") for s in d.get("sessions") or [])]
+    hard_days = [d for d in days if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions") or [])]
     if len(hard_days) > hard_cap:
         for day in reversed(hard_days[hard_cap:]):
             for session in day.get("sessions") or []:
@@ -129,7 +129,7 @@ def _enforce_no_consecutive_finger(plan: Dict[str, Any]) -> None:
     last_finger_date = None
     for day in days:
         cur = _parse_date(day["date"])
-        has_finger = any((s.get("tags") or {}).get("finger") for s in day.get("sessions") or [])
+        has_finger = any((s.get("tags") or {}).get("finger") and s.get("status") != "done" for s in day.get("sessions") or [])
         if has_finger and last_finger_date and (cur - last_finger_date).days <= 1:
             for session in day.get("sessions") or []:
                 if (session.get("tags") or {}).get("finger"):
@@ -180,14 +180,19 @@ def apply_events(
             day = _find_day(updated, event["date"])
             removed = _extract_session(day, session_ref=event.get("session_ref"), slot=event.get("slot"))
             slot = removed.get("slot") or event.get("slot") or "evening"
-            day.setdefault("sessions", []).append(_build_fill_session(updated, day, slot, kind="recovery"))
+            recovery = _build_fill_session(updated, day, slot, kind="recovery")
+            recovery["status"] = "skipped"
+            day.setdefault("sessions", []).append(recovery)
+            day["status"] = "skipped"
 
         elif event_type == "mark_done":
             day = _find_day(updated, event["date"])
-            try:
-                _extract_session(day, session_ref=event.get("session_ref"), slot=event.get("slot"))
-            except ValueError:
-                pass
+            for s in day.get("sessions") or []:
+                if _session_matches(s, session_ref=event.get("session_ref"), slot=event.get("slot")):
+                    s["status"] = "done"
+                    break
+            if all(s.get("status") == "done" for s in day.get("sessions") or []):
+                day["status"] = "done"
 
         elif event_type == "set_availability":
             if availability is not None and event.get("availability"):

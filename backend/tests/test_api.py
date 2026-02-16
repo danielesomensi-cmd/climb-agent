@@ -314,6 +314,14 @@ class TestSession:
 # -----------------------------------------------------------------------
 
 class TestReplanner:
+    def _get_week_plan(self):
+        """Full pipeline: assessment → macrocycle → week plan."""
+        client.post("/api/assessment/compute", json={})
+        client.post("/api/macrocycle/generate", json={"total_weeks": 12})
+        r = client.get("/api/week/1")
+        assert r.status_code == 200
+        return r.json()["week_plan"]
+
     def test_override_no_plan_errors(self):
         r = client.post("/api/replanner/override", json={
             "intent": "rest",
@@ -327,6 +335,83 @@ class TestReplanner:
             "events": [{"event_type": "mark_done", "date": "2026-03-02"}],
         })
         assert r.status_code == 422
+
+    def test_events_mark_done_keeps_session(self):
+        """API-level: mark_done should retain session with status 'done'."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        # Find first day with at least one session
+        day = next(d for d in days if d.get("sessions"))
+        session = day["sessions"][0]
+        original_count = len(day["sessions"])
+
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "mark_done",
+                "date": day["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r.status_code == 200
+        updated_day = next(
+            d for d in r.json()["week_plan"]["weeks"][0]["days"]
+            if d["date"] == day["date"]
+        )
+        assert len(updated_day["sessions"]) == original_count
+        done_s = next(s for s in updated_day["sessions"] if s["session_id"] == session["session_id"])
+        assert done_s["status"] == "done"
+
+    def test_events_mark_skipped_sets_day_status(self):
+        """API-level: mark_skipped should set day status to 'skipped' and replace with recovery."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        day = next(d for d in days if d.get("sessions"))
+        session = day["sessions"][0]
+
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "mark_skipped",
+                "date": day["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r.status_code == 200
+        updated_day = next(
+            d for d in r.json()["week_plan"]["weeks"][0]["days"]
+            if d["date"] == day["date"]
+        )
+        assert updated_day["status"] == "skipped"
+        recovery_s = next(s for s in updated_day["sessions"] if s["slot"] == session["slot"])
+        assert recovery_s["session_id"] == "regeneration_easy"
+
+    def test_events_auto_resolves_sessions(self):
+        """API-level: events endpoint should auto-resolve recovery sessions."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        day = next(d for d in days if d.get("sessions"))
+        session = day["sessions"][0]
+
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "mark_skipped",
+                "date": day["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r.status_code == 200
+        updated_day = next(
+            d for d in r.json()["week_plan"]["weeks"][0]["days"]
+            if d["date"] == day["date"]
+        )
+        recovery_s = next(s for s in updated_day["sessions"] if s["slot"] == session["slot"])
+        # Auto-resolve should have populated the "resolved" field
+        assert "resolved" in recovery_s
 
 
 # -----------------------------------------------------------------------
