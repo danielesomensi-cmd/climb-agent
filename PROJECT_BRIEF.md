@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 102 | 12 categories (finger, power, PE, endurance, pull, push, core, prehab, technique, flexibility, handstand, conditioning) |
 | Sessions | 29 | gym evening, home lunch, recovery, flexibility, prehab, conditioning, finger maintenance |
 | Templates | 11 | unchanged from v1 |
-| Tests | 183 | all green (post Phase 3.1) |
+| Tests | 184 | all green (post Phase 3.1) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 14 | 9 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
@@ -152,7 +152,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (183 green)
+# Backend tests (184 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server
