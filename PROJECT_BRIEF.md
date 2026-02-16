@@ -79,13 +79,13 @@ backend/
       replanner.py          ← POST /api/replanner/override, /api/replanner/events
       feedback.py           ← POST /api/feedback
   catalog/
-    exercises/v1/           ← 102 exercises (JSON)
-    sessions/v1/            ← 29 sessions (JSON)
-    templates/v1/           ← 11 templates (JSON)
+    exercises/v1/           ← 113 exercises (JSON)
+    sessions/v1/            ← 30 sessions (JSON)
+    templates/v1/           ← 19 templates (JSON)
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 188 pytest tests
+  tests/                    ← 214 pytest tests
 frontend/
   src/
     app/

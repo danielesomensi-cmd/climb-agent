@@ -111,6 +111,7 @@ Allowed `domain` values (v1.1, backwards-compatible):
 - `technique_boulder`
 - `technique_lead`
 - `technique_footwork`
+- `climbing_routes` *(route climbing — lead routes, redpoint attempts)*
 
 Guidelines:
 - Use `domain` for the *primary adaptation* (capacity/skill), not for individual muscles.

@@ -194,13 +194,39 @@ Modello semplice iniziale: low=20, medium=40, high=65, max=85.
 Output: weekly summary con total load, hard days count.
 Necessario per: overtraining monitoring, adaptive deload input, UI visualization.
 
-### §2.6 Exercise Catalog Audit (Phase 2.5)
+### §2.6 Exercise Catalog Audit (Phase 2.5 — da fare)
 
-Placeholder per audit sistematico del catalogo esercizi:
-- Verificare copertura equipment per tutti gli esercizi
-- Identificare esercizi mai selezionati dal resolver
-- Aggiungere esercizi mancanti per pattern non coperti
-- Allineare `resistance_band` vs `band` nel catalogo
+Audit sistematico del catalogo esercizi contro la literature review
+(`docs/literature_review_climbing_training.md`, 19 sezioni).
+Da fare DOPO Phase 2 (tracking) per beneficiare dei dati di feedback reali.
+
+Scope:
+1. **Qualità prescription**: parametri (set, rep, rest, durata) coerenti con la letteratura?
+   Esercizi con notes generiche che meritano prescrizioni precise?
+   Confrontare con raccomandazioni specifiche di Hörst, Lattice, Eva López.
+   Esempio: un esercizio di max hang ha rest_seconds coerente con i 3-5 min
+   raccomandati dalla letteratura? I repeater hanno il protocollo 7/3 corretto?
+2. **Gap di copertura**: mancano esercizi per aree coperte dalla literature review?
+   Verificare per ogni sezione della literature review (§1-19):
+   - §1-4: Periodizzazione e hangboard — protocolli mancanti?
+   - §5-8: Sessioni serali e complementary — esercizi gym mancanti?
+   - §9-13: Core, handstand, technique — varianti sufficienti?
+   - §14-16: Conditioning, ARC — esercizi specifici mancanti?
+   - §17-18: Flexibility e cooldown — copertura sufficiente post-B8?
+3. **Consistenza interna**: categorie, pattern, stress_tags, fatigue_cost
+   calibrati in modo uniforme e coerente tra esercizi simili?
+   Esempio: tutti gli esercizi di max hang hanno fatigue_cost simile?
+   Tutti i core exercises hanno stress_tags coerenti tra loro?
+4. **Validazione letteratura**: ogni esercizio ha parametri allineati con
+   le raccomandazioni delle fonti (Hörst, Lattice, Eva López, ecc.)?
+   Focus su: intensità, volume, rest, frequenza raccomandata.
+5. **Check tecnici**: equipment_required coerente, esercizi mai selezionati
+   dal resolver, allineamento resistance_band vs band, pattern non coperti.
+
+Dipendenza: il tracking (Phase 2) fornirà dati reali di feedback per informare
+l'audit — se un esercizio ha prescrizioni sbagliate, il feedback lo rivelerà.
+
+Posizionamento: Phase 2.5 (tra tracking e UI polish).
 
 ---
 
@@ -227,7 +253,29 @@ Placeholder per audit sistematico del catalogo esercizi:
 | NEW-F8 | Easy climbing nel pool deload | Bassa | Small | Verificare con letteratura e aggiungere climbing leggero nel pool deload. |
 | NEW-F9 | Finger maintenance in fase PE | Bassa | Small | Forzare almeno 1 finger_maintenance nel pool PE come primary. |
 | — | Motivational quotes | Bassa | Small | 1 citazione per sessione, contestuale (hard day → perseveranza, deload → pazienza). Rotazione 30 giorni. |
+| B28 | Cross-session recency nel resolver | Media | Small | Alimentare `recent_ex_ids` dal log sessioni completate per variabilità esercizi tra sessioni. Vedi §4.1. |
 | — | Report engine | Media | Medium | Settimanale (aderenza, volume, highlight), mensile (trend, distribuzione gradi), annuale (timeline progressione). |
+
+### §4.1 Cross-session exercise variety (B28)
+
+Attualmente `recent_ex_ids` è inizializzato vuoto ad ogni `resolve_session()`.
+Risultato: blocchi con selezione dinamica (core, cooldown, pulling, antagonist)
+selezionano sempre lo stesso esercizio (primo alfabeticamente),
+sessione dopo sessione, settimana dopo settimana. Niente varietà.
+
+Fix proposto: alimentare `recent_ex_ids` dal log sessioni completate.
+Il meccanismo di scoring (-100/-25/-5) già esistente in `score_exercise()`
+creerà variabilità automatica senza aggiungere randomness.
+
+**Nota tecnica importante**: `pick_best_exercise_p0()` (usato sia per template blocks
+che per inline blocks) attualmente NON chiama `score_exercise()`. Usa un tie-break
+puramente alfabetico. Per attivare la recency, occorre:
+1. Alimentare `recent_ex_ids` dal log sessioni (piccolo — solo estrazione dati)
+2. Integrare `score_exercise()` in `pick_best_exercise_p0()` come tie-break
+   al posto dell'ordine alfabetico (medio — richiede attenzione al determinismo)
+
+Dipendenza: richiede log sessioni completate (tracking).
+Determinismo preservato: stessa storia di sessioni → stessa selezione.
 
 ---
 
@@ -312,6 +360,7 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F9 | Finger maintenance in PE | TODO | 2 | §4 |
 | NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |
 | F6-partial | Intent projecting mancante | TODO | 1.75 | §2.4 |
+| B28 | Cross-session recency nel resolver | TODO | 2 | §4.1 |
 | B-NEW | Exercise catalog audit | TODO | 2.5 | §2.6 |
 
 ---
