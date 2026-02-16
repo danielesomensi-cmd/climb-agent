@@ -1,0 +1,127 @@
+{
+  "id": "core_conditioning_standalone",
+  "name": "Core Conditioning (Standalone)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "core_tension",
+    "secondary_goals": [
+      "joint_health",
+      "mobility"
+    ],
+    "notes": "Standalone core session. 4 core patterns for balanced development. Works at home or gym. Not yet auto-scheduled by planner."
+  },
+  "compatibility": {
+    "slot": ["short", "medium"],
+    "sports": ["climbing"]
+  },
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 40,
+    "hard_cap_min": 55
+  },
+  "modules": [
+    {
+      "template_id": "warmup_recovery",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "anti_extension",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Anti-extension core: hollow hold or dead bug.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["core"],
+            "pattern": ["anti_extension"]
+          }
+        }
+      },
+      "prescription": {
+        "sets_range": [3, 4],
+        "rest_seconds_range": [45, 60]
+      }
+    },
+    {
+      "block_id": "anti_rotation",
+      "required": true,
+      "priority": 85,
+      "module_role": "primary",
+      "notes": "Anti-rotation core: pallof press or similar.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["core"],
+            "pattern": ["anti_rotation"]
+          }
+        }
+      },
+      "prescription": {
+        "sets_range": [3, 4],
+        "rest_seconds_range": [45, 60]
+      }
+    },
+    {
+      "block_id": "compression",
+      "required": true,
+      "priority": 80,
+      "module_role": "primary",
+      "notes": "Compression core: hanging leg raise or toes-to-bar.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["core"],
+            "pattern": ["compression"]
+          }
+        }
+      },
+      "prescription": {
+        "sets_range": [3, 4],
+        "rest_seconds_range": [45, 60]
+      }
+    },
+    {
+      "block_id": "anti_lateral_flexion",
+      "required": true,
+      "priority": 75,
+      "module_role": "primary",
+      "notes": "Anti-lateral flexion: side plank or suitcase carry.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["core"],
+            "pattern": ["anti_lateral_flexion"]
+          }
+        }
+      },
+      "prescription": {
+        "sets_range": [2, 3],
+        "rest_seconds_range": [30, 45]
+      }
+    },
+    {
+      "block_id": "antagonist_light",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary",
+      "notes": "Light shoulder prehab/mobility if time allows.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_shoulder", "mobility"]
+          }
+        }
+      }
+    }
+  ]
+}

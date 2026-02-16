@@ -1,22 +1,19 @@
 {
   "id": "power_contact_gym",
   "name": "Power & Contact Strength (Gym)",
-  "version": "1.0",
+  "version": "2.0",
   "intent": {
     "primary_goal": "contact_strength",
     "secondary_goals": [
       "power",
-      "strength_general"
+      "core_tension",
+      "joint_health"
     ],
-    "notes": "Campus board work and/or limit bouldering. High CNS demand — schedule with full rest before and after."
+    "notes": "Limit bouldering on FRESH fingers. NO max hangboard — fingers must be fresh for the wall. Campus work optional if energy remains."
   },
   "compatibility": {
-    "slot": [
-      "long"
-    ],
-    "sports": [
-      "climbing"
-    ]
+    "slot": ["long"],
+    "sports": ["climbing"]
   },
   "context": {
     "location": "gym"
@@ -27,57 +24,60 @@
   },
   "modules": [
     {
-      "template_id": "general_warmup",
+      "template_id": "warmup_climbing",
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
     },
     {
-      "block_id": "campus_or_limit_main",
+      "block_id": "limit_bouldering",
       "required": true,
       "priority": 90,
       "module_role": "primary",
-      "notes": "Campus exercises (laddering, bumps) OR limit bouldering. Choose based on equipment and phase. Do NOT combine both at max intensity in same session.",
+      "notes": "Limit bouldering at max grade. FRESH fingers — this is the primary stimulus. Full rest between attempts.",
       "selection": {
         "primary": {
           "filters": {
-            "domain": ["contact_strength", "power"],
             "role": ["main"],
-            "intensity_max": "max"
+            "domain": ["power", "contact_strength"],
+            "pattern": ["climbing_limit_boulder"]
           }
         }
       }
     },
     {
-      "block_id": "antagonist_accessories",
+      "block_id": "campus_power",
+      "required": false,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Campus laddering or bumps. Only if energy remains and campus board available.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["main"],
+            "domain": ["contact_strength"],
+            "pattern": ["campus_ladder"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "core_standard",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "antagonist_prehab",
       "required": false,
       "priority": 50,
-      "module_role": "secondary",
-      "notes": "Light antagonist work: pushups, dips, or face pulls. Keep volume low — main session is demanding.",
-      "selection": {
-        "primary": {
-          "filters": {
-            "role": ["accessory"],
-            "pattern": ["push", "scapular_control"],
-            "intensity_max": "medium"
-          }
-        }
-      }
+      "module_role": "secondary"
     },
     {
-      "block_id": "cooldown",
+      "template_id": "cooldown_stretch",
       "required": false,
       "priority": 40,
-      "module_role": "cooldown",
-      "notes": "Forearm stretches + light shoulder mobility. 5-10 min.",
-      "selection": {
-        "primary": {
-          "filters": {
-            "role": ["cooldown"],
-            "domain": ["flexibility", "prehab_wrist"]
-          }
-        }
-      }
+      "module_role": "cooldown"
     }
   ]
 }

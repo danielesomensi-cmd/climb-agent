@@ -4252,6 +4252,434 @@
         "cns": "low",
         "skin": "none"
       }
+    },
+    {
+      "id": "route_redpoint_attempt",
+      "name": "Route Redpoint Attempt",
+      "category": "endurance",
+      "time_min": 30,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "climbing_routes"
+      ],
+      "pattern": "climbing_routes",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "route_redpoint",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          2,
+          4
+        ],
+        "rest_seconds_range": [
+          300,
+          600
+        ],
+        "notes": "Project-level routes. Full rest between attempts. Focus on linking crux sequences."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "high",
+        "skin": "medium"
+      }
+    },
+    {
+      "id": "cooldown_forearm_wrist_stretch",
+      "name": "Forearm & Wrist Stretch (Cooldown)",
+      "category": "flexibility",
+      "time_min": 3,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "prehab_wrist",
+        "flexibility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "cooldown_forearm",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "hold_seconds_range": [
+          20,
+          30
+        ],
+        "sets": 2,
+        "notes": "Flexor and extensor stretches. Prayer and reverse prayer. Hold each side."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "cooldown_hip_pigeon",
+      "name": "Pigeon Stretch (Cooldown)",
+      "category": "flexibility",
+      "time_min": 3,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "cooldown_hips",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "hold_seconds_range": [
+          30,
+          60
+        ],
+        "sets": 1,
+        "notes": "Each side. Keep hips square. Breathe into the stretch."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "cooldown_hip_frog",
+      "name": "Frog Stretch (Cooldown)",
+      "category": "flexibility",
+      "time_min": 3,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "cooldown_hips",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "hold_seconds_range": [
+          30,
+          60
+        ],
+        "sets": 1,
+        "notes": "Knees wide, hips sink toward floor. Gentle hold, no bouncing."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "cooldown_shoulder_chest",
+      "name": "Shoulder & Chest Stretch (Cooldown)",
+      "category": "flexibility",
+      "time_min": 3,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "cooldown_shoulders",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "hold_seconds_range": [
+          20,
+          30
+        ],
+        "sets": 2,
+        "notes": "Doorway stretch or wall pec stretch. Each side. Open chest and anterior shoulder."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "cooldown_hamstring_fold",
+      "name": "Standing Forward Fold (Cooldown)",
+      "category": "flexibility",
+      "time_min": 2,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "cooldown_hamstrings",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "hold_seconds_range": [
+          30,
+          60
+        ],
+        "sets": 1,
+        "notes": "Soft knees. Hang heavy. Breathe and relax into the stretch."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "cooldown_spinal_twist",
+      "name": "Supine Spinal Twist (Cooldown)",
+      "category": "flexibility",
+      "time_min": 2,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "cooldown_spine",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "hold_seconds_range": [
+          30,
+          60
+        ],
+        "sets": 1,
+        "notes": "Each side. Knees stacked, arms wide. Let gravity do the work."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "cooldown_deep_squat_hold",
+      "name": "Deep Squat Hold (Cooldown)",
+      "category": "flexibility",
+      "time_min": 3,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "cooldown_hips",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "hold_seconds_range": [
+          30,
+          90
+        ],
+        "sets": 1,
+        "notes": "Heels down. Hold a support if needed. Open hips and thoracic spine."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "flexibility_cossack_squat",
+      "name": "Cossack Squat (Active Flexibility)",
+      "category": "flexibility",
+      "time_min": 5,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_active",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "flexibility_hips",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          2,
+          3
+        ],
+        "reps_range": [
+          6,
+          10
+        ],
+        "rest_seconds": 30,
+        "notes": "Alternating sides. Full depth. Heel stays down on working leg."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "flexibility_active_leg_raise",
+      "name": "Active Straight Leg Raise",
+      "category": "flexibility",
+      "time_min": 5,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "flexibility"
+      ],
+      "pattern": "flexibility_active",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "flexibility_hamstrings",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          2,
+          3
+        ],
+        "reps_range": [
+          8,
+          12
+        ],
+        "rest_seconds": 30,
+        "notes": "Supine. Use hip flexors to raise straight leg. Hold 2s at top. Each side."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
+    },
+    {
+      "id": "flexibility_ninety_ninety",
+      "name": "90/90 Hip Switch (Active Flexibility)",
+      "category": "flexibility",
+      "time_min": 5,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "flexibility",
+        "mobility"
+      ],
+      "pattern": "flexibility_active",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "flexibility_hips",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets_range": [
+          2,
+          3
+        ],
+        "reps_range": [
+          6,
+          10
+        ],
+        "rest_seconds": 30,
+        "notes": "Seated. Knees at 90 degrees. Rotate from one side to the other with control."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      }
     }
   ]
 }

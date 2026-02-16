@@ -1,0 +1,49 @@
+{
+  "id": "warmup_climbing",
+  "name": "Climbing Warm-up (Module)",
+  "version": "1.0",
+  "category": "warmup_module",
+  "sports": ["climbing"],
+  "disciplines": ["boulder", "lead", "mixed"],
+
+  "compatible_slots": ["short", "medium", "long"],
+  "requires_environment": { "equipment_any_of": ["none", "band", "mat", "floor"] },
+
+  "goals": ["increase_body_temperature", "improve_joint_readiness", "activate_shoulders"],
+  "stress_tags": { "fingers": "none", "cns": "low", "elbow": "low", "skin": "none" },
+
+  "scheduling_rules": {
+    "max_per_day": 2,
+    "notes": "Use before any climbing session. Includes bouldering ramp-up on easy problems."
+  },
+
+  "blocks": [
+    {
+      "block_id": "pulse_raise",
+      "type": "warmup_general",
+      "mode": "instruction_only",
+      "duration_min_range": [3, 5],
+      "options": ["brisk_walk", "easy_jog", "jumping_jacks", "air_squats_flow"],
+      "notes": ["Raise body temperature. Include 5-10 min easy bouldering on large holds as ramp-up."]
+    },
+    {
+      "block_id": "mobility",
+      "type": "mobility",
+      "mode": "instruction_only",
+      "duration_min_range": [3, 5],
+      "focus": ["thoracic_spine", "hips", "shoulders", "wrists"],
+      "notes": ["Dynamic mobility. Wrist circles, shoulder CARs, hip circles. No long static stretches."]
+    },
+    {
+      "block_id": "upper_activation",
+      "type": "activation",
+      "mode": "select_one",
+      "role": ["warmup", "prehab"],
+      "domain": ["prehab_shoulder"],
+      "prescription": { "sets_range": [2, 3], "reps_range": [8, 15], "rest_seconds_range": [30, 60] },
+      "notes": ["Light scap/rotator cuff activation. Band pull-aparts or shoulder CARs. Submaximal."]
+    }
+  ],
+
+  "module_notes": "Climbing-specific warm-up. Includes bouldering ramp-up on easy problems as part of pulse raise."
+}

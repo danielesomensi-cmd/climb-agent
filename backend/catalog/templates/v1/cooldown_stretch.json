@@ -1,0 +1,48 @@
+{
+  "id": "cooldown_stretch",
+  "name": "Cooldown Stretching (Module)",
+  "version": "1.0",
+  "category": "cooldown_module",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "none",
+    "cns": "none",
+    "elbows": "none",
+    "skin": "none"
+  },
+
+  "blocks": [
+    {
+      "block_id": "forearm_wrist",
+      "type": "cooldown",
+      "exercise_id": "cooldown_forearm_wrist_stretch",
+      "prescription": {
+        "hold_seconds_range": [20, 30],
+        "sets": 2,
+        "notes": "Mandatory after climbing. Flexor and extensor stretches."
+      }
+    },
+    {
+      "block_id": "hip_flexibility",
+      "type": "cooldown",
+      "exercise_id": "cooldown_hip_pigeon",
+      "prescription": {
+        "hold_seconds_range": [30, 60],
+        "sets": 1,
+        "notes": "Pigeon stretch each side. Reliable hip opener."
+      }
+    },
+    {
+      "block_id": "general_flexibility",
+      "type": "cooldown",
+      "role": ["cooldown"],
+      "domain": ["flexibility"],
+      "prescription": {
+        "hold_seconds_range": [30, 60],
+        "sets": 1,
+        "notes": "Supplementary stretch. Varies by session."
+      }
+    }
+  ]
+}

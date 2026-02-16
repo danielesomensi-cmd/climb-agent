@@ -1,0 +1,40 @@
+{
+  "id": "antagonist_prehab",
+  "name": "Antagonist & Prehab (Module)",
+  "version": "1.0",
+  "category": "prehab",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "none",
+    "cns": "low",
+    "elbows": "low",
+    "skin": "none"
+  },
+
+  "blocks": [
+    {
+      "block_id": "antagonist_push",
+      "type": "accessory",
+      "exercise_id": "pushup",
+      "prescription": {
+        "sets_range": [3, 3],
+        "reps_range": [8, 12],
+        "rest_seconds_range": [60, 90],
+        "notes": "Push-ups for antagonist balance. No equipment needed. Control the negative."
+      }
+    },
+    {
+      "block_id": "shoulder_prehab",
+      "type": "prehab",
+      "role": ["prehab"],
+      "domain": ["prehab_shoulder"],
+      "prescription": {
+        "sets_range": [2, 2],
+        "reps_range": [12, 15],
+        "rest_seconds_range": [30, 45],
+        "notes": "Rotator cuff prehab: band external rotation or shoulder CARs. Light and controlled."
+      }
+    }
+  ]
+}

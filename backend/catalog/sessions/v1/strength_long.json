@@ -1,103 +1,31 @@
 {
   "id": "strength_long",
   "name": "Strength Day (Long Session) – Finger Max Strength Focus",
-  "version": "1.1",
+  "version": "2.0",
   "intent": {
     "primary_goal": "finger_max_strength",
     "secondary_goals": [
+      "climbing_movement",
+      "pulling_strength",
       "core_tension",
       "joint_health"
     ],
-    "notes": "Primary stimulus is max finger force. Secondary modules must not reduce main-set quality."
+    "notes": "Primary stimulus is max finger force (hangboard). Post-hangboard climbing on large holds for movement quality. Pulling, core, antagonist, and cooldown round out the session."
   },
   "compatibility": {
-    "slot": [
-      "long"
-    ],
-    "sports": [
-      "climbing"
-    ]
+    "slot": ["long"],
+    "sports": ["climbing"]
   },
-  "readiness_checks": {
-    "skip_general_warmup_if_already_warm": true,
-    "quick_checklist": [
-      "No sharp finger pain at baseline",
-      "Elbow pain <= mild",
-      "Skin condition acceptable for hangs",
-      "Sleep/stress not critically low"
-    ],
-    "if_failed": {
-      "action": "downgrade_or_replace_session",
-      "notes": "If pain or skin is a limiter, reduce intensity/volume or switch to health-focused protocol."
-    }
-  },
-  "composition_rules": {
-    "primary_module_count": 1,
-    "secondary_module_max_count": 2,
-    "order_policy": "fixed",
-    "quality_first": true,
-    "stop_if_main_quality_at_risk": true
+  "context": {
+    "location": "gym"
   },
   "time_budget": {
-    "target_duration_min": 60,
-    "hard_cap_min": 80,
-    "module_time_guards": {
-      "general_warmup_min": 10,
-      "primary_min": 25,
-      "secondary_total_max": 20
-    }
-  },
-  "rotation_policy": {
-    "exercise_family_rotation": {
-      "finger_max_strength": {
-        "preferred_family": "max_hangs",
-        "allowed_variants": [
-          "max_hang_5s",
-          "max_hang_7s",
-          "max_hang_ladder"
-        ],
-        "avoid_same_variant_within_days": 7
-      }
-    },
-    "grip_rotation": {
-      "allowed_grips": [
-        "half_crimp",
-        "open_hand",
-        "two_finger_pocket"
-      ],
-      "max_grips_per_session": 2,
-      "notes": "Keep grip variety controlled; do not add many grips in a single session."
-    }
-  },
-  "quality_constraints": {
-    "stop_rules": [
-      {
-        "trigger": "sharp_pain",
-        "action": "stop_session",
-        "notes": "Stop immediately for sharp finger or elbow pain."
-      },
-      {
-        "trigger": "form_breakdown",
-        "action": "reduce_volume_or_end_main",
-        "notes": "If you cannot maintain consistent grip/form, end the main set early."
-      },
-      {
-        "trigger": "unexpected_failure_early",
-        "action": "reduce_intensity",
-        "notes": "If failing too early, reduce total load and keep session sub-failure."
-      }
-    ],
-    "target_effort": {
-      "main_set_rpe_target": [
-        8.5,
-        9.5
-      ],
-      "notes": "Near maximal, but avoid repeated true failure efforts."
-    }
+    "target_duration_min": 90,
+    "hard_cap_min": 120
   },
   "modules": [
     {
-      "template_id": "general_warmup",
+      "template_id": "warmup_climbing",
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
@@ -106,36 +34,62 @@
       "template_id": "finger_max_strength",
       "required": true,
       "priority": 90,
-      "notes": "Primary module includes its own specific warm-up and main hang protocol selection.",
-      "module_role": "primary"
+      "module_role": "primary",
+      "notes": "Primary module. Finger first — fresh tendons for max effort."
     },
     {
-      "template_id": "core_short",
+      "block_id": "climbing_movement",
+      "required": false,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Post-hangboard climbing on large holds. Movement quality, NOT limit crimping. Easy to moderate grade.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["technique"],
+            "domain": ["technique_boulder"],
+            "pattern": ["technique_drill", "climbing_continuous"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "pulling_compound",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "Weighted pullup or row. Heavy compound pull for general strength.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["main"],
+            "domain": ["strength_general"],
+            "pattern": ["pull_vertical"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "core_standard",
       "required": false,
       "priority": 60,
-      "constraints": {
-        "include_only_if_time_allows": true,
-        "skip_if_primary_quality_at_risk": true
-      },
       "module_role": "secondary"
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
     }
   ],
   "coach_notes": {
-    "protocol_examples": [
-      "Hörst-style 7/53: 7s hang + 53s rest x3 per set; 2–5 sets; ~3 min between sets.",
-      "Lattice-style max hangs can be expressed as 8 reps x 10s with ~4 min between reps (definition of sets/reps can vary)."
-    ],
     "warmup_emphasis": "Warm-up should be gradual: general heat + mobility + activation, then specific progressive loading on the hangboard.",
-    "post_session": "Finish with light antagonist/wrist stabilizer work when appropriate."
-  },
-  "load_model_hint": {
-    "aggregation": "sum",
-    "dimensions": [
-      "fingers",
-      "cns",
-      "elbow",
-      "skin"
-    ],
-    "notes": "Compute daily/weekly load by aggregating module stress_tags; apply multipliers for session duration and perceived intensity."
+    "post_session": "Forearm stretches mandatory. Full cooldown with hip and shoulder work."
   }
 }

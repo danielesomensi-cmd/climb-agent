@@ -1,0 +1,20 @@
+{
+  "id": "core_standard",
+  "name": "Core Standard (Module)",
+  "version": "1.0",
+  "category": "core_module",
+
+  "blocks": [
+    {
+      "block_id": "core_main",
+      "type": "accessory",
+      "role": ["accessory"],
+      "domain": ["core"],
+      "prescription": {
+        "sets_range": [3, 4],
+        "rest_seconds_range": [45, 75],
+        "notes": "Core exercise: hollow hold, dead bug, side plank, or pallof press. Pick one."
+      }
+    }
+  ]
+}

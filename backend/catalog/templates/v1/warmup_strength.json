@@ -1,0 +1,41 @@
+{
+  "id": "warmup_strength",
+  "name": "Strength Warm-up (Module)",
+  "version": "1.0",
+  "category": "warmup_module",
+  "sports": ["climbing"],
+
+  "compatible_slots": ["short", "medium", "long"],
+  "requires_environment": { "equipment_any_of": ["none", "hangboard"] },
+
+  "goals": ["increase_body_temperature", "improve_joint_readiness", "progressive_finger_prep"],
+  "stress_tags": { "fingers": "low", "cns": "low", "elbow": "low", "skin": "none" },
+
+  "blocks": [
+    {
+      "block_id": "pulse_raise",
+      "type": "warmup_general",
+      "mode": "instruction_only",
+      "duration_min_range": [3, 5],
+      "options": ["brisk_walk", "easy_jog", "jumping_jacks"],
+      "notes": ["Raise body temperature. No bouldering — this is an off-wall strength session."]
+    },
+    {
+      "block_id": "mobility",
+      "type": "mobility",
+      "mode": "instruction_only",
+      "duration_min_range": [3, 5],
+      "focus": ["thoracic_spine", "hips", "shoulders", "wrists"],
+      "notes": ["Dynamic mobility. Wrist circles, shoulder CARs, hip circles."]
+    },
+    {
+      "block_id": "hang_rampup",
+      "type": "warmup_specific",
+      "mode": "instruction_only",
+      "duration_min_range": [3, 5],
+      "notes": ["Progressive hangs on jugs: 3-5 hangs increasing from bodyweight to ~50% max. Full rest between. Prepares tendons for max effort."]
+    }
+  ],
+
+  "module_notes": "Strength/off-wall warm-up. No bouldering. Progressive finger loading on large holds."
+}

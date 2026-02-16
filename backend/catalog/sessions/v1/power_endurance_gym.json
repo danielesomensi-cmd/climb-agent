@@ -1,33 +1,30 @@
 {
   "id": "power_endurance_gym",
   "name": "Power Endurance (Gym — Lead Focus)",
-  "version": "1.0",
+  "version": "2.0",
   "intent": {
     "primary_goal": "power_endurance",
     "secondary_goals": [
       "anaerobic_capacity",
+      "finger_endurance",
       "core"
     ],
-    "notes": "4x4 bouldering, linked boulders, or route intervals. Lead-climber focused. High skin and pump cost."
+    "notes": "4x4 bouldering, linked boulders, or route intervals. Lead-climber focused. Submaximal finger repeaters post-climbing."
   },
   "compatibility": {
-    "slot": [
-      "long"
-    ],
-    "sports": [
-      "climbing"
-    ]
+    "slot": ["long"],
+    "sports": ["climbing"]
   },
   "context": {
     "location": "gym"
   },
   "time_budget": {
-    "target_duration_min": 100,
-    "hard_cap_min": 120
+    "target_duration_min": 90,
+    "hard_cap_min": 105
   },
   "modules": [
     {
-      "template_id": "general_warmup",
+      "template_id": "warmup_climbing",
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
@@ -37,37 +34,50 @@
       "required": true,
       "priority": 90,
       "module_role": "primary",
-      "notes": "4x4 bouldering, linked boulders, or route intervals. Select based on available equipment and training phase.",
+      "notes": "4x4 bouldering, linked boulders, or route intervals. High pump tolerance.",
       "selection": {
         "primary": {
           "filters": {
-            "domain": ["power_endurance"],
             "role": ["main"],
+            "domain": ["power_endurance", "anaerobic_capacity"],
             "pattern": ["climbing_intervals"]
           }
         }
       }
     },
     {
-      "template_id": "core_short",
+      "block_id": "finger_endurance",
+      "required": false,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Submaximal repeaters post-climbing. Finger endurance stimulus, not max strength.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["main"],
+            "domain": ["finger_strength_endurance", "finger_aerobic_endurance"],
+            "pattern": ["repeater_hang"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "core_standard",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "antagonist_prehab",
       "required": false,
       "priority": 50,
       "module_role": "secondary"
     },
     {
-      "block_id": "cooldown",
+      "template_id": "cooldown_stretch",
       "required": false,
       "priority": 40,
-      "module_role": "cooldown",
-      "notes": "Forearm stretches + full body light stretch.",
-      "selection": {
-        "primary": {
-          "filters": {
-            "role": ["cooldown"],
-            "domain": ["flexibility", "prehab_wrist"]
-          }
-        }
-      }
+      "module_role": "cooldown"
     }
   ]
 }

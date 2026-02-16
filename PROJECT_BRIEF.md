@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-16 (post Phase 3.1 — bug fixes)
+> Last updated: 2026-02-16 (post Phase 1.75 — B8 session enrichment)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -17,10 +17,10 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 
 | Area | Count | Notes |
 |------|-------|-------|
-| Exercises | 102 | 12 categories (finger, power, PE, endurance, pull, push, core, prehab, technique, flexibility, handstand, conditioning) |
-| Sessions | 29 | gym evening, home lunch, recovery, flexibility, prehab, conditioning, finger maintenance |
-| Templates | 11 | unchanged from v1 |
-| Tests | 201 | all green (post P0 fixes session) |
+| Exercises | 113 | 12 categories + cooldown stretches + active flexibility |
+| Sessions | 30 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone |
+| Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
+| Tests | 214 | all green (post B8 session enrichment) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 15 | 9 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
@@ -154,7 +154,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (201 green)
+# Backend tests (214 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server
@@ -180,7 +180,7 @@ from backend.engine.X import Y
 | 1.5: Post-E2E fixes | ✅ | 14 findings, 13 resolved, 155→188 tests |
 | 3: UI (Next.js PWA) | ✅ | 15 endpoints, 19 pages, mobile-first dark PWA |
 | 3.1: Bug fixes | ✅ | B21-B24, B9, B26 |
-| **1.75: Session enrichment** | 🔲 | **NEXT** — audit vs literature, 5-7 blocks, fix P0 |
+| **1.75: Session enrichment** | ✅ | B8 done: 8 templates, 4 sessions enriched, 11 exercises, core standalone |
 | 3.2: UI polish + adaptive | 🔲 | B25 adaptive replanning, B19/B20 UI features |
 | 2: Tracking + outdoor | 🔲 | Outdoor logging, reports, motivational quotes |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |

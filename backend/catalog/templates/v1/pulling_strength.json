@@ -1,0 +1,29 @@
+{
+  "id": "pulling_strength",
+  "name": "Pulling Strength (Module)",
+  "version": "1.0",
+  "category": "strength",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "low",
+    "cns": "medium",
+    "elbows": "medium",
+    "skin": "none"
+  },
+
+  "blocks": [
+    {
+      "block_id": "pull_compound",
+      "type": "main_set",
+      "role": ["main"],
+      "domain": ["strength_general"],
+      "prescription": {
+        "sets_range": [3, 4],
+        "reps_range": [3, 5],
+        "rest_seconds_range": [120, 180],
+        "notes": "Heavy compound pull: weighted pullup, barbell row, or lock-off. Near max effort."
+      }
+    }
+  ]
+}

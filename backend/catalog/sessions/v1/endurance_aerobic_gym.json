@@ -1,33 +1,30 @@
 {
   "id": "endurance_aerobic_gym",
-  "name": "Aerobic Endurance + Technique (Gym)",
-  "version": "1.0",
+  "name": "Aerobic Endurance (Gym)",
+  "version": "2.0",
   "intent": {
     "primary_goal": "aerobic_capacity",
     "secondary_goals": [
-      "technique_footwork",
-      "technique_lead"
+      "finger_aerobic_endurance",
+      "core",
+      "joint_health"
     ],
-    "notes": "ARC training, threshold climbing, and/or technique drills. Low-to-medium intensity. Good for base building."
+    "notes": "ARC training, threshold climbing, and/or volume routes. Low-to-medium intensity. Good for base building. Endurance hangs post-climbing."
   },
   "compatibility": {
-    "slot": [
-      "long"
-    ],
-    "sports": [
-      "climbing"
-    ]
+    "slot": ["long"],
+    "sports": ["climbing"]
   },
   "context": {
     "location": "gym"
   },
   "time_budget": {
-    "target_duration_min": 90,
+    "target_duration_min": 80,
     "hard_cap_min": 100
   },
   "modules": [
     {
-      "template_id": "general_warmup",
+      "template_id": "warmup_climbing",
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
@@ -37,46 +34,50 @@
       "required": true,
       "priority": 90,
       "module_role": "primary",
-      "notes": "ARC training or threshold climbing. Continuous low-intensity climbing. Zero to moderate pump.",
+      "notes": "ARC training or continuous climbing. Low intensity, high volume. Zero to moderate pump.",
       "selection": {
         "primary": {
           "filters": {
-            "domain": ["aerobic_capacity"],
             "role": ["main"],
+            "domain": ["aerobic_capacity"],
             "pattern": ["climbing_continuous"]
           }
         }
       }
     },
     {
-      "block_id": "technique_drills",
+      "block_id": "capacity_hangboard",
       "required": false,
-      "priority": 60,
+      "priority": 80,
       "module_role": "secondary",
-      "notes": "Technique drills: silent feet, no readjust, slow climbing. Easy grade.",
+      "notes": "Density or endurance hangs. Submaximal repeaters for finger aerobic capacity.",
       "selection": {
         "primary": {
           "filters": {
-            "role": ["technique"],
-            "pattern": ["technique_drill"],
-            "intensity_max": "low"
+            "role": ["main"],
+            "domain": ["finger_aerobic_endurance"],
+            "pattern": ["repeater_hang"]
           }
         }
       }
     },
     {
-      "block_id": "cooldown",
+      "template_id": "core_standard",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
       "required": false,
       "priority": 40,
-      "module_role": "cooldown",
-      "selection": {
-        "primary": {
-          "filters": {
-            "role": ["cooldown"],
-            "domain": ["flexibility"]
-          }
-        }
-      }
+      "module_role": "cooldown"
     }
   ]
 }

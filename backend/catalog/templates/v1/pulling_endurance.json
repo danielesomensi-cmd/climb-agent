@@ -1,0 +1,29 @@
+{
+  "id": "pulling_endurance",
+  "name": "Pulling Endurance (Module)",
+  "version": "1.0",
+  "category": "strength",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "low",
+    "cns": "low",
+    "elbows": "low",
+    "skin": "none"
+  },
+
+  "blocks": [
+    {
+      "block_id": "pull_endurance",
+      "type": "accessory",
+      "role": ["accessory"],
+      "domain": ["strength_general"],
+      "prescription": {
+        "sets_range": [3, 3],
+        "reps_range": [8, 12],
+        "rest_seconds_range": [60, 90],
+        "notes": "High-rep pulling: bodyweight pullups, inverted rows, or band-assisted. Focus on volume and form."
+      }
+    }
+  ]
+}

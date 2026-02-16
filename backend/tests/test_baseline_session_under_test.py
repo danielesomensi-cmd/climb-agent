@@ -57,30 +57,36 @@ class TestBaselineSessionUnderTest(unittest.TestCase):
         sug = inst.get("suggested") or {}
         self.assertIn("target_total_load_kg", sug)
         self.assertTrue(("added_weight_kg" in sug) or ("assistance_kg" in sug))
-    def test_home_hangboard(self):
-        out = run_case("home", None)
-        self.assertEqual(out.get("resolution_status"), "success")
-        self.assertEqual(out.get("context", {}).get("location"), "home")
-        self.assert_instruction_only(out, "general_warmup.pulse_raise", must_have_keys=("options","duration_min_range"))
-        self.assert_instruction_only(out, "general_warmup.mobility", must_have_keys=("focus","duration_min_range"))
-        self.assertEqual(out.get("context", {}).get("location"), "home")
-        self.assert_instruction_only(out, "general_warmup.pulse_raise", must_have_keys=("options","duration_min_range"))
-        self.assert_instruction_only(out, "general_warmup.mobility", must_have_keys=("focus","duration_min_range"))
-        self.assert_selected(out, "finger_max_strength.warmup_specific")
-        self.assert_selected(out, "finger_max_strength.main")
-        self.assert_selected(out, "finger_max_strength.cooldown_prehab_light")
-        self.assert_selected(out, "core_short.main")
-        self.assert_has_suggested_load(out, "max_hang_5s")
-
 
     def test_gym_blocx(self):
+        """strength_long v2 at Blocx gym: warmup_climbing + finger_max + core_standard + antagonist + cooldown."""
         out = run_case("gym", "blocx")
         self.assertEqual(out.get("resolution_status"), "success")
+        # Warmup climbing template
+        self.assert_instruction_only(out, "warmup_climbing.pulse_raise", must_have_keys=("options", "duration_min_range"))
+        self.assert_instruction_only(out, "warmup_climbing.mobility", must_have_keys=("focus", "duration_min_range"))
+        self.assert_selected(out, "warmup_climbing.upper_activation")
+        # Finger max strength template
         self.assert_selected(out, "finger_max_strength.warmup_specific")
         self.assert_selected(out, "finger_max_strength.main")
         self.assert_selected(out, "finger_max_strength.cooldown_prehab_light")
-        self.assert_selected(out, "core_short.main")
+        # Core standard template
+        self.assert_selected(out, "core_standard.core_main")
+        # Antagonist prehab template
+        self.assert_selected(out, "antagonist_prehab.antagonist_push")
+        self.assert_selected(out, "antagonist_prehab.shoulder_prehab")
+        # Cooldown stretch template
+        self.assert_selected(out, "cooldown_stretch.forearm_wrist")
+        self.assert_selected(out, "cooldown_stretch.hip_flexibility")
+        self.assert_selected(out, "cooldown_stretch.general_flexibility")
         self.assertEqual(out.get("context", {}).get("gym_id"), "blocx")
+        # Suggested load for max hang
+        self.assert_has_suggested_load(out, "max_hang_5s")
+
+    def test_gym_blocx_location(self):
+        """strength_long v2 forces gym location (session context overrides user_state)."""
+        out = run_case("gym", "blocx")
+        self.assertEqual(out.get("context", {}).get("location"), "gym")
 
 if __name__ == "__main__":
     unittest.main()

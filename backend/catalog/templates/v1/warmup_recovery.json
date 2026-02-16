@@ -1,0 +1,32 @@
+{
+  "id": "warmup_recovery",
+  "name": "Recovery Warm-up (Module)",
+  "version": "1.0",
+  "category": "warmup_module",
+  "sports": ["climbing"],
+
+  "compatible_slots": ["short", "medium"],
+  "requires_environment": { "equipment_any_of": ["none", "foam_roller"] },
+
+  "goals": ["promote_blood_flow", "reduce_stiffness"],
+  "stress_tags": { "fingers": "none", "cns": "none", "elbow": "none", "skin": "none" },
+
+  "blocks": [
+    {
+      "block_id": "foam_rolling",
+      "type": "recovery",
+      "mode": "instruction_only",
+      "duration_min_range": [5, 5],
+      "notes": ["Foam roll or lacrosse ball: thoracic spine, lats, quads, calves. 30-60s per area. Gentle pressure."]
+    },
+    {
+      "block_id": "easy_mobility",
+      "type": "mobility",
+      "mode": "instruction_only",
+      "duration_min_range": [5, 5],
+      "notes": ["Very gentle mobility: cat-cow, thread the needle, hip circles, ankle circles. Slow and easy."]
+    }
+  ],
+
+  "module_notes": "Very gentle warm-up for recovery and core sessions. No finger or high-intensity work."
+}

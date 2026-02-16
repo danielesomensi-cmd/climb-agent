@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-16 (post §2.1 P0 fixes + §2.2 verified audit)
+> Last updated: 2026-02-16 (post §2.3 B8 session enrichment)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -103,12 +103,12 @@ La struttura dipende dallo stimolo primario della sessione.
 
 #### Stato attuale vs target (verificato 2026-02-16)
 
-| Sessione attuale | Moduli attuali (verificati) | Blocchi target | Gap |
-|-----------------|----------------------------|----------------|-----|
-| strength_long | 3: general_warmup (template), finger_max_strength (template), core_short (template, optional) | 7 (warmup → finger_max → climbing_jugs → pulling → core → antagonist → cooldown) | Mancano: climbing on jugs, pulling, antagonist, cooldown. Core c'è ma optional. |
-| power_contact_gym | 4: general_warmup (template), campus_or_limit_main (inline), antagonist_accessories (inline, optional), cooldown (inline, optional) | 6 (warmup → limit_boulder → campus → explosive_pull → core → antagonist) | Manca: core. antagonist è generico (bench_press). Nessun explosive_pull dedicato. |
-| power_endurance_gym | 4: general_warmup (template), pe_climbing_main (inline), core_short (template, optional), cooldown (inline, optional) | 6 (warmup → finger_repeaters → 4x4 → route_volume → core → antagonist) | Mancano: finger repeaters leggeri, antagonist. Core c'è ma optional. |
-| endurance_aerobic_gym | 4: general_warmup (template), aerobic_climbing_main (inline), technique_drills (inline, optional), cooldown (inline, optional) | 6 (warmup → ARC → endurance_repeaters → pulling_endurance → core → antagonist) | Mancano: endurance repeaters, pulling, core, antagonist. Ha technique_drills (bonus). |
+| Sessione | Moduli pre-B8 | Moduli post-B8 | Stato |
+|----------|---------------|----------------|-------|
+| strength_long | 3 (warmup, finger_max, core_short) | 7 (warmup_climbing, finger_max, climbing_movement, pulling, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
+| power_contact_gym | 4 (warmup, limit_main, antagonist, cooldown) | 6 (warmup_climbing, limit_boulder, campus_power, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
+| power_endurance_gym | 4 (warmup, pe_main, core_short, cooldown) | 6 (warmup_climbing, pe_climbing, finger_endurance, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
+| endurance_aerobic_gym | 4 (warmup, aerobic_main, technique, cooldown) | 6 (warmup_climbing, aerobic_main, capacity_hangboard, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
 
 **Sessioni aggiuntive verificate** (candidati per enrichment futuro):
 - `technique_focus_gym`: 4 moduli (warmup, technique drills inline, core, cooldown) — struttura già buona
@@ -157,16 +157,25 @@ La maggior parte degli esercizi elencati come "nuovi" **esiste già**.
 **Risultato**: solo ~1 esercizio genuinamente mancante (`route_redpoint_attempt`).
 I 7 template nuovi possono essere costruiti interamente con esercizi esistenti.
 
-### §2.3 Implementazione B8 — Session enrichment
+### §2.3 Implementazione B8 — Session enrichment ✅
 
-Dopo l'audit (§2.2) e i fix P0 (§2.1):
-1. Creare i template nuovi necessari (§2.2)
-2. Aggiungere il ~1 esercizio mancante al catalogo
-3. Riscrivere le 4 sessioni serali principali con la struttura target
-4. NON toccare sessioni home/lunch/recovery
-5. NON toccare il planner/replanner
-6. Aggiungere test per ogni sessione riscritta (resolver deve funzionare)
-7. Incorpora B1 (core_conditioning_home come sessione standalone)
+Completato 2026-02-16. 13 test nuovi in `test_session_enrichment.py`. 214 test verdi.
+
+| Deliverable | Dettaglio |
+|-------------|-----------|
+| Esercizi nuovi | 11: route_redpoint_attempt, 7 cooldown stretches, 3 active flexibility |
+| Template nuovi | 8: warmup_climbing, warmup_strength, warmup_recovery, pulling_strength, pulling_endurance, antagonist_prehab, core_standard, cooldown_stretch |
+| Sessioni riscritte | 4: strength_long (7 mod), power_contact_gym (6 mod), power_endurance_gym (6 mod), endurance_aerobic_gym (6 mod) |
+| Sessione nuova | core_conditioning_standalone (B1, 6 mod, home) — non in planner/pool |
+| Test | 13 nuovi in test_session_enrichment.py |
+
+Dettagli implementazione:
+1. Creati 8 template nuovi per warmup/pulling/antagonist/core/cooldown
+2. Aggiunti 11 esercizi (1 route, 7 cooldown, 3 flexibility attiva) al catalogo
+3. Riscritte le 4 sessioni serali principali con struttura target da §2.2
+4. NON toccate sessioni home/lunch/recovery
+5. NON toccato planner/replanner
+6. B1 implementato come core_conditioning_standalone (non auto-schedulato)
 
 ### §2.4 Fix P1 collegati
 
@@ -184,6 +193,14 @@ Ogni sessione nel planner avrà `estimated_load_score`.
 Modello semplice iniziale: low=20, medium=40, high=65, max=85.
 Output: weekly summary con total load, hard days count.
 Necessario per: overtraining monitoring, adaptive deload input, UI visualization.
+
+### §2.6 Exercise Catalog Audit (Phase 2.5)
+
+Placeholder per audit sistematico del catalogo esercizi:
+- Verificare copertura equipment per tutti gli esercizi
+- Identificare esercizi mai selezionati dal resolver
+- Aggiungere esercizi mancanti per pattern non coperti
+- Allineare `resistance_band` vs `band` nel catalogo
 
 ---
 
@@ -263,14 +280,14 @@ Tabella unica con TUTTI gli item tracciati.
 
 | ID | Titolo | Stato | Fase | Sezione roadmap |
 |----|--------|-------|------|-----------------|
-| B1 | Standalone core session | TODO (incorporato in B8) | 1.75 | §2.3 |
+| B1 | Standalone core session | ✅ DONE | 1.75 | §2.3 |
 | B2 | Outdoor sessions / logging | TODO | 2 | §4 |
 | B3 | Plan validation vs literature | TODO (→ audit §2.2) | 1.75 | §2.2 |
 | B4 | Load score / weekly fatigue | TODO | 1.75 | §2.5 |
 | B5 | Replanner phase-aware | ✅ DONE | 1.5 | §1 |
 | B6 | PE assessment repeater | ✅ DONE | 1.5 | §1 |
 | B7 | Validazioni edge case | ✅ DONE | 1.5 | §1 |
-| B8 | Session enrichment + modules | TODO | 1.75 | §2.3 |
+| B8 | Session enrichment + modules | ✅ DONE | 1.75 | §2.3 |
 | B9 | cable_machine, leg_press | ✅ DONE | 3.1 | §1 |
 | B10 | Outdoor climbing spots | TODO | 2 | §4 |
 | B11 | Configurable test protocols | TODO | 3.2 | §3 |
@@ -295,6 +312,7 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F9 | Finger maintenance in PE | TODO | 2 | §4 |
 | NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |
 | F6-partial | Intent projecting mancante | TODO | 1.75 | §2.4 |
+| B-NEW | Exercise catalog audit | TODO | 2.5 | §2.6 |
 
 ---
 

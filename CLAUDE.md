@@ -14,7 +14,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (201 green)
+# Run all tests (214 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -43,7 +43,7 @@ backend/
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 201 pytest tests with fixtures/
+  tests/             # 214 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 19 pages: 5 main views + 12 onboarding steps + root + index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
@@ -125,9 +125,9 @@ cd frontend && npm run dev    # http://localhost:3000
 
 ## Catalog status (post Phase 0 expansion)
 
-- **Exercises**: 102 in `backend/catalog/exercises/v1/exercises.json`
-- **Sessions**: 29 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home)
-- **Templates**: 11 in `backend/catalog/templates/v1/` (unchanged)
+- **Exercises**: 113 in `backend/catalog/exercises/v1/exercises.json`
+- **Sessions**: 30 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone)
+- **Templates**: 19 in `backend/catalog/templates/v1/` (11 original + 8 new: warmup_climbing/strength/recovery, pulling_strength/endurance, antagonist_prehab, core_standard, cooldown_stretch)
 
 ### Exercise categories covered
 - Finger strength: max hang, repeaters, long duration, min edge, pinch, density, one-arm
@@ -139,7 +139,8 @@ cd frontend && npm run dev    # http://localhost:3000
 - Core: hollow hold, L-sit, front lever, hanging leg raise, ab wheel, pallof, side plank, dead bug, windshield wipers, toes-to-bar
 - Prehab: wrist curls, forearm rotation, rotator cuff, scapular pullups, finger extensors, elbow eccentrics, shoulder CARs
 - Technique drills: silent feet, no readjust, downclimbing, slow climbing, flag practice
-- Flexibility: hip opener, shoulder stretch, forearm stretch, full body flow, active hip mobility
+- Flexibility: hip opener, shoulder stretch, forearm stretch, full body flow, active hip mobility, cossack squat, active leg raise, 90/90 hip switch
+- Cooldown stretches: forearm/wrist, pigeon, frog, shoulder/chest, hamstring fold, spinal twist, deep squat hold
 - Complementary - handstand: wall hold, wall walk-up, shoulder taps, freestanding, HSPU
 - Complementary - conditioning: jump rope, TGU, farmer carry, bear crawl, band pull-apart
 
@@ -159,7 +160,7 @@ Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green.
 - `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and min 2-week floor per non-deload phase.
 - `backend/engine/planner_v2.py` — Phase-aware weekly planner. 2-pass algorithm: pass 1 places primary/climbing sessions with spacing, pass 2 fills complementary. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles.
 - `backend/engine/replanner_v1.py` — Phase-aware replanner. 12 intents mapped to planner_v2 sessions (was 7 from planner_v1). `apply_day_override` accepts `phase_id`. Imports `_SESSION_META` from planner_v2 (no longer depends on planner_v1 SESSION_LIBRARY).
-- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 29 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty.
+- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 30 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty.
 
 ### Flow
 
