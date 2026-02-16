@@ -112,7 +112,7 @@ frontend/
       hooks/use-state.ts    ← useUserState hook
 docs/
   vocabulary_v1.md          ← Closed vocabulary (updated §5.1-5.6)
-  DESIGN_GOAL_MACROCICLO_v1.1.md ← Complete design + roadmap
+  DESIGN_GOAL_MACROCICLO_v1.1.md ← Complete design (the "why")
   ROADMAP_v2.md             ← Consolidated roadmap + backlog + audit (authoritative)
   audit_post_fix.md         ← Historic: post-fix audit results
   e2e_test_results.md       ← Historic: E2E test findings

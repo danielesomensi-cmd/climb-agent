@@ -1,8 +1,9 @@
 # climb-agent — Design: Goal → Macrociclo → Sessione
 
-> Documento di design per il sistema di periodizzazione adattiva.  
-> Versione: 1.1 — febbraio 2026  
-> Stato: approvato in discussione, pronto per implementazione
+> Documento di design per il sistema di periodizzazione adattiva.
+> Versione: 1.2 — febbraio 2026
+> Stato: documento vivente, aggiornato post Phase 3.1 + B8
+> Ultimo audit: 2026-02-17
 
 ---
 
@@ -429,86 +430,19 @@ L'LLM è l'interfaccia umana, non il cervello.
 | Decisione | Scelta | Motivazione |
 |-----------|--------|-------------|
 | **Persistenza** | JSON/JSONL | Semplice, funzionante, zero dipendenze. Migrazione DB se/quando serve multi-utente |
-| **Frontend** | Next.js + React + Tailwind (PWA) | Mobile-first, Claude Code lo genera bene, PWA si installa su telefono, shadcn/ui + Recharts per UI/grafici |
+| **Frontend** | Next.js 14 + React + Tailwind + shadcn/ui (PWA) | Mobile-first, Claude Code lo genera bene, PWA si installa su telefono, shadcn/ui + Recharts per UI/grafici |
 | **Assessment** | Ogni 6 settimane | Mini-test integrati in sessioni normali, non invasivo |
+| **Periodizzazione** | Hörst 4-3-2-1 con DUP | Concurrent training dentro ogni fase, pesi personalizzati da profilo debolezze |
+| **Deload** | Misto: programmato + adattivo + pre-trip | 3 trigger diversi per massima sicurezza (§5) |
 | **Logging outdoor** | Integrato nella day view | Stessa interfaccia indoor/outdoor, outdoor aggiunge location+condizioni |
-| **Feedback** | Granulare per esercizio | Piano vs realtà: l'utente registra gradi fatti, carichi usati, serie completate |
+| **Feedback** | Granulare per esercizio (5 livelli: very_easy → very_hard) | Piano vs realtà: l'utente registra gradi fatti, carichi usati, serie completate |
 | **LLM Coach** | Claude Sonnet, key nel backend | Layer conversazionale sopra engine deterministico, utente non configura nulla |
+| **Equipment** | `equipment_required` solo per gear essenziale | Gear opzionale menzionato solo in `prescription_defaults.notes` |
+| **Guided Session Mode** | Timer UI con rest timer colorato | Spec completa in §12b |
 
 ---
 
-## 13. Roadmap
-
-### Fase 0: Dati + API (1-2 settimane) ✅
-- [x] Caricare questo doc nel repo (`docs/DESIGN_GOAL_MACROCICLO_v1.1.md`)
-- [x] Aggiornare CLAUDE.md con riferimento a questo doc
-- [x] Ampliare catalogo esercizi (da 35 a ~102)
-- [x] Ampliare catalogo sessioni (da 17 a ~28)
-- [ ] API FastAPI: implementare tutti gli endpoint
-- [ ] Aggiungere planning mode: `lead_focus`
-
-### Fase 1: Macrociclo engine (2-3 settimane) ✅
-- [x] Schema goal in user_state (`user_state.json` v1.5)
-- [x] Assessment engine: `assessment_v1.py` — profilo 6 assi (0-100)
-- [x] Macrociclo generator: `macrocycle_v1.py` — Hörst 4-3-2-1 con DUP
-- [x] Planner v2: `planner_v2.py` — planner phase-aware
-- [x] Deload: programmato + adattivo + pre-trip
-- [x] Vocabulary update (§5.1-5.6)
-- [x] Test per tutto il macrociclo engine (assessment, macrocycle, planner_v2)
-- [ ] Adattività avanzata: readiness, overreach, plateau detection
-
-### Fase 1.5: Fix post-E2E (completata) ✅
-Test E2E manuale ha prodotto 14 finding (4 P0, 6 P1, 4 P2).
-Risolti in due cluster di fix.
-- [x] Cluster 1: resolver inline blocks, integration test sessioni
-      reali, planner 2-pass con cycling e distribuzione uniforme,
-      finger_maintenance_home, climbing-first ordering
-- [x] Cluster 2: PE assessment con repeater test, replanner
-      phase-aware (12 intent), validazione goal, floor minimo fasi,
-      pre-trip deload reale, vocabulary sync
-- [x] 155 test verdi (da 115)
-- [x] 13/14 finding risolti (F14 outdoor → backlog)
-- [x] docs/BACKLOG.md creato con 7+ item per fasi future
-
-### Fase 1.75: Arricchimento sessioni (da fare)
-Review letteratura (Hörst, Lattice, Eva López, Hooper's Beta) ha
-evidenziato gap tra le sessioni attuali e i programmi reali.
-- [ ] Sessioni serali da 5-7 blocchi (ora 2-3): warmup → finger
-      → pulling → climbing on wall → core → antagonist/prehab
-      → cooldown
-- [ ] Template nuovi: pulling_strength, antagonist_prehab,
-      limit_bouldering
-- [ ] Arricchire sessioni esistenti: pulling in strength_long,
-      core da opzionale a standard, antagonisti in ogni sessione
-      serale
-- [ ] Sessione core standalone per slot pranzo (B1)
-- [ ] Sessione PE serale completa: 4x4/intervals + route volume
-      + core + antagonist
-- [ ] Verifica piano vs letteratura: confronto struttura macrociclo
-      con Hörst 4-3-2-1, Lattice, Eva López
-- [ ] Load score placeholder per sessione (low=20, medium=40,
-      high=65, max=85) + weekly summary
-
-### Fase 2: Tracking + extras (1-2 settimane)
-- [ ] Schema outdoor session log
-- [ ] Feedback granulare: piano vs realtà per ogni esercizio
-- [ ] Logging climbing: gradi, stile, tentativi (indoor + outdoor)
-- [ ] Trip planning: date trip → deload pre-trip automatico
-- [ ] Catalogo citazioni motivazionali
-- [ ] Report engine: settimanale + mensile (Python)
-
-### Fase 3: UI (2-4 settimane)
-- [ ] Setup Next.js + Tailwind + shadcn/ui + PWA
-- [ ] Day view: "cosa fare oggi" + citazione + sessione risolta
-- [ ] Feedback view: registra risultati per esercizio (gradi, carichi, RPE)
-- [ ] Week view: piano settimanale, skip/move, outdoor
-- [ ] Outdoor log view (integrato nella day view)
-- [ ] Onboarding/Assessment wizard
-- [ ] Report view: grafici progressi (Recharts)
-- [ ] Guided session mode: timer per esercizi, rest timer automatico, beep/vibrazione
-- [ ] Feedback automatico tempi (effettivo vs pianificato → closed loop)
-
-#### Sessione guidata con timer (Guided Session Mode)
+## 12b. Guided Session Mode (spec futura)
 
 La UI deve supportare un'esperienza "sessione guidata" step-by-step:
 
@@ -540,23 +474,15 @@ Questo feedback (tempo effettivo vs pianificato) alimenta il closed loop:
 se un utente riposa sistematicamente più del previsto, potrebbe indicare
 carico troppo alto o pattern da correggere.
 
-### Fase 3.5: LLM Coach layer (1-2 settimane)
-- [ ] Integrazione API Anthropic (Claude Sonnet) nel backend
-- [ ] System prompt dinamico: inietta user_state + piano corrente + log recenti
-- [ ] Endpoint `/chat`: conversazione con contesto completo dell'utente
-- [ ] Casi d'uso:
-  - Onboarding conversazionale (assessment guidato dal coach)
-  - Coaching pre-sessione ("oggi mi sento stanco, che faccio?")
-  - Analisi post-sessione ("come è andata?" → feedback strutturato)
-  - Discussione climbing libera ("vado ad Arco, come mi preparo?")
-  - Suggerimenti e citazioni motivazionali contestuali
-- [ ] API key gestita nel backend (env var), utente non vede nulla
-- [ ] Limiti: l'LLM suggerisce e conversa, NON modifica il piano
-  direttamente. Ogni modifica passa dall'engine deterministico
+---
 
-### Fase 4: Evoluzione (ongoing)
-- [ ] Più tipi di goal (boulder, all-round, outdoor_season)
-- [ ] Report annuale
-- [ ] P1 ranking nel resolver (recency, intensità, fatica)
-- [ ] Periodizzazione multi-macrociclo (stagionale)
-- [ ] Notifiche/reminder
+## 13. Roadmap
+
+Per lo stato dettagliato delle fasi, B-items, finding e pianificazione
+operativa, vedere **`docs/ROADMAP_v2.md`** (fonte autoritativa).
+
+Le specifiche di design per fasi future sono contenute in questo documento:
+- **Guided Session Mode** (timer, countdown, rest colorato): §12b
+- **Onboarding flow** (assessment guidato): §2.3
+- **LLM Coach** (conversational layer): §11
+- **Decisioni tecniche approvate**: §12

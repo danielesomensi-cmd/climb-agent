@@ -299,7 +299,7 @@ Claude Sonnet come layer conversazionale sopra engine deterministico.
 - Periodizzazione multi-macrociclo (stagionale)
 - Notifiche/reminder
 - Guided timer mode (countdown, rest timer colorato, vibrazione/beep PWA)
-  Spec completa in DESIGN_GOAL_MACROCICLO_v1.1.md §9
+  Spec completa in DESIGN_GOAL_MACROCICLO_v1.1.md §12b
 
 ---
 
@@ -315,7 +315,7 @@ nelle fasi attive.
 | Aggiornamento profilo nel tempo | Verificare che il closed loop aggiorni assessment.tests (non solo working_loads) dopo sessioni test | audit_post_fix spunto C |
 | Deload vs letteratura | Confrontare struttura deload con Hörst, Lattice, Eva López — potrebbe essere troppo leggera | audit_post_fix spunto D |
 | Override intensity cap | Warning quando utente fa override con sessione di intensity superiore al cap della fase corrente | audit_post_fix spunto F |
-| Adattività avanzata | Readiness score, overreach detection, plateau detection | DESIGN_DOC §13 Fase 1 checkbox vuota |
+| Adattività avanzata | Readiness score, overreach detection, plateau detection | DESIGN_DOC §4.4 (spec) |
 | Bouldering discipline | Espandere da lead-only a bouldering e mixed | memory progetto |
 | Gym preferences | Preferire palestra specifica per giorno (es. "BKL il lunedì") | memory progetto |
 | Midjourney imagery | Immagini fotorealistiche climbing per UI (dark background, Midjourney v6) | memory progetto |
