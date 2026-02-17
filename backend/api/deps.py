@@ -127,6 +127,7 @@ def week_num_to_phase_context(macrocycle: Dict[str, Any], week_num: int) -> Dict
                 "intensity_cap": phase.get("intensity_cap"),
                 "phase": phase,
                 "week_num": week_num,
+                "is_last_week_of_phase": (week_in_phase == duration - 1),
             }
         cumulative += duration
 

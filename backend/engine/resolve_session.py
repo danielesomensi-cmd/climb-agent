@@ -1055,6 +1055,13 @@ def resolve_session(
         b.get("status") == "failed" for b in blocks
     ) else "success"
 
+    # B4: session load score from exercise fatigue_cost
+    ex_fatigue = {e.get("id"): e.get("fatigue_cost", 0) for e in exercises}
+    session_instance["session_load_score"] = sum(
+        ex_fatigue.get(inst.get("exercise_id"), 0)
+        for inst in exercise_instances
+    )
+
     # ---------------------------
     # P0 contract: no silent blocks (central normalization)
     # ---------------------------

@@ -44,9 +44,15 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "complementary_conditioning": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "regeneration_easy": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym", "outdoor")},
     "finger_maintenance_home": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",)},
+    "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym")},
+    "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym")},
+    "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym")},
 }
 
 _INTENSITY_ORDER = {"low": 0, "medium": 1, "high": 2, "max": 3}
+
+# Fallback load score for unresolved sessions (real score uses fatigue_cost from exercises)
+_INTENSITY_TO_LOAD: Dict[str, int] = {"low": 20, "medium": 40, "high": 65, "max": 85}
 
 
 def _parse_date(value: str) -> date:
@@ -185,6 +191,7 @@ def _make_session_entry(
         "gym_id": gym_id,
         "phase_id": phase_id,
         "intensity": meta["intensity"],
+        "estimated_load_score": _INTENSITY_TO_LOAD.get(meta["intensity"], 40),
         "tags": {"hard": meta["hard"], "finger": meta["finger"]},
         "explain": [
             f"phase={phase_id}",
@@ -209,6 +216,7 @@ def generate_phase_week(
     gyms: Optional[List[Dict[str, Any]]] = None,
     intensity_cap: Optional[str] = None,
     pretrip_dates: Optional[List[str]] = None,
+    is_last_week_of_phase: bool = False,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -384,6 +392,81 @@ def generate_phase_week(
         comp_uses += 1
         days_with_sessions += 1
 
+    # ── PASS 3 (optional): Inject test sessions on last week of eligible phase ──
+    if is_last_week_of_phase and phase_id in ("base", "strength_power"):
+        # Required tests first, then optional
+        _test_schedule = [
+            ("test_max_hang_5s", True),
+            ("test_repeater_7_3", True),
+            ("test_max_weighted_pullup", False),
+        ]
+        test_placed_offsets: set = set()
+        for test_sid, _required in _test_schedule:
+            test_meta = _SESSION_META.get(test_sid)
+            if test_meta is None:
+                continue
+            # Test sessions bypass phase intensity cap — they're assessment protocols
+            placed = False
+            for offset in range(7):
+                if placed:
+                    break
+                # Skip days already used by a test session in this pass
+                if offset in test_placed_offsets:
+                    continue
+                # Check if this day already has a finger/hard session we'd swap
+                day_has_finger = any(
+                    _SESSION_META.get(e.get("session_id", ""), {}).get("finger")
+                    for e in day_sessions[offset]
+                )
+                day_has_hard = any(
+                    _SESSION_META.get(e.get("session_id", ""), {}).get("hard")
+                    for e in day_sessions[offset]
+                )
+                # Respect finger spacing — but swapping on a day that already has finger is OK
+                if test_meta["finger"] and not day_has_finger and finger_day_offsets:
+                    if any(abs(offset - fo) <= 1 for fo in finger_day_offsets):
+                        continue
+                # Respect hard-day spacing — but swapping on a day that already has hard is OK
+                if test_meta["hard"] and not day_has_hard and hard_day_offsets:
+                    if any(abs(offset - ho) <= 1 for ho in hard_day_offsets):
+                        continue
+                # Hard cap check
+                if test_meta["hard"] and hard_days >= effective_hard_cap:
+                    continue
+                if not day_sessions[offset]:
+                    continue
+                day_avail = normalized[day_keys[offset]]
+                result = _find_best_slot(day_avail, test_meta, locations, prefer_evening=True)
+                if result is None:
+                    continue
+                slot, slot_info = result
+                # Pick best session to replace: prefer complementary, fall back to any
+                replace_idx = None
+                for i, entry in enumerate(day_sessions[offset]):
+                    sid_meta = _SESSION_META.get(entry.get("session_id", ""), {})
+                    if not _is_primary_session(sid_meta):
+                        replace_idx = i
+                        break
+                if replace_idx is None:
+                    # No complementary — replace the last session on this day
+                    replace_idx = len(day_sessions[offset]) - 1
+                # Check if replacing a hard/finger session frees up constraints
+                old_entry = day_sessions[offset][replace_idx]
+                old_meta = _SESSION_META.get(old_entry.get("session_id", ""), {})
+                test_entry = _make_session_entry(
+                    slot, test_sid, test_meta, slot_info, locations,
+                    phase_id, day_keys[offset],
+                    default_gym_id, gyms or [], "pass3:test_session",
+                )
+                day_sessions[offset][replace_idx] = test_entry
+                if test_meta["hard"] and not old_meta.get("hard"):
+                    hard_days += 1
+                    hard_day_offsets.append(offset)
+                if test_meta["finger"] and not old_meta.get("finger"):
+                    finger_day_offsets.append(offset)
+                test_placed_offsets.add(offset)
+                placed = True
+
     # Build plan_days
     plan_days: List[Dict[str, Any]] = []
     for offset in range(7):
@@ -397,6 +480,21 @@ def generate_phase_week(
         plan_days.append(day_entry)
 
     finger_days_count = len(finger_day_offsets)
+
+    # Compute weekly load summary
+    total_load = sum(
+        s.get("estimated_load_score", 0)
+        for day_list in day_sessions for s in day_list
+    )
+    hard_days_count = sum(
+        1 for day_list in day_sessions
+        if any(s.get("tags", {}).get("hard") for s in day_list)
+    )
+    recovery_days_count = sum(
+        1 for day_list in day_sessions
+        if not day_list or all(s.get("intensity") == "low" for s in day_list)
+    )
+
     week_plan = {
         "plan_version": "planner.v2",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -407,6 +505,11 @@ def generate_phase_week(
             "intensity_cap": cap,
             "allowed_locations": locations,
             "hard_cap_per_week": effective_hard_cap,
+        },
+        "weekly_load_summary": {
+            "total_load": total_load,
+            "hard_days_count": hard_days_count,
+            "recovery_days_count": recovery_days_count,
         },
         "weeks": [
             {
@@ -424,5 +527,17 @@ def generate_phase_week(
 
     if phase_id == "deload":
         week_plan = apply_deload_week(week_plan)
+        # Recompute load summary after deload transformation
+        all_deload_sessions = [
+            s for d in week_plan["weeks"][0]["days"] for s in d["sessions"]
+        ]
+        week_plan["weekly_load_summary"] = {
+            "total_load": sum(s.get("estimated_load_score", 0) for s in all_deload_sessions),
+            "hard_days_count": 0,
+            "recovery_days_count": sum(
+                1 for d in week_plan["weeks"][0]["days"]
+                if not d["sessions"] or all(s.get("intensity") == "low" for s in d["sessions"])
+            ),
+        }
 
     return week_plan

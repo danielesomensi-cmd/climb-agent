@@ -14,7 +14,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (214 green)
+# Run all tests (225 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -43,7 +43,7 @@ backend/
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 214 pytest tests with fixtures/
+  tests/             # 225 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 19 pages: 5 main views + 12 onboarding steps + root + index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
@@ -126,7 +126,7 @@ cd frontend && npm run dev    # http://localhost:3000
 ## Catalog status (post Phase 0 expansion)
 
 - **Exercises**: 113 in `backend/catalog/exercises/v1/exercises.json`
-- **Sessions**: 30 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone)
+- **Sessions**: 32 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup)
 - **Templates**: 19 in `backend/catalog/templates/v1/` (11 original + 8 new: warmup_climbing/strength/recovery, pulling_strength/endurance, antagonist_prehab, core_standard, cooldown_stretch)
 
 ### Exercise categories covered
@@ -158,9 +158,9 @@ Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green.
 
 - `backend/engine/assessment_v1.py` — 6-axis profile computation (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition). Each axis 0-100, benchmark-based when test data available, grade-estimated otherwise. PE score uses repeater test (40%) + RP-OS gap (40%) + self_eval (20%) to avoid double counting.
 - `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and min 2-week floor per non-deload phase.
-- `backend/engine/planner_v2.py` — Phase-aware weekly planner. 2-pass algorithm: pass 1 places primary/climbing sessions with spacing, pass 2 fills complementary. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles.
-- `backend/engine/replanner_v1.py` — Phase-aware replanner. 12 intents mapped to planner_v2 sessions (was 7 from planner_v1). `apply_day_override` accepts `phase_id`. Imports `_SESSION_META` from planner_v2 (no longer depends on planner_v1 SESSION_LIBRARY).
-- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 30 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty.
+- `backend/engine/planner_v2.py` — Phase-aware weekly planner. 3-pass algorithm: pass 1 places primary/climbing sessions with spacing, pass 2 fills complementary, pass 3 injects test sessions on last week of eligible phases (`is_last_week_of_phase=True`). Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles. Outputs `estimated_load_score` per session and `weekly_load_summary` per week.
+- `backend/engine/replanner_v1.py` — Phase-aware replanner. 13 intents mapped to planner_v2 sessions (incl. "projecting"). `apply_day_override` accepts `phase_id` and applies proportional ripple effect (hard→medium on day+1, force recovery on day+2). Imports `_SESSION_META` from planner_v2 (no longer depends on planner_v1 SESSION_LIBRARY).
+- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 32 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty. Outputs `session_load_score` (sum of exercise `fatigue_cost` values).
 
 ### Flow
 
