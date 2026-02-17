@@ -325,5 +325,125 @@ class TestPlannerV2PretripDeload(unittest.TestCase):
             self.assertNotIn("pretrip_deload", d)
 
 
+class TestPlannerV2TestSessions(unittest.TestCase):
+    """Tests for test session scheduling (NEW-F3a)."""
+
+    def test_last_week_base_has_test_sessions(self):
+        """Last week of base phase should include test_max_hang_5s and test_repeater_7_3."""
+        plan = generate_phase_week(**_make_kwargs("base", is_last_week_of_phase=True,
+            hard_cap_per_week=5,
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 5}))
+        all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
+        session_ids = {s["session_id"] for s in all_sessions}
+        self.assertIn("test_max_hang_5s", session_ids,
+                       "Last week of base phase should have test_max_hang_5s")
+        self.assertIn("test_repeater_7_3", session_ids,
+                       "Last week of base phase should have test_repeater_7_3")
+
+    def test_last_week_strength_power_has_test_sessions(self):
+        """Last week of strength_power phase should include test sessions."""
+        plan = generate_phase_week(**_make_kwargs("strength_power", is_last_week_of_phase=True,
+            hard_cap_per_week=5,
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 5}))
+        all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
+        session_ids = {s["session_id"] for s in all_sessions}
+        self.assertIn("test_max_hang_5s", session_ids,
+                       "Last week of strength_power should have test_max_hang_5s")
+
+    def test_non_last_week_no_test_session(self):
+        """Non-last weeks should NOT have test sessions."""
+        plan = generate_phase_week(**_make_kwargs("base", is_last_week_of_phase=False))
+        all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
+        test_sessions = [s for s in all_sessions if s["session_id"].startswith("test_")]
+        self.assertEqual(len(test_sessions), 0,
+                         "Non-last week should not have test sessions")
+
+    def test_deload_phase_no_test_session(self):
+        """Deload phase should never have test sessions."""
+        plan = generate_phase_week(**_make_kwargs("deload", is_last_week_of_phase=True))
+        all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
+        test_sessions = [s for s in all_sessions if s["session_id"].startswith("test_")]
+        self.assertEqual(len(test_sessions), 0,
+                         "Deload phase should never have test sessions")
+
+    def test_test_sessions_respect_finger_spacing(self):
+        """Injected test sessions must not violate 48h finger gap."""
+        plan = generate_phase_week(**_make_kwargs("base", is_last_week_of_phase=True,
+            hard_cap_per_week=5,
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 5}))
+        days = plan["weeks"][0]["days"]
+        finger_dates = []
+        for d in days:
+            if any(s["tags"]["finger"] for s in d["sessions"]):
+                finger_dates.append(datetime.strptime(d["date"], "%Y-%m-%d").date())
+        for prev, cur in zip(finger_dates, finger_dates[1:]):
+            self.assertGreater((cur - prev).days, 1,
+                               f"Finger spacing violated: {prev} and {cur}")
+
+    def test_test_session_has_pass3_explain(self):
+        """Test sessions should have pass3:test_session in explain."""
+        plan = generate_phase_week(**_make_kwargs("base", is_last_week_of_phase=True,
+            hard_cap_per_week=5,
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 5}))
+        all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
+        test_sessions = [s for s in all_sessions if s["session_id"].startswith("test_")]
+        self.assertGreater(len(test_sessions), 0, "No test sessions found")
+        for ts in test_sessions:
+            self.assertIn("pass3:test_session", ts.get("explain", []),
+                          f"Test session {ts['session_id']} missing pass3 label")
+
+
+class TestPlannerV2LoadScore(unittest.TestCase):
+    """Tests for B4 — load score and weekly load summary."""
+
+    def test_sessions_have_estimated_load_score(self):
+        """Every session entry must have estimated_load_score."""
+        plan = generate_phase_week(**_make_kwargs("base"))
+        for d in plan["weeks"][0]["days"]:
+            for s in d["sessions"]:
+                self.assertIn("estimated_load_score", s,
+                              f"Session {s['session_id']} missing load score")
+                self.assertIsInstance(s["estimated_load_score"], int)
+
+    def test_load_score_matches_intensity(self):
+        """Load score must match the intensity-to-load mapping."""
+        mapping = {"low": 20, "medium": 40, "high": 65, "max": 85}
+        for phase_id in ("base", "strength_power", "power_endurance", "performance"):
+            plan = generate_phase_week(**_make_kwargs(phase_id))
+            for d in plan["weeks"][0]["days"]:
+                for s in d["sessions"]:
+                    expected = mapping.get(s["intensity"], 40)
+                    self.assertEqual(s["estimated_load_score"], expected,
+                        f"Phase {phase_id}: {s['session_id']} intensity={s['intensity']} "
+                        f"expected load={expected}, got {s['estimated_load_score']}")
+
+    def test_weekly_load_summary_present(self):
+        """Week plan must have weekly_load_summary."""
+        plan = generate_phase_week(**_make_kwargs("base"))
+        self.assertIn("weekly_load_summary", plan)
+        summary = plan["weekly_load_summary"]
+        self.assertIn("total_load", summary)
+        self.assertIn("hard_days_count", summary)
+        self.assertIn("recovery_days_count", summary)
+
+    def test_weekly_load_summary_correct_total(self):
+        """total_load must equal sum of all session load scores."""
+        plan = generate_phase_week(**_make_kwargs("strength_power"))
+        expected_total = sum(
+            s.get("estimated_load_score", 0)
+            for d in plan["weeks"][0]["days"]
+            for s in d["sessions"]
+        )
+        self.assertEqual(plan["weekly_load_summary"]["total_load"], expected_total)
+
+    def test_deload_week_low_load(self):
+        """Deload week should have low total load."""
+        plan = generate_phase_week(**_make_kwargs("deload"))
+        summary = plan["weekly_load_summary"]
+        self.assertEqual(summary["hard_days_count"], 0)
+        # All deload sessions are low intensity, max 20 per session, max 3 sessions
+        self.assertLessEqual(summary["total_load"], 20 * 3)
+
+
 if __name__ == "__main__":
     unittest.main()
