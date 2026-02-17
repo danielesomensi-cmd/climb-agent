@@ -80,7 +80,7 @@ backend/
       feedback.py           ← POST /api/feedback
   catalog/
     exercises/v1/           ← 113 exercises (JSON)
-    sessions/v1/            ← 30 sessions (JSON)
+    sessions/v1/            ← 32 sessions (JSON)
     templates/v1/           ← 19 templates (JSON)
   data/
     user_state.json         ← User source of truth (v1.5)

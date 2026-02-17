@@ -229,6 +229,18 @@ Scope:
    Focus su: intensità, volume, rest, frequenza raccomandata.
 5. **Check tecnici**: equipment_required coerente, esercizi mai selezionati
    dal resolver, allineamento resistance_band vs band, pattern non coperti.
+6. **Dedicated test exercises**: Create exercises with `"is_test": true` flag in the catalog
+   for assessment sessions. Currently test sessions (test_max_hang_5s, test_repeater_7_3,
+   test_max_weighted_pullup) resolve through standard training templates. Dedicated test
+   exercises would provide:
+   - Clear separation between training and assessment in the catalog
+   - Specific test protocols (precise prescription, not training-oriented)
+   - Clean tracking: distinguish "this was a test" from "this was training" in logs
+   - Required tests: max_hang_5s (finger_strength), repeater_7_3 (power_endurance)
+   - Optional tests: max_weighted_pullup (pulling_strength),
+     continuous_climbing_minutes (endurance)
+   - technique and body_composition remain self-eval (no automated test exercise)
+   Depends on Phase 2 (tracking) to get full value from the separation.
 
 Dipendenza: il tracking (Phase 2) fornirà dati reali di feedback per informare
 l'audit — se un esercizio ha prescrizioni sbagliate, il feedback lo rivelerà.
@@ -368,6 +380,7 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |
 | F6-partial | Intent projecting mancante | ✅ DONE | 1.75 | §2.4 |
 | B28 | Cross-session recency nel resolver | TODO | 2 | §4.1 |
+| B29 | Dedicated test exercises in catalog | TODO | 2.5 | §2.6 |
 | B-NEW | Exercise catalog audit | TODO | 2.5 | §2.6 |
 
 ---
