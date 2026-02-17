@@ -1,7 +1,7 @@
 {
   "id": "technique_focus_gym",
   "name": "Technique Focus (Gym — Drills + Intentional Climbing)",
-  "version": "1.0",
+  "version": "2.0",
   "intent": {
     "primary_goal": "technique_footwork",
     "secondary_goals": [
@@ -9,7 +9,7 @@
       "technique_lead",
       "aerobic_capacity"
     ],
-    "notes": "Dedicated technique session. Drills then easy intentional climbing. Low physical stress, high cognitive focus."
+    "notes": "Dedicated technique session. Multiple drills then easy intentional climbing. Low physical stress, high cognitive focus."
   },
   "compatibility": {
     "slot": [
@@ -24,27 +24,56 @@
   },
   "time_budget": {
     "target_duration_min": 90,
-    "hard_cap_min": 100
+    "hard_cap_min": 110
   },
   "modules": [
     {
-      "template_id": "general_warmup",
+      "template_id": "warmup_climbing",
       "required": true,
       "priority": 100,
       "module_role": "general_warmup"
     },
     {
-      "block_id": "technique_drills_main",
+      "block_id": "technique_drill_1",
       "required": true,
-      "priority": 90,
+      "priority": 95,
       "module_role": "primary",
-      "notes": "Silent feet, no readjust, downclimbing, slow climbing, flag practice. Select 2-3 drills.",
+      "notes": "First technique drill (e.g., silent feet, downclimbing, no readjust).",
       "selection": {
         "primary": {
           "filters": {
             "role": ["technique"],
-            "pattern": ["technique_drill"],
-            "intensity_max": "low"
+            "pattern": ["technique_drill"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "technique_drill_2",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Second technique drill — dedup ensures a different exercise from drill 1.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["technique"],
+            "pattern": ["technique_drill"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "technique_drill_3",
+      "required": false,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Third technique drill if time allows.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["technique"],
+            "pattern": ["technique_drill"]
           }
         }
       }
@@ -60,25 +89,28 @@
           "filters": {
             "domain": ["aerobic_capacity", "regeneration"],
             "role": ["main"],
-            "pattern": ["climbing_continuous", "climbing_routes"],
-            "intensity_max": "low"
+            "pattern": ["climbing_continuous"]
           }
         }
       }
     },
     {
-      "block_id": "cooldown",
+      "template_id": "core_standard",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "antagonist_prehab",
       "required": false,
       "priority": 40,
-      "module_role": "cooldown",
-      "selection": {
-        "primary": {
-          "filters": {
-            "role": ["cooldown"],
-            "domain": ["flexibility"]
-          }
-        }
-      }
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 30,
+      "module_role": "cooldown"
     }
   ]
 }

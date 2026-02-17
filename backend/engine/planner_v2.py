@@ -90,6 +90,10 @@ def _normalize_availability(
     normalized: Dict[str, Dict[str, Dict[str, Any]]] = {}
     for wd in WEEKDAYS:
         day = (availability or {}).get(wd) or {}
+        # Detect whether this day dict has any explicit slot keys
+        has_explicit_slots = isinstance(day, dict) and any(
+            s in day for s in SLOTS
+        )
         day_slots: Dict[str, Dict[str, Any]] = {}
         for slot in SLOTS:
             default = {"available": True, "locations": sorted(set(allowed_locations)),
@@ -100,6 +104,8 @@ def _normalize_availability(
                 continue
             slot_value = day.get(slot)
             if slot_value is None:
+                if has_explicit_slots:
+                    default["available"] = False
                 day_slots[slot] = default
                 continue
             if isinstance(slot_value, bool):
@@ -290,6 +296,31 @@ def generate_phase_week(
         day_avail = normalized[day_keys[offset]]
         has_slot = any(day_avail[slot]["available"] for slot in SLOTS)
         day_has_available_slot.append(has_slot)
+
+    # Cap available days to target_training_days_per_week
+    available_day_count = sum(day_has_available_slot)
+    if available_day_count > target_days:
+        day_scores: List[Tuple[int, int]] = []
+        for offset in range(7):
+            if not day_has_available_slot[offset]:
+                continue
+            day_avail = normalized[day_keys[offset]]
+            score = 0
+            for s in SLOTS:
+                si = day_avail[s]
+                if not si["available"]:
+                    continue
+                if si.get("preferred_location") == "gym" or "gym" in si.get("locations", []):
+                    score += 10
+                if s == "evening":
+                    score += 5
+            day_scores.append((score, offset))
+        # Stable sort: by score descending, then offset ascending
+        day_scores.sort(key=lambda x: (-x[0], x[1]))
+        keep_offsets = set(x[1] for x in day_scores[:target_days])
+        for offset in range(7):
+            if offset not in keep_offsets:
+                day_has_available_slot[offset] = False
 
     # ── PASS 1: Place primary sessions (climbing-first) ──
     primary_idx = 0

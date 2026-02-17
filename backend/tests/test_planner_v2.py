@@ -192,9 +192,34 @@ class TestPlannerV2ClimbingFirst(unittest.TestCase):
 
     def test_no_evening_only_complementary(self):
         """No day should have only a complementary session in the evening slot
-        while primary climbing sessions are still unplaced."""
+        while primary climbing sessions are still unplaced.
+        Only checks days where non-evening slots are available (Bug 1 fix
+        makes unmentioned slots unavailable when explicit slots exist)."""
+        # Use availability with all slots available on every active day
+        all_slots_avail = {
+            "mon": {"morning": {"available": True, "locations": ["gym", "home"]},
+                    "lunch": {"available": True, "locations": ["gym", "home"]},
+                    "evening": {"available": True, "locations": ["gym", "home"]}},
+            "tue": {"morning": {"available": True, "locations": ["gym", "home"]},
+                    "lunch": {"available": True, "locations": ["gym", "home"]},
+                    "evening": {"available": True, "locations": ["gym", "home"]}},
+            "wed": {"morning": {"available": True, "locations": ["gym", "home"]},
+                    "lunch": {"available": True, "locations": ["gym", "home"]},
+                    "evening": {"available": True, "locations": ["gym", "home"]}},
+            "thu": {"morning": {"available": True, "locations": ["home"]},
+                    "lunch": {"available": True, "locations": ["home"]},
+                    "evening": {"available": True, "locations": ["home"]}},
+            "fri": {"morning": {"available": True, "locations": ["gym", "home"]},
+                    "lunch": {"available": True, "locations": ["gym", "home"]},
+                    "evening": {"available": True, "locations": ["gym", "home"]}},
+            "sat": {"morning": {"available": True, "locations": ["gym", "home"]},
+                    "lunch": {"available": True, "locations": ["gym", "home"]},
+                    "evening": {"available": True, "locations": ["gym", "home"]}},
+            "sun": {"available": False},
+        }
         for phase_id in ("base", "strength_power", "power_endurance", "performance"):
             plan = generate_phase_week(**_make_kwargs(phase_id,
+                availability=all_slots_avail,
                 planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
             days = plan["weeks"][0]["days"]
             for d in days:

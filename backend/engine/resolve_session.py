@@ -220,6 +220,7 @@ def pick_best_exercise_p0(
     role_req: Any,
     domain_req: Any,
     pattern_req: Any = None,
+    exclude_ids: Optional[set] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -273,6 +274,13 @@ def pick_best_exercise_p0(
         trace["domain_filter_applied"] = False
         trace["pattern_filter_applied"] = False
         return None, trace
+
+    # Stage 3b: exclude already-used exercise IDs (soft constraint)
+    if exclude_ids:
+        base3_dedup = [e for e in base3 if norm_str(get_ex_id(e)) not in exclude_ids]
+        if base3_dedup:  # only apply if alternatives exist
+            base3 = base3_dedup
+    trace["counts"]["after_dedup"] = len(base3)
 
     # Stage 4: domain only if it doesn't zero
     trace["domain_filter_applied"] = False
@@ -659,6 +667,7 @@ def _resolve_inline_block(
         role_req=role_req,
         domain_req=domain_req,
         pattern_req=pattern_req,
+        exclude_ids=set(recent_ex_ids),
     )
     chosen_by = "p0_inline_block"
 
@@ -928,6 +937,7 @@ def resolve_session(
                         available_equipment=available_equipment,
                         role_req=role_req,
                         domain_req=domain_req,
+                        exclude_ids=set(recent_ex_ids),
                     )
                     chosen_by = "p0_hard_filters"
 
