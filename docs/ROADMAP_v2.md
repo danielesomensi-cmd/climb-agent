@@ -185,7 +185,7 @@ Dettagli implementazione:
 | NEW-F3b | assessment.tests mai aggiornato dal closed loop | Closed loop aggiorna working_loads ma non assessment.tests dopo sessioni test. | Aggiornare assessment.tests nel closed loop quando sessione è un test. Creare test_power_endurance. | TODO (Phase 2) |
 | NEW-F4 | Ripple effect proporzionale | Dopo override hard/max, il replanner ora applica downgrade proporzionale. | Delta=1: hard→medium (complementary_conditioning), medium→low (regeneration_easy), low→keep. Delta=2: tutto non-low→recovery. Solo direzione upward (più intenso → più leggero il giorno dopo). | ✅ DONE |
 | F6-partial | Intent "projecting" mancante | 11/12 intent funzionano, ma "projecting" (naturale per climber) non è mappato. | Aggiunto `"projecting": "power_contact_gym"` in INTENT_TO_SESSION. 13 intent totali. | ✅ DONE |
-| NEW-F1 | Prescription climbing vuota | Esercizi climbing hanno solo notes generico. Mancano: grado suggerito, volume, rest. | Deferred to Phase 2.5 (exercise catalog audit). Richiede audit sistematico dei parametri di prescrizione contro la letteratura. | ⏩ Phase 2.5 |
+| NEW-F1 | Prescription climbing vuota | Esercizi climbing hanno solo notes generico. Mancano: grado suggerito, volume, rest. | Moved to Phase 2.5 — see §2.6 | ⏩ Phase 2.5 |
 
 ### §2.5 B4 — Load score ✅
 
@@ -229,6 +229,18 @@ Scope:
    Focus su: intensità, volume, rest, frequenza raccomandata.
 5. **Check tecnici**: equipment_required coerente, esercizi mai selezionati
    dal resolver, allineamento resistance_band vs band, pattern non coperti.
+6. **Dedicated test exercises**: Create exercises with `"is_test": true` flag in the catalog
+   for assessment sessions. Currently test sessions (test_max_hang_5s, test_repeater_7_3,
+   test_max_weighted_pullup) resolve through standard training templates. Dedicated test
+   exercises would provide:
+   - Clear separation between training and assessment in the catalog
+   - Specific test protocols (precise prescription, not training-oriented)
+   - Clean tracking: distinguish "this was a test" from "this was training" in logs
+   - Required tests: max_hang_5s (finger_strength), repeater_7_3 (power_endurance)
+   - Optional tests: max_weighted_pullup (pulling_strength),
+     continuous_climbing_minutes (endurance)
+   - technique and body_composition remain self-eval (no automated test exercise)
+   Depends on Phase 2 (tracking) to get full value from the separation.
 
 Dipendenza: il tracking (Phase 2) fornirà dati reali di feedback per informare
 l'audit — se un esercizio ha prescrizioni sbagliate, il feedback lo rivelerà.
@@ -355,7 +367,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B25 | Adaptive replanning after feedback | TODO | 3.2 | §3 |
 | B26 | Test isolation fixtures | ✅ DONE | 3.1 | §1 |
 | B27 | Equipment label single source | TODO | 3.2 | §3 |
-| NEW-F1 | Prescription climbing vuota | ⏩ Phase 2.5 | 2.5 | §2.4, §2.6 |
+| NEW-F1 | Prescription climbing vuota | TODO | 2.5 | §2.6 |
 | NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
 | NEW-F3a | Test sessions scheduling | ✅ DONE | 1.75 | §2.4 |
 | NEW-F3b | assessment.tests closed loop | TODO | 2 | §2.4 |
@@ -368,6 +380,7 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |
 | F6-partial | Intent projecting mancante | ✅ DONE | 1.75 | §2.4 |
 | B28 | Cross-session recency nel resolver | TODO | 2 | §4.1 |
+| B29 | Dedicated test exercises in catalog | TODO | 2.5 | §2.6 |
 | B-NEW | Exercise catalog audit | TODO | 2.5 | §2.6 |
 
 ---
