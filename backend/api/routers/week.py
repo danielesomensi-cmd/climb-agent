@@ -134,6 +134,7 @@ def get_week(week_num: int):
                 gyms=gyms,
                 intensity_cap=ctx.get("intensity_cap"),
                 pretrip_dates=pretrip_dates if pretrip_dates else None,
+                is_last_week_of_phase=ctx.get("is_last_week_of_phase", False),
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")

@@ -1,0 +1,42 @@
+{
+  "id": "test_max_weighted_pullup",
+  "name": "Test Session \u2014 Weighted Pullup 1RM",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "pulling_strength",
+    "secondary_goals": [],
+    "notes": "Weighted pullup 1RM baseline refresh."
+  },
+  "compatibility": {
+    "slot": ["long"],
+    "sports": ["climbing"]
+  },
+  "time_budget": {
+    "target_duration_min": 45,
+    "hard_cap_min": 65
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "template_id": "pulling_strength",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ],
+  "tags": {
+    "test": true
+  },
+  "test_id": "weighted_pullup_1rm"
+}

@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from backend.engine.planner_v2 import _SESSION_META, generate_phase_week
+from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META, generate_phase_week
 
 # Phase-aware intent → session_id mapping (uses planner_v2 session catalog)
 INTENT_TO_SESSION = {
@@ -20,6 +20,7 @@ INTENT_TO_SESSION = {
     "flexibility": "flexibility_full",
     "finger_maintenance": "finger_maintenance_home",
     "finger_max": "finger_strength_home",
+    "projecting": "power_contact_gym",
 }
 SLOTS = ("morning", "lunch", "evening")
 
@@ -97,6 +98,7 @@ def _build_fill_session(plan: Dict[str, Any], day: Dict[str, Any], slot: str, *,
         "location": location,
         "gym_id": gym_id,
         "intensity": meta["intensity"],
+        "estimated_load_score": _INTENSITY_TO_LOAD.get(meta["intensity"], 40),
         "constraints_applied": ["replanner_fill"],
         "tags": {"hard": meta["hard"], "finger": meta["finger"]},
         "explain": ["deterministic refill", f"fill_kind={kind}"],
@@ -279,30 +281,70 @@ def apply_day_override(
 
     if meta["hard"] or meta["finger"]:
         recovery_meta = _meta_for("regeneration_easy")
+        comp_meta = _meta_for("complementary_conditioning")
         for delta in (1, 2):
             ripple_key = (target + timedelta(days=delta)).isoformat()
             try:
                 ripple_day = _find_day(updated, ripple_key)
             except ValueError:
                 continue
+            if not ripple_day.get("sessions"):
+                continue
             next_sessions = []
             for session in ripple_day.get("sessions", []):
-                if session.get("tags", {}).get("hard"):
-                    next_sessions.append(
-                        {
-                            "slot": session.get("slot", "evening"),
-                            "session_id": "regeneration_easy",
-                            "location": session.get("location", location),
-                            "gym_id": session.get("gym_id", effective_gym_id),
-                            "phase_id": effective_phase,
-                            "intensity": recovery_meta["intensity"],
-                            "constraints_applied": ["recovery_ripple"],
-                            "tags": {"hard": False, "finger": False},
-                            "explain": ["downgraded after hard override", f"source_day={target_key}"],
-                        }
-                    )
+                is_hard = session.get("tags", {}).get("hard")
+                is_low = session.get("intensity") == "low"
+
+                if delta == 1:
+                    # Proportional: hard→medium, medium→low, low→keep
+                    if is_hard:
+                        next_sessions.append(
+                            {
+                                "slot": session.get("slot", "evening"),
+                                "session_id": "complementary_conditioning",
+                                "location": session.get("location", location),
+                                "gym_id": session.get("gym_id", effective_gym_id),
+                                "phase_id": effective_phase,
+                                "intensity": comp_meta["intensity"],
+                                "constraints_applied": ["recovery_ripple_proportional"],
+                                "tags": {"hard": False, "finger": False},
+                                "explain": ["hard→medium after hard override", f"source_day={target_key}"],
+                            }
+                        )
+                    elif not is_low:
+                        next_sessions.append(
+                            {
+                                "slot": session.get("slot", "evening"),
+                                "session_id": "regeneration_easy",
+                                "location": session.get("location", location),
+                                "gym_id": session.get("gym_id", effective_gym_id),
+                                "phase_id": effective_phase,
+                                "intensity": recovery_meta["intensity"],
+                                "constraints_applied": ["recovery_ripple_proportional"],
+                                "tags": {"hard": False, "finger": False},
+                                "explain": ["medium→low after hard override", f"source_day={target_key}"],
+                            }
+                        )
+                    else:
+                        next_sessions.append(session)
                 else:
-                    next_sessions.append(session)
+                    # Day+2: force recovery for anything non-low
+                    if is_hard or not is_low:
+                        next_sessions.append(
+                            {
+                                "slot": session.get("slot", "evening"),
+                                "session_id": "regeneration_easy",
+                                "location": session.get("location", location),
+                                "gym_id": session.get("gym_id", effective_gym_id),
+                                "phase_id": effective_phase,
+                                "intensity": recovery_meta["intensity"],
+                                "constraints_applied": ["recovery_ripple"],
+                                "tags": {"hard": False, "finger": False},
+                                "explain": ["forced recovery after hard override", f"source_day={target_key}"],
+                            }
+                        )
+                    else:
+                        next_sessions.append(session)
             ripple_day["sessions"] = next_sessions
 
     _reconcile(updated)

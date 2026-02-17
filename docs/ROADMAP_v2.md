@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-16 (post §2.3 B8 session enrichment)
+> Last updated: 2026-02-17 (Phase 1.75 P1 items closed)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -179,19 +179,22 @@ Dettagli implementazione:
 
 ### §2.4 Fix P1 collegati
 
-| ID | Finding | Descrizione | Fix |
-|----|---------|-------------|-----|
-| NEW-F3a | Test sessions mai pianificate (scheduling) | test_max_hang_5s esiste ma non è in _SESSION_META né in nessun pool. Nessun scheduling periodico. | Aggiungere a _SESSION_META e pool fine-Base/fine-SP. Scheduling ogni N settimane. |
-| NEW-F3b | assessment.tests mai aggiornato dal closed loop | Closed loop aggiorna working_loads ma non assessment.tests dopo sessioni test. | Aggiornare assessment.tests nel closed loop quando sessione è un test. Creare test_power_endurance. |
-| NEW-F4 | Ripple effect troppo conservativo | Dopo override hard/max, il replanner controlla solo giorni +2/+3 e solo sessioni già hard. Sessioni medium lasciate invariate. | Forzare giorno successivo a recovery dopo hard/max override |
-| F6-partial | Intent "projecting" mancante | 11/12 intent funzionano, ma "projecting" (naturale per climber) non è mappato. Variante indoor possibile: limit bouldering. | Aggiungere intent projecting → limit bouldering indoor |
-| NEW-F1 | Prescription climbing vuota | Esercizi climbing hanno solo notes generico. Mancano: grado suggerito, volume, rest. | Aggiungere suggested_grade_offset, volume, rest_between. Resolver calcola grado da current_grade + offset. |
+| ID | Finding | Descrizione | Fix | Stato |
+|----|---------|-------------|-----|-------|
+| NEW-F3a | Test sessions mai pianificate (scheduling) | test_max_hang_5s esiste ma non è in _SESSION_META né in nessun pool. Nessun scheduling periodico. | Pass 3 in planner_v2: `is_last_week_of_phase=True` inietta test sessions (test_max_hang_5s, test_repeater_7_3, test_max_weighted_pullup) su ultima settimana di base/strength_power. Creati 2 nuovi session file. API wired in deps.py/week.py. | ✅ DONE |
+| NEW-F3b | assessment.tests mai aggiornato dal closed loop | Closed loop aggiorna working_loads ma non assessment.tests dopo sessioni test. | Aggiornare assessment.tests nel closed loop quando sessione è un test. Creare test_power_endurance. | TODO (Phase 2) |
+| NEW-F4 | Ripple effect proporzionale | Dopo override hard/max, il replanner ora applica downgrade proporzionale. | Delta=1: hard→medium (complementary_conditioning), medium→low (regeneration_easy), low→keep. Delta=2: tutto non-low→recovery. Solo direzione upward (più intenso → più leggero il giorno dopo). | ✅ DONE |
+| F6-partial | Intent "projecting" mancante | 11/12 intent funzionano, ma "projecting" (naturale per climber) non è mappato. | Aggiunto `"projecting": "power_contact_gym"` in INTENT_TO_SESSION. 13 intent totali. | ✅ DONE |
+| NEW-F1 | Prescription climbing vuota | Esercizi climbing hanno solo notes generico. Mancano: grado suggerito, volume, rest. | Deferred to Phase 2.5 (exercise catalog audit). Richiede audit sistematico dei parametri di prescrizione contro la letteratura. | ⏩ Phase 2.5 |
 
-### §2.5 B4 — Load score
+### §2.5 B4 — Load score ✅
 
-Ogni sessione nel planner avrà `estimated_load_score`.
-Modello semplice iniziale: low=20, medium=40, high=65, max=85.
-Output: weekly summary con total load, hard days count.
+Implementato 2026-02-17. Approccio a due livelli:
+
+1. **`estimated_load_score`** (fallback, planner): basato su intensity mapping (low=20, medium=40, high=65, max=85). Presente su ogni sessione nel piano settimanale e nel replanner fill.
+2. **`session_load_score`** (primario, resolver): somma di `fatigue_cost` (1-9) di tutti gli esercizi risolti. Presente nell'output di `resolve_session()`.
+3. **`weekly_load_summary`**: aggiunto al piano settimanale con `total_load`, `hard_days_count`, `recovery_days_count`. Ricalcolato dopo deload transform.
+
 Necessario per: overtraining monitoring, adaptive deload input, UI visualization.
 
 ### §2.6 Exercise Catalog Audit (Phase 2.5 — da fare)
@@ -199,6 +202,10 @@ Necessario per: overtraining monitoring, adaptive deload input, UI visualization
 Audit sistematico del catalogo esercizi contro la literature review
 (`docs/literature_review_climbing_training.md`, 19 sezioni).
 Da fare DOPO Phase 2 (tracking) per beneficiare dei dati di feedback reali.
+
+Include anche:
+- **NEW-F1** (prescription climbing vuota): aggiungere suggested_grade_offset, volume, rest_between agli esercizi climbing.
+- **Test exercise expansion**: aggiungere esercizi con `is_test: true` per coprire più assi dell'assessment. Phase 1.75 ha creato test_repeater_7_3 e test_max_weighted_pullup come session files, ma servono più esercizi test specializzati.
 
 Scope:
 1. **Qualità prescription**: parametri (set, rep, rest, durata) coerenti con la letteratura?
@@ -331,7 +338,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B1 | Standalone core session | ✅ DONE | 1.75 | §2.3 |
 | B2 | Outdoor sessions / logging | TODO | 2 | §4 |
 | B3 | Plan validation vs literature | TODO (→ audit §2.2) | 1.75 | §2.2 |
-| B4 | Load score / weekly fatigue | TODO | 1.75 | §2.5 |
+| B4 | Load score / weekly fatigue | ✅ DONE | 1.75 | §2.5 |
 | B5 | Replanner phase-aware | ✅ DONE | 1.5 | §1 |
 | B6 | PE assessment repeater | ✅ DONE | 1.5 | §1 |
 | B7 | Validazioni edge case | ✅ DONE | 1.5 | §1 |
@@ -348,18 +355,18 @@ Tabella unica con TUTTI gli item tracciati.
 | B25 | Adaptive replanning after feedback | TODO | 3.2 | §3 |
 | B26 | Test isolation fixtures | ✅ DONE | 3.1 | §1 |
 | B27 | Equipment label single source | TODO | 3.2 | §3 |
-| NEW-F1 | Prescription climbing vuota | TODO | 1.75 | §2.4 |
+| NEW-F1 | Prescription climbing vuota | ⏩ Phase 2.5 | 2.5 | §2.4, §2.6 |
 | NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
-| NEW-F3a | Test sessions scheduling | TODO | 1.75 | §2.4 |
+| NEW-F3a | Test sessions scheduling | ✅ DONE | 1.75 | §2.4 |
 | NEW-F3b | assessment.tests closed loop | TODO | 2 | §2.4 |
-| NEW-F4 | Ripple effect conservativo | TODO | 1.75 | §2.4 |
+| NEW-F4 | Ripple effect proporzionale | ✅ DONE | 1.75 | §2.4 |
 | NEW-F5 | Durate fase negative | ✅ DONE | 1.75 | §2.1 |
 | NEW-F6 | Warning phase_mismatch | TODO | 3.2 | §3 |
 | NEW-F7 | Finger compensation | TODO | 3.2 | §3 |
 | NEW-F8 | Easy climbing in deload | TODO | 2 | §4 |
 | NEW-F9 | Finger maintenance in PE | TODO | 2 | §4 |
 | NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |
-| F6-partial | Intent projecting mancante | TODO | 1.75 | §2.4 |
+| F6-partial | Intent projecting mancante | ✅ DONE | 1.75 | §2.4 |
 | B28 | Cross-session recency nel resolver | TODO | 2 | §4.1 |
 | B-NEW | Exercise catalog audit | TODO | 2.5 | §2.6 |
 
