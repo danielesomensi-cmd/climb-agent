@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 113 | 12 categories + cooldown stretches + active flexibility |
 | Sessions | 32 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup) |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | 225 | all green (post Phase 1.75 P1 closure) |
+| Tests | 233 | all green (post Phase 1.75 P1 closure + doc audit) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 15 | 9 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
@@ -80,12 +80,12 @@ backend/
       feedback.py           ← POST /api/feedback
   catalog/
     exercises/v1/           ← 113 exercises (JSON)
-    sessions/v1/            ← 30 sessions (JSON)
+    sessions/v1/            ← 32 sessions (JSON)
     templates/v1/           ← 19 templates (JSON)
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 225 pytest tests
+  tests/                    ← 233 pytest tests
 frontend/
   src/
     app/
@@ -154,7 +154,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (225 green)
+# Backend tests (233 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server
