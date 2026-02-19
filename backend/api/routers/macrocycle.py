@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 from fastapi import APIRouter, HTTPException
 
-from backend.api.deps import invalidate_week_cache, load_state, next_monday, save_state
+from backend.api.deps import invalidate_week_cache, load_state, this_monday, save_state
 from backend.api.models import MacrocycleRequest
 from backend.engine.macrocycle_v1 import generate_macrocycle
 
@@ -24,7 +26,20 @@ def generate(req: MacrocycleRequest):
     if not profile:
         raise HTTPException(status_code=422, detail="No assessment profile — run assessment first")
 
-    start_date = req.start_date or next_monday()
+    # Validate goal deadline is not in the past
+    deadline = goal.get("deadline")
+    if deadline:
+        try:
+            dl = datetime.strptime(deadline, "%Y-%m-%d").date()
+            if dl < date.today():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Goal deadline is in the past. Please update your goal with a future date.",
+                )
+        except ValueError:
+            pass  # Non-standard format, let macrocycle generator handle it
+
+    start_date = req.start_date or this_monday()
 
     try:
         macrocycle = generate_macrocycle(goal, profile, state, start_date, req.total_weeks)

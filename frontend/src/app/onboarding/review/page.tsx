@@ -12,6 +12,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const LEAD_GRADES_ORDERED = [
+  "5a","5a+","5b","5b+","5c","5c+",
+  "6a","6a+","6b","6b+","6c","6c+",
+  "7a","7a+","7b","7b+","7c","7c+",
+  "8a","8a+","8b","8b+","8c","8c+",
+  "9a","9a+",
+];
+
+function gradeToNumeric(grade: string): number {
+  const idx = LEAD_GRADES_ORDERED.indexOf(grade);
+  return idx >= 0 ? idx : -1;
+}
+
+const CLIMBING_EQUIPMENT = new Set([
+  "gym_boulder", "gym_routes", "spraywall",
+  "board_moonboard", "board_kilter", "campus_board",
+]);
+
 const WEAKNESS_LABELS: Record<string, string> = {
   pump_too_early: "I pump out too early",
   fingers_give_out: "My fingers give out",
@@ -87,6 +105,20 @@ export default function ReviewPage() {
     }
     return count;
   }, [data.availability]);
+
+  // Cross-validation warnings
+  const hasGradeExperienceMismatch = useMemo(() => {
+    if (data.experience.climbing_years > 0) return false;
+    const gradeNum = gradeToNumeric(data.grades.lead_max_rp);
+    const threshold = gradeToNumeric("6a");
+    return gradeNum >= 0 && threshold >= 0 && gradeNum > threshold;
+  }, [data.experience.climbing_years, data.grades.lead_max_rp]);
+
+  const hasNoClimbingEquipment = useMemo(() => {
+    return !data.equipment.gyms.some((gym) =>
+      gym.equipment.some((eq) => CLIMBING_EQUIPMENT.has(eq))
+    );
+  }, [data.equipment.gyms]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -229,6 +261,19 @@ export default function ReviewPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Warnings */}
+      {hasGradeExperienceMismatch && (
+        <div className="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+          Your grades suggest significant climbing experience. Please review your experience inputs.
+        </div>
+      )}
+
+      {hasNoClimbingEquipment && data.equipment.gyms.length > 0 && (
+        <div className="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+          None of your gyms have climbing walls. Climbing-specific sessions will be limited. Consider adding a gym with bouldering or route areas.
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-600 dark:bg-red-950 dark:text-red-200">

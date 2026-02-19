@@ -21,7 +21,7 @@ source .venv/bin/activate && python -m pytest backend/tests -q
 python -m pytest backend/tests/test_planner_v1.py -q
 
 # Start API dev server (port 8000)
-uvicorn backend.api.main:app --reload
+uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8000
 
 # Start frontend dev server (port 3000)
 cd frontend && npm run dev

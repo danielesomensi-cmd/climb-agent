@@ -37,6 +37,8 @@ export interface SessionSlot {
   status?: "planned" | "done" | "skipped";
   tags?: Record<string, boolean>;
   resolved?: Record<string, unknown> | null;
+  estimated_load_score?: number;
+  intensity?: string;
 }
 
 export interface DayPlan {
@@ -49,6 +51,11 @@ export interface DayPlan {
 export interface WeekPlan {
   weeks: Array<{ days: DayPlan[] }>;
   profile_snapshot?: Record<string, unknown>;
+  weekly_load_summary?: {
+    total_load?: number;
+    hard_days_count?: number;
+    recovery_days_count?: number;
+  };
 }
 
 export interface Exercise {

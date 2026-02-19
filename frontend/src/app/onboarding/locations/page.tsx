@@ -65,9 +65,10 @@ export default function LocationsPage() {
   };
 
   const addGym = () => {
+    const nextIndex = equipment.gyms.length + 1;
     update("equipment", {
       ...equipment,
-      gyms: [...equipment.gyms, { name: "", equipment: [] }],
+      gyms: [...equipment.gyms, { name: `Gym ${nextIndex}`, equipment: [] }],
     });
   };
 
@@ -210,6 +211,12 @@ export default function LocationsPage() {
             Add gym
           </Button>
 
+          {equipment.gyms.some((g) => !g.name.trim()) && (
+            <p className="text-xs text-red-500">
+              All gyms must have a name
+            </p>
+          )}
+
           <p className="text-xs text-muted-foreground">
             At least one climbing area is required for climbing sessions
           </p>
@@ -223,7 +230,10 @@ export default function LocationsPage() {
         >
           Back
         </Button>
-        <Button onClick={() => router.push("/onboarding/availability")}>
+        <Button
+          disabled={equipment.gyms.some((g) => !g.name.trim())}
+          onClick={() => router.push("/onboarding/availability")}
+        >
           Next
         </Button>
       </div>

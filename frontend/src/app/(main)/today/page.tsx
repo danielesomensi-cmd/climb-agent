@@ -155,6 +155,26 @@ function TodayContent() {
     }
   }
 
+  /** Undo a session's done/skipped status */
+  async function handleUndo(sessionId: string) {
+    if (!weekPlan) return;
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "mark_planned",
+            date: targetDate,
+            session_ref: sessionId,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to undo");
+    }
+  }
+
   /** Submit session feedback */
   async function handleFeedbackSubmit(feedback: Record<string, string>) {
     if (!feedbackSessionId) return;
@@ -268,6 +288,7 @@ function TodayContent() {
             gyms={gyms}
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}
+            onUndo={handleUndo}
           />
         )}
 

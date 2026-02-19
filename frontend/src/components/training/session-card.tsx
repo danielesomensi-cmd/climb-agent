@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Check, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Undo2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ interface SessionCardProps {
   gyms?: Gym[];
   onMarkDone?: () => void;
   onMarkSkipped?: () => void;
+  onUndo?: () => void;
 }
 
 /** Format session_id into a readable string: replace _ with spaces, capitalize */
@@ -50,6 +51,7 @@ export function SessionCard({
   gyms,
   onMarkDone,
   onMarkSkipped,
+  onUndo,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -94,6 +96,11 @@ export function SessionCard({
           {isFinger && (
             <Badge className="bg-orange-500 text-white text-[10px]">
               Finger
+            </Badge>
+          )}
+          {session.estimated_load_score != null && (
+            <Badge variant="outline" className="text-[10px]">
+              Load: {session.estimated_load_score}
             </Badge>
           )}
           {isDone && (
@@ -180,6 +187,24 @@ export function SessionCard({
                   Skipped
                 </Button>
               )}
+            </div>
+          )}
+
+          {/* Undo button — shown for finalized sessions */}
+          {isFinalized && onUndo && (
+            <div className="flex items-center">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs text-muted-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUndo();
+                }}
+              >
+                <Undo2 className="size-3.5 mr-1" />
+                Undo
+              </Button>
             </div>
           )}
         </CardContent>

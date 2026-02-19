@@ -56,13 +56,21 @@ export default function TripsPage() {
   };
 
   const setField = (index: number, field: keyof Trip, value: string) => {
-    const next = trips.map((t, i) =>
-      i === index ? { ...t, [field]: value } : t,
-    );
+    const next = trips.map((t, i) => {
+      if (i !== index) return t;
+      const updated = { ...t, [field]: value };
+      // Auto-adjust end_date when start_date changes and end_date is before new start
+      if (field === "start_date" && updated.end_date && updated.end_date <= value) {
+        const d = new Date(value);
+        d.setDate(d.getDate() + 1);
+        updated.end_date = d.toISOString().split("T")[0];
+      }
+      return updated;
+    });
     update("trips", next);
   };
 
-  // Valid if no trips, or all trips have required fields
+  // Valid if no trips, or all trips have required fields and dates are valid
   const isValid =
     trips.length === 0 ||
     trips.every(
@@ -70,6 +78,7 @@ export default function TripsPage() {
         t.name.trim() !== "" &&
         t.start_date !== "" &&
         t.end_date !== "" &&
+        t.end_date > t.start_date &&
         t.discipline !== "" &&
         t.priority !== "",
     );
@@ -131,10 +140,16 @@ export default function TripsPage() {
                     id={`trip-end-${index}`}
                     type="date"
                     value={trip.end_date}
+                    min={trip.start_date || undefined}
                     onChange={(e) =>
                       setField(index, "end_date", e.target.value)
                     }
                   />
+                  {trip.start_date && trip.end_date && trip.end_date <= trip.start_date && (
+                    <p className="text-xs text-red-500">
+                      End date must be after start date
+                    </p>
+                  )}
                 </div>
               </div>
 
