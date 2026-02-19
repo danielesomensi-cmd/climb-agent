@@ -32,9 +32,9 @@ def list_sessions():
         data = json.loads(p.read_text(encoding="utf-8"))
         sessions.append({
             "id": p.stem,
-            "name": data.get("session_name", p.stem),
-            "type": data.get("session_type", "unknown"),
-            "location": data.get("location", "any"),
+            "name": data.get("session_name") or data.get("name") or p.stem,
+            "type": data.get("session_type") or data.get("type") or "unknown",
+            "location": data.get("location") or (data.get("context") or {}).get("location") or "any",
             "tags": data.get("tags", {}),
         })
     return {"sessions": sessions, "count": len(sessions)}

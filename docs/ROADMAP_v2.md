@@ -441,6 +441,10 @@ Tabella unica con TUTTI gli item tracciati.
 | FR-3 | Feedback badge/sticker on exercises | ✅ DONE | Batch 2 | §3 |
 | UI-23 | Gym slot priority in planner | ✅ DONE | UI-23 | §3 |
 | FR-4 | Outdoor vs gym slot priority | TODO | 2 backlog | §9.4 |
+| B29 | Undo "done" non funziona | ✅ DONE | post-2 | — |
+| B30 | easy_climbing_deload "unknown" nel dialog | ✅ DONE | post-2 | — |
+| B31 | Add session "other" mostra solo deload | ✅ DONE | post-2 | — |
+| B32 | Feedback done non visibile in UI | ✅ DONE | post-2 | — |
 
 ---
 

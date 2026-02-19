@@ -88,11 +88,11 @@ def append_feedback_log(
     """Append session feedback summary to state["feedback_log"]. Trims to 7."""
     difficulty = _derive_session_difficulty(log_entry, exercises_by_id)
 
-    # Extract session_id
-    session_id = "unknown"
-    if resolved_day and resolved_day.get("sessions"):
+    # Extract session_id — prefer direct field from log_entry (frontend sends this)
+    session_id = log_entry.get("session_id") or "unknown"
+    if session_id == "unknown" and resolved_day and resolved_day.get("sessions"):
         session_id = resolved_day["sessions"][0].get("session_id", "unknown")
-    elif log_entry.get("planned"):
+    if session_id == "unknown" and log_entry.get("planned"):
         planned = log_entry["planned"]
         if isinstance(planned, list) and planned:
             session_id = planned[0].get("session_id", "unknown")

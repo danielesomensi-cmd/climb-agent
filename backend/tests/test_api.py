@@ -95,6 +95,23 @@ class TestCatalog:
         assert data["count"] > 0
         assert all("id" in s for s in data["sessions"])
 
+    def test_sessions_location_and_name_extraction(self):
+        """B30/B31: catalog returns correct name, type, location for all session formats."""
+        r = client.get("/api/catalog/sessions")
+        data = r.json()
+        by_id = {s["id"]: s for s in data["sessions"]}
+
+        # New-style session (easy_climbing_deload) should use top-level fields
+        deload = by_id["easy_climbing_deload"]
+        assert deload["name"] == "Easy Climbing — Deload"
+        assert deload["type"] == "climbing"
+        assert deload["location"] == "gym"
+
+        # Old-style session (strength_long) should extract from nested context.location
+        strength = by_id["strength_long"]
+        assert strength["name"] != "strength_long"  # should use the name field
+        assert strength["location"] == "gym"  # from context.location
+
 
 # -----------------------------------------------------------------------
 # Onboarding

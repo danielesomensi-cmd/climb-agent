@@ -465,6 +465,16 @@ def apply_events(
             if all(s.get("status") == "done" for s in day.get("sessions") or []):
                 day["status"] = "done"
 
+        elif event_type == "mark_planned":
+            day = _find_day(updated, event["date"])
+            for s in day.get("sessions") or []:
+                if _session_matches(s, session_ref=event.get("session_ref"), slot=event.get("slot")):
+                    s.pop("status", None)
+                    break
+            # If any session is no longer done/skipped, clear day-level status
+            if not all(s.get("status") in ("done", "skipped") for s in day.get("sessions") or []):
+                day.pop("status", None)
+
         elif event_type == "set_availability":
             if availability is not None and event.get("availability"):
                 av = event["availability"]

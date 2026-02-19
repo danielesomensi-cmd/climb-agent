@@ -39,6 +39,7 @@ export interface SessionSlot {
   resolved?: Record<string, unknown> | null;
   estimated_load_score?: number;
   intensity?: string;
+  feedback_summary?: string;
 }
 
 export interface DayPlan {

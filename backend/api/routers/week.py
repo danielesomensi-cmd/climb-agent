@@ -62,6 +62,21 @@ def _auto_resolve(week_plan: dict, state: dict) -> None:
                     session_entry["resolved"] = None
 
 
+def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
+    """Attach feedback_summary from feedback_log to matching sessions (B32)."""
+    if not feedback_log:
+        return
+    # Index by (date, session_id) for O(1) lookup
+    fb_index = {(fb["date"], fb["session_id"]): fb["difficulty"] for fb in feedback_log if fb.get("session_id") != "unknown"}
+    for week_block in week_plan.get("weeks", []):
+        for day_entry in week_block.get("days", []):
+            day_date = day_entry.get("date", "")
+            for session_entry in day_entry.get("sessions", []):
+                key = (day_date, session_entry.get("session_id", ""))
+                if key in fb_index:
+                    session_entry["feedback_summary"] = fb_index[key]
+
+
 def _current_week_num(macrocycle: dict) -> int:
     """Compute the 1-based absolute week number for today."""
     pi, wi = current_phase_and_week(macrocycle)
@@ -164,6 +179,9 @@ def get_week(week_num: int, force: bool = False):
 
     # Auto-resolve each session so the frontend gets exercises inline
     _auto_resolve(week_plan, state)
+
+    # Attach feedback summaries from feedback_log (B32)
+    _attach_feedback(week_plan, state.get("feedback_log", []))
 
     return {
         "week_num": ctx["week_num"],

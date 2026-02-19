@@ -141,8 +141,9 @@ export function QuickAddDialog({
   // Filter all sessions by location
   const filteredAll = allSessions?.filter((s) => {
     const loc = s.location?.toLowerCase() ?? "";
-    if (resolvedLocation === "home") return loc.includes("home") || loc.includes("both");
-    return loc.includes("gym") || loc.includes("both");
+    if (loc === "any" || loc === "both") return true;
+    if (resolvedLocation === "home") return loc.includes("home");
+    return loc.includes("gym");
   });
 
   return (

@@ -227,6 +227,47 @@ def test_mark_done_keeps_session_with_status():
     assert done_session["status"] == "done"
 
 
+def test_undo_done_restores_session_status():
+    """mark_planned should reset a done session back to planned (no status key)."""
+    plan = _plan_snapshot()
+    monday = next(d for d in plan["weeks"][0]["days"] if d["date"] == "2026-01-05")
+    target_session = monday["sessions"][0]
+
+    # First mark as done
+    updated = apply_events(
+        plan,
+        [
+            {
+                "event_type": "mark_done",
+                "date": "2026-01-05",
+                "slot": target_session["slot"],
+                "session_ref": target_session["session_id"],
+            }
+        ],
+    )
+    done_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-05")
+    done_session = next(s for s in done_day["sessions"] if s["session_id"] == target_session["session_id"])
+    assert done_session["status"] == "done"
+
+    # Now undo via mark_planned
+    restored = apply_events(
+        updated,
+        [
+            {
+                "event_type": "mark_planned",
+                "date": "2026-01-05",
+                "slot": target_session["slot"],
+                "session_ref": target_session["session_id"],
+            }
+        ],
+    )
+    restored_day = next(d for d in restored["weeks"][0]["days"] if d["date"] == "2026-01-05")
+    restored_session = next(s for s in restored_day["sessions"] if s["session_id"] == target_session["session_id"])
+    assert "status" not in restored_session
+    # Day status should also be cleared
+    assert "status" not in restored_day
+
+
 def test_day_override_recovery_ripple():
     """Hard override should downgrade following days to regeneration_easy."""
     plan = _v2_plan_snapshot("strength_power")

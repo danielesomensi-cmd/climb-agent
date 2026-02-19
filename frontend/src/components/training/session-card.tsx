@@ -28,6 +28,14 @@ function formatSessionName(sessionId: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+const FEEDBACK_BADGE_STYLE: Record<string, string> = {
+  very_easy: "bg-green-500/20 text-green-400 border-green-500/30",
+  easy: "bg-green-500/20 text-green-400 border-green-500/30",
+  ok: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  hard: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  very_hard: "bg-red-500/20 text-red-400 border-red-500/30",
+};
+
 /** Map slot key to display label */
 function formatSlot(slot: string): string {
   const slotMap: Record<string, string> = {
@@ -111,6 +119,14 @@ export function SessionCard({
           {isSkipped && (
             <Badge className="bg-yellow-500 text-white text-[10px]">
               Skipped
+            </Badge>
+          )}
+          {isDone && session.feedback_summary && (
+            <Badge
+              variant="outline"
+              className={`text-[10px] ${FEEDBACK_BADGE_STYLE[session.feedback_summary] ?? ""}`}
+            >
+              {session.feedback_summary.replace(/_/g, " ")}
             </Badge>
           )}
         </div>
