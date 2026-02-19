@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-17 (post Phase 1.75 — P1 items closed)
+> Last updated: 2026-02-19 (post UI test batches — Batch 1/1b/2 + UI-23)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,10 +20,10 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 113 | 12 categories + cooldown stretches + active flexibility |
 | Sessions | 32 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup) |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | 233 | all green (post Phase 1.75 P1 closure + doc audit) |
+| Tests | ~251 | all green (post UI test batches) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 15 | 9 routers + health (FastAPI, CORS for Next.js) |
-| Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
+| Frontend pages | 21 | 5 main views + 12 onboarding steps + root + onboarding index + session detail |
 
 ---
 
@@ -85,7 +85,7 @@ backend/
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 233 pytest tests
+  tests/                    ← ~251 pytest tests
 frontend/
   src/
     app/
@@ -154,10 +154,10 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (233 green)
+# Backend tests (~251 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
-# API dev server
+# API dev server (exclude data dir from reload)
 uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8000
 
 # Frontend dev server
@@ -181,7 +181,8 @@ from backend.engine.X import Y
 | 3: UI (Next.js PWA) | ✅ | 15 endpoints, 19 pages, mobile-first dark PWA |
 | 3.1: Bug fixes | ✅ | B21-B24, B9, B26 |
 | **1.75: Session enrichment + fix** | ✅ | B8 enrichment, B4 load score, NEW-F3a test scheduling, NEW-F4 ripple fix, F6 projecting intent. NEW-F1 → Phase 2.5. |
-| 3.2: UI polish + adaptive | 🔲 | B25 adaptive replanning, B19/B20 UI features |
+| UI test fixes (Batch 1-2) | ✅ | 22 bugs fixed, 3 FRs implemented, planner slot/location/dedup/gym-priority |
+| 3.2: UI polish + adaptive | 🔲 (partial) | 18/24 items done. Remaining: B25 adaptive replanning, B19/B20 |
 | 2: Tracking + outdoor | 🔲 | Outdoor logging, reports, motivational quotes |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
 | 4: Evolution | 🔲 | Multi-goal, annual report, notifications |

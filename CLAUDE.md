@@ -14,7 +14,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (233 green)
+# Run all tests (~251 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -43,9 +43,9 @@ backend/
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 233 pytest tests with fixtures/
+  tests/             # ~251 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
-  src/app/           # 19 pages: 5 main views + 12 onboarding steps + root + index
+  src/app/           # 21+ pages: 5 main views + 12 onboarding steps + root + index + session detail
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
   src/lib/           # api.ts (14 endpoint functions), types.ts, hooks/
 docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, ROADMAP_v2.md, audit_post_fix.md, e2e_test_results.md
@@ -73,8 +73,8 @@ Data paths are relative to the repo root:
 FastAPI app with 9 routers and 15 endpoints + health check.
 
 ```bash
-# Start
-uvicorn backend.api.main:app --reload
+# Start (exclude data dir from reload)
+uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8000
 
 # Test
 source .venv/bin/activate && python -m pytest backend/tests/test_api.py -q
@@ -115,11 +115,13 @@ cd frontend && npm run dev    # http://localhost:3000
 - **API client**: Typed fetch wrapper in `src/lib/api.ts`
 - **PWA**: manifest.json + service worker
 
-### Pages
+### Pages (21+)
+5 main views + 12 onboarding steps, with validation (date pickers, grade-experience cross-check), multi-week navigation, replan intents, feedback badges, undo done, load score display.
+
 - `/today` — Today's sessions (or any day via `?date=YYYY-MM-DD`), mark done/skipped, post-session feedback
-- `/week` — 7-day grid + scrollable day detail cards + "View day" / "Change plan" buttons + replan dialog
+- `/week` — 7-day grid + scrollable day detail cards + "View day" / "Change plan" buttons + replan dialog + multi-week navigation
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
-- `/session/[id]` — Resolved exercises with prescription details
+- `/session/[id]` — Resolved exercises with prescription details, feedback badges, load score
 - `/settings` — Profile summary, regenerate assessment/macrocycle, reset
 - `/onboarding/*` — 10-step wizard: welcome → profile → experience → grades → goals → weaknesses → tests → limitations → locations → availability → trips → review
 
@@ -158,7 +160,7 @@ Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green.
 
 - `backend/engine/assessment_v1.py` — 6-axis profile computation (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition). Each axis 0-100, benchmark-based when test data available, grade-estimated otherwise. PE score uses repeater test (40%) + RP-OS gap (40%) + self_eval (20%) to avoid double counting.
 - `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and min 2-week floor per non-deload phase.
-- `backend/engine/planner_v2.py` — Phase-aware weekly planner. 3-pass algorithm: pass 1 places primary/climbing sessions with spacing, pass 2 fills complementary, pass 3 injects test sessions on last week of eligible phases (`is_last_week_of_phase=True`). Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles. Outputs `estimated_load_score` per session and `weekly_load_summary` per week.
+- `backend/engine/planner_v2.py` — Phase-aware weekly planner. 3-pass algorithm: pass 1 places primary/climbing sessions with spacing (gym days processed first), pass 2 fills complementary, pass 3 injects test sessions on last week of eligible phases (`is_last_week_of_phase=True`). Location-aware: respects preferred_location from availability, filters session pool by home/gym compatibility. Gym-priority scoring ensures climbing days are never dropped by target_days cap. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles. Outputs `estimated_load_score` per session and `weekly_load_summary` per week.
 - `backend/engine/replanner_v1.py` — Phase-aware replanner. 13 intents mapped to planner_v2 sessions (incl. "projecting"). `apply_day_override` accepts `phase_id` and applies proportional ripple effect (hard→medium on day+1, force recovery on day+2). Imports `_SESSION_META` from planner_v2 (no longer depends on planner_v1 SESSION_LIBRARY).
 - `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 32 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty. Outputs `session_load_score` (sum of exercise `fatigue_cost` values).
 

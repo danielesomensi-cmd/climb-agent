@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-18 (UI test findings added, Batch 1 merged)
+> Last updated: 2026-02-19 (post UI test batches — Batch 1/1b/2 + UI-23)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -29,9 +29,16 @@
 - B9 cable_machine/leg_press, B26 test isolation
 - 188 test verdi
 
+### UI Test Fixes ✅
+- Batch 1 (planner P0): UI-6 slot fix, UI-11 target_days, UI-13 dedup, UI-19 technique session
+- Batch 1b (location): UI-6b location filtering, UI-19b technique resolver
+- Batch 2 (18 UX items): UI-1 through UI-22 + FR-2/FR-3
+- UI-23: gym slot priority in planner
+- ~251 test verdi
+
 ---
 
-## §2 — Prossimo: Phase 1.75 — Session enrichment + fix
+## §2 — Phase 1.75: Session enrichment + fix ✅
 
 ### §2.1 Pre-requisiti: fix P0 ✅
 
@@ -252,10 +259,15 @@ Posizionamento: Phase 2.5 (tra tracking e UI polish).
 ---
 
 > **UI Test (feb 2026)**: 22 findings from manual end-to-end test.
-> 4 P0/P1 fixed in Batch 1 (UI-6, UI-11, UI-13, UI-19).
-> Remaining items tracked in §8 and assigned to phases 3.2, 2, or 2.5.
+> Batch 1 (4 P0/P1), Batch 1b (2 location fixes), Batch 2 (18 UX items), UI-23 (gym priority).
+> All done except: UI-9 (Phase 2.5), UI-18 (Phase 2), UI-20 (Phase 2.5), FR-1 (Phase 2).
+> See §8 for full status.
 
-## §3 — Phase 3.2: UI polish + adaptive
+## §3 — Phase 3.2: UI polish + adaptive 🔲 (partial — 18/24 done)
+
+Completed in Batch 2: UI-1, UI-2, UI-3, UI-4, UI-5, UI-7, UI-8, UI-10, UI-12, UI-14, UI-15, UI-16, UI-17, UI-22, FR-2, FR-3. See §8.
+
+**Remaining items:**
 
 | ID | Titolo | Priorità | Effort | Descrizione |
 |----|--------|----------|--------|-------------|
@@ -266,22 +278,6 @@ Posizionamento: Phase 2.5 (tra tracking e UI polish).
 | B27 | Equipment label single source | Media | Small | Labels equipment definite in un solo posto, non duplicati tra onboarding.py e frontend. |
 | NEW-F6 | Warning phase_mismatch nel replanner | Bassa | Small | Avvisare quando l'utente fa override con sessione incompatibile con la fase corrente. |
 | NEW-F7 | Finger compensation dopo override | Bassa | Small | Se override rimuove sessione finger, compensare nei giorni successivi. |
-| UI-1 | Trip date validation | Bassa | Small | end_date ≥ start_date, auto-adjust |
-| UI-2 | Reload-exclude docs | Bassa | Tiny | Document --reload-exclude in PROJECT_BRIEF + CLAUDE.md |
-| UI-3 | Settings weight/height | Media | Small | Read from assessment.body path |
-| UI-4 | Settings duplicate key | Bassa | Tiny | Use gym.id or index as React key |
-| UI-5 | Partial first week | Media | Medium | macrocycle start_date = today, planner handles <7 days |
-| UI-7 | Deadline validation | Media | Small | Frontend + backend: deadline > today + 9 weeks |
-| UI-8 | Gym name default | Bassa | Tiny | Auto "Gym 1", "Gym 2" if empty |
-| UI-10 | Experience cross-check | Bassa | Small | Warning in Review if grade > 6a and experience = 0 |
-| UI-12 | Availability detail | Bassa | Tiny | Show "Mon morning (home)" format |
-| UI-14 | Load score display | Media | Small | Badge in day card with estimated_load_score |
-| UI-15 | Replan intents | Media | Medium | Add intent chips (projecting, strength, endurance, etc.) |
-| UI-16 | Undo done | Media | Medium | event_type "undo_done" + UI toggle |
-| UI-17 | Feedback UX | Media | Small | Default "ok", show badge after submit |
-| UI-22 | Multi-week nav | Media | Medium | Prev/next buttons calling /api/week/{n} |
-| FR-2 | No-climbing warning | Bassa | Tiny | Informative warning in onboarding |
-| FR-3 | Feedback badge | Bassa | Small | Color sticker per exercise post-feedback |
 
 ---
 
@@ -406,34 +402,80 @@ Tabella unica con TUTTI gli item tracciati.
 | B28 | Cross-session recency nel resolver | TODO | 2 | §4.1 |
 | B29 | Dedicated test exercises in catalog | TODO | 2.5 | §2.6 |
 | B-NEW | Exercise catalog audit | TODO | 2.5 | §2.6 |
-| UI-1 | Trip date picker: end_date validation | TODO | 3.2 | §3 |
-| UI-2 | uvicorn --reload-exclude for data dir | TODO | 3.2 | §3 |
-| UI-3 | Settings: weight/height not displayed | TODO | 3.2 | §3 |
-| UI-4 | Settings: React duplicate key on gyms | TODO | 3.2 | §3 |
-| UI-5 | Plan starts always on Monday (partial week) | TODO | 3.2 | §3 |
+| UI-1 | Trip date picker: end_date validation | ✅ DONE | Batch 2 | §3 |
+| UI-2 | uvicorn --reload-exclude for data dir | ✅ DONE | Batch 2 | §3 |
+| UI-3 | Settings: weight/height not displayed | ✅ DONE | Batch 2 | §3 |
+| UI-4 | Settings: React duplicate key on gyms | ✅ DONE | Batch 2 | §3 |
+| UI-5 | Plan starts always on Monday (partial week) | ✅ DONE | Batch 2 | §3 |
 | UI-6 | Planner ignores slot + preferred_location | ✅ DONE | Batch 1 | §2 |
-| UI-7 | Goal deadline validation (past date) | TODO | 3.2 | §3 |
-| UI-8 | Gym name required or auto-default | TODO | 3.2 | §3 |
+| UI-7 | Goal deadline validation (past date) | ✅ DONE | Batch 2 | §3 |
+| UI-8 | Gym name required or auto-default | ✅ DONE | Batch 2 | §3 |
 | UI-9 | Limitation filtering in resolver (verify) | TODO | 2.5 | §2.6 |
-| UI-10 | Experience vs grade cross-validation warning | TODO | 3.2 | §3 |
+| UI-10 | Experience vs grade cross-validation warning | ✅ DONE | Batch 2 | §3 |
 | UI-11 | Planner ignores target_training_days_per_week | ✅ DONE | Batch 1 | §2 |
-| UI-12 | Settings: availability show location/gym | TODO | 3.2 | §3 |
+| UI-12 | Settings: availability show location/gym | ✅ DONE | Batch 2 | §3 |
 | UI-13 | Resolver selects duplicate exercises in session | ✅ DONE | Batch 1 | §2 |
-| UI-14 | Load score (B4) visible in frontend | TODO | 3.2 | §3 |
-| UI-15 | Replan dialog: add intent selection | TODO | 3.2 | §3 |
-| UI-16 | Undo session "done" status | TODO | 3.2 | §3 |
-| UI-17 | Feedback optional + visible after submit | TODO | 3.2 | §3 |
+| UI-14 | Load score (B4) visible in frontend | ✅ DONE | Batch 2 | §3 |
+| UI-15 | Replan dialog: add intent selection | ✅ DONE | Batch 2 | §3 |
+| UI-16 | Undo session "done" status | ✅ DONE | Batch 2 | §3 |
+| UI-17 | Feedback optional + visible after submit | ✅ DONE | Batch 2 | §3 |
 | UI-18 | Exercise load/weight prescription display | TODO | 2 | §4 |
 | UI-19 | technique_focus_gym resolves wrong | ✅ DONE | Batch 1 | §2 |
 | UI-20 | Warmup variety (always shoulder_car) | TODO | 2.5 | §2.6 |
-| UI-22 | Week view: multi-week navigation | TODO | 3.2 | §3 |
+| UI-21 | Session structure info (informational) | ℹ️ | — | — |
+| UI-22 | Week view: multi-week navigation | ✅ DONE | Batch 2 | §3 |
 | FR-1 | Outdoor as availability location option | TODO | 2 | §4 |
-| FR-2 | Warning: no climbing equipment in gyms | TODO | 3.2 | §3 |
-| FR-3 | Feedback badge/sticker on exercises | TODO | 3.2 | §3 |
+| FR-2 | Warning: no climbing equipment in gyms | ✅ DONE | Batch 2 | §3 |
+| FR-3 | Feedback badge/sticker on exercises | ✅ DONE | Batch 2 | §3 |
+| UI-23 | Gym slot priority in planner | ✅ DONE | UI-23 | §3 |
 
 ---
 
-## §9 — Regole di allineamento
+## §9 — Future features (from UI testing insights, feb 2026)
+
+### 9.1 — Testing week in onboarding (Phase 2.5)
+After onboarding review step, offer the user two options:
+- "Start training now" — generates macrocycle immediately with available data
+- "Do a test week first (recommended)" — generates a special 1-week assessment plan
+
+The test week includes 3-4 sessions:
+- Day 1: test_max_hang_5s (finger strength)
+- Day 2: test_max_weighted_pullup (pulling strength)
+- Day 3: test_repeater_7_3 (power endurance)
+- Day 4 (optional): continuous_climbing_minutes (endurance)
+
+After completing the test week, results update assessment.tests → profile is recomputed
+→ then the real macrocycle is generated with precise data.
+
+Depends on: Phase 2 tracking (to capture test results automatically)
+
+### 9.2 — Expanded onboarding test battery (Phase 3.2)
+Add more optional test fields to onboarding step 7 (tests):
+- Core: max plank hold (seconds)
+- Flexibility: can touch toes (boolean), shoulder mobility (boolean)
+- Aerobic: resting heart rate, continuous climbing time (minutes)
+- Pulling: max pull-ups (reps)
+
+These are ALL optional with "Skip" prominent. Purpose:
+- Gives the system a more complete initial profile
+- Communicates seriousness and depth to the user
+- Even displaying the option (without filling) signals "this matters"
+
+### 9.3 — Outdoor vs gym priority preference (Phase 2)
+In onboarding, after availability step, ask:
+"When both outdoor and gym are available on the same day, which do you prefer?"
+- Options: "Prioritize outdoor climbing" / "Prioritize gym training" / "Alternate"
+
+This informs the planner the same way UI-23 does for gym vs home:
+- Outdoor-priority: outdoor slots get climbing sessions first
+- Gym-priority: gym slots get structured training first
+- Alternate: even distribution
+
+Depends on: FR-1 (outdoor as availability location)
+
+---
+
+## §10 — Regole di allineamento
 
 1. **Dopo ogni sessione di sviluppo**: aggiornare questo file (stati, nuovi item) E
    aggiornare la sezione Roadmap in PROJECT_BRIEF.md (solo stati fasi ✅/🔲)
