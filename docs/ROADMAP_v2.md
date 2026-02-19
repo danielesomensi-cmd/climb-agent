@@ -448,6 +448,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B33 | Quote motivazionale nella Today view | ✅ DONE | post-2 | — |
 | B34 | Feedback badge sessione mancante in Today view | TODO | post-2 | — |
 | B35 | Feedback esercizio singolo non visibile (FR-3 incompleto) | TODO | post-2 | — |
+| B36 | "— unknown" type label in Add session all-sessions list | ✅ DONE | post-2 | — |
 
 ---
 

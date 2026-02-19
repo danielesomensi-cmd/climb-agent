@@ -291,7 +291,9 @@ export function QuickAddDialog({
                   onClick={() => setSelectedSession(s.id)}
                 >
                   <span className="font-medium">{s.name}</span>
-                  <span className="text-muted-foreground"> — {s.type}</span>
+                  {s.type && s.type !== "unknown" && (
+                    <span className="text-muted-foreground"> — {s.type}</span>
+                  )}
                 </button>
               ))}
               {filteredAll.length === 0 && (
