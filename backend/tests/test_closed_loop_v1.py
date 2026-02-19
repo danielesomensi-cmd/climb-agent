@@ -165,7 +165,7 @@ def test_resolve_planned_day_respects_user_state_for_gym_equipment(tmp_path: Pat
     resolved = json.loads(out_path.read_text(encoding="utf-8"))
     session = resolved["sessions"][0]
     exercise_ids = {ei.get("exercise_id") for ei in session.get("exercise_instances") or []}
-    assert "gym_limit_bouldering" not in exercise_ids
+    assert "limit_bouldering" not in exercise_ids
 
     target_blocks = [
         b for b in (session.get("resolved_blocks") or [])

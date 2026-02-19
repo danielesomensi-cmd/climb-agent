@@ -66,7 +66,7 @@ class TestClimbingEquipment(unittest.TestCase):
     def test_gym_climbing_exercises_have_wall_requirement(self):
         """Exercises that require a climbing wall must declare it."""
         wall_exercise_ids = {
-            "gym_limit_bouldering", "gym_power_endurance_4x4",
+            "limit_bouldering", "four_by_four_bouldering",
             "gym_arc_easy_volume", "gym_technique_boulder_drills",
             "arc_training", "continuity_climbing",
             "downclimbing_drill", "slow_climbing",

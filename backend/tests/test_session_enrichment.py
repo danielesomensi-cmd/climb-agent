@@ -180,7 +180,7 @@ class TestPowerEndurance(unittest.TestCase):
         exs = self.result["resolved_session"]["exercise_instances"]
         ex_ids = [e["exercise_id"] for e in exs]
         # Find climbing exercise (from pe_climbing_main inline block)
-        climbing_exs = {"gym_power_endurance_4x4", "four_by_four_bouldering",
+        climbing_exs = {"four_by_four_bouldering",
                         "linked_boulder_circuit", "route_intervals"}
         # Find finger exercise (from finger_endurance inline block)
         finger_exs = {"density_hang_10_10", "repeaters_7_3", "long_duration_hang",

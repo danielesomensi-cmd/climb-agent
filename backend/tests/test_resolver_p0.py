@@ -238,14 +238,14 @@ class TestResolverP0Determinism(unittest.TestCase):
         out = self._resolve_gym_power_with_equipment(["spraywall"], "gym_spraywall")
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
-        self.assertIn("gym_limit_bouldering", ids)
+        self.assertIn("limit_bouldering", ids)
 
     def test_gym_limit_bouldering_selected_with_board_kilter(self):
         out = self._resolve_gym_power_with_equipment(["board_kilter"], "gym_board_kilter")
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
         self.assertTrue(
-            "gym_limit_bouldering" in ids or "board_limit_boulders" in ids,
+            "limit_bouldering" in ids or "board_limit_boulders" in ids,
             f"Expected a limit bouldering exercise, got {ids}",
         )
 
@@ -253,13 +253,13 @@ class TestResolverP0Determinism(unittest.TestCase):
         out = self._resolve_gym_power_with_equipment(["gym_boulder"], "gym_gym_boulder")
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
-        self.assertIn("gym_limit_bouldering", ids)
+        self.assertIn("limit_bouldering", ids)
 
     def test_gym_limit_bouldering_skipped_without_required_any_equipment(self):
         out = self._resolve_gym_power_with_equipment(["hangboard"], "gym_no_limit_tools")
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
-        self.assertNotIn("gym_limit_bouldering", ids)
+        self.assertNotIn("limit_bouldering", ids)
         self.assertIn("density_hang_10_10", ids)
         main_block = self._main_block(out)
         self.assertEqual(main_block.get("status"), "selected")

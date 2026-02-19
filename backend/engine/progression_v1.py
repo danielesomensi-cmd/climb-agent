@@ -12,7 +12,7 @@ FONT_GRADES: List[str] = [
 ]
 FONT_GRADE_TO_INDEX = {grade: idx for idx, grade in enumerate(FONT_GRADES)}
 LOAD_BASED_EXERCISES = {"max_hang_5s", "weighted_pullup", "pullup"}
-GRADE_BASED_EXERCISES = {"gym_limit_bouldering"}
+GRADE_BASED_EXERCISES = {"limit_bouldering"}
 SURFACE_PRIORITY = ("board_kilter", "spraywall", "gym_boulder")
 VALID_FEEDBACK = {"very_easy", "easy", "ok", "hard", "very_hard"}
 LEGACY_DIFFICULTY_MAP = {
@@ -70,7 +70,7 @@ def _relevant_setup(exercise_id: str, source: Dict[str, Any]) -> Dict[str, Any]:
             "grip": source.get("grip"),
             "load_method": source.get("load_method"),
         }
-    if exercise_id == "gym_limit_bouldering":
+    if exercise_id == "limit_bouldering":
         return {"surface": source.get("surface_selected") or source.get("surface")}
     return {}
 
@@ -87,7 +87,7 @@ def _setup_key(exercise_id: str, setup: Dict[str, Any]) -> str:
             ("grip", setup.get("grip")),
             ("load_method", setup.get("load_method")),
         ]
-    elif exercise_id == "gym_limit_bouldering":
+    elif exercise_id == "limit_bouldering":
         pairs = [("surface", setup.get("surface"))]
     else:
         pairs = []
@@ -280,7 +280,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         "suggested_rep_scheme": f"{sets}x{reps}",
                     })
 
-            if ex_id == "gym_limit_bouldering":
+            if ex_id == "limit_bouldering":
                 options = _surface_options(user_state, session.get("gym_id"))
                 selected_surface = _select_surface(preferred=None, options=options, gym_id=session.get("gym_id"), user_state=user_state)
                 target_grade = step_grade(benchmark_grade, offset)

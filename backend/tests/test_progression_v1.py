@@ -46,7 +46,7 @@ def _resolved_day_for_progression() -> dict:
                 "gym_id": "blocx",
                 "tags": {"hard": True},
                 "exercise_instances": [
-                    {"exercise_id": "gym_limit_bouldering", "prescription": {}},
+                    {"exercise_id": "limit_bouldering", "prescription": {}},
                     {"exercise_id": "max_hang_5s", "prescription": {"sets": 6, "hang_seconds": 5, "intensity_pct_of_total_load": 0.9, "edge_mm": 20, "grip": "half_crimp", "load_method": "added_weight"}},
                 ],
             }
@@ -150,7 +150,7 @@ def test_boulder_grade_progression_changes_next_target():
     resolved_day = _resolved_day_for_progression()
 
     first = inject_targets(deepcopy(resolved_day), deepcopy(user_state))
-    limit = next(i for i in first["sessions"][0]["exercise_instances"] if i["exercise_id"] == "gym_limit_bouldering")
+    limit = next(i for i in first["sessions"][0]["exercise_instances"] if i["exercise_id"] == "limit_bouldering")
     base_grade = limit["suggested"]["suggested_boulder_target"]["target_grade"]
 
     log_entry = {
@@ -159,7 +159,7 @@ def test_boulder_grade_progression_changes_next_target():
         "actual": {
             "exercise_feedback_v1": [
                 {
-                    "exercise_id": "gym_limit_bouldering",
+                    "exercise_id": "limit_bouldering",
                     "completed": True,
                     "feedback_label": "very_hard",
                     "used_grade": "7B",
@@ -173,7 +173,7 @@ def test_boulder_grade_progression_changes_next_target():
     second_day = deepcopy(resolved_day)
     second_day["date"] = "2026-01-06"
     second = inject_targets(second_day, updated_state)
-    limit_2 = next(i for i in second["sessions"][0]["exercise_instances"] if i["exercise_id"] == "gym_limit_bouldering")
+    limit_2 = next(i for i in second["sessions"][0]["exercise_instances"] if i["exercise_id"] == "limit_bouldering")
     new_grade = limit_2["suggested"]["suggested_boulder_target"]["target_grade"]
 
     assert normalize_font_grade(base_grade) is not None
@@ -287,7 +287,7 @@ def test_gym_limit_bouldering_requires_surface(tmp_path):
 
     yes = run_with_equipment(["spraywall"])
     yes_inst = yes["sessions"][0]["exercise_instances"]
-    limit = next(i for i in yes_inst if i["exercise_id"] == "gym_limit_bouldering")
+    limit = next(i for i in yes_inst if i["exercise_id"] == "limit_bouldering")
     target = limit.get("suggested", {}).get("suggested_boulder_target")
     assert target is not None
     assert target["surface_options"] == ["spraywall"]
@@ -296,4 +296,4 @@ def test_gym_limit_bouldering_requires_surface(tmp_path):
 
     no = run_with_equipment(["hangboard"])
     no_ids = [i["exercise_id"] for i in no["sessions"][0]["exercise_instances"]]
-    assert "gym_limit_bouldering" not in no_ids
+    assert "limit_bouldering" not in no_ids
