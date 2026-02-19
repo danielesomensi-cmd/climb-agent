@@ -401,6 +401,15 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
                     equipment = norm_list_str(g.get("equipment"))
                     break
 
+            # Fallback: if no gym matched (no gym_id or id not found), use
+            # the first gym sorted by priority — mirrors planner._select_gym_id.
+            if not equipment and gyms:
+                sorted_gyms = sorted(
+                    gyms,
+                    key=lambda g: (g.get("priority", 999), g.get("gym_id", "")),
+                )
+                equipment = norm_list_str(sorted_gyms[0].get("equipment"))
+
 
     # Always-available "virtual equipment"
     if "floor" not in equipment:

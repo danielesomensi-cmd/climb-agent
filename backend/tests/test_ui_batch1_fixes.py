@@ -351,21 +351,21 @@ class TestBatch1bLocationPreference(unittest.TestCase):
                     self.assertEqual(s["location"], "home",
                                      f"{wd}: expected home, got {s['location']}")
 
-    def test_technique_resolves_zero_at_home(self):
-        """technique_focus_gym resolved at home should yield 0 technique exercises
-        (all technique exercises require gym equipment)."""
+    def test_technique_resolves_zero_at_gym_without_climbing_surfaces(self):
+        """technique_focus_gym at a gym with no climbing surfaces (e.g. work_gym
+        with only dumbbell/bench/barbell) should yield 0 technique exercises
+        because technique drills need gym_boulder/spraywall/board_kilter."""
         base_us = _load_json(os.path.join(REPO_ROOT, "backend", "tests", "fixtures", "test_user_state.json"))
         us = deepcopy(base_us)
         us.setdefault("context", {})
-        us["context"]["location"] = "home"
-        us["context"]["gym_id"] = None
+        us["context"]["gym_id"] = "work_gym"
 
         out = resolve_session(
             repo_root=REPO_ROOT,
             session_path="backend/catalog/sessions/v1/technique_focus_gym.json",
             templates_dir="backend/catalog/templates",
             exercises_path="backend/catalog/exercises/v1/exercises.json",
-            out_path="output/__test_technique_home.json",
+            out_path="output/__test_technique_no_surfaces.json",
             user_state_override=us,
             write_output=False,
         )
@@ -383,7 +383,80 @@ class TestBatch1bLocationPreference(unittest.TestCase):
                 if "technique" in roles:
                     technique_count += 1
         self.assertEqual(technique_count, 0,
-                         f"Expected 0 technique exercises at home, got {technique_count}")
+                         f"Expected 0 technique exercises at gym without climbing surfaces, got {technique_count}")
+
+    def test_technique_resolves_with_default_gym_fallback(self):
+        """When no gym_id is set, resolver falls back to first gym by priority
+        and technique exercises should still resolve (UI-19 deep fix)."""
+        base_us = _load_json(os.path.join(REPO_ROOT, "backend", "tests", "fixtures", "test_user_state.json"))
+        us = deepcopy(base_us)
+        # Remove context entirely — simulates real user_state without context
+        us.pop("context", None)
+
+        out = resolve_session(
+            repo_root=REPO_ROOT,
+            session_path="backend/catalog/sessions/v1/technique_focus_gym.json",
+            templates_dir="backend/catalog/templates",
+            exercises_path="backend/catalog/exercises/v1/exercises.json",
+            out_path="output/__test_technique_fallback.json",
+            user_state_override=us,
+            write_output=False,
+        )
+
+        exercises_raw = _load_json(os.path.join(REPO_ROOT, "backend", "catalog", "exercises", "v1", "exercises.json"))
+        if isinstance(exercises_raw, dict):
+            exercises_raw = exercises_raw.get("exercises") or exercises_raw.get("items") or exercises_raw.get("data") or []
+        ex_lookup = {norm_str(get_ex_id(e)): e for e in exercises_raw}
+
+        technique_count = 0
+        for inst in out["resolved_session"]["exercise_instances"]:
+            ex = ex_lookup.get(norm_str(inst["exercise_id"]))
+            if ex:
+                roles = [norm_str(r) for r in (ex.get("role") if isinstance(ex.get("role"), list) else [ex.get("role", "")])]
+                if "technique" in roles:
+                    technique_count += 1
+        self.assertGreaterEqual(technique_count, 2,
+                                f"Expected >=2 technique exercises with gym fallback, got {technique_count}")
+
+    def test_technique_exercises_exist_and_match_session_spec(self):
+        """Verify technique exercises have fields that match technique_focus_gym inline blocks."""
+        import glob
+
+        with open(os.path.join(REPO_ROOT, 'backend', 'catalog', 'sessions', 'v1', 'technique_focus_gym.json')) as f:
+            session = json.load(f)
+
+        technique_specs = []
+        for mod in session.get('modules', []):
+            sel = mod.get('selection', {})
+            primary = sel.get('primary', {})
+            filters = primary.get('filters', {})
+            if filters.get('role') and 'technique' in filters['role']:
+                technique_specs.append(filters)
+
+        self.assertGreaterEqual(len(technique_specs), 2,
+                                f"Expected >=2 technique blocks in session, found {len(technique_specs)}")
+
+        exercises_raw = _load_json(os.path.join(REPO_ROOT, 'backend', 'catalog', 'exercises', 'v1', 'exercises.json'))
+        if isinstance(exercises_raw, dict):
+            exercises_raw = exercises_raw.get('exercises') or exercises_raw.get('items') or exercises_raw.get('data') or []
+
+        for spec in technique_specs:
+            role_filter = spec.get('role', [])
+            pattern_filter = spec.get('pattern', [])
+
+            matching = [
+                e for e in exercises_raw
+                if (not role_filter or any(r in (e.get('role') or []) for r in role_filter))
+                and (not pattern_filter or (e.get('pattern', '') in pattern_filter
+                                            or (isinstance(e.get('pattern'), list)
+                                                and any(p in pattern_filter for p in e['pattern']))))
+            ]
+
+            self.assertGreater(len(matching), 0,
+                f"No exercises match technique block spec: "
+                f"role={role_filter}, pattern={pattern_filter}. "
+                f"Available technique exercises: "
+                f"{[(e['id'], e.get('role'), e.get('pattern')) for e in exercises_raw if 'technique' in str(e.get('role', [])).lower()]}")
 
 
 # ---------------------------------------------------------------------------
