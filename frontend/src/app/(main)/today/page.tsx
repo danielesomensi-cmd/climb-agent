@@ -6,8 +6,8 @@ import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
-import { getWeek, getState, applyEvents, postFeedback } from "@/lib/api";
-import type { WeekPlan, DayPlan } from "@/lib/types";
+import { getWeek, getState, applyEvents, postFeedback, getDailyQuote } from "@/lib/api";
+import type { WeekPlan, DayPlan, Quote } from "@/lib/types";
 
 /** Full weekday names */
 const WEEKDAY_FULL: Record<number, string> = {
@@ -76,6 +76,7 @@ function TodayContent() {
   const [feedbackSessionId, setFeedbackSessionId] = useState<string | null>(
     null
   );
+  const [quote, setQuote] = useState<Quote | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -100,6 +101,27 @@ function TodayContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Fetch daily quote once the week plan is loaded
+  useEffect(() => {
+    if (!weekPlan) return;
+    const phaseId = (weekPlan.profile_snapshot as Record<string, unknown> | undefined)?.phase_id as string | undefined;
+    const sessionIds = dayPlan?.sessions.map((s) => s.session_id) ?? [];
+
+    let context = "general";
+    if (phaseId === "deload") {
+      context = "deload";
+    } else if (
+      sessionIds.some((id) =>
+        ["strength_long", "power_contact", "finger_strength"].some((kw) => id.includes(kw))
+      )
+    ) {
+      context = "hard_day";
+    }
+
+    getDailyQuote(context).then(setQuote).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekPlan]);
 
   /** Find target day in the weekly plan */
   const dayPlan: DayPlan | undefined = weekPlan?.weeks
@@ -329,6 +351,18 @@ function TodayContent() {
                 Preview next training day ({nextTrainingDay.weekday})
               </Link>
             )}
+          </div>
+        )}
+
+        {/* Daily motivational quote */}
+        {quote && !loading && (
+          <div className="pt-4 pb-2">
+            <p className="text-sm italic text-muted-foreground">
+              &ldquo;{quote.text}&rdquo;
+            </p>
+            <p className="text-xs text-muted-foreground text-right mt-1">
+              — {quote.author}
+            </p>
           </div>
         )}
       </main>

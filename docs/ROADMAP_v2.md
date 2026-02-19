@@ -445,6 +445,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B30 | easy_climbing_deload "unknown" nel dialog | ✅ DONE | post-2 | — |
 | B31 | Add session "other" mostra solo deload | ✅ DONE | post-2 | — |
 | B32 | Feedback done non visibile in UI | ✅ DONE | post-2 | — |
+| B33 | Quote motivazionale nella Today view | ✅ DONE | post-2 | — |
 
 ---
 
