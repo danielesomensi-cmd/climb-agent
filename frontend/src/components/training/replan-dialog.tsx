@@ -24,10 +24,15 @@ interface ReplanDialogProps {
   onApply: (data: { intent: string; location: string; gym_id?: string }) => void;
 }
 
-const INTENSITY_OPTIONS = [
+const INTENT_OPTIONS = [
   { value: "rest", label: "Rest", description: "Full rest day" },
   { value: "recovery", label: "Easy", description: "Light recovery or yoga" },
-  { value: "strength", label: "Hard", description: "Full intensity session" },
+  { value: "projecting", label: "Projecting", description: "Try your project route/boulder" },
+  { value: "strength", label: "Strength", description: "Max hangs, limit bouldering" },
+  { value: "endurance", label: "Endurance", description: "ARC, long routes, volume" },
+  { value: "power_endurance", label: "Power Endurance", description: "4x4, intervals" },
+  { value: "technique", label: "Technique", description: "Drills and movement quality" },
+  { value: "hard", label: "Hard", description: "Full intensity session (auto-select)" },
 ];
 
 /** Format date as "15 Feb" */
@@ -51,17 +56,17 @@ export function ReplanDialog({
   onApply,
 }: ReplanDialogProps) {
   const [location, setLocation] = useState<string>("gym");
-  const [intensity, setIntensity] = useState<string>("rest");
+  const [intent, setIntent] = useState<string>("rest");
 
   const handleApply = () => {
-    let intent = intensity;
-    // For hard + home, use finger_max (most common home hard session)
-    if (intensity === "strength" && location === "home") {
-      intent = "finger_max";
+    let resolvedIntent = intent;
+    // For strength/hard + home, use finger_max (most common home hard session)
+    if ((intent === "strength" || intent === "hard") && location === "home") {
+      resolvedIntent = "finger_max";
     }
     const isGym = location !== "home";
     onApply({
-      intent,
+      intent: resolvedIntent,
       location: isGym ? "gym" : "home",
       gym_id: isGym ? location : undefined,
     });
@@ -128,20 +133,20 @@ export function ReplanDialog({
             </div>
           </div>
 
-          {/* Intensity */}
+          {/* Intent */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Intensity</Label>
+            <Label className="text-sm font-medium">What do you want to do?</Label>
             <div className="space-y-1.5">
-              {INTENSITY_OPTIONS.map((opt) => (
+              {INTENT_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   className={`w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
-                    intensity === opt.value
+                    intent === opt.value
                       ? "border-primary bg-primary/10 text-primary"
                       : "border-muted text-muted-foreground hover:border-primary/40"
                   }`}
-                  onClick={() => setIntensity(opt.value)}
+                  onClick={() => setIntent(opt.value)}
                 >
                   <span className="font-medium">{opt.label}</span>
                   <span className="text-muted-foreground"> — {opt.description}</span>

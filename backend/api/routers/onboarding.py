@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 from fastapi import APIRouter, HTTPException
 
-from backend.api.deps import REPO_ROOT, invalidate_week_cache, load_state, next_monday, save_state
+from backend.api.deps import REPO_ROOT, invalidate_week_cache, load_state, next_monday, this_monday, save_state
 from backend.api.models import OnboardingData
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
 from backend.engine.macrocycle_v1 import generate_macrocycle
@@ -215,7 +215,7 @@ def onboarding_complete(data: OnboardingData):
 
     # 3. Generate macrocycle
     try:
-        start = next_monday()
+        start = this_monday()
         macrocycle = generate_macrocycle(goal, profile, state, start, 12)
     except Exception as e:
         # Save state with profile even if macrocycle fails

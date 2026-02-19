@@ -37,14 +37,17 @@ export function FeedbackDialog({
 }: FeedbackDialogProps) {
   const [feedback, setFeedback] = useState<Record<string, string>>({});
 
-  const allFilled = exercises.every((ex) => feedback[ex.exercise_id] != null);
-
   function handleValueChange(exerciseId: string, value: string) {
     setFeedback((prev) => ({ ...prev, [exerciseId]: value }));
   }
 
   function handleSubmit() {
-    onSubmit(feedback);
+    // Default unrated exercises to "ok"
+    const complete: Record<string, string> = {};
+    for (const ex of exercises) {
+      complete[ex.exercise_id] = feedback[ex.exercise_id] ?? "ok";
+    }
+    onSubmit(complete);
     setFeedback({});
   }
 
@@ -61,7 +64,7 @@ export function FeedbackDialog({
         <DialogHeader>
           <DialogTitle>Session feedback</DialogTitle>
           <DialogDescription>
-            Rate the perceived difficulty for each exercise.
+            Rate the perceived difficulty for each exercise. Unrated exercises default to &quot;Ok&quot;.
           </DialogDescription>
         </DialogHeader>
 
@@ -102,7 +105,7 @@ export function FeedbackDialog({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={!allFilled}>
+          <Button onClick={handleSubmit}>
             Submit feedback
           </Button>
         </DialogFooter>

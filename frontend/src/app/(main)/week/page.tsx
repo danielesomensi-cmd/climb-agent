@@ -6,8 +6,10 @@ import { WeekGrid } from "@/components/training/week-grid";
 import { DayCard } from "@/components/training/day-card";
 import { ReplanDialog } from "@/components/training/replan-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getWeek, getState, applyOverride } from "@/lib/api";
-import type { WeekPlan, DayPlan } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle } from "@/lib/types";
 
 /** English labels for phase names */
 const PHASE_LABELS: Record<string, string> = {
@@ -30,6 +32,9 @@ function todayISO(): string {
 export default function WeekPage() {
   const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);
   const [phaseId, setPhaseId] = useState<string | null>(null);
+  const [weekNum, setWeekNum] = useState(0); // 0 = current week
+  const [displayWeekNum, setDisplayWeekNum] = useState(1);
+  const [macrocycle, setMacrocycle] = useState<Macrocycle | null>(null);
   const [gyms, setGyms] = useState<
     Array<{ name: string; equipment: string[] }>
   >([]);
@@ -45,7 +50,22 @@ export default function WeekPage() {
     });
   }, []);
 
-  const fetchData = useCallback(async () => {
+  const fetchWeek = useCallback(async (wn: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const weekData = await getWeek(wn);
+      setWeekPlan(weekData.week_plan);
+      setPhaseId(weekData.phase_id);
+      setDisplayWeekNum(weekData.week_num);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchInitial = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -55,6 +75,8 @@ export default function WeekPage() {
       ]);
       setWeekPlan(weekData.week_plan);
       setPhaseId(weekData.phase_id);
+      setDisplayWeekNum(weekData.week_num);
+      setMacrocycle(stateData.macrocycle ?? null);
       const eq = stateData.equipment as Record<string, unknown> | undefined;
       setGyms(
         (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
@@ -67,11 +89,27 @@ export default function WeekPage() {
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchInitial();
+  }, [fetchInitial]);
+
+  const totalWeeks = macrocycle?.total_weeks ?? 0;
+
+  const handlePrevWeek = () => {
+    if (displayWeekNum <= 1) return;
+    const newWn = displayWeekNum - 1;
+    setWeekNum(newWn);
+    fetchWeek(newWn);
+  };
+
+  const handleNextWeek = () => {
+    if (totalWeeks > 0 && displayWeekNum >= totalWeeks) return;
+    const newWn = displayWeekNum + 1;
+    setWeekNum(newWn);
+    fetchWeek(newWn);
+  };
 
   /** Handle replan: call override API and update week plan */
-  async function handleReplanApply(data: {
+  async function handleReplanApply(rdata: {
     intent: string;
     location: string;
     gym_id?: string;
@@ -80,11 +118,11 @@ export default function WeekPage() {
     setError(null);
     try {
       const result = await applyOverride({
-        intent: data.intent,
-        location: data.location,
+        intent: rdata.intent,
+        location: rdata.location,
         reference_date: replanDate,
         target_date: replanDate,
-        gym_id: data.gym_id,
+        gym_id: rdata.gym_id,
         phase_id: phaseId ?? undefined,
         week_plan: weekPlan,
       });
@@ -107,11 +145,38 @@ export default function WeekPage() {
       <TopBar title="Week" />
 
       <main className="mx-auto max-w-2xl space-y-6 p-4">
-        {/* Current phase badge */}
-        {phaseLabel && !loading && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Phase:</span>
-            <Badge variant="secondary">{phaseLabel}</Badge>
+        {/* Week navigation */}
+        {!loading && weekPlan && (
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handlePrevWeek}
+              disabled={displayWeekNum <= 1}
+            >
+              <ChevronLeft className="size-4 mr-1" />
+              Previous
+            </Button>
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              <span className="text-sm font-medium">
+                Week {displayWeekNum}{totalWeeks > 0 ? ` / ${totalWeeks}` : ""}
+              </span>
+              {phaseLabel && (
+                <Badge variant="secondary">{phaseLabel}</Badge>
+              )}
+              {weekPlan?.weekly_load_summary?.total_load != null && (
+                <Badge variant="outline">Load: {weekPlan.weekly_load_summary.total_load}</Badge>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleNextWeek}
+              disabled={totalWeeks > 0 && displayWeekNum >= totalWeeks}
+            >
+              Next
+              <ChevronRight className="size-4 ml-1" />
+            </Button>
           </div>
         )}
 
@@ -127,7 +192,7 @@ export default function WeekPage() {
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
             <p className="text-sm text-destructive">{error}</p>
             <button
-              onClick={fetchData}
+              onClick={fetchInitial}
               className="mt-2 text-sm font-medium text-primary underline"
             >
               Retry

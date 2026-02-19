@@ -75,6 +75,23 @@ export default function GoalsPage() {
   const targetIdx = gradeIndex(goal.target_grade, gradeList);
   const gap = targetIdx >= 0 && currentIdx >= 0 ? targetIdx - currentIdx : 0;
 
+  // Deadline validation
+  const today = new Date();
+  const todayISO = today.toISOString().split("T")[0];
+  const minDeadline = (() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split("T")[0];
+  })();
+  const isDeadlinePast = goal.deadline !== "" && goal.deadline <= todayISO;
+  const isDeadlineShort = (() => {
+    if (!goal.deadline || isDeadlinePast) return false;
+    const dl = new Date(goal.deadline);
+    const nineWeeks = new Date(today);
+    nineWeeks.setDate(nineWeeks.getDate() + 63);
+    return dl < nineWeeks;
+  })();
+
   // Warnings
   const isAmbitious = gap > 8;
   const isTooLow =
@@ -124,7 +141,8 @@ export default function GoalsPage() {
   const isValid =
     goal.target_grade !== "" &&
     goal.deadline !== "" &&
-    !isTooLow;
+    !isTooLow &&
+    !isDeadlinePast;
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -206,8 +224,19 @@ export default function GoalsPage() {
               id="deadline"
               type="date"
               value={goal.deadline}
+              min={minDeadline}
               onChange={(e) => setGoal({ deadline: e.target.value })}
             />
+            {isDeadlinePast && (
+              <p className="text-xs text-red-500">
+                Deadline must be in the future
+              </p>
+            )}
+            {isDeadlineShort && (
+              <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+                This is a short timeframe. The macrocycle may be compressed.
+              </div>
+            )}
           </div>
 
           {/* Warnings */}

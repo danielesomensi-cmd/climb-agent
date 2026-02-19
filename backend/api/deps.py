@@ -64,6 +64,17 @@ def next_monday(from_date: Optional[date] = None) -> str:
     return (d + timedelta(days=days_ahead)).isoformat()
 
 
+def this_monday(from_date: Optional[date] = None) -> str:
+    """Return the Monday of the current week as 'YYYY-MM-DD'.
+
+    Unlike next_monday(), this goes backwards to find the Monday
+    so that a macrocycle can start immediately (partial first week).
+    """
+    d = from_date or date.today()
+    # weekday() returns 0 for Monday
+    return (d - timedelta(days=d.weekday())).isoformat()
+
+
 def current_phase_and_week(macrocycle: Dict[str, Any]) -> Tuple[int, int]:
     """Given a macrocycle dict, find which phase and week-within-phase today falls in.
 

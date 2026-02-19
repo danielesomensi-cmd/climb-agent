@@ -31,6 +31,8 @@ export default function SettingsPage() {
 
   // User data
   const user = state?.user ?? {};
+  const assessment = state?.assessment ?? {};
+  const body = (state as Record<string, unknown>)?.body as Record<string, number> | undefined;
   const goal = state?.goal ?? {};
   const equipment = (state?.equipment ?? {}) as {
     home_enabled?: boolean;
@@ -39,7 +41,7 @@ export default function SettingsPage() {
   };
   const availability = (state?.availability ?? {}) as Record<
     string,
-    Record<string, { available: boolean }>
+    Record<string, { available: boolean; preferred_location?: string; gym_id?: string }>
   >;
 
   /** Regenerate the assessment profile */
@@ -135,15 +137,17 @@ export default function SettingsPage() {
                 />
                 <InfoRow
                   label="Weight"
-                  value={
-                    user.weight_kg != null ? `${user.weight_kg} kg` : "—"
-                  }
+                  value={(() => {
+                    const w = assessment?.body?.weight_kg ?? body?.weight_kg ?? user.weight_kg;
+                    return w != null ? `${w} kg` : "—";
+                  })()}
                 />
                 <InfoRow
                   label="Height"
-                  value={
-                    user.height_cm != null ? `${user.height_cm} cm` : "—"
-                  }
+                  value={(() => {
+                    const h = assessment?.body?.height_cm ?? body?.height_cm ?? user.height_cm;
+                    return h != null ? `${h} cm` : "—";
+                  })()}
                 />
               </CardContent>
             </Card>
@@ -211,10 +215,10 @@ export default function SettingsPage() {
                   </div>
                 )}
                 {equipment.gyms &&
-                  equipment.gyms.map((gym) => (
-                    <div key={gym.name} className="mb-2">
+                  equipment.gyms.map((gym, index) => (
+                    <div key={`gym-${index}`} className="mb-2">
                       <p className="text-xs font-medium text-muted-foreground mb-1">
-                        {gym.name}
+                        {gym.name || `Gym ${index + 1}`}
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {gym.equipment.map((item) => (
@@ -250,7 +254,18 @@ export default function SettingsPage() {
                       const slotEntries = slots ? Object.entries(slots) : [];
                       const availableSlots = slotEntries
                         .filter(([, s]) => s?.available)
-                        .map(([slotName]) => slotName);
+                        .map(([slotName, s]) => {
+                          const loc = s?.preferred_location;
+                          if (!loc) return slotName;
+                          if (loc === "home") return `${slotName} (home)`;
+                          if (s?.gym_id) {
+                            const gym = equipment.gyms?.find(
+                              (g) => g.name === s.gym_id
+                            );
+                            return `${slotName} (${gym?.name || s.gym_id})`;
+                          }
+                          return `${slotName} (gym)`;
+                        });
 
                       return (
                         <div key={day} className="flex items-start gap-2 text-xs">

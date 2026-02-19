@@ -158,7 +158,7 @@ CLAUDE.md                   ← Context for Claude Code
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server
-uvicorn backend.api.main:app --reload
+uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8000
 
 # Frontend dev server
 cd frontend && npm run dev

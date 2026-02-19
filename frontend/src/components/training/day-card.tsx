@@ -19,6 +19,7 @@ interface DayCardProps {
   gyms?: Gym[];
   onMarkDone?: (sessionId: string) => void;
   onMarkSkipped?: (sessionId: string) => void;
+  onUndo?: (sessionId: string) => void;
   onReplan?: (date: string) => void;
   showActions?: boolean;
 }
@@ -71,6 +72,7 @@ export function DayCard({
   gyms,
   onMarkDone,
   onMarkSkipped,
+  onUndo,
   onReplan,
   showActions = false,
 }: DayCardProps) {
@@ -116,6 +118,7 @@ export function DayCard({
               onMarkSkipped={
                 onMarkSkipped ? () => onMarkSkipped(session.session_id) : undefined
               }
+              onUndo={onUndo ? () => onUndo(session.session_id) : undefined}
             />
           ))
         )}
