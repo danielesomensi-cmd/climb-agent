@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-19 (Phase 2 complete — outdoor, resolver, reports, quotes)
+> Last updated: 2026-02-19 (Phase 2 complete — catalog cleanup, doc alignment)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -446,6 +446,8 @@ Tabella unica con TUTTI gli item tracciati.
 | B31 | Add session "other" mostra solo deload | ✅ DONE | post-2 | — |
 | B32 | Feedback done non visibile in UI | ✅ DONE | post-2 | — |
 | B33 | Quote motivazionale nella Today view | ✅ DONE | post-2 | — |
+| B34 | Feedback badge sessione mancante in Today view | TODO | post-2 | — |
+| B35 | Feedback esercizio singolo non visibile (FR-3 incompleto) | TODO | post-2 | — |
 
 ---
 
