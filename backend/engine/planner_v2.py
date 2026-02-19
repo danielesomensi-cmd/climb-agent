@@ -78,8 +78,10 @@ def _pick_location(
     if not viable:
         return None
     preferred = slot_info.get("preferred_location")
-    if isinstance(preferred, str) and preferred in viable:
-        return preferred
+    if isinstance(preferred, str):
+        if preferred in viable:
+            return preferred
+        return None  # session can't satisfy location preference
     return viable[0]
 
 
@@ -310,10 +312,21 @@ def generate_phase_week(
                 si = day_avail[s]
                 if not si["available"]:
                     continue
-                if si.get("preferred_location") == "gym" or "gym" in si.get("locations", []):
-                    score += 10
+                # Scoring priorities:
+                # 1. Gym preferred or gym-only slot: +100 (climbing sessions need gym)
+                # 2. Gym available but not preferred: +50
+                # 3. Home-only slot: +1 (baseline)
+                slot_locs = si.get("locations", [])
+                preferred = si.get("preferred_location")
+                is_gym = preferred == "gym" or (preferred is None and "gym" in slot_locs)
+                if is_gym:
+                    score += 100
+                elif "gym" in slot_locs:
+                    score += 50
+                else:
+                    score += 1
                 if s == "evening":
-                    score += 5
+                    score += 10
             day_scores.append((score, offset))
         # Stable sort: by score descending, then offset ascending
         day_scores.sort(key=lambda x: (-x[0], x[1]))
@@ -327,7 +340,23 @@ def generate_phase_week(
     primary_uses = 0
     max_primary_uses = len(primary_pool) * 2 if primary_pool else 0  # max 2 cycles
 
-    for offset in range(7):
+    # Sort day offsets: gym-available days first, then home-only, preserving weekday order within groups
+    def _day_has_gym(offset: int) -> bool:
+        day_avail = normalized[day_keys[offset]]
+        return any(
+            day_avail[s]["available"] and (
+                day_avail[s].get("preferred_location") == "gym"
+                or "gym" in day_avail[s].get("locations", [])
+            )
+            for s in SLOTS
+        )
+
+    pass1_day_order = sorted(
+        [o for o in range(7) if day_has_available_slot[o]],
+        key=lambda o: (0 if _day_has_gym(o) else 1, o),
+    )
+
+    for offset in pass1_day_order:
         if not day_has_available_slot[offset]:
             continue
         if not primary_pool:
@@ -335,57 +364,64 @@ def generate_phase_week(
         if primary_uses >= max_primary_uses:
             break
 
-        sid = primary_pool[primary_idx % len(primary_pool)]
-        meta = _SESSION_META[sid]
+        placed = False
+        attempts = 0
+        while attempts < len(primary_pool) and primary_uses < max_primary_uses:
+            sid = primary_pool[primary_idx % len(primary_pool)]
+            meta = _SESSION_META[sid]
 
-        # Pre-trip deload: no hard/max sessions on pretrip dates
-        if day_dates[offset] in pretrip_set and (meta["hard"] or meta["intensity"] == "max"):
-            continue
+            skip = False
 
-        # Hard day cap
-        if meta["hard"] and hard_days >= effective_hard_cap:
+            # Pre-trip deload: no hard/max sessions on pretrip dates
+            if day_dates[offset] in pretrip_set and (meta["hard"] or meta["intensity"] == "max"):
+                skip = True
+
+            # Hard day cap
+            if not skip and meta["hard"] and hard_days >= effective_hard_cap:
+                skip = True
+
+            # No consecutive finger days (48h gap)
+            if not skip and meta["finger"] and finger_day_offsets:
+                last_finger_offset = finger_day_offsets[-1]
+                if (offset - last_finger_offset) <= 1:
+                    skip = True
+
+            # No consecutive hard/max-intensity days
+            if not skip and meta["hard"] and hard_day_offsets:
+                last_hard_offset = hard_day_offsets[-1]
+                if (offset - last_hard_offset) <= 1:
+                    skip = True
+
+            if skip:
+                primary_idx += 1
+                primary_uses += 1
+                attempts += 1
+                continue
+
+            day_avail = normalized[day_keys[offset]]
+            result = _find_best_slot(day_avail, meta, locations, prefer_evening=True)
+            if result is None:
+                primary_idx += 1
+                primary_uses += 1
+                attempts += 1
+                continue  # try next session for SAME day
+
+            slot, slot_info = result
+            entry = _make_session_entry(
+                slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
+                default_gym_id, gyms or [], "pass1:primary",
+            )
+            day_sessions[offset].append(entry)
             primary_idx += 1
             primary_uses += 1
-            # Try next session in same day
-            if primary_uses < max_primary_uses:
-                sid = primary_pool[primary_idx % len(primary_pool)]
-                meta = _SESSION_META[sid]
-                if meta["hard"] and hard_days >= effective_hard_cap:
-                    continue  # Skip this day for primary
-            else:
-                continue
 
-        # No consecutive finger days (48h gap)
-        if meta["finger"] and finger_day_offsets:
-            last_finger_offset = finger_day_offsets[-1]
-            if (offset - last_finger_offset) <= 1:
-                continue
-
-        # No consecutive hard/max-intensity days
-        if meta["hard"] and hard_day_offsets:
-            last_hard_offset = hard_day_offsets[-1]
-            if (offset - last_hard_offset) <= 1:
-                continue
-
-        day_avail = normalized[day_keys[offset]]
-        result = _find_best_slot(day_avail, meta, locations, prefer_evening=True)
-        if result is None:
-            continue
-
-        slot, slot_info = result
-        entry = _make_session_entry(
-            slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
-            default_gym_id, gyms or [], "pass1:primary",
-        )
-        day_sessions[offset].append(entry)
-        primary_idx += 1
-        primary_uses += 1
-
-        if meta["hard"]:
-            hard_days += 1
-            hard_day_offsets.append(offset)
-        if meta["finger"]:
-            finger_day_offsets.append(offset)
+            if meta["hard"]:
+                hard_days += 1
+                hard_day_offsets.append(offset)
+            if meta["finger"]:
+                finger_day_offsets.append(offset)
+            placed = True
+            break
 
     # ── PASS 2: Fill remaining days with complementary sessions ──
     days_with_sessions = sum(1 for ds in day_sessions if ds)
@@ -405,23 +441,29 @@ def generate_phase_week(
         if comp_uses >= max_comp_uses:
             break
 
-        sid = complementary_pool[comp_idx % len(complementary_pool)]
-        meta = _SESSION_META[sid]
+        attempts = 0
+        while attempts < len(complementary_pool) and comp_uses < max_comp_uses:
+            sid = complementary_pool[comp_idx % len(complementary_pool)]
+            meta = _SESSION_META[sid]
 
-        day_avail = normalized[day_keys[offset]]
-        result = _find_best_slot(day_avail, meta, locations, prefer_evening=False)
-        if result is None:
-            continue
+            day_avail = normalized[day_keys[offset]]
+            result = _find_best_slot(day_avail, meta, locations, prefer_evening=False)
+            if result is None:
+                comp_idx += 1
+                comp_uses += 1
+                attempts += 1
+                continue  # try next session for SAME day
 
-        slot, slot_info = result
-        entry = _make_session_entry(
-            slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
-            default_gym_id, gyms or [], "pass2:complementary",
-        )
-        day_sessions[offset].append(entry)
-        comp_idx += 1
-        comp_uses += 1
-        days_with_sessions += 1
+            slot, slot_info = result
+            entry = _make_session_entry(
+                slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
+                default_gym_id, gyms or [], "pass2:complementary",
+            )
+            day_sessions[offset].append(entry)
+            comp_idx += 1
+            comp_uses += 1
+            days_with_sessions += 1
+            break
 
     # ── PASS 3 (optional): Inject test sessions on last week of eligible phase ──
     if is_last_week_of_phase and phase_id in ("base", "strength_power"):
