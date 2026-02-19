@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-19 (post UI test batches — Batch 1/1b/2 + UI-23)
+> Last updated: 2026-02-19 (Phase 3.2 complete — B25, B19, B20, B27, NEW-F6, NEW-F7)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -35,6 +35,16 @@
 - Batch 2 (18 UX items): UI-1 through UI-22 + FR-2/FR-3
 - UI-23: gym slot priority in planner
 - ~251 test verdi
+
+### Phase 3.2: UI polish + adaptive ✅
+- B25 adaptive replanning after feedback (conservative rules)
+- B19 quick-add session (suggest + append, day+1 ripple only)
+- B20 edit availability from Settings (preserve completed sessions on regen)
+- B27 equipment label single source (frontend fetches from API)
+- NEW-F6 phase mismatch warning in replanner
+- NEW-F7 finger compensation after override
+- B11 configurable test protocols → deferred to Phase 2.5
+- ~290 test verdi, 17 endpoints
 
 ---
 
@@ -212,6 +222,7 @@ Da fare DOPO Phase 2 (tracking) per beneficiare dei dati di feedback reali.
 
 Include anche:
 - **NEW-F1** (prescription climbing vuota): aggiungere suggested_grade_offset, volume, rest_between agli esercizi climbing.
+- **B11** (configurable test protocols): 5s vs 7s hang, 1RM vs 2RM pullup con conversione automatica. Deferred from Phase 3.2.
 - **Test exercise expansion**: aggiungere esercizi con `is_test: true` per coprire più assi dell'assessment. Phase 1.75 ha creato test_repeater_7_3 e test_max_weighted_pullup come session files, ma servono più esercizi test specializzati.
 - **UI-9** (limitation filtering verification): verificare che resolve_session.py controlli limitations.active_flags contro controindicazioni esercizi. Se no → implementare.
 - **UI-20** (warmup exercise variety): warmup template pool ha opzioni limitate o tie-break seleziona sempre shoulder_car. Espandere pool o migliorare selezione.
@@ -263,21 +274,20 @@ Posizionamento: Phase 2.5 (tra tracking e UI polish).
 > All done except: UI-9 (Phase 2.5), UI-18 (Phase 2), UI-20 (Phase 2.5), FR-1 (Phase 2).
 > See §8 for full status.
 
-## §3 — Phase 3.2: UI polish + adaptive 🔲 (partial — 18/24 done)
+## §3 — Phase 3.2: UI polish + adaptive ✅ (complete — B11 deferred to Phase 2.5)
 
-Completed in Batch 2: UI-1, UI-2, UI-3, UI-4, UI-5, UI-7, UI-8, UI-10, UI-12, UI-14, UI-15, UI-16, UI-17, UI-22, FR-2, FR-3. See §8.
+Completed in Batch 2: UI-1, UI-2, UI-3, UI-4, UI-5, UI-7, UI-8, UI-10, UI-12, UI-14, UI-15, UI-16, UI-17, UI-22, FR-2, FR-3.
+Phase 3.2 bundle: B25, B19, B20, B27, NEW-F6, NEW-F7 — all done. B11 deferred to Phase 2.5 (depends on catalog audit).
 
-**Remaining items:**
-
-| ID | Titolo | Priorità | Effort | Descrizione |
-|----|--------|----------|--------|-------------|
-| B25 | Adaptive replanning after feedback | **Alta** | Medium | Regole conservative: very_hard → downgrade next hard day. 2× very_hard in 3 giorni → insert recovery. Solo downgrade automatici, mai upgrade senza conferma utente. |
-| B19 | Quick-add session | Media | Medium | Aggiungere sessione extra da week view. Suggerisce tipo basato su fase e bilancio settimanale. |
-| B20 | Edit availability da Settings | Media | Small | Form frontend + API call a set_availability. |
-| B11 | Configurable test protocols | Media | Small | 5s vs 7s hang, 1RM vs 2RM pullup con conversione automatica. |
-| B27 | Equipment label single source | Media | Small | Labels equipment definite in un solo posto, non duplicati tra onboarding.py e frontend. |
-| NEW-F6 | Warning phase_mismatch nel replanner | Bassa | Small | Avvisare quando l'utente fa override con sessione incompatibile con la fase corrente. |
-| NEW-F7 | Finger compensation dopo override | Bassa | Small | Se override rimuove sessione finger, compensare nei giorni successivi. |
+| ID | Titolo | Stato | Note |
+|----|--------|-------|------|
+| B25 | Adaptive replanning after feedback | ✅ DONE | Conservative rules: very_hard → downgrade, 2× very_hard → insert recovery |
+| B19 | Quick-add session | ✅ DONE | suggest_sessions + apply_day_add, day+1 ripple only, warnings |
+| B20 | Edit availability from Settings | ✅ DONE | AvailabilityEditor component, force regen preserving completed sessions |
+| B27 | Equipment label single source | ✅ DONE | Frontend fetches from GET /api/onboarding/defaults |
+| NEW-F6 | Warning phase_mismatch nel replanner | ✅ DONE | Logged in adaptations when override uses different phase |
+| NEW-F7 | Finger compensation dopo override | ✅ DONE | _compensate_finger: replaces complementary with finger_maintenance_home, 48h gap |
+| B11 | Configurable test protocols | ⏩ Phase 2.5 | Depends on catalog audit and dedicated test exercises |
 
 ---
 
@@ -377,24 +387,24 @@ Tabella unica con TUTTI gli item tracciati.
 | B8 | Session enrichment + modules | ✅ DONE | 1.75 | §2.3 |
 | B9 | cable_machine, leg_press | ✅ DONE | 3.1 | §1 |
 | B10 | Outdoor climbing spots | TODO | 2 | §4 |
-| B11 | Configurable test protocols | TODO | 3.2 | §3 |
-| B19 | Quick-add session | TODO | 3.2 | §3 |
-| B20 | Edit availability from Settings | TODO | 3.2 | §3 |
+| B11 | Configurable test protocols | ⏩ Phase 2.5 | 2.5 | §2.6 |
+| B19 | Quick-add session | ✅ DONE | 3.2 | §3 |
+| B20 | Edit availability from Settings | ✅ DONE | 3.2 | §3 |
 | B21 | Done button status | ✅ DONE | 3.1 | §1 |
 | B22 | Events endpoint auto-resolve | ✅ DONE | 3.1 | §1 |
 | B23 | Skip status update | ✅ DONE | 3.1 | §1 |
 | B24 | Gym equipment labels | ✅ DONE | 3.1 | §1 |
-| B25 | Adaptive replanning after feedback | TODO | 3.2 | §3 |
+| B25 | Adaptive replanning after feedback | ✅ DONE | 3.2 | §3 |
 | B26 | Test isolation fixtures | ✅ DONE | 3.1 | §1 |
-| B27 | Equipment label single source | TODO | 3.2 | §3 |
+| B27 | Equipment label single source | ✅ DONE | 3.2 | §3 |
 | NEW-F1 | Prescription climbing vuota | TODO | 2.5 | §2.6 |
 | NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
 | NEW-F3a | Test sessions scheduling | ✅ DONE | 1.75 | §2.4 |
 | NEW-F3b | assessment.tests closed loop | TODO | 2 | §2.4 |
 | NEW-F4 | Ripple effect proporzionale | ✅ DONE | 1.75 | §2.4 |
 | NEW-F5 | Durate fase negative | ✅ DONE | 1.75 | §2.1 |
-| NEW-F6 | Warning phase_mismatch | TODO | 3.2 | §3 |
-| NEW-F7 | Finger compensation | TODO | 3.2 | §3 |
+| NEW-F6 | Warning phase_mismatch | ✅ DONE | 3.2 | §3 |
+| NEW-F7 | Finger compensation | ✅ DONE | 3.2 | §3 |
 | NEW-F8 | Easy climbing in deload | TODO | 2 | §4 |
 | NEW-F9 | Finger maintenance in PE | TODO | 2 | §4 |
 | NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |

@@ -2,8 +2,8 @@
 
 > Documento di design per il sistema di periodizzazione adattiva.
 > Versione: 1.2 — febbraio 2026
-> Stato: documento vivente, aggiornato post Phase 3.1 + B8
-> Ultimo audit: 2026-02-17
+> Stato: documento vivente, aggiornato post Phase 3.2
+> Ultimo audit: 2026-02-19
 
 ---
 
@@ -69,7 +69,8 @@ Il sistema fa domande mirate per costruire il profilo iniziale:
 
 Mini-test integrati nelle sessioni normali, non giornate dedicate:
 - Sessione test max hang (già presente: `test_max_hang_5s`)
-- Sessione test PE (da creare)
+- Sessione test PE (già presente: `test_repeater_7_3`)
+- Sessione test pulling (già presente: `test_max_weighted_pullup`)
 - Review dei gradi scalati (indoor + outdoor) dal log
 
 ### 2.4 Profilo debolezze → Pesi del macrociclo
@@ -486,3 +487,6 @@ Le specifiche di design per fasi future sono contenute in questo documento:
 - **Onboarding flow** (assessment guidato): §2.3
 - **LLM Coach** (conversational layer): §11
 - **Decisioni tecniche approvate**: §12
+
+Prossime fasi operative: Phase 2 (tracking + outdoor), Phase 2.5 (exercise catalog audit + B11 test protocols).
+Vedere `docs/ROADMAP_v2.md` per dettagli.

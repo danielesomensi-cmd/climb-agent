@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-19 (post UI test batches — Batch 1/1b/2 + UI-23)
+> Last updated: 2026-02-19 (Phase 3.2 complete)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,9 +20,9 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 113 | 12 categories + cooldown stretches + active flexibility |
 | Sessions | 32 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup) |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | ~251 | all green (post UI test batches) |
+| Tests | ~290 | all green (post Phase 3.2) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
-| API endpoints | 15 | 9 routers + health (FastAPI, CORS for Next.js) |
+| API endpoints | 17 | 9 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 21 | 5 main views + 12 onboarding steps + root + onboarding index + session detail |
 
 ---
@@ -76,7 +76,7 @@ backend/
       macrocycle.py         ← POST /api/macrocycle/generate
       week.py               ← GET /api/week/{week_num} (auto-resolves sessions)
       session.py            ← POST /api/session/resolve
-      replanner.py          ← POST /api/replanner/override, /api/replanner/events
+      replanner.py          ← POST /api/replanner/override, /events, /quick-add + GET /suggest-sessions
       feedback.py           ← POST /api/feedback
   catalog/
     exercises/v1/           ← 113 exercises (JSON)
@@ -85,7 +85,7 @@ backend/
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← ~251 pytest tests
+  tests/                    ← ~290 pytest tests
 frontend/
   src/
     app/
@@ -107,7 +107,7 @@ frontend/
       training/             ← DayCard, SessionCard, ExerciseCard, WeekGrid,
                               MacrocycleTimeline, FeedbackDialog
     lib/
-      api.ts                ← API client (14 endpoint functions)
+      api.ts                ← API client (16 endpoint functions)
       types.ts              ← TypeScript interfaces
       hooks/use-state.ts    ← useUserState hook
 docs/
@@ -154,7 +154,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (~251 green)
+# Backend tests (~290 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)
@@ -180,9 +180,9 @@ from backend.engine.X import Y
 | 1.5: Post-E2E fixes | ✅ | 14 findings, 13 resolved, 155→188 tests |
 | 3: UI (Next.js PWA) | ✅ | 15 endpoints, 19 pages, mobile-first dark PWA |
 | 3.1: Bug fixes | ✅ | B21-B24, B9, B26 |
-| **1.75: Session enrichment + fix** | ✅ | B8 enrichment, B4 load score, NEW-F3a test scheduling, NEW-F4 ripple fix, F6 projecting intent. NEW-F1 → Phase 2.5. |
+| 1.75: Session enrichment + fix | ✅ | B8 enrichment, B4 load score, NEW-F3a test scheduling, NEW-F4 ripple fix, F6 projecting intent. NEW-F1 → Phase 2.5. |
 | UI test fixes (Batch 1-2) | ✅ | 22 bugs fixed, 3 FRs implemented, planner slot/location/dedup/gym-priority |
-| 3.2: UI polish + adaptive | 🔲 (partial) | 18/24 items done. Remaining: B25 adaptive replanning, B19/B20 |
+| **3.2: UI polish + adaptive** | ✅ | B25 adaptive replanning, B19 quick-add, B20 edit availability, B27 equipment labels, NEW-F6/F7. B11 → Phase 2.5 |
 | 2: Tracking + outdoor | 🔲 | Outdoor logging, reports, motivational quotes |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
 | 4: Evolution | 🔲 | Multi-goal, annual report, notifications |
