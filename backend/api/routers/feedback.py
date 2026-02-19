@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+from datetime import date as date_type
+
 from fastapi import APIRouter, HTTPException
 
 from backend.api.deps import load_state, save_state
 from backend.api.models import FeedbackRequest
+from backend.engine.adaptive_replan import (
+    append_feedback_log,
+    apply_adaptive_replan,
+    check_adaptive_replan,
+    load_exercises_by_id,
+)
 from backend.engine.closed_loop_v1 import apply_day_result_to_user_state
 from backend.engine.progression_v1 import apply_feedback
 
@@ -33,6 +41,21 @@ def post_feedback(req: FeedbackRequest):
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Closed-loop update failed: {e}")
+
+    # 3. Append to feedback log (B25)
+    exercises_by_id = load_exercises_by_id()
+    append_feedback_log(state, req.log_entry, req.resolved_day, exercises_by_id)
+
+    # 4. Check adaptive replanning (B25)
+    plan = state.get("current_week_plan")
+    if plan and plan.get("weeks"):
+        current_date = req.log_entry.get("date") or date_type.today().isoformat()
+        feedback_history = state.get("feedback_log", [])
+        result = check_adaptive_replan(plan, feedback_history, current_date)
+        if result["actions"]:
+            state["current_week_plan"] = apply_adaptive_replan(
+                plan, result["actions"]
+            )
 
     save_state(state)
     return {"status": "ok", "state": state}
