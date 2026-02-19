@@ -8,8 +8,8 @@ from copy import deepcopy
 from fastapi import APIRouter, HTTPException
 
 from backend.api.deps import REPO_ROOT, load_state, save_state
-from backend.api.models import EventsRequest, OverrideRequest
-from backend.engine.replanner_v1 import apply_day_override, apply_events
+from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
+from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
 from backend.engine.resolve_session import resolve_session
 
 router = APIRouter(prefix="/api/replanner", tags=["replanner"])
@@ -87,6 +87,74 @@ def override(req: OverrideRequest):
     _auto_resolve(updated, state)
 
     return {"week_plan": updated}
+
+
+@router.get("/suggest-sessions")
+def get_suggestions(target_date: str, location: str = "gym"):
+    """Suggest sessions to quick-add on a given date."""
+    state = load_state()
+    week_plan = state.get("current_week_plan")
+    if not week_plan:
+        raise HTTPException(
+            status_code=422,
+            detail="No current week plan — generate one from GET /api/week/0 first",
+        )
+
+    # Build session pool from macrocycle context if available
+    session_pool = None
+    macrocycle = state.get("macrocycle")
+    if macrocycle:
+        snapshot = week_plan.get("profile_snapshot") or {}
+        phase_id = snapshot.get("phase_id", "base")
+        from backend.engine.macrocycle_v1 import _build_session_pool
+        session_pool = _build_session_pool(phase_id)
+
+    try:
+        suggestions = suggest_sessions(
+            week_plan,
+            target_date,
+            location,
+            session_pool=session_pool,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Suggestion failed: {e}")
+
+    return {"suggestions": suggestions}
+
+
+@router.post("/quick-add")
+def quick_add(req: QuickAddRequest):
+    """Add an extra session to a day without replacing existing ones."""
+    state = load_state()
+
+    week_plan = req.week_plan
+    if not week_plan:
+        raise HTTPException(
+            status_code=422,
+            detail="week_plan is required — generate one from GET /api/week/{week_num} first",
+        )
+
+    try:
+        updated, warnings = apply_day_add(
+            week_plan,
+            session_id=req.session_id,
+            target_date=req.target_date,
+            slot=req.slot,
+            location=req.location,
+            phase_id=req.phase_id,
+            gym_id=req.gym_id,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Quick-add failed: {e}")
+
+    state["current_week_plan"] = updated
+    save_state(state)
+
+    _auto_resolve(updated, state)
+
+    return {"week_plan": updated, "warnings": warnings}
 
 
 @router.post("/events")

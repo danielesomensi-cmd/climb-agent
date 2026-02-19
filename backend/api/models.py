@@ -68,6 +68,17 @@ class EventsRequest(BaseModel):
     week_plan: Optional[Dict[str, Any]] = None
 
 
+class QuickAddRequest(BaseModel):
+    """Body for POST /api/replanner/quick-add."""
+    session_id: str
+    target_date: str
+    slot: str = "evening"
+    location: str = "gym"
+    phase_id: Optional[str] = None
+    week_plan: Optional[Dict[str, Any]] = None
+    gym_id: Optional[str] = None
+
+
 # --------------------------------------------------------------------------- #
 # Feedback
 # --------------------------------------------------------------------------- #

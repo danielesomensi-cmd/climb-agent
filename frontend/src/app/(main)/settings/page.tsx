@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
-import { computeAssessment, generateMacrocycle, deleteState } from "@/lib/api";
+import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek } from "@/lib/api";
+import { AvailabilityEditor } from "@/components/settings/availability-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,7 @@ export default function SettingsPage() {
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [editingAvailability, setEditingAvailability] = useState(false);
 
   // User data
   const user = state?.user ?? {};
@@ -43,6 +45,22 @@ export default function SettingsPage() {
     string,
     Record<string, { available: boolean; preferred_location?: string; gym_id?: string }>
   >;
+
+  /** Save updated availability and regenerate plan */
+  async function handleSaveAvailability(
+    newAvailability: Record<string, unknown>,
+    newPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number },
+  ) {
+    setActionError(null);
+    try {
+      await putState({ availability: newAvailability, planning_prefs: newPrefs });
+      await getWeek(0, true);
+      await refresh();
+      setEditingAvailability(false);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to save availability");
+    }
+  }
 
   /** Regenerate the assessment profile */
   async function handleRegenAssessment() {
@@ -243,51 +261,74 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Availability ----- */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Availability</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {Object.keys(availability).length > 0 ? (
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                    {Object.entries(availability).map(([day, slots]) => {
-                      const slotEntries = slots ? Object.entries(slots) : [];
-                      const availableSlots = slotEntries
-                        .filter(([, s]) => s?.available)
-                        .map(([slotName, s]) => {
-                          const loc = s?.preferred_location;
-                          if (!loc) return slotName;
-                          if (loc === "home") return `${slotName} (home)`;
-                          if (s?.gym_id) {
-                            const gym = equipment.gyms?.find(
-                              (g) => g.name === s.gym_id
-                            );
-                            return `${slotName} (${gym?.name || s.gym_id})`;
-                          }
-                          return `${slotName} (gym)`;
-                        });
-
-                      return (
-                        <div key={day} className="flex items-start gap-2 text-xs">
-                          <span className="font-medium capitalize min-w-[60px]">
-                            {day}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {availableSlots.length > 0
-                              ? availableSlots.join(", ")
-                              : "—"}
-                          </span>
-                        </div>
-                      );
-                    })}
+            {editingAvailability ? (
+              <AvailabilityEditor
+                initialAvailability={availability as Record<string, Record<string, { available: boolean; preferred_location: string; gym_id?: string }>>}
+                initialPlanningPrefs={{
+                  target_training_days_per_week: (state?.planning_prefs as Record<string, number>)?.target_training_days_per_week ?? 4,
+                  hard_day_cap_per_week: (state?.planning_prefs as Record<string, number>)?.hard_day_cap_per_week ?? 3,
+                }}
+                gyms={equipment.gyms ?? []}
+                onSave={handleSaveAvailability}
+                onCancel={() => setEditingAvailability(false)}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Availability</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => setEditingAvailability(true)}
+                    >
+                      Edit
+                    </Button>
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">
-                    No availability configured
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent>
+                  {Object.keys(availability).length > 0 ? (
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      {Object.entries(availability).map(([day, slots]) => {
+                        const slotEntries = slots ? Object.entries(slots) : [];
+                        const availableSlots = slotEntries
+                          .filter(([, s]) => s?.available)
+                          .map(([slotName, s]) => {
+                            const loc = s?.preferred_location;
+                            if (!loc) return slotName;
+                            if (loc === "home") return `${slotName} (home)`;
+                            if (s?.gym_id) {
+                              const gym = equipment.gyms?.find(
+                                (g) => g.name === s.gym_id
+                              );
+                              return `${slotName} (${gym?.name || s.gym_id})`;
+                            }
+                            return `${slotName} (gym)`;
+                          });
+
+                        return (
+                          <div key={day} className="flex items-start gap-2 text-xs">
+                            <span className="font-medium capitalize min-w-[60px]">
+                              {day}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {availableSlots.length > 0
+                                ? availableSlots.join(", ")
+                                : "—"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No availability configured
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Separator />
 

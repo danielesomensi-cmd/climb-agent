@@ -64,8 +64,10 @@ export const generateMacrocycle = (startDate?: string, totalWeeks = 12) =>
   });
 
 // Week
-export const getWeek = (weekNum: number) =>
-  request<{ week_num: number; phase_id: string; week_plan: WeekPlan }>(`/api/week/${weekNum}`);
+export const getWeek = (weekNum: number, force?: boolean) =>
+  request<{ week_num: number; phase_id: string; week_plan: WeekPlan }>(
+    `/api/week/${weekNum}${force ? "?force=true" : ""}`
+  );
 
 // Session
 export const resolveSession = (sessionId: string, context?: Record<string, unknown>) =>
@@ -95,6 +97,30 @@ export const applyEvents = (data: {
   week_plan: WeekPlan;
 }) =>
   request<{ week_plan: WeekPlan }>("/api/replanner/events", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const getSuggestedSessions = (targetDate: string, location: string) =>
+  request<{
+    suggestions: Array<{
+      session_id: string;
+      intensity: string;
+      estimated_load_score: number;
+      reason: string;
+    }>;
+  }>(`/api/replanner/suggest-sessions?target_date=${targetDate}&location=${location}`);
+
+export const quickAddSession = (data: {
+  session_id: string;
+  target_date: string;
+  slot?: string;
+  location?: string;
+  phase_id?: string;
+  week_plan: WeekPlan;
+  gym_id?: string;
+}) =>
+  request<{ week_plan: WeekPlan; warnings: string[] }>("/api/replanner/quick-add", {
     method: "POST",
     body: JSON.stringify(data),
   });

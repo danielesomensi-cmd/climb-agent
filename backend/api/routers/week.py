@@ -18,6 +18,7 @@ from backend.api.deps import (
 )
 from backend.engine.macrocycle_v1 import compute_pretrip_dates
 from backend.engine.planner_v2 import generate_phase_week
+from backend.engine.replanner_v1 import regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
 
 logger = logging.getLogger(__name__)
@@ -70,8 +71,12 @@ def _current_week_num(macrocycle: dict) -> int:
 
 
 @router.get("/{week_num}")
-def get_week(week_num: int):
-    """Generate the plan for a given week (1-based). week_num=0 → current week."""
+def get_week(week_num: int, force: bool = False):
+    """Generate the plan for a given week (1-based). week_num=0 → current week.
+
+    When force=True and this is the current week, regenerate from scratch but
+    preserve any sessions already marked done/skipped.
+    """
     state = load_state()
     macrocycle = state.get("macrocycle")
     if not macrocycle:
@@ -98,7 +103,10 @@ def get_week(week_num: int):
     is_current_week = (week_num == 0) or (ctx["week_num"] == _current_week_num(macrocycle))
     week_plan = None
 
-    if is_current_week:
+    # Store old plan before force-regeneration
+    old_plan = state.get("current_week_plan") if (force and is_current_week) else None
+
+    if is_current_week and not force:
         try:
             cached = state.get("current_week_plan")
             if (
@@ -138,6 +146,16 @@ def get_week(week_num: int):
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")
+
+        # When force-regenerating, preserve completed sessions from old plan
+        if (
+            old_plan
+            and old_plan.get("start_date") == week_plan.get("start_date")
+        ):
+            try:
+                week_plan = regenerate_preserving_completed(old_plan, week_plan)
+            except Exception:
+                logger.warning("Failed to preserve completed sessions, using fresh plan")
 
         # Cache the freshly generated plan for the current week
         if is_current_week:

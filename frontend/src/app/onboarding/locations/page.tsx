@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { getOnboardingDefaults } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,38 +22,26 @@ interface EquipmentItem {
   description: string;
 }
 
-const HOME_EQUIPMENT: EquipmentItem[] = [
-  { id: "hangboard", label: "Hangboard", description: "Finger training board" },
-  { id: "pullup_bar", label: "Pull-up bar", description: "" },
-  { id: "band", label: "Assistance band", description: "" },
-  { id: "dumbbell", label: "Dumbbells", description: "" },
-  { id: "kettlebell", label: "Kettlebell", description: "" },
-  { id: "ab_wheel", label: "Ab Wheel", description: "" },
-  { id: "rings", label: "Rings", description: "" },
-  { id: "foam_roller", label: "Foam Roller", description: "" },
-  { id: "resistance_band", label: "Resistance band", description: "" },
-  { id: "pinch_block", label: "Pinch Block", description: "" },
-];
-
-const GYM_EQUIPMENT: EquipmentItem[] = [
-  { id: "gym_boulder", label: "Bouldering area", description: "" },
-  { id: "gym_routes", label: "Lead / Top-rope walls", description: "" },
-  { id: "spraywall", label: "Spraywall", description: "" },
-  { id: "board_kilter", label: "Kilter Board", description: "" },
-  { id: "board_moonboard", label: "MoonBoard", description: "" },
-  { id: "campus_board", label: "Campus Board", description: "" },
-  { id: "hangboard", label: "Hangboard", description: "" },
-  { id: "dumbbell", label: "Dumbbells", description: "" },
-  { id: "barbell", label: "Barbell", description: "" },
-  { id: "bench", label: "Bench", description: "" },
-  { id: "cable_machine", label: "Cable machine", description: "" },
-  { id: "leg_press", label: "Leg press", description: "" },
-];
-
 export default function LocationsPage() {
   const router = useRouter();
   const { data, update } = useOnboarding();
   const equipment = data.equipment;
+
+  const [homeEquipment, setHomeEquipment] = useState<EquipmentItem[]>([]);
+  const [gymEquipment, setGymEquipment] = useState<EquipmentItem[]>([]);
+  const [loadingDefaults, setLoadingDefaults] = useState(true);
+
+  useEffect(() => {
+    getOnboardingDefaults()
+      .then((defaults) => {
+        setHomeEquipment(defaults.equipment_home as EquipmentItem[]);
+        setGymEquipment(defaults.equipment_gym as EquipmentItem[]);
+      })
+      .catch(() => {
+        // Silently fail — lists will be empty, user can still proceed
+      })
+      .finally(() => setLoadingDefaults(false));
+  }, []);
 
   const toggleHomeEnabled = (checked: boolean) => {
     update("equipment", { ...equipment, home_enabled: checked });
@@ -120,32 +110,38 @@ export default function LocationsPage() {
 
           {equipment.home_enabled && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {HOME_EQUIPMENT.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex items-start gap-2 cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={equipment.home.includes(item.id)}
-                      onCheckedChange={(checked) =>
-                        toggleHomeItem(item.id, checked === true)
-                      }
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <p className="text-sm font-medium leading-tight">
-                        {item.label}
-                      </p>
-                      {item.description && (
-                        <p className="text-xs text-muted-foreground">
-                          {item.description}
+              {loadingDefaults ? (
+                <div className="flex justify-center py-4">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {homeEquipment.map((item) => (
+                    <label
+                      key={item.id}
+                      className="flex items-start gap-2 cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={equipment.home.includes(item.id)}
+                        onCheckedChange={(checked) =>
+                          toggleHomeItem(item.id, checked === true)
+                        }
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <p className="text-sm font-medium leading-tight">
+                          {item.label}
                         </p>
-                      )}
-                    </div>
-                  </label>
-                ))}
-              </div>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground">
+                            {item.description}
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
 
               <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
                 A hangboard is essential for finger training
@@ -185,25 +181,31 @@ export default function LocationsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                {GYM_EQUIPMENT.map((item) => (
-                  <label
-                    key={item.id}
-                    className="flex items-start gap-2 cursor-pointer"
-                  >
-                    <Checkbox
-                      checked={gym.equipment.includes(item.id)}
-                      onCheckedChange={(checked) =>
-                        toggleGymEquipment(gymIndex, item.id, checked === true)
-                      }
-                      className="mt-0.5"
-                    />
-                    <p className="text-sm font-medium leading-tight">
-                      {item.label}
-                    </p>
-                  </label>
-                ))}
-              </div>
+              {loadingDefaults ? (
+                <div className="flex justify-center py-4">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {gymEquipment.map((item) => (
+                    <label
+                      key={item.id}
+                      className="flex items-start gap-2 cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={gym.equipment.includes(item.id)}
+                        onCheckedChange={(checked) =>
+                          toggleGymEquipment(gymIndex, item.id, checked === true)
+                        }
+                        className="mt-0.5"
+                      />
+                      <p className="text-sm font-medium leading-tight">
+                        {item.label}
+                      </p>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 

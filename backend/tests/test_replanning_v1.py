@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
+
+import pytest
 
 from backend.engine.planner_v1 import generate_week_plan
 from backend.engine.replanner_v1 import INTENT_TO_SESSION, apply_day_override, apply_events
@@ -370,3 +372,120 @@ def test_day_override_ripple_keeps_low_sessions():
                     and "recovery_ripple_proportional" not in s.get("constraints_applied", []):
                 # This was an original low session — should be unchanged
                 assert s["intensity"] == "low"
+
+
+# ---------- NEW-F6: phase mismatch warning ----------
+
+
+def test_phase_mismatch_warning_emitted():
+    """Override with different phase_id should emit phase_mismatch_warning in adaptations."""
+    plan = _v2_plan_snapshot("base")
+    updated = apply_day_override(
+        plan,
+        intent="strength",
+        location="gym",
+        reference_date="2026-01-05",
+        phase_id="power_endurance",  # mismatch: plan is base
+    )
+    warnings = [a for a in updated.get("adaptations", []) if a["type"] == "phase_mismatch_warning"]
+    assert len(warnings) == 1
+    assert warnings[0]["requested_phase"] == "power_endurance"
+    assert warnings[0]["current_phase"] == "base"
+
+
+def test_no_phase_mismatch_warning_when_matching():
+    """Override with matching phase_id should NOT emit phase_mismatch_warning."""
+    plan = _v2_plan_snapshot("base")
+    updated = apply_day_override(
+        plan,
+        intent="technique",
+        location="gym",
+        reference_date="2026-01-05",
+        phase_id="base",
+    )
+    warnings = [a for a in updated.get("adaptations", []) if a["type"] == "phase_mismatch_warning"]
+    assert len(warnings) == 0
+
+
+# ---------- NEW-F7: finger compensation after override ----------
+
+
+def test_finger_compensation_after_override():
+    """Override that removes finger session should compensate on a later day."""
+    plan = _v2_plan_snapshot("base")
+    days = plan["weeks"][0]["days"]
+    finger_day = next(
+        (d for d in days if any((s.get("tags") or {}).get("finger") for s in d["sessions"])),
+        None,
+    )
+    if finger_day is None:
+        pytest.skip("No finger day in base plan")
+
+    finger_date = finger_day["date"]
+    updated = apply_day_override(
+        plan,
+        intent="technique",  # non-finger
+        location="gym",
+        reference_date=(datetime.strptime(finger_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d"),
+        target_date=finger_date,
+        phase_id="base",
+    )
+
+    # Check: finger_compensation or finger_compensation_warning should be logged
+    compensations = [a for a in updated.get("adaptations", []) if a.get("type") == "finger_compensation"]
+    finger_warnings = [a for a in updated.get("adaptations", []) if a.get("type") == "finger_compensation_warning"]
+    assert len(compensations) + len(finger_warnings) >= 1, \
+        "Should either compensate finger or warn about inability to compensate"
+
+
+def test_finger_no_compensation_when_finger_kept():
+    """Override with finger intent should NOT trigger compensation."""
+    plan = _v2_plan_snapshot("base")
+    days = plan["weeks"][0]["days"]
+    finger_day = next(
+        (d for d in days if any((s.get("tags") or {}).get("finger") for s in d["sessions"])),
+        None,
+    )
+    if finger_day is None:
+        pytest.skip("No finger day in base plan")
+
+    finger_date = finger_day["date"]
+    updated = apply_day_override(
+        plan,
+        intent="finger_max",  # still finger!
+        location="home",
+        reference_date=(datetime.strptime(finger_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d"),
+        target_date=finger_date,
+        phase_id="base",
+    )
+
+    compensations = [a for a in updated.get("adaptations", []) if a.get("type") in ("finger_compensation", "finger_compensation_warning")]
+    assert len(compensations) == 0, "No compensation needed when finger session was kept"
+
+
+def test_finger_compensation_respects_48h_gap():
+    """Finger compensation must not place finger session adjacent to existing finger day."""
+    plan = _v2_plan_snapshot("strength_power")
+    days = plan["weeks"][0]["days"]
+    finger_days = [d for d in days if any((s.get("tags") or {}).get("finger") for s in d["sessions"])]
+    if len(finger_days) < 1:
+        pytest.skip("No finger day in strength_power plan")
+
+    finger_date = finger_days[0]["date"]
+    updated = apply_day_override(
+        plan,
+        intent="technique",
+        location="gym",
+        reference_date=(datetime.strptime(finger_date, "%Y-%m-%d") - timedelta(days=1)).strftime("%Y-%m-%d"),
+        target_date=finger_date,
+        phase_id="strength_power",
+    )
+
+    # If compensated, verify 48h gap
+    comp_days = [
+        d for d in updated["weeks"][0]["days"]
+        if any((s.get("tags") or {}).get("finger") for s in d["sessions"])
+    ]
+    dates = sorted(datetime.strptime(d["date"], "%Y-%m-%d").date() for d in comp_days)
+    for prev, cur in zip(dates, dates[1:]):
+        assert (cur - prev).days > 1, f"Finger sessions too close: {prev} and {cur}"

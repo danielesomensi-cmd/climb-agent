@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, RefreshCw } from "lucide-react";
+import { Eye, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ interface DayCardProps {
   onMarkSkipped?: (sessionId: string) => void;
   onUndo?: (sessionId: string) => void;
   onReplan?: (date: string) => void;
+  onQuickAdd?: (date: string) => void;
   showActions?: boolean;
 }
 
@@ -74,6 +75,7 @@ export function DayCard({
   onMarkSkipped,
   onUndo,
   onReplan,
+  onQuickAdd,
   showActions = false,
 }: DayCardProps) {
   const today = isToday(day.date);
@@ -141,6 +143,17 @@ export function DayCard({
               >
                 <RefreshCw className="size-3.5 mr-1" />
                 Change plan
+              </Button>
+            )}
+            {onQuickAdd && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs"
+                onClick={() => onQuickAdd(day.date)}
+              >
+                <Plus className="size-3.5 mr-1" />
+                Add session
               </Button>
             )}
           </div>

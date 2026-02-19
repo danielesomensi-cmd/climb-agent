@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { TopBar } from "@/components/layout/top-bar";
 import { WeekGrid } from "@/components/training/week-grid";
 import { DayCard } from "@/components/training/day-card";
+import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getWeek, getState, applyOverride } from "@/lib/api";
+import { getWeek, getState, applyOverride, quickAddSession } from "@/lib/api";
 import type { WeekPlan, DayPlan, Macrocycle } from "@/lib/types";
 
 /** English labels for phase names */
@@ -41,6 +42,7 @@ export default function WeekPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [replanDate, setReplanDate] = useState<string | null>(null);
+  const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -131,6 +133,36 @@ export default function WeekPage() {
       setError(e instanceof Error ? e.message : "Failed to update plan");
     } finally {
       setReplanDate(null);
+    }
+  }
+
+  /** Handle quick-add: call quick-add API and update week plan */
+  async function handleQuickAddApply(rdata: {
+    session_id: string;
+    slot: string;
+    location: string;
+    gym_id?: string;
+  }) {
+    if (!weekPlan || !quickAddDate) return;
+    setError(null);
+    try {
+      const result = await quickAddSession({
+        session_id: rdata.session_id,
+        target_date: quickAddDate,
+        slot: rdata.slot,
+        location: rdata.location,
+        gym_id: rdata.gym_id,
+        phase_id: phaseId ?? undefined,
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+      if (result.warnings?.length > 0) {
+        setError(result.warnings.join("; "));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add session");
+    } finally {
+      setQuickAddDate(null);
     }
   }
 
@@ -227,6 +259,7 @@ export default function WeekPage() {
                   gyms={gyms}
                   showActions
                   onReplan={(date) => setReplanDate(date)}
+                  onQuickAdd={(date) => setQuickAddDate(date)}
                 />
               </div>
             ))}
@@ -250,6 +283,15 @@ export default function WeekPage() {
         gyms={gyms}
         onClose={() => setReplanDate(null)}
         onApply={handleReplanApply}
+      />
+
+      {/* Quick-add dialog */}
+      <QuickAddDialog
+        open={quickAddDate !== null}
+        date={quickAddDate ?? ""}
+        gyms={gyms}
+        onClose={() => setQuickAddDate(null)}
+        onApply={handleQuickAddApply}
       />
     </>
   );
