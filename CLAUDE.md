@@ -45,9 +45,9 @@ backend/
   data/              # user_state.json + JSON schemas for log validation
   tests/             # ~360 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
-  src/app/           # 21+ pages: 5 main views + 12 onboarding steps + root + index + session detail
+  src/app/           # 19 pages: 5 main views + 12 onboarding steps + root + onboarding index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
-  src/lib/           # api.ts (16 endpoint functions), types.ts, hooks/
+  src/lib/           # api.ts (25 endpoint functions), types.ts, hooks/
 docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, ROADMAP_v2.md, audit_post_fix.md, e2e_test_results.md
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```
@@ -127,19 +127,19 @@ cd frontend && npm run dev    # http://localhost:3000
 - **API client**: Typed fetch wrapper in `src/lib/api.ts` (25 endpoint functions)
 - **PWA**: manifest.json + service worker
 
-### Pages (21+)
-5 main views + 12 onboarding steps, with validation (date pickers, grade-experience cross-check), multi-week navigation, replan intents, feedback badges, undo done, load score display.
+### Pages (19)
+5 main views + 12 onboarding steps + root + onboarding index, with validation (date pickers, grade-experience cross-check), multi-week navigation, replan intents, feedback badges, undo done, load score display.
 
 - `/today` — Today's sessions (or any day via `?date=YYYY-MM-DD`), mark done/skipped, post-session feedback
 - `/week` — 7-day grid + scrollable day detail cards + "View day" / "Change plan" buttons + replan dialog + multi-week navigation
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
 - `/session/[id]` — Resolved exercises with prescription details, feedback badges, load score
 - `/settings` — Profile summary, regenerate assessment/macrocycle, reset
-- `/onboarding/*` — 10-step wizard: welcome → profile → experience → grades → goals → weaknesses → tests → limitations → locations → availability → trips → review
+- `/onboarding/*` — 12-step wizard: welcome → profile → experience → grades → goals → weaknesses → tests → limitations → locations → availability → trips → review
 
 ## Catalog status (post Phase 0 expansion)
 
-- **Exercises**: 113 in `backend/catalog/exercises/v1/exercises.json`
+- **Exercises**: 103 in `backend/catalog/exercises/v1/exercises.json`
 - **Sessions**: 33 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup + easy_climbing_deload)
 - **Templates**: 19 in `backend/catalog/templates/v1/` (11 original + 8 new: warmup_climbing/strength/recovery, pulling_strength/endurance, antagonist_prehab, core_standard, cooldown_stretch)
 
@@ -149,9 +149,9 @@ cd frontend && npm run dev    # http://localhost:3000
 - Power endurance: 4x4, linked boulders, route intervals, ARC, threshold
 - Endurance/regeneration: continuity climbing, easy laps, easy traverse
 - Pulling strength: pullup variants (weighted, L-sit, archer, typewriter, one-arm), rows, lock-offs
-- Push/antagonist: pushups, dips, pike pushup, shoulder press, ring pushup, bench, face pull
+- Push/antagonist: pushup, dip, pike pushup, overhead press, ring pushup, bench, face pull
 - Core: hollow hold, L-sit, front lever, hanging leg raise, ab wheel, pallof, side plank, dead bug, windshield wipers, toes-to-bar
-- Prehab: wrist curls, forearm rotation, rotator cuff, scapular pullups, finger extensors, elbow eccentrics, shoulder CARs
+- Prehab: wrist curls, forearm pronation/supination, band external rotation, scapular pullup, finger extensors, elbow eccentrics, shoulder CARs
 - Technique drills: silent feet, no readjust, downclimbing, slow climbing, flag practice
 - Flexibility: hip opener, shoulder stretch, forearm stretch, full body flow, active hip mobility, cossack squat, active leg raise, 90/90 hip switch
 - Cooldown stretches: forearm/wrist, pigeon, frog, shoulder/chest, hamstring fold, spinal twist, deep squat hold
@@ -174,7 +174,7 @@ Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green.
 - `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and min 2-week floor per non-deload phase.
 - `backend/engine/planner_v2.py` — Phase-aware weekly planner. 3-pass algorithm: pass 1 places primary/climbing sessions with spacing (gym days processed first), pass 2 fills complementary, pass 3 injects test sessions on last week of eligible phases (`is_last_week_of_phase=True`). Location-aware: respects preferred_location from availability, filters session pool by home/gym compatibility. Gym-priority scoring ensures climbing days are never dropped by target_days cap. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles. Outputs `estimated_load_score` per session and `weekly_load_summary` per week.
 - `backend/engine/replanner_v1.py` — Phase-aware replanner. 13 intents mapped to planner_v2 sessions (incl. "projecting"). `apply_day_override` accepts `phase_id` and applies proportional ripple effect (hard→medium on day+1, force recovery on day+2) with phase mismatch warnings and finger compensation. `suggest_sessions` + `apply_day_add` for quick-add (append, day+1 ripple only). `regenerate_preserving_completed` for availability changes. Imports `_SESSION_META` from planner_v2.
-- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 32 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty. Outputs `session_load_score` (sum of exercise `fatigue_cost` values).
+- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 33 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty. Outputs `session_load_score` (sum of exercise `fatigue_cost` values).
 
 ### Flow
 

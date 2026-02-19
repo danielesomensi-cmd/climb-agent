@@ -17,13 +17,13 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 
 | Area | Count | Notes |
 |------|-------|-------|
-| Exercises | 113 | 12 categories + cooldown stretches + active flexibility |
+| Exercises | 103 | 12 categories + cooldown stretches + active flexibility |
 | Sessions | 33 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
 | Tests | ~360 | all green (post Phase 2) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 26 | 12 routers + health (FastAPI, CORS for Next.js) |
-| Frontend pages | 21 | 5 main views + 12 onboarding steps + root + onboarding index + session detail |
+| Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
 
 ---
 
@@ -65,7 +65,7 @@ backend/
     closed_loop_v1.py       ← Closed-loop feedback processing
     adaptation/             ← Closed-loop (multiplier-based adjustments)
   api/
-    main.py                 ← FastAPI app (9 routers + health)
+    main.py                 ← FastAPI app (12 routers + health)
     models.py               ← Pydantic request/response models
     deps.py                 ← Shared dependencies (state loading, date helpers)
     routers/
@@ -78,14 +78,17 @@ backend/
       session.py            ← POST /api/session/resolve
       replanner.py          ← POST /api/replanner/override, /events, /quick-add + GET /suggest-sessions
       feedback.py           ← POST /api/feedback
+      outdoor.py            ← GET/POST/DELETE /api/outdoor/spots, POST /log, GET /sessions, /stats, POST /convert-slot
+      reports.py            ← GET /api/reports/weekly, /monthly
+      quotes.py             ← GET /api/quotes/daily
   catalog/
-    exercises/v1/           ← 113 exercises (JSON)
-    sessions/v1/            ← 32 sessions (JSON)
+    exercises/v1/           ← 103 exercises (JSON)
+    sessions/v1/            ← 33 sessions (JSON)
     templates/v1/           ← 19 templates (JSON)
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← ~290 pytest tests
+  tests/                    ← ~362 pytest tests
 frontend/
   src/
     app/
@@ -97,7 +100,7 @@ frontend/
         plan/page.tsx       ← Macrocycle timeline + radar chart
         session/[id]/       ← Session detail with resolved exercises
         settings/page.tsx   ← Profile, goal, equipment, actions
-      onboarding/           ← 10-step onboarding wizard
+      onboarding/           ← 12-step onboarding wizard
         welcome → profile → experience → grades → goals →
         weaknesses → tests → limitations → locations →
         availability → trips → review (generates plan)
@@ -107,7 +110,7 @@ frontend/
       training/             ← DayCard, SessionCard, ExerciseCard, WeekGrid,
                               MacrocycleTimeline, FeedbackDialog
     lib/
-      api.ts                ← API client (16 endpoint functions)
+      api.ts                ← API client (25 endpoint functions)
       types.ts              ← TypeScript interfaces
       hooks/use-state.ts    ← useUserState hook
 docs/
@@ -136,7 +139,7 @@ CLAUDE.md                   ← Context for Claude Code
 | Feedback | Granular per exercise (5 levels: very_easy → very_hard) |
 | LLM Coach | Claude Sonnet as conversational layer (Phase 3.5) |
 | Equipment | `equipment_required` only for essential gear, optional in notes |
-| Guided Session Mode | Timer UI with colored rest timer (spec in design doc, Phase 3) |
+| Guided Session Mode | Timer UI with colored rest timer (spec in design doc, Phase 4) |
 
 ---
 

@@ -1,7 +1,7 @@
 # climb-agent — Design: Goal → Macrociclo → Sessione
 
 > Documento di design per il sistema di periodizzazione adattiva.
-> Versione: 1.2 — febbraio 2026
+> Versione: 1.2 (file: v1.1) — febbraio 2026
 > Stato: documento vivente, aggiornato post Phase 3.2
 > Ultimo audit: 2026-02-19
 
@@ -488,5 +488,5 @@ Le specifiche di design per fasi future sono contenute in questo documento:
 - **LLM Coach** (conversational layer): §11
 - **Decisioni tecniche approvate**: §12
 
-Prossime fasi operative: Phase 2 (tracking + outdoor), Phase 2.5 (exercise catalog audit + B11 test protocols).
+Prossime fasi operative: Phase 2.5 (exercise catalog audit + B11 test protocols), Phase 3.5 (LLM Coach).
 Vedere `docs/ROADMAP_v2.md` per dettagli.

@@ -34,10 +34,10 @@ backend/
   engine/            # Core: planner, resolver, replanner, progression, outdoor log, reports, quotes
     adaptation/      # Closed-loop adaptation (multiplier-based)
   api/               # FastAPI app (12 routers, 26 endpoints)
-  catalog/           # Exercises (113), sessions (33), templates (19), quotes (200)
+  catalog/           # Exercises (103), sessions (33), templates (19), quotes (200)
   data/              # user_state.json + JSON schemas
   tests/             # ~360 pytest tests
-frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui) — 21 pages
+frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui) — 19 pages
 docs/                # ROADMAP_v2.md, DESIGN_GOAL_MACROCICLO_v1.1.md, vocabulary_v1.md
 ```
 
