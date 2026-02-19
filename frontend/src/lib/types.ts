@@ -46,6 +46,8 @@ export interface DayPlan {
   weekday: string;
   sessions: SessionSlot[];
   status?: "planned" | "done" | "skipped";
+  outdoor_slot?: boolean;
+  pretrip_deload?: boolean;
 }
 
 export interface WeekPlan {
@@ -192,6 +194,105 @@ export interface OnboardingData {
     discipline: string;
     priority: string;
   }>;
+}
+
+// -----------------------------------------------------------------------
+// Outdoor
+// -----------------------------------------------------------------------
+
+export interface OutdoorSpot {
+  id: string;
+  name: string;
+  discipline: "lead" | "boulder" | "both";
+  typical_days?: string[];
+  notes?: string;
+}
+
+export interface OutdoorAttempt {
+  result: "sent" | "fell" | "topped_out";
+  notes?: string;
+}
+
+export interface OutdoorRoute {
+  name: string;
+  grade: string;
+  discipline?: "lead" | "boulder";
+  style?: "onsight" | "flash" | "redpoint" | "project" | "repeat";
+  attempts: OutdoorAttempt[];
+}
+
+export interface OutdoorSession {
+  log_version: string;
+  date: string;
+  spot_id?: string;
+  spot_name: string;
+  discipline: "lead" | "boulder" | "both";
+  duration_minutes: number;
+  conditions?: {
+    temperature_c?: number;
+    humidity?: "low" | "medium" | "high";
+    rock_condition?: "dry" | "damp" | "wet";
+    wind?: "none" | "light" | "strong";
+  };
+  routes: OutdoorRoute[];
+  notes?: string;
+  energy_level?: string;
+  overall_feeling?: string;
+}
+
+export interface OutdoorStats {
+  total_sessions: number;
+  total_routes: number;
+  grade_histogram: Record<string, number>;
+  onsight_pct: number;
+  flash_pct: number;
+  sent_pct: number;
+  top_grade_sent: string | null;
+}
+
+// -----------------------------------------------------------------------
+// Reports
+// -----------------------------------------------------------------------
+
+export interface WeeklyReport {
+  report_type: "weekly";
+  week_start: string;
+  week_end: string;
+  planned_sessions: number;
+  completed_sessions: number;
+  adherence_pct: number;
+  total_indoor_minutes: number;
+  total_outdoor_minutes: number;
+  session_types: Record<string, number>;
+  outdoor_sessions: number;
+  highlights: string[];
+}
+
+export interface MonthlyReport {
+  report_type: "monthly";
+  month: string;
+  period_start: string;
+  period_end: string;
+  total_indoor_sessions: number;
+  total_outdoor_sessions: number;
+  avg_sessions_per_week: number;
+  weekly_session_counts: number[];
+  total_indoor_minutes: number;
+  total_outdoor_minutes: number;
+  feedback_summary: Record<string, number>;
+  suggestions: string[];
+}
+
+// -----------------------------------------------------------------------
+// Quotes
+// -----------------------------------------------------------------------
+
+export interface Quote {
+  id: string;
+  text: string;
+  author: string;
+  source_type: string;
+  context: string;
 }
 
 // -----------------------------------------------------------------------

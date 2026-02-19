@@ -14,7 +14,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (~290 green)
+# Run all tests (~360 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -36,14 +36,14 @@ mypy backend/engine/
 backend/
   engine/            # Core logic: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (9 routers, 17 endpoints)
-    main.py          # App setup, CORS, router mounting
+  api/               # FastAPI REST API (12 routers, 26 endpoints)
+    main.py          # App setup, CORS, router mounting (12 routers)
     models.py        # Pydantic request/response models
     deps.py          # Shared deps (load_state, save_state, next_monday)
-    routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback
+    routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # ~290 pytest tests with fixtures/
+  tests/             # ~360 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 21+ pages: 5 main views + 12 onboarding steps + root + index + session detail
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
@@ -70,7 +70,7 @@ Data paths are relative to the repo root:
 
 ## API (Phase 3)
 
-FastAPI app with 9 routers and 17 endpoints + health check.
+FastAPI app with 12 routers and 26 endpoints + health check.
 
 ```bash
 # Start (exclude data dir from reload)
@@ -101,6 +101,16 @@ source .venv/bin/activate && python -m pytest backend/tests/test_api.py -q
 | GET | `/api/replanner/suggest-sessions` | Suggest sessions for quick-add (by date + location) |
 | POST | `/api/replanner/quick-add` | Add extra session to a day (append, not replace) |
 | POST | `/api/feedback` | Submit session feedback |
+| GET | `/api/outdoor/spots` | List outdoor spots |
+| POST | `/api/outdoor/spots` | Add outdoor spot |
+| DELETE | `/api/outdoor/spots/{id}` | Remove outdoor spot |
+| POST | `/api/outdoor/log` | Log outdoor session |
+| GET | `/api/outdoor/sessions` | List outdoor sessions |
+| GET | `/api/outdoor/stats` | Outdoor statistics |
+| POST | `/api/outdoor/convert-slot` | Convert outdoor slot to gym/home |
+| GET | `/api/reports/weekly` | Weekly training report |
+| GET | `/api/reports/monthly` | Monthly training report |
+| GET | `/api/quotes/daily` | Daily motivational quote |
 
 ## Frontend (Phase 3)
 
@@ -114,7 +124,7 @@ cd frontend && npm run dev    # http://localhost:3000
 - **Framework**: Next.js 14 (App Router, "use client" for all pages)
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **State**: React hooks (useUserState, useOnboarding context)
-- **API client**: Typed fetch wrapper in `src/lib/api.ts`
+- **API client**: Typed fetch wrapper in `src/lib/api.ts` (25 endpoint functions)
 - **PWA**: manifest.json + service worker
 
 ### Pages (21+)
@@ -130,7 +140,7 @@ cd frontend && npm run dev    # http://localhost:3000
 ## Catalog status (post Phase 0 expansion)
 
 - **Exercises**: 113 in `backend/catalog/exercises/v1/exercises.json`
-- **Sessions**: 32 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup)
+- **Sessions**: 33 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup + easy_climbing_deload)
 - **Templates**: 19 in `backend/catalog/templates/v1/` (11 original + 8 new: warmup_climbing/strength/recovery, pulling_strength/endurance, antagonist_prehab, core_standard, cooldown_stretch)
 
 ### Exercise categories covered

@@ -47,6 +47,8 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym")},
     "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym")},
     "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym")},
+    "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",)},
+    "finger_maintenance_gym": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("gym",)},
 }
 
 _INTENSITY_ORDER = {"low": 0, "medium": 1, "high": 2, "max": 3}
@@ -293,9 +295,23 @@ def generate_phase_week(
     hard_day_offsets: List[int] = []
 
     # Determine which days have available slots
+    # Track outdoor-only days — they get no sessions from the planner
+    day_is_outdoor: List[bool] = [False] * 7
     day_has_available_slot: List[bool] = []
     for offset in range(7):
         day_avail = normalized[day_keys[offset]]
+        # Check if ALL available slots on this day are outdoor-only
+        available_slots = [s for s in SLOTS if day_avail[s]["available"]]
+        if available_slots:
+            all_outdoor = all(
+                day_avail[s].get("preferred_location") == "outdoor"
+                or day_avail[s].get("locations") == ["outdoor"]
+                for s in available_slots
+            )
+            if all_outdoor:
+                day_is_outdoor[offset] = True
+                day_has_available_slot.append(False)  # skip for session assignment
+                continue
         has_slot = any(day_avail[slot]["available"] for slot in SLOTS)
         day_has_available_slot.append(has_slot)
 
@@ -465,6 +481,72 @@ def generate_phase_week(
             days_with_sessions += 1
             break
 
+    # ── PASS 2.5 (NEW-F9): Ensure PE phase has at least 1 finger maintenance session ──
+    if phase_id == "power_endurance":
+        has_finger_maintenance = any(
+            s.get("session_id", "").startswith("finger_maintenance")
+            for day_list in day_sessions for s in day_list
+        )
+        if not has_finger_maintenance:
+            fm_candidates = [
+                ("finger_maintenance_home", _SESSION_META.get("finger_maintenance_home")),
+                ("finger_maintenance_gym", _SESSION_META.get("finger_maintenance_gym")),
+            ]
+            fm_placed = False
+            for offset in range(7):
+                if fm_placed:
+                    break
+                if not day_has_available_slot[offset]:
+                    continue
+                if day_is_outdoor[offset]:
+                    continue
+                # Respect 48h finger gap
+                if finger_day_offsets and any(abs(offset - fo) <= 1 for fo in finger_day_offsets):
+                    continue
+                # Try to place in an empty complementary slot first
+                if day_sessions[offset]:
+                    # Check if we can replace a non-primary session
+                    for i, entry in enumerate(day_sessions[offset]):
+                        sid_meta = _SESSION_META.get(entry.get("session_id", ""), {})
+                        if not _is_primary_session(sid_meta) and not sid_meta.get("finger"):
+                            # Replace this complementary session
+                            day_avail = normalized[day_keys[offset]]
+                            for fm_sid, fm_meta in fm_candidates:
+                                if fm_meta is None:
+                                    continue
+                                result = _find_best_slot(day_avail, fm_meta, locations, prefer_evening=False)
+                                if result:
+                                    slot, slot_info = result
+                                    fm_entry = _make_session_entry(
+                                        slot, fm_sid, fm_meta, slot_info, locations,
+                                        phase_id, day_keys[offset],
+                                        default_gym_id, gyms or [], "pass2.5:pe_finger_maintenance",
+                                    )
+                                    day_sessions[offset][i] = fm_entry
+                                    finger_day_offsets.append(offset)
+                                    fm_placed = True
+                                    break
+                            break
+                else:
+                    # Empty day — place directly
+                    day_avail = normalized[day_keys[offset]]
+                    for fm_sid, fm_meta in fm_candidates:
+                        if fm_meta is None:
+                            continue
+                        result = _find_best_slot(day_avail, fm_meta, locations, prefer_evening=False)
+                        if result:
+                            slot, slot_info = result
+                            fm_entry = _make_session_entry(
+                                slot, fm_sid, fm_meta, slot_info, locations,
+                                phase_id, day_keys[offset],
+                                default_gym_id, gyms or [], "pass2.5:pe_finger_maintenance",
+                            )
+                            day_sessions[offset].append(fm_entry)
+                            finger_day_offsets.append(offset)
+                            days_with_sessions += 1
+                            fm_placed = True
+                            break
+
     # ── PASS 3 (optional): Inject test sessions on last week of eligible phase ──
     if is_last_week_of_phase and phase_id in ("base", "strength_power"):
         # Required tests first, then optional
@@ -548,6 +630,8 @@ def generate_phase_week(
             "weekday": day_keys[offset],
             "sessions": day_sessions[offset],
         }
+        if day_is_outdoor[offset]:
+            day_entry["outdoor_slot"] = True
         if day_dates[offset] in pretrip_set:
             day_entry["pretrip_deload"] = True
         plan_days.append(day_entry)

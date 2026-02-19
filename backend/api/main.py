@@ -9,7 +9,10 @@ from backend.api.routers import (
     feedback,
     macrocycle,
     onboarding,
+    outdoor,
+    quotes,
     replanner,
+    reports,
     session,
     state,
     week,
@@ -36,6 +39,9 @@ app.include_router(week.router)
 app.include_router(session.router)
 app.include_router(replanner.router)
 app.include_router(feedback.router)
+app.include_router(outdoor.router)
+app.include_router(reports.router)
+app.include_router(quotes.router)
 
 
 @app.get("/health")

@@ -8,6 +8,12 @@ import type {
   AssessmentProfile,
   Exercise,
   SessionMeta,
+  OutdoorSpot,
+  OutdoorSession,
+  OutdoorStats,
+  WeeklyReport,
+  MonthlyReport,
+  Quote,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -135,3 +141,51 @@ export const postFeedback = (data: {
     method: "POST",
     body: JSON.stringify(data),
   });
+
+// Outdoor
+export const getOutdoorSpots = () =>
+  request<{ spots: OutdoorSpot[] }>("/api/outdoor/spots");
+
+export const addOutdoorSpot = (spot: {
+  id?: string;
+  name: string;
+  discipline: string;
+  typical_days?: string[];
+  notes?: string;
+}) =>
+  request<{ status: string; spot: OutdoorSpot }>("/api/outdoor/spots", {
+    method: "POST",
+    body: JSON.stringify(spot),
+  });
+
+export const deleteOutdoorSpot = (spotId: string) =>
+  request<{ status: string }>(`/api/outdoor/spots/${spotId}`, {
+    method: "DELETE",
+  });
+
+export const postOutdoorLog = (session: Omit<OutdoorSession, "log_version">) =>
+  request<{ status: string; log_path: string }>("/api/outdoor/log", {
+    method: "POST",
+    body: JSON.stringify(session),
+  });
+
+export const getOutdoorSessions = (since?: string) =>
+  request<{ sessions: OutdoorSession[]; count: number }>(
+    `/api/outdoor/sessions${since ? `?since=${since}` : ""}`
+  );
+
+export const getOutdoorStats = (since?: string) =>
+  request<OutdoorStats>(
+    `/api/outdoor/stats${since ? `?since=${since}` : ""}`
+  );
+
+// Reports
+export const getWeeklyReport = (weekStart: string) =>
+  request<WeeklyReport>(`/api/reports/weekly?week_start=${weekStart}`);
+
+export const getMonthlyReport = (month: string) =>
+  request<MonthlyReport>(`/api/reports/monthly?month=${month}`);
+
+// Quotes
+export const getDailyQuote = (context?: string) =>
+  request<Quote>(`/api/quotes/daily${context ? `?context=${context}` : ""}`);

@@ -107,3 +107,66 @@ class OnboardingData(BaseModel):
     availability: Dict[str, Any] = Field(default_factory=dict)
     planning_prefs: Dict[str, Any] = Field(default_factory=dict)
     trips: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+# --------------------------------------------------------------------------- #
+# Outdoor
+# --------------------------------------------------------------------------- #
+
+class OutdoorSpotCreate(BaseModel):
+    """Body for POST /api/outdoor/spots."""
+    id: Optional[str] = None
+    name: str
+    discipline: str  # lead | boulder | both
+    typical_days: Optional[List[str]] = None
+    notes: Optional[str] = None
+
+
+class OutdoorAttempt(BaseModel):
+    """Single attempt on a route."""
+    result: str  # sent | fell | topped_out
+    notes: Optional[str] = None
+
+
+class OutdoorRoute(BaseModel):
+    """A route/problem attempted in an outdoor session."""
+    name: str
+    grade: str
+    discipline: Optional[str] = None
+    style: Optional[str] = None
+    attempts: List[OutdoorAttempt] = Field(default_factory=list)
+
+
+class OutdoorSessionLog(BaseModel):
+    """Body for POST /api/outdoor/log."""
+    date: str
+    spot_id: Optional[str] = None
+    spot_name: str
+    discipline: str
+    duration_minutes: int
+    conditions: Optional[Dict[str, Any]] = None
+    routes: List[OutdoorRoute] = Field(default_factory=list)
+    notes: Optional[str] = None
+    energy_level: Optional[str] = None
+    overall_feeling: Optional[str] = None
+
+
+class ConvertSlotRequest(BaseModel):
+    """Body for POST /api/outdoor/convert-slot."""
+    date: str
+    new_location: str  # gym | home
+    gym_id: Optional[str] = None
+
+
+# --------------------------------------------------------------------------- #
+# Reports
+# --------------------------------------------------------------------------- #
+
+class WeeklyReportRequest(BaseModel):
+    """Query params for GET /api/reports/weekly."""
+    week_start: str
+
+
+class MonthlyReportRequest(BaseModel):
+    """Query params for GET /api/reports/monthly."""
+    month: str  # YYYY-MM

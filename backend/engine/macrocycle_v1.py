@@ -109,6 +109,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "flexibility_full": "primary",
         "yoga_recovery": "primary",
         "prehab_maintenance": "primary",
+        "easy_climbing_deload": "available",
         "handstand_practice": "available",
     },
 }
@@ -402,7 +403,7 @@ def _phase_notes(phase_id: str) -> str:
 # Deload functions (Task 5)
 # ---------------------------------------------------------------------------
 
-DELOAD_SESSION_POOL = ["regeneration_easy", "flexibility_full", "yoga_recovery", "prehab_maintenance"]
+DELOAD_SESSION_POOL = ["regeneration_easy", "flexibility_full", "yoga_recovery", "prehab_maintenance", "easy_climbing_deload"]
 
 
 def apply_deload_week(week_plan: Dict[str, Any]) -> Dict[str, Any]:

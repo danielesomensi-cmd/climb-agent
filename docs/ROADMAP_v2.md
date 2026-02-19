@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-19 (Phase 3.2 complete — B25, B19, B20, B27, NEW-F6, NEW-F7)
+> Last updated: 2026-02-19 (Phase 2 complete — outdoor, resolver, reports, quotes)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -293,17 +293,19 @@ Phase 3.2 bundle: B25, B19, B20, B27, NEW-F6, NEW-F7 — all done. B11 deferred 
 
 ## §4 — Phase 2: Tracking + outdoor
 
+> UI-18 moved to Phase 2.5 — depends on exercise catalog audit for load_parameters
+
 | ID | Titolo | Priorità | Effort | Descrizione |
 |----|--------|----------|--------|-------------|
-| B2 | Outdoor sessions / logging | Media | Large | Sessioni outdoor non risolte dall'engine: logging di gradi/stile/tentativi. Schema diverso da sessioni indoor. Integration con trip planning. |
-| B10 | Outdoor climbing spots | Media | Medium | Location type per spot outdoor (es. "Berdorf — boulder — weekends"). Usabile in availability grid e trip planning. |
-| NEW-F8 | Easy climbing nel pool deload | Bassa | Small | Verificare con letteratura e aggiungere climbing leggero nel pool deload. |
-| NEW-F9 | Finger maintenance in fase PE | Bassa | Small | Forzare almeno 1 finger_maintenance nel pool PE come primary. |
-| — | Motivational quotes | Bassa | Small | 1 citazione per sessione, contestuale (hard day → perseveranza, deload → pazienza). Rotazione 30 giorni. |
-| B28 | Cross-session recency nel resolver | Media | Small | Alimentare `recent_ex_ids` dal log sessioni completate per variabilità esercizi tra sessioni. Vedi §4.1. |
-| UI-18 | Exercise weight/load prescription | Alta | Large | Resolver calculates initial loads from assessment tests. Frontend displays suggested weight. Depends on working_loads population. |
-| FR-1 | Outdoor as availability location | Media | Medium | "Outdoor" option in availability grid. Outdoor slots → logging only, no resolved sessions. Links to B2 outdoor sessions. |
-| — | Report engine | Media | Medium | Settimanale (aderenza, volume, highlight), mensile (trend, distribuzione gradi), annuale (timeline progressione). |
+| B2 | Outdoor sessions / logging | ✅ DONE | Large | Sessioni outdoor non risolte dall'engine: logging di gradi/stile/tentativi. Schema diverso da sessioni indoor. Integration con trip planning. |
+| B10 | Outdoor climbing spots | ✅ DONE | Medium | Location type per spot outdoor (es. "Berdorf — boulder — weekends"). Usabile in availability grid e trip planning. |
+| NEW-F8 | Easy climbing nel pool deload | ✅ DONE | Small | Verificare con letteratura e aggiungere climbing leggero nel pool deload. |
+| NEW-F9 | Finger maintenance in fase PE | ✅ DONE | Small | Forzare almeno 1 finger_maintenance nel pool PE come primary. |
+| — | Motivational quotes | ✅ DONE | Small | 1 citazione per sessione, contestuale (hard day → perseveranza, deload → pazienza). Rotazione 30 giorni. |
+| B28 | Cross-session recency nel resolver | ✅ DONE | Small | Alimentare `recent_ex_ids` dal log sessioni completate per variabilità esercizi tra sessioni. Vedi §4.1. |
+| UI-18 | Exercise weight/load prescription | → Phase 2.5 | Large | Resolver calculates initial loads from assessment tests. Frontend displays suggested weight. Depends on working_loads population. |
+| FR-1 | Outdoor as availability location | ✅ DONE | Medium | "Outdoor" option in availability grid. Outdoor slots → logging only, no resolved sessions. Links to B2 outdoor sessions. |
+| — | Report engine | ✅ DONE | Medium | Settimanale (aderenza, volume, highlight), mensile (trend, distribuzione gradi). |
 
 ### §4.1 Cross-session exercise variety (B28)
 
@@ -378,7 +380,7 @@ Tabella unica con TUTTI gli item tracciati.
 | ID | Titolo | Stato | Fase | Sezione roadmap |
 |----|--------|-------|------|-----------------|
 | B1 | Standalone core session | ✅ DONE | 1.75 | §2.3 |
-| B2 | Outdoor sessions / logging | TODO | 2 | §4 |
+| B2 | Outdoor sessions / logging | ✅ DONE | 2 | §4 |
 | B3 | Plan validation vs literature | TODO (→ audit §2.2) | 1.75 | §2.2 |
 | B4 | Load score / weekly fatigue | ✅ DONE | 1.75 | §2.5 |
 | B5 | Replanner phase-aware | ✅ DONE | 1.5 | §1 |
@@ -386,7 +388,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B7 | Validazioni edge case | ✅ DONE | 1.5 | §1 |
 | B8 | Session enrichment + modules | ✅ DONE | 1.75 | §2.3 |
 | B9 | cable_machine, leg_press | ✅ DONE | 3.1 | §1 |
-| B10 | Outdoor climbing spots | TODO | 2 | §4 |
+| B10 | Outdoor climbing spots | ✅ DONE | 2 | §4 |
 | B11 | Configurable test protocols | ⏩ Phase 2.5 | 2.5 | §2.6 |
 | B19 | Quick-add session | ✅ DONE | 3.2 | §3 |
 | B20 | Edit availability from Settings | ✅ DONE | 3.2 | §3 |
@@ -400,16 +402,16 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F1 | Prescription climbing vuota | TODO | 2.5 | §2.6 |
 | NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
 | NEW-F3a | Test sessions scheduling | ✅ DONE | 1.75 | §2.4 |
-| NEW-F3b | assessment.tests closed loop | TODO | 2 | §2.4 |
+| NEW-F3b | assessment.tests closed loop | TODO | 2.5 | §2.4 |
 | NEW-F4 | Ripple effect proporzionale | ✅ DONE | 1.75 | §2.4 |
 | NEW-F5 | Durate fase negative | ✅ DONE | 1.75 | §2.1 |
 | NEW-F6 | Warning phase_mismatch | ✅ DONE | 3.2 | §3 |
 | NEW-F7 | Finger compensation | ✅ DONE | 3.2 | §3 |
-| NEW-F8 | Easy climbing in deload | TODO | 2 | §4 |
-| NEW-F9 | Finger maintenance in PE | TODO | 2 | §4 |
+| NEW-F8 | Easy climbing in deload | ✅ DONE | 2 | §4 |
+| NEW-F9 | Finger maintenance in PE | ✅ DONE | 2 | §4 |
 | NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |
 | F6-partial | Intent projecting mancante | ✅ DONE | 1.75 | §2.4 |
-| B28 | Cross-session recency nel resolver | TODO | 2 | §4.1 |
+| B28 | Cross-session recency nel resolver | ✅ DONE | 2 | §4.1 |
 | B29 | Dedicated test exercises in catalog | TODO | 2.5 | §2.6 |
 | B-NEW | Exercise catalog audit | TODO | 2.5 | §2.6 |
 | UI-1 | Trip date picker: end_date validation | ✅ DONE | Batch 2 | §3 |
@@ -429,12 +431,12 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-15 | Replan dialog: add intent selection | ✅ DONE | Batch 2 | §3 |
 | UI-16 | Undo session "done" status | ✅ DONE | Batch 2 | §3 |
 | UI-17 | Feedback optional + visible after submit | ✅ DONE | Batch 2 | §3 |
-| UI-18 | Exercise load/weight prescription display | TODO | 2 | §4 |
+| UI-18 | Exercise load/weight prescription display | TODO | 2.5 | §4 |
 | UI-19 | technique_focus_gym resolves wrong | ✅ DONE | Batch 1 | §2 |
 | UI-20 | Warmup variety (always shoulder_car) | TODO | 2.5 | §2.6 |
 | UI-21 | Session structure info (informational) | ℹ️ | — | — |
 | UI-22 | Week view: multi-week navigation | ✅ DONE | Batch 2 | §3 |
-| FR-1 | Outdoor as availability location option | TODO | 2 | §4 |
+| FR-1 | Outdoor as availability location option | ✅ DONE | 2 | §4 |
 | FR-2 | Warning: no climbing equipment in gyms | ✅ DONE | Batch 2 | §3 |
 | FR-3 | Feedback badge/sticker on exercises | ✅ DONE | Batch 2 | §3 |
 | UI-23 | Gym slot priority in planner | ✅ DONE | UI-23 | §3 |

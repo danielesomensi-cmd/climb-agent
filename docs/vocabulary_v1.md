@@ -484,7 +484,24 @@ Allowed `phase_id` values:
 - `performance` — Performance (limit climbing, projecting, outdoor)
 - `deload` — Deload (recovery, mobility, prehab)
 
-### 5.6 Assessment profile axes
+### 5.6 Outdoor spots
+
+`outdoor_spots.discipline` values:
+- `lead`
+- `boulder`
+- `both`
+
+`outdoor_spots.typical_days` values: standard weekday keys (`mon`, `tue`, ..., `sun`).
+
+`availability.*.location` value `"outdoor"` marks a slot as outdoor-only. The planner assigns
+no sessions to outdoor slots. Outdoor days appear in the week plan with `outdoor_slot: true`.
+
+Outdoor session logging conditions:
+- `conditions.humidity`: `low | medium | high`
+- `conditions.rock_condition`: `dry | damp | wet`
+- `conditions.wind`: `none | light | strong`
+
+### 5.7 Assessment profile axes
 
 The 6 normalized axes (0-100) of the assessment radar:
 

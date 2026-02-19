@@ -1,0 +1,2420 @@
+{
+  "version": "1.0",
+  "total": 200,
+  "contexts": [
+    "hard_day",
+    "deload",
+    "new_phase",
+    "outdoor",
+    "general",
+    "training",
+    "technique",
+    "recovery",
+    "failure",
+    "success",
+    "pre_session"
+  ],
+  "source_types": [
+    "climber",
+    "athlete",
+    "martial_arts",
+    "yoga",
+    "philosophy",
+    "humor",
+    "popular"
+  ],
+  "quotes": [
+    {
+      "id": "q001",
+      "text": "I don't really think about why I climb. I just simply love it.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q002",
+      "text": "The only purpose of training is not just getting better and stronger. The goal should be the training itself. It can be very fun.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q003",
+      "text": "Instead of saying I'm going training, I always said I'm going climbing. Which means I'm going to have some fun.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "pre_session",
+        "training"
+      ]
+    },
+    {
+      "id": "q004",
+      "text": "It is about turning pain into joy. That is what every good climber should be good at.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "failure"
+      ]
+    },
+    {
+      "id": "q005",
+      "text": "Every failure motivates me, eventually, to make something different, train harder, and come better prepared for the next challenge.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q006",
+      "text": "What really motivates me to climb harder is not to show who's best, but climbing harder routes makes it more fun.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "new_phase",
+        "success"
+      ]
+    },
+    {
+      "id": "q007",
+      "text": "The harder routes you climb, the more interesting the climbing gets and the more crazy moves you are forced to figure out.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q008",
+      "text": "Climbing in a beautiful location, the goal is not to power my way up but to become for that moment a part of the landscape, part of the rock.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "technique",
+        "deload"
+      ]
+    },
+    {
+      "id": "q009",
+      "text": "People often say: train hard! Yes, try hard when you are actually climbing, but spend your time in the gym in a smart and efficient way.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "training",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q010",
+      "text": "Every December I take two or three weeks off. After an entire season of training and climbing, my body needs the break.",
+      "author": "Adam Ondra",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "deload",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q011",
+      "text": "I try to expand my comfort zone by practicing the moves over and over again. I work through the fear, until it's just not scary anymore.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "technique",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q012",
+      "text": "Anyone can be happy and cosy. Nothing good happens in the world by being happy and cosy.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q013",
+      "text": "If you want to improve, focus on your weaknesses. If you want to perform, focus on your strengths.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "training",
+        "new_phase",
+        "technique"
+      ]
+    },
+    {
+      "id": "q014",
+      "text": "It's about being a warrior. You face your fear because your goal demands it. That is the warrior spirit.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "pre_session",
+        "failure"
+      ]
+    },
+    {
+      "id": "q015",
+      "text": "If you spend 20 years of preparation on something, eventually you're comfortable doing things that used to seem insane.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "training",
+        "general"
+      ]
+    },
+    {
+      "id": "q016",
+      "text": "I think it's the best thing in life to be able to take the one thing you love the most and have it work out that you can make a living that way.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q017",
+      "text": "Imagine an Olympic-gold-medal-level athletic achievement that, if you don't get that gold medal, you're gonna die. That's pretty much what free soloing El Cap is like.",
+      "author": "Tommy Caldwell",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q018",
+      "text": "After a few months of overtraining, you dig yourself in a hole so deep it can take several months to get out of it.",
+      "author": "Tommy Caldwell",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "recovery",
+        "deload",
+        "training"
+      ]
+    },
+    {
+      "id": "q019",
+      "text": "Trad climbing is about taking calculated risks and trusting yourself and your gear.",
+      "author": "Tommy Caldwell",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q020",
+      "text": "Staying authentic to yourself and accepting how you feel… It's all about your attitude and the story that you tell yourself.",
+      "author": "Lynn Hill",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "hard_day",
+        "failure"
+      ]
+    },
+    {
+      "id": "q021",
+      "text": "Sport climbing is about creativity, problem-solving, and the joy of movement.",
+      "author": "Lynn Hill",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "technique",
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q022",
+      "text": "It won't go free… today.",
+      "author": "Lynn Hill",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day"
+      ],
+      "note": "Said after her accidental fall on The Nose, 1989. Legendary quote in climbing."
+    },
+    {
+      "id": "q023",
+      "text": "The process of working a project — falling off, learning, coming back — that is the real journey.",
+      "author": "Chris Sharma",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q024",
+      "text": "Climbing isn't about getting to the top. It's about the process of becoming someone who can.",
+      "author": "Chris Sharma",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "general",
+        "new_phase",
+        "training"
+      ]
+    },
+    {
+      "id": "q025",
+      "text": "The summit is only half the battle.",
+      "author": "Reinhold Messner",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "success",
+        "outdoor",
+        "general"
+      ]
+    },
+    {
+      "id": "q026",
+      "text": "In the mountains, there are only two grades: you can either do it or you can't.",
+      "author": "Reinhold Messner",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "general",
+        "hard_day",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q027",
+      "text": "Mountains are not stadiums where I satisfy my ambition to achieve. They are the cathedrals where I practice my religion.",
+      "author": "Anatoli Boukreev",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q028",
+      "text": "The purpose of climbing is not to conquer the rock, but to conquer yourself.",
+      "author": "Yvon Chouinard",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "general",
+        "failure"
+      ]
+    },
+    {
+      "id": "q029",
+      "text": "The best climber in the world is the one having the most fun.",
+      "author": "Alex Lowe",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "deload",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q030",
+      "text": "It's not the mountain we conquer, but ourselves.",
+      "author": "Edmund Hillary",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "general",
+        "failure",
+        "success"
+      ]
+    },
+    {
+      "id": "q031",
+      "text": "Sport climbing is like a dance with the wall, where the music is the sound of your breath and the beat of your heart.",
+      "author": "Janja Garnbret",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "technique",
+        "pre_session",
+        "general"
+      ]
+    },
+    {
+      "id": "q032",
+      "text": "Every move on the wall is a conversation between you and the rock. Listen carefully.",
+      "author": "Janja Garnbret",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "technique",
+        "outdoor",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q033",
+      "text": "Climb the mountains not to plant your flag, but to embrace the challenge, enjoy the air, and behold the view.",
+      "author": "David McCullough Jr.",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q034",
+      "text": "The mountains are calling, and I must go.",
+      "author": "John Muir",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q035",
+      "text": "Mountains have a way of dealing with overconfidence.",
+      "author": "Hermann Buhl",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q036",
+      "text": "Climbing is not about the rock. It's about what the rock makes of you.",
+      "author": "Detto popolare arrampicata",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "general",
+        "hard_day",
+        "failure"
+      ]
+    },
+    {
+      "id": "q037",
+      "text": "Your maximum is the minimum.",
+      "author": "Detto classico climbing",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q038",
+      "text": "The rock doesn't lie. Your fingers do.",
+      "author": "Detto popolare arrampicata",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "training"
+      ]
+    },
+    {
+      "id": "q039",
+      "text": "A send is just a fail you haven't committed to yet.",
+      "author": "Detto popolare bouldering",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q040",
+      "text": "The only bad session is the one you didn't show up for.",
+      "author": "Detto popolare climbing",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "pre_session",
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q041",
+      "text": "Sport climbing is not just about competition, it's about the community, the friendships, and the shared passion.",
+      "author": "Margo Hayes",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "general",
+        "outdoor",
+        "deload"
+      ]
+    },
+    {
+      "id": "q042",
+      "text": "Trad climbing is about adventure, exploration, and pushing your limits in the natural world.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "general"
+      ]
+    },
+    {
+      "id": "q043",
+      "text": "The rock is a teacher. Every fall is a lesson.",
+      "author": "Detto popolare arrampicata",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "failure",
+        "technique",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q044",
+      "text": "A good rest day is part of training, not a skip from training.",
+      "author": "Eric Hörst",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "recovery",
+        "deload",
+        "training"
+      ]
+    },
+    {
+      "id": "q045",
+      "text": "Footwork is 80% of climbing. The hands just follow.",
+      "author": "Detto popolare climbing",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "technique",
+        "training",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q046",
+      "text": "The crux is always one move past the point where you thought you'd fall.",
+      "author": "Detto popolare climbing",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "technique",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q047",
+      "text": "Confidence in climbing comes not from the absence of fear, but from facing it on the rock, move after move.",
+      "author": "Steph Davis",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "outdoor",
+        "technique"
+      ]
+    },
+    {
+      "id": "q048",
+      "text": "Trad climbing is the art of finding the line and making it happen.",
+      "author": "Steph Davis",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q049",
+      "text": "Every route is a conversation. Some days you lead, some days the rock leads.",
+      "author": "Detto popolare arrampicata",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "failure",
+        "technique"
+      ]
+    },
+    {
+      "id": "q050",
+      "text": "In climbing, style matters as much as success. How you get up is as important as whether you get up.",
+      "author": "Yvon Chouinard",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "technique",
+        "outdoor",
+        "general"
+      ]
+    },
+    {
+      "id": "q051",
+      "text": "Strength does not come from winning. Your struggles develop your strengths. When you go through hardships and decide not to surrender, that is strength.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "training"
+      ]
+    },
+    {
+      "id": "q052",
+      "text": "The mind always fails first, not the body. The secret is to make your mind work for you, not against you.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "pre_session",
+        "training"
+      ]
+    },
+    {
+      "id": "q053",
+      "text": "You can have results or excuses. Not both.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "training",
+        "pre_session",
+        "general"
+      ]
+    },
+    {
+      "id": "q054",
+      "text": "The last three or four reps is what makes the muscle grow. This area of pain divides the champion from someone who is not a champion.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q055",
+      "text": "The resistance that you fight physically in the gym and the resistance that you fight in life can only build a strong character.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "training",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q056",
+      "text": "Training gives us an outlet for suppressed energies created by stress and thus tones the spirit just as exercise conditions the body.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "training",
+        "general"
+      ]
+    },
+    {
+      "id": "q057",
+      "text": "What we face may look insurmountable. But I learned that we are always stronger than we know.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q058",
+      "text": "There are no shortcuts — everything is reps, reps, reps.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q059",
+      "text": "The mind is the limit. As long as the mind can envision the fact that you can do something, you can do it.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "hard_day",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q060",
+      "text": "The secret is contained in a three-part formula: self-confidence, a positive mental attitude, and honest hard work.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q061",
+      "text": "While others were out partying, I was training. While they were dancing at the clubs, I was training.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general"
+      ]
+    },
+    {
+      "id": "q062",
+      "text": "The pain you feel today will be the strength you feel tomorrow.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "failure"
+      ]
+    },
+    {
+      "id": "q063",
+      "text": "For me, life is continuously being hungry. The meaning of life is not simply to exist, but to move ahead, to go up, to achieve, to conquer.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "general",
+        "training"
+      ]
+    },
+    {
+      "id": "q064",
+      "text": "What is the point of being on this Earth if you are going to be like everyone else?",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q065",
+      "text": "From the bodybuilding days on, I learned that everything is reps and mileage. The more miles you ski, the better a skier you become.",
+      "author": "Arnold Schwarzenegger",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "training",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q066",
+      "text": "Champions aren't made in the gyms. Champions are made from something they have deep inside them — a desire, a dream, a vision.",
+      "author": "Muhammad Ali",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "general",
+        "new_phase",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q067",
+      "text": "It's not the size of the dog in the fight, it's the size of the fight in the dog.",
+      "author": "Mark Twain",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q068",
+      "text": "The fight is won or lost far away from witnesses, behind the lines, in the gym, and out there on the road, long before I dance under those lights.",
+      "author": "Muhammad Ali",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "training",
+        "pre_session",
+        "general"
+      ]
+    },
+    {
+      "id": "q069",
+      "text": "He who is not courageous enough to take risks will accomplish nothing in life.",
+      "author": "Muhammad Ali",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "outdoor",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q070",
+      "text": "Excellence is not a singular act, but a habit. You are what you repeatedly do.",
+      "author": "Shaquille O'Neal (attr. Aristotele)",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "training",
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q071",
+      "text": "The more you sweat in practice, the less you bleed in battle.",
+      "author": "Proverbio militare / Richard Marcinko",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "training",
+        "hard_day",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q072",
+      "text": "You don't have to be great to start, but you have to start to be great.",
+      "author": "Zig Ziglar",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q073",
+      "text": "Difficult roads often lead to beautiful destinations.",
+      "author": "Detto popolare",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q074",
+      "text": "The only way to do great work is to love what you do.",
+      "author": "Steve Jobs",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training",
+        "deload"
+      ]
+    },
+    {
+      "id": "q075",
+      "text": "A goal without a plan is just a wish.",
+      "author": "Antoine de Saint-Exupéry",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "training",
+        "general"
+      ]
+    },
+    {
+      "id": "q076",
+      "text": "The pain of discipline is far less than the pain of regret.",
+      "author": "Sarah Bombell",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "training",
+        "hard_day",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q077",
+      "text": "Hard work beats talent when talent doesn't work hard.",
+      "author": "Tim Notke",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q078",
+      "text": "Progress, not perfection.",
+      "author": "Detto popolare fitness",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "general",
+        "failure",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q079",
+      "text": "Repetition is the mother of learning, the father of action, which makes it the architect of accomplishment.",
+      "author": "Zig Ziglar",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "training",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q080",
+      "text": "Don't wish it were easier. Wish you were better.",
+      "author": "Jim Rohn",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "failure"
+      ]
+    },
+    {
+      "id": "q081",
+      "text": "Be like water making its way through cracks. Do not be assertive, but adjust to the object, and you shall find a way around or through it.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "technique",
+        "failure",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q082",
+      "text": "I fear not the man who has practiced 10,000 kicks once, but I fear the man who has practiced one kick 10,000 times.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "training",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q083",
+      "text": "Knowing is not enough; we must apply. Willing is not enough; we must do.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "general",
+        "training"
+      ]
+    },
+    {
+      "id": "q084",
+      "text": "Absorb what is useful, discard what is not, add what is uniquely your own.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q085",
+      "text": "If you spend too much time thinking about a thing, you'll never get it done.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q086",
+      "text": "Empty your mind, be formless, shapeless — like water. Now, water can flow or it can crash. Be water, my friend.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "hard_day",
+        "outdoor",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q087",
+      "text": "The successful warrior is the average man, with laser-like focus.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "training",
+        "pre_session",
+        "technique"
+      ]
+    },
+    {
+      "id": "q088",
+      "text": "Hack away at the unessential.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "training",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q089",
+      "text": "A fight is not won by one punch or kick. Either learn to endure or hire a bodyguard.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "failure"
+      ]
+    },
+    {
+      "id": "q090",
+      "text": "Life is never stagnation. It is constant movement, as we as constant change. Things live by moving and gain strength as they go.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "general",
+        "training"
+      ]
+    },
+    {
+      "id": "q091",
+      "text": "The highest technique is to have no technique. My technique is the result of your technique.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "outdoor",
+        "general"
+      ]
+    },
+    {
+      "id": "q092",
+      "text": "Remember: actual sparring is the ultimate, and the training is only a means towards this.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "training",
+        "outdoor",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q093",
+      "text": "Simplicity is the key to brilliance.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "general",
+        "training"
+      ]
+    },
+    {
+      "id": "q094",
+      "text": "All type of knowledge ultimately means self-knowledge.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "general",
+        "technique",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q095",
+      "text": "Mistakes are always forgivable, if one has the courage to admit them.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q096",
+      "text": "Do not pray for an easy life, pray for the strength to endure a difficult one.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "general"
+      ]
+    },
+    {
+      "id": "q097",
+      "text": "Real living is living for others.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "deload",
+        "general"
+      ]
+    },
+    {
+      "id": "q098",
+      "text": "Man, the living creature, the creating individual, is always more important than any established style or system.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "general",
+        "technique",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q099",
+      "text": "Notice that the stiffest tree is most easily cracked, while the bamboo or willow survives by bending with the wind.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "recovery",
+        "deload",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q100",
+      "text": "The key to immortality is first living a life worth remembering.",
+      "author": "Bruce Lee",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "general",
+        "outdoor",
+        "deload"
+      ]
+    },
+    {
+      "id": "q101",
+      "text": "If you learn to use this body as an instrument, it is the most fantastic and powerful instrument on the planet.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "training",
+        "pre_session",
+        "general",
+        "technique"
+      ]
+    },
+    {
+      "id": "q102",
+      "text": "The basis of yoga is this: to be absolutely intense and relaxed at the same time.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "pre_session",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q103",
+      "text": "If you want your body and brain to work well, the first thing is to become joyful by your own nature.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "general",
+        "pre_session",
+        "deload"
+      ]
+    },
+    {
+      "id": "q104",
+      "text": "Once your thought, emotion, and energies are organised in one direction, your ability to create and manifest what you want is phenomenal.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q105",
+      "text": "If you resist change, you resist life.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "general",
+        "failure"
+      ]
+    },
+    {
+      "id": "q106",
+      "text": "Yoga does not mean just standing on your head or holding your breath. It means taking charge of your life.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q107",
+      "text": "Only when you are absolutely devoted to what you do, you can produce something significant in the world.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q108",
+      "text": "Neither health nor joy can be created from outside. There may be external stimuli, but essentially, both come from within.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "general",
+        "recovery",
+        "deload"
+      ]
+    },
+    {
+      "id": "q109",
+      "text": "The very way you breathe, sit, stand, eat, walk, work — everything can become yoga.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "recovery",
+        "general"
+      ]
+    },
+    {
+      "id": "q110",
+      "text": "Meditation means dissolving the invisible walls that unawareness has built.",
+      "author": "Sadhguru",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "deload",
+        "recovery",
+        "general"
+      ]
+    },
+    {
+      "id": "q111",
+      "text": "Your body exists in the past and your mind exists in the future. In yoga, they come together in the present.",
+      "author": "B.K.S. Iyengar",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q112",
+      "text": "Yoga is a mirror to look at ourselves from within.",
+      "author": "B.K.S. Iyengar",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "general",
+        "technique",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q113",
+      "text": "Meditation is the art of knowing how to focus your mind.",
+      "author": "Swami Rama",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "technique",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q114",
+      "text": "Do not worry about the past or the future. Live in the eternal present.",
+      "author": "Swami Rama",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q115",
+      "text": "A mountain is composed of tiny grains of earth. The ocean is made up of tiny drops of water. Even so, life is but an endless series of little details and actions.",
+      "author": "Swami Sivananda",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "training",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q116",
+      "text": "Asana is not a performance but an exploration.",
+      "author": "Prashant Iyengar",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "training",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q117",
+      "text": "Breath is the bridge between the outer and the inner.",
+      "author": "Prashant Iyengar",
+      "source_type": "yoga",
+      "verified": true,
+      "contexts": [
+        "technique",
+        "pre_session",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q118",
+      "text": "The impediment to action advances action. What stands in the way becomes the way.",
+      "author": "Marco Aurelio (Meditazioni)",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q119",
+      "text": "You have power over your mind — not outside events. Realize this, and you will find strength.",
+      "author": "Marco Aurelio",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "pre_session",
+        "failure"
+      ]
+    },
+    {
+      "id": "q120",
+      "text": "Waste no more time arguing what a good man should be. Be one.",
+      "author": "Marco Aurelio",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q121",
+      "text": "The first rule is to keep an untroubled spirit. The second is to look things in the face and know them for what they are.",
+      "author": "Marco Aurelio",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q122",
+      "text": "If it is not right, do not do it; if it is not true, do not say it.",
+      "author": "Marco Aurelio",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "general",
+        "technique"
+      ]
+    },
+    {
+      "id": "q123",
+      "text": "Difficulties strengthen the mind, as labor does the body.",
+      "author": "Seneca",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "failure"
+      ]
+    },
+    {
+      "id": "q124",
+      "text": "It is not that I am brave, it is just that I am busy.",
+      "author": "Seneca",
+      "source_type": "philosophy",
+      "verified": false,
+      "contexts": [
+        "general",
+        "pre_session",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q125",
+      "text": "Per aspera ad astra. Attraverso l'asprezza alle stelle.",
+      "author": "Seneca (attr.)",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "new_phase",
+        "outdoor",
+        "failure"
+      ]
+    },
+    {
+      "id": "q126",
+      "text": "Nusquam est qui ubique est. Chi è ovunque non è da nessuna parte. Concentrati su ciò che conta.",
+      "author": "Seneca",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "training",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q127",
+      "text": "Seek not good fortune to be free from misfortune, but rather, courage equal to your misfortune.",
+      "author": "Seneca",
+      "source_type": "philosophy",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q128",
+      "text": "It's not what happens to you, but how you react to it that matters.",
+      "author": "Epitteto",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q129",
+      "text": "First say to yourself what you would be; and then do what you have to do.",
+      "author": "Epitteto",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q130",
+      "text": "Make the best use of what is in your power, and take the rest as it happens.",
+      "author": "Epitteto",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "outdoor",
+        "failure"
+      ]
+    },
+    {
+      "id": "q131",
+      "text": "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+      "author": "Aristotele",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q132",
+      "text": "The roots of education are bitter, but the fruit is sweet.",
+      "author": "Aristotele",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q133",
+      "text": "He who has a why to live can bear almost any how.",
+      "author": "Friedrich Nietzsche",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "general",
+        "failure"
+      ]
+    },
+    {
+      "id": "q134",
+      "text": "That which does not kill us makes us stronger.",
+      "author": "Friedrich Nietzsche",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "training"
+      ]
+    },
+    {
+      "id": "q135",
+      "text": "One must have chaos in oneself to give birth to a dancing star.",
+      "author": "Friedrich Nietzsche",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q136",
+      "text": "The secret of getting ahead is getting started.",
+      "author": "Mark Twain",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q137",
+      "text": "Twenty years from now you will be more disappointed by the things you didn't do than by the ones you did.",
+      "author": "Mark Twain",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "general",
+        "outdoor",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q138",
+      "text": "In the middle of difficulty lies opportunity.",
+      "author": "Albert Einstein",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q139",
+      "text": "Try not. Do, or do not. There is no try.",
+      "author": "Yoda (Star Wars)",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q140",
+      "text": "Fall seven times, stand up eight.",
+      "author": "Proverbio giapponese",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q141",
+      "text": "The journey of a thousand miles begins with a single step.",
+      "author": "Laozi (Tao Te Ching)",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q142",
+      "text": "Mastering others is strength. Mastering yourself is true power.",
+      "author": "Laozi",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q143",
+      "text": "Water is fluid, soft, and yielding. But water will wear away rock, which is rigid and cannot yield. Whatever is fluid, soft, and yielding will overcome whatever is rigid and hard.",
+      "author": "Laozi",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "technique",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q144",
+      "text": "Today I will do what others won't, so tomorrow I can accomplish what others can't.",
+      "author": "Jerry Rice",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "training",
+        "pre_session",
+        "general"
+      ]
+    },
+    {
+      "id": "q145",
+      "text": "The will to win is not nearly as important as the will to prepare to win.",
+      "author": "Vince Lombardi",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "training",
+        "pre_session",
+        "general"
+      ]
+    },
+    {
+      "id": "q146",
+      "text": "It always seems impossible until it's done.",
+      "author": "Nelson Mandela",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "new_phase",
+        "success"
+      ]
+    },
+    {
+      "id": "q147",
+      "text": "There is nothing outside of yourself that can ever enable you to get better, stronger, richer, quicker, or smarter. Everything is within. Seek nothing outside of yourself.",
+      "author": "Miyamoto Musashi (Il Libro dei Cinque Anelli)",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "general",
+        "hard_day",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q148",
+      "text": "Think lightly of yourself and deeply of the world.",
+      "author": "Miyamoto Musashi",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "general",
+        "outdoor",
+        "deload"
+      ]
+    },
+    {
+      "id": "q149",
+      "text": "The primary thing when you take a sword in your hands is your intention to cut the enemy, whatever the means.",
+      "author": "Miyamoto Musashi",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "hard_day",
+        "technique"
+      ]
+    },
+    {
+      "id": "q150",
+      "text": "Today is victory over yourself of yesterday; tomorrow is your victory over lesser men.",
+      "author": "Miyamoto Musashi",
+      "source_type": "martial_arts",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q151",
+      "text": "Of all the paths you take in life, make sure a few of them are dirt.",
+      "author": "John Muir",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q152",
+      "text": "In every walk with nature, one receives far more than he seeks.",
+      "author": "John Muir",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "deload",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q153",
+      "text": "The earth has music for those who listen.",
+      "author": "George Santayana (attr.)",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "deload",
+        "general"
+      ]
+    },
+    {
+      "id": "q154",
+      "text": "Adventures are worthwhile in themselves.",
+      "author": "Amelia Earhart",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q155",
+      "text": "It's always further than it looks. It's always taller than it looks. And it's always harder than it looks.",
+      "author": "Detto alpinistico (The 3 Rules of Alpinism)",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "hard_day",
+        "failure"
+      ]
+    },
+    {
+      "id": "q156",
+      "text": "The best view comes after the hardest climb.",
+      "author": "Detto popolare",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "success",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q157",
+      "text": "Not all those who wander are lost.",
+      "author": "J.R.R. Tolkien",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q158",
+      "text": "Going to the mountains is going home.",
+      "author": "John Muir",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "outdoor",
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q159",
+      "text": "The canyon walls don't care about your project grade. Just climb.",
+      "author": "Detto popolare outdoor climbing",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "general",
+        "failure"
+      ]
+    },
+    {
+      "id": "q160",
+      "text": "On the rock, the mind clears. The noise of the world falls away, and only the next hold matters.",
+      "author": "Detto popolare arrampicata",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "pre_session",
+        "technique"
+      ]
+    },
+    {
+      "id": "q161",
+      "text": "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+      "author": "Winston Churchill",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q162",
+      "text": "Our greatest glory is not in never falling, but in rising every time we fall.",
+      "author": "Confucio",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q163",
+      "text": "Endure the discomfort of growth, or endure the pain of staying the same.",
+      "author": "Detto popolare",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "new_phase",
+        "training"
+      ]
+    },
+    {
+      "id": "q164",
+      "text": "The body achieves what the mind believes.",
+      "author": "Detto popolare sport",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "pre_session",
+        "hard_day",
+        "training"
+      ]
+    },
+    {
+      "id": "q165",
+      "text": "You never know how strong you are until being strong is your only option.",
+      "author": "Bob Marley (attr.)",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "general"
+      ]
+    },
+    {
+      "id": "q166",
+      "text": "Do not count the days. Make the days count.",
+      "author": "Muhammad Ali",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q167",
+      "text": "Great things are not done by impulse, but by a series of small things brought together.",
+      "author": "Vincent van Gogh",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "training",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q168",
+      "text": "Dreams are lovely. But they are just dreams. Fuzzy and insubstantial. Wish fulfillment. Climbing requires hard work.",
+      "author": "Felicity Aston",
+      "source_type": "climber",
+      "verified": false,
+      "contexts": [
+        "training",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q169",
+      "text": "Champions keep playing until they get it right.",
+      "author": "Billie Jean King",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "training"
+      ]
+    },
+    {
+      "id": "q170",
+      "text": "Push yourself, because no one else is going to do it for you.",
+      "author": "Detto popolare sport",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "pre_session",
+        "training",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q171",
+      "text": "The hard days are the best because that's when champions are made.",
+      "author": "Gabby Douglas",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "training",
+        "failure"
+      ]
+    },
+    {
+      "id": "q172",
+      "text": "Believe you can and you're halfway there.",
+      "author": "Theodore Roosevelt",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q173",
+      "text": "The only impossible journey is the one you never begin.",
+      "author": "Tony Robbins",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "new_phase",
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q174",
+      "text": "The comeback is always stronger than the setback.",
+      "author": "Detto popolare sport",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "failure",
+        "recovery",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q175",
+      "text": "Rest when you're weary. Refresh and renew yourself, your body, your mind, your spirit. Then get back to work.",
+      "author": "Ralph Marston",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "deload",
+        "recovery",
+        "general"
+      ]
+    },
+    {
+      "id": "q176",
+      "text": "An athlete cannot run with money in his pockets. He must run with hope in his heart and dreams in his head.",
+      "author": "Emil Zátopek",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "general",
+        "pre_session",
+        "training"
+      ]
+    },
+    {
+      "id": "q177",
+      "text": "To give anything less than your best is to sacrifice the gift.",
+      "author": "Steve Prefontaine",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "pre_session",
+        "training",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q178",
+      "text": "Some people want it to happen, some wish it would happen, others make it happen.",
+      "author": "Michael Jordan",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q179",
+      "text": "I've missed more than 9,000 shots in my career. I've failed over and over again. And that is why I succeed.",
+      "author": "Michael Jordan",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q180",
+      "text": "Deload week: the most productive session you almost skipped.",
+      "author": "Detto popolare powerlifting",
+      "source_type": "popular",
+      "verified": false,
+      "contexts": [
+        "deload",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q181",
+      "text": "One more attempt. Said every climber, forever.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q182",
+      "text": "Chalk does not lie. Your fingers do.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "technique",
+        "failure"
+      ]
+    },
+    {
+      "id": "q183",
+      "text": "Active recovery: watching others train while holding a sports drink.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "deload",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q184",
+      "text": "It is a 7a. It just feels like an 8a. It is still a 7a.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q185",
+      "text": "Deload week: your body's thank-you note. Your ego did not sign it.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "deload",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q186",
+      "text": "Outdoor climbing: same moves, worse holds, better photos.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "general"
+      ]
+    },
+    {
+      "id": "q187",
+      "text": "RPE 10: when you look at the route and already know.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "training",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q188",
+      "text": "Warmup is optional. Technically.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "pre_session",
+        "training",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q189",
+      "text": "Linear progression always works. Until it does not. Then add volume.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "training",
+        "new_phase",
+        "general"
+      ]
+    },
+    {
+      "id": "q190",
+      "text": "\"Just a couple of hours at the crag.\" — 6 hours ago.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "general"
+      ]
+    },
+    {
+      "id": "q191",
+      "text": "The project is not hard. It is just not done yet.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q192",
+      "text": "Hangboard: a torture device you bought willingly and called training.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "training",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q193",
+      "text": "Grip strength: the KPI of people who actually send things.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "training",
+        "general",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q194",
+      "text": "If your training does not scare you a little, it is probably a warmup.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "training",
+        "new_phase",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q195",
+      "text": "Note to future self: that route was actually hard. It was not the tiredness.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q196",
+      "text": "Your future self will thank you for today's rest. Your current self disagrees. Your current self is wrong.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "deload",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q197",
+      "text": "Power endurance: the reason you train, and also the reason you cry.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "training",
+        "hard_day",
+        "new_phase"
+      ]
+    },
+    {
+      "id": "q198",
+      "text": "That 7b you have been projecting for 6 months is not a route. It is a mirror.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "failure",
+        "hard_day",
+        "outdoor",
+        "general"
+      ]
+    },
+    {
+      "id": "q199",
+      "text": "Every impossible sequence is just a sequence you have not figured out yet. Usually.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "technique",
+        "failure",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q200",
+      "text": "Sending is great. But climbing outside with friends, sunshine, and a sandwich in your bag — that is the whole point.",
+      "author": "AI Dani — climb-agent v1",
+      "source_type": "humor",
+      "verified": false,
+      "contexts": [
+        "outdoor",
+        "general",
+        "deload"
+      ]
+    }
+  ]
+}

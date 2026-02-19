@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
-import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek } from "@/lib/api";
+import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot } from "@/lib/api";
+import type { OutdoorSpot } from "@/lib/types";
 import { AvailabilityEditor } from "@/components/settings/availability-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,40 @@ export default function SettingsPage() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingAvailability, setEditingAvailability] = useState(false);
+  const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
+  const [addingSpot, setAddingSpot] = useState(false);
+  const [newSpotName, setNewSpotName] = useState("");
+  const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("boulder");
+
+  const loadSpots = useCallback(async () => {
+    try {
+      const data = await getOutdoorSpots();
+      setOutdoorSpots(data.spots);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadSpots(); }, [loadSpots]);
+
+  async function handleAddSpot() {
+    if (!newSpotName.trim()) return;
+    try {
+      await addOutdoorSpot({ name: newSpotName.trim(), discipline: newSpotDiscipline });
+      setNewSpotName("");
+      setAddingSpot(false);
+      await loadSpots();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to add spot");
+    }
+  }
+
+  async function handleDeleteSpot(spotId: string) {
+    try {
+      await deleteOutdoorSpot(spotId);
+      await loadSpots();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to delete spot");
+    }
+  }
 
   // User data
   const user = state?.user ?? {};
@@ -329,6 +364,92 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* ----- Outdoor Spots ----- */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Outdoor Spots</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setAddingSpot(true)}
+                  >
+                    Add spot
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {outdoorSpots.length === 0 && !addingSpot && (
+                  <p className="text-xs text-muted-foreground">
+                    No outdoor spots saved yet
+                  </p>
+                )}
+                {outdoorSpots.map((spot) => (
+                  <div
+                    key={spot.id}
+                    className="flex items-center justify-between py-1.5 text-sm"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{spot.name}</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {spot.discipline}
+                      </Badge>
+                      {spot.typical_days && spot.typical_days.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {spot.typical_days.join(", ")}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteSpot(spot.id)}
+                      className="text-xs text-destructive hover:underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {addingSpot && (
+                  <div className="mt-2 space-y-2 rounded-lg border p-3">
+                    <input
+                      type="text"
+                      placeholder="Spot name"
+                      value={newSpotName}
+                      onChange={(e) => setNewSpotName(e.target.value)}
+                      className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                    />
+                    <div className="flex gap-2">
+                      {(["boulder", "lead", "both"] as const).map((d) => (
+                        <button
+                          key={d}
+                          onClick={() => setNewSpotDiscipline(d)}
+                          className={`rounded-md px-3 py-1 text-xs border ${
+                            newSpotDiscipline === d
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-background"
+                          }`}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={handleAddSpot}>
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAddingSpot(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             <Separator />
 

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OutdoorSpot",
+  "description": "Schema for an outdoor climbing spot entry in user_state.outdoor_spots",
+  "type": "object",
+  "required": ["id", "name", "discipline"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique spot identifier (slug-style)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable spot name"
+    },
+    "discipline": {
+      "type": "string",
+      "enum": ["lead", "boulder", "both"],
+      "description": "Primary climbing discipline at this spot"
+    },
+    "typical_days": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+      },
+      "uniqueItems": true,
+      "description": "Days of the week this spot is typically visited"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Free-form notes about the spot"
+    }
+  },
+  "additionalProperties": false
+}

@@ -221,6 +221,7 @@ def pick_best_exercise_p0(
     domain_req: Any,
     pattern_req: Any = None,
     exclude_ids: Optional[set] = None,
+    recent_ex_ids: Optional[List[str]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -318,8 +319,16 @@ def pick_best_exercise_p0(
             trace["pattern_filter_applied"] = False
             trace["counts"]["after_pattern"] = len(base3)
 
-    # Deterministic pick
-    base3.sort(key=lambda e: norm_str(get_ex_id(e)))
+    # Deterministic pick: score_exercise for recency-aware tie-breaking,
+    # then exercise_id ascending for final deterministic tie-break
+    if recent_ex_ids:
+        prefs_empty: Dict[str, Any] = {}
+        base3.sort(key=lambda e: (
+            -score_exercise(e, prefs_empty, recent_ex_ids),
+            norm_str(get_ex_id(e)),
+        ))
+    else:
+        base3.sort(key=lambda e: norm_str(get_ex_id(e)))
     return (base3[0] if base3 else None), trace
 
 
@@ -677,6 +686,7 @@ def _resolve_inline_block(
         domain_req=domain_req,
         pattern_req=pattern_req,
         exclude_ids=set(recent_ex_ids),
+        recent_ex_ids=recent_ex_ids,
     )
     chosen_by = "p0_inline_block"
 
@@ -947,6 +957,7 @@ def resolve_session(
                         role_req=role_req,
                         domain_req=domain_req,
                         exclude_ids=set(recent_ex_ids),
+                        recent_ex_ids=recent_ex_ids,
                     )
                     chosen_by = "p0_hard_filters"
 

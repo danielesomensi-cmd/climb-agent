@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Eye, Plus, RefreshCw } from "lucide-react";
+import { Eye, Mountain, Plus, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -106,7 +106,15 @@ export function DayCard({
       </CardHeader>
 
       <CardContent className="space-y-2">
-        {day.sessions.length === 0 ? (
+        {day.outdoor_slot ? (
+          <div className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
+            <Mountain className="size-4 text-green-500" />
+            <span className="font-medium">Outdoor day</span>
+            <span className="text-xs text-muted-foreground">
+              Log your session after climbing
+            </span>
+          </div>
+        ) : day.sessions.length === 0 ? (
           <p className="text-xs text-muted-foreground italic">
             Rest
           </p>
