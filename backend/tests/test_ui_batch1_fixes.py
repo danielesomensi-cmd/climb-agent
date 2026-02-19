@@ -191,11 +191,6 @@ class TestBug3TechniqueSession(unittest.TestCase):
         us.setdefault("context", {})
         us["context"]["location"] = "gym"
         us["context"]["gym_id"] = "blocx"
-        # Ensure gym has gym_boulder for technique exercises
-        for g in us.get("equipment", {}).get("gyms", []):
-            if g["gym_id"] == "blocx":
-                if "gym_boulder" not in g["equipment"]:
-                    g["equipment"].append("gym_boulder")
         return resolve_session(
             repo_root=REPO_ROOT,
             session_path="backend/catalog/sessions/v1/technique_focus_gym.json",
@@ -282,6 +277,184 @@ class TestBug4TargetTrainingDays(unittest.TestCase):
         days_with_sessions = sum(1 for d in days if d["sessions"])
         self.assertLessEqual(days_with_sessions, 3,
                              f"Expected <=3 days with sessions, got {days_with_sessions}")
+
+
+
+
+# ---------------------------------------------------------------------------
+# Batch 1b: Planner preferred_location + technique resolution
+# ---------------------------------------------------------------------------
+
+class TestBatch1bLocationPreference(unittest.TestCase):
+    """UI-6b / UI-19b: planner must respect preferred_location on slots."""
+
+    def _avail_all_prefer(self, preferred, days=("mon", "tue", "wed", "thu")):
+        """Build availability where every day has an evening slot preferring *preferred*."""
+        avail = {}
+        for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun"):
+            if wd in days:
+                avail[wd] = {
+                    "evening": {
+                        "available": True,
+                        "locations": ["home", "gym"],
+                        "preferred_location": preferred,
+                    },
+                }
+            else:
+                avail[wd] = {"available": False}
+        return avail
+
+    def test_planner_home_preferred_no_gym_session(self):
+        """All slots prefer home → every placed session must have location='home'."""
+        avail = self._avail_all_prefer("home")
+        plan = generate_phase_week(**_make_kwargs("base", availability=avail))
+        for day in plan["weeks"][0]["days"]:
+            for s in day["sessions"]:
+                self.assertEqual(
+                    s["location"], "home",
+                    f"Session {s['session_id']} on {day['weekday']} has location "
+                    f"'{s['location']}', expected 'home'",
+                )
+
+    def test_planner_gym_preferred_gets_gym_session(self):
+        """All slots prefer gym → at least some sessions are gym."""
+        avail = self._avail_all_prefer("gym")
+        plan = generate_phase_week(**_make_kwargs("base", availability=avail))
+        gym_count = sum(
+            1 for day in plan["weeks"][0]["days"]
+            for s in day["sessions"] if s["location"] == "gym"
+        )
+        self.assertGreater(gym_count, 0, "No gym sessions placed despite gym preference")
+
+    def test_planner_mixed_locations_respected(self):
+        """Mon/Wed prefer gym, Tue/Thu prefer home → each day's session matches."""
+        avail = {}
+        gym_days = {"mon", "wed"}
+        home_days = {"tue", "thu"}
+        for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun"):
+            if wd in gym_days:
+                avail[wd] = {"evening": {"available": True, "locations": ["home", "gym"],
+                                          "preferred_location": "gym"}}
+            elif wd in home_days:
+                avail[wd] = {"evening": {"available": True, "locations": ["home", "gym"],
+                                          "preferred_location": "home"}}
+            else:
+                avail[wd] = {"available": False}
+        plan = generate_phase_week(**_make_kwargs("base", availability=avail))
+        for day in plan["weeks"][0]["days"]:
+            wd = day["weekday"]
+            for s in day["sessions"]:
+                if wd in gym_days:
+                    self.assertEqual(s["location"], "gym",
+                                     f"{wd}: expected gym, got {s['location']}")
+                elif wd in home_days:
+                    self.assertEqual(s["location"], "home",
+                                     f"{wd}: expected home, got {s['location']}")
+
+    def test_technique_resolves_zero_at_home(self):
+        """technique_focus_gym resolved at home should yield 0 technique exercises
+        (all technique exercises require gym equipment)."""
+        base_us = _load_json(os.path.join(REPO_ROOT, "backend", "tests", "fixtures", "test_user_state.json"))
+        us = deepcopy(base_us)
+        us.setdefault("context", {})
+        us["context"]["location"] = "home"
+        us["context"]["gym_id"] = None
+
+        out = resolve_session(
+            repo_root=REPO_ROOT,
+            session_path="backend/catalog/sessions/v1/technique_focus_gym.json",
+            templates_dir="backend/catalog/templates",
+            exercises_path="backend/catalog/exercises/v1/exercises.json",
+            out_path="output/__test_technique_home.json",
+            user_state_override=us,
+            write_output=False,
+        )
+
+        exercises_raw = _load_json(os.path.join(REPO_ROOT, "backend", "catalog", "exercises", "v1", "exercises.json"))
+        if isinstance(exercises_raw, dict):
+            exercises_raw = exercises_raw.get("exercises") or exercises_raw.get("items") or exercises_raw.get("data") or []
+        ex_lookup = {norm_str(get_ex_id(e)): e for e in exercises_raw}
+
+        technique_count = 0
+        for inst in out["resolved_session"]["exercise_instances"]:
+            ex = ex_lookup.get(norm_str(inst["exercise_id"]))
+            if ex:
+                roles = [norm_str(r) for r in (ex.get("role") if isinstance(ex.get("role"), list) else [ex.get("role", "")])]
+                if "technique" in roles:
+                    technique_count += 1
+        self.assertEqual(technique_count, 0,
+                         f"Expected 0 technique exercises at home, got {technique_count}")
+
+
+# ---------------------------------------------------------------------------
+# UI-23: Planner prioritises gym slots for climbing sessions
+# ---------------------------------------------------------------------------
+
+class TestUI23GymSlotPriority(unittest.TestCase):
+    """UI-23: Planner prioritizes gym slots for climbing sessions."""
+
+    def _avail_mixed(self, gym_days, home_days):
+        """Build availability with specific gym and home days."""
+        avail = {}
+        for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun"):
+            if wd in gym_days:
+                avail[wd] = {"evening": {"available": True, "locations": ["gym"],
+                             "preferred_location": "gym", "gym_id": "blocx"}}
+            elif wd in home_days:
+                avail[wd] = {"morning": {"available": True, "locations": ["home"],
+                             "preferred_location": "home"}}
+            else:
+                avail[wd] = {"available": False}
+        return avail
+
+    def test_gym_days_kept_over_home_when_capped(self):
+        """With 3 gym + 3 home days and target=4, all 3 gym days should be kept."""
+        avail = self._avail_mixed(
+            gym_days=("mon", "wed", "fri"),
+            home_days=("tue", "thu", "sat"),
+        )
+        plan = generate_phase_week(**_make_kwargs("base",
+            availability=avail,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        gym_days_with_sessions = [
+            d for d in days
+            if d["sessions"] and any(s["location"] == "gym" for s in d["sessions"])
+        ]
+        self.assertGreaterEqual(len(gym_days_with_sessions), 3,
+            f"Expected >=3 gym days kept, got {len(gym_days_with_sessions)}")
+
+    def test_climbing_sessions_placed_on_gym_days(self):
+        """Gym-only climbing sessions should be placed on gym days, not dropped."""
+        avail = self._avail_mixed(
+            gym_days=("tue", "thu"),
+            home_days=("mon", "wed", "fri", "sat"),
+        )
+        plan = generate_phase_week(**_make_kwargs("base",
+            availability=avail,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        gym_sessions = [
+            s for d in days for s in d["sessions"]
+            if s["location"] == "gym"
+        ]
+        self.assertGreater(len(gym_sessions), 0,
+            "No gym sessions placed — gym days were dropped by target_days cap")
+
+    def test_all_home_slots_still_works(self):
+        """When user only has home slots, planner should still fill target_days."""
+        avail = self._avail_mixed(
+            gym_days=(),
+            home_days=("mon", "tue", "wed", "thu", "fri"),
+        )
+        plan = generate_phase_week(**_make_kwargs("base",
+            availability=avail,
+            allowed_locations=["home"],
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3}))
+        days = plan["weeks"][0]["days"]
+        days_with_sessions = sum(1 for d in days if d["sessions"])
+        self.assertGreaterEqual(days_with_sessions, 3,
+            f"Expected >=3 training days with home-only, got {days_with_sessions}")
 
 
 if __name__ == "__main__":
