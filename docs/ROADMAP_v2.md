@@ -440,6 +440,7 @@ Tabella unica con TUTTI gli item tracciati.
 | FR-2 | Warning: no climbing equipment in gyms | ✅ DONE | Batch 2 | §3 |
 | FR-3 | Feedback badge/sticker on exercises | ✅ DONE | Batch 2 | §3 |
 | UI-23 | Gym slot priority in planner | ✅ DONE | UI-23 | §3 |
+| FR-4 | Outdoor vs gym slot priority | TODO | 2 backlog | §9.4 |
 
 ---
 
@@ -484,6 +485,15 @@ This informs the planner the same way UI-23 does for gym vs home:
 - Alternate: even distribution
 
 Depends on: FR-1 (outdoor as availability location)
+
+### 9.4 — Outdoor vs gym priority preference (Phase 2 backlog — FR-4)
+When both outdoor and gym slots are available on the same day, user can set a preference:
+- "Prioritize outdoor climbing" — outdoor slots get climbing sessions first
+- "Prioritize gym training" — gym slots get structured training first
+- "Alternate" — even distribution
+
+Works the same way as UI-23 (gym slot priority). Setting lives in planning_prefs.
+Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 
 ---
 
