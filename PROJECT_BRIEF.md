@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-19 (Phase 2 complete)
+> Last updated: 2026-02-21 (Phase 2.5 in progress — hangboard audit)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -17,10 +17,10 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 
 | Area | Count | Notes |
 |------|-------|-------|
-| Exercises | 103 | 12 categories + cooldown stretches + active flexibility |
+| Exercises | 133 | 12 categories + cooldown stretches + active flexibility + technique drills + hangboard audit |
 | Sessions | 33 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | ~360 | all green (post Phase 2) |
+| Tests | ~373 | all green (post Phase 2.5 hangboard audit) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 26 | 12 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
@@ -82,7 +82,7 @@ backend/
       reports.py            ← GET /api/reports/weekly, /monthly
       quotes.py             ← GET /api/quotes/daily
   catalog/
-    exercises/v1/           ← 103 exercises (JSON)
+    exercises/v1/           ← 133 exercises (JSON)
     sessions/v1/            ← 33 sessions (JSON)
     templates/v1/           ← 19 templates (JSON)
   data/
@@ -187,7 +187,7 @@ from backend.engine.X import Y
 | UI test fixes (Batch 1-2) | ✅ | 22 bugs fixed, 3 FRs implemented, planner slot/location/dedup/gym-priority |
 | **3.2: UI polish + adaptive** | ✅ | B25 adaptive replanning, B19 quick-add, B20 edit availability, B27 equipment labels, NEW-F6/F7. B11 → Phase 2.5 |
 | 2: Tracking + outdoor | ✅ | Outdoor logging, reports, motivational quotes |
-| 2.5: Catalog audit + loads | 🔲 | Exercise audit vs literature, UI-18 working loads, B11 test protocols, UI-9, UI-20 |
+| 2.5: Catalog audit + loads | 🟡 | Hangboard audit ✅, exercise audit vs literature, UI-18 working loads, B11 test protocols, UI-9, UI-20 |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
 | 4: Evolution | 🔲 | Multi-goal, annual report, notifications |
 

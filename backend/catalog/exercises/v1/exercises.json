@@ -543,7 +543,7 @@
       "recency_group": "finger_submaximal_hang",
       "equipment_required": ["hangboard"],
       "location_allowed": ["home", "gym"],
-      "contraindications": ["acute_finger_injury"],
+      "contraindications": [],
       "prescription_defaults": {
         "sets": 5,
         "reps": null,
@@ -578,7 +578,7 @@
       "recency_group": "finger_test",
       "equipment_required": ["hangboard"],
       "location_allowed": ["home", "gym"],
-      "contraindications": ["finger_injury"],
+      "contraindications": [],
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -613,7 +613,7 @@
       "recency_group": "finger_test",
       "equipment_required": ["hangboard"],
       "location_allowed": ["home", "gym"],
-      "contraindications": ["finger_injury"],
+      "contraindications": [],
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -3478,7 +3478,7 @@
       "recency_group": "finger_max_hang",
       "equipment_required": ["hangboard"],
       "location_allowed": ["home", "gym"],
-      "contraindications": ["finger_injury", "pulley_injury"],
+      "contraindications": [],
       "prescription_defaults": {
         "sets": 5,
         "reps": null,
@@ -3513,7 +3513,7 @@
       "recency_group": "campus_ladders",
       "equipment_required": ["campus_board"],
       "location_allowed": ["gym"],
-      "contraindications": ["finger_injury", "pulley_injury", "shoulder_injury"],
+      "contraindications": [],
       "prescription_defaults": {
         "sets": 5,
         "reps": 4,
@@ -3541,7 +3541,7 @@
       "recency_group": "campus_ladders",
       "equipment_required": ["campus_board"],
       "location_allowed": ["gym"],
-      "contraindications": ["finger_injury", "pulley_injury", "shoulder_injury", "elbow_injury"],
+      "contraindications": ["elbow_sensitive"],
       "prescription_defaults": {
         "sets": 4,
         "reps": 1,
@@ -3569,7 +3569,7 @@
       "recency_group": "campus_switches",
       "equipment_required": ["campus_board"],
       "location_allowed": ["gym"],
-      "contraindications": ["finger_injury", "pulley_injury", "shoulder_injury"],
+      "contraindications": [],
       "prescription_defaults": {
         "sets": 5,
         "reps": 8,
@@ -3597,7 +3597,7 @@
       "recency_group": "campus_endurance",
       "equipment_required": ["campus_board"],
       "location_allowed": ["gym"],
-      "contraindications": ["finger_injury", "pulley_injury", "shoulder_injury"],
+      "contraindications": [],
       "prescription_defaults": {
         "sets": 3,
         "reps": null,
@@ -3785,6 +3785,151 @@
       "description": null,
       "cues": [],
       "video_url": null
-    }
+    },
+
+  {
+    "id": "pronator_terres_isometric_hold",
+    "name": "Pronator Teres Isometric Hold",
+    "category": "prehab",
+    "time_min": 5,
+    "role": ["prehab"],
+    "domain": ["prehab_elbow"],
+    "pattern": "forearm_pronation",
+    "intensity_level": "low",
+    "fatigue_cost": 2,
+    "recency_group": "prehab_elbow_pronator",
+    "equipment_required": ["resistance_band"],
+    "location_allowed": ["home", "gym"],
+    "contraindications": [],
+    "prescription_defaults": {
+      "sets": 3,
+      "reps": null,
+      "work_seconds": 20,
+      "rest_between_reps_seconds": null,
+      "rest_between_sets_seconds": 60,
+      "notes": "Hold band resisted pronation at 90° elbow. Light tension, pain-free."
+    },
+    "stress_tags": {"elbow": "low", "fingers": "none", "cns": "low", "skin": "none"},
+    "description": "Isometric hold targeting pronator teres to prevent climber's elbow.",
+    "cues": ["Elbow at 90°", "Palm up, resist internal rotation", "Keep shoulder relaxed"],
+    "video_url": null,
+    "load_model": "bodyweight_only"
+  },
+  {
+    "id": "stick_pronation_supination_eccentric",
+    "name": "Stick Pronation/Supination Eccentrics",
+    "category": "prehab",
+    "time_min": 7,
+    "role": ["prehab"],
+    "domain": ["prehab_elbow"],
+    "pattern": "rotation",
+    "intensity_level": "low",
+    "fatigue_cost": 3,
+    "recency_group": "prehab_elbow_rotation",
+    "equipment_required": ["dumbbell"],
+    "location_allowed": ["home", "gym"],
+    "contraindications": ["elbow_sensitive"],
+    "prescription_defaults": {
+      "sets": 3,
+      "reps": 10,
+      "work_seconds": null,
+      "rest_between_reps_seconds": null,
+      "rest_between_sets_seconds": 90,
+      "notes": "Slow eccentric (4-5s) pronation and supination with light dumbbell."
+    },
+    "stress_tags": {"elbow": "low", "fingers": "none", "cns": "low", "skin": "none"},
+    "description": "Eccentric rotation for medial epicondylitis prevention.",
+    "cues": ["Slow control on lowering", "Neutral wrist", "No pain allowed"],
+    "video_url": null,
+    "load_model": "bodyweight_only"
+  },
+  {
+    "id": "heel_hook_specific_drill",
+    "name": "Heel-Hook Specific Drill",
+    "category": "technique",
+    "time_min": 15,
+    "role": ["technique"],
+    "domain": ["technique_footwork"],
+    "pattern": "technique_drill",
+    "intensity_level": "medium",
+    "fatigue_cost": 4,
+    "recency_group": "technique_heel",
+    "equipment_required": [],
+    "equipment_required_any": ["gym_boulder", "spraywall"],
+    "location_allowed": ["gym", "outdoor"],
+    "contraindications": [],
+    "prescription_defaults": {
+      "sets": 4,
+      "reps": null,
+      "work_seconds": 60,
+      "rest_between_reps_seconds": null,
+      "rest_between_sets_seconds": 120,
+      "notes": "Easy problems, focus only on heel placement."
+    },
+    "stress_tags": {"elbow": "low", "fingers": "low", "cns": "medium", "skin": "low"},
+    "description": "Isolates heel-hook technique on volume terrain.",
+    "cues": ["Active heel pull", "Hip close to wall", "Relaxed arms"],
+    "video_url": null,
+    "load_model": "grade_relative"
+  },
+  {
+    "id": "lattice_lactate_8x8",
+    "name": "Lattice Lactate Tolerance 8x8",
+    "category": "power_endurance",
+    "time_min": 35,
+    "role": ["main"],
+    "domain": ["anaerobic_capacity"],
+    "pattern": "climbing_intervals",
+    "intensity_level": "high",
+    "fatigue_cost": 9,
+    "recency_group": "pe_lactate",
+    "equipment_required": [],
+    "equipment_required_any": ["gym_boulder", "board_kilter"],
+    "location_allowed": ["gym"],
+    "contraindications": [],
+    "prescription_defaults": {
+      "sets": 8,
+      "reps": 8,
+      "work_seconds": null,
+      "rest_between_reps_seconds": null,
+      "rest_between_sets_seconds": 240,
+      "notes": "8 problems back-to-back, 4 min rest between rounds."
+    },
+    "stress_tags": {"elbow": "high", "fingers": "high", "cns": "high", "skin": "high"},
+    "description": "High-lactate bouldering capacity (Lattice advanced).",
+    "cues": ["Fight through burn", "Maintain form", "Grade ~flash level"],
+    "video_url": null,
+    "load_model": "grade_relative"
+  },
+  {
+    "id": "grip_transitions_half_to_open",
+    "name": "Grip Transitions (Half-Crimp to Open-Hand)",
+    "category": "main_strength",
+    "time_min": 10,
+    "role": ["main"],
+    "domain": ["finger_strength"],
+    "pattern": "isometric_hang",
+    "intensity_level": "high",
+    "fatigue_cost": 6,
+    "recency_group": "finger_transition",
+    "equipment_required": ["hangboard"],
+    "location_allowed": ["home", "gym"],
+    "contraindications": ["elbow_sensitive"],
+    "prescription_defaults": {
+      "sets": 5,
+      "reps": 4,
+      "work_seconds": 7,
+      "rest_between_reps_seconds": null,
+      "rest_between_sets_seconds": 180,
+      "notes": "Transition mid-hang from half-crimp to open-hand."
+    },
+    "stress_tags": {"elbow": "high", "fingers": "high", "cns": "high", "skin": "medium"},
+    "description": "Improves grip adaptability and tendon resilience.",
+    "cues": ["Smooth transition", "No slip", "Shoulders engaged"],
+    "video_url": null,
+    "load_model": "bodyweight_only"
+  }
+
   ]
+
 }

@@ -139,7 +139,7 @@ cd frontend && npm run dev    # http://localhost:3000
 
 ## Catalog status (post Phase 0 expansion)
 
-- **Exercises**: 103 in `backend/catalog/exercises/v1/exercises.json`
+- **Exercises**: 133 in `backend/catalog/exercises/v1/exercises.json`
 - **Sessions**: 33 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup + easy_climbing_deload)
 - **Templates**: 19 in `backend/catalog/templates/v1/` (11 original + 8 new: warmup_climbing/strength/recovery, pulling_strength/endurance, antagonist_prehab, core_standard, cooldown_stretch)
 

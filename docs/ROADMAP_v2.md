@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-19 (Phase 2 complete — catalog cleanup, doc alignment)
+> Last updated: 2026-02-21 (Phase 2.5 in progress — hangboard audit complete)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -214,11 +214,13 @@ Implementato 2026-02-17. Approccio a due livelli:
 
 Necessario per: overtraining monitoring, adaptive deload input, UI visualization.
 
-### §2.6 Exercise Catalog Audit (Phase 2.5 — da fare)
+### §2.6 Exercise Catalog Audit (Phase 2.5 — in corso)
 
 Audit sistematico del catalogo esercizi contro la literature review
 (`docs/literature_review_climbing_training.md`, 19 sezioni).
 Da fare DOPO Phase 2 (tracking) per beneficiare dei dati di feedback reali.
+
+**Hangboard catalog audit complete (2026-02-21):** 5 esercizi aggiunti (pronator_terres_isometric_hold, stick_pronation_supination_eccentric, heel_hook_specific_drill, lattice_lactate_8x8, grip_transitions_half_to_open), validati contro vocabulary_v1.md. Fix contraindications pre-esistenti su 8 esercizi.
 
 Include anche:
 - **NEW-F1** (prescription climbing vuota): aggiungere suggested_grade_offset, volume, rest_between agli esercizi climbing.
@@ -413,7 +415,7 @@ Tabella unica con TUTTI gli item tracciati.
 | F6-partial | Intent projecting mancante | ✅ DONE | 1.75 | §2.4 |
 | B28 | Cross-session recency nel resolver | ✅ DONE | 2 | §4.1 |
 | B29 | Dedicated test exercises in catalog | TODO | 2.5 | §2.6 |
-| B-NEW | Exercise catalog audit | TODO | 2.5 | §2.6 |
+| B-NEW | Exercise catalog audit | 🟡 IN PROGRESS | 2.5 | §2.6 |
 | UI-1 | Trip date picker: end_date validation | ✅ DONE | Batch 2 | §3 |
 | UI-2 | uvicorn --reload-exclude for data dir | ✅ DONE | Batch 2 | §3 |
 | UI-3 | Settings: weight/height not displayed | ✅ DONE | Batch 2 | §3 |
