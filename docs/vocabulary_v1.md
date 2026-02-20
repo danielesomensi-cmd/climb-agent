@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-02-19
+Last updated: 2026-02-20
 
 ---
 
@@ -78,6 +78,7 @@ Allowed `role` values:
 - `prehab`
 - `technique`
 - `conditioning`
+- `test` *(assessment / benchmark exercises — e.g., critical force test, MED test)*
 
 Notes:
 - `role` can be an array if an exercise is legitimately reusable across roles (e.g., scapular control).
@@ -111,6 +112,11 @@ Allowed `domain` values (v1.1, backwards-compatible):
 - `technique_boulder`
 - `technique_lead`
 - `technique_footwork`
+- `technique_body_position` *(hip rotation, flagging, centre of gravity)*
+- `technique_constraint` *(constraint drills — hover hands, one-hand climbing, three-limb)*
+- `technique_movement` *(movement quality — slow climbing, sloth/monkey)*
+- `technique_relaxation` *(breathing awareness, tension management)*
+- `prehab_finger` *(finger extensor / tendon prehab)*
 - `climbing_routes` *(route climbing — lead routes, redpoint attempts)*
 
 Guidelines:
@@ -134,22 +140,6 @@ Canonical context fields:
 
 Rule:
 - If `location="gym"`, `gym_id` MUST be present for downstream policies.
-
----
-
-### 2.3 Role (phase of session)
-
-`role` describes *where the exercise sits within a session* (phase), not what it trains.
-
-Allowed `role` values:
-- `warmup`
-- `activation`
-- `main`
-- `accessory`
-- `conditioning`
-- `technique`
-- `prehab`
-- `cooldown`
 
 ---
 
@@ -200,6 +190,7 @@ Allowed `pattern` values:
 
 Allowed values:
 
+- `very_low`
 - `low`
 - `medium`
 - `high`
@@ -270,6 +261,57 @@ Optional canonical fields:
   - `wrist_sensitive`
 
 If present, resolver must avoid selecting these exercises when user_state indicates the corresponding sensitivity.
+
+---
+
+### 2.10 Load model
+
+`load_model` describes how external load is prescribed and progressed for an exercise.
+
+Allowed values:
+
+- `total_load` *(body weight + added weight; e.g., max hangs, weighted pull-ups)*
+- `external_load` *(only the added weight matters; e.g., dumbbell curls, wrist curls)*
+- `grade_relative` *(intensity is expressed as a climbing grade; e.g., limit bouldering, route intervals)*
+- `bodyweight_only` *(no external loading; e.g., hollow hold, dead bug)*
+- `null` *(load model not applicable or not yet assigned)*
+
+---
+
+### 2.11 Category
+
+`category` is a coarse grouping for UI display and reporting. It is NOT used for selection filtering.
+
+Allowed values:
+
+- `warmup_general`
+- `warmup_specific`
+- `main_strength`
+- `strength_accessory`
+- `power_endurance`
+- `endurance`
+- `core`
+- `prehab`
+- `mobility`
+- `flexibility`
+- `technique`
+- `conditioning`
+- `complementary`
+- `test`
+
+---
+
+### 2.12 Focus (technique drills)
+
+`focus` describes the primary technical focus of a technique drill exercise. Only exercises with `role: ["technique"]` use this field.
+
+Allowed values:
+
+- `footwork`
+- `body_position`
+- `movement`
+- `constraint`
+- `relaxation`
 
 ---
 
