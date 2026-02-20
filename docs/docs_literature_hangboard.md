@@ -1,6 +1,6 @@
 # climb-agent — Literature Sources: Hangboard Exercises
 
-**File:** `docs/literature_hangboard.md`
+**File:** `docs/docs_literature_hangboard.md`
 **Scope:** Esercizi hangboard — fonti per validare e compilare tutti i campi
 **Ultimo aggiornamento:** 2026-02-20 (sessione 2 — aggiornamento con correzioni da fonti primarie)
 **Stato:** Seconda ricerca completata — correzioni importanti su density hangs e min_edge_hang
@@ -36,6 +36,7 @@ Queste correzioni sono emerse dalla lettura diretta della fonte primaria (traini
 | 3 | `density_hangs` | struttura | 10s/10s × 6 reps | **30–40s to near-failure × 2–3 reps, 3–5 min rest** | Nelson C4HP diretto | ⭐⭐⭐ Alta |
 | 4 | `density_hang_10_10` | nota | — | Questo esercizio è una **semplificazione** non canonica del Nelson. Potrebbe valere la pena rinominarlo. | Nelson C4HP diretto | ⭐⭐ Media |
 | 5 | `horst_7_53` | `sets` | 4 | **massimo 5** (4 è ok come default) | Hörst T4C: "do not exceed 5 sets" | ✅ Già corretto |
+| 6 | `max_hang_7s` | `sets` | 6 | **5** (max) | Hörst T4C: "2–5 sets", López: "3–5 sets" — 6 sopra range (stessa correzione di max_hang_5s) | ⭐⭐ Media |
 
 ---
 
@@ -84,7 +85,7 @@ Queste correzioni sono emerse dalla lettura diretta della fonte primaria (traini
 | 3 | strengthclimbing.com analisi 7-53 | 2020 | https://strengthclimbing.com/eric-horst-7-53-hangboard-routine/ | 3–5 | — | 7s | 53s | 180s | 90–95% | 20mm | half_crimp |
 
 **Validazione campi JSON:**
-- `sets: 5` ✅ (range 3–5, 5 è il massimo consigliato)
+- `sets: 5` ⚠️ (range 3–5, 5 è il massimo consigliato — **JSON attuale ha 6, da ridurre a 5**)
 - `work_seconds: 7` ✅
 - `rest_between_sets_seconds: 180` ✅
 - `edge_mm: 20` ✅
@@ -416,7 +417,7 @@ Queste correzioni sono emerse dalla lettura diretta della fonte primaria (traini
 - `sets: 5` ✅ (range 4–8)
 - `work_seconds: 30` ✅ (basso del range 20–45)
 - `rest_between_sets_seconds: 60` ✅ (basso del range 30–120)
-- `edge_mm: 22` ✅ (range 14–20mm, usiamo 22 come valore centrale intermedio)
+- `edge_mm: 22` ⚠️ (range letteratura 14–20mm — 22mm è fuori range; considerare 18mm come valore centrale)
 
 **video_url:** `null` — `[da cercare: Eva López SubHangs YouTube]`
 
