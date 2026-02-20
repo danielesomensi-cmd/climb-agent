@@ -353,8 +353,8 @@ class TestBatch1bLocationPreference(unittest.TestCase):
 
     def test_technique_resolves_zero_at_gym_without_climbing_surfaces(self):
         """technique_focus_gym at a gym with no climbing surfaces (e.g. work_gym
-        with only dumbbell/bench/barbell) should yield 0 technique exercises
-        because technique drills need gym_boulder/spraywall/board_kilter."""
+        with only dumbbell/bench/barbell) should yield 0 surface-requiring
+        technique exercises. Bodyweight drills (equipment_required=[]) may still appear."""
         base_us = _load_json(os.path.join(REPO_ROOT, "backend", "tests", "fixtures", "test_user_state.json"))
         us = deepcopy(base_us)
         us.setdefault("context", {})
@@ -375,15 +375,17 @@ class TestBatch1bLocationPreference(unittest.TestCase):
             exercises_raw = exercises_raw.get("exercises") or exercises_raw.get("items") or exercises_raw.get("data") or []
         ex_lookup = {norm_str(get_ex_id(e)): e for e in exercises_raw}
 
-        technique_count = 0
+        climbing_surfaces = {"gym_boulder", "spraywall", "board_kilter", "board_moonboard"}
+        surface_technique_count = 0
         for inst in out["resolved_session"]["exercise_instances"]:
             ex = ex_lookup.get(norm_str(inst["exercise_id"]))
             if ex:
                 roles = [norm_str(r) for r in (ex.get("role") if isinstance(ex.get("role"), list) else [ex.get("role", "")])]
-                if "technique" in roles:
-                    technique_count += 1
-        self.assertEqual(technique_count, 0,
-                         f"Expected 0 technique exercises at gym without climbing surfaces, got {technique_count}")
+                equip = set(ex.get("equipment_required", []) + ex.get("equipment_required_any", []))
+                if "technique" in roles and equip & climbing_surfaces:
+                    surface_technique_count += 1
+        self.assertEqual(surface_technique_count, 0,
+                         f"Expected 0 surface-requiring technique exercises at gym without climbing surfaces, got {surface_technique_count}")
 
     def test_technique_resolves_with_default_gym_fallback(self):
         """When no gym_id is set, resolver falls back to first gym by priority

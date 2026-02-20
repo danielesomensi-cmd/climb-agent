@@ -183,8 +183,8 @@ class TestPowerEndurance(unittest.TestCase):
         climbing_exs = {"four_by_four_bouldering",
                         "linked_boulder_circuit", "route_intervals"}
         # Find finger exercise (from finger_endurance inline block)
-        finger_exs = {"density_hang_10_10", "repeaters_7_3", "long_duration_hang",
-                       "min_edge_hang_submaximal"}
+        finger_exs = {"density_hangs", "repeater_hang_7_3", "long_duration_hang",
+                       "min_edge_hang"}
         climbing_idx = next((i for i, eid in enumerate(ex_ids) if eid in climbing_exs), None)
         finger_idx = next((i for i, eid in enumerate(ex_ids) if eid in finger_exs), None)
         if climbing_idx is not None and finger_idx is not None:

@@ -1,4 +1,4 @@
-"""Tests for exercises.json v2.0 schema validation."""
+"""Tests for exercises.json v2.1 schema validation."""
 
 import json
 import os
@@ -26,12 +26,12 @@ def exercise_map(exercise_list):
     return {e["id"]: e for e in exercise_list}
 
 
-def test_version_is_2_0(exercises):
-    assert exercises["version"] == "2.0"
+def test_version_is_2_1(exercises):
+    assert exercises["version"] == "2.1"
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 129
+    assert len(exercise_list) == 128
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
@@ -62,7 +62,7 @@ def test_load_model_values(exercise_list):
 
 HANGBOARD_IDS = {
     "max_hang_5s", "max_hang_7s", "max_hang_ladder",
-    "repeater_hang_7_3", "density_hang_10_10",
+    "repeater_hang_7_3", "density_hangs",
     "min_edge_hang", "dead_hang_easy", "long_duration_hang",
     "one_arm_hang_assisted", "pinch_block_training",
     # New hangboard exercises

@@ -260,10 +260,10 @@ class TestResolverP0Determinism(unittest.TestCase):
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
         self.assertNotIn("limit_bouldering", ids)
-        self.assertIn("density_hang_10_10", ids)
+        self.assertIn("density_hangs", ids)
         main_block = self._main_block(out)
         self.assertEqual(main_block.get("status"), "selected")
-        self.assertEqual(main_block.get("selected_exercises", [])[0].get("exercise_id"), "density_hang_10_10")
+        self.assertEqual(main_block.get("selected_exercises", [])[0].get("exercise_id"), "density_hangs")
 
 
 class TestResolverInlineBlocks(unittest.TestCase):

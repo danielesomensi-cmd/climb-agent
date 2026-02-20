@@ -116,7 +116,7 @@ Allowed `domain` values (v1.1, backwards-compatible):
 - `technique_constraint` *(constraint drills — hover hands, one-hand climbing, three-limb)*
 - `technique_movement` *(movement quality — slow climbing, sloth/monkey)*
 - `technique_relaxation` *(breathing awareness, tension management)*
-- `prehab_finger` *(finger extensor / tendon prehab)*
+- `endurance` *(general endurance capacity — used in test protocols)*
 - `climbing_routes` *(route climbing — lead routes, redpoint attempts)*
 
 Guidelines:
