@@ -106,7 +106,7 @@ def _pick_hangboard_baseline(user_state: Dict[str, Any], edge_mm: int, grip: str
             return b
     return baselines[0] if baselines else None
 
-def suggest_max_hang_load(user_state: Optional[Dict[str, Any]], prescription: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def suggest_max_hang_load(user_state: Optional[Dict[str, Any]], prescription: Dict[str, Any], exercise_attrs: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     '''
     Given user_state baselines (max_total_load_kg) and prescription intensity,
     return suggested target_total_load_kg and added_weight_kg / assistance_kg.
@@ -117,14 +117,17 @@ def suggest_max_hang_load(user_state: Optional[Dict[str, Any]], prescription: Di
     if bw is None:
         return None
 
+    attrs = exercise_attrs or {}
     intensity = prescription.get("intensity_pct_of_total_load")
+    if intensity is None:
+        intensity = attrs.get("intensity_pct")
     if intensity is None:
         return None
 
     # Defaults (deterministic)
     edge_mm = 20
     grip = "half_crimp"
-    hang_seconds = int(prescription.get("hang_seconds") or prescription.get("hang_seconds_range", [5])[0] or 5)
+    hang_seconds = int(prescription.get("work_seconds") or prescription.get("hang_seconds") or prescription.get("hang_seconds_range", [5])[0] or 5)
 
     b = _pick_hangboard_baseline(user_state, edge_mm=edge_mm, grip=grip, hang_seconds=hang_seconds)
     if not b:
@@ -742,11 +745,13 @@ def _resolve_inline_block(
             exercise_id=ex_id,
         )
 
+        ex_attrs = selected_ex.get("attributes") or {}
         inst = {
             "instance_id": instance_id,
             "exercise_id": ex_id,
             "variant": {},
             "prescription": merged,
+            "attributes": ex_attrs,
             "block_uid": block_uid,
             "source": {
                 "picked_by": f"resolver_v0.2/{chosen_by}",
@@ -756,8 +761,8 @@ def _resolve_inline_block(
         }
         if replanner_note:
             inst["replanner"] = replanner_note
-        if ex_id == "max_hang_5s":
-            sug = suggest_max_hang_load(user_state, merged)
+        if ex_attrs.get("intensity_pct") is not None:
+            sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
             if sug:
                 inst["suggested"] = sug
         exercise_instances.append(inst)
@@ -1014,11 +1019,13 @@ def resolve_session(
                     exercise_id=ex_id,
                 )
 
+                ex_attrs = selected_ex.get("attributes") or {}
                 inst = {
                     "instance_id": instance_id,
                     "exercise_id": ex_id,
                     "variant": variant,
                     "prescription": merged,
+                    "attributes": ex_attrs,
                     "block_uid": block_uid,
                     "source": {
                         "picked_by": f"resolver_v0.2/{chosen_by or 'unknown'}",
@@ -1028,8 +1035,8 @@ def resolve_session(
                 }
                 if replanner_note:
                     inst["replanner"] = replanner_note
-                if ex_id == "max_hang_5s":
-                    sug = suggest_max_hang_load(user_state, merged)
+                if ex_attrs.get("intensity_pct") is not None:
+                    sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
                     if sug:
                         inst["suggested"] = sug
                 exercise_instances.append(inst)

@@ -215,19 +215,21 @@ def _best_entry(user_state: Dict[str, Any], exercise_id: str, setup: Dict[str, A
     return None
 
 
-def _max_hang_suggested(user_state: Dict[str, Any], prescription: Dict[str, Any]) -> Dict[str, Any]:
+def _max_hang_suggested(user_state: Dict[str, Any], prescription: Dict[str, Any], exercise_attrs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     bodyweight = float(user_state.get("bodyweight_kg") or ((user_state.get("body") or {}).get("weight_kg") or 0.0))
-    intensity = float(prescription.get("intensity_pct_of_total_load") or 0.9)
+    attrs = exercise_attrs or {}
+    intensity = float(prescription.get("intensity_pct_of_total_load") or attrs.get("intensity_pct") or 0.9)
     baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
     baseline = baselines[0] if baselines else {}
     max_total = float(baseline.get("max_total_load_kg") or bodyweight)
     target_total = _round_half_step(max_total * intensity)
     suggested_external = _round_half_step(target_total - bodyweight)
+    work_s = prescription.get('work_seconds') or prescription.get('hang_seconds', 5)
     return {
         "schema_version": "progression_targets.v1",
         "suggested_total_load_kg": target_total,
         "suggested_external_load_kg": suggested_external,
-        "suggested_rep_scheme": f"{prescription.get('sets', 6)}x{prescription.get('hang_seconds', 5)}s",
+        "suggested_rep_scheme": f"{prescription.get('sets', 6)}x{work_s}s",
     }
 
 
@@ -246,7 +248,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
 
             if ex_id in LOAD_BASED_EXERCISES:
                 if ex_id == "max_hang_5s":
-                    suggested.update(_max_hang_suggested(user_state, prescription))
+                    suggested.update(_max_hang_suggested(user_state, prescription, exercise_attrs=inst.get("attributes")))
                     inject_source = dict(prescription)
                     inject_source.update(inst.get("suggested") or {})
                     setup, _ = _progression_setup_and_key(ex_id, inject_source)

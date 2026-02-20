@@ -47,7 +47,7 @@ def _resolved_day_for_progression() -> dict:
                 "tags": {"hard": True},
                 "exercise_instances": [
                     {"exercise_id": "limit_bouldering", "prescription": {}},
-                    {"exercise_id": "max_hang_5s", "prescription": {"sets": 6, "hang_seconds": 5, "intensity_pct_of_total_load": 0.9, "edge_mm": 20, "grip": "half_crimp", "load_method": "added_weight"}},
+                    {"exercise_id": "max_hang_5s", "prescription": {"sets": 6, "work_seconds": 5, "edge_mm": 20, "grip": "half_crimp", "load_method": "added_weight"}, "attributes": {"edge_mm": 20, "grip": "half_crimp", "intensity_pct": 0.9}},
                 ],
             }
         ],
@@ -125,7 +125,8 @@ def test_max_hang_override_precedence_and_total_recompute_with_missing_setup_in_
                 "exercise_instances": [
                     {
                         "exercise_id": "max_hang_5s",
-                        "prescription": {"sets": 6, "hang_seconds": 5, "intensity_pct_of_total_load": 0.9},
+                        "prescription": {"sets": 6, "work_seconds": 5},
+                        "attributes": {"edge_mm": 20, "grip": "half_crimp", "intensity_pct": 0.9},
                         "suggested": {
                             "schema_version": "progression_targets.v1",
                             "suggested_external_load_kg": 15.0,

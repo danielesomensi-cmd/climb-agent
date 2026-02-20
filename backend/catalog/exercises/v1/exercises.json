@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "2.0",
   "exercises": [
     {
       "id": "finger_warmup_generic",
@@ -25,21 +25,23 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          5,
-          8
-        ],
-        "notes": [
-          "Tendon glides + open/close pulses + wrist circles.",
-          "Goal: warmth and readiness, not pump. Stay easy."
-        ]
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Tendon glides + open/close pulses + wrist circles. Goal: warmth and readiness, not pump. Stay easy."
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "elbow_wrist_extensor_eccentric",
@@ -67,15 +69,21 @@
       "prescription_defaults": {
         "sets": 3,
         "reps": 12,
-        "tempo": "3-1-1",
-        "rest_seconds": 60
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Tempo: 3-1-1."
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "band_external_rotation",
@@ -103,14 +111,20 @@
       "prescription_defaults": {
         "sets": 3,
         "reps": 15,
-        "rest_seconds": 45
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "finger_recruitment_pulls",
@@ -141,7 +155,9 @@
       "prescription_defaults": {
         "sets": 3,
         "reps": 5,
-        "rest_seconds": 45,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
         "notes": "Short controlled pulls, not max."
       },
       "stress_tags": {
@@ -149,7 +165,11 @@
         "fingers": "low",
         "cns": "low",
         "skin": "low"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "dead_hang_easy",
@@ -178,8 +198,10 @@
       ],
       "prescription_defaults": {
         "sets": 3,
-        "hang_seconds": 10,
-        "rest_seconds": 50,
+        "reps": null,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 50,
         "notes": "Very easy intensity."
       },
       "stress_tags": {
@@ -187,6 +209,14 @@
         "fingers": "low",
         "cns": "low",
         "skin": "low"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
       }
     },
     {
@@ -217,33 +247,26 @@
       ],
       "attributes": {
         "edge_mm": 20,
-        "grip": "half_crimp"
+        "grip": "half_crimp",
+        "intensity_pct": 0.9
       },
-      "load_model": {
-        "type": "total_load",
-        "definition": "total_load = bodyweight + external_load",
-        "supports": [
-          "added_weight",
-          "assistance"
-        ]
-      },
+      "load_model": "total_load",
       "prescription_defaults": {
         "sets": 6,
-        "hang_seconds": 5,
-        "rest_seconds": 180,
-        "intensity_pct_of_total_load": 0.9,
-        "setup_fields": [
-          "edge_mm",
-          "grip",
-          "load_method"
-        ]
+        "reps": null,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180
       },
       "stress_tags": {
         "fingers": "high",
         "elbow": "medium",
         "cns": "medium",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
     },
     {
       "id": "max_hang_7s",
@@ -273,33 +296,26 @@
       ],
       "attributes": {
         "edge_mm": 20,
-        "grip": "half_crimp"
+        "grip": "half_crimp",
+        "intensity_pct": 0.88
       },
-      "load_model": {
-        "type": "total_load",
-        "definition": "total_load = bodyweight + external_load",
-        "supports": [
-          "added_weight",
-          "assistance"
-        ]
-      },
+      "load_model": "total_load",
       "prescription_defaults": {
         "sets": 6,
-        "hang_seconds": 7,
-        "rest_seconds": 180,
-        "intensity_pct_of_total_load": 0.88,
-        "setup_fields": [
-          "edge_mm",
-          "grip",
-          "load_method"
-        ]
+        "reps": null,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180
       },
       "stress_tags": {
         "fingers": "high",
         "elbow": "medium",
         "cns": "medium",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
     },
     {
       "id": "max_hang_ladder",
@@ -331,43 +347,24 @@
         "edge_mm": 20,
         "grip": "half_crimp"
       },
-      "load_model": {
-        "type": "total_load",
-        "definition": "total_load = bodyweight + external_load",
-        "supports": [
-          "added_weight",
-          "assistance"
-        ]
-      },
+      "load_model": "total_load",
       "prescription_defaults": {
-        "steps": [
-          {
-            "hang_seconds": 5,
-            "intensity_pct_of_total_load": 0.85
-          },
-          {
-            "hang_seconds": 5,
-            "intensity_pct_of_total_load": 0.9
-          },
-          {
-            "hang_seconds": 5,
-            "intensity_pct_of_total_load": 0.95
-          }
-        ],
-        "rest_seconds": 180,
-        "rounds": 3,
-        "setup_fields": [
-          "edge_mm",
-          "grip",
-          "load_method"
-        ]
+        "sets": 3,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Ladder: step 1: 5s @ 0.85, step 2: 5s @ 0.9, step 3: 5s @ 0.95."
       },
       "stress_tags": {
         "fingers": "high",
         "elbow": "medium",
         "cns": "medium",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
     },
     {
       "id": "core_hollow_hold",
@@ -393,15 +390,21 @@
       "contraindications": [],
       "prescription_defaults": {
         "sets": 4,
-        "hold_seconds": 30,
-        "rest_seconds": 45
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45
       },
       "stress_tags": {
         "fingers": "none",
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "core_l_sit",
@@ -428,16 +431,22 @@
       ],
       "prescription_defaults": {
         "sets": 5,
-        "hold_seconds": 15,
-        "rest_seconds": 60
+        "reps": null,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Parallettes removed in v1; floor variant only."
       },
-      "notes": "Parallettes removed in v1; floor variant only.",
       "stress_tags": {
         "fingers": "none",
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "mobility_thoracic_shoulders_flow",
@@ -463,7 +472,10 @@
       "contraindications": [],
       "prescription_defaults": {
         "sets": 1,
-        "duration_seconds": 300,
+        "reps": null,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Dynamic flow: thoracic rotations, arm circles, scapular CARs. No static stretching."
       },
       "stress_tags": {
@@ -471,7 +483,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "general_pulse_raise",
@@ -496,18 +512,23 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "notes": "Light jogging in place + arm swings.",
-        "duration_min_range": [
-          4,
-          8
-        ]
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 240,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Light jogging in place + arm swings."
       },
       "stress_tags": {
         "fingers": "none",
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "pangullich_ladders_easy",
@@ -537,7 +558,9 @@
       "prescription_defaults": {
         "sets": 5,
         "reps": 6,
-        "rest_seconds": 150,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
         "notes": "Controlled ladders, avoid cutting feet."
       },
       "stress_tags": {
@@ -545,7 +568,12 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "low"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": "body_position"
     },
     {
       "id": "repeater_hang_7_3",
@@ -573,28 +601,26 @@
         "elbow_sensitive"
       ],
       "prescription_defaults": {
-        "protocol": "7s_on/3s_off",
-        "reps_per_set_range": [
-          6,
-          10
-        ],
-        "sets_range": [
-          3,
-          5
-        ],
-        "rest_seconds_range": [
-          90,
-          180
-        ],
-        "intensity_notes": [
-          "Aim ~60–75% max hang load; stop before form breaks."
-        ]
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": 3,
+        "rest_between_sets_seconds": 180,
+        "notes": "Aim ~60–75% max hang load; stop before form breaks. Protocol: 7s_on/3s_off."
       },
       "stress_tags": {
         "elbow": "medium",
         "fingers": "high",
         "cns": "medium",
         "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
       }
     },
     {
@@ -623,20 +649,26 @@
         "elbow_sensitive"
       ],
       "prescription_defaults": {
-        "protocol": "10s_on/10s_off",
-        "total_minutes_range": [
-          10,
-          20
-        ],
-        "intensity_notes": [
-          "Low pump target; stay conversational; no pain."
-        ]
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": 10,
+        "rest_between_sets_seconds": 180,
+        "notes": "Low pump target; stay conversational; no pain. Protocol: 10s_on/10s_off."
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "medium",
         "cns": "low",
         "skin": "low"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
       }
     },
     {
@@ -660,13 +692,12 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "total_minutes_range": [
-          25,
-          45
-        ],
-        "notes": [
-          "Very low pump. Continuous movement. If pump rises, downgrade."
-        ]
+        "sets": 2,
+        "reps": null,
+        "work_seconds": 1200,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
+        "notes": "Very low pump. Continuous movement. If pump rises, downgrade."
       },
       "stress_tags": {
         "elbow": "low",
@@ -678,7 +709,11 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "gym_technique_boulder_drills",
@@ -702,9 +737,12 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "notes": [
-          "Silent feet, no readjust, hip-in, breathing. Keep it easy."
-        ]
+        "sets": null,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Silent feet, no readjust, hip-in, breathing. Keep it easy."
       },
       "stress_tags": {
         "elbow": "low",
@@ -716,7 +754,12 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": null
     },
     {
       "id": "split_squat",
@@ -742,25 +785,22 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          6,
-          12
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ]
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
       },
       "stress_tags": {
         "elbow": "none",
         "fingers": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "external_load"
     },
     {
       "id": "pullup",
@@ -789,25 +829,22 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          6
-        ],
-        "reps_range": [
-          3,
-          8
-        ],
-        "rest_seconds_range": [
-          120,
-          180
-        ]
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120
       },
       "stress_tags": {
         "elbow": "medium",
         "fingers": "low",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "chinup",
@@ -836,25 +873,22 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          4,
-          10
-        ],
-        "rest_seconds_range": [
-          90,
-          150
-        ]
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
       },
       "stress_tags": {
         "elbow": "medium",
         "fingers": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "scapular_pullup",
@@ -884,25 +918,22 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          6,
-          10
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ]
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "inverted_row",
@@ -929,18 +960,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          6,
-          12
-        ],
-        "rest_seconds_range": [
-          75,
-          120
-        ],
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
         "notes": "Rings, low bar, or TRX. Easier than pullup. Great for shoulder health."
       },
       "stress_tags": {
@@ -948,7 +972,11 @@
         "fingers": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "band_assisted_pullup",
@@ -977,25 +1005,22 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          5,
-          10
-        ],
-        "rest_seconds_range": [
-          90,
-          150
-        ]
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "dip",
@@ -1022,18 +1047,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          6
-        ],
-        "reps_range": [
-          4,
-          10
-        ],
-        "rest_seconds_range": [
-          120,
-          180
-        ],
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Can use parallel bars or rings."
       },
       "stress_tags": {
@@ -1041,7 +1059,11 @@
         "fingers": "none",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "pushup",
@@ -1068,22 +1090,22 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          8,
-          20
-        ],
-        "rest_seconds": 60
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "pike_pushup",
@@ -1109,25 +1131,22 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          6,
-          12
-        ],
-        "rest_seconds_range": [
-          90,
-          150
-        ]
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "bench_press",
@@ -1154,25 +1173,22 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          4,
-          8
-        ],
-        "rest_seconds_range": [
-          120,
-          180
-        ]
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120
       },
       "stress_tags": {
         "elbow": "medium",
         "fingers": "none",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "external_load"
     },
     {
       "id": "overhead_press",
@@ -1200,25 +1216,22 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          6,
-          10
-        ],
-        "rest_seconds_range": [
-          90,
-          150
-        ]
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
       },
       "stress_tags": {
         "elbow": "low",
         "fingers": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "external_load"
     },
     {
       "id": "plank",
@@ -1243,25 +1256,22 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "hold_seconds_range": [
-          20,
-          45
-        ],
-        "rest_seconds_range": [
-          30,
-          60
-        ]
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30
       },
       "stress_tags": {
         "elbow": "none",
         "fingers": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "long_duration_hang",
@@ -1288,8 +1298,10 @@
       "contraindications": [],
       "prescription_defaults": {
         "sets": 4,
-        "hang_seconds": 40,
-        "rest_seconds": 120,
+        "reps": null,
+        "work_seconds": 40,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Large edge (25-35mm). 30-45s hangs. Low intensity, focus on tissue loading and injury prevention."
       },
       "stress_tags": {
@@ -1297,6 +1309,14 @@
         "elbow": "low",
         "cns": "low",
         "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
       }
     },
     {
@@ -1326,8 +1346,10 @@
       ],
       "prescription_defaults": {
         "sets": 5,
-        "hang_seconds": 7,
-        "rest_seconds": 180,
+        "reps": null,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
         "notes": "14-16mm edge, bodyweight only. Half crimp. Progress by reducing edge size."
       },
       "stress_tags": {
@@ -1335,6 +1357,14 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "high"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
       }
     },
     {
@@ -1362,8 +1392,10 @@
       "contraindications": [],
       "prescription_defaults": {
         "sets": 5,
-        "hold_seconds": 8,
-        "rest_seconds": 150,
+        "reps": null,
+        "work_seconds": 8,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
         "notes": "Loadable pinch block. Progress via added weight. Full thumb wrap."
       },
       "stress_tags": {
@@ -1371,6 +1403,14 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "low"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "pinch"
       }
     },
     {
@@ -1401,8 +1441,10 @@
       ],
       "prescription_defaults": {
         "sets": 4,
-        "hang_seconds": 5,
-        "rest_seconds": 240,
+        "reps": null,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 240,
         "notes": "One arm with pulley or band assistance. 20mm edge. Half crimp. Advanced only."
       },
       "stress_tags": {
@@ -1410,6 +1452,14 @@
         "elbow": "high",
         "cns": "high",
         "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
       }
     },
     {
@@ -1438,19 +1488,23 @@
         "elbow_sensitive"
       ],
       "prescription_defaults": {
-        "protocol": "10s_on/5s_off",
-        "total_minutes_range": [
-          8,
-          15
-        ],
-        "notes": "Ratio hang:rest for volume. Moderate edge (20mm). ~50-60% max load. Stop if pump exceeds moderate."
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": 10,
+        "rest_between_sets_seconds": 180,
+        "notes": "Ratio hang:rest for volume. Moderate edge (20mm). ~50-60% max load. Stop if pump exceeds moderate. Protocol: 10s_on/5s_off."
       },
       "stress_tags": {
         "fingers": "medium",
         "elbow": "low",
         "cns": "low",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "campus_laddering_feet_off",
@@ -1479,7 +1533,9 @@
       "prescription_defaults": {
         "sets": 6,
         "reps": 4,
-        "rest_seconds": 180,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
         "notes": "Half crimp. No skipping rungs. Sprint speed. Stop when speed drops."
       },
       "stress_tags": {
@@ -1487,7 +1543,11 @@
         "elbow": "high",
         "cns": "high",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "campus_laddering_feet_on",
@@ -1514,7 +1574,9 @@
       "prescription_defaults": {
         "sets": 5,
         "reps": 6,
-        "rest_seconds": 120,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Feet on wall for assistance. Good intermediate progression. Focus on contact quality."
       },
       "stress_tags": {
@@ -1522,7 +1584,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "campus_bumps",
@@ -1551,7 +1617,9 @@
       "prescription_defaults": {
         "sets": 5,
         "reps": 4,
-        "rest_seconds": 180,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
         "notes": "Touch-and-go on higher rung, one arm at a time. Focus explosive contact."
       },
       "stress_tags": {
@@ -1559,7 +1627,11 @@
         "elbow": "high",
         "cns": "high",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "campus_double_dyno",
@@ -1590,7 +1662,9 @@
       "prescription_defaults": {
         "sets": 4,
         "reps": 3,
-        "rest_seconds": 240,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 240,
         "notes": "Advanced only. 5+ years climbing minimum. Double dyno on campus. Full rest between sets."
       },
       "stress_tags": {
@@ -1598,7 +1672,11 @@
         "elbow": "high",
         "cns": "high",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "limit_bouldering",
@@ -1625,14 +1703,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          6,
-          10
-        ],
-        "rest_seconds_range": [
-          180,
-          360
-        ],
+        "sets": 6,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
         "notes": "3-7 moves at limit. Focus deadpoint and latching. Full rest. Stop when quality drops."
       },
       "stress_tags": {
@@ -1645,7 +1720,11 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "board_limit_boulders",
@@ -1673,14 +1752,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          5,
-          10
-        ],
-        "rest_seconds_range": [
-          180,
-          360
-        ],
+        "sets": 5,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
         "notes": "Also works on Moon Board, Tension Board. 3-5 attempts per problem, full rest between."
       },
       "stress_tags": {
@@ -1688,7 +1764,11 @@
         "elbow": "medium",
         "cns": "high",
         "skin": "high"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "power_pullups_explosive",
@@ -1716,18 +1796,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          4,
-          6
-        ],
-        "reps_range": [
-          3,
-          5
-        ],
-        "rest_seconds_range": [
-          150,
-          210
-        ],
+        "sets": 4,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
         "notes": "Explosive pull, hands leave the bar. Full rest. Quality over quantity."
       },
       "stress_tags": {
@@ -1735,7 +1808,11 @@
         "elbow": "medium",
         "cns": "high",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "four_by_four_bouldering",
@@ -1759,9 +1836,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "rounds": 4,
+        "sets": 4,
         "reps": 4,
-        "rest_seconds": 300,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
         "notes": "Choose grade where you fail on rep 3-4. Not rep 1-2 (too hard) or complete all 4 easily (too easy)."
       },
       "stress_tags": {
@@ -1774,7 +1853,11 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "linked_boulders",
@@ -1799,14 +1882,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "rest_seconds_range": [
-          240,
-          360
-        ],
+        "sets": 3,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 240,
         "notes": "Link 3-5 boulders without pause. Moderate grade. Rest fully between sets."
       },
       "stress_tags": {
@@ -1814,7 +1894,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "high"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "route_intervals",
@@ -1839,14 +1923,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          4,
-          6
-        ],
-        "rest_seconds_range": [
-          120,
-          300
-        ],
+        "sets": 4,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Climb route sections with timed rest. Grade 1-2 below onsight. Focus sustained effort."
       },
       "stress_tags": {
@@ -1854,7 +1935,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "arc_training",
@@ -1877,10 +1962,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "total_minutes_range": [
-          20,
-          30
-        ],
+        "sets": 2,
+        "reps": null,
+        "work_seconds": 1200,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
         "notes": "Well below onsight grade. Zero pump. If you feel pump, go easier."
       },
       "stress_tags": {
@@ -1893,7 +1979,11 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "threshold_climbing",
@@ -1918,10 +2008,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "total_minutes_range": [
-          20,
-          35
-        ],
+        "sets": 6,
+        "reps": null,
+        "work_seconds": 120,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Just below onsight grade. Sustained effort. Moderate pump acceptable."
       },
       "stress_tags": {
@@ -1929,7 +2020,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "continuity_climbing",
@@ -1952,10 +2047,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "total_minutes_range": [
-          20,
-          40
-        ],
+        "sets": 6,
+        "reps": null,
+        "work_seconds": 120,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Grade VERY far below onsight. Must feel trivially easy. Chat-pace effort. Lattice 5x3 style."
       },
       "stress_tags": {
@@ -1968,7 +2064,11 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative"
     },
     {
       "id": "easy_route_laps",
@@ -1993,14 +2093,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          4,
-          8
-        ],
-        "rest_seconds_range": [
-          120,
-          180
-        ],
+        "sets": 4,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Repeated laps on easy routes. Focus recovery, blood flow, and movement quality."
       },
       "stress_tags": {
@@ -2008,7 +2105,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "low"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "arc_easy_traverse",
@@ -2033,10 +2134,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "total_minutes_range": [
-          15,
-          20
-        ],
+        "sets": 2,
+        "reps": null,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
         "notes": "Easy traverses, 15-20 min continuous. Zero pump. Focus fluid movement."
       },
       "stress_tags": {
@@ -2044,7 +2146,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "low"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "weighted_pullup",
@@ -2073,18 +2179,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          4,
-          6
-        ],
-        "reps_range": [
-          3,
-          6
-        ],
-        "rest_seconds_range": [
-          150,
-          240
-        ],
+        "sets": 4,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
         "notes": "Added weight via belt or vest. Progress load, not reps."
       },
       "stress_tags": {
@@ -2092,7 +2191,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "total_load"
     },
     {
       "id": "l_sit_pullup",
@@ -2121,18 +2224,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          3,
-          8
-        ],
-        "rest_seconds_range": [
-          120,
-          180
-        ],
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Maintain L-sit throughout. If core fails first, reduce reps."
       },
       "stress_tags": {
@@ -2140,7 +2236,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "archer_pullup",
@@ -2168,18 +2268,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          3,
-          6
-        ],
-        "rest_seconds_range": [
-          120,
-          180
-        ],
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Asymmetric pullup. Alternate sides. One arm pulls, other assists on bar."
       },
       "stress_tags": {
@@ -2187,7 +2280,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "lock_off_isometric",
@@ -2215,12 +2312,11 @@
         "elbow_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "hold_seconds": 7,
-        "rest_seconds": 120,
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Hold 5-10s at each angle. 90°, 120°, full lock. 3-5 sets per angle."
       },
       "stress_tags": {
@@ -2228,7 +2324,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "one_arm_pullup_assisted",
@@ -2258,18 +2358,11 @@
         "elbow_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          1,
-          3
-        ],
-        "rest_seconds_range": [
-          180,
-          300
-        ],
+        "sets": 3,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
         "notes": "Band or pulley assistance. Advanced. Focus controlled full ROM."
       },
       "stress_tags": {
@@ -2277,7 +2370,11 @@
         "elbow": "high",
         "cns": "high",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "barbell_row",
@@ -2302,18 +2399,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          6,
-          10
-        ],
-        "rest_seconds_range": [
-          90,
-          150
-        ],
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
         "notes": "Barbell or dumbbell row. Controlled eccentric."
       },
       "stress_tags": {
@@ -2321,7 +2411,11 @@
         "elbow": "low",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "typewriter_pullup",
@@ -2349,18 +2443,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          3,
-          6
-        ],
-        "rest_seconds_range": [
-          120,
-          180
-        ],
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Pull to top, traverse laterally at top position. Alternate direction."
       },
       "stress_tags": {
@@ -2368,7 +2455,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "ring_pushup",
@@ -2396,18 +2487,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          6,
-          15
-        ],
-        "rest_seconds_range": [
-          60,
-          120
-        ],
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Instability from rings increases demand. Turn rings out at top."
       },
       "stress_tags": {
@@ -2415,7 +2499,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "face_pull",
@@ -2442,15 +2530,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          15,
-          20
-        ],
-        "rest_seconds": 45,
+        "sets": 3,
+        "reps": 15,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
         "notes": "Also excellent as prehab. 3-4 sets, 15-20 reps."
       },
       "stress_tags": {
@@ -2458,7 +2542,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "external_load"
     },
     {
       "id": "front_lever_tuck",
@@ -2486,18 +2574,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "hold_seconds_range": [
-          8,
-          15
-        ],
-        "rest_seconds_range": [
-          90,
-          150
-        ],
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 8,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
         "notes": "Tuck, advanced tuck, or one-leg. Progress toward full. Maintain hollow body."
       },
       "stress_tags": {
@@ -2505,7 +2586,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "hanging_leg_raise",
@@ -2531,18 +2616,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          6,
-          12
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Straight legs to bar. Control the negative. No kipping."
       },
       "stress_tags": {
@@ -2550,7 +2628,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "ab_wheel_rollout",
@@ -2574,18 +2656,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          6,
-          12
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Ab wheel recommended; towel on smooth floor works too."
       },
       "stress_tags": {
@@ -2593,7 +2668,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "pallof_press",
@@ -2619,18 +2698,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          8,
-          12
-        ],
-        "rest_seconds_range": [
-          45,
-          60
-        ],
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
         "notes": "Press and hold. Resist rotation. Alternate sides."
       },
       "stress_tags": {
@@ -2638,7 +2710,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "side_plank",
@@ -2663,15 +2739,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          2,
-          3
-        ],
-        "hold_seconds_range": [
-          20,
-          40
-        ],
-        "rest_seconds": 30,
+        "sets": 2,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Each side. Stack feet or stagger. Hips high."
       },
       "stress_tags": {
@@ -2679,7 +2751,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "dead_bug",
@@ -2705,15 +2781,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          2,
-          3
-        ],
-        "reps_range": [
-          8,
-          12
-        ],
-        "rest_seconds": 30,
+        "sets": 2,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Slow and controlled. Press low back into floor. Breathe out on extension."
       },
       "stress_tags": {
@@ -2721,7 +2793,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "windshield_wipers",
@@ -2747,18 +2823,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          4,
-          8
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Controlled rotation. Legs to bar, rotate side to side."
       },
       "stress_tags": {
@@ -2766,7 +2835,11 @@
         "elbow": "low",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "toes_to_bar",
@@ -2792,18 +2865,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          5,
-          10
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Strict form. No kipping. Full compression at top."
       },
       "stress_tags": {
@@ -2811,7 +2877,11 @@
         "elbow": "low",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "wrist_curl",
@@ -2839,7 +2909,9 @@
       "prescription_defaults": {
         "sets": 3,
         "reps": 15,
-        "rest_seconds": 30,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Light dumbbell. Slow and controlled. Forearm on knee."
       },
       "stress_tags": {
@@ -2847,7 +2919,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "reverse_wrist_curl",
@@ -2875,7 +2951,9 @@
       "prescription_defaults": {
         "sets": 3,
         "reps": 15,
-        "rest_seconds": 30,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Light dumbbell. Slow and controlled. Forearm on knee, palm down."
       },
       "stress_tags": {
@@ -2883,7 +2961,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "forearm_pronation_supination",
@@ -2909,7 +2991,9 @@
       "prescription_defaults": {
         "sets": 3,
         "reps": 12,
-        "rest_seconds": 30,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Hammer or light dumbbell. Slow and controlled."
       },
       "stress_tags": {
@@ -2917,7 +3001,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "finger_extensor_training",
@@ -2942,15 +3030,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          15,
-          20
-        ],
-        "rest_seconds": 20,
+        "sets": 3,
+        "reps": 15,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 20,
         "notes": "Rubber band around fingers. 3-4 sets, 15-20 reps. Daily if desired."
       },
       "stress_tags": {
@@ -2958,7 +3042,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "elbow_eccentric_curl",
@@ -2986,7 +3074,9 @@
       "prescription_defaults": {
         "sets": 3,
         "reps": 15,
-        "rest_seconds": 30,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Slow eccentric. Key exercise for elbow tendinopathy prevention. Tyler twist / reverse Tyler twist."
       },
       "stress_tags": {
@@ -2994,7 +3084,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "shoulder_car",
@@ -3023,7 +3117,9 @@
       "prescription_defaults": {
         "sets": 3,
         "reps": 3,
-        "rest_seconds": 15,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 15,
         "notes": "Full range. Slow and controlled. 3 reps each direction per arm."
       },
       "stress_tags": {
@@ -3031,7 +3127,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "silent_feet_drill",
@@ -3054,10 +3154,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          15,
-          25
-        ],
+        "sets": 1,
+        "reps": 1,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Climb well below onsight. Focus: zero noise on footplacements."
       },
       "stress_tags": {
@@ -3070,7 +3171,12 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": "footwork"
     },
     {
       "id": "no_readjust_drill",
@@ -3093,10 +3199,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          15,
-          25
-        ],
+        "sets": 1,
+        "reps": 1,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Place foot once, no adjustment. Forces precision. Well below onsight grade."
       },
       "stress_tags": {
@@ -3109,7 +3216,12 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": "footwork"
     },
     {
       "id": "downclimbing_drill",
@@ -3132,10 +3244,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          15,
-          25
-        ],
+        "sets": 1,
+        "reps": 1,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Climb up, climb down controlled. Every route/boulder. Builds eccentric strength and awareness."
       },
       "stress_tags": {
@@ -3148,7 +3261,12 @@
         "gym_boulder",
         "spraywall",
         "board_kilter"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": "movement"
     },
     {
       "id": "slow_climbing",
@@ -3171,10 +3289,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          15,
-          25
-        ],
+        "sets": 1,
+        "reps": 1,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Count to 3 between every move. Forces reading, breathing, and deliberate movement."
       },
       "stress_tags": {
@@ -3186,7 +3305,12 @@
       "equipment_required_any": [
         "gym_routes",
         "gym_boulder"
-      ]
+      ],
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": "movement"
     },
     {
       "id": "flag_practice",
@@ -3211,10 +3335,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          15,
-          25
-        ],
+        "sets": 1,
+        "reps": 1,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Inside flag, outside flag, drop knee practice. Easy boulders. Focus body tension and balance."
       },
       "stress_tags": {
@@ -3222,7 +3347,12 @@
         "elbow": "low",
         "cns": "low",
         "skin": "low"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "focus": "body_position"
     },
     {
       "id": "hip_opener_flow",
@@ -3248,10 +3378,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          10,
-          15
-        ],
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 600,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Hold each position 45-60s. Breathe deeply. Post-session or rest day."
       },
       "stress_tags": {
@@ -3259,7 +3390,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "shoulder_stretch_flow",
@@ -3285,10 +3420,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          8,
-          12
-        ],
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 480,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Pec stretch, cross-body, sleeper stretch. Hold 45-60s each."
       },
       "stress_tags": {
@@ -3296,7 +3432,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "forearm_stretches",
@@ -3322,10 +3462,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          2,
-          4
-        ],
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 120,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Essential after every climbing session. 2-3 min minimum. Wrist extension and flexion on floor."
       },
       "stress_tags": {
@@ -3333,7 +3474,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "full_body_stretch_flow",
@@ -3358,10 +3503,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          15,
-          20
-        ],
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Yin-yoga inspired. Hips, shoulders, spine, hamstrings. Hold 60s+ per position."
       },
       "stress_tags": {
@@ -3369,7 +3515,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "active_hip_mobility",
@@ -3396,10 +3546,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          8,
-          12
-        ],
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 480,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "High step drill, hip CARs, active frog. Dynamic, controlled movement."
       },
       "stress_tags": {
@@ -3407,7 +3558,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "wall_handstand_hold",
@@ -3435,18 +3590,11 @@
         "wrist_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "hold_seconds_range": [
-          20,
-          30
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Belly-to-wall. Arms straight, shoulders elevated. 3-4 x 20-30s."
       },
       "stress_tags": {
@@ -3454,7 +3602,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "wall_walk_up",
@@ -3481,18 +3633,11 @@
         "wrist_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          2,
-          4
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Walk up from pushup position to handstand at wall. Controlled descent."
       },
       "stress_tags": {
@@ -3500,7 +3645,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "handstand_shoulder_taps",
@@ -3528,18 +3677,11 @@
         "wrist_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "reps_range": [
-          4,
-          8
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "In handstand at wall, tap opposite shoulder. Anti-rotation + stability."
       },
       "stress_tags": {
@@ -3547,7 +3689,11 @@
         "elbow": "low",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "freestanding_handstand_practice",
@@ -3574,10 +3720,11 @@
         "wrist_sensitive"
       ],
       "prescription_defaults": {
-        "duration_min_range": [
-          10,
-          15
-        ],
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 600,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Skill practice. Many short attempts, full rest. Quality over quantity."
       },
       "stress_tags": {
@@ -3585,7 +3732,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "handstand_pushup_wall",
@@ -3613,18 +3764,11 @@
         "wrist_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          3,
-          8
-        ],
-        "rest_seconds_range": [
-          120,
-          180
-        ],
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
         "notes": "Wall-supported HSPU. Full ROM. Head to floor. Control the negative."
       },
       "stress_tags": {
@@ -3632,7 +3776,11 @@
         "elbow": "medium",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "jump_rope",
@@ -3658,10 +3806,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "duration_min_range": [
-          5,
-          10
-        ],
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Jump rope recommended but optional. Good pulse raiser alternative."
       },
       "stress_tags": {
@@ -3669,7 +3818,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "turkish_getup",
@@ -3698,18 +3851,11 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          5
-        ],
-        "reps_range": [
-          2,
-          3
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Kettlebell or dumbbell. Alternate sides. Slow and controlled. Full body coordination."
       },
       "stress_tags": {
@@ -3717,7 +3863,11 @@
         "elbow": "low",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "external_load"
     },
     {
       "id": "farmers_carry",
@@ -3744,18 +3894,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "duration_seconds_range": [
-          30,
-          60
-        ],
-        "rest_seconds_range": [
-          60,
-          90
-        ],
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "Heavy dumbbells or kettlebells. Walk with control. Suitcase carry for anti-lateral flexion."
       },
       "stress_tags": {
@@ -3763,7 +3906,11 @@
         "elbow": "low",
         "cns": "medium",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "external_load"
     },
     {
       "id": "bear_crawl",
@@ -3790,18 +3937,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          3,
-          4
-        ],
-        "duration_seconds_range": [
-          20,
-          40
-        ],
-        "rest_seconds_range": [
-          30,
-          45
-        ],
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Quadrupedia. Shoulder stability + coordination. Knees off ground. Slow and controlled."
       },
       "stress_tags": {
@@ -3809,7 +3949,11 @@
         "elbow": "low",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "band_pull_apart",
@@ -3837,15 +3981,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          2,
-          3
-        ],
-        "reps_range": [
-          15,
-          20
-        ],
-        "rest_seconds": 20,
+        "sets": 2,
+        "reps": 15,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 20,
         "notes": "Can do daily. 2-3 sets of 15-20. Essential for shoulder health."
       },
       "stress_tags": {
@@ -3853,7 +3993,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "route_redpoint_attempt",
@@ -3879,14 +4023,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          2,
-          4
-        ],
-        "rest_seconds_range": [
-          300,
-          600
-        ],
+        "sets": 2,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
         "notes": "Project-level routes. Full rest between attempts. Focus on linking crux sequences."
       },
       "stress_tags": {
@@ -3894,7 +4035,11 @@
         "elbow": "medium",
         "cns": "high",
         "skin": "medium"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_forearm_wrist_stretch",
@@ -3920,11 +4065,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "hold_seconds_range": [
-          20,
-          30
-        ],
         "sets": 2,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Flexor and extensor stretches. Prayer and reverse prayer. Hold each side."
       },
       "stress_tags": {
@@ -3932,7 +4077,11 @@
         "elbow": "none",
         "cns": "none",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_hip_pigeon",
@@ -3958,11 +4107,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "hold_seconds_range": [
-          30,
-          60
-        ],
         "sets": 1,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Each side. Keep hips square. Breathe into the stretch."
       },
       "stress_tags": {
@@ -3970,7 +4119,11 @@
         "elbow": "none",
         "cns": "none",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_hip_frog",
@@ -3996,11 +4149,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "hold_seconds_range": [
-          30,
-          60
-        ],
         "sets": 1,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Knees wide, hips sink toward floor. Gentle hold, no bouncing."
       },
       "stress_tags": {
@@ -4008,7 +4161,11 @@
         "elbow": "none",
         "cns": "none",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_shoulder_chest",
@@ -4034,11 +4191,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "hold_seconds_range": [
-          20,
-          30
-        ],
         "sets": 2,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Doorway stretch or wall pec stretch. Each side. Open chest and anterior shoulder."
       },
       "stress_tags": {
@@ -4046,7 +4203,11 @@
         "elbow": "none",
         "cns": "none",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_hamstring_fold",
@@ -4071,11 +4232,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "hold_seconds_range": [
-          30,
-          60
-        ],
         "sets": 1,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Soft knees. Hang heavy. Breathe and relax into the stretch."
       },
       "stress_tags": {
@@ -4083,7 +4244,11 @@
         "elbow": "none",
         "cns": "none",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_spinal_twist",
@@ -4109,11 +4274,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "hold_seconds_range": [
-          30,
-          60
-        ],
         "sets": 1,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Each side. Knees stacked, arms wide. Let gravity do the work."
       },
       "stress_tags": {
@@ -4121,7 +4286,11 @@
         "elbow": "none",
         "cns": "none",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_deep_squat_hold",
@@ -4147,11 +4316,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "hold_seconds_range": [
-          30,
-          90
-        ],
         "sets": 1,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
         "notes": "Heels down. Hold a support if needed. Open hips and thoracic spine."
       },
       "stress_tags": {
@@ -4159,7 +4328,11 @@
         "elbow": "none",
         "cns": "none",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "flexibility_cossack_squat",
@@ -4184,15 +4357,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          2,
-          3
-        ],
-        "reps_range": [
-          6,
-          10
-        ],
-        "rest_seconds": 30,
+        "sets": 2,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Alternating sides. Full depth. Heel stays down on working leg."
       },
       "stress_tags": {
@@ -4200,7 +4369,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "flexibility_active_leg_raise",
@@ -4224,15 +4397,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          2,
-          3
-        ],
-        "reps_range": [
-          8,
-          12
-        ],
-        "rest_seconds": 30,
+        "sets": 2,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Supine. Use hip flexors to raise straight leg. Hold 2s at top. Each side."
       },
       "stress_tags": {
@@ -4240,7 +4409,11 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
-      }
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "flexibility_ninety_ninety",
@@ -4265,15 +4438,11 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets_range": [
-          2,
-          3
-        ],
-        "reps_range": [
-          6,
-          10
-        ],
-        "rest_seconds": 30,
+        "sets": 2,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
         "notes": "Seated. Knees at 90 degrees. Rotate from one side to the other with control."
       },
       "stress_tags": {
@@ -4281,6 +4450,1232 @@
         "elbow": "none",
         "cns": "low",
         "skin": "none"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "max_hang_10s",
+      "name": "Max Hang 10s (Hypertrophy)",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "finger_max_hang",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": null,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "85-90% intensity. Longer duration for structural/hypertrophic adaptation."
+      },
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.88
+      },
+      "load_model": "total_load",
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "horst_7_53",
+      "name": "Hörst 7-53 Protocol",
+      "category": "main_strength",
+      "time_min": 25,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "finger_max_hang",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": 53,
+        "rest_between_sets_seconds": 180,
+        "notes": "90-95% intensity. Each set = 3 hangs (7s on / 53s off). 3 min between sets. Hörst signature protocol."
+      },
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.93
+      },
+      "load_model": "total_load",
+      "stress_tags": {
+        "elbow": "high",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "repeater_15_15",
+      "name": "Repeater Hang 15/15 (Endurance)",
+      "category": "endurance",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength",
+        "endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "finger_repeaters",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 6,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": 15,
+        "rest_between_sets_seconds": 120,
+        "notes": "40-50% max load. Eva López / Hörst endurance protocol. Focus on sustained grip."
+      },
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
+      },
+      "load_model": "total_load",
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "medium",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "lopez_subhangs",
+      "name": "López Submaximal Hangs",
+      "category": "prehab",
+      "time_min": 15,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "finger_strength",
+        "prehab_finger"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "finger_submaximal_hang",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "acute_finger_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "30-40% max load. High volume, low intensity. Eva López protocol for tendon conditioning."
+      },
+      "attributes": {
+        "edge_mm": 22,
+        "grip": "half_crimp"
+      },
+      "load_model": "total_load",
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "critical_force_test",
+      "name": "Critical Force Test",
+      "category": "test",
+      "time_min": 15,
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "finger_strength",
+        "endurance"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "finger_test",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 3,
+        "rest_between_sets_seconds": null,
+        "notes": "7s on / 3s off to failure at fixed load. Determines aerobic threshold of forearm. Lattice / research protocol."
+      },
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
+      },
+      "load_model": "total_load",
+      "stress_tags": {
+        "elbow": "high",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "med_test",
+      "name": "Maximum Effort Duration Test (MED)",
+      "category": "test",
+      "time_min": 10,
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "finger_strength",
+        "endurance"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "finger_test",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Hang at 45% bodyweight until failure. Record total seconds. Lattice endurance metric."
+      },
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
+      },
+      "load_model": "total_load",
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "high",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "campus_touches",
+      "name": "Campus Board Touches",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength",
+        "power"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "campus_ladders",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury",
+        "shoulder_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Touch high rung and return. Focus on speed and precision. Contact strength development."
+      },
+      "load_model": "bodyweight_only",
+      "stress_tags": {
+        "elbow": "high",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "campus_max_ladders",
+      "name": "Campus Max Ladders",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength",
+        "power"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "high",
+      "fatigue_cost": 9,
+      "recency_group": "campus_ladders",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury",
+        "shoulder_injury",
+        "elbow_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 210,
+        "notes": "Advanced. 1-4-7, 1-5-8 patterns. Full body tension. Stop when speed drops. Anderson RCTM / Hörst."
+      },
+      "load_model": "bodyweight_only",
+      "stress_tags": {
+        "elbow": "high",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "campus_switches",
+      "name": "Campus Board Switches",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "campus_switches",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury",
+        "shoulder_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "Match on rung, rapid hand switches (hand-over-hand). Speed training. Same rung height throughout."
+      },
+      "load_model": "bodyweight_only",
+      "stress_tags": {
+        "elbow": "high",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "campus_sprint_endurance",
+      "name": "Campus Sprint Endurance",
+      "category": "power_endurance",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength",
+        "anaerobic_capacity"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "campus_endurance",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "pulley_injury",
+        "shoulder_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Up and down repeatedly for 15-20s. Alactic-aerobic campus capacity. Stop if form breaks."
+      },
+      "load_model": "bodyweight_only",
+      "stress_tags": {
+        "elbow": "high",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "emom_bouldering",
+      "name": "EMOM Bouldering",
+      "category": "power_endurance",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance",
+        "anaerobic_capacity"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "gym_emom",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 12,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Every Minute On the Minute. Start at minute mark, rest remainder. Grade at flash or +1. 10-15 minutes total."
+      },
+      "load_model": "grade_relative",
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "otm_bouldering",
+      "name": "OTM Bouldering (Every 2 Minutes)",
+      "category": "power_endurance",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance",
+        "anaerobic_capacity"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "gym_otm",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 8,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "On The Minute (every 2 min). Grade at or above flash level. Longer rest than EMOM allows harder attempts."
+      },
+      "load_model": "grade_relative",
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "linked_boulders_circuit",
+      "name": "Linked Boulder Circuit",
+      "category": "power_endurance",
+      "time_min": 25,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance",
+        "anaerobic_capacity"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "gym_linked_boulders",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
+        "notes": "Link 3-5 boulders back-to-back, no rest between. Grade 2-3 below flash. 5 min rest between circuits."
+      },
+      "load_model": "grade_relative",
+      "stress_tags": {
+        "elbow": "high",
+        "fingers": "high",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "arc_training_progressive",
+      "name": "ARC Training Progressive",
+      "category": "endurance",
+      "time_min": 35,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity",
+        "regeneration"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "gym_arc",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": null,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
+        "notes": "Start at 15 min continuous, build to 30 min week over week. Grade well below onsight. Zero pump target."
+      },
+      "load_model": "grade_relative",
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "threshold_long_intervals",
+      "name": "Threshold Long Intervals (2:1)",
+      "category": "endurance",
+      "time_min": 25,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "gym_threshold",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_routes",
+        "gym_boulder",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": null,
+        "work_seconds": 120,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "120s climb / 60s rest. Moderate pump OK, deep pump = too hard. RPE 7-8/10. Hörst recommended protocol."
+      },
+      "load_model": "grade_relative",
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "medium",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "id": "regeneration_climbing",
+      "name": "Regeneration Climbing",
+      "category": "endurance",
+      "time_min": 25,
+      "role": [
+        "cooldown"
+      ],
+      "domain": [
+        "regeneration"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "very_low",
+      "fatigue_cost": 1,
+      "recency_group": "gym_arc",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 1200,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Grade 4-6 below onsight. Conversational pace. 20-30 min. Focus on movement quality, not effort."
+      },
+      "load_model": "grade_relative",
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "low",
+        "cns": "none",
+        "skin": "low"
+      },
+      "description": null,
+      "cues": [],
+      "video_url": null
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "sticky_feet",
+      "name": "Sticky Feet Drill",
+      "domain": [
+        "technique_footwork"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_footwork_drills",
+      "focus": "footwork",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Place foot once, no adjustments. If you adjust, downclimb and restart. Grade 2-3 below onsight."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "foothold_stare",
+      "name": "Foothold Stare Drill",
+      "domain": [
+        "technique_footwork"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_footwork_drills",
+      "focus": "footwork",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Look at every foothold 2s before placing. Grade 2-3 below onsight. Builds precision habit."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "tap_and_place",
+      "name": "Tap and Place Drill",
+      "domain": [
+        "technique_footwork"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_footwork_drills",
+      "focus": "footwork",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Tap foothold with toe, hover 1s, then place. Develops deliberate foot placement."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "hover_hands",
+      "name": "Hover Hands Drill",
+      "domain": [
+        "technique_movement"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_movement_drills",
+      "focus": "movement",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Hover hand over next hold 3s before grabbing. Forces body position awareness before reaching."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "hip_rotation_drill",
+      "name": "Hip Rotation Drill",
+      "domain": [
+        "technique_body_position"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_body_position_drills",
+      "focus": "body_position",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Exaggerated hip turn into wall on every move. Inside/outside flag required each move."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "straight_arms",
+      "name": "Straight Arms Drill",
+      "domain": [
+        "technique_body_position"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_body_position_drills",
+      "focus": "body_position",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Keep arms straight as much as possible. Bent arms = start over. Builds efficiency and hip drive."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "sloth_monkey",
+      "name": "Sloth-Monkey Drill",
+      "domain": [
+        "technique_movement"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_movement_drills",
+      "focus": "movement",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "2 moves ultra-slow (sloth), then 2 moves fast/dynamic (monkey). Alternate throughout. Rhythm training."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "breathing_awareness",
+      "name": "Breathing Awareness Drill",
+      "domain": [
+        "technique_relaxation"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "technique_relaxation_drills",
+      "focus": "relaxation",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Conscious exhale on every move. Count breaths. Never hold breath. Grade well below onsight."
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [
+        "shoulder_injury"
+      ],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "one_hand_climbing",
+      "name": "One Hand Climbing Drill",
+      "domain": [
+        "technique_constraint"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_constraint_drills",
+      "focus": "constraint",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Climb using only one hand (alternate left/right per boulder). Forces maximum footwork. Very easy grade."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
+      }
+    },
+    {
+      "category": "technique",
+      "role": [
+        "technique"
+      ],
+      "pattern": "technique_drill",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "gym_routes",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "load_model": "grade_relative",
+      "description": null,
+      "cues": [],
+      "video_url": null,
+      "id": "three_limb_drill",
+      "name": "Three Limbs Drill",
+      "domain": [
+        "technique_constraint"
+      ],
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_constraint_drills",
+      "focus": "constraint",
+      "time_min": 15,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Always keep 3 limbs on wall. Move only one limb at a time. Develops static, controlled climbing."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "low",
+        "cns": "low",
+        "skin": "low"
       }
     }
   ]

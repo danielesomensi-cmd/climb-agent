@@ -80,8 +80,11 @@ class TestBaselineSessionUnderTest(unittest.TestCase):
         self.assert_selected(out, "cooldown_stretch.hip_flexibility")
         self.assert_selected(out, "cooldown_stretch.general_flexibility")
         self.assertEqual(out.get("context", {}).get("gym_id"), "blocx")
-        # Suggested load for max hang
-        self.assert_has_suggested_load(out, "max_hang_5s")
+        # Suggested load for a max hang exercise (any from finger_max_hang group)
+        insts = out.get("resolved_session", {}).get("exercise_instances", [])
+        max_hang_ids = {"max_hang_5s", "max_hang_7s", "max_hang_ladder", "max_hang_10s", "horst_7_53", "min_edge_hang", "one_arm_hang_assisted"}
+        found = [x for x in insts if x.get("exercise_id") in max_hang_ids and x.get("suggested")]
+        self.assertTrue(len(found) > 0, f"No max hang exercise with suggested load found. IDs: {[x['exercise_id'] for x in insts]}")
 
     def test_gym_blocx_location(self):
         """strength_long v2 forces gym location (session context overrides user_state)."""

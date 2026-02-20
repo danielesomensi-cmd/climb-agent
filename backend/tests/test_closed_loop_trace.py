@@ -33,7 +33,7 @@ def test_closed_loop_trace_report_is_deterministic(tmp_path: Path) -> None:
                 "domain": ["strength_general"],
                 "location_allowed": ["home", "gym"],
                 "equipment_required": ["pullup_bar", "weight"],
-                "prescription_defaults": {"sets": 5, "reps": 3, "rest_seconds": 180},
+                "prescription_defaults": {"sets": 5, "reps": 3, "rest_between_sets_seconds": 180},
             }
         ]
     }
