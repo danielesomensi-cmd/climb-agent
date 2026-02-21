@@ -1605,9 +1605,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Foundational anti-extension isometric. Develops total-body tension directly transferable to steep climbing. Builds the ability to keep hips close to the wall and transfer force between arms and feet. (Horst plank sequence; inSPIRE Rock core guide)",
+      "cues": [
+        "Neutral spine — no hip sag and no piking up",
+        "Actively squeeze glutes and quads to close hips toward shoulders",
+        "Ears aligned with shoulders, gaze toward floor",
+        "Breathe steadily — do not hold breath",
+        "Progress by moving elbows forward past shoulder line for longer lever"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -1645,9 +1651,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Gymnastic full-body tension hold pressing lower back into the floor to activate deep transverse abdominis. Directly trains the body tension required to keep feet on steep terrain and resist barn-dooring. (Horst; Lattice conditioning)",
+      "cues": [
+        "Lower back must stay in contact with the floor throughout — if it lifts, raise legs higher",
+        "Arms extended overhead increases the lever; bend them to regress",
+        "Breathe in short controlled pulses — never hold breath",
+        "Progress by gradually lowering legs toward the floor as strength builds",
+        "Stop the set the moment lower back lifts — form over duration"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -1687,9 +1699,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Isometric compression hold building hip flexor and deep core strength. Prerequisite for bat hangs, high-step compression and heel hook loading on steep terrain. Floor variant — no parallettes required. (climbing.com front lever guide; Horst conditioning)",
+      "cues": [
+        "Shoulders depressed and retracted — create space between ears and shoulders",
+        "Push firmly through palms and fully extend elbows",
+        "Legs straight and together, held parallel to floor",
+        "If too hard: tuck-sit (bent knees) first, then one leg extended",
+        "Engage quads aggressively — soft legs kill the position"
+      ],
+      "video_url": "https://www.climbing.com/skills/how-to-do-a-front-lever/",
       "load_model": "bodyweight_only"
     },
     {
@@ -3009,12 +3027,12 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets": 3,
+        "sets": 5,
         "reps": null,
         "work_seconds": 8,
         "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": 90,
-        "notes": "Tuck, advanced tuck, or one-leg. Progress toward full. Maintain hollow body."
+        "rest_between_sets_seconds": 180,
+        "notes": "Advance to next progression when 4x15s is consistent. 3 min rest is minimum — this is near-maximal isometric effort."
       },
       "stress_tags": {
         "fingers": "low",
@@ -3022,9 +3040,15 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Entry-level front lever progression. Knees tucked to chest reduces lever arm, making the horizontal hold achievable. Trains lat-core integration fundamental for body tension on overhangs. Progress to advanced tuck when 4 sets of 15s is consistently achievable. (climbing.com; heavyweightcali.com; Horst)",
+      "cues": [
+        "Arms fully locked out — any elbow bend collapses the position",
+        "Hips level with shoulders — sagging hips reduce the training stimulus",
+        "Shoulders actively engaged: depressed and retracted (no shrugging)",
+        "Hollow body throughout: squeeze glutes and brace deep abs",
+        "Stop 1-2s before complete failure on each set — distribute effort across all sets"
+      ],
+      "video_url": "https://www.climbing.com/skills/how-to-do-a-front-lever/",
       "load_model": "bodyweight_only"
     },
     {
@@ -3064,9 +3088,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Dynamic hip flexion from a dead hang strengthening hip flexors, lower abs and grip in a climbing-specific position. Directly trains the compression needed for toe hooks, bat hangs and high-steps on vertical and overhang. (Horst; UKC core guide)",
+      "cues": [
+        "Start from a dead hang with shoulders actively engaged — not passive",
+        "Initiate with scapular depression before hip flexion, no kipping",
+        "Aim for legs parallel to floor or higher — not just a partial lift",
+        "Slow controlled eccentric: 2-3 seconds down, avoid swinging",
+        "Progression: bent-knee raises → straight-leg parallel → toes to bar"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -3104,9 +3134,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "High-demand anti-extension movement requiring full-body tension from fingers to feet. Trains the ability to resist spine extension under load — directly transfers to body tension on steep overhangs and roof climbing. (Horst; UKC core training)",
+      "cues": [
+        "Start kneeling — progress to standing only when kneeling form is perfect",
+        "Keep arms straight throughout — do not bend elbows",
+        "Neutral lower back at all times: no sagging or hyperextension",
+        "Roll only as far as position can be maintained — partial range at first is fine",
+        "Exhale on the roll-out (braces core), inhale on return"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -3146,9 +3182,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Anti-rotation press training obliques and deep stabilizers to resist rotational forces. Directly transfers to twisting moves, hip flags and barn-door prevention. Requires band or cable. (UKC core guide; Horst conditioning principles)",
+      "cues": [
+        "Band or cable anchored at chest height to the side",
+        "Press straight out slowly — feel the oblique tension resist rotation",
+        "Zero rotation in pelvis and torso throughout the press",
+        "Pause at full extension for 1-2s before returning",
+        "Train both directions each set — do not skip the weaker side"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -3187,9 +3229,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Lateral anti-rotation isometric targeting obliques, lateral hip stabilizers and hip abductors. Essential for flagging, hip drops and side-pull sequences where the body is under rotational stress. (inSPIRE Rock; Horst core series)",
+      "cues": [
+        "Ear, shoulder, hip and ankle in one straight line — no hip sag",
+        "Hips stacked vertically — do not let top hip roll forward",
+        "Breathe steadily and maintain full tension throughout",
+        "Regression: bottom knee bent to shorten the lever",
+        "Progression: top arm overhead, or top foot raised"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -3229,9 +3277,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Anti-extension dynamic stability drill training contralateral coordination and deep core activation. Strengthens the stabilizers that control limb movements independently while keeping the spine neutral — transfers to moving feet precisely on steep terrain. (UKC core guide; inSPIRE Rock)",
+      "cues": [
+        "Lower back pressed firmly into the floor for every single rep — non-negotiable",
+        "Extend opposite arm and leg simultaneously in a slow controlled arc",
+        "Exhale fully on the extension to brace deep core",
+        "Never sacrifice back position for range of motion — reduce range if needed",
+        "Progress: add light dumbbell in hand or resistance band on foot"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -3271,9 +3325,15 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Advanced rotational core exercise. From a dead hang, legs rotate side to side demanding high body tension, rotational control and grip endurance. Do not attempt before achieving 10+ clean toes-to-bar. (Horst; alpinetrek.co.uk core guide)",
+      "cues": [
+        "Keep legs straight and pressed together throughout the rotation",
+        "Control the arc — avoid using momentum to swing the legs",
+        "Pause briefly at each side before reversing direction",
+        "Shoulders actively engaged throughout — not passive hanging",
+        "Reduce range to 45° if form breaks at full rotation"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -3313,9 +3373,15 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Classic hanging hip flexion/compression combining grip, shoulder stability and full core engagement. Trains the same compression chain used in bat hangs and toe hooks, in a fully hanging position. Prerequisite for windshield_wipers. (UKC core guide; inSPIRE Rock)",
+      "cues": [
+        "Begin with a hollow body position in the dead hang before initiating",
+        "Initiate with scapular depression first, then drive hips up",
+        "Touch the bar with feet — do not stop short",
+        "Slow controlled eccentric on the way down: 2-3 seconds",
+        "If too hard: progress from hanging knee raises → straight-leg raises → toes to bar"
+      ],
+      "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only"
     },
     {
@@ -6252,6 +6318,57 @@
         "Submaximal: this is health work, stop if any pulley pain"
       ],
       "video_url": "https://strengthclimbing.com/dr-tyler-nelsons-new-active-finger-strength-training-protocols/",
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "copenhagen_plank",
+      "name": "Copenhagen Plank",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_rotation",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_anti_rotation",
+      "equipment_required": [
+        "bench"
+      ],
+      "equipment_required_any": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Each side. Regress: bottom knee bent on bench. Progress: dynamic dips from position."
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Lateral plank with top foot on a bench, targeting adductors, obliques and lateral hip stabilizers. One of the most effective exercises for the inner thigh/hip complex needed for high-steps, knee-drops and heel hooks on steep terrain. Underused by climbers. (Lattice S&C conditioning; climbing physio literature)",
+      "cues": [
+        "Top foot rests on bench, bottom leg hangs freely — maintain full lateral body line",
+        "Drive top hip up to maintain plank position — do not let hips sag",
+        "Ear, shoulder, hip, ankle in line when viewed from the side",
+        "Feel the adductor of the top leg working actively to maintain position",
+        "Both sides equal — do not skip the weaker side"
+      ],
+      "video_url": null,
       "load_model": "bodyweight_only"
     }
   ]
