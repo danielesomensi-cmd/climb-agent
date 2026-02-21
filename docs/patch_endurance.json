@@ -1,0 +1,218 @@
+{
+  "_meta": {
+    "category": "endurance",
+    "generated": "2026-02-21",
+    "sources": [
+      "latticetraining.com/blog/what-is-endurance-training-in-climbing",
+      "latticetraining.com/blog/training-series-endurance (Continuity 5x3 Lattice protocol)",
+      "strengthclimbing.com/eric-horst-hangboard-moving-hangs (Horst HMH full protocol)",
+      "strengthclimbing.com/hangboard-repeaters",
+      "climbing.com/skills/climbing-training-complete-guide-part-two-low-intensity-endurance (Gresham bible)",
+      "unlevel-edge.com/blogs/climbing-endurance-training-methods-protocols-and-progressions",
+      "betaflow.app/guides/climbing-endurance-training",
+      "treadwallfitness.com/brewers-ledge-treadwall-training-guide (Horst energy systems)"
+    ],
+    "instructions": "Merge rules: overwrite description/cues/video_url only if null/empty. Apply prescription_defaults fixes ALWAYS (overwrite)."
+  },
+
+  "fixes": [
+    {
+      "_comment": "BUG: intensity_level was 'medium' but ARC by definition is low (Lattice: 2/10 RPE). Identical prescription to arc_training — differentiation is equipment (requires gym_boulder/spraywall/board).",
+      "id": "gym_arc_easy_volume",
+      "intensity_level": "low"
+    },
+    {
+      "_comment": "BUG: prescription was 6x120s/60s — identical to threshold_climbing. Notes say 'Lattice 5x3 style' but actual Lattice Continuity protocol is 5 min on / 3 min off. Fixed to match literature.",
+      "id": "continuity_climbing",
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": null,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Grade VERY far below onsight (Lattice: 4-6 letter grades). 5 min climbing / 3 min rest. Must feel conversational — if any pump builds you are too hard. Lattice Continuity 5x3 protocol."
+      }
+    },
+    {
+      "_comment": "BUG: work_seconds null — no duration anchor for route laps. 600s (10 min) is a conservative single lap estimate. Prescription remains flexible but adds a time anchor.",
+      "id": "easy_route_laps",
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 600,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Easy route laps, ~10 min per lap. Focus recovery, blood flow, movement quality. Grade at least 3 below onsight."
+      }
+    }
+  ],
+
+  "updates": [
+    {
+      "id": "gym_arc_easy_volume",
+      "description": "ARC (Aerobic Restoration and Capillarization) at easy grade on bouldering wall, spray wall or board. Builds capillary density and forearm aerobic capacity through sustained low-intensity climbing. The defining constraint of ARC is zero pump — any forearm fatigue means the grade is too high. (Lattice: 2/10 RPE for 10-30+ min continuous)",
+      "cues": [
+        "Zero pump is the goal — if forearm starts to fill, step off and rest or switch to easier holds",
+        "Hands near heart level to optimize blood flow and reduce cardiovascular strain",
+        "Grade 4-5 below boulder onsight — should feel embarrassingly easy",
+        "Move continuously: traverses, up-downs, linking easy problems. Stop = failed set",
+        "Breathing stays conversational throughout — you should be able to talk normally"
+      ],
+      "video_url": "https://latticetraining.com/blog/what-is-endurance-training-in-climbing/"
+    },
+    {
+      "id": "arc_training",
+      "description": "Classic ARC (Aerobic Restoration and Capillarization) on roped wall or bouldering. 20 minutes of genuinely continuous easy movement at 2/10 RPE. Primary adaptation target is capillary density and forearm aerobic enzyme activity — the foundation of route climbing endurance. Distinguished from gym_arc_easy_volume by longer set duration and route-style movement. (Lattice, Hörst, Gresham — universal aerobic base protocol)",
+      "cues": [
+        "Find the grade where you feel nothing in your forearms — this is your ARC grade today",
+        "20 continuous minutes: no rests, no shaking out, no sitting on holds",
+        "If pump builds at any point, immediately downclimb or traverse to easier terrain",
+        "Eyes and mind can wander — ARC should be so easy it is almost boring",
+        "After the set, hold arms above heart for 10-15s then shake out to clear blood"
+      ],
+      "video_url": "https://latticetraining.com/blog/what-is-endurance-training-in-climbing/"
+    },
+    {
+      "id": "arc_training_progressive",
+      "description": "Progressive ARC protocol building from 15 min continuous to 30+ min over successive weeks. Ideal first endurance cycle for boulderers transitioning to route training, or returning from injury. Each week add 2-3 minutes per set until 30 min is comfortable. Grade stays fixed — only volume increases. (Lattice progressive load model; Hörst aerobic base programming)",
+      "cues": [
+        "Week 1: 15 min each set. Week 2: 18 min. Week 3: 21 min. Week 4+: continue adding 2-3 min",
+        "Grade must stay fixed throughout the progression cycle — never raise grade while building volume",
+        "Stop the progression if any pump appears during a set — that signals the grade is creeping up",
+        "Keep a timer visible: knowing the remaining time helps pace the effort mentally",
+        "300s rest between sets is a minimum — take more if needed to fully recover"
+      ],
+      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+    },
+    {
+      "id": "threshold_climbing",
+      "description": "Sustained sub-onsight climbing on routes at moderate pump. Works the aerobic/anaerobic threshold — the highest intensity maintainable aerobically. Lead route setting at 1 grade below onsight level. Moderate pump acceptable and expected; deep forearm failure is too hard. 2:1 work:rest ratio for route climbing. (Hörst threshold endurance; Gresham training bible 2:1 intervals)",
+      "cues": [
+        "Grade: 1 letter grade below your lead onsight — should feel hard but manageable",
+        "RPE 7-8/10 on the wall. Moderate pump is acceptable; cannot-hold-on pump = too hard",
+        "120s per set: not a route lap, it's a timed effort. If route ends before 120s, downclimb",
+        "60s rest: arms down, shake out actively, breathe. Not a full recovery — that is intentional",
+        "6 sets total. Sets 5-6 will feel harder — that metabolic accumulation is the training stimulus"
+      ],
+      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+    },
+    {
+      "id": "continuity_climbing",
+      "description": "Lattice Continuity protocol: 5 min climbing / 3 min rest. Grade is very far below onsight — the defining feature of continuity versus threshold is the absence of any pump. The 5-minute round targets aerobic base without crossing into anaerobic territory. Boulderers can do this on a spray wall or bouldering wall at a very easy grade. (Lattice Training Continuity 5×3 protocol; Tom Randall)",
+      "cues": [
+        "Grade must be 4-6 letter grades below onsight — literally no effort should register in the forearms",
+        "5 minutes continuous, zero rest mid-set. If you need to rest, the grade is too hard",
+        "3 min rest: enough to fully clear metabolic products before the next set",
+        "Boulderers: use the spray wall or traverse at a grade where top moves feel like warm-up",
+        "After 4-6 weeks of continuity, transition to ARC for longer continuous sets"
+      ],
+      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+    },
+    {
+      "id": "easy_route_laps",
+      "description": "Repeated laps on easy gym routes for active recovery and blood flow. Grade is 3+ below onsight. Not an endurance training stimulus — it is a recovery activity that maintains movement quality and promotes aerobic restoration between hard sessions. Can substitute for a rest day when the athlete needs movement without load. (Hörst regeneration climbing; Gresham active recovery)",
+      "cues": [
+        "Grade 3+ below onsight — this should require virtually no effort",
+        "Focus on technique: silent feet, straight arms, deliberate hip positioning",
+        "If forearms are sore from previous days, stop at any onset of worsening",
+        "Conversational pace: ideal session to climb and talk with a partner simultaneously",
+        "~10 min per lap. 2 min rest between laps. Total 4 laps = ~50 min gentle movement"
+      ],
+      "video_url": "https://latticetraining.com/blog/what-is-endurance-training-in-climbing/"
+    },
+    {
+      "id": "arc_easy_traverse",
+      "description": "ARC traversing: continuous horizontal movement at very easy grade. Traverses reduce the gravitational component of climbing and allow very long uninterrupted efforts without height anxiety. Ideal for early ARC blocks when 20-min continuous vertical feels psychologically demanding, or when the gym is busy. Same physiological target as arc_training with different movement pattern. (Gresham training bible; Neil Gresham low-intensity endurance guide)",
+      "cues": [
+        "Traverse left-right-left continuously for the full 15-20 min without stepping off",
+        "Use any holds — grade is irrelevant on traverses, effort level is what matters",
+        "Zero pump is the goal — if forearms start to build, slow down or switch to larger holds",
+        "Mix movement patterns: cross-through, step-through, flagging. Use traverse as technique time",
+        "Hands near heart level on vertical sections — on slab traverses this is automatic"
+      ],
+      "video_url": "https://www.climbing.com/skills/climbing-training-complete-guide-part-two-low-intensity-endurance/"
+    },
+    {
+      "id": "route_redpoint_attempt",
+      "description": "Full redpoint attempts on project-level routes. High-intensity output with full rest between attempts. The primary training goal is project-specific skill acquisition: reading crux sequences, managing pump tactically, and ingraining beta under fatigue. Distinct from training exercises — this is performance-oriented climbing. Record every attempt: holds used, sections recovered, failure point. (Hörst redpoint taper protocol; standard competition prep)",
+      "cues": [
+        "Full rest between attempts: minimum 5-10 min, up to 20 min for hard projects",
+        "Two quality attempts are worth more than four fatigued attempts — stop if form degrades",
+        "After a fall, immediately identify the failure: technique, fitness, or mental? Log it",
+        "Rehearse the crux section individually during rest if execution was messy",
+        "Plan attempts around peak freshness: first or second attempt of the session is usually best"
+      ],
+      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+    },
+    {
+      "id": "threshold_long_intervals",
+      "description": "Threshold intervals performed on bouldering wall, spray wall, or board (not limited to routes). Identical timing to threshold_climbing (120s work / 60s rest) but equipment-agnostic — links boulder problems to accumulate pump rather than climbing a single route. Useful when route gym access is unavailable or when working a specific movement pattern. (Hörst 2:1 threshold intervals; Unlevel Edge 7-min variant reference)",
+      "cues": [
+        "Link 3-5 boulder problems continuously for the 120s round — don't stop between problems",
+        "Grade of linked problems: 1-2 below boulder onsight individually, but pump accumulates over 120s",
+        "RPE 7-8/10 at the end of each set. First 60s easy, last 60s hard — that progression is correct",
+        "60s rest: walk, shake out, breathe deeply. Partial recovery is intentional",
+        "Same set count and rest structure as threshold_climbing — sessions are interchangeable in programming"
+      ],
+      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+    },
+    {
+      "id": "regeneration_climbing",
+      "description": "20-30 minutes of continuous climbing at grade 4-6 below onsight. Conversational pace throughout. Used as a cooldown exercise at the end of hard sessions, or as a standalone active recovery session 24-36h after maximum effort days. The forearm aerobic system benefits even at very low intensity — there is no minimum threshold to get an aerobic adaptation stimulus. (Hörst submaximal volume; Lattice regeneration protocol)",
+      "cues": [
+        "Grade 4-6 below your lead onsight — you should be able to close your eyes on the holds",
+        "Conversational pace: the acid test is whether you can hold a full conversation while climbing",
+        "Arms feel light after 10 min: this is blood flow working. The forearms should never build pump",
+        "After a hard session: use this to flush lactate and restore forearm blood flow before leaving the gym",
+        "Duration flexible: 20 min minimum, but 30+ min gives a stronger aerobic stimulus"
+      ],
+      "video_url": "https://latticetraining.com/blog/what-is-endurance-training-in-climbing/"
+    }
+  ],
+
+  "new_exercises": [
+    {
+      "id": "hangboard_moving_hangs",
+      "name": "Hangboard Moving Hangs (HMH)",
+      "category": "endurance",
+      "time_min": 30,
+      "role": ["main"],
+      "domain": ["finger_strength_endurance", "aerobic_capacity"],
+      "pattern": "repeater_hang",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "hangboard_endurance",
+      "equipment_required": ["hangboard"],
+      "location_allowed": ["home", "gym"],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
+        "notes": "5 min moving / 5 min rest. Feet on floor or box behind hangboard. Move hands continuously between holds. Load controlled by hold size and wall angle. Beginner-friendly — safe for intermediate and below."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 25,
+        "grip": "open_hand"
+      },
+      "description": "Hörst Hangboard Moving Hangs (HMH): feet supported, hands move continuously between holds. Genuinely different from all static/intermittent protocols — 50/50 duty cycle, active movement, load controlled by hold size and foot position. Trains aerobic forearm endurance when below Critical Force, strength-endurance when above. Ideal entry protocol for climbers new to hangboarding: safe, versatile, and home-compatible. (Hörst, Conditioning for Climbers 2008; StrengthClimbing HMH analysis)",
+      "cues": [
+        "Feet on floor or on a box placed 30-60 cm behind the hangboard — this is load control",
+        "Move hands between holds every 5-10 seconds: use different grip positions each set",
+        "For aerobic endurance: choose a hold where you feel nothing in the forearms after 3 min",
+        "For strength-endurance: choose a hold where mild pump builds by 3-4 min",
+        "After dismounting: hold arms above heart level for 10s, then shake out slowly"
+      ],
+      "video_url": "https://strengthclimbing.com/eric-horst-hangboard-moving-hangs-climbing-training-endurance-protocol/"
+    }
+  ]
+}

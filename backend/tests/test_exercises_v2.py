@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 135
+    assert len(exercise_list) == 136
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
