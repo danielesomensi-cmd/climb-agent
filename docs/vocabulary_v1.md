@@ -175,6 +175,7 @@ Allowed `pattern` values:
 - `compression` *(pike, L-sit to pike, toes-to-bar, hanging leg raise)*
 - `flexibility_passive` *(static stretching, yin yoga)*
 - `flexibility_active` *(active mobility, CARs, dynamic flow)*
+- `locomotion` *(cardio/locomotion patterns: jump rope, bear crawl, running)*
 
 - `climbing_limit_boulder`
 - `climbing_intervals`

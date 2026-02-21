@@ -1,0 +1,305 @@
+{
+  "_meta": {
+    "category": "flexibility",
+    "patch_type": "full",
+    "generated": "2026-02-21",
+    "sources": [
+      "Hörst Training for Climbing 3rd ed — hip flexor mobility chapter",
+      "Hörst trainingforclimbing.com/stretching-for-climbers",
+      "Lattice Training / Tom Randall — flexibility for climbing series",
+      "Bechtel climbstrong.com — mobility for climbers",
+      "Eva López blog — lower body flexibility in climbing"
+    ],
+    "bug_fixes": [
+      "cooldown_forearm_wrist_stretch: work_seconds 20 → 30 (20s insufficient for effective static stretch; minimum 30s per position per PNF/static stretch research)"
+    ],
+    "new_exercises": [
+      "hip_flexor_couch_stretch",
+      "lat_overhead_stretch"
+    ],
+    "count_before": 15,
+    "count_after": 17
+  },
+
+  "bug_fixes": [
+    {
+      "id": "cooldown_forearm_wrist_stretch",
+      "field": "prescription_defaults.work_seconds",
+      "old": 20,
+      "new": 30,
+      "reason": "20s is insufficient for a meaningful static stretch. Minimum 30s per position required for connective tissue response. Standard forearm stretches in climbing literature prescribe 30-60s holds."
+    }
+  ],
+
+  "updates": [
+    {
+      "id": "hip_opener_flow",
+      "description": "Continuous hip mobility flow sequencing through external rotation positions — 90/90, pigeon, frog, butterfly, and deep squat. Targets hip flexors, external rotators, adductors, and glutes. Directly improves high-step reach, flag position range, and knee-to-wall engagement on steep terrain. 10-minute continuous flow format.",
+      "cues": [
+        "Move slowly and continuously — this is a flow, not held stretches",
+        "Breathe into each position: inhale 4 counts, exhale 4 counts",
+        "90/90: both shins at 90°, sit tall, slight lean forward over front shin",
+        "Pigeon: front shin parallel to top of mat, square hips to the floor",
+        "Deep squat: heels flat if possible, chest up, elbows pressing knees open",
+        "Never force rotation — explore the end of easy range, then breathe"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=rMRGNHbxLPc"
+    },
+    {
+      "id": "shoulder_stretch_flow",
+      "description": "Upper body flexibility sequence targeting posterior shoulder capsule, pectorals, biceps, and overhead range. Includes cross-body shoulder, chest doorframe stretch, overhead tricep/lat pull, and thread-the-needle. Addresses the anterior chest tightness and limited overhead range common in regular climbers.",
+      "cues": [
+        "Cross-body shoulder: pull arm across chest at shoulder height, relax the stretched shoulder down",
+        "Doorframe chest: forearms on doorframe at 90°, step through slowly — stop if sharp pain",
+        "Thread-the-needle: from all-fours, slide one arm under body until shoulder touches floor",
+        "Overhead lat: one arm overhead, other hand gentle pull at wrist — feel stretch down side of torso",
+        "Hold each position 30s minimum — do not rush",
+        "After hard climbing session: focus extra time on posterior shoulder and pec minor"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers"
+    },
+    {
+      "id": "forearm_stretches",
+      "description": "Forearm flexor and extensor stretching sequence essential for finger and wrist health in climbers. Targets the forearm flexor group (fingers/wrist), wrist extensors, and finger flexors individually. Hörst and Eva López both explicitly prescribe post-session forearm stretching as injury prevention. 2 minutes minimum post-climbing.",
+      "cues": [
+        "Flexor stretch: arm straight in front, palm up, other hand gently pulls fingers toward floor. Feel stretch in underside of forearm.",
+        "Extensor stretch: arm straight in front, palm down, other hand gently pushes fingers toward floor.",
+        "Hold each stretch 30s minimum per arm",
+        "Never bounce or force — tendons and pulleys stretch very slowly",
+        "Intensity: mild pull only. Zero pain. Any sharp pain → stop.",
+        "Perform after every climbing session while forearms are still warm"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/forearm-stretching"
+    },
+    {
+      "id": "full_body_stretch_flow",
+      "description": "Complete 15-minute post-session flexibility routine covering all major muscle groups used in climbing: forearms, shoulders, lats, hip flexors, hamstrings, hip external rotators, and quads. Intended as end-of-session cooldown. Low intensity, passive holds, systematic top-to-bottom or bottom-to-top sequencing.",
+      "cues": [
+        "Sequence suggestion: forearms → shoulders → lats → hip flexors → hamstrings → hips → quads",
+        "Minimum 30s per position — use a timer",
+        "Aim for zero tension by the end of each hold before moving on",
+        "This is the session's reward: allow the nervous system to downregulate",
+        "Add breathing practice: 4-7-8 pattern (inhale 4, hold 7, exhale 8) during long holds"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/flexibility-for-climbers"
+    },
+    {
+      "id": "active_hip_mobility",
+      "description": "Dynamic hip mobility drills performed through active range of motion — hip CARs (controlled articular rotations), leg swings, and active 90/90 switches. Unlike passive stretching, active work builds strength through the newly acquired range. Directly improves high-step control, drop-knee engagement, and flag stability.",
+      "cues": [
+        "Hip CARs: standing, slowly draw the largest circle possible with your knee — own that range",
+        "Leg swings: 10 forward/back and 10 lateral per leg — controlled pendulum, not momentum",
+        "90/90 active switches: sit in 90/90 and actively lift each knee, no hands for assistance",
+        "Slower is harder and more effective — do not rush through the motion",
+        "If hips pop or click without pain: normal. If click with pain: reduce range"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/hip-mobility-for-climbers"
+    },
+    {
+      "id": "cooldown_forearm_wrist_stretch",
+      "description": "Brief post-session forearm and wrist stretch targeting finger flexors and wrist extensors. Essential cooldown element for finger health — consistently prescribed by Hörst, Eva López, and Lattice. Keeps connective tissue supple between sessions.",
+      "cues": [
+        "Flexor: arm extended, palm up, opposite hand pulls fingers toward floor — underside forearm stretch",
+        "Extensor: arm extended, palm down, opposite hand pushes hand toward floor — top of forearm stretch",
+        "Hold each 30s minimum per arm (not 20s — that's too short)",
+        "Both arms, both directions: 4 stretches total, ~2 min",
+        "Intensity: 4/10 pull — never force. Tendons respond to gentle sustained load only"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/forearm-stretching"
+    },
+    {
+      "id": "cooldown_hip_pigeon",
+      "description": "Pigeon pose hip external rotator stretch targeting piriformis, glute medius, and deep hip external rotators. One of the most effective single-side hip stretches available. Regular practice improves drop-knee range and high-step reach. Hold each side minimum 60s (30s yields minimal connective tissue benefit).",
+      "cues": [
+        "Front shin parallel to the top edge of mat — more parallel = deeper stretch",
+        "Square hips toward floor — do not allow the hip to collapse to one side",
+        "Walk hands forward and lower torso for deeper stretch once hips settle",
+        "30s is the minimum, 60-90s per side is the goal for meaningful adaptation",
+        "Avoid if sharp knee pain — try a supine figure-4 stretch instead"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y"
+    },
+    {
+      "id": "cooldown_hip_frog",
+      "description": "Frog stretch targeting hip adductors, groin, and hip external rotators from a wide kneeling position. Excellent complement to pigeon — reaches the adductors which pigeon misses. Particularly useful for climbers who struggle with heels-in high steps and wide stemming positions.",
+      "cues": [
+        "From all-fours: walk knees wide until a gentle pull is felt in the inner thighs",
+        "Feet directly behind knees, feet flat (heels out, toes in) or neutral",
+        "Hips sink slowly toward floor — do not force",
+        "Hands walk forward to increase stretch intensity",
+        "Hold 60s — 30s is insufficient for meaningful adductor adaptation",
+        "Breathe into the tension: exhale and allow further release"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y"
+    },
+    {
+      "id": "cooldown_shoulder_chest",
+      "description": "Chest and shoulder stretch targeting anterior deltoid, pectorals, and shoulder internal rotators — the muscles most shortened by climbing's dominant pulling pattern. Cross-body arm stretch or doorframe chest stretch. Compensates for anterior chest dominance and helps maintain healthy shoulder posture.",
+      "cues": [
+        "Option A: arm across chest — pull at elbow, relax the shoulder being stretched downward",
+        "Option B: hand on doorframe at shoulder height — gently rotate away from the frame",
+        "Hold 30s minimum per arm/side",
+        "Avoid shrugging the shoulder being stretched — it must stay depressed and relaxed",
+        "Breathe slowly throughout — the stretch deepens naturally with each exhale"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers"
+    },
+    {
+      "id": "cooldown_hamstring_fold",
+      "description": "Seated hamstring stretch — forward fold or single-leg extension targeting biceps femoris, semimembranosus, and semitendinosus. Hamstring flexibility directly supports high heel placements and seated rest positions on overhangs. Seated forward fold or supine single-leg hamstring stretch.",
+      "cues": [
+        "Seated: legs straight, flex feet, hinge from hips (not waist) — keep spine long",
+        "Do NOT round the lower back — prioritise a flat back over reaching further",
+        "Supine option: lying flat, loop a strap over foot, pull leg toward ceiling — safer for lower back",
+        "Hold 30-60s per side",
+        "Reaching further is less important than keeping the pelvis in anterior tilt (long spine)"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y"
+    },
+    {
+      "id": "cooldown_spinal_twist",
+      "description": "Supine spinal twist targeting thoracic rotation, glute medius, and IT band. Decompresses the spine after climbing sessions, restores rotational range, and counteracts the sustained thoracic flexion of climbing posture. Performed lying on back, one knee across body.",
+      "cues": [
+        "Lie on back, bend one knee to 90°, drop it across the body to the floor",
+        "Opposite arm extends along floor at shoulder height — shoulder stays flat on floor",
+        "Turn gaze away from the knee for full spinal rotation",
+        "Hold 30-60s per side — let gravity do the work, no forcing",
+        "Exhale to allow deeper rotation — do not force with hands"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y"
+    },
+    {
+      "id": "cooldown_deep_squat_hold",
+      "description": "Deep bodyweight squat hold targeting ankle dorsiflexion, hip external rotation, and adductors simultaneously. One position that trains three common climbing flexibility demands at once. Useful pre- and post-session. Regular practice improves heels-flat squat depth which transfers to low-foot placements and rest positions.",
+      "cues": [
+        "Feet slightly wider than hips, toes angled out ~30°",
+        "Heels flat if possible — if not, elevate heels on a small block initially",
+        "Elbows press inside of knees to encourage hip external rotation",
+        "Chest up, spine neutral — do not let the lower back round excessively",
+        "Hold 30-60s. If it feels easy, walk feet slightly closer together"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/hip-mobility-for-climbers"
+    },
+    {
+      "id": "flexibility_cossack_squat",
+      "description": "Cossack squat — deep lateral lunge to each side, with one leg fully extended and the other deeply bent. Challenges adductors, lateral hamstring, and ankle dorsiflexion simultaneously in an active end-range position. Higher transfer to climbing than passive stretches — combines flexibility with strength through range.",
+      "cues": [
+        "From wide stance: shift weight laterally over one foot, bending that knee deeply",
+        "Extended leg: foot flexed with toes pointing up, or heel on floor — both valid",
+        "Torso stays upright — resist the urge to lean excessively forward",
+        "Move slowly: 3-second controlled lower, pause at bottom, 3-second return",
+        "If ankle rolls or heel lifts on bent leg, use a small plate under the heel"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=tpczTeSkHz0"
+    },
+    {
+      "id": "flexibility_active_leg_raise",
+      "description": "Standing active straight-leg raise — lift one leg forward as high as possible using hip flexors and quad only, without assistance. Tests and trains active hamstring flexibility and hip flexor strength simultaneously. More functionally relevant than passive hamstring stretching for high-foot placements.",
+      "cues": [
+        "Standing, hold a wall for balance",
+        "Swing leg forward as high as possible under muscular control — no momentum kick",
+        "Maintaining a neutral spine — do not posteriorly tilt the pelvis to gain height",
+        "Hold peak position 2s before lowering with control",
+        "8 reps/side: quality over height. Better to stop at 70° with perfect form than 90° with compensation"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=tpczTeSkHz0"
+    },
+    {
+      "id": "flexibility_ninety_ninety",
+      "description": "90/90 hip external and internal rotation stretch — both hip joints at 90° angles in a seated position, one in external rotation (front shin), one in internal rotation (back shin). Directly trains and assesses hip rotational range. Highly recommended across Lattice and Bechtel protocols for identifying hip asymmetries in climbers.",
+      "cues": [
+        "Sit on floor with front leg shin parallel to body front, back leg shin behind you",
+        "Both hips at 90° — 'square' the position before adding forward lean",
+        "Lean slowly over front shin while maintaining a long spine — stop when back rounds",
+        "Hold 30-60s per side in each direction (external and internal rotation)",
+        "Active version: lift each knee off the floor without using hands — this tests hip strength in range"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=rMRGNHbxLPc"
+    }
+  ],
+
+  "new_exercises": [
+    {
+      "id": "hip_flexor_couch_stretch",
+      "name": "Hip Flexor Couch Stretch (Psoas / Quad)",
+      "category": "flexibility",
+      "time_min": 6,
+      "role": ["cooldown", "accessory"],
+      "domain": ["flexibility"],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "flexibility_hip",
+      "equipment_required": [],
+      "location_allowed": ["gym", "home", "outdoor"],
+      "contraindications": ["knee_injury"],
+      "equipment_required_any": [],
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": null,
+        "work_seconds": 90,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
+        "notes": "2 sets × 90s per side. Rear foot elevated on couch/bench/wall, front foot on floor in lunge position. Hips drive forward gently. Hörst specifically recommends regular psoas stretching for climbers who sit for extended periods."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "load_model": "bodyweight_only",
+      "description": "The couch stretch is the gold standard for hip flexor (psoas, iliacus, rectus femoris) lengthening. Rear foot elevated on a couch or wall with front foot in a low lunge position. Critically missing from most climbers' routines despite hip flexor shortness being endemic — long periods of sitting and lack of hip extension in climbing both shorten hip flexors, which restricts drop-knee range, contributes to anterior pelvic tilt, and limits high-step reach. Hörst recommends regular hip flexor stretching. 90s minimum hold required for meaningful connective tissue adaptation.",
+      "cues": [
+        "Back knee on floor, back foot elevated on couch/bench/wall at hip height or above",
+        "Front foot on floor, front shin vertical (knee over ankle)",
+        "Drive hips FORWARD and DOWN — the stretch is felt in the front of the elevated-leg hip",
+        "Upright torso: do not lean forward to 'cheat' the stretch — keep chest up",
+        "Hold 90s minimum per side — 30s holds produce negligible adaptation in hip flexors",
+        "After: squeeze glute of stretched leg to reinforce hip extension pattern"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=wC5_iobGlmg"
+    },
+    {
+      "id": "lat_overhead_stretch",
+      "name": "Lat and Overhead Flexibility Stretch",
+      "category": "flexibility",
+      "time_min": 5,
+      "role": ["cooldown", "accessory"],
+      "domain": ["flexibility"],
+      "pattern": "flexibility_passive",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "flexibility_shoulder",
+      "equipment_required": [],
+      "location_allowed": ["gym", "home", "outdoor"],
+      "contraindications": [],
+      "equipment_required_any": [],
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": null,
+        "work_seconds": 60,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
+        "notes": "2 sets × 60s per side. Doorframe overhead reach or hanging lat stretch (passive dead hang with bent knees to decompress). Lat tightness restricts overhead reach and shoulder overhead press range — common in climbers."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "load_model": "bodyweight_only",
+      "description": "Latissimus dorsi and overhead shoulder flexibility stretch. The lats are heavily loaded during pulling and often shortened in climbers, restricting overhead shoulder range and contributing to internal rotation. Two options: (1) hanging lat stretch — passive dead hang with slightly bent knees, allow shoulders to fully decompress; (2) doorframe/pole reach — one arm overhead gripping a frame, lateral lean away from the arm. Also targets the long head of triceps in the overhead position. Hörst includes lat stretching in post-session recovery protocols in Training for Climbing.",
+      "cues": [
+        "Option A (hanging): dead hang from bar with slightly bent knees, shoulders fully relaxed — 45-60s",
+        "Option B (doorframe): one hand overhead on doorframe, opposite hip pushed away from the frame — side-stretch feeling",
+        "Option C (kneeling): kneeling at a couch/box, one arm extended forward, drop chest toward floor",
+        "Hold still — do not swing or rotate during the stretch",
+        "Breathe into the stretched side: feel the ribs expand on the inhale",
+        "Option A note: fingers and pulleys take load — avoid if fingers are injured; use Option B or C instead"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers"
+    }
+  ]
+}
