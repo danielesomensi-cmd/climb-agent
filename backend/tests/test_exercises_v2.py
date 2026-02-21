@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 135
+    assert len(exercise_list) == 134
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
@@ -144,3 +144,61 @@ def test_intensity_pct_only_in_attributes(exercise_list):
         pd = e.get("prescription_defaults", {})
         assert "intensity_pct_of_total_load" not in pd, f"{e['id']} still has intensity_pct in prescription_defaults"
         assert "intensity_pct" not in pd, f"{e['id']} has intensity_pct in prescription_defaults"
+
+
+# --- grade_ref / grade_offset validation ---
+
+VALID_GRADE_REFS = {"boulder_max_rp", "boulder_max_os", "lead_max_os", "lead_max_rp"}
+
+CAMPUS_IDS = {
+    "pangullich_ladders_easy", "campus_laddering_feet_off",
+    "campus_laddering_feet_on", "campus_bumps", "campus_double_dyno",
+}
+
+
+def test_grade_relative_non_campus_have_grade_ref(exercise_list):
+    """All grade_relative exercises except campus board must have grade_ref."""
+    for e in exercise_list:
+        if e.get("load_model") != "grade_relative":
+            continue
+        if e["id"] in CAMPUS_IDS:
+            continue
+        pd = e.get("prescription_defaults", {})
+        assert pd.get("grade_ref") is not None, (
+            f"{e['id']} is grade_relative but missing grade_ref"
+        )
+
+
+def test_grade_ref_canonical_values(exercise_list):
+    """grade_ref must be one of the 4 canonical values when present."""
+    for e in exercise_list:
+        pd = e.get("prescription_defaults", {})
+        gr = pd.get("grade_ref")
+        if gr is None:
+            continue
+        assert gr in VALID_GRADE_REFS, (
+            f"{e['id']} has invalid grade_ref: {gr}"
+        )
+
+
+def test_grade_offset_range(exercise_list):
+    """grade_offset must be int in [-6, 1] when present."""
+    for e in exercise_list:
+        pd = e.get("prescription_defaults", {})
+        go = pd.get("grade_offset")
+        if go is None:
+            continue
+        assert isinstance(go, int), f"{e['id']} grade_offset is not int: {type(go)}"
+        assert -6 <= go <= 1, f"{e['id']} grade_offset out of range: {go}"
+
+
+def test_grade_ref_implies_grade_offset(exercise_list):
+    """If grade_ref is set, grade_offset must also be set (and vice versa)."""
+    for e in exercise_list:
+        pd = e.get("prescription_defaults", {})
+        gr = pd.get("grade_ref")
+        go = pd.get("grade_offset")
+        if gr is not None:
+            assert go is not None, f"{e['id']} has grade_ref but no grade_offset"
+        if go is not None:
+            assert gr is not None, f"{e['id']} has grade_offset but no grade_ref"

@@ -278,6 +278,47 @@ Allowed values:
 
 ---
 
+### 2.10.1 Grade prescription fields (`prescription_defaults` extensions)
+
+When `load_model` is `grade_relative`, two optional fields in `prescription_defaults` control how the target grade is computed from the user's assessment grades.
+
+#### `grade_ref`
+
+Reference grade key from `user_state.assessment.grades`. If null or absent, `grade_offset` is not read by the engine.
+
+Canonical values:
+
+- `boulder_max_rp` — `assessment.grades.boulder_max_rp` (max boulder redpoint)
+- `boulder_max_os` — `assessment.grades.boulder_max_os` (max boulder onsight)
+- `lead_max_os` — `assessment.grades.lead_max_os` (max lead onsight)
+- `lead_max_rp` — `assessment.grades.lead_max_rp` (max lead redpoint)
+
+#### `grade_offset`
+
+Integer offset from the reference grade. Range: **-6 to +1**.
+
+Unit: whole Font/UIAA grades (no half-grades). Scale: 6a=0, 6b=1, 6c=2, 7a=3, 7b=4, 7c=5, 8a=6, ...
+The "+" modifier is not an increment — 6a+ falls between 6a and 6b.
+
+Examples:
+- `lead_max_os=7c`, offset=-2 → prescribed grade: **7a**
+- `boulder_max_rp=6A`, offset=-2 → prescribed grade: **5C**
+
+Reference values (from literature):
+
+| offset | meaning | typical exercises |
+|--------|---------|-------------------|
+| 0 | at limit | limit bouldering |
+| -1 | one grade below | threshold, OTM |
+| -2 | two grades below | 4x4, route intervals, technique drills |
+| -3 | three grades below | linked circuits, moderate volume |
+| -4 | four grades below | continuity, progressive ARC |
+| -5 | five grades below | ARC, regeneration — trivially easy |
+
+Semantics for boulder exercises: when `grade_relative` and the exercise uses problems/attempts, `reps` = max attempts per problem. The user may stop earlier if quality drops.
+
+---
+
 ### 2.11 Category
 
 `category` is a coarse grouping for UI display and reporting. It is NOT used for selection filtering.

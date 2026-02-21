@@ -1018,7 +1018,9 @@
         "work_seconds": 1200,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 300,
-        "notes": "Very low pump. Continuous movement. If pump rises, downgrade."
+        "notes": "Very low pump. Continuous movement. If pump rises, downgrade.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -5
       },
       "stress_tags": {
         "elbow": "low",
@@ -1058,12 +1060,14 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets": null,
+        "sets": 1,
         "reps": null,
-        "work_seconds": null,
+        "work_seconds": 1800,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Silent feet, no readjust, hip-in, breathing. Keep it easy."
+        "notes": "Silent feet, no readjust, hip-in, breathing. Keep it easy.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
       },
       "stress_tags": {
         "elbow": "low",
@@ -2042,12 +2046,14 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets": 6,
-        "reps": null,
+        "sets": 4,
+        "reps": 5,
         "work_seconds": null,
-        "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": 180,
-        "notes": "3-7 moves at limit. Focus deadpoint and latching. Full rest. Stop when quality drops."
+        "rest_between_reps_seconds": 180,
+        "rest_between_sets_seconds": 300,
+        "notes": "3-7 moves at limit. Focus deadpoint and latching. Full rest. Stop when quality drops.",
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": 0
       },
       "stress_tags": {
         "fingers": "high",
@@ -2097,12 +2103,14 @@
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
-        "sets": 5,
-        "reps": null,
+        "sets": 4,
+        "reps": 5,
         "work_seconds": null,
-        "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": 180,
-        "notes": "Also works on Moon Board, Tension Board. 3-5 attempts per problem, full rest between."
+        "rest_between_reps_seconds": 180,
+        "rest_between_sets_seconds": 300,
+        "notes": "Also works on Moon Board, Tension Board. 3-5 attempts per problem, full rest between.",
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": 0
       },
       "stress_tags": {
         "fingers": "high",
@@ -2198,7 +2206,9 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 300,
-        "notes": "Choose grade where you fail on rep 3-4. Not rep 1-2 (too hard) or complete all 4 easily (too easy)."
+        "notes": "Choose grade where you fail on rep 3-4. Not rep 1-2 (too hard) or complete all 4 easily (too easy).",
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": -2
       },
       "stress_tags": {
         "fingers": "high",
@@ -2294,10 +2304,12 @@
       "prescription_defaults": {
         "sets": 4,
         "reps": null,
-        "work_seconds": null,
+        "work_seconds": 60,
         "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": 120,
-        "notes": "Climb route sections with timed rest. Grade 1-2 below onsight. Focus sustained effort."
+        "rest_between_sets_seconds": 60,
+        "notes": "Climb route sections with timed rest. Grade 1-2 below onsight. Focus sustained effort.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -2
       },
       "stress_tags": {
         "fingers": "medium",
@@ -2342,7 +2354,9 @@
         "work_seconds": 1200,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 300,
-        "notes": "Well below onsight grade. Zero pump. If you feel pump, go easier."
+        "notes": "Well below onsight grade. Zero pump. If you feel pump, go easier.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -5
       },
       "stress_tags": {
         "fingers": "low",
@@ -2388,7 +2402,9 @@
         "work_seconds": 120,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Just below onsight grade. Sustained effort. Moderate pump acceptable."
+        "notes": "Just below onsight grade. Sustained effort. Moderate pump acceptable.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -1
       },
       "stress_tags": {
         "fingers": "medium",
@@ -2427,7 +2443,9 @@
         "work_seconds": 120,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Grade VERY far below onsight. Must feel trivially easy. Chat-pace effort. Lattice 5x3 style."
+        "notes": "Grade VERY far below onsight. Must feel trivially easy. Chat-pace effort. Lattice 5x3 style.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -4
       },
       "stress_tags": {
         "fingers": "low",
@@ -3612,7 +3630,9 @@
         "work_seconds": 900,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Climb well below onsight. Focus: zero noise on footplacements."
+        "notes": "Climb well below onsight. Focus: zero noise on footplacements.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
       },
       "stress_tags": {
         "fingers": "low",
@@ -3657,7 +3677,9 @@
         "work_seconds": 900,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Place foot once, no adjustment. Forces precision. Well below onsight grade."
+        "notes": "Place foot once, no adjustment. Forces precision. Well below onsight grade.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
       },
       "stress_tags": {
         "fingers": "low",
@@ -3702,7 +3724,9 @@
         "work_seconds": 900,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Climb up, climb down controlled. Every route/boulder. Builds eccentric strength and awareness."
+        "notes": "Climb up, climb down controlled. Every route/boulder. Builds eccentric strength and awareness.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
       },
       "stress_tags": {
         "fingers": "low",
@@ -3747,7 +3771,9 @@
         "work_seconds": 900,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Count to 3 between every move. Forces reading, breathing, and deliberate movement."
+        "notes": "Count to 3 between every move. Forces reading, breathing, and deliberate movement.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
       },
       "stress_tags": {
         "fingers": "low",
@@ -3793,7 +3819,9 @@
         "work_seconds": 900,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Inside flag, outside flag, drop knee practice. Easy boulders. Focus body tension and balance."
+        "notes": "Inside flag, outside flag, drop knee practice. Easy boulders. Focus body tension and balance.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
       },
       "stress_tags": {
         "fingers": "low",
@@ -5679,7 +5707,9 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Every Minute On the Minute. Start at minute mark, rest remainder. Grade at flash or +1. 10-15 minutes total."
+        "notes": "Every Minute On the Minute. Start at minute mark, rest remainder. Grade at flash or +1. 10-15 minutes total.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
       },
       "load_model": "grade_relative",
       "stress_tags": {
@@ -5726,7 +5756,9 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "On The Minute (every 2 min). Grade at or above flash level. Longer rest than EMOM allows harder attempts."
+        "notes": "On The Minute (every 2 min). Grade at or above flash level. Longer rest than EMOM allows harder attempts.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -1
       },
       "load_model": "grade_relative",
       "stress_tags": {
@@ -5773,7 +5805,9 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 300,
-        "notes": "Link 3-5 boulders back-to-back, no rest between. Grade 2-3 below flash. 5 min rest between circuits."
+        "notes": "Link 3-5 boulders back-to-back, no rest between. Grade 2-3 below flash. 5 min rest between circuits.",
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": -3
       },
       "load_model": "grade_relative",
       "stress_tags": {
@@ -5819,7 +5853,9 @@
         "work_seconds": 900,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 300,
-        "notes": "Start at 15 min continuous, build to 30 min week over week. Grade well below onsight. Zero pump target."
+        "notes": "Start at 15 min continuous, build to 30 min week over week. Grade well below onsight. Zero pump target.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -4
       },
       "load_model": "grade_relative",
       "stress_tags": {
@@ -5864,7 +5900,9 @@
         "work_seconds": 120,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "120s climb / 60s rest. Moderate pump OK, deep pump = too hard. RPE 7-8/10. Hörst recommended protocol."
+        "notes": "120s climb / 60s rest. Moderate pump OK, deep pump = too hard. RPE 7-8/10. Hörst recommended protocol.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -1
       },
       "load_model": "grade_relative",
       "stress_tags": {
@@ -5909,7 +5947,9 @@
         "work_seconds": 1200,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Grade 4-6 below onsight. Conversational pace. 20-30 min. Focus on movement quality, not effort."
+        "notes": "Grade 4-6 below onsight. Conversational pace. 20-30 min. Focus on movement quality, not effort.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -5
       },
       "load_model": "grade_relative",
       "stress_tags": {
@@ -6047,7 +6087,9 @@
         "work_seconds": 60,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 120,
-        "notes": "Easy problems, focus only on heel placement."
+        "notes": "Easy problems, focus only on heel placement.",
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": -2
       },
       "stress_tags": {
         "elbow": "low",
@@ -6060,53 +6102,6 @@
         "Active heel pull",
         "Hip close to wall",
         "Relaxed arms"
-      ],
-      "video_url": null,
-      "load_model": "grade_relative"
-    },
-    {
-      "id": "lattice_lactate_8x8",
-      "name": "Lattice Lactate Tolerance 8x8",
-      "category": "power_endurance",
-      "time_min": 35,
-      "role": [
-        "main"
-      ],
-      "domain": [
-        "anaerobic_capacity"
-      ],
-      "pattern": "climbing_intervals",
-      "intensity_level": "high",
-      "fatigue_cost": 9,
-      "recency_group": "pe_lactate",
-      "equipment_required": [],
-      "equipment_required_any": [
-        "gym_boulder",
-        "board_kilter"
-      ],
-      "location_allowed": [
-        "gym"
-      ],
-      "contraindications": [],
-      "prescription_defaults": {
-        "sets": 8,
-        "reps": 8,
-        "work_seconds": null,
-        "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": 240,
-        "notes": "8 problems back-to-back, 4 min rest between rounds."
-      },
-      "stress_tags": {
-        "elbow": "high",
-        "fingers": "high",
-        "cns": "high",
-        "skin": "high"
-      },
-      "description": "High-lactate bouldering capacity (Lattice advanced).",
-      "cues": [
-        "Fight through burn",
-        "Maintain form",
-        "Grade ~flash level"
       ],
       "video_url": null,
       "load_model": "grade_relative"
