@@ -1,0 +1,97 @@
+{
+  "_meta": {
+    "category": "endurance",
+    "patch_type": "addendum",
+    "generated": "2026-02-21",
+    "sources": [
+      "trainingbeta.com/20-min-endurance-workout (Tom Randall & Ollie Torr / Lattice / EpicTV)",
+      "latticetraining.com/blog/training-series-endurance (Tom Randall UKC series)",
+      "trainingforclimbing.com/aerobic-versus-anaerobic-training-for-climbing (Lucie Hanes/Horst pyramid protocol)"
+    ],
+    "instructions": "new_exercises only — append to exercises list. No fixes or updates.",
+    "count_delta": 2
+  },
+
+  "new_exercises": [
+    {
+      "id": "one_on_one_off_intervals",
+      "name": "1-on / 1-off Aerobic Intervals (Lattice)",
+      "category": "endurance",
+      "time_min": 20,
+      "role": ["main"],
+      "domain": ["aerobic_capacity"],
+      "pattern": "climbing_intervals",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "gym_threshold",
+      "equipment_required": [],
+      "equipment_required_any": ["gym_routes", "gym_boulder", "spraywall"],
+      "location_allowed": ["gym", "outdoor"],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 10,
+        "reps": 1,
+        "work_seconds": 60,
+        "rest_between_reps_seconds": 60,
+        "rest_between_sets_seconds": null,
+        "notes": "1 min climbing / 1 min rest x 10 rounds = 20 min total. Grade 1-2 below lead onsight. Aim for zero pump — intensity sits just above ARC but below threshold. If pump accumulates by round 6-7, reduce grade next session. Lattice Randall/Torr protocol."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "load_model": "grade_relative",
+      "description": "Lattice Training 1-on/1-off aerobic capacity protocol (Tom Randall & Ollie Torr). 10 rounds of 1 min climbing / 1 min rest at 1-2 grades below onsight. Classified by Lattice as aerobic capacity, not power endurance — the grade is the key: low enough to stay aerobic and avoid deep pump. Efficient 20-min format, usable on routes, boulders or spray wall. Bridges the gap between long ARC sessions and threshold intervals. (Lattice Training EpicTV 20-min Endurance Workout; Tom Randall UKC endurance series)",
+      "cues": [
+        "Start every round at the 0:00 and 2:00 marks — use a visible timer",
+        "Grade: 1-2 letter grades below your lead onsight. Both work; 2 below is safer aerobically",
+        "Round 1-4 should feel almost too easy — that is correct. Do not raise grade",
+        "If pump builds by round 6-7, you are too hard: grade down next session",
+        "1 min rest: arms below heart level, shake out, breathe. Full but not excessive"
+      ],
+      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+    },
+    {
+      "id": "aerobic_pyramid_intervals",
+      "name": "Aerobic Pyramid Intervals (1-2-3-4-3-2-1)",
+      "category": "endurance",
+      "time_min": 30,
+      "role": ["main"],
+      "domain": ["aerobic_capacity"],
+      "pattern": "climbing_intervals",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "gym_threshold",
+      "equipment_required": [],
+      "equipment_required_any": ["gym_routes", "gym_boulder", "spraywall", "board_kilter"],
+      "location_allowed": ["gym", "outdoor"],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 7,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Pyramid: 1 min on / 1 off → 2/2 → 3/3 → 4/4 → 3/3 → 2/2 → 1/1. 7 rounds total = ~28 min. Grade 2 below redpoint. Aerobic target — avoid pump throughout. Beginners start with just 3 rounds (1-2-3 without descent). Horst pyramid protocol."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "load_model": "grade_relative",
+      "description": "Hörst aerobic pyramid: 1-2-3-4-3-2-1 min climbing intervals with equal rest, totalling ~28 min. Grade stays constant throughout (2 below redpoint limit, ~2 below onsight). The ascending rounds build aerobic load progressively; the descending side maintains stimulus while fatigue accumulates. Makes standard ARC sessions more mentally engaging. First-timers should stop at the peak (1-2-3) to avoid excessive volume. (Hörst / Lucie Hanes, trainingforclimbing.com aerobic vs anaerobic article)",
+      "cues": [
+        "Equal work = equal rest at every level: 1/1, 2/2, 3/3, 4/4...",
+        "Grade is fixed throughout the pyramid — do not increase as rounds get longer",
+        "4-min rounds should feel sustainably hard but never cause full pump",
+        "Beginners: do 1-2-3 only (no descent) — ~12 min total, build from there",
+        "After the session: arms felt lightly worked, not pumped. If pumped, grade too hard"
+      ],
+      "video_url": "https://trainingforclimbing.com/aerobic-versus-anaerobic-training-for-climbing-beat-the-burn-and-climb-all-day/"
+    }
+  ]
+}

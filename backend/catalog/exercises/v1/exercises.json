@@ -1086,9 +1086,15 @@
         "spraywall",
         "board_kilter"
       ],
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Free-form technique drill session at the gym: silent feet, no readjust, hip engagement, breathing control. Grade kept well below max to allow movement quality focus.",
+      "cues": [
+        "Silent feet: place feet without sound, feel the hold before weighting",
+        "No readjust: commit to each foot placement first time",
+        "Hip engagement: actively twist hips toward wall on steep terrain",
+        "Breathing: exhale on hard moves, never hold breath",
+        "Grade should feel easy — this is skill work, not fitness work"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/footwork-drills",
       "load_model": "grade_relative",
       "focus": null
     },
@@ -1128,9 +1134,16 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Bulgarian or rear-foot-elevated split squat. Unilateral lower body strength targeting quad, glute, and hip stability — directly transfers to high-stepping and heel hook loading. One of the few lower body exercises consistently recommended across climbing coaches.",
+      "cues": [
+        "Back foot elevated on bench or box at knee height",
+        "Front foot far enough forward that shin stays vertical at bottom",
+        "Knee tracks over second toe throughout — no valgus collapse",
+        "Torso upright or slight forward lean, core engaged",
+        "Full range: back knee approaches but does not touch floor",
+        "3-second eccentric lower for maximum tendon adaptation"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=1V4ypd3YBbA",
       "load_model": "external_load"
     },
     {
@@ -1222,9 +1235,16 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Supinated-grip pull-up (palms toward face). Targets biceps and lats with strong forearm flexor involvement. Higher biceps activation than pronated pullup, making it a useful complement for climbers who lack elbow flexor strength relative to lat strength.",
+      "cues": [
+        "Shoulders packed before pulling: depress and retract scapulae",
+        "Initiate movement by driving elbows down toward hips, not by shrugging",
+        "Chin clearly over bar at top — no neck craning",
+        "Full extension at bottom: straight arms before each rep",
+        "3-second eccentric lower — do not drop",
+        "Quality over quantity: stop set when form breaks"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/pull-ups-for-climbers",
       "load_model": "bodyweight_only"
     },
     {
@@ -1267,9 +1287,16 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Isometric and dynamic scapular depression / retraction drill from a dead hang. Activates lower trapezius and serratus anterior without elbow flexion. Critical for shoulder health in climbers — prevents impingement, builds the foundation for all pulling movements. Hörst describes it as 'The Best Climbing Exercise You're Not Doing'.",
+      "cues": [
+        "Start in dead hang: arms fully extended, shoulders passively elevated",
+        "With straight arms only: pull shoulders down and back (do NOT bend elbows)",
+        "Feel lower trapezius and lats engage — chest rises slightly toward bar",
+        "Hold 2 seconds at top, then slowly return to passive hang",
+        "Zero elbow bend throughout — if elbows bend, it has become a pullup",
+        "Do before every climbing session as part of warm-up"
+      ],
+      "video_url": "https://trainingforclimbing.com/the-best-climbing-exercise-youre-not-doing/",
       "load_model": "bodyweight_only"
     },
     {
@@ -1310,9 +1337,16 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Horizontal pull from below a bar or rings with body at an angle. Targets rhomboids, mid-traps, and rear deltoids — antagonist musculature to climbing's dominant vertical pull pattern. Reduces shoulder injury risk. Angle of body controls difficulty: more horizontal = harder.",
+      "cues": [
+        "Body forms a straight line from heels to shoulders — engage core and glutes",
+        "Initiate by retracting scapulae before bending elbows",
+        "Pull bar or rings to lower sternum / upper abdomen — not chin",
+        "Elbows stay close to body at roughly 45° flare",
+        "Full extension at bottom before next rep",
+        "To increase difficulty: raise feet, use rings, add pause at top"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "bodyweight_only"
     },
     {
@@ -1354,9 +1388,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Standard pronated pullup with a resistance band looped over the bar for assistance. Removes a percentage of bodyweight to allow proper pullup mechanics for climbers not yet able to do 3+ unassisted reps. Progressive: move to thinner bands as strength builds.",
+      "cues": [
+        "Knee or foot in band — knee in band = more stable, foot in band = more authentic movement",
+        "Same cues as standard pullup: packed shoulders, elbows driving down",
+        "Choose band that allows 5-8 clean reps — if 10+ feels easy, use thinner band",
+        "Eccentric still matters: control the lowering phase even with band assistance",
+        "Goal: eliminate band entirely. Transition test: can you do 3 unassisted reps?"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/pull-ups-for-climbers",
       "load_model": "bodyweight_only"
     },
     {
@@ -1445,9 +1485,16 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Standard horizontal push-up. Primary antagonist pressing movement for climbers — counterbalances the dominant pulling and internal rotation load. Targets pectorals, anterior deltoid, triceps, and serratus anterior. Accessible, zero-equipment, foundational.",
+      "cues": [
+        "Hands shoulder-width or slightly wider, fingers spread and gripping the floor",
+        "Body forms a single rigid plank: core, glutes, quads all engaged",
+        "Elbows at 45° flare from torso — not flared wide, not pinned in",
+        "Lower chest to 1-2 cm from floor — full range of motion",
+        "Push floor away on the way up: protract scapulae at the top",
+        "Quality: 3-second lower. If reps degrade to half-ROM, stop the set"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "bodyweight_only"
     },
     {
@@ -1486,9 +1533,16 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Vertical push-up pattern from a pike (inverted-V) body position — hip hinge with hands and feet on floor, head below hips. Emphasises anterior deltoid and triceps more than horizontal pushup. Progression toward handstand pushup; directly trains overhead pressing strength for manteling.",
+      "cues": [
+        "Start in downward-dog position: hips high, arms and legs straight",
+        "Lower crown of head toward the floor between hands",
+        "Elbows flare naturally outward — allow this in the pike position",
+        "Push back to full arm extension, maintaining hip elevation throughout",
+        "Walk feet closer to hands for more vertical load (harder); further away for easier",
+        "If wrists are uncomfortable, use push-up handles or fists"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "bodyweight_only"
     },
     {
@@ -1528,9 +1582,16 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Horizontal barbell or dumbbell pressing. Comprehensive horizontal push pattern targeting pectorals, anterior deltoid, and triceps. Most load-measurable of all pressing movements, making progressive overload easy to track. Useful for climbers needing significant upper-body push antagonist work to address strength imbalances.",
+      "cues": [
+        "Feet flat on floor, slight arch in lower back — retract and depress scapulae against bench",
+        "Grip width: slightly outside shoulder width — wrists stacked over elbows at bottom",
+        "Lower bar to lower sternum with control — 3-second eccentric",
+        "Drive feet through floor and squeeze glutes on the press",
+        "Elbows at 45-75° flare — avoid flaring fully to protect shoulder",
+        "Dumbbells: allow natural arc rather than forcing a straight bar path"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "external_load"
     },
     {
@@ -1571,9 +1632,16 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Vertical pressing pattern (barbell or dumbbell). Targets anterior/medial deltoid and triceps. Trains the overhead position climbers need for manteling and high-ball pressing. Addresses the deltoid imbalance common in climbers who over-train vertical pull.",
+      "cues": [
+        "Standing: feet shoulder-width, slight core brace — do not hyperextend lower back",
+        "Bar starts at upper chest / collarbone level, elbows slightly in front of bar",
+        "Press directly overhead — bar travels in a slight arc around the face",
+        "Finish with bar over mid-foot and ears visible in front of upper arm",
+        "Lower with control: 3-second eccentric",
+        "Seated dumbbell variation is shoulder-health-friendly alternative if bar feels uncomfortable"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "external_load"
     },
     {
@@ -2889,10 +2957,17 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
-      "load_model": "bodyweight_only"
+      "description": "Bent-over barbell or dumbbell horizontal row. Targets rhomboids, mid-trapezius, rear deltoid, and biceps. Heaviest loadable horizontal pull movement — effective for climbers who need significant upper-back volume to counterbalance anterior shoulder loading. Dumbbell variation is accessible and allows unilateral work.",
+      "cues": [
+        "Hip hinge to ~45°: flat back, core braced, chest up",
+        "Pull bar to lower abdomen / upper hip — not chest",
+        "Lead with elbows driving back and up — do not shrug",
+        "Retract scapulae at the top: feel mid-back squeeze",
+        "3-second controlled eccentric lower — no bouncing off legs",
+        "If lower back fatigues before upper back, reduce load or switch to dumbbell single-arm row"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
+      "load_model": "external_load"
     },
     {
       "id": "typewriter_pullup",
@@ -2983,9 +3058,16 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Push-up performed on gymnastics rings. Increased difficulty vs floor pushup: instability activates rotator cuff and serratus anterior more intensely. Rings allow natural wrist rotation through the press, reducing wrist and shoulder stress. Excellent climbing-specific antagonist work.",
+      "cues": [
+        "Rings at ~30 cm from floor — adjust height to control difficulty",
+        "Grip rings with knuckles facing out at the bottom of the movement",
+        "Allow rings to rotate inward (pronation) as you press up — natural movement",
+        "Body remains a rigid plank throughout: core and glutes engaged",
+        "To regress: raise rings higher (less bodyweight). To progress: elevate feet",
+        "Pause 2 seconds at top in full support position for shoulder stability benefit"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "bodyweight_only"
     },
     {
@@ -6591,6 +6673,221 @@
         "Stop if a round is clearly failing before 30s — quality over quantity in every session"
       ],
       "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
+    },
+    {
+      "id": "frenchies",
+      "name": "Frenchies (Isometric Pull-up Intervals)",
+      "category": "strength_accessory",
+      "time_min": 15,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_pulling",
+        "lock_off_endurance"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "vertical_pull",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "equipment_required_any": [],
+      "location_allowed": [
+        "gym",
+        "home"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "elbow_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 300,
+        "notes": "One Frenchie = pull to top (4s hold) → lower to 90° (4s hold) → lower to 120° (4s hold) → return to dead hang. That is 1 rep. Do as many full reps as possible per set, then rest 5 min. 2-3 sets. Hörst coined term in Flash Training (1994). Stop set when unable to complete a full pull or maintain 4s hold."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "high",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "load_model": "bodyweight_only",
+      "description": "Frenchies combine dynamic pull-up strength with isometric lock-offs at three joint angles (top/full lock, 90°, 120°), creating one of the most climbing-specific upper-body strength-endurance exercises available. Named and popularised by Eric Hörst (Flash Training, 1994). The time-under-tension at multiple angles directly mirrors the lock-off demands of hard bouldering and steep sport climbing. Elbow stress is significant — do not perform with existing elbow/medial epicondyle pain. Progress by adding a 4th or 5th lock-off angle per rep or by adding weight.",
+      "cues": [
+        "Rep 1 protocol: pull to chin over bar → hold 4s; lower to dead hang; pull again → lower to 90° → hold 4s; lower to dead hang; pull again → lower to 120° → hold 4s; return to dead hang = 1 rep",
+        "Palms facing away (pronated) or toward you (supinated) — both valid, alternate for variety",
+        "4-second holds are non-negotiable — shorter holds reduce benefit significantly",
+        "Set ends when you can no longer do a complete pull-up OR cannot hold 4 seconds",
+        "5 full minutes rest between sets — less rest compromises quality severely",
+        "Elbow warning: if lateral or medial elbow pain during holds, stop immediately"
+      ],
+      "video_url": "https://trainingforclimbing.com/4-pull-up-variations-to-amp-up-your-workouts/"
+    },
+    {
+      "id": "uneven_grip_pullup",
+      "name": "Uneven-Grip Pull-up (One-Arm Progression)",
+      "category": "strength_accessory",
+      "time_min": 15,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_pulling",
+        "lock_off_endurance"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "vertical_pull",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "equipment_required_any": [],
+      "location_allowed": [
+        "gym",
+        "home"
+      ],
+      "contraindications": [
+        "finger_injury",
+        "elbow_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "One hand on bar, other hand grips a sling looped over bar — hands offset 30-60 cm (start with 30 cm). 3 sets × 5 reps each arm, 3 min rest between sets. Increase offset as strength improves. Long-term progression toward one-arm pull-up. Hörst: begin with 12-inch offset, increase when you can do 5 solid reps."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "load_model": "bodyweight_only",
+      "description": "Uneven-grip pull-up progressively loads one arm more than the other by offsetting hand height, bridging between two-arm pull-ups and one-arm pull-ups. Hörst recommends it as the most climbing-specific path to lock-off strength and eventual one-arm pull-up capacity. Use a sling looped over a pull-up bar — high hand on bar (palms-in or out), low hand grips sling with deep two-finger or pinch grip (more climbing-specific). Start with 30 cm offset; as strength improves increase to 60 cm. Alternate arms each set.",
+      "cues": [
+        "High hand on bar, low hand on sling — not the reverse",
+        "Focus on pulling with the HIGH hand; low hand assists progressively less",
+        "Full range of motion required — dead hang to chin over bar height",
+        "Alternate arms each set: do not favour one side",
+        "30 cm offset for beginners → 45 cm → 60 cm as a rough progression",
+        "To increase climbing specificity: high hand uses palms-away (pronated) grip"
+      ],
+      "video_url": "https://trainingforclimbing.com/develop-one-arm-lock-off-strength-with-uneven-grip-pull-ups/"
+    },
+    {
+      "id": "one_on_one_off_intervals",
+      "name": "1-on / 1-off Aerobic Intervals (Lattice)",
+      "category": "endurance",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "gym_threshold",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_routes",
+        "gym_boulder",
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 10,
+        "reps": 1,
+        "work_seconds": 60,
+        "rest_between_reps_seconds": 60,
+        "rest_between_sets_seconds": null,
+        "notes": "1 min climbing / 1 min rest x 10 rounds = 20 min total. Grade 1-2 below lead onsight. Aim for zero pump — intensity sits just above ARC but below threshold. If pump accumulates by round 6-7, reduce grade next session. Lattice Randall/Torr protocol.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -1
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "load_model": "grade_relative",
+      "description": "Lattice Training 1-on/1-off aerobic capacity protocol (Tom Randall & Ollie Torr). 10 rounds of 1 min climbing / 1 min rest at 1-2 grades below onsight. Classified by Lattice as aerobic capacity, not power endurance — the grade is the key: low enough to stay aerobic and avoid deep pump. Efficient 20-min format, usable on routes, boulders or spray wall. Bridges the gap between long ARC sessions and threshold intervals. (Lattice Training EpicTV 20-min Endurance Workout; Tom Randall UKC endurance series)",
+      "cues": [
+        "Start every round at the 0:00 and 2:00 marks — use a visible timer",
+        "Grade: 1-2 letter grades below your lead onsight. Both work; 2 below is safer aerobically",
+        "Round 1-4 should feel almost too easy — that is correct. Do not raise grade",
+        "If pump builds by round 6-7, you are too hard: grade down next session",
+        "1 min rest: arms below heart level, shake out, breathe. Full but not excessive"
+      ],
+      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+    },
+    {
+      "id": "aerobic_pyramid_intervals",
+      "name": "Aerobic Pyramid Intervals (1-2-3-4-3-2-1)",
+      "category": "endurance",
+      "time_min": 30,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "gym_threshold",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_routes",
+        "gym_boulder",
+        "spraywall",
+        "board_kilter"
+      ],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 7,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Pyramid: 1 min on / 1 off → 2/2 → 3/3 → 4/4 → 3/3 → 2/2 → 1/1. 7 rounds total = ~28 min. Grade 2 below redpoint. Aerobic target — avoid pump throughout. Beginners start with just 3 rounds (1-2-3 without descent). Horst pyramid protocol.",
+        "grade_ref": "lead_max_rp",
+        "grade_offset": -2
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "load_model": "grade_relative",
+      "description": "Hörst aerobic pyramid: 1-2-3-4-3-2-1 min climbing intervals with equal rest, totalling ~28 min. Grade stays constant throughout (2 below redpoint limit, ~2 below onsight). The ascending rounds build aerobic load progressively; the descending side maintains stimulus while fatigue accumulates. Makes standard ARC sessions more mentally engaging. First-timers should stop at the peak (1-2-3) to avoid excessive volume. (Hörst / Lucie Hanes, trainingforclimbing.com aerobic vs anaerobic article)",
+      "cues": [
+        "Equal work = equal rest at every level: 1/1, 2/2, 3/3, 4/4...",
+        "Grade is fixed throughout the pyramid — do not increase as rounds get longer",
+        "4-min rounds should feel sustainably hard but never cause full pump",
+        "Beginners: do 1-2-3 only (no descent) — ~12 min total, build from there",
+        "After the session: arms felt lightly worked, not pumped. If pumped, grade too hard"
+      ],
+      "video_url": "https://trainingforclimbing.com/aerobic-versus-anaerobic-training-for-climbing-beat-the-burn-and-climb-all-day/"
     }
   ]
 }
