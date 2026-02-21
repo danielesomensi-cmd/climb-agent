@@ -3711,9 +3711,15 @@
         "spraywall",
         "board_kilter"
       ],
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Footwork precision drill: place every foot silently with zero audible contact. Forces conscious attention to exact toe placement, hold orientation and weight transfer. Directly reduces sloppy footwork which bleeds energy and limits technique on any terrain. (Jorgeson/Wallach via climbing.com; Paige Claassen footwork series)",
+      "cues": [
+        "Eyes on the foothold until the foot is weighted — never look away early",
+        "Place the toe first, then slowly transfer weight — never slam or drop",
+        "If any sound is heard, downclimb the move and repeat it silently",
+        "Grade 2 below onsight — this is not a fitness drill, it is a precision drill",
+        "Practice every warm-up set: silent feet is a lifetime habit, not a beginner exercise"
+      ],
+      "video_url": "https://www.climbing.com/skills/how-to-improve-footwork-climbing/",
       "load_model": "grade_relative",
       "focus": "footwork"
     },
@@ -3758,9 +3764,15 @@
         "spraywall",
         "board_kilter"
       ],
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Footwork commitment drill: place the foot once and do not adjust it. Trains first-placement accuracy and the confidence to weight an imperfectly placed foot rather than waste time and energy readjusting. Inspired by Margo Hayes and Janja Garnbret's footwork economy. (Paige Claassen; climbing.com)",
+      "cues": [
+        "Look at the foothold before moving the foot — plan the exact placement point",
+        "Place and commit: no micro-adjustments, no scoping, no second placement",
+        "If the foot slips, note why and retry that specific move — learn the error",
+        "Grade 2 below onsight so upper body is not a limiting factor",
+        "Progress: move closer to onsight grade while maintaining zero readjusts"
+      ],
+      "video_url": "https://www.climbing.com/skills/how-to-improve-your-footwork-for-climbing-2/",
       "load_model": "grade_relative",
       "focus": "footwork"
     },
@@ -3805,9 +3817,15 @@
         "spraywall",
         "board_kilter"
       ],
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Downclimb every route or problem after topping out. Builds footwork precision and body awareness in the direction most climbers neglect — feet-first, legs doing the work. Dramatically improves reading ability and foot confidence on first attempts. (Gripped; 99boulders footwork drills)",
+      "cues": [
+        "Feet lead down — use legs to lower bodyweight, not arms",
+        "Look down at each foothold before weighting it: the same skill as upclimbing",
+        "Keep arms straight and relaxed — downclimbing should not pump your forearms",
+        "Grade 1-2 below onsight so movement quality can be maintained throughout",
+        "Downclimb all warm-up sets — make it a session default, not an occasional drill"
+      ],
+      "video_url": "https://gripped.com/indoor-climbing/five-fun-drills-to-improve-your-climbing-footwork/",
       "load_model": "grade_relative",
       "focus": "movement"
     },
@@ -3851,9 +3869,15 @@
         "gym_routes",
         "gym_boulder"
       ],
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Climb at half normal speed or slower, pausing on every hold. Exposes inefficiencies in balance, hip positioning and weight distribution that normal-pace climbing masks. Fundamental drill for developing deliberate movement and reading body position. (Hooper's Beta technique series; trainingforclimbing.com)",
+      "cues": [
+        "Every move takes at least 3 seconds — use a count if needed",
+        "Pause in each position: feel where the weight is, check hip position",
+        "Arms straight and relaxed between moves — slow climbing reveals grip dependency",
+        "Breathe on every move — slow climbing is the ideal drill for breathing awareness too",
+        "Grade 3 below onsight: technique focus demands very familiar terrain"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "grade_relative",
       "focus": "movement"
     },
@@ -3895,9 +3919,15 @@
         "cns": "low",
         "skin": "low"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Dedicated flag and hip positioning drill: on each move, consciously choose and execute a flag (inside, outside, or back-flag) to prevent barn-door and maintain hip proximity to wall. Builds the automatic body tension and hip awareness required on overhanging terrain. (Hooper's Beta flagging guide; trainingforclimbing.com hip technique)",
+      "cues": [
+        "Identify the barn-door risk before making each move — plan the flag",
+        "Inside flag: foot crosses body to opposite side, pushes into wall",
+        "Outside flag: foot extends behind and out on same side as moving hand",
+        "Back-flag: rear leg extends back and down to counter rotation",
+        "Grade 2 below onsight: technique must be exaggerated and deliberate, not reactive"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "grade_relative",
       "focus": "body_position"
     },
@@ -3946,7 +3976,7 @@
         "Notice any breath-holding and consciously release",
         "Shake out arms while breathing deeply at every good hold"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -3995,7 +4025,7 @@
         "Climb 2-3 grades below max to maintain focus",
         "Zero readjustments allowed after initial placement"
       ],
-      "video_url": null,
+      "video_url": "https://www.99boulders.com/bouldering-footwork-drills",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4044,7 +4074,7 @@
         "Exaggerate the rotation on easy terrain to build the pattern",
         "Combine with drop-knee on steep sections"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4093,7 +4123,7 @@
         "Maintain stable body position during the hover",
         "If you lunge or grab immediately, repeat the move"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4142,7 +4172,7 @@
         "Use hip shifts and body tension to stay in balance",
         "Alternate lead hand each problem"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4191,7 +4221,7 @@
         "Maintain perfect technique in both modes",
         "Notice which mode feels harder and train that more"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4240,7 +4270,7 @@
         "Climb 2-3 grades below max to maintain focus",
         "Focus on toe tip precision, not full-foot smearing"
       ],
-      "video_url": null,
+      "video_url": "https://inspirerock.com/3-drills-to-improve-your-footwork/",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4289,7 +4319,7 @@
         "Use hip turns and high steps to keep arms long on steep terrain",
         "If you notice bent arms at rest, shake out and reset"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4338,7 +4368,7 @@
         "Zero readjustments after the final placement",
         "Maintain focus even when pumped or tired"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4387,7 +4417,7 @@
         "Use flagging and hip shifts to stay balanced on 3 points",
         "Climb easy problems — focus on control, not difficulty"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -6169,7 +6199,7 @@
         "Hip close to wall",
         "Relaxed arms"
       ],
-      "video_url": null,
+      "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "grade_relative"
     },
     {

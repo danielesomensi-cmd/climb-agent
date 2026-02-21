@@ -1,0 +1,125 @@
+{
+  "_meta": {
+    "category": "technique",
+    "generated": "2026-02-21",
+    "sources": [
+      "climbing.com/skills/how-to-improve-footwork-climbing (Kevin Jorgeson/Paige Claassen)",
+      "climbing.com/skills/how-to-improve-your-footwork-for-climbing-2 (Claassen 6 tips)",
+      "gripped.com/indoor-climbing/five-fun-drills-to-improve-your-climbing-footwork",
+      "mojagear.com/new-climber-tip-silent-feet",
+      "99boulders.com/bouldering-footwork-drills",
+      "hoopersbeta.com/library (technique drills)",
+      "trainingforclimbing.com (Horst technique principles)"
+    ],
+    "instructions": "Merge rules: overwrite description/cues/video_url only if null/empty. Do not touch prescription_defaults."
+  },
+
+  "updates": [
+    {
+      "id": "silent_feet_drill",
+      "description": "Footwork precision drill: place every foot silently with zero audible contact. Forces conscious attention to exact toe placement, hold orientation and weight transfer. Directly reduces sloppy footwork which bleeds energy and limits technique on any terrain. (Jorgeson/Wallach via climbing.com; Paige Claassen footwork series)",
+      "cues": [
+        "Eyes on the foothold until the foot is weighted — never look away early",
+        "Place the toe first, then slowly transfer weight — never slam or drop",
+        "If any sound is heard, downclimb the move and repeat it silently",
+        "Grade 2 below onsight — this is not a fitness drill, it is a precision drill",
+        "Practice every warm-up set: silent feet is a lifetime habit, not a beginner exercise"
+      ],
+      "video_url": "https://www.climbing.com/skills/how-to-improve-footwork-climbing/"
+    },
+    {
+      "id": "no_readjust_drill",
+      "description": "Footwork commitment drill: place the foot once and do not adjust it. Trains first-placement accuracy and the confidence to weight an imperfectly placed foot rather than waste time and energy readjusting. Inspired by Margo Hayes and Janja Garnbret's footwork economy. (Paige Claassen; climbing.com)",
+      "cues": [
+        "Look at the foothold before moving the foot — plan the exact placement point",
+        "Place and commit: no micro-adjustments, no scoping, no second placement",
+        "If the foot slips, note why and retry that specific move — learn the error",
+        "Grade 2 below onsight so upper body is not a limiting factor",
+        "Progress: move closer to onsight grade while maintaining zero readjusts"
+      ],
+      "video_url": "https://www.climbing.com/skills/how-to-improve-your-footwork-for-climbing-2/"
+    },
+    {
+      "id": "downclimbing_drill",
+      "description": "Downclimb every route or problem after topping out. Builds footwork precision and body awareness in the direction most climbers neglect — feet-first, legs doing the work. Dramatically improves reading ability and foot confidence on first attempts. (Gripped; 99boulders footwork drills)",
+      "cues": [
+        "Feet lead down — use legs to lower bodyweight, not arms",
+        "Look down at each foothold before weighting it: the same skill as upclimbing",
+        "Keep arms straight and relaxed — downclimbing should not pump your forearms",
+        "Grade 1-2 below onsight so movement quality can be maintained throughout",
+        "Downclimb all warm-up sets — make it a session default, not an occasional drill"
+      ],
+      "video_url": "https://gripped.com/indoor-climbing/five-fun-drills-to-improve-your-climbing-footwork/"
+    },
+    {
+      "id": "slow_climbing",
+      "description": "Climb at half normal speed or slower, pausing on every hold. Exposes inefficiencies in balance, hip positioning and weight distribution that normal-pace climbing masks. Fundamental drill for developing deliberate movement and reading body position. (Hooper's Beta technique series; trainingforclimbing.com)",
+      "cues": [
+        "Every move takes at least 3 seconds — use a count if needed",
+        "Pause in each position: feel where the weight is, check hip position",
+        "Arms straight and relaxed between moves — slow climbing reveals grip dependency",
+        "Breathe on every move — slow climbing is the ideal drill for breathing awareness too",
+        "Grade 3 below onsight: technique focus demands very familiar terrain"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "flag_practice",
+      "description": "Dedicated flag and hip positioning drill: on each move, consciously choose and execute a flag (inside, outside, or back-flag) to prevent barn-door and maintain hip proximity to wall. Builds the automatic body tension and hip awareness required on overhanging terrain. (Hooper's Beta flagging guide; trainingforclimbing.com hip technique)",
+      "cues": [
+        "Identify the barn-door risk before making each move — plan the flag",
+        "Inside flag: foot crosses body to opposite side, pushes into wall",
+        "Outside flag: foot extends behind and out on same side as moving hand",
+        "Back-flag: rear leg extends back and down to counter rotation",
+        "Grade 2 below onsight: technique must be exaggerated and deliberate, not reactive"
+      ],
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "breathing_awareness",
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "foothold_stare",
+      "video_url": "https://www.99boulders.com/bouldering-footwork-drills"
+    },
+    {
+      "id": "hip_rotation_drill",
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "hover_hands",
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "one_hand_climbing",
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "sloth_monkey",
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "sticky_feet",
+      "video_url": "https://inspirerock.com/3-drills-to-improve-your-footwork/"
+    },
+    {
+      "id": "straight_arms",
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "tap_and_place",
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "three_limb_drill",
+      "video_url": "https://www.hoopersbeta.com/library"
+    },
+    {
+      "id": "heel_hook_specific_drill",
+      "video_url": "https://www.hoopersbeta.com/library"
+    }
+  ],
+
+  "new_exercises": []
+}
