@@ -5807,9 +5807,15 @@
         "cns": "high",
         "skin": "high"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null
+      "description": "Campus board arm sprints for alactic-aerobic capacity. Up-and-down the largest rungs as fast as possible for 15-20 seconds. Trains the alactic PCr system to rapidly reload between explosive efforts — the mechanism that allows hard boulderers to do multiple attempts with short rest. High injury risk: warm up thoroughly, stop if shoulder fatigue appears. (Hörst PE protocols; campus endurance progressions)",
+      "cues": [
+        "Largest rungs only: this is not a strength exercise, it is a sprint",
+        "Go as fast as possible — each 15s effort is near-max arm speed",
+        "If you can't reach the top rung, skip fewer rungs on the next set",
+        "Stop immediately at any shoulder elevation or shrugging — campus work demands scapular engagement throughout",
+        "120s rest between sets: full PCr recovery before the next all-out sprint"
+      ],
+      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
     },
     {
       "id": "emom_bouldering",
@@ -5842,10 +5848,10 @@
       "prescription_defaults": {
         "sets": 12,
         "reps": 1,
-        "work_seconds": null,
+        "work_seconds": 30,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Every Minute On the Minute. Start at minute mark, rest remainder. Grade at flash or +1. 10-15 minutes total.",
+        "notes": "Every Minute On the Minute: start a problem at 0:00, 1:00, 2:00... rest is whatever remains of each minute. Typical problem takes 20-30s. Grade 2-4 below boulder max. 12 problems = 12 min. Reduce grade mid-session to maintain form — EMOM trains capacity, not failure.",
         "grade_ref": "boulder_max_os",
         "grade_offset": -2
       },
@@ -5856,9 +5862,15 @@
         "cns": "high",
         "skin": "high"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null
+      "description": "Every Minute On the Minute bouldering: one problem per minute for 10-12 rounds. The fixed 60-second clock progressively reduces rest as sessions advance — early rounds feel easy, later rounds increasingly pump. Trains aerobic power and recovery ability at submaximal climbing intensity. Ideal format for building density of hard moves without exceeding anaerobic threshold. (Hörst EMOM; Lattice aerobic power intervals)",
+      "cues": [
+        "Start each problem exactly at the minute mark — use a visible timer",
+        "Grade: 2-4 below boulder max. Problems should be high-percentage to avoid failure mid-round",
+        "Rest is whatever remains of each 60s — if you're using under 30s per climb, go harder",
+        "When round 8-12 starts to feel hard, that's the training stimulus — don't reduce grade unless you'll fail",
+        "Progress: 12 rounds → 15 rounds → 1 level harder at 12 rounds"
+      ],
+      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
     },
     {
       "id": "otm_bouldering",
@@ -5889,12 +5901,12 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets": 8,
-        "reps": 1,
-        "work_seconds": null,
-        "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": null,
-        "notes": "On The Minute (every 2 min). Grade at or above flash level. Longer rest than EMOM allows harder attempts.",
+        "sets": 2,
+        "reps": 10,
+        "work_seconds": 45,
+        "rest_between_reps_seconds": 75,
+        "rest_between_sets_seconds": 600,
+        "notes": "One problem every 2 minutes: start at 0:00, 2:00, 4:00... 10 problems = 20 min per set. 10 min rest between sets. Grade at or just above flash: harder than EMOM since longer rest allows harder effort. Stop if form breaks. Bechtel OTM protocol.",
         "grade_ref": "boulder_max_os",
         "grade_offset": -1
       },
@@ -5905,9 +5917,15 @@
         "cns": "high",
         "skin": "high"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null
+      "description": "On The Minute bouldering (Bechtel): 10 problems over 20 minutes, one every 2 minutes, then 10-minute rest. The 2-minute cycle allows harder problems than EMOM while still accumulating training density over the session. Tracks improvement by noting total problems completed per session over the training cycle. Use on a home wall or spray wall where you know the problems well. (Bechtel climbing.com; OTM progression model)",
+      "cues": [
+        "2-minute cycle: problem starts at 0:00, 2:00, 4:00... rest is whatever remains between problems",
+        "Grade: just above or at flash level — harder than EMOM because you have more rest",
+        "Know your problems in advance — onsighting during OTM wastes time and breaks flow",
+        "If problems are taking >35 seconds, they are too hard: switch to lower grade",
+        "Progress: add 1 problem per session, not 1 grade. Volume before intensity."
+      ],
+      "video_url": "https://www.climbing.com/gym-climbing/train-endurance-by-bouldering-bechtel/"
     },
     {
       "id": "linked_boulders_circuit",
@@ -5954,9 +5972,15 @@
         "cns": "high",
         "skin": "high"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null
+      "description": "Link 3-5 boulder problems back-to-back without rest between them. Each circuit of 3-5 linked problems constitutes one set. Grade is 2-3 below boulder flash so each individual problem is manageable but accumulated pump over the circuit creates anaerobic lactic stress. Closest to route climbing specificity among all bouldering PE protocols. (Hörst PE protocols; Lattice Boulder Triples pattern)",
+      "cues": [
+        "Choose 3-5 problems you can reliably flash individually — linking is the challenge, not each problem",
+        "No rest between problems in a circuit: step off one and onto the next immediately",
+        "Grade target: 2-3 below individual flash. By problem 4-5 you should feel significant pump",
+        "5 min rest between circuits: this is a minimum. Take more if needed to restore quality",
+        "Sets 2-3 will feel much harder than set 1 — that metabolic accumulation is the point"
+      ],
+      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
     },
     {
       "id": "arc_training_progressive",
@@ -6513,6 +6537,60 @@
         "After dismounting: hold arms above heart level for 10s, then shake out slowly"
       ],
       "video_url": "https://strengthclimbing.com/eric-horst-hangboard-moving-hangs-climbing-training-endurance-protocol/"
+    },
+    {
+      "id": "thirty_thirty_intervals",
+      "name": "30/30 Climbing Intervals",
+      "category": "power_endurance",
+      "time_min": 40,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance",
+        "anaerobic_capacity"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "very_high",
+      "fatigue_cost": 9,
+      "recency_group": "pe_thirty_thirty",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "spraywall",
+        "board_moonboard",
+        "board_kilter"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive",
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": 30,
+        "rest_between_sets_seconds": 600,
+        "notes": "6 intervals of 30s all-out / 30s rest = 1 set. 10 min rest between sets. 2-4 sets total (well-conditioned climbers only). RPE 9-10/10 during work. Climb intuitive open-hold style — no set problems. Use smallest holds possible without falling. As you fatigue, move to bigger holds rather than stopping."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "high",
+        "cns": "very_high",
+        "skin": "high"
+      },
+      "load_model": "bodyweight_only",
+      "description": "Hörst 30/30 intervals: 30 seconds all-out climbing alternating with 30 seconds rest, 6 intervals = 1 round. Patented by Eric Hörst as the elite PE protocol that exhausts alactic power while building aerobic power (to drive PCr recovery) without excessive lactic accumulation. Done on spray walls or system boards — no set problems, climb intuitively at max intensity. Contraindicated early in training cycles; program 2-4 weeks max before performance phase. (Hörst trainingforclimbing.com; Cameron Horst climbing.com)",
+      "cues": [
+        "30s work: absolute maximum intensity — the smallest holds you can hold without falling",
+        "30s rest: shake out below heart level, chalk up, breathe deeply. Time this exactly",
+        "6 intervals per round: difficulty escalates. Early rounds easy, rounds 5-6 extremely hard",
+        "10 min rest between rounds: PCr system needs full recovery to deliver max quality",
+        "Stop if a round is clearly failing before 30s — quality over quantity in every session"
+      ],
+      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
     }
   ]
 }
