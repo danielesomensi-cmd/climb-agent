@@ -399,7 +399,7 @@ Tabella unica con TUTTI gli item tracciati.
 |----|--------|-------|------|-----------------|
 | B1 | Standalone core session | ✅ DONE | 1.75 | §2.3 |
 | B2 | Outdoor sessions / logging | ✅ DONE | 2 | §4 |
-| B3 | Plan validation vs literature | TODO (→ audit §2.2) | 1.75 | §2.2 |
+| B3 | Plan validation vs literature | ✅ DONE (→ audit §2.2 + §2.6) | 1.75 | §2.2 |
 | B4 | Load score / weekly fatigue | ✅ DONE | 1.75 | §2.5 |
 | B5 | Replanner phase-aware | ✅ DONE | 1.5 | §1 |
 | B6 | PE assessment repeater | ✅ DONE | 1.5 | §1 |
@@ -407,7 +407,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B8 | Session enrichment + modules | ✅ DONE | 1.75 | §2.3 |
 | B9 | cable_machine, leg_press | ✅ DONE | 3.1 | §1 |
 | B10 | Outdoor climbing spots | ✅ DONE | 2 | §4 |
-| B11 | Configurable test protocols | ⏩ Phase 2.5 | 2.5 | §2.6 |
+| B11 | Configurable test protocols | ⏩ future | 3.5+ | §2.6 |
 | B19 | Quick-add session | ✅ DONE | 3.2 | §3 |
 | B20 | Edit availability from Settings | ✅ DONE | 3.2 | §3 |
 | B21 | Done button status | ✅ DONE | 3.1 | §1 |
@@ -430,7 +430,7 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F10 | Trip start_date HARD | ✅ DONE | 1.75 | §2.1 |
 | F6-partial | Intent projecting mancante | ✅ DONE | 1.75 | §2.4 |
 | B28 | Cross-session recency nel resolver | ✅ DONE | 2 | §4.1 |
-| B29 | Dedicated test exercises in catalog | TODO | 2.5 | §2.6 |
+| B29a | Dedicated test exercises in catalog | ⏩ future | 3.5+ | §2.6 |
 | B-NEW | Exercise catalog audit | ✅ DONE | 2.5 | §2.6 |
 | UI-1 | Trip date picker: end_date validation | ✅ DONE | Batch 2 | §3 |
 | UI-2 | uvicorn --reload-exclude for data dir | ✅ DONE | Batch 2 | §3 |
@@ -449,7 +449,7 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-15 | Replan dialog: add intent selection | ✅ DONE | Batch 2 | §3 |
 | UI-16 | Undo session "done" status | ✅ DONE | Batch 2 | §3 |
 | UI-17 | Feedback optional + visible after submit | ✅ DONE | Batch 2 | §3 |
-| UI-18 | Exercise load/weight prescription display | TODO | 2.5 | §4 |
+| UI-18 | Exercise load/weight prescription display | TODO | next | §2.8 |
 | UI-19 | technique_focus_gym resolves wrong | ✅ DONE | Batch 1 | §2 |
 | UI-20 | Warmup variety (always shoulder_car) | TODO | 2.5 | §2.6 |
 | UI-21 | Session structure info (informational) | ℹ️ | — | — |
@@ -459,7 +459,7 @@ Tabella unica con TUTTI gli item tracciati.
 | FR-3 | Feedback badge/sticker on exercises | ✅ DONE | Batch 2 | §3 |
 | UI-23 | Gym slot priority in planner | ✅ DONE | UI-23 | §3 |
 | FR-4 | Outdoor vs gym slot priority | TODO | 2 backlog | §9.4 |
-| B29 | Undo "done" non funziona | ✅ DONE | post-2 | — |
+| B29b | Undo "done" non funziona | ✅ DONE | post-2 | — |
 | B30 | easy_climbing_deload "unknown" nel dialog | ✅ DONE | post-2 | — |
 | B31 | Add session "other" mostra solo deload | ✅ DONE | post-2 | — |
 | B32 | Feedback done non visibile in UI | ✅ DONE | post-2 | — |
