@@ -325,6 +325,27 @@ Phase 3.2 bundle: B25, B19, B20, B27, NEW-F6, NEW-F7 — all done. B11 deferred 
 | FR-1 | Outdoor as availability location | ✅ DONE | Medium | "Outdoor" option in availability grid. Outdoor slots → logging only, no resolved sessions. Links to B2 outdoor sessions. |
 | — | Report engine | ✅ DONE | Medium | Settimanale (aderenza, volume, highlight), mensile (trend, distribuzione gradi). |
 
+### §4.2 — Outdoor UI: da completare (TODO)
+
+Il backend outdoor è completo (6 endpoint funzionanti).
+Il frontend è parziale — OutdoorLogForm.tsx esiste ma non è montato. Prima di implementare, definire bene il flusso UX:
+
+**Punti aperti da decidere:**
+- Come si accede al log outdoor? (bottone in DayCard, tab dedicato, modal?)
+- Dove si vedono le sessioni outdoor passate? (sezione in Plan, tab storico, dentro Settings?)
+- Come si vedono le statistiche outdoor? (integrato in reports, pagina dedicata?)
+- Convert-slot: come funziona nella UI? (l'utente converte un giorno outdoor in gym/home)
+
+**Stato tecnico:**
+- ✅ Backend: spots CRUD, log, sessions, stats, convert-slot
+- ✅ OutdoorLogForm.tsx — completo ma non montato
+- ✅ api.ts — 6/7 funzioni presenti (manca convertOutdoorSlot)
+- ❌ Nessuna pagina /outdoor
+- ❌ DayCard mostra "Log your session" ma senza azione
+- ❌ Stats e storico non collegati
+
+Da affrontare quando si decide il design UX dell'outdoor.
+
 ### §4.1 Cross-session exercise variety (B28)
 
 Attualmente `recent_ex_ids` è inizializzato vuoto ad ogni `resolve_session()`.
