@@ -1920,7 +1920,7 @@
         "Stop when form degrades — quality over volume"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "grade_relative",
+      "load_model": "bodyweight_only",
       "focus": "body_position"
     },
     {
@@ -1970,7 +1970,7 @@
         "Stop at first sign of form breakdown — never full crimp"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "grade_relative"
+      "load_model": "bodyweight_only"
     },
     {
       "id": "campus_laddering_feet_on",
@@ -2017,7 +2017,7 @@
         "Half-crimp grip unless specifically training open-hand"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "grade_relative"
+      "load_model": "bodyweight_only"
     },
     {
       "id": "campus_bumps",
@@ -2066,7 +2066,7 @@
         "3 sets per side, 2-3 min rest — quality over speed"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "grade_relative"
+      "load_model": "bodyweight_only"
     },
     {
       "id": "campus_double_dyno",
@@ -2117,7 +2117,7 @@
         "If you miss or straight-arm catch — stop immediately"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "grade_relative"
+      "load_model": "bodyweight_only"
     },
     {
       "id": "limit_bouldering",
@@ -6815,6 +6815,8 @@
         "work_seconds": 30,
         "rest_between_reps_seconds": 30,
         "rest_between_sets_seconds": 600,
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": -2,
         "notes": "6 intervals of 30s all-out / 30s rest = 1 set. 10 min rest between sets. 2-4 sets total (well-conditioned climbers only). RPE 9-10/10 during work. Climb intuitive open-hold style — no set problems. Use smallest holds possible without falling. As you fatigue, move to bigger holds rather than stopping."
       },
       "stress_tags": {
@@ -6823,7 +6825,7 @@
         "cns": "very_high",
         "skin": "high"
       },
-      "load_model": "bodyweight_only",
+      "load_model": "grade_relative",
       "description": "Hörst 30/30 intervals: 30 seconds all-out climbing alternating with 30 seconds rest, 6 intervals = 1 round. Patented by Eric Hörst as the elite PE protocol that exhausts alactic power while building aerobic power (to drive PCr recovery) without excessive lactic accumulation. Done on spray walls or system boards — no set problems, climb intuitively at max intensity. Contraindicated early in training cycles; program 2-4 weeks max before performance phase. (Hörst trainingforclimbing.com; Cameron Horst climbing.com)",
       "cues": [
         "30s work: absolute maximum intensity — the smallest holds you can hold without falling",
