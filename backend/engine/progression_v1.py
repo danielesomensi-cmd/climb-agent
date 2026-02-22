@@ -21,8 +21,43 @@ WHOLE_FONT_GRADES: List[str] = [
 ]
 _WHOLE_GRADE_TO_INDEX = {g: i for i, g in enumerate(WHOLE_FONT_GRADES)}
 
-LOAD_BASED_EXERCISES = {"max_hang_5s", "weighted_pullup", "pullup"}
+LOAD_BASED_EXERCISES = {"max_hang_5s", "weighted_pullup"}
 GRADE_BASED_EXERCISES = {"limit_bouldering"}
+EXTERNAL_LOAD_EXERCISES = {
+    "barbell_row", "bench_press", "face_pull", "farmers_carry",
+    "overhead_press", "split_squat", "turkish_getup",
+}
+EXTERNAL_LOAD_FALLBACK_PCT_BW = {
+    "barbell_row": 0.30,
+    "bench_press": 0.40,
+    "face_pull": 0.08,
+    "farmers_carry": 0.30,
+    "overhead_press": 0.25,
+    "split_squat": 0.15,
+    "turkish_getup": 0.15,
+}
+HANGBOARD_TOTAL_LOAD_EXERCISES = {
+    "critical_force_test", "dead_hang_easy", "density_hangs",
+    "hangboard_moving_hangs", "horst_7_53", "long_duration_hang",
+    "lopez_subhangs", "max_hang_10s", "max_hang_7s", "max_hang_ladder",
+    "med_test", "one_arm_hang_assisted", "repeater_15_15", "repeater_hang_7_3",
+}
+HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
+    "critical_force_test": 0.80,
+    "dead_hang_easy": 0.50,
+    "density_hangs": 0.65,
+    "hangboard_moving_hangs": 0.55,
+    "horst_7_53": 0.70,
+    "long_duration_hang": 0.55,
+    "lopez_subhangs": 0.75,
+    "max_hang_10s": 0.85,
+    "max_hang_7s": 0.88,
+    "max_hang_ladder": 0.80,
+    "med_test": 0.70,
+    "one_arm_hang_assisted": 0.85,
+    "repeater_15_15": 0.65,
+    "repeater_hang_7_3": 0.70,
+}
 SURFACE_PRIORITY = ("board_kilter", "spraywall", "gym_boulder")
 VALID_FEEDBACK = {"very_easy", "easy", "ok", "hard", "very_hard"}
 LEGACY_DIFFICULTY_MAP = {
@@ -34,6 +69,13 @@ LEGACY_DIFFICULTY_MAP = {
     "fail": "very_hard",
 }
 
+DEFAULT_ADJUSTMENT_POLICY = {
+    "very_easy": {"pct_range": [0.10, 0.20]},
+    "easy": {"pct_range": [0.05, 0.10]},
+    "ok": {"pct_range": [0.00, 0.05]},
+    "hard": {"pct_range": [-0.05, 0.00]},
+    "very_hard": {"pct_range": [-0.15, -0.05]},
+}
 
 
 def canonical_feedback_label(item: Dict[str, Any]) -> str:
@@ -53,6 +95,10 @@ def canonical_feedback_label(item: Dict[str, Any]) -> str:
 
 def _round_half_step(value: float) -> float:
     return round(value / 0.5) * 0.5
+
+
+def _get_bodyweight(user_state: Dict[str, Any]) -> float:
+    return float(user_state.get("bodyweight_kg") or ((user_state.get("body") or {}).get("weight_kg") or 0.0))
 
 
 def _parse_day(value: str | None) -> Optional[datetime]:
@@ -233,7 +279,7 @@ def _best_entry(user_state: Dict[str, Any], exercise_id: str, setup: Dict[str, A
 
 
 def _max_hang_suggested(user_state: Dict[str, Any], prescription: Dict[str, Any], exercise_attrs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    bodyweight = float(user_state.get("bodyweight_kg") or ((user_state.get("body") or {}).get("weight_kg") or 0.0))
+    bodyweight = _get_bodyweight(user_state)
     attrs = exercise_attrs or {}
     intensity = float(prescription.get("intensity_pct_of_total_load") or attrs.get("intensity_pct") or 0.9)
     baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
@@ -247,6 +293,31 @@ def _max_hang_suggested(user_state: Dict[str, Any], prescription: Dict[str, Any]
         "suggested_total_load_kg": target_total,
         "suggested_external_load_kg": suggested_external,
         "suggested_rep_scheme": f"{prescription.get('sets', 6)}x{work_s}s",
+    }
+
+
+def _hangboard_suggested(user_state: Dict[str, Any], exercise_id: str, prescription: Dict[str, Any], exercise_attrs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Compute suggested load for hangboard total_load exercises (not max_hang_5s)."""
+    bodyweight = _get_bodyweight(user_state)
+    attrs = exercise_attrs or {}
+    intensity = prescription.get("intensity_pct_of_total_load")
+    if intensity is None:
+        intensity = attrs.get("intensity_pct")
+    if intensity is None:
+        intensity = HANGBOARD_DEFAULT_INTENSITY_PCT.get(exercise_id, 0.70)
+    intensity = float(intensity)
+    baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
+    baseline = baselines[0] if baselines else {}
+    max_total = float(baseline.get("max_total_load_kg") or bodyweight)
+    target_total = _round_half_step(max_total * intensity)
+    suggested_external = _round_half_step(target_total - bodyweight)
+    work_s = prescription.get('work_seconds') or prescription.get('hang_seconds', 7)
+    sets = prescription.get('sets') or (prescription.get('sets_range') or [4])[0]
+    return {
+        "schema_version": "progression_targets.v1",
+        "suggested_total_load_kg": target_total,
+        "suggested_external_load_kg": suggested_external,
+        "suggested_rep_scheme": f"{sets}x{work_s}s",
     }
 
 
@@ -270,7 +341,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     inject_source.update(inst.get("suggested") or {})
                     setup, _ = _progression_setup_and_key(ex_id, inject_source)
                     entry = _best_entry(user_state, ex_id, setup, out.get("date") or "")
-                    bodyweight = float(user_state.get("bodyweight_kg") or ((user_state.get("body") or {}).get("weight_kg") or 0.0))
+                    bodyweight = _get_bodyweight(user_state)
 
                     if entry and entry.get("next_external_load_kg") is not None:
                         external = _round_half_step(float(entry["next_external_load_kg"]))
@@ -319,6 +390,52 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     "intensity_label": intensity,
                 }
 
+            # Grade-relative exercises with grade_ref (excludes limit_bouldering which has its own logic above)
+            grade_ref = prescription.get("grade_ref")
+            if grade_ref and ex_id != "limit_bouldering":
+                grades = ((user_state.get("assessment") or {}).get("grades") or {})
+                ref_grade_raw = grades.get(grade_ref)
+                if ref_grade_raw is not None:
+                    # Normalize: lead grades are lowercase French (e.g. "7a+"), convert to uppercase Font
+                    ref_grade_str = str(ref_grade_raw).strip().upper().replace(" ", "")
+                    grade_offset = int(prescription.get("grade_offset") or 0)
+                    suggested_grade = step_grade(ref_grade_str, grade_offset)
+                    suggested["suggested_grade"] = suggested_grade
+                    suggested["grade_ref"] = grade_ref
+                    suggested["grade_offset"] = grade_offset
+
+            # External load exercises (barbell_row, bench_press, etc.)
+            if ex_id in EXTERNAL_LOAD_EXERCISES:
+                entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
+                if entry and entry.get("next_external_load_kg") is not None:
+                    next_load = _round_half_step(float(entry["next_external_load_kg"]))
+                else:
+                    bw = _get_bodyweight(user_state)
+                    pct = EXTERNAL_LOAD_FALLBACK_PCT_BW.get(ex_id, 0.15)
+                    next_load = _round_half_step(bw * pct)
+                reps = prescription.get("reps") or (prescription.get("reps_range") or [8])[0]
+                sets = prescription.get("sets") or (prescription.get("sets_range") or [3])[0]
+                suggested.update({
+                    "schema_version": "progression_targets.v1",
+                    "suggested_external_load_kg": next_load,
+                    "suggested_rep_scheme": f"{sets}x{reps}",
+                })
+
+            # Hangboard total_load exercises (repeaters, density hangs, etc.)
+            if ex_id in HANGBOARD_TOTAL_LOAD_EXERCISES:
+                hb_suggested = _hangboard_suggested(user_state, ex_id, prescription, exercise_attrs=inst.get("attributes"))
+                suggested.update(hb_suggested)
+                entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
+                if entry and entry.get("next_external_load_kg") is not None:
+                    bodyweight = _get_bodyweight(user_state)
+                    external = _round_half_step(float(entry["next_external_load_kg"]))
+                    suggested["suggested_external_load_kg"] = external
+                    suggested["suggested_total_load_kg"] = _round_half_step(bodyweight + external)
+                elif entry and entry.get("next_total_load_kg") is not None:
+                    total = _round_half_step(float(entry["next_total_load_kg"]))
+                    suggested["suggested_total_load_kg"] = total
+                    suggested["suggested_external_load_kg"] = _round_half_step(total - _get_bodyweight(user_state))
+
             if suggested:
                 inst["suggested"] = suggested
 
@@ -327,7 +444,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
 
 def _rule_midpoint_pct(user_state: Dict[str, Any], label: str) -> float:
     rules = (((user_state.get("working_loads") or {}).get("rules") or {}).get("adjustment_policy") or {})
-    policy = rules.get(label) or {}
+    policy = rules.get(label) or DEFAULT_ADJUSTMENT_POLICY.get(label) or {}
     pct_range = policy.get("pct_range") or [0.0, 0.0]
     if len(pct_range) != 2:
         return 0.0
@@ -433,7 +550,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
     actual = log_entry.get("actual") or {}
     feedback_items = actual.get("exercise_feedback_v1") or []
     date_value = str(log_entry.get("date") or "")
-    bodyweight = float(updated.get("bodyweight_kg") or ((updated.get("body") or {}).get("weight_kg") or 0.0))
+    bodyweight = _get_bodyweight(updated)
 
     counters = updated.setdefault("progression_counters", {})
     if not isinstance(counters, dict):
@@ -453,7 +570,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         planned_prescription = (planned_inst.get("prescription") or {}) if planned_inst else {}
         planned_target = (((planned_inst.get("suggested") or {}).get("suggested_boulder_target") or {}) if planned_inst else {})
 
-        if exercise_id in LOAD_BASED_EXERCISES:
+        if exercise_id in LOAD_BASED_EXERCISES or exercise_id in HANGBOARD_TOTAL_LOAD_EXERCISES:
             used_total = item.get("used_total_load_kg")
             used_external = item.get("used_external_load_kg")
             if used_total is None and used_external is not None:
@@ -496,6 +613,27 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 else:
                     max_hang_hard = 0
                     max_hang_easy = 0
+
+        elif exercise_id in EXTERNAL_LOAD_EXERCISES:
+            used_load = item.get("used_external_load_kg") or item.get("used_load_kg")
+            if used_load is None:
+                continue
+            base = float(used_load)
+            pct = _rule_midpoint_pct(updated, feedback_label)
+            next_load = _round_half_step(base * (1.0 + pct))
+            entry = _find_working_load_entry(updated, exercise_id, {})
+            entry.update(
+                {
+                    "exercise_id": exercise_id,
+                    "key": exercise_id,
+                    "setup": {},
+                    "last_completed": bool(item.get("completed", False)),
+                    "last_feedback_label": feedback_label,
+                    "last_external_load_kg": _round_half_step(base),
+                    "next_external_load_kg": next_load,
+                    "updated_at": date_value,
+                }
+            )
 
         elif exercise_id in GRADE_BASED_EXERCISES:
             used_grade = normalize_font_grade(item.get("used_grade"))

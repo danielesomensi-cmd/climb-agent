@@ -12,7 +12,7 @@ def _base_user_state() -> dict:
         "bodyweight_kg": 77.0,
         "baselines": {"hangboard": [{"max_total_load_kg": 102.0}]},
         "working_loads": {
-            "entries": [{"exercise_id": "pullup", "next_external_load_kg": 10.0}],
+            "entries": [{"exercise_id": "weighted_pullup", "next_external_load_kg": 10.0}],
             "rules": {
                 "feedback_scale": ["very_easy", "easy", "ok", "hard", "very_hard"],
                 "adjustment_policy": {
@@ -185,20 +185,20 @@ def test_working_load_update_from_feedback():
     user_state = _base_user_state()
     log_easy = {
         "date": "2026-01-05",
-        "planned": [{"exercise_instances": [{"exercise_id": "pullup", "prescription": {}}]}],
-        "actual": {"exercise_feedback_v1": [{"exercise_id": "pullup", "completed": True, "feedback_label": "easy", "used_external_load_kg": 10.0}]},
+        "planned": [{"exercise_instances": [{"exercise_id": "weighted_pullup", "prescription": {}}]}],
+        "actual": {"exercise_feedback_v1": [{"exercise_id": "weighted_pullup", "completed": True, "feedback_label": "easy", "used_external_load_kg": 10.0}]},
     }
     updated_easy = apply_feedback(log_easy, user_state)
-    easy_next = next(e for e in updated_easy["working_loads"]["entries"] if e["exercise_id"] == "pullup" and e.get("key") == "pullup")["next_external_load_kg"]
+    easy_next = next(e for e in updated_easy["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")["next_external_load_kg"]
     assert easy_next == 11.0
 
     log_hard = {
         "date": "2026-01-06",
-        "planned": [{"exercise_instances": [{"exercise_id": "pullup", "prescription": {}}]}],
-        "actual": {"exercise_feedback_v1": [{"exercise_id": "pullup", "completed": True, "feedback_label": "very_hard", "used_external_load_kg": 10.0}]},
+        "planned": [{"exercise_instances": [{"exercise_id": "weighted_pullup", "prescription": {}}]}],
+        "actual": {"exercise_feedback_v1": [{"exercise_id": "weighted_pullup", "completed": True, "feedback_label": "very_hard", "used_external_load_kg": 10.0}]},
     }
     updated_hard = apply_feedback(log_hard, user_state)
-    hard_next = next(e for e in updated_hard["working_loads"]["entries"] if e["exercise_id"] == "pullup" and e.get("key") == "pullup")["next_external_load_kg"]
+    hard_next = next(e for e in updated_hard["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")["next_external_load_kg"]
     assert hard_next == 9.0
 
 

@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.engine.cluster_utils import cluster_key_for_exercise, parse_date
+from backend.engine.progression_v1 import inject_targets
 
 
 # ---------------------------
@@ -752,6 +753,7 @@ def _resolve_inline_block(
             "variant": {},
             "prescription": merged,
             "attributes": ex_attrs,
+            "load_model": selected_ex.get("load_model"),
             "block_uid": block_uid,
             "source": {
                 "picked_by": f"resolver_v0.2/{chosen_by}",
@@ -1026,6 +1028,7 @@ def resolve_session(
                     "variant": variant,
                     "prescription": merged,
                     "attributes": ex_attrs,
+                    "load_model": selected_ex.get("load_model"),
                     "block_uid": block_uid,
                     "source": {
                         "picked_by": f"resolver_v0.2/{chosen_by or 'unknown'}",
@@ -1083,6 +1086,26 @@ def resolve_session(
             "exercise_instances": exercise_instances
         }
     }
+
+    # Inject progression targets (working loads, grade suggestions, etc.)
+    if user_state is not None:
+        _intent = session.get("intent") or {}
+        _intent_str = _intent if isinstance(_intent, str) else (_intent.get("primary_goal") or "")
+        pseudo_day = {
+            "date": session_ctx.get("target_date") or session_ctx.get("date") or "",
+            "sessions": [{
+                "session_id": session_id,
+                "intent": _intent_str,
+                "location": location,
+                "gym_id": gym_id,
+                "tags": session.get("tags") or {},
+                "exercise_instances": exercise_instances,
+            }],
+        }
+        enriched = inject_targets(pseudo_day, user_state)
+        enriched_ei = enriched["sessions"][0]["exercise_instances"]
+        session_instance["resolved_session"]["exercise_instances"] = enriched_ei
+        exercise_instances = enriched_ei
 
     # ---------------------------
     # P0 contract: resolution_status

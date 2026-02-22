@@ -320,6 +320,80 @@ Semantics for boulder exercises: when `grade_relative` and the exercise uses pro
 
 ---
 
+### 2.10.2 Working loads schema and feedback fields
+
+The engine stores per-exercise progression state in `user_state.working_loads`.
+
+#### `working_loads.entries[]` schema
+
+Each entry tracks the last feedback and next suggested load for one exercise (optionally scoped by setup):
+
+```json
+{
+  "exercise_id": "barbell_row",
+  "key": "barbell_row",
+  "setup": {},
+  "last_completed": true,
+  "last_feedback_label": "easy",
+  "last_external_load_kg": 25.0,
+  "next_external_load_kg": 27.0,
+  "updated_at": "2026-01-05"
+}
+```
+
+For `total_load` exercises (hangboard, weighted_pullup), entries also include `last_total_load_kg` and `next_total_load_kg`.
+
+#### `working_loads.rules.adjustment_policy`
+
+Default values (used when user has no custom policy):
+
+| label | pct_range | midpoint |
+|-------|-----------|----------|
+| very_easy | [0.10, 0.20] | +15% |
+| easy | [0.05, 0.10] | +7.5% |
+| ok | [0.00, 0.05] | +2.5% |
+| hard | [-0.05, 0.00] | -2.5% |
+| very_hard | [-0.15, -0.05] | -10% |
+
+#### `baselines.hangboard[]`
+
+Shared baseline for all hangboard exercises:
+
+```json
+{
+  "max_total_load_kg": 102.0,
+  "edge_mm": 20,
+  "grip": "half_crimp",
+  "hang_seconds": 5,
+  "load_method": "added_weight"
+}
+```
+
+#### Suggestion fields per load_model
+
+| load_model | suggested fields | source |
+|------------|-----------------|--------|
+| `total_load` | `suggested_total_load_kg`, `suggested_external_load_kg`, `suggested_rep_scheme` | baselines.hangboard → working_loads |
+| `external_load` | `suggested_external_load_kg`, `suggested_rep_scheme` | working_loads → BW% fallback |
+| `grade_relative` | `suggested_grade`, `grade_ref`, `grade_offset` | assessment.grades + prescription_defaults |
+| `grade_relative` (limit_bouldering) | `suggested_boulder_target` (with surface) | special surface-aware logic |
+| `bodyweight_only` | — | no suggestion needed |
+
+#### Feedback fields required per load_model (UI-24)
+
+When submitting `exercise_feedback_v1`, the frontend must include load/grade data for the engine to update working_loads:
+
+| load_model | required feedback fields | notes |
+|------------|------------------------|-------|
+| `total_load` | `used_total_load_kg` **or** `used_external_load_kg` | engine derives the other from bodyweight |
+| `external_load` | `used_external_load_kg` | — |
+| `grade_relative` (limit_bouldering) | `used_grade`, `surface_selected` | — |
+| `bodyweight_only` | — | feedback_label only |
+
+If these fields are missing, `apply_feedback` does a silent skip (no crash, no update).
+
+---
+
 ### 2.11 Category
 
 `category` is a coarse grouping for UI display and reporting. It is NOT used for selection filtering.
