@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-21 (Phase 2.5 in progress — hangboard audit complete)
+> Last updated: 2026-02-21 (Phase 2.5 catalog audit COMPLETE — 143 exercises, 377 tests)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -45,6 +45,15 @@
 - NEW-F7 finger compensation after override
 - B11 configurable test protocols → deferred to Phase 2.5
 - ~290 test verdi, 17 endpoints
+
+### Phase 2.5: Catalog audit ✅
+- Audit sistematico catalogo esercizi vs letteratura (Hörst, Lattice, Eva López, Tension)
+- 10 patch applicati: main_strength, grade_ref, core, technique, endurance, power_endurance, strength_accessory, endurance_addendum, flexibility, remaining (complementary + conditioning + mobility)
+- 135 → 143 esercizi (+8 nuovi, -1 rimosso lattice_lactate_8x8)
+- grade_ref + grade_offset su 23/28 esercizi grade_relative (5 campus esclusi by design)
+- Vocabulary aggiornato: §2.10.1 grade prescription, pattern locomotion
+- Bug fix: 11 prescription_defaults corretti, 1 load_model fix (barbell_row), 2 pattern fix (jump_rope, bear_crawl)
+- 377 test verdi
 
 ---
 
@@ -214,66 +223,73 @@ Implementato 2026-02-17. Approccio a due livelli:
 
 Necessario per: overtraining monitoring, adaptive deload input, UI visualization.
 
-### §2.6 Exercise Catalog Audit (Phase 2.5 — in corso)
+### §2.6 Exercise Catalog Audit (Phase 2.5) ✅ COMPLETE
 
 Audit sistematico del catalogo esercizi contro la literature review
 (`docs/literature_review_climbing_training.md`, 19 sezioni).
-Da fare DOPO Phase 2 (tracking) per beneficiare dei dati di feedback reali.
 
-**Hangboard catalog audit complete (2026-02-21):** 5 esercizi aggiunti (pronator_terres_isometric_hold, stick_pronation_supination_eccentric, heel_hook_specific_drill, lattice_lactate_8x8, grip_transitions_half_to_open), validati contro vocabulary_v1.md. Fix contraindications pre-esistenti su 8 esercizi.
+**Completato 2026-02-21.** 10 patch applicati in sequenza, 377 test verdi.
 
-Include anche:
-- **NEW-F1** (prescription climbing vuota): aggiungere suggested_grade_offset, volume, rest_between agli esercizi climbing.
-- **B11** (configurable test protocols): 5s vs 7s hang, 1RM vs 2RM pullup con conversione automatica. Deferred from Phase 3.2.
-- **Test exercise expansion**: aggiungere esercizi con `is_test: true` per coprire più assi dell'assessment. Phase 1.75 ha creato test_repeater_7_3 e test_max_weighted_pullup come session files, ma servono più esercizi test specializzati.
-- **UI-9** (limitation filtering verification): verificare che resolve_session.py controlli limitations.active_flags contro controindicazioni esercizi. Se no → implementare.
-- **UI-20** (warmup exercise variety): warmup template pool ha opzioni limitate o tie-break seleziona sempre shoulder_car. Espandere pool o migliorare selezione.
+| Metrica | Prima | Dopo |
+|---------|-------|------|
+| Esercizi totali | 135 | 143 |
+| Nuovi aggiunti | — | +9 (copenhagen_plank, hangboard_moving_hangs, thirty_thirty_intervals, frenchies, uneven_grip_pullup, one_on_one_off_intervals, aerobic_pyramid_intervals, hip_flexor_couch_stretch, lat_overhead_stretch) |
+| Rimossi | — | -1 (lattice_lactate_8x8 — protocollo non standard) |
+| Bug fix prescription | — | 11 (work_seconds, sets, rest, load_model, intensity) |
+| Enrichment (desc/cues/video) | — | ~80 esercizi aggiornati |
+| grade_ref/grade_offset | 0 | 23/28 grade_relative (5 campus esclusi) |
+| Vocabulary updates | — | §2.10.1 grade prescription, locomotion pattern |
 
-Scope:
-1. **Qualità prescription**: parametri (set, rep, rest, durata) coerenti con la letteratura?
-   Esercizi con notes generiche che meritano prescrizioni precise?
-   Confrontare con raccomandazioni specifiche di Hörst, Lattice, Eva López.
-   Esempio: un esercizio di max hang ha rest_seconds coerente con i 3-5 min
-   raccomandati dalla letteratura? I repeater hanno il protocollo 7/3 corretto?
-2. **Gap di copertura**: mancano esercizi per aree coperte dalla literature review?
-   Verificare per ogni sezione della literature review (§1-19):
-   - §1-4: Periodizzazione e hangboard — protocolli mancanti?
-   - §5-8: Sessioni serali e complementary — esercizi gym mancanti?
-   - §9-13: Core, handstand, technique — varianti sufficienti?
-   - §14-16: Conditioning, ARC — esercizi specifici mancanti?
-   - §17-18: Flexibility e cooldown — copertura sufficiente post-B8?
-3. **Consistenza interna**: categorie, pattern, stress_tags, fatigue_cost
-   calibrati in modo uniforme e coerente tra esercizi simili?
-   Esempio: tutti gli esercizi di max hang hanno fatigue_cost simile?
-   Tutti i core exercises hanno stress_tags coerenti tra loro?
-4. **Validazione letteratura**: ogni esercizio ha parametri allineati con
-   le raccomandazioni delle fonti (Hörst, Lattice, Eva López, ecc.)?
-   Focus su: intensità, volume, rest, frequenza raccomandata.
-5. **Check tecnici**: equipment_required coerente, esercizi mai selezionati
-   dal resolver, allineamento resistance_band vs band, pattern non coperti.
-6. **Dedicated test exercises**: Create exercises with `"is_test": true` flag in the catalog
-   for assessment sessions. Currently test sessions (test_max_hang_5s, test_repeater_7_3,
-   test_max_weighted_pullup) resolve through standard training templates. Dedicated test
-   exercises would provide:
-   - Clear separation between training and assessment in the catalog
-   - Specific test protocols (precise prescription, not training-oriented)
-   - Clean tracking: distinguish "this was a test" from "this was training" in logs
-   - Required tests: max_hang_5s (finger_strength), repeater_7_3 (power_endurance)
-   - Optional tests: max_weighted_pullup (pulling_strength),
-     continuous_climbing_minutes (endurance)
-   - technique and body_composition remain self-eval (no automated test exercise)
-   Depends on Phase 2 (tracking) to get full value from the separation.
+**Hangboard audit (prima fase):** 5 esercizi aggiunti, fix contraindications su 8 esercizi.
 
-Dipendenza: il tracking (Phase 2) fornirà dati reali di feedback per informare
-l'audit — se un esercizio ha prescrizioni sbagliate, il feedback lo rivelerà.
+**Remaining items moved to future phases:**
+- **B11** (configurable test protocols): → Phase 3.5 or later
+- **B29** (dedicated test exercises): → Phase 3.5 or later
+- **UI-9** (limitation filtering): → next implementation phase
+- **UI-20** (warmup variety): → next implementation phase
 
-Posizionamento: Phase 2.5 (tra tracking e UI polish).
+### §2.7 Grade resolver (TODO — next implementation step)
+
+**Finding from Phase 2.5 audit**: `resolve_session.py` does NOT compute `suggested_grade` for grade_relative exercises, even though the catalog now has `grade_ref` and `grade_offset` on 23 exercises.
+
+**Current state**:
+- Catalog: grade_ref + grade_offset populated on 23/28 grade_relative exercises ✅
+- Vocabulary: §2.10.1 documents the fields and semantics ✅
+- Tests: 4 validation tests enforce correctness ✅
+- Resolver: does NOT read grade_ref/grade_offset — **gap** ❌
+- Progression: `progression_v1.py` has grade logic but only for feedback, not prescription
+
+**Implementation needed** (in `resolve_session.py`):
+1. Read `grade_ref` and `grade_offset` from exercise `prescription_defaults`
+2. Look up the reference grade from `user_state.assessment.grades`
+3. Apply offset using a grade-to-int scale (6a=0, 6b=1, 6c=2, 7a=3, ...)
+4. Output `suggested_grade` field in the resolved exercise output
+5. Add tests for the grade computation logic
+
+**Dipendenza**: nessuna — il catalogo è pronto, serve solo il codice nel resolver.
+
+### §2.8 Working loads (UI-18 — TODO)
+
+**UI-18**: resolver calculates initial loads from assessment tests. Frontend displays suggested weight.
+
+**Current state**:
+- `resolve_session.py` falls back to assessment test data for suggested loads when baselines are empty
+- `working_loads` in user_state are populated by the closed loop after feedback
+- Frontend does NOT display suggested weight/load per exercise
+
+**Implementation needed**:
+1. §2.7 (grade resolver) for grade_relative exercises
+2. Load computation from assessment tests for total_load/external_load exercises
+3. API output includes `suggested_load` per exercise
+4. Frontend displays suggested load in session detail view
+
+**Dipendenza**: §2.7 (grade resolver) è prerequisito per la parte grade_relative.
 
 ---
 
 > **UI Test (feb 2026)**: 22 findings from manual end-to-end test.
 > Batch 1 (4 P0/P1), Batch 1b (2 location fixes), Batch 2 (18 UX items), UI-23 (gym priority).
-> All done except: UI-9 (Phase 2.5), UI-18 (Phase 2), UI-20 (Phase 2.5), FR-1 (Phase 2).
+> All done except: UI-9 (next phase), UI-18 (§2.8), UI-20 (next phase).
 > See §8 for full status.
 
 ## §3 — Phase 3.2: UI polish + adaptive ✅ (complete — B11 deferred to Phase 2.5)
@@ -401,7 +417,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B25 | Adaptive replanning after feedback | ✅ DONE | 3.2 | §3 |
 | B26 | Test isolation fixtures | ✅ DONE | 3.1 | §1 |
 | B27 | Equipment label single source | ✅ DONE | 3.2 | §3 |
-| NEW-F1 | Prescription climbing vuota | TODO | 2.5 | §2.6 |
+| NEW-F1 | Prescription climbing vuota | ⏩ §2.7 | 2.5→next | §2.7 |
 | NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
 | NEW-F3a | Test sessions scheduling | ✅ DONE | 1.75 | §2.4 |
 | NEW-F3b | assessment.tests closed loop | TODO | 2.5 | §2.4 |
@@ -415,7 +431,7 @@ Tabella unica con TUTTI gli item tracciati.
 | F6-partial | Intent projecting mancante | ✅ DONE | 1.75 | §2.4 |
 | B28 | Cross-session recency nel resolver | ✅ DONE | 2 | §4.1 |
 | B29 | Dedicated test exercises in catalog | TODO | 2.5 | §2.6 |
-| B-NEW | Exercise catalog audit | 🟡 IN PROGRESS | 2.5 | §2.6 |
+| B-NEW | Exercise catalog audit | ✅ DONE | 2.5 | §2.6 |
 | UI-1 | Trip date picker: end_date validation | ✅ DONE | Batch 2 | §3 |
 | UI-2 | uvicorn --reload-exclude for data dir | ✅ DONE | Batch 2 | §3 |
 | UI-3 | Settings: weight/height not displayed | ✅ DONE | Batch 2 | §3 |
