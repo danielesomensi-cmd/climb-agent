@@ -6,14 +6,19 @@ __pycache__/
 # virtual env
 .venv/
 
+# claude code
+.claude/
+
 # environment
 .env
+frontend/.env.local
 
 # build / generated artifacts
 out/
 output/
 tmp/
 data/logs/
+backend/data/users/
 
 # local backups
 *.bak
