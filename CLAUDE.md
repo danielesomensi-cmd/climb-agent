@@ -220,6 +220,7 @@ source .venv/bin/activate && python -m pytest backend/tests -q
   - Deploy: automatico da push su main
   - Config: `Procfile` + `requirements.txt` in root
   - Env vars: `PYTHONPATH=.`
+  - Railway usa la porta 8080 internamente (`$PORT=8080`). Il dominio pubblico è mappato sulla porta 8080. Non modificare la porta nel Procfile.
 
 ### Come deployare una modifica
 
