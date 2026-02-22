@@ -1,5 +1,9 @@
 # CLAUDE.md — climb-agent
 
+## Author
+
+Daniele **Somensi** (con la S, non Somenzi).
+
 ## Project context
 
 climb-agent is a deterministic climbing training engine. It generates personalised weekly training plans, resolves abstract sessions into concrete exercises with sets/reps/load, and adapts progression through closed-loop feedback. No LLM is used at runtime — all logic is rule-based and testable.
@@ -200,6 +204,44 @@ Tests live in `backend/tests/`. The `conftest.py` adds the repo root to `sys.pat
 ```bash
 source .venv/bin/activate && python -m pytest backend/tests -q
 ```
+
+## Deployment
+
+### Architettura deployed
+
+- **Frontend**: Next.js PWA su Vercel
+  - URL: https://climb-agent.vercel.app
+  - Deploy: automatico da push su main
+  - Config: `frontend/` come root directory
+  - Env vars: `NEXT_PUBLIC_API_URL=https://climb-agent-production.up.railway.app`
+
+- **Backend**: FastAPI/uvicorn su Railway
+  - URL: https://climb-agent-production.up.railway.app
+  - Deploy: automatico da push su main
+  - Config: `Procfile` + `requirements.txt` in root
+  - Env vars: `PYTHONPATH=.`
+
+### Come deployare una modifica
+
+`git push` su main → Railway e Vercel si aggiornano automaticamente entro 2-3 minuti.
+
+### Multi-user
+
+- Ogni utente ha UUID generato da `crypto.randomUUID()`, salvato in localStorage come `climb_user_id`
+- Inviato come header `X-User-ID` su ogni chiamata API
+- State salvato in `backend/data/users/{user_id}/user_state.json`
+
+### Sviluppo locale
+
+```bash
+# Backend
+uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8000
+
+# Frontend
+cd frontend && npm run dev   # porta 3000
+```
+
+Senza header `X-User-ID` → fallback a `backend/data/user_state.json` (per dev/test locali).
 
 ## Documentation alignment
 

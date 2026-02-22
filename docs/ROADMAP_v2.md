@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-21 (Phase 2.5 catalog audit COMPLETE — 143 exercises, 377 tests)
+> Last updated: 2026-02-22 (Phase 4a multi-user UUID — 143 exercises, 395 tests)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -467,6 +467,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B34 | Feedback badge sessione mancante in Today view | TODO | post-2 | — |
 | B35 | Feedback esercizio singolo non visibile (FR-3 incompleto) | TODO | post-2 | — |
 | B36 | "— unknown" type label in Add session all-sessions list | ✅ DONE | post-2 | — |
+| UI-24 | Feedback con carico/grado — pre-popolare dal suggested | TODO | P1 | §2.8 |
 
 ---
 
@@ -523,7 +524,31 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 
 ---
 
-## §10 — Regole di allineamento
+## §10 — Deployment & Distribution
+
+### Phase 4a — Beta ✅
+
+- **Frontend**: https://climb-agent.vercel.app (Vercel, auto-deploy da main, root dir: `frontend/`)
+- **Backend**: https://climb-agent-production.up.railway.app (Railway, auto-deploy da main, `Procfile` + `requirements.txt`)
+- **Multi-user**: UUID v4 generato dal frontend al primo accesso, salvato in `localStorage`, inviato come header `X-User-ID` su ogni chiamata API
+- **Per-user state**: `backend/data/users/{user_id}/user_state.json` (copia da template al primo accesso)
+- **CORS**: `http://localhost:3000` + `https://climb-agent.vercel.app`
+- **No auth, no database, no pagamenti** in questa fase
+
+### Phase 4b — Produzione
+
+- **Auth**: Clerk (Next.js native)
+- **DB**: Supabase Postgres
+- **Pagamenti**: Stripe (subscription)
+
+### Phase 4c — App store (futuro)
+
+- **Capacitor**: wrappa la PWA esistente per iOS/Android
+- Zero riscrittura del codice
+
+---
+
+## §11 — Regole di allineamento
 
 1. **Dopo ogni sessione di sviluppo**: aggiornare questo file (stati, nuovi item) E
    aggiornare la sezione Roadmap in PROJECT_BRIEF.md (solo stati fasi ✅/🔲)

@@ -1,7 +1,10 @@
 """Climb-agent API — FastAPI application."""
 
-from fastapi import FastAPI
+import logging
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from backend.api.routers import (
     assessment,
@@ -18,16 +21,31 @@ from backend.api.routers import (
     week,
 )
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="climb-agent", version="0.1.0")
 
-# CORS — allow Next.js dev server
+# CORS — allow Next.js dev server + Vercel production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "https://climb-agent.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch unhandled exceptions and return a clean JSON error."""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 # Mount routers
 app.include_router(state.router)
