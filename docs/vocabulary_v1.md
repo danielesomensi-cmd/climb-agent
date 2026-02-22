@@ -303,7 +303,7 @@ The "+" modifier is not an increment — 6a+ falls between 6a and 6b.
 
 Examples:
 - `lead_max_os=7c`, offset=-2 → prescribed grade: **7a**
-- `boulder_max_rp=6A`, offset=-2 → prescribed grade: **5C**
+- `boulder_max_rp=6A`, offset=-2 → prescribed grade: **5B**
 
 Reference values (from literature):
 

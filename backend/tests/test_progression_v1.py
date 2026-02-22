@@ -178,7 +178,7 @@ def test_boulder_grade_progression_changes_next_target():
     new_grade = limit_2["suggested"]["suggested_boulder_target"]["target_grade"]
 
     assert normalize_font_grade(base_grade) is not None
-    assert new_grade == "7A"
+    assert new_grade == "6C"  # 7B - 2 whole grades (very_hard)
 
 
 def test_working_load_update_from_feedback():
@@ -258,11 +258,15 @@ def test_two_hard_feedbacks_enqueue_retest_and_retest_updates_official_test():
 
 def test_font_grade_stepper():
     assert normalize_font_grade("7a") == "7A"
-    assert step_grade("7A", 1) == "7A+"
+    # step_grade uses whole-grade scale (vocabulary §2.10.1)
+    assert step_grade("7A", 1) == "7B"
+    assert step_grade("7B", 1) == "7C"
+    assert step_grade("7C", -1) == "7B"
+    assert step_grade("7C", -2) == "7A"
+    # '+' inputs are stripped to base whole grade
     assert step_grade("7A+", 1) == "7B"
-    assert step_grade("7B", 1) == "7B+"
     assert step_grade("7B+", 1) == "7C"
-    assert step_grade("7C", -1) == "7B+"
+    assert step_grade("7C+", -2) == "7A"
 
 
 def test_gym_limit_bouldering_requires_surface(tmp_path):

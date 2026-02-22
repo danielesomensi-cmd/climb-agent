@@ -11,6 +11,16 @@ FONT_GRADES: List[str] = [
     "8A", "8A+", "8B", "8B+", "8C", "8C+",
 ]
 FONT_GRADE_TO_INDEX = {grade: idx for idx, grade in enumerate(FONT_GRADES)}
+
+# Whole-grade scale for step_grade (vocabulary §2.10.1: no half-grades).
+WHOLE_FONT_GRADES: List[str] = [
+    "5A", "5B", "5C",
+    "6A", "6B", "6C",
+    "7A", "7B", "7C",
+    "8A", "8B", "8C",
+]
+_WHOLE_GRADE_TO_INDEX = {g: i for i, g in enumerate(WHOLE_FONT_GRADES)}
+
 LOAD_BASED_EXERCISES = {"max_hang_5s", "weighted_pullup", "pullup"}
 GRADE_BASED_EXERCISES = {"limit_bouldering"}
 SURFACE_PRIORITY = ("board_kilter", "spraywall", "gym_boulder")
@@ -103,10 +113,17 @@ def normalize_font_grade(grade: str | None) -> Optional[str]:
 
 
 def step_grade(grade: str, steps: int) -> str:
-    normalized = normalize_font_grade(grade) or "6C"
-    idx = FONT_GRADE_TO_INDEX[normalized] + int(steps)
-    idx = max(0, min(len(FONT_GRADES) - 1, idx))
-    return FONT_GRADES[idx]
+    """Apply an integer offset on the whole-grade scale (vocabulary 2.10.1).
+
+    Input + modifiers are stripped (rounded to the base whole grade).
+    Output is always a whole grade without +.
+    """
+    cleaned = str(grade).strip().upper().replace(' ', '').replace('+', '')
+    if cleaned not in _WHOLE_GRADE_TO_INDEX:
+        cleaned = '6C'
+    idx = _WHOLE_GRADE_TO_INDEX[cleaned] + int(steps)
+    idx = max(0, min(len(WHOLE_FONT_GRADES) - 1, idx))
+    return WHOLE_FONT_GRADES[idx]
 
 
 def _extract_grade_benchmark(user_state: Dict[str, Any]) -> str:
