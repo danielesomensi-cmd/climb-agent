@@ -59,7 +59,7 @@ export function ExerciseCard({ exercise, feedbackLevel }: ExerciseCardProps) {
       <CardHeader className="py-2.5">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="text-sm truncate">{exercise.name}</CardTitle>
+            <CardTitle className="text-sm">{exercise.name}</CardTitle>
             {feedbackLevel && FEEDBACK_COLORS[feedbackLevel] && (
               <span
                 className={`inline-block size-2 shrink-0 rounded-full ${FEEDBACK_COLORS[feedbackLevel]}`}
