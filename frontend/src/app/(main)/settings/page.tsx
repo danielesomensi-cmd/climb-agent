@@ -7,6 +7,8 @@ import { useUserState } from "@/lib/hooks/use-state";
 import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot } from "@/lib/api";
 import type { OutdoorSpot } from "@/lib/types";
 import { AvailabilityEditor } from "@/components/settings/availability-editor";
+import { EquipmentEditor } from "@/components/settings/equipment-editor";
+import { GoalEditor } from "@/components/settings/goal-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +33,10 @@ export default function SettingsPage() {
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingAvailability, setEditingAvailability] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState(false);
+  const [equipmentSavedOpen, setEquipmentSavedOpen] = useState(false);
+  const [goalEditorOpen, setGoalEditorOpen] = useState(false);
+  const [savingGoal, setSavingGoal] = useState(false);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [addingSpot, setAddingSpot] = useState(false);
   const [newSpotName, setNewSpotName] = useState("");
@@ -94,6 +100,36 @@ export default function SettingsPage() {
       setEditingAvailability(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to save availability");
+    }
+  }
+
+  /** Save updated equipment */
+  async function handleSaveEquipment(newEquipment: Record<string, unknown>) {
+    setActionError(null);
+    try {
+      await putState({ equipment: newEquipment });
+      await refresh();
+      setEditingEquipment(false);
+      setEquipmentSavedOpen(true);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to save equipment");
+    }
+  }
+
+  /** Save updated goal and regenerate plan */
+  async function handleGoalConfirm(newGoal: Record<string, unknown>) {
+    setSavingGoal(true);
+    setActionError(null);
+    try {
+      await putState({ goal: newGoal });
+      await computeAssessment(state?.assessment, newGoal);
+      await generateMacrocycle();
+      await refresh();
+      setGoalEditorOpen(false);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to update goal");
+    } finally {
+      setSavingGoal(false);
     }
   }
 
@@ -208,7 +244,17 @@ export default function SettingsPage() {
             {/* ----- Goal ----- */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Goal</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Goal</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setGoalEditorOpen(true)}
+                  >
+                    Edit
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 <InfoRow
@@ -238,19 +284,60 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Equipment ----- */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Equipment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {equipment.home_enabled && (
-                  <div className="mb-2">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
-                      Home
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {equipment.home && equipment.home.length > 0
-                        ? equipment.home.map((item) => (
+            {editingEquipment ? (
+              <EquipmentEditor
+                initialEquipment={equipment}
+                onSave={handleSaveEquipment}
+                onCancel={() => setEditingEquipment(false)}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">Equipment</CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => setEditingEquipment(true)}
+                    >
+                      Edit
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {equipment.home_enabled && (
+                    <div className="mb-2">
+                      <p className="text-xs font-medium text-muted-foreground mb-1">
+                        Home
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {equipment.home && equipment.home.length > 0
+                          ? equipment.home.map((item) => (
+                              <Badge
+                                key={item}
+                                variant="outline"
+                                className="text-[10px]"
+                              >
+                                {item.replace(/_/g, " ")}
+                              </Badge>
+                            ))
+                          : (
+                              <span className="text-xs text-muted-foreground">
+                                None
+                              </span>
+                            )}
+                      </div>
+                    </div>
+                  )}
+                  {equipment.gyms &&
+                    equipment.gyms.map((gym, index) => (
+                      <div key={`gym-${index}`} className="mb-2">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          {gym.name || `Gym ${index + 1}`}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {gym.equipment.map((item) => (
                             <Badge
                               key={item}
                               variant="outline"
@@ -258,42 +345,19 @@ export default function SettingsPage() {
                             >
                               {item.replace(/_/g, " ")}
                             </Badge>
-                          ))
-                        : (
-                            <span className="text-xs text-muted-foreground">
-                              None
-                            </span>
-                          )}
-                    </div>
-                  </div>
-                )}
-                {equipment.gyms &&
-                  equipment.gyms.map((gym, index) => (
-                    <div key={`gym-${index}`} className="mb-2">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">
-                        {gym.name || `Gym ${index + 1}`}
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {gym.equipment.map((item) => (
-                          <Badge
-                            key={item}
-                            variant="outline"
-                            className="text-[10px]"
-                          >
-                            {item.replace(/_/g, " ")}
-                          </Badge>
-                        ))}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                {!equipment.home_enabled &&
-                  (!equipment.gyms || equipment.gyms.length === 0) && (
-                    <p className="text-xs text-muted-foreground">
-                      No equipment configured
-                    </p>
-                  )}
-              </CardContent>
-            </Card>
+                    ))}
+                  {!equipment.home_enabled &&
+                    (!equipment.gyms || equipment.gyms.length === 0) && (
+                      <p className="text-xs text-muted-foreground">
+                        No equipment configured
+                      </p>
+                    )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* ----- Availability ----- */}
             {editingAvailability ? (
@@ -607,6 +671,45 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ----- Equipment saved dialog ----- */}
+      <Dialog open={equipmentSavedOpen} onOpenChange={setEquipmentSavedOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Equipment updated</DialogTitle>
+            <DialogDescription>
+              Regenerate your plan to apply changes?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEquipmentSavedOpen(false)}
+            >
+              Keep current plan
+            </Button>
+            <Button
+              onClick={() => {
+                setEquipmentSavedOpen(false);
+                handleRegenMacro();
+              }}
+              disabled={regeneratingMacro}
+            >
+              {regeneratingMacro ? "Processing..." : "Regenerate"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ----- Goal editor dialog ----- */}
+      <GoalEditor
+        open={goalEditorOpen}
+        currentGoal={goal}
+        grades={(assessment?.grades ?? {}) as Record<string, string>}
+        onConfirm={handleGoalConfirm}
+        onCancel={() => setGoalEditorOpen(false)}
+        saving={savingGoal}
+      />
     </>
   );
 }
