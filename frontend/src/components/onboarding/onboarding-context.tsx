@@ -18,6 +18,23 @@ const DEFAULT_DATA: OnboardingData = {
   trips: [],
 };
 
+const SESSION_KEY = "climb_onboarding_draft";
+
+function loadDraft(): OnboardingData | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    return raw ? (JSON.parse(raw) as OnboardingData) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(data: OnboardingData) {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+}
+
 interface OnboardingContextType {
   data: OnboardingData;
   update: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
@@ -34,8 +51,15 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<OnboardingData>(DEFAULT_DATA);
   const [loaded, setLoaded] = useState(false);
 
-  // Pre-populate from existing state
+  // Pre-populate: sessionStorage draft first, then backend state as fallback
   useEffect(() => {
+    const draft = loadDraft();
+    if (draft && draft.profile.name) {
+      setData(draft);
+      setLoaded(true);
+      return;
+    }
+
     getState()
       .then((state) => {
         const d = { ...DEFAULT_DATA };
@@ -87,13 +111,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           d.limitations = lim.details as OnboardingData["limitations"];
         }
         setData(d);
+        saveDraft(d);
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
   }, []);
 
   const update = useCallback(<K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
-    setData((prev) => ({ ...prev, [key]: value }));
+    setData((prev) => {
+      const next = { ...prev, [key]: value };
+      saveDraft(next);
+      return next;
+    });
   }, []);
 
   return (

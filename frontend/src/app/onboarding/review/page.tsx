@@ -125,6 +125,7 @@ export default function ReviewPage() {
     setError(null);
     try {
       await completeOnboarding(data);
+      sessionStorage.removeItem("climb_onboarding_draft");
       setSuccess(true);
       // Brief delay to show success state, then redirect
       setTimeout(() => {
@@ -171,7 +172,7 @@ export default function ReviewPage() {
           {/* Profile */}
           <SummaryRow
             label="Profile"
-            value={`${data.profile.name}, ${data.profile.weight_kg}kg, ${data.profile.height_cm}cm${data.profile.body_fat_pct ? `, ${data.profile.body_fat_pct}% BF` : ""}`}
+            value={`${data.profile.name}, ${data.profile.age}y, ${data.profile.weight_kg}kg, ${data.profile.height_cm}cm${data.profile.body_fat_pct ? `, ${data.profile.body_fat_pct}% BF` : ""}`}
             editHref="/onboarding/profile"
             router={router}
           />
