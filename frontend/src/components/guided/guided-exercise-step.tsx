@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Check, SkipForward, Lightbulb, Film } from "lucide-react";
 import type { GuidedExercise } from "@/lib/types";
+import { ExerciseTimer } from "@/components/guided/exercise-timer";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
@@ -189,6 +190,15 @@ export function GuidedExerciseStep({
               )}
             </div>
           </div>
+        )}
+
+        {/* Exercise timer */}
+        {exercise.prescription.workSeconds != null && exercise.prescription.workSeconds > 0 && (
+          <ExerciseTimer
+            workSeconds={exercise.prescription.workSeconds}
+            restSeconds={exercise.prescription.restSeconds ?? 0}
+            sets={exercise.prescription.sets ?? 1}
+          />
         )}
 
         {/* Feedback selector */}
