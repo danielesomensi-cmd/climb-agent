@@ -160,7 +160,12 @@ export default function WeekPage() {
         setError(result.warnings.join("; "));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to add session");
+      const msg = e instanceof Error ? e.message : "Failed to add session";
+      if (msg.includes("already occupied")) {
+        setError("That time slot is already taken. Try a different slot or day.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setQuickAddDate(null);
     }

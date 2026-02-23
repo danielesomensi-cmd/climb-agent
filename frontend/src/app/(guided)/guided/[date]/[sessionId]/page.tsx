@@ -246,11 +246,14 @@ export default function GuidedSessionPage() {
         return item;
       });
 
+      const durationSeconds = Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000));
+
       try {
         await postFeedback({
           log_entry: {
             date: state.date,
             session_id: state.sessionId,
+            session_duration_seconds: durationSeconds,
             actual: {
               exercise_feedback_v1: exerciseFeedback,
             },

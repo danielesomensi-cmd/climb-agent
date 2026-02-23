@@ -327,6 +327,9 @@ export interface GuidedExercise {
     surface?: string;
   };
 
+  videoUrl?: string;
+  cues?: string[];
+
   status: "pending" | "done" | "skipped";
   feedbackLabel: string;
   usedLoadKg?: number;

@@ -94,6 +94,8 @@ function buildGuidedState(
         repScheme: suggested.suggested_rep_scheme as string | undefined,
         surface: boulderTarget.surface_selected as string | undefined,
       },
+      videoUrl: (inst.video_url as string | undefined) ?? undefined,
+      cues: (inst.cues as string[] | undefined) ?? undefined,
       status: "pending",
       feedbackLabel: "ok",
     };
@@ -291,6 +293,13 @@ export function SessionCard({
                 </Button>
               )}
             </div>
+          )}
+
+          {/* Hint text for planned sessions with exercises */}
+          {!isFinalized && hasExercises && (
+            <p className="text-[11px] text-muted-foreground/60">
+              Tap Start session to begin your guided workout
+            </p>
           )}
 
           {/* Undo button — shown for finalized sessions */}

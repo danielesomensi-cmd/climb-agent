@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, SkipForward, Lightbulb } from "lucide-react";
+import { Check, SkipForward, Lightbulb, Film } from "lucide-react";
 import type { GuidedExercise } from "@/lib/types";
 
 interface GuidedExerciseStepProps {
@@ -134,6 +134,34 @@ export function GuidedExerciseStep({
           <p className="text-xs text-muted-foreground italic">
             {exercise.prescription.notes}
           </p>
+        )}
+
+        {/* Cues */}
+        {exercise.cues && exercise.cues.length > 0 && (
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">Cues:</p>
+            <ul className="space-y-0.5">
+              {exercise.cues.map((cue, i) => (
+                <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                  <span className="mt-1.5 block h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
+                  {cue}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Video link */}
+        {exercise.videoUrl && (
+          <a
+            href={exercise.videoUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+          >
+            <Film className="size-3.5" />
+            Watch video
+          </a>
         )}
 
         {/* Suggested load/grade */}

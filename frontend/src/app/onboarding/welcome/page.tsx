@@ -24,6 +24,12 @@ export default function WelcomePage() {
             built specifically for you.
           </p>
 
+          <p className="text-sm text-muted-foreground">
+            The more complete your initial assessment, the more personalized
+            your training plan will be. Climb Agent will also learn from your
+            session feedback and refine your plan over time.
+          </p>
+
           <ul className="space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />

@@ -35,6 +35,7 @@ WEAKNESS_OPTIONS = [
 
 EQUIPMENT_HOME = [
     {"id": "hangboard", "label": "Hangboard", "description": "Finger training board"},
+    {"id": "homewall", "label": "Homewall", "description": "Home climbing wall (any size or board type)"},
     {"id": "pullup_bar", "label": "Pull-up bar", "description": "Fixed bar for pull-ups and hanging exercises"},
     {"id": "band", "label": "Assistance band", "description": "Elastic band for assistance or resistance"},
     {"id": "dumbbell", "label": "Dumbbells", "description": "Dumbbells for strength exercises"},

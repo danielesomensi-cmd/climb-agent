@@ -2137,7 +2137,8 @@
       "recency_group": "gym_limit_bouldering",
       "equipment_required": [],
       "location_allowed": [
-        "gym"
+        "gym",
+        "home"
       ],
       "contraindications": [
         "elbow_sensitive",
@@ -2162,7 +2163,8 @@
       "equipment_required_any": [
         "gym_boulder",
         "spraywall",
-        "board_kilter"
+        "board_kilter",
+        "homewall"
       ],
       "description": "Max-intensity bouldering at or near limit grade for power and technique integration. The most sport-specific way to train power. Problems should be 1-5 moves, requiring near-maximal effort on each attempt. (Hörst, Lattice — primary strength phase exercise)",
       "cues": [
@@ -2295,7 +2297,8 @@
       "recency_group": "gym_4x4",
       "equipment_required": [],
       "location_allowed": [
-        "gym"
+        "gym",
+        "home"
       ],
       "contraindications": [],
       "prescription_defaults": {
@@ -2317,7 +2320,8 @@
       "equipment_required_any": [
         "gym_boulder",
         "spraywall",
-        "board_kilter"
+        "board_kilter",
+        "homewall"
       ],
       "description": "4x4 bouldering: 4 problems climbed back-to-back x 4 rounds. Classic power endurance protocol combining anaerobic capacity with skill. Problems at 60-70% max effort for sustainable volume. (Hörst Training for Climbing, widely used in Lattice protocols)",
       "cues": [
@@ -6080,11 +6084,13 @@
         "gym_boulder",
         "spraywall",
         "board_kilter",
-        "board_moonboard"
+        "board_moonboard",
+        "homewall"
       ],
       "location_allowed": [
         "gym",
-        "outdoor"
+        "outdoor",
+        "home"
       ],
       "contraindications": [],
       "prescription_defaults": {
@@ -6135,11 +6141,13 @@
         "gym_boulder",
         "spraywall",
         "board_kilter",
-        "board_moonboard"
+        "board_moonboard",
+        "homewall"
       ],
       "location_allowed": [
         "gym",
-        "outdoor"
+        "outdoor",
+        "home"
       ],
       "contraindications": [],
       "prescription_defaults": {
@@ -6190,11 +6198,13 @@
         "gym_boulder",
         "spraywall",
         "board_kilter",
-        "board_moonboard"
+        "board_moonboard",
+        "homewall"
       ],
       "location_allowed": [
         "gym",
-        "outdoor"
+        "outdoor",
+        "home"
       ],
       "contraindications": [],
       "prescription_defaults": {
@@ -7030,8 +7040,8 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
-        "notes": "Pyramid: 1 min on / 1 off → 2/2 → 3/3 → 4/4 → 3/3 → 2/2 → 1/1. 7 rounds total = ~28 min. Grade 2 below redpoint. Aerobic target — avoid pump throughout. Beginners start with just 3 rounds (1-2-3 without descent). Horst pyramid protocol.",
-        "grade_ref": "lead_max_rp",
+        "notes": "Pyramid: 1 min on / 1 off → 2/2 → 3/3 → 4/4 → 3/3 → 2/2 → 1/1. 7 rounds total = ~28 min. Grade 2 below onsight. Aerobic target — avoid pump throughout. Beginners start with just 3 rounds (1-2-3 without descent). Horst pyramid protocol.",
+        "grade_ref": "lead_max_os",
         "grade_offset": -2
       },
       "stress_tags": {
