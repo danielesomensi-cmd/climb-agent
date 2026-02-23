@@ -485,6 +485,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B40 | Branch develop/main workflow | TODO | infra | — |
 | B41 | Other activities in availability (block day + optional intensity reduction day after) | TODO | beta feedback | — |
 | B42 | Sunday reminder — confirm next week availability | TODO | beta feedback | — |
+| B43 | Edit profile + assessment data from Settings | TODO | beta feedback | — |
 
 ---
 
@@ -588,6 +589,7 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 | FB-1 | Alexis | 2026-02-23 | Bloccare giorni per altri sport con riduzione intensità opzionale giorno dopo | TODO | B41 |
 | FB-2 | Alexis | 2026-02-23 | Sessione su giorno non selezionato — comportamento corretto, non bug | CHIUSO | — |
 | FB-3 | Alexis | 2026-02-23 | Reminder domenicale per confermare disponibilità settimana successiva | TODO | B42 |
+| FB-4 | Davide Vato | 2026-02-23 | Re-enter assessment data senza reset completo (età, peso, grado massimo) | TODO | B43 |
 
 ---
 
