@@ -486,6 +486,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B41 | Other activities in availability (block day + optional intensity reduction day after) | TODO | beta feedback | — |
 | B42 | Sunday reminder — confirm next week availability | TODO | beta feedback | — |
 | B43 | Edit profile + assessment data from Settings | TODO | beta feedback | — |
+| B44 | Permettere meno di 3 sessioni/settimana (min 1) | TODO | beta feedback | — |
 
 ---
 
@@ -590,6 +591,7 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 | FB-2 | Alexis | 2026-02-23 | Sessione su giorno non selezionato — comportamento corretto, non bug | CHIUSO | — |
 | FB-3 | Alexis | 2026-02-23 | Reminder domenicale per confermare disponibilità settimana successiva | TODO | B42 |
 | FB-4 | Davide Vato | 2026-02-23 | Re-enter assessment data senza reset completo (età, peso, grado massimo) | TODO | B43 |
+| FB-5 | Luca | 2026-02-23 | Impossibile selezionare meno di 3 allenamenti/settimana — scala 1 volta a settimana | TODO | B44 |
 
 ---
 
