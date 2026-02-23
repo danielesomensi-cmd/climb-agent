@@ -244,7 +244,7 @@ export function SessionCard({
 
           {/* Action buttons — hidden for finalized sessions */}
           {!isFinalized && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {/* Start guided session button */}
               {hasExercises && (
                 <Button
@@ -260,7 +260,7 @@ export function SessionCard({
                     router.push(`/guided/${date}/${session.session_id}`);
                   }}
                 >
-                  <Play className="size-4 mr-1" />
+                  <Play className="size-3.5 mr-1" />
                   Start session
                 </Button>
               )}
@@ -274,7 +274,7 @@ export function SessionCard({
                     onMarkDone();
                   }}
                 >
-                  <Check className="size-4 mr-1" />
+                  <Check className="size-3.5 mr-1" />
                   Done
                 </Button>
               )}
@@ -288,8 +288,8 @@ export function SessionCard({
                     onMarkSkipped();
                   }}
                 >
-                  <X className="size-4 mr-1" />
-                  Skipped
+                  <X className="size-3.5 mr-1" />
+                  Skip
                 </Button>
               )}
             </div>

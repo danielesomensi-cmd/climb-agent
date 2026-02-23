@@ -136,10 +136,10 @@ export function DayCard({
 
         {/* Action buttons for week view */}
         {showActions && (
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <Link href={`/today?date=${day.date}`}>
-              <Button size="sm" variant="outline" className="text-xs">
-                <Eye className="size-3.5 mr-1" />
+              <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                <Eye className="size-3 mr-1" />
                 View day
               </Button>
             </Link>
@@ -147,10 +147,10 @@ export function DayCard({
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs"
+                className="text-xs px-2 py-1"
                 onClick={() => onReplan(day.date)}
               >
-                <RefreshCw className="size-3.5 mr-1" />
+                <RefreshCw className="size-3 mr-1" />
                 Change plan
               </Button>
             )}
@@ -158,10 +158,10 @@ export function DayCard({
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs"
+                className="text-xs px-2 py-1"
                 onClick={() => onQuickAdd(day.date)}
               >
-                <Plus className="size-3.5 mr-1" />
+                <Plus className="size-3 mr-1" />
                 Add session
               </Button>
             )}
