@@ -491,8 +491,10 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-24 | Feedback con carico/grado — pre-popolare dal suggested | TODO | P1 | §2.8 |
 | B37 | Add exercise to existing session | TODO | next | — |
 | B38 | Injuries filter (contraindications) | TODO | next | — |
-| B39 | Railway persistent volume | TODO | infra | — |
+| B39 | Railway persistent volume | ✅ DONE | infra | §10 |
 | B40 | Branch develop/main workflow | TODO | infra | — |
+| B41 | Other activities in availability (block day + optional intensity reduction day after) | TODO | beta feedback | — |
+| B42 | Sunday reminder — confirm next week availability | TODO | beta feedback | — |
 
 ---
 
@@ -589,7 +591,17 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 
 ---
 
-## §11 — Regole di allineamento
+## §11 — Beta feedback log
+
+| ID | Tester | Data | Descrizione | Status | B-item |
+|----|--------|------|-------------|--------|--------|
+| FB-1 | Alexis | 2026-02-23 | Bloccare giorni per altri sport con riduzione intensità opzionale giorno dopo | TODO | B41 |
+| FB-2 | Alexis | 2026-02-23 | Sessione su giorno non selezionato — comportamento corretto, non bug | CHIUSO | — |
+| FB-3 | Alexis | 2026-02-23 | Reminder domenicale per confermare disponibilità settimana successiva | TODO | B42 |
+
+---
+
+## §12 — Regole di allineamento
 
 1. **Dopo ogni sessione di sviluppo**: aggiornare questo file (stati, nuovi item) E
    aggiornare la sezione Roadmap in PROJECT_BRIEF.md (solo stati fasi ✅/🔲)
