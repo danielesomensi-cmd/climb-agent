@@ -6,12 +6,14 @@ import logging
 import os
 from copy import deepcopy
 from datetime import datetime, timedelta
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import (
     REPO_ROOT,
     current_phase_and_week,
+    get_user_id,
     load_state,
     save_state,
     week_num_to_phase_context,
@@ -63,18 +65,21 @@ def _auto_resolve(week_plan: dict, state: dict) -> None:
 
 
 def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
-    """Attach feedback_summary from feedback_log to matching sessions (B32)."""
+    """Attach feedback_summary + exercise_feedback from feedback_log to matching sessions (B32/B35)."""
     if not feedback_log:
         return
     # Index by (date, session_id) for O(1) lookup
-    fb_index = {(fb["date"], fb["session_id"]): fb["difficulty"] for fb in feedback_log if fb.get("session_id") != "unknown"}
+    fb_index = {(fb["date"], fb["session_id"]): fb for fb in feedback_log if fb.get("session_id") != "unknown"}
     for week_block in week_plan.get("weeks", []):
         for day_entry in week_block.get("days", []):
             day_date = day_entry.get("date", "")
             for session_entry in day_entry.get("sessions", []):
                 key = (day_date, session_entry.get("session_id", ""))
-                if key in fb_index:
-                    session_entry["feedback_summary"] = fb_index[key]
+                fb = fb_index.get(key)
+                if fb:
+                    session_entry["feedback_summary"] = fb["difficulty"]
+                    if fb.get("exercise_feedback"):
+                        session_entry["exercise_feedback"] = fb["exercise_feedback"]
 
 
 def _current_week_num(macrocycle: dict) -> int:
@@ -86,13 +91,13 @@ def _current_week_num(macrocycle: dict) -> int:
 
 
 @router.get("/{week_num}")
-def get_week(week_num: int, force: bool = False):
+def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depends(get_user_id)):
     """Generate the plan for a given week (1-based). week_num=0 → current week.
 
     When force=True and this is the current week, regenerate from scratch but
     preserve any sessions already marked done/skipped.
     """
-    state = load_state()
+    state = load_state(user_id)
     macrocycle = state.get("macrocycle")
     if not macrocycle:
         raise HTTPException(status_code=422, detail="No macrocycle — generate one first")
@@ -175,7 +180,7 @@ def get_week(week_num: int, force: bool = False):
         # Cache the freshly generated plan for the current week
         if is_current_week:
             state["current_week_plan"] = week_plan
-            save_state(state)
+            save_state(state, user_id)
 
     # Auto-resolve each session so the frontend gets exercises inline
     _auto_resolve(week_plan, state)

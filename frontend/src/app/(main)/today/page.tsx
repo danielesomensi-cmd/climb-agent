@@ -218,6 +218,8 @@ function TodayContent() {
         },
         status: "done",
       });
+      // Re-fetch week plan so feedback_summary badges appear immediately
+      await fetchData();
     } catch {
       // Non-critical feedback, don't block the UX
     } finally {

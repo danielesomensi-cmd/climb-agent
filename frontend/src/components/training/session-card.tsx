@@ -146,12 +146,13 @@ export function SessionCard({
                 <div className="space-y-1.5">
                   {exercises.map((ex, i) => {
                     const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
+                    const exerciseId = (ex.exercise_id as string) ?? "";
                     return (
                       <ExerciseCard
-                        key={`${ex.exercise_id}-${i}`}
+                        key={`${exerciseId}-${i}`}
                         exercise={{
-                          exercise_id: (ex.exercise_id as string) ?? "",
-                          name: (ex.name as string) ?? (ex.exercise_id as string) ?? "",
+                          exercise_id: exerciseId,
+                          name: (ex.name as string) ?? exerciseId.replace(/_/g, " ") ?? "",
                           sets: prescription.sets as number | undefined,
                           reps: prescription.reps != null ? String(prescription.reps) : undefined,
                           load_kg: prescription.load_kg as number | undefined,
@@ -159,6 +160,7 @@ export function SessionCard({
                           tempo: prescription.tempo as string | undefined,
                           notes: prescription.notes as string | undefined,
                         }}
+                        feedbackLevel={session.exercise_feedback?.[exerciseId]}
                       />
                     );
                   })}

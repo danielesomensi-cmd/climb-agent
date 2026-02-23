@@ -40,6 +40,7 @@ export interface SessionSlot {
   estimated_load_score?: number;
   intensity?: string;
   feedback_summary?: string;
+  exercise_feedback?: Record<string, string>;
 }
 
 export interface DayPlan {

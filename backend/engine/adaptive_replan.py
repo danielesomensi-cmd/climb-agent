@@ -101,12 +101,25 @@ def append_feedback_log(
 
     date = str(log_entry.get("date") or "")
 
+    # Build per-exercise feedback map for UI display (B35 / FR-3)
+    actual = log_entry.get("actual") or {}
+    feedback_items = actual.get("exercise_feedback_v1") or []
+    exercise_feedback: Dict[str, str] = {}
+    for item in feedback_items:
+        eid = str(item.get("exercise_id") or "")
+        label = canonical_feedback_label(item)
+        if eid:
+            exercise_feedback[eid] = label
+
     feedback_log: List[Dict[str, Any]] = state.setdefault("feedback_log", [])
-    feedback_log.append({
+    entry: Dict[str, Any] = {
         "date": date,
         "session_id": session_id,
         "difficulty": difficulty,
-    })
+    }
+    if exercise_feedback:
+        entry["exercise_feedback"] = exercise_feedback
+    feedback_log.append(entry)
 
     # Trim to last 7 entries by date descending
     feedback_log.sort(key=lambda x: str(x.get("date") or ""), reverse=True)
