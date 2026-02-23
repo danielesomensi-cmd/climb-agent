@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.api.deps import REPO_ROOT, get_user_id, load_state, save_state
+from backend.api.deps import DATA_DIR, get_user_id, load_state, save_state
 from backend.api.models import OutdoorSpotCreate, OutdoorSessionLog, ConvertSlotRequest
 from backend.engine.outdoor_log import (
     append_outdoor_session,
@@ -18,7 +18,7 @@ from backend.engine.outdoor_log import (
 
 router = APIRouter(prefix="/api/outdoor", tags=["outdoor"])
 
-LOG_DIR = str(REPO_ROOT / "backend" / "data" / "logs")
+LOG_DIR = str(DATA_DIR / "logs")
 
 
 # ── Spots CRUD ──────────────────────────────────────────────────────────

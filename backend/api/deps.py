@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import uuid as _uuid
 from copy import deepcopy
 from datetime import date, datetime, timedelta
@@ -12,8 +13,9 @@ from typing import Any, Dict, Optional, Tuple
 from fastapi import HTTPException, Request
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-STATE_PATH = REPO_ROOT / "backend" / "data" / "user_state.json"
-USERS_DIR = REPO_ROOT / "backend" / "data" / "users"
+DATA_DIR = Path(os.environ.get("DATA_DIR", str(REPO_ROOT / "backend" / "data")))
+STATE_PATH = DATA_DIR / "user_state.json"
+USERS_DIR = DATA_DIR / "users"
 
 EMPTY_TEMPLATE: Dict[str, Any] = {
     "schema_version": "1.5",

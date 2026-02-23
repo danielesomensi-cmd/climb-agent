@@ -6,12 +6,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
-from backend.api.deps import REPO_ROOT, get_user_id, load_state
+from backend.api.deps import DATA_DIR, get_user_id, load_state
 from backend.engine.report_engine import generate_monthly_report, generate_weekly_report
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
 
-LOG_DIR = str(REPO_ROOT / "backend" / "data" / "logs")
+LOG_DIR = str(DATA_DIR / "logs")
 
 
 @router.get("/weekly")
