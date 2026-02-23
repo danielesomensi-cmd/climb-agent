@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-21 (Phase 2.5 catalog audit COMPLETE)
+> Last updated: 2026-02-22 (Phase 4a multi-user UUID)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 143 | 14 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises |
 | Sessions | 33 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | ~377 | all green (post Phase 2.5 catalog audit complete) |
+| Tests | ~395 | all green (post Phase 4a multi-user) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 26 | 12 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
@@ -140,6 +140,11 @@ CLAUDE.md                   ← Context for Claude Code
 | LLM Coach | Claude Sonnet as conversational layer (Phase 3.5) |
 | Equipment | `equipment_required` only for essential gear, optional in notes |
 | Guided Session Mode | Timer UI with colored rest timer (spec in design doc, Phase 4) |
+| Multi-user beta | UUID localStorage + X-User-ID header |
+| Auth produzione | Clerk |
+| DB produzione | Supabase Postgres |
+| Pagamenti | Stripe |
+| App store futuro | Capacitor |
 
 ---
 
@@ -188,6 +193,7 @@ from backend.engine.X import Y
 | **3.2: UI polish + adaptive** | ✅ | B25 adaptive replanning, B19 quick-add, B20 edit availability, B27 equipment labels, NEW-F6/F7. B11 → Phase 2.5 |
 | 2: Tracking + outdoor | ✅ | Outdoor logging, reports, motivational quotes |
 | 2.5: Catalog audit | ✅ | 143 exercises, 10 patches, grade_ref/grade_offset, 377 tests. Remaining: §2.7 grade resolver, §2.8 working loads |
+| **4a: Multi-user + deploy** | ✅ | UUID multi-user, Railway/Vercel deploy prep, 395 tests |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
 | 4: Evolution | 🔲 | Multi-goal, annual report, notifications |
 

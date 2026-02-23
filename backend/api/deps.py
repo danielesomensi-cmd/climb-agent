@@ -3,13 +3,17 @@
 from __future__ import annotations
 
 import json
+import uuid as _uuid
 from copy import deepcopy
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from fastapi import HTTPException, Request
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STATE_PATH = REPO_ROOT / "backend" / "data" / "user_state.json"
+USERS_DIR = REPO_ROOT / "backend" / "data" / "users"
 
 EMPTY_TEMPLATE: Dict[str, Any] = {
     "schema_version": "1.5",
@@ -42,17 +46,58 @@ def invalidate_week_cache(state: Dict[str, Any]) -> None:
     state["current_week_plan"] = None
 
 
-def load_state() -> Dict[str, Any]:
-    """Load user state from disk. Returns empty template if file missing."""
-    if STATE_PATH.exists():
-        return json.loads(STATE_PATH.read_text(encoding="utf-8"))
+def get_user_id(request: Request) -> Optional[str]:
+    """Extract and validate X-User-ID header.
+
+    Returns None if header is absent (legacy/test fallback).
+    Raises 400 if header is present but not a valid UUID v4.
+    """
+    header = request.headers.get("X-User-ID")
+    if header is None:
+        return None
+    try:
+        _uuid.UUID(header, version=4)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid X-User-ID: must be a valid UUID v4")
+    return header
+
+
+def _user_state_path(user_id: Optional[str]) -> Path:
+    """Return the state file path for a given user_id, or the legacy path."""
+    if user_id:
+        return USERS_DIR / user_id / "user_state.json"
+    return STATE_PATH
+
+
+def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
+    """Load user state from disk. Returns empty template if file missing.
+
+    If user_id is provided, reads from the per-user directory.
+    If the per-user file doesn't exist, copies the template and returns it.
+    """
+    path = _user_state_path(user_id)
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    if user_id:
+        # New user: bootstrap from template
+        state = deepcopy(EMPTY_TEMPLATE)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return state
     return deepcopy(EMPTY_TEMPLATE)
 
 
-def save_state(state: Dict[str, Any]) -> None:
-    """Write user state to disk."""
-    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    STATE_PATH.write_text(
+def save_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
+    """Write user state to disk.
+
+    If user_id is provided, writes to the per-user directory.
+    """
+    path = _user_state_path(user_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
         json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )

@@ -750,6 +750,8 @@ def _resolve_inline_block(
         inst = {
             "instance_id": instance_id,
             "exercise_id": ex_id,
+            "name": selected_ex.get("name", ""),
+            "category": selected_ex.get("category", ""),
             "variant": {},
             "prescription": merged,
             "attributes": ex_attrs,
@@ -1025,6 +1027,8 @@ def resolve_session(
                 inst = {
                     "instance_id": instance_id,
                     "exercise_id": ex_id,
+                    "name": selected_ex.get("name", ""),
+                    "category": selected_ex.get("category", ""),
                     "variant": variant,
                     "prescription": merged,
                     "attributes": ex_attrs,

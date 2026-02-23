@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import date as date_type
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import load_state, save_state
+from backend.api.deps import get_user_id, load_state, save_state
 from backend.api.models import FeedbackRequest
 from backend.engine.adaptive_replan import (
     append_feedback_log,
@@ -21,9 +22,9 @@ router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
 
 @router.post("")
-def post_feedback(req: FeedbackRequest):
+def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply session feedback: progression updates + closed-loop state changes."""
-    state = load_state()
+    state = load_state(user_id)
 
     # 1. Apply progression feedback (updates working loads)
     try:
@@ -57,5 +58,5 @@ def post_feedback(req: FeedbackRequest):
                 plan, result["actions"]
             )
 
-    save_state(state)
+    save_state(state, user_id)
     return {"status": "ok", "state": state}

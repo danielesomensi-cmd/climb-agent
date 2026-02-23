@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, invalidate_week_cache, load_state, next_monday, this_monday, save_state
+from backend.api.deps import REPO_ROOT, get_user_id, invalidate_week_cache, load_state, next_monday, this_monday, save_state
 from backend.api.models import OnboardingData
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
 from backend.engine.macrocycle_v1 import generate_macrocycle
@@ -184,11 +184,11 @@ def _build_current_level(grades: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.post("/complete")
-def onboarding_complete(data: OnboardingData):
+def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(get_user_id)):
     """Atomic onboarding: save state + compute assessment + generate macrocycle."""
     # 1. Build and save user state
     state = _build_user_state_from_onboarding(data)
-    save_state(state)
+    save_state(state, user_id)
 
     # 2. Compute assessment profile
     assessment = state.get("assessment", {})
@@ -219,11 +219,11 @@ def onboarding_complete(data: OnboardingData):
         macrocycle = generate_macrocycle(goal, profile, state, start, 12)
     except Exception as e:
         # Save state with profile even if macrocycle fails
-        save_state(state)
+        save_state(state, user_id)
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
 
     state["macrocycle"] = macrocycle
     invalidate_week_cache(state)
-    save_state(state)
+    save_state(state, user_id)
 
     return {"profile": profile, "macrocycle": macrocycle}

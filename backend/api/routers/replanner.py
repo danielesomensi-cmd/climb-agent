@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import os
 from copy import deepcopy
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, load_state, save_state
+from backend.api.deps import REPO_ROOT, get_user_id, load_state, save_state
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
 from backend.engine.resolve_session import resolve_session
@@ -52,9 +53,9 @@ def _auto_resolve(week_plan: dict, state: dict) -> None:
 
 
 @router.post("/override")
-def override(req: OverrideRequest):
+def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply a day override (change a day's session by intent)."""
-    state = load_state()
+    state = load_state(user_id)
 
     week_plan = req.week_plan
     if not week_plan:
@@ -81,7 +82,7 @@ def override(req: OverrideRequest):
 
     # Persist the updated plan so it survives page navigation
     state["current_week_plan"] = updated
-    save_state(state)
+    save_state(state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state)
@@ -90,9 +91,9 @@ def override(req: OverrideRequest):
 
 
 @router.get("/suggest-sessions")
-def get_suggestions(target_date: str, location: str = "gym"):
+def get_suggestions(target_date: str, location: str = "gym", user_id: Optional[str] = Depends(get_user_id)):
     """Suggest sessions to quick-add on a given date."""
-    state = load_state()
+    state = load_state(user_id)
     week_plan = state.get("current_week_plan")
     if not week_plan:
         raise HTTPException(
@@ -123,9 +124,9 @@ def get_suggestions(target_date: str, location: str = "gym"):
 
 
 @router.post("/quick-add")
-def quick_add(req: QuickAddRequest):
+def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Add an extra session to a day without replacing existing ones."""
-    state = load_state()
+    state = load_state(user_id)
 
     week_plan = req.week_plan
     if not week_plan:
@@ -150,7 +151,7 @@ def quick_add(req: QuickAddRequest):
         raise HTTPException(status_code=500, detail=f"Quick-add failed: {e}")
 
     state["current_week_plan"] = updated
-    save_state(state)
+    save_state(state, user_id)
 
     _auto_resolve(updated, state)
 
@@ -158,9 +159,9 @@ def quick_add(req: QuickAddRequest):
 
 
 @router.post("/events")
-def events(req: EventsRequest):
+def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply a list of events (move, mark_done, mark_skipped, etc.) to a week plan."""
-    state = load_state()
+    state = load_state(user_id)
 
     week_plan = req.week_plan
     if not week_plan:
@@ -188,7 +189,7 @@ def events(req: EventsRequest):
 
     # Persist the updated plan so it survives page navigation
     state["current_week_plan"] = updated
-    save_state(state)
+    save_state(state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state)

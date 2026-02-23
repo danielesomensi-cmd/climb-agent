@@ -580,9 +580,9 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             if used_total is None and used_external is None:
                 continue
 
-            base = float(used_external)
             pct = _rule_midpoint_pct(updated, feedback_label)
-            next_load = _round_half_step(base * (1.0 + pct))
+            next_total = _round_half_step(float(used_total) * (1.0 + pct))
+            next_external = _round_half_step(next_total - bodyweight)
             setup_source = dict(planned_prescription)
             setup_source.update(item)
             setup, setup_key = _progression_setup_and_key(exercise_id, setup_source)
@@ -595,10 +595,10 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     "setup": setup,
                     "last_completed": bool(item.get("completed", False)),
                     "last_feedback_label": feedback_label,
-                    "last_external_load_kg": _round_half_step(base),
+                    "last_external_load_kg": _round_half_step(float(used_external)),
                     "last_total_load_kg": _round_half_step(float(used_total)),
-                    "next_external_load_kg": next_load,
-                    "next_total_load_kg": _round_half_step(float(used_total) * (1.0 + pct)),
+                    "next_external_load_kg": next_external,
+                    "next_total_load_kg": next_total,
                     "updated_at": date_value,
                 }
             )

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
-from backend.api.deps import EMPTY_TEMPLATE, load_state, save_state
+from backend.api.deps import EMPTY_TEMPLATE, get_user_id, load_state, save_state
 
 router = APIRouter(prefix="/api/state", tags=["state"])
 
@@ -23,23 +23,23 @@ def _deep_merge(base: Dict[str, Any], patch: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.get("")
-def get_state():
+def get_state(user_id: Optional[str] = Depends(get_user_id)):
     """Return the full user_state.json."""
-    return load_state()
+    return load_state(user_id)
 
 
 @router.put("")
-def put_state(patch: Dict[str, Any]):
+def put_state(patch: Dict[str, Any], user_id: Optional[str] = Depends(get_user_id)):
     """Deep-merge patch into existing state."""
-    state = load_state()
+    state = load_state(user_id)
     _deep_merge(state, patch)
-    save_state(state)
+    save_state(state, user_id)
     return state
 
 
 @router.delete("")
-def delete_state():
+def delete_state(user_id: Optional[str] = Depends(get_user_id)):
     """Reset state to minimal empty template."""
     state = deepcopy(EMPTY_TEMPLATE)
-    save_state(state)
+    save_state(state, user_id)
     return {"status": "reset", "state": state}

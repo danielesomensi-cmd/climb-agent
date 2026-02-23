@@ -262,8 +262,8 @@ def test_hangboard_feedback():
     }
     updated = apply_feedback(log, us)
     entry = next(e for e in updated["working_loads"]["entries"] if e["exercise_id"] == "repeater_hang_7_3")
-    # ok midpoint = (0.0+0.05)/2 = 0.025; external = 80 - 77 = 3.0; next = 3.0 * 1.025 = 3.075 → 3.0
-    assert entry["next_external_load_kg"] == 3.0
+    # ok midpoint = 0.025; total = 80 × 1.025 = 82.0; ext = 82.0 - 77 = 5.0
+    assert entry["next_external_load_kg"] == 5.0
     assert entry["last_total_load_kg"] == 80.0
 
 

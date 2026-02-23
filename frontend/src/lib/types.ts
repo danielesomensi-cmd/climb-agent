@@ -298,6 +298,53 @@ export interface Quote {
 }
 
 // -----------------------------------------------------------------------
+// Guided Session Mode
+// -----------------------------------------------------------------------
+
+export interface GuidedExercise {
+  exerciseId: string;
+  name: string;
+  category: string;
+  blockUid: string;
+  loadModel: string;
+
+  prescription: {
+    sets?: number;
+    reps?: string | number;
+    workSeconds?: number;
+    restSeconds?: number;
+    loadKg?: number;
+    tempo?: string;
+    notes?: string;
+    intensityPct?: number;
+  };
+
+  suggested: {
+    externalLoadKg?: number;
+    totalLoadKg?: number;
+    grade?: string;
+    repScheme?: string;
+    surface?: string;
+  };
+
+  status: "pending" | "done" | "skipped";
+  feedbackLabel: string;
+  usedLoadKg?: number;
+  usedGrade?: string;
+}
+
+export interface GuidedSessionState {
+  version: 1;
+  date: string;
+  sessionId: string;
+  sessionName: string;
+  startedAt: string;
+  currentIndex: number;
+  exercises: GuidedExercise[];
+  submitStatus?: "in_progress" | "feedback_pending" | "completed";
+}
+
+// -----------------------------------------------------------------------
 // User state (simplified — backend may have more keys)
 // -----------------------------------------------------------------------
 

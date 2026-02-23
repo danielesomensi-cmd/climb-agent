@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, Check, X, Undo2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronDown, ChevronUp, Check, X, Undo2, Play } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExerciseCard } from "@/components/training/exercise-card";
-import type { SessionSlot } from "@/lib/types";
+import type { SessionSlot, GuidedSessionState, GuidedExercise } from "@/lib/types";
 
 interface Gym {
   name: string;
@@ -15,6 +16,7 @@ interface Gym {
 
 interface SessionCardProps {
   session: SessionSlot;
+  date: string;
   gyms?: Gym[];
   onMarkDone?: () => void;
   onMarkSkipped?: () => void;
@@ -54,14 +56,73 @@ function getLocationLabel(session: SessionSlot, gyms?: Gym[]): string {
   return "Gym";
 }
 
+/** Build GuidedSessionState from a resolved session slot */
+function buildGuidedState(
+  session: SessionSlot,
+  date: string,
+): GuidedSessionState | null {
+  const resolved = session.resolved as Record<string, unknown> | undefined;
+  const resolvedSession = resolved?.resolved_session as Record<string, unknown> | undefined;
+  const instances = (resolvedSession?.exercise_instances ?? []) as Array<Record<string, unknown>>;
+  if (instances.length === 0) return null;
+
+  const exercises: GuidedExercise[] = instances.map((inst) => {
+    const prescription = (inst.prescription ?? {}) as Record<string, unknown>;
+    const suggested = (inst.suggested ?? {}) as Record<string, unknown>;
+    const boulderTarget = (suggested.suggested_boulder_target ?? {}) as Record<string, unknown>;
+
+    return {
+      exerciseId: (inst.exercise_id as string) ?? "",
+      name: (inst.name as string) ?? ((inst.exercise_id as string) ?? "").replace(/_/g, " "),
+      category: (inst.category as string) ?? "",
+      blockUid: (inst.block_uid as string) ?? "",
+      loadModel: (inst.load_model as string) ?? "",
+      prescription: {
+        sets: prescription.sets as number | undefined,
+        reps: prescription.reps != null ? (prescription.reps as string | number) : undefined,
+        workSeconds: (prescription.work_seconds ?? prescription.hang_seconds ?? prescription.duration_seconds) as number | undefined,
+        restSeconds: prescription.rest_s as number | undefined,
+        loadKg: prescription.load_kg as number | undefined,
+        tempo: prescription.tempo as string | undefined,
+        notes: prescription.notes as string | undefined,
+        intensityPct: (inst.attributes as Record<string, unknown> | undefined)?.intensity_pct as number | undefined,
+      },
+      suggested: {
+        externalLoadKg: suggested.suggested_external_load_kg as number | undefined,
+        totalLoadKg: suggested.suggested_total_load_kg as number | undefined,
+        grade: (suggested.suggested_grade as string | undefined) ?? (boulderTarget.target_grade as string | undefined),
+        repScheme: suggested.suggested_rep_scheme as string | undefined,
+        surface: boulderTarget.surface_selected as string | undefined,
+      },
+      status: "pending",
+      feedbackLabel: "ok",
+    };
+  });
+
+  const sessionName = (resolvedSession?.session_name as string) ??
+    session.session_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return {
+    version: 1,
+    date,
+    sessionId: session.session_id,
+    sessionName,
+    startedAt: new Date().toISOString(),
+    currentIndex: 0,
+    exercises,
+  };
+}
+
 export function SessionCard({
   session,
+  date,
   gyms,
   onMarkDone,
   onMarkSkipped,
   onUndo,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const router = useRouter();
 
   const isHard = session.tags?.hard === true;
   const isFinger = session.tags?.finger === true;
@@ -69,6 +130,11 @@ export function SessionCard({
   const isSkipped = session.status === "skipped";
   const isFinalized = isDone || isSkipped;
   const locationLabel = getLocationLabel(session, gyms);
+  const hasExercises = (() => {
+    const r = session.resolved as Record<string, unknown> | undefined;
+    const rs = r?.resolved_session as Record<string, unknown> | undefined;
+    return ((rs?.exercise_instances ?? []) as unknown[]).length > 0;
+  })();
 
   return (
     <Card className="gap-0 py-0 overflow-hidden">
@@ -177,6 +243,25 @@ export function SessionCard({
           {/* Action buttons — hidden for finalized sessions */}
           {!isFinalized && (
             <div className="flex items-center gap-2">
+              {/* Start guided session button */}
+              {hasExercises && (
+                <Button
+                  size="sm"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const guidedState = buildGuidedState(session, date);
+                    if (!guidedState) return;
+                    const userId = localStorage.getItem("climb_user_id") ?? "";
+                    const key = `guided_session_${userId}_${date}_${session.session_id}`;
+                    localStorage.setItem(key, JSON.stringify(guidedState));
+                    router.push(`/guided/${date}/${session.session_id}`);
+                  }}
+                >
+                  <Play className="size-4 mr-1" />
+                  Start session
+                </Button>
+              )}
               {onMarkDone && (
                 <Button
                   size="sm"

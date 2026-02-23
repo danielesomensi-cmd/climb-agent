@@ -190,7 +190,7 @@ def test_working_load_update_from_feedback():
     }
     updated_easy = apply_feedback(log_easy, user_state)
     easy_next = next(e for e in updated_easy["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")["next_external_load_kg"]
-    assert easy_next == 11.0
+    assert easy_next == 16.5
 
     log_hard = {
         "date": "2026-01-06",
@@ -199,7 +199,7 @@ def test_working_load_update_from_feedback():
     }
     updated_hard = apply_feedback(log_hard, user_state)
     hard_next = next(e for e in updated_hard["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")["next_external_load_kg"]
-    assert hard_next == 9.0
+    assert hard_next == 1.5
 
 
 def test_two_hard_feedbacks_enqueue_retest_and_retest_updates_official_test():

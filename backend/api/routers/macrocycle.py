@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import invalidate_week_cache, load_state, this_monday, save_state
+from backend.api.deps import get_user_id, invalidate_week_cache, load_state, this_monday, save_state
 from backend.api.models import MacrocycleRequest
 from backend.engine.macrocycle_v1 import generate_macrocycle
 
@@ -14,9 +15,9 @@ router = APIRouter(prefix="/api/macrocycle", tags=["macrocycle"])
 
 
 @router.post("/generate")
-def generate(req: MacrocycleRequest):
+def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Generate a macrocycle and save it into state."""
-    state = load_state()
+    state = load_state(user_id)
 
     goal = state.get("goal")
     if not goal:
@@ -48,6 +49,6 @@ def generate(req: MacrocycleRequest):
 
     state["macrocycle"] = macrocycle
     invalidate_week_cache(state)
-    save_state(state)
+    save_state(state, user_id)
 
     return {"macrocycle": macrocycle}

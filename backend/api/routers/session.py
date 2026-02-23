@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import os
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, load_state
+from backend.api.deps import REPO_ROOT, get_user_id, load_state
 from backend.api.models import SessionResolveRequest
 from backend.engine.resolve_session import resolve_session
 
@@ -18,7 +19,7 @@ EXERCISES_PATH = "backend/catalog/exercises/v1/exercises.json"
 
 
 @router.post("/resolve")
-def resolve(req: SessionResolveRequest):
+def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Resolve a session_id into concrete exercises."""
     session_path = os.path.join(SESSIONS_DIR, f"{req.session_id}.json")
     full_path = REPO_ROOT / session_path
@@ -26,7 +27,7 @@ def resolve(req: SessionResolveRequest):
     if not full_path.exists():
         raise HTTPException(status_code=404, detail=f"Session not found: {req.session_id}")
 
-    state = load_state()
+    state = load_state(user_id)
     if req.context:
         state["context"] = {**state.get("context", {}), **req.context}
 

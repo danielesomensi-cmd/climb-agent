@@ -123,6 +123,7 @@ export function DayCard({
             <SessionCard
               key={session.session_id}
               session={session}
+              date={day.date}
               gyms={gyms}
               onMarkDone={onMarkDone ? () => onMarkDone(session.session_id) : undefined}
               onMarkSkipped={

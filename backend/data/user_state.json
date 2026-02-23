@@ -2,31 +2,31 @@
   "assessment": {
     "body": {
       "body_fat_pct": null,
-      "height_cm": 40,
-      "weight_kg": 40
+      "height_cm": 182,
+      "weight_kg": 77
     },
     "experience": {
-      "climbing_years": 0,
-      "structured_training_years": 0
+      "climbing_years": 15,
+      "structured_training_years": 7
     },
     "grades": {
-      "boulder_max_os": "5A+",
-      "boulder_max_rp": "6A",
-      "lead_max_os": "8b",
-      "lead_max_rp": "7c+"
+      "boulder_max_os": "7A+",
+      "boulder_max_rp": "7C",
+      "lead_max_os": "7a+",
+      "lead_max_rp": "8a+"
     },
     "last_assessed": "2026-02-23",
     "profile": {
-      "body_composition": 31,
-      "endurance": 53,
-      "finger_strength": 34,
-      "power_endurance": 73,
-      "pulling_strength": 46,
-      "technique": 80
+      "body_composition": 59,
+      "endurance": 30,
+      "finger_strength": 66,
+      "power_endurance": 37,
+      "pulling_strength": 61,
+      "technique": 35
     },
     "self_eval": {
-      "primary_weakness": "fingers_give_out",
-      "secondary_weakness": "pump_too_early"
+      "primary_weakness": "pump_too_early",
+      "secondary_weakness": "technique_errors"
     },
     "tests": {}
   },
@@ -34,57 +34,49 @@
     "fri": {
       "evening": {
         "available": true,
-        "preferred_location": "gym"
+        "preferred_location": "home"
       }
     },
     "mon": {
-      "morning": {
+      "evening": {
         "available": true,
-        "preferred_location": "home"
+        "preferred_location": "gym"
       }
     },
     "sat": {
       "evening": {
         "available": true,
-        "gym_id": "Gym 1",
-        "preferred_location": "gym"
-      }
-    },
-    "sun": {
-      "evening": {
-        "available": true,
-        "gym_id": "Gym 2",
-        "preferred_location": "gym"
+        "preferred_location": "home"
       }
     },
     "thu": {
-      "morning": {
+      "evening": {
         "available": true,
         "preferred_location": "home"
       }
     },
     "tue": {
-      "morning": {
+      "evening": {
         "available": true,
-        "preferred_location": "home"
+        "preferred_location": "gym"
       }
     },
     "wed": {
-      "morning": {
+      "evening": {
         "available": true,
-        "preferred_location": "home"
+        "preferred_location": "gym"
       }
     }
   },
   "baselines": {},
   "body": {
     "body_fat_pct": null,
-    "height_cm": 40,
-    "weight_kg": 40
+    "height_cm": 182,
+    "weight_kg": 77
   },
-  "bodyweight_kg": 40,
+  "bodyweight_kg": 77,
   "current_week_plan": {
-    "generated_at": "2026-02-19T11:45:36",
+    "generated_at": "2026-02-22T01:36:02",
     "plan_version": "planner.v2",
     "profile_snapshot": {
       "allowed_locations": [
@@ -92,12 +84,12 @@
         "home"
       ],
       "domain_weights": {
-        "core_prehab": 0.089,
-        "finger_strength": 0.223,
-        "power_endurance": 0.134,
-        "pulling_strength": 0.179,
-        "technique": 0.152,
-        "volume_climbing": 0.223
+        "core_prehab": 0.043,
+        "finger_strength": 0.174,
+        "power_endurance": 0.174,
+        "pulling_strength": 0.13,
+        "technique": 0.217,
+        "volume_climbing": 0.261
       },
       "hard_cap_per_week": 3,
       "intensity_cap": "medium",
@@ -106,8 +98,8 @@
     "start_date": "2026-02-16",
     "weekly_load_summary": {
       "hard_days_count": 0,
-      "recovery_days_count": 3,
-      "total_load": 160
+      "recovery_days_count": 2,
+      "total_load": 220
     },
     "weeks": [
       {
@@ -119,76 +111,11 @@
                 "estimated_load_score": 40,
                 "explain": [
                   "phase=base",
-                  "slot=morning",
+                  "slot=evening",
                   "day=mon",
                   "pass1:primary"
                 ],
                 "gym_id": null,
-                "intensity": "medium",
-                "location": "home",
-                "phase_id": "base",
-                "session_id": "finger_maintenance_home",
-                "slot": "morning",
-                "tags": {
-                  "finger": true,
-                  "hard": false
-                }
-              }
-            ],
-            "weekday": "mon"
-          },
-          {
-            "date": "2026-02-17",
-            "sessions": [],
-            "weekday": "tue"
-          },
-          {
-            "date": "2026-02-18",
-            "sessions": [],
-            "weekday": "wed"
-          },
-          {
-            "date": "2026-02-19",
-            "sessions": [],
-            "weekday": "thu"
-          },
-          {
-            "date": "2026-02-20",
-            "sessions": [
-              {
-                "estimated_load_score": 40,
-                "explain": [
-                  "phase=base",
-                  "slot=evening",
-                  "day=fri",
-                  "pass1:primary"
-                ],
-                "gym_id": null,
-                "intensity": "medium",
-                "location": "gym",
-                "phase_id": "base",
-                "session_id": "technique_focus_gym",
-                "slot": "evening",
-                "tags": {
-                  "finger": false,
-                  "hard": false
-                }
-              }
-            ],
-            "weekday": "fri"
-          },
-          {
-            "date": "2026-02-21",
-            "sessions": [
-              {
-                "estimated_load_score": 40,
-                "explain": [
-                  "phase=base",
-                  "slot=evening",
-                  "day=sat",
-                  "pass1:primary"
-                ],
-                "gym_id": "Gym 1",
                 "intensity": "medium",
                 "location": "gym",
                 "phase_id": "base",
@@ -200,6 +127,111 @@
                 }
               }
             ],
+            "weekday": "mon"
+          },
+          {
+            "date": "2026-02-17",
+            "sessions": [
+              {
+                "estimated_load_score": 40,
+                "explain": [
+                  "phase=base",
+                  "slot=evening",
+                  "day=tue",
+                  "pass1:primary"
+                ],
+                "gym_id": null,
+                "intensity": "medium",
+                "location": "gym",
+                "phase_id": "base",
+                "session_id": "technique_focus_gym",
+                "slot": "evening",
+                "tags": {
+                  "finger": false,
+                  "hard": false
+                }
+              }
+            ],
+            "weekday": "tue"
+          },
+          {
+            "date": "2026-02-18",
+            "sessions": [
+              {
+                "estimated_load_score": 40,
+                "explain": [
+                  "phase=base",
+                  "slot=evening",
+                  "day=wed",
+                  "pass1:primary"
+                ],
+                "gym_id": null,
+                "intensity": "medium",
+                "location": "gym",
+                "phase_id": "base",
+                "session_id": "endurance_aerobic_gym",
+                "slot": "evening",
+                "tags": {
+                  "finger": false,
+                  "hard": false
+                }
+              }
+            ],
+            "weekday": "wed"
+          },
+          {
+            "date": "2026-02-19",
+            "sessions": [
+              {
+                "estimated_load_score": 40,
+                "explain": [
+                  "phase=base",
+                  "slot=evening",
+                  "day=thu",
+                  "pass1:primary"
+                ],
+                "gym_id": null,
+                "intensity": "medium",
+                "location": "home",
+                "phase_id": "base",
+                "session_id": "finger_maintenance_home",
+                "slot": "evening",
+                "tags": {
+                  "finger": true,
+                  "hard": false
+                }
+              }
+            ],
+            "weekday": "thu"
+          },
+          {
+            "date": "2026-02-20",
+            "sessions": [
+              {
+                "estimated_load_score": 20,
+                "explain": [
+                  "phase=base",
+                  "slot=evening",
+                  "day=fri",
+                  "pass2:complementary"
+                ],
+                "gym_id": null,
+                "intensity": "low",
+                "location": "home",
+                "phase_id": "base",
+                "session_id": "prehab_maintenance",
+                "slot": "evening",
+                "tags": {
+                  "finger": false,
+                  "hard": false
+                }
+              }
+            ],
+            "weekday": "fri"
+          },
+          {
+            "date": "2026-02-21",
+            "sessions": [],
             "weekday": "sat"
           },
           {
@@ -209,16 +241,16 @@
                 "estimated_load_score": 40,
                 "explain": [
                   "phase=base",
-                  "slot=evening",
+                  "slot=lunch",
                   "day=sun",
-                  "pass1:primary"
+                  "pass2:complementary"
                 ],
-                "gym_id": "Gym 2",
+                "gym_id": null,
                 "intensity": "medium",
                 "location": "gym",
                 "phase_id": "base",
-                "session_id": "technique_focus_gym",
-                "slot": "evening",
+                "session_id": "complementary_conditioning",
+                "slot": "lunch",
                 "tags": {
                   "finger": false,
                   "hard": false
@@ -243,21 +275,19 @@
       {
         "equipment": [
           "gym_boulder",
+          "board_moonboard",
           "spraywall",
-          "board_moonboard"
-        ],
-        "name": "Gym 1"
-      },
-      {
-        "equipment": [
           "gym_routes",
           "board_kilter",
           "campus_board",
+          "hangboard",
+          "barbell",
           "dumbbell",
           "bench",
-          "leg_press"
+          "leg_press",
+          "cable_machine"
         ],
-        "name": "Gym 2"
+        "name": "Gym 1"
       }
     ],
     "home": [
@@ -267,11 +297,11 @@
   },
   "fatigue_proxy": {},
   "goal": {
-    "current_grade": "7c+",
-    "deadline": "2026-06-24",
+    "current_grade": "8a+",
+    "deadline": "2026-08-22",
     "discipline": "lead",
     "goal_type": "lead_grade",
-    "target_grade": "8c+",
+    "target_grade": "8b",
     "target_style": "redpoint"
   },
   "history_index": {
@@ -286,34 +316,34 @@
   },
   "macrocycle": {
     "assessment_snapshot": {
-      "body_composition": 31,
-      "endurance": 53,
-      "finger_strength": 34,
-      "power_endurance": 73,
-      "pulling_strength": 46,
-      "technique": 80
+      "body_composition": 59,
+      "endurance": 30,
+      "finger_strength": 66,
+      "power_endurance": 37,
+      "pulling_strength": 61,
+      "technique": 35
     },
     "end_date": "2026-05-10",
-    "generated_at": "2026-02-19T11:45:35",
+    "generated_at": "2026-02-22T01:36:01",
     "goal_snapshot": {
-      "current_grade": "7c+",
-      "deadline": "2026-06-24",
+      "current_grade": "8a+",
+      "deadline": "2026-08-22",
       "goal_type": "lead_grade",
-      "target_grade": "8c+"
+      "target_grade": "8b"
     },
     "macrocycle_version": "macrocycle.v1",
     "phases": [
       {
         "domain_weights": {
-          "core_prehab": 0.089,
-          "finger_strength": 0.223,
-          "power_endurance": 0.134,
-          "pulling_strength": 0.179,
-          "technique": 0.152,
-          "volume_climbing": 0.223
+          "core_prehab": 0.043,
+          "finger_strength": 0.174,
+          "power_endurance": 0.174,
+          "pulling_strength": 0.13,
+          "technique": 0.217,
+          "volume_climbing": 0.261
         },
-        "duration_weeks": 3,
-        "end_week": 3,
+        "duration_weeks": 5,
+        "end_week": 5,
         "energy_system": "aerobic",
         "intensity_cap": "medium",
         "notes": "Build aerobic base. High volume, low intensity. Focus technique and movement quality.",
@@ -335,14 +365,14 @@
       },
       {
         "domain_weights": {
-          "core_prehab": 0.134,
-          "finger_strength": 0.357,
-          "power_endurance": 0.089,
-          "pulling_strength": 0.268,
-          "technique": 0.062,
-          "volume_climbing": 0.089
+          "core_prehab": 0.087,
+          "finger_strength": 0.304,
+          "power_endurance": 0.13,
+          "pulling_strength": 0.217,
+          "technique": 0.13,
+          "volume_climbing": 0.13
         },
-        "duration_weeks": 4,
+        "duration_weeks": 2,
         "end_week": 7,
         "energy_system": "anaerobic_alactic",
         "intensity_cap": "max",
@@ -359,16 +389,16 @@
           "handstand_practice",
           "technique_focus_gym"
         ],
-        "start_week": 4
+        "start_week": 6
       },
       {
         "domain_weights": {
-          "core_prehab": 0.134,
-          "finger_strength": 0.179,
-          "power_endurance": 0.312,
-          "pulling_strength": 0.134,
-          "technique": 0.107,
-          "volume_climbing": 0.134
+          "core_prehab": 0.087,
+          "finger_strength": 0.13,
+          "power_endurance": 0.348,
+          "pulling_strength": 0.087,
+          "technique": 0.174,
+          "volume_climbing": 0.174
         },
         "duration_weeks": 2,
         "end_week": 9,
@@ -390,12 +420,12 @@
       },
       {
         "domain_weights": {
-          "core_prehab": 0.179,
-          "finger_strength": 0.134,
-          "power_endurance": 0.179,
-          "pulling_strength": 0.089,
-          "technique": 0.196,
-          "volume_climbing": 0.223
+          "core_prehab": 0.13,
+          "finger_strength": 0.087,
+          "power_endurance": 0.217,
+          "pulling_strength": 0.043,
+          "technique": 0.261,
+          "volume_climbing": 0.261
         },
         "duration_weeks": 2,
         "end_week": 11,
@@ -417,12 +447,12 @@
       },
       {
         "domain_weights": {
-          "core_prehab": 0.288,
-          "finger_strength": 0.192,
-          "power_endurance": 0.096,
-          "pulling_strength": 0.192,
-          "technique": 0.038,
-          "volume_climbing": 0.192
+          "core_prehab": 0.182,
+          "finger_strength": 0.091,
+          "power_endurance": 0.182,
+          "pulling_strength": 0.091,
+          "technique": 0.182,
+          "volume_climbing": 0.273
         },
         "duration_weeks": 1,
         "end_week": 12,
@@ -436,6 +466,7 @@
           "prehab_maintenance",
           "regeneration_easy",
           "yoga_recovery",
+          "easy_climbing_deload",
           "handstand_practice"
         ],
         "start_week": 12
@@ -448,18 +479,18 @@
     "current_level": {
       "boulder": {
         "onsight": {
-          "grade": "5A+"
+          "grade": "7A+"
         },
         "worked": {
-          "grade": "6A"
+          "grade": "7C"
         }
       },
       "sport": {
         "onsight": {
-          "grade": "8b"
+          "grade": "7a+"
         },
         "worked": {
-          "grade": "7c+"
+          "grade": "8a+"
         }
       },
       "updated_at": null
@@ -467,8 +498,14 @@
   },
   "planning_prefs": {
     "hard_day_cap_per_week": 3,
-    "target_training_days_per_week": 4
+    "target_training_days_per_week": 6
   },
+  "quote_history": [
+    "q001",
+    "q002",
+    "q003",
+    "q006"
+  ],
   "recent_sessions": [],
   "recent_sessions_window_days": 14,
   "schema_version": "1.5",
@@ -476,8 +513,8 @@
   "tests": {},
   "trips": [],
   "user": {
-    "id": "da",
-    "name": "da",
+    "id": "ddd",
+    "name": "ddd",
     "preferred_name": "",
     "timezone": "Europe/Brussels",
     "units": {

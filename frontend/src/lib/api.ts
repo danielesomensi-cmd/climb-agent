@@ -18,10 +18,27 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+function getUserId(): string {
+  if (typeof window === "undefined") return "";
+  const key = "climb_user_id";
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const userId = getUserId();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(userId ? { "X-User-ID": userId } : {}),
+    ...((options?.headers as Record<string, string>) || {}),
+  };
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers,
   });
   if (!res.ok) {
     const body = await res.text();

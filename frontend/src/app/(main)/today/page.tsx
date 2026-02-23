@@ -91,6 +91,59 @@ function TodayContent() {
       setGyms(
         (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
       );
+
+      // Retry pending guided session feedback + cleanup old sessions
+      if (typeof window !== "undefined") {
+        const userId = localStorage.getItem("climb_user_id") ?? "";
+        const prefix = `guided_session_${userId}_`;
+        const now = Date.now();
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || !key.startsWith(prefix)) continue;
+          try {
+            const raw = localStorage.getItem(key);
+            if (!raw) continue;
+            const saved = JSON.parse(raw) as { startedAt?: string; submitStatus?: string; date?: string; sessionId?: string; exercises?: Array<Record<string, unknown>> };
+
+            // Cleanup sessions older than 24h that are completed
+            if (saved.startedAt) {
+              const age = now - new Date(saved.startedAt).getTime();
+              if (age > 24 * 60 * 60 * 1000 && saved.submitStatus !== "feedback_pending") {
+                localStorage.removeItem(key);
+                continue;
+              }
+            }
+
+            // Retry pending feedback
+            if (saved.submitStatus === "feedback_pending" && saved.exercises) {
+              const feedbackItems = saved.exercises.map((ex: Record<string, unknown>) => {
+                const item: Record<string, unknown> = {
+                  exercise_id: ex.exerciseId,
+                  feedback_label: ex.feedbackLabel,
+                  completed: ex.status === "done",
+                };
+                if (ex.usedLoadKg != null) item.used_external_load_kg = ex.usedLoadKg;
+                if (ex.usedGrade) item.used_grade = ex.usedGrade;
+                return item;
+              });
+              await postFeedback({
+                log_entry: {
+                  date: saved.date ?? "",
+                  session_id: saved.sessionId ?? "",
+                  actual: { exercise_feedback_v1: feedbackItems },
+                },
+                status: "done",
+              }).then(() => {
+                localStorage.removeItem(key);
+              }).catch(() => {
+                // Leave in localStorage for next retry
+              });
+            }
+          } catch {
+            // Ignore malformed localStorage entries
+          }
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
