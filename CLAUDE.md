@@ -18,7 +18,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (~377 green)
+# Run all tests (421 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -40,17 +40,20 @@ mypy backend/engine/
 backend/
   engine/            # Core logic: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (12 routers, 26 endpoints)
+  api/               # FastAPI REST API (12 routers, 27 endpoints)
     main.py          # App setup, CORS, router mounting (12 routers)
     models.py        # Pydantic request/response models
     deps.py          # Shared deps (load_state, save_state, next_monday)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # ~377 pytest tests with fixtures/
+  tests/             # 421 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
-  src/app/           # 19 pages: 5 main views + 12 onboarding steps + root + onboarding index
+  src/app/           # 21 pages: 7 main views + 12 onboarding steps + root + onboarding index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
+                     # guided/ (session-timer, progress-bar, exercise-step, summary)
+                     # whats-next/ (roadmap-section, feature-item, feedback-section)
+                     # settings/ (equipment-editor, goal-editor)
   src/lib/           # api.ts (25 endpoint functions), types.ts, hooks/
 docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, ROADMAP_v2.md, audit_post_fix.md, e2e_test_results.md
 _archive/            # Legacy scripts, docs, config (do not modify)
@@ -74,7 +77,7 @@ Data paths are relative to the repo root:
 
 ## API (Phase 3)
 
-FastAPI app with 12 routers and 26 endpoints + health check.
+FastAPI app with 12 routers and 27 endpoints + health check.
 
 ```bash
 # Start (exclude data dir from reload)
@@ -131,14 +134,16 @@ cd frontend && npm run dev    # http://localhost:3000
 - **API client**: Typed fetch wrapper in `src/lib/api.ts` (25 endpoint functions)
 - **PWA**: manifest.json + service worker
 
-### Pages (19)
-5 main views + 12 onboarding steps + root + onboarding index, with validation (date pickers, grade-experience cross-check), multi-week navigation, replan intents, feedback badges, undo done, load score display.
+### Pages (21)
+7 main views + 12 onboarding steps + root + onboarding index, with validation (date pickers, grade-experience cross-check), multi-week navigation, replan intents, feedback badges, undo done, load score display.
 
 - `/today` — Today's sessions (or any day via `?date=YYYY-MM-DD`), mark done/skipped, post-session feedback
 - `/week` — 7-day grid + scrollable day detail cards + "View day" / "Change plan" buttons + replan dialog + multi-week navigation
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
 - `/session/[id]` — Resolved exercises with prescription details, feedback badges, load score
-- `/settings` — Profile summary, regenerate assessment/macrocycle, reset
+- `/whats-next` — Votable roadmap (7 features, localStorage) + feedback form (mailto:)
+- `/settings` — Profile summary, goal editor, equipment editor, regenerate assessment/macrocycle, reset
+- `/guided/[date]/[sessionId]` — Step-by-step guided session with timer, progress dots, inline feedback, summary
 - `/onboarding/*` — 12-step wizard: welcome → profile → experience → grades → goals → weaknesses → tests → limitations → locations → availability → trips → review
 
 ## Catalog status (post Phase 0 expansion)
@@ -243,6 +248,10 @@ cd frontend && npm run dev   # porta 3000
 ```
 
 Senza header `X-User-ID` → fallback a `backend/data/user_state.json` (per dev/test locali).
+
+### Problema dati persistenza
+
+I file user_state.json sono in `backend/data/users/{id}/` e vengono persi ad ogni nuovo deploy Railway perché il filesystem è ephemeral. Fix pianificato: Railway persistent volume (B39).
 
 ## Documentation alignment
 

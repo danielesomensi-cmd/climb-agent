@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-22 (Phase 4a multi-user UUID — 143 exercises, 395 tests)
+> Last updated: 2026-02-23 (Phase 4b guided session + beta prep — 143 exercises, 421 tests)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -485,10 +485,14 @@ Tabella unica con TUTTI gli item tracciati.
 | B31 | Add session "other" mostra solo deload | ✅ DONE | post-2 | — |
 | B32 | Feedback done non visibile in UI | ✅ DONE | post-2 | — |
 | B33 | Quote motivazionale nella Today view | ✅ DONE | post-2 | — |
-| B34 | Feedback badge sessione mancante in Today view | TODO | post-2 | — |
-| B35 | Feedback esercizio singolo non visibile (FR-3 incompleto) | TODO | post-2 | — |
+| B34 | Feedback badge sessione mancante in Today view | ✅ DONE | 4b | — |
+| B35 | Feedback esercizio singolo non visibile (FR-3 incompleto) | ✅ DONE | 4b | — |
 | B36 | "— unknown" type label in Add session all-sessions list | ✅ DONE | post-2 | — |
 | UI-24 | Feedback con carico/grado — pre-popolare dal suggested | TODO | P1 | §2.8 |
+| B37 | Add exercise to existing session | TODO | next | — |
+| B38 | Injuries filter (contraindications) | TODO | next | — |
+| B39 | Railway persistent volume | TODO | infra | — |
+| B40 | Branch develop/main workflow | TODO | infra | — |
 
 ---
 
@@ -556,13 +560,29 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 - **CORS**: `http://localhost:3000` + `https://climb-agent.vercel.app`
 - **No auth, no database, no pagamenti** in questa fase
 
-### Phase 4b — Produzione
+### Phase 4b — Guided Session + Beta prep ✅ (2026-02-23)
+
+- **Guided Session Mode**: `/guided/[date]/[sessionId]`
+  localStorage persistence, step-by-step navigation,
+  progress dots, session timer, feedback inline per esercizio,
+  carico/grado editabile, summary screen,
+  retry automatico feedback fallito
+- **B34/B35 fix**: feedback badge Today view + feedback esercizio singolo
+- **Catalog fixes**: load_model 6 esercizi (campus → bodyweight_only, 30/30 → grade_relative),
+  grade_ref aerobic_pyramid → lead_max_os, homewall aggiunto come equipment home
+- **UX**: hint "Start session", intro onboarding, video link + cues in guided session,
+  session_duration_seconds nel feedback payload
+- **Tab "What's next"**: roadmap votabile (7 feature), feedback form → daniele.somensi@gmail.com
+- **Settings**: Edit Equipment (con regenerate dialog), Edit Goal (two-step confirmation + rigenera macrociclo)
+- 421 test verdi
+
+### Phase 4c — Produzione
 
 - **Auth**: Clerk (Next.js native)
 - **DB**: Supabase Postgres
 - **Pagamenti**: Stripe (subscription)
 
-### Phase 4c — App store (futuro)
+### Phase 4d — App store (futuro)
 
 - **Capacitor**: wrappa la PWA esistente per iOS/Android
 - Zero riscrittura del codice

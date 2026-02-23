@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-22 (Phase 4a multi-user UUID)
+> Last updated: 2026-02-23 (Phase 4b guided session + beta prep)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,10 +20,10 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 143 | 14 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises |
 | Sessions | 33 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | ~395 | all green (post Phase 4a multi-user) |
+| Tests | 421 | all green (post Phase 4b) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
-| API endpoints | 26 | 12 routers + health (FastAPI, CORS for Next.js) |
-| Frontend pages | 19 | 5 main views + 12 onboarding steps + root + onboarding index |
+| API endpoints | 27 | 12 routers + health (FastAPI, CORS for Next.js) |
+| Frontend pages | 21 | 7 main views + 12 onboarding steps + root + onboarding index |
 
 ---
 
@@ -88,7 +88,7 @@ backend/
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← ~377 pytest tests
+  tests/                    ← 421 pytest tests
 frontend/
   src/
     app/
@@ -99,7 +99,10 @@ frontend/
         week/page.tsx       ← Weekly grid + day detail cards
         plan/page.tsx       ← Macrocycle timeline + radar chart
         session/[id]/       ← Session detail with resolved exercises
+        whats-next/page.tsx ← Roadmap votabile + feedback form
         settings/page.tsx   ← Profile, goal, equipment, actions
+      (guided)/             ← Guided session (no bottom nav)
+        guided/[date]/[sessionId]/ ← Step-by-step session execution
       onboarding/           ← 12-step onboarding wizard
         welcome → profile → experience → grades → goals →
         weaknesses → tests → limitations → locations →
@@ -109,6 +112,9 @@ frontend/
       onboarding/           ← OnboardingContext, RadarChart, StepIndicator
       training/             ← DayCard, SessionCard, ExerciseCard, WeekGrid,
                               MacrocycleTimeline, FeedbackDialog
+      guided/               ← session-timer, progress-bar, exercise-step, summary
+      whats-next/           ← roadmap-section, feature-item, feedback-section
+      settings/             ← equipment-editor, goal-editor
     lib/
       api.ts                ← API client (25 endpoint functions)
       types.ts              ← TypeScript interfaces
@@ -162,7 +168,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (~377 green)
+# Backend tests (421 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)
@@ -194,6 +200,7 @@ from backend.engine.X import Y
 | 2: Tracking + outdoor | ✅ | Outdoor logging, reports, motivational quotes |
 | 2.5: Catalog audit | ✅ | 143 exercises, 10 patches, grade_ref/grade_offset, 377 tests. Remaining: §2.7 grade resolver, §2.8 working loads |
 | **4a: Multi-user + deploy** | ✅ | UUID multi-user, Railway/Vercel deploy prep, 395 tests |
+| **4b: Guided Session + Beta prep** | ✅ | Guided session mode, what's next tab, edit equipment/goal, homewall, grade fixes |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
 | 4: Evolution | 🔲 | Multi-goal, annual report, notifications |
 
