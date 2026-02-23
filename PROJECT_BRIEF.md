@@ -114,7 +114,7 @@ frontend/
                               MacrocycleTimeline, FeedbackDialog
       guided/               ← session-timer, progress-bar, exercise-step, summary
       whats-next/           ← roadmap-section, feature-item, feedback-section
-      settings/             ← equipment-editor, goal-editor
+      settings/             ← availability-editor, equipment-editor, goal-editor
     lib/
       api.ts                ← API client (25 endpoint functions)
       types.ts              ← TypeScript interfaces
@@ -123,6 +123,7 @@ docs/
   vocabulary_v1.md          ← Closed vocabulary (updated §5.1-5.6)
   DESIGN_GOAL_MACROCICLO_v1.1.md ← Complete design (the "why")
   ROADMAP_v2.md             ← Consolidated roadmap + backlog + audit (authoritative)
+  beta_feedback.md          ← Beta tester feedback log (FB-1 through FB-5)
   audit_post_fix.md         ← Historic: post-fix audit results
   e2e_test_results.md       ← Historic: E2E test findings
 _archive/                   ← Legacy scripts, docs, config (do not modify)
@@ -147,6 +148,7 @@ CLAUDE.md                   ← Context for Claude Code
 | Equipment | `equipment_required` only for essential gear, optional in notes |
 | Guided Session Mode | Timer UI with colored rest timer (spec in design doc, Phase 4) |
 | Multi-user beta | UUID localStorage + X-User-ID header |
+| Persistent storage | Railway volume at /data/climb-agent (DATA_DIR env var) |
 | Auth produzione | Clerk |
 | DB produzione | Supabase Postgres |
 | Pagamenti | Stripe |
@@ -200,7 +202,7 @@ from backend.engine.X import Y
 | 2: Tracking + outdoor | ✅ | Outdoor logging, reports, motivational quotes |
 | 2.5: Catalog audit | ✅ | 143 exercises, 10 patches, grade_ref/grade_offset, 377 tests. §2.7 grade resolver ✅, §2.8 working loads ✅ |
 | **4a: Multi-user + deploy** | ✅ | UUID multi-user, Railway/Vercel deploy prep, 395 tests |
-| **4b: Guided Session + Beta prep** | ✅ | Guided session mode, what's next tab, edit equipment/goal, homewall, grade fixes |
+| **4b: Guided Session + Beta prep** | ✅ | Guided session mode, what's next tab, edit equipment/goal, homewall, grade fixes, B39 persistent volume |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
 | 4: Evolution | 🔲 | Multi-goal, annual report, notifications |
 
