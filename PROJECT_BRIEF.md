@@ -194,11 +194,11 @@ from backend.engine.X import Y
 | 1.5: Post-E2E fixes | ✅ | 14 findings, 13 resolved, 155→188 tests |
 | 3: UI (Next.js PWA) | ✅ | 15 endpoints, 19 pages, mobile-first dark PWA |
 | 3.1: Bug fixes | ✅ | B21-B24, B9, B26 |
-| 1.75: Session enrichment + fix | ✅ | B8 enrichment, B4 load score, NEW-F3a test scheduling, NEW-F4 ripple fix, F6 projecting intent. NEW-F1 → Phase 2.5. |
+| 1.75: Session enrichment + fix | ✅ | B8 enrichment, B4 load score, NEW-F3a test scheduling, NEW-F4 ripple fix, F6 projecting intent. NEW-F1 ✅. |
 | UI test fixes (Batch 1-2) | ✅ | 22 bugs fixed, 3 FRs implemented, planner slot/location/dedup/gym-priority |
 | **3.2: UI polish + adaptive** | ✅ | B25 adaptive replanning, B19 quick-add, B20 edit availability, B27 equipment labels, NEW-F6/F7. B11 → Phase 2.5 |
 | 2: Tracking + outdoor | ✅ | Outdoor logging, reports, motivational quotes |
-| 2.5: Catalog audit | ✅ | 143 exercises, 10 patches, grade_ref/grade_offset, 377 tests. Remaining: §2.7 grade resolver, §2.8 working loads |
+| 2.5: Catalog audit | ✅ | 143 exercises, 10 patches, grade_ref/grade_offset, 377 tests. §2.7 grade resolver ✅, §2.8 working loads ✅ |
 | **4a: Multi-user + deploy** | ✅ | UUID multi-user, Railway/Vercel deploy prep, 395 tests |
 | **4b: Guided Session + Beta prep** | ✅ | Guided session mode, what's next tab, edit equipment/goal, homewall, grade fixes |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |

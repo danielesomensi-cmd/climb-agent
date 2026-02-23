@@ -248,42 +248,32 @@ Audit sistematico del catalogo esercizi contro la literature review
 - **UI-9** (limitation filtering): → next implementation phase
 - **UI-20** (warmup variety): → next implementation phase
 
-### §2.7 Grade resolver (TODO — next implementation step)
+### §2.7 Grade resolver ✅ DONE
 
-**Finding from Phase 2.5 audit**: `resolve_session.py` does NOT compute `suggested_grade` for grade_relative exercises, even though the catalog now has `grade_ref` and `grade_offset` on 23 exercises.
+Implementato in `progression_v1.py:393-405` via `inject_targets()`, chiamato da `resolve_session.py:1098-1116` post-resolution.
 
-**Current state**:
-- Catalog: grade_ref + grade_offset populated on 23/28 grade_relative exercises ✅
-- Vocabulary: §2.10.1 documents the fields and semantics ✅
-- Tests: 4 validation tests enforce correctness ✅
-- Resolver: does NOT read grade_ref/grade_offset — **gap** ❌
-- Progression: `progression_v1.py` has grade logic but only for feedback, not prescription
+- `step_grade()` normalizza gradi Font (strip "+", whole-grade only, scala 5A→8C)
+- Legge `grade_ref` + `grade_offset` da prescription_defaults, lookup in `user_state.assessment.grades`
+- Output: `suggested_grade`, `grade_ref`, `grade_offset` nel dict `suggested` di ogni exercise instance
+- `limit_bouldering` escluso (ha logica dedicata `suggested_boulder_target`)
+- 13 test: 5 in `test_working_loads.py`, 4 E2E in `test_feedback_loop_e2e.py`, 4 validazione catalogo in `test_exercises_v2.py`
 
-**Implementation needed** (in `resolve_session.py`):
-1. Read `grade_ref` and `grade_offset` from exercise `prescription_defaults`
-2. Look up the reference grade from `user_state.assessment.grades`
-3. Apply offset using a grade-to-int scale (6a=0, 6b=1, 6c=2, 7a=3, ...)
-4. Output `suggested_grade` field in the resolved exercise output
-5. Add tests for the grade computation logic
+### §2.8 Working loads (UI-18) ✅ DONE
 
-**Dipendenza**: nessuna — il catalogo è pronto, serve solo il codice nel resolver.
+Implementato in `progression_v1.py:324-442` (`inject_targets()`), closed loop in `progression_v1.py:548-685` (`apply_feedback()`).
 
-### §2.8 Working loads (UI-18 — TODO)
+**Backend**:
+- `inject_targets()` produce `suggested_total_load_kg`, `suggested_external_load_kg`, `suggested_rep_scheme` per load-based, external-load, e hangboard exercises
+- Fallback chain: working_loads entry → baselines.hangboard → %BW default
+- `apply_feedback()` aggiorna `working_loads.entries[]` con adjustment policy (very_easy +15%, easy +7.5%, ok +2.5%, hard -2.5%, very_hard -10%)
+- Persistito via `save_state()` in feedback router
 
-**UI-18**: resolver calculates initial loads from assessment tests. Frontend displays suggested weight.
+**Frontend**:
+- Guided session pre-popola load/grade input da `suggested` (exercise-step.tsx:79-92)
+- Box "Suggested: +X kg" con icona Lightbulb visibile per esercizi con load
+- Feedback con `used_external_load_kg` e `used_grade` inviato al backend
 
-**Current state**:
-- `resolve_session.py` falls back to assessment test data for suggested loads when baselines are empty
-- `working_loads` in user_state are populated by the closed loop after feedback
-- Frontend does NOT display suggested weight/load per exercise
-
-**Implementation needed**:
-1. §2.7 (grade resolver) for grade_relative exercises
-2. Load computation from assessment tests for total_load/external_load exercises
-3. API output includes `suggested_load` per exercise
-4. Frontend displays suggested load in session detail view
-
-**Dipendenza**: §2.7 (grade resolver) è prerequisito per la parte grade_relative.
+**Test**: 17 in `test_working_loads.py`, E2E loop in `test_feedback_loop_e2e.py` (max_hang 3-session, repeater 2-session, bench_press 3-session), `test_progression_v1.py`
 
 ---
 
@@ -438,7 +428,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B25 | Adaptive replanning after feedback | ✅ DONE | 3.2 | §3 |
 | B26 | Test isolation fixtures | ✅ DONE | 3.1 | §1 |
 | B27 | Equipment label single source | ✅ DONE | 3.2 | §3 |
-| NEW-F1 | Prescription climbing vuota | ⏩ §2.7 | 2.5→next | §2.7 |
+| NEW-F1 | Prescription climbing vuota | ✅ DONE | 4b | §2.7 |
 | NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
 | NEW-F3a | Test sessions scheduling | ✅ DONE | 1.75 | §2.4 |
 | NEW-F3b | assessment.tests closed loop | TODO | 2.5 | §2.4 |
@@ -470,7 +460,7 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-15 | Replan dialog: add intent selection | ✅ DONE | Batch 2 | §3 |
 | UI-16 | Undo session "done" status | ✅ DONE | Batch 2 | §3 |
 | UI-17 | Feedback optional + visible after submit | ✅ DONE | Batch 2 | §3 |
-| UI-18 | Exercise load/weight prescription display | TODO | next | §2.8 |
+| UI-18 | Exercise load/weight prescription display | ✅ DONE | 4b | §2.8 |
 | UI-19 | technique_focus_gym resolves wrong | ✅ DONE | Batch 1 | §2 |
 | UI-20 | Warmup variety (always shoulder_car) | TODO | 2.5 | §2.6 |
 | UI-21 | Session structure info (informational) | ℹ️ | — | — |
@@ -488,7 +478,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B34 | Feedback badge sessione mancante in Today view | ✅ DONE | 4b | — |
 | B35 | Feedback esercizio singolo non visibile (FR-3 incompleto) | ✅ DONE | 4b | — |
 | B36 | "— unknown" type label in Add session all-sessions list | ✅ DONE | post-2 | — |
-| UI-24 | Feedback con carico/grado — pre-popolare dal suggested | TODO | P1 | §2.8 |
+| UI-24 | Feedback con carico/grado — pre-popolare dal suggested | ✅ DONE | 4b | §2.8 |
 | B37 | Add exercise to existing session | TODO | next | — |
 | B38 | Injuries filter (contraindications) | TODO | next | — |
 | B39 | Railway persistent volume | ✅ DONE | infra | §10 |
