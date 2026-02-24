@@ -232,9 +232,9 @@ def test_hangboard_working_loads_override():
 
 
 def test_hangboard_no_baseline():
-    """No baseline → estimates max_total from grade via _FINGER_BENCHMARK.
-    Fixture has no redpoint_french grade → fallback ratio 1.10×BW.
-    77 × 1.10 = 84.7; 84.7 × 0.70 = 59.29 → 59.5; ext = 59.5 - 77 = -17.5
+    """No baseline → estimate_missing_baselines fills from lead_max_rp grade.
+    Fixture has lead_max_rp="8a+" → GRADE_TO_HANG_OFFSET["8a+"]=40 → estimated=77+40=117.
+    Then _hangboard_suggested: 117 × 0.70 = 81.9 → 82.0; ext = 82.0 - 77 = 5.0
     """
     us = _base_user_state()
     us["baselines"] = {}
@@ -245,10 +245,10 @@ def test_hangboard_no_baseline():
     out = inject_targets(day, us)
     inst = out["sessions"][0]["exercise_instances"][0]
     sug = inst["suggested"]
-    # 77 * 1.10 * 0.70 = 59.29 → 59.5
-    assert sug["suggested_total_load_kg"] == 59.5
-    # 59.5 - 77 = -17.5
-    assert sug["suggested_external_load_kg"] == -17.5
+    # 77 + 40 = 117; 117 * 0.70 = 81.9 → 82.0
+    assert sug["suggested_total_load_kg"] == 82.0
+    # 82.0 - 77 = 5.0
+    assert sug["suggested_external_load_kg"] == 5.0
 
 
 def test_hangboard_feedback():

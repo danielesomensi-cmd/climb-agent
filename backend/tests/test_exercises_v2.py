@@ -202,3 +202,54 @@ def test_grade_ref_implies_grade_offset(exercise_list):
             assert go is not None, f"{e['id']} has grade_ref but no grade_offset"
         if go is not None:
             assert gr is not None, f"{e['id']} has grade_offset but no grade_ref"
+
+
+def test_timed_rep_exercises_have_correct_volume(exercise_list):
+    """Exercises with reps > 1 AND work_seconds > 0 must have numeric reps and sets.
+
+    The guided session timer loops sets × reps work intervals.
+    This test verifies the data contract: sets and reps are both positive integers
+    so the timer can compute total_work_intervals = sets × reps.
+    """
+    timed_rep_exercises = []
+    for e in exercise_list:
+        pd = e.get("prescription_defaults", {})
+        reps = pd.get("reps")
+        work_s = pd.get("work_seconds")
+        if reps is not None and isinstance(reps, int) and reps > 1 and work_s and work_s > 0:
+            timed_rep_exercises.append(e)
+
+    # At least density_hangs, repeater_hang_7_3, repeater_15_15 must be in this set
+    ids = {e["id"] for e in timed_rep_exercises}
+    assert "density_hangs" in ids
+    assert "repeater_hang_7_3" in ids
+    assert "repeater_15_15" in ids
+
+    for e in timed_rep_exercises:
+        pd = e["prescription_defaults"]
+        sets = pd.get("sets")
+        reps = pd.get("reps")
+        work_s = pd.get("work_seconds")
+        rest_sets = pd.get("rest_between_sets_seconds")
+
+        assert isinstance(sets, int) and sets >= 1, f"{e['id']} sets must be positive int"
+        assert isinstance(reps, int) and reps >= 2, f"{e['id']} reps must be >= 2"
+        assert isinstance(work_s, (int, float)) and work_s > 0, f"{e['id']} work_seconds must be > 0"
+        assert rest_sets is not None and rest_sets > 0, f"{e['id']} must have rest_between_sets_seconds"
+
+        total_intervals = sets * reps
+        assert total_intervals >= 4, (
+            f"{e['id']}: sets={sets} × reps={reps} = {total_intervals} intervals — "
+            "seems too low for a timed-rep protocol"
+        )
+
+
+def test_density_hangs_protocol(exercise_map):
+    """density_hangs must match Tyler Nelson protocol: 3 grips × 3 hangs, 90s rep rest."""
+    dh = exercise_map["density_hangs"]
+    pd = dh["prescription_defaults"]
+    assert pd["sets"] == 3
+    assert pd["reps"] == 3
+    assert pd["work_seconds"] == 30
+    assert pd["rest_between_reps_seconds"] == 90, "Nelson protocol: 90s rest between hangs"
+    assert pd["rest_between_sets_seconds"] == 180

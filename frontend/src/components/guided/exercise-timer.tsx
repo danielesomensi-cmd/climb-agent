@@ -1,21 +1,83 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Pause, RotateCcw, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
 interface ExerciseTimerProps {
-  workSeconds: number;
-  restSeconds: number;
+  workSeconds: number;              // 0 for manual/rep-based exercises
+  restBetweenRepsSeconds: number;   // rest between reps within a set (0 = no rep rest)
+  restBetweenSetsSeconds: number;   // rest between sets
   sets: number;
-  initialSet?: number;  // resume from this set number (default 1)
-  onSetChange?: (completedSets: number) => void;  // called when a work set finishes
+  reps: number;                     // reps per set (timer loops reps only when workSeconds > 0)
+  initialSet?: number;
+  onSetChange?: (completedSets: number) => void;
 }
 
-type Phase = "idle" | "work" | "rest" | "complete";
+type Phase = "idle" | "get_ready" | "work" | "rep_rest" | "set_rest" | "complete";
 
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const GET_READY_SECONDS = 5;
 const RADIUS = 52;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+// ---------------------------------------------------------------------------
+// Audio — module-level AudioContext for iOS Safari compatibility.
+// Must be created/resumed inside a user-gesture handler (handleStart / handleDoneSet).
+// ---------------------------------------------------------------------------
+
+let sharedAudioCtx: AudioContext | null = null;
+
+function ensureAudioContext(): void {
+  try {
+    if (sharedAudioCtx && sharedAudioCtx.state !== "closed") {
+      if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
+      return;
+    }
+    const Ctx =
+      typeof window !== "undefined"
+        ? window.AudioContext ??
+          (window as unknown as { webkitAudioContext?: typeof AudioContext })
+            .webkitAudioContext
+        : undefined;
+    if (!Ctx) return;
+    sharedAudioCtx = new Ctx();
+  } catch { /* silent */ }
+}
+
+function beep(freq: number, duration: number, volume: number) {
+  const ctx = sharedAudioCtx;
+  if (!ctx || ctx.state !== "running") return;
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  } catch { /* silent */ }
+}
+
+/** Short high-pitched tick for countdown 3-2-1 */
+function countdownTick() { beep(660, 0.08, 0.25); }
+
+/** Longer beep on phase transition */
+function transitionBeep() { beep(880, 0.2, 0.4); }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function formatSeconds(s: number): string {
   if (s >= 60) {
@@ -26,67 +88,76 @@ function formatSeconds(s: number): string {
   return String(s);
 }
 
-function playBeep() {
-  try {
-    const Ctx =
-      typeof window !== "undefined"
-        ? window.AudioContext ??
-          (window as unknown as { webkitAudioContext?: typeof AudioContext })
-            .webkitAudioContext
-        : undefined;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = 440;
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.15);
-    // Clean up after playback
-    osc.onended = () => ctx.close();
-  } catch {
-    // Silent fail
-  }
-}
-
-function vibrate() {
-  try {
-    navigator?.vibrate?.(200);
-  } catch {
-    // Silent fail
-  }
-}
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export function ExerciseTimer({
   workSeconds,
-  restSeconds,
+  restBetweenRepsSeconds,
+  restBetweenSetsSeconds,
   sets,
+  reps,
   initialSet = 1,
   onSetChange,
 }: ExerciseTimerProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [currentSet, setCurrentSet] = useState(initialSet);
-  const [secondsLeft, setSecondsLeft] = useState(workSeconds);
+  const [currentRep, setCurrentRep] = useState(1);
+  const [secondsLeft, setSecondsLeft] = useState(0);
   const [paused, setPaused] = useState(false);
   const [transitionId, setTransitionId] = useState(0);
+  const [flash, setFlash] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Keep onSetChange in a ref so the interval callback always has the latest version
   const onSetChangeRef = useRef(onSetChange);
   useEffect(() => { onSetChangeRef.current = onSetChange; }, [onSetChange]);
 
-  const totalForPhase = phase === "work" ? workSeconds : restSeconds;
+  // Refs for countdown beep effect (avoid re-triggering on phase/paused change)
+  const phaseRef = useRef(phase);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  const pausedRef = useRef(paused);
+  useEffect(() => { pausedRef.current = paused; }, [paused]);
 
-  // Beep + vibrate on phase transitions (not on initial mount)
+  const isManual = workSeconds === 0;
+  const hasRepLoop = !isManual && reps > 1;
+
+  // Total duration for current phase (progress arc denominator)
+  const totalForPhase = (() => {
+    switch (phase) {
+      case "get_ready": return GET_READY_SECONDS;
+      case "work": return workSeconds;
+      case "rep_rest": return restBetweenRepsSeconds;
+      case "set_rest": return restBetweenSetsSeconds;
+      default: return 0;
+    }
+  })();
+
+  // --- Audio effects ---
+
+  // Transition beep + visual flash
   useEffect(() => {
     if (transitionId > 0) {
-      playBeep();
-      vibrate();
+      transitionBeep();
+      setFlash(true);
+      const t = setTimeout(() => setFlash(false), 300);
+      return () => clearTimeout(t);
     }
   }, [transitionId]);
+
+  // Countdown ticks at 3 / 2 / 1 seconds
+  useEffect(() => {
+    if (secondsLeft >= 1 && secondsLeft <= 3) {
+      const p = phaseRef.current;
+      if (!pausedRef.current && p !== "idle" && p !== "complete") {
+        // No countdown ticks during manual work (no timer running)
+        if (!(p === "work" && isManual)) {
+          countdownTick();
+        }
+      }
+    }
+  }, [secondsLeft, isManual]);
+
+  // --- Timer management ---
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -95,49 +166,81 @@ export function ExerciseTimer({
     }
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return clearTimer;
-  }, [clearTimer]);
+  useEffect(() => clearTimer, [clearTimer]);
 
-  // Main timer tick
+  // Main tick — recreated when relevant state changes
   useEffect(() => {
     clearTimer();
 
     if (phase === "idle" || phase === "complete" || paused) return;
+    if (phase === "work" && isManual) return; // manual work has no countdown
 
     intervalRef.current = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          // Transition happens here
+          // --- Phase transition ---
+
+          if (phase === "get_ready") {
+            setPhase("work");
+            setTransitionId((id) => id + 1);
+            if (isManual) return 0;
+            return workSeconds;
+          }
+
           if (phase === "work") {
-            // Notify parent that this work set is complete
+            // More reps in this set?
+            if (hasRepLoop && currentRep < reps) {
+              if (restBetweenRepsSeconds > 0) {
+                setPhase("rep_rest");
+                setTransitionId((id) => id + 1);
+                return restBetweenRepsSeconds;
+              }
+              // No rep rest — next rep immediately
+              setCurrentRep((r) => r + 1);
+              setTransitionId((id) => id + 1);
+              return workSeconds;
+            }
+            // End of set
             onSetChangeRef.current?.(currentSet);
             if (currentSet >= sets) {
-              // Last set done
               setPhase("complete");
               setTransitionId((id) => id + 1);
               return 0;
             }
-            if (restSeconds > 0) {
-              setPhase("rest");
-              setSecondsLeft(restSeconds);
+            // More sets — go to set rest
+            if (restBetweenSetsSeconds > 0) {
+              setPhase("set_rest");
               setTransitionId((id) => id + 1);
-              return restSeconds;
+              return restBetweenSetsSeconds;
             }
-            // No rest — go straight to next work
+            // No set rest — next set with get_ready
             setCurrentSet((s) => s + 1);
-            setSecondsLeft(workSeconds);
+            setCurrentRep(1);
+            setPhase("get_ready");
             setTransitionId((id) => id + 1);
-            return workSeconds;
+            return GET_READY_SECONDS;
           }
-          if (phase === "rest") {
-            setCurrentSet((s) => s + 1);
+
+          if (phase === "rep_rest") {
+            setCurrentRep((r) => r + 1);
             setPhase("work");
-            setSecondsLeft(workSeconds);
             setTransitionId((id) => id + 1);
             return workSeconds;
           }
+
+          if (phase === "set_rest") {
+            setCurrentSet((s) => s + 1);
+            setCurrentRep(1);
+            if (!isManual) {
+              setPhase("get_ready");
+              setTransitionId((id) => id + 1);
+              return GET_READY_SECONDS;
+            }
+            setPhase("work");
+            setTransitionId((id) => id + 1);
+            return 0;
+          }
+
           return 0;
         }
         return prev - 1;
@@ -145,49 +248,90 @@ export function ExerciseTimer({
     }, 1000);
 
     return clearTimer;
-  }, [phase, paused, currentSet, sets, workSeconds, restSeconds, clearTimer]);
+  }, [phase, paused, currentSet, currentRep, sets, reps, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, clearTimer]);
+
+  // --- Handlers ---
 
   function handleStart() {
-    setPhase("work");
-    // Keep currentSet as-is (initialSet on first start, or wherever reset left it)
-    setSecondsLeft(workSeconds);
+    ensureAudioContext(); // Unlock audio on iOS (must be inside user gesture)
+    if (isManual) {
+      setPhase("work");
+      setSecondsLeft(0);
+    } else {
+      setPhase("get_ready");
+      setSecondsLeft(GET_READY_SECONDS);
+    }
     setPaused(false);
+    setTransitionId((id) => id + 1);
+  }
+
+  function handleDoneSet() {
+    ensureAudioContext(); // Resume audio if suspended
+    onSetChangeRef.current?.(currentSet);
+    if (currentSet >= sets) {
+      setPhase("complete");
+    } else if (restBetweenSetsSeconds > 0) {
+      setPhase("set_rest");
+      setSecondsLeft(restBetweenSetsSeconds);
+    } else {
+      setCurrentSet((s) => s + 1);
+      // Phase stays "work" (manual), no countdown
+    }
     setTransitionId((id) => id + 1);
   }
 
   function handleReset() {
     clearTimer();
     setPhase("idle");
-    setCurrentSet(1);  // Full restart — always go back to set 1
-    setSecondsLeft(workSeconds);
+    setCurrentSet(1);
+    setCurrentRep(1);
+    setSecondsLeft(0);
     setPaused(false);
   }
 
   function handleCircleTap() {
-    if (phase === "work" || phase === "rest") {
+    if (phase === "work" && isManual) {
+      handleDoneSet();
+      return;
+    }
+    if (phase !== "idle" && phase !== "complete") {
       setPaused((p) => !p);
     }
   }
 
-  // SVG progress
+  // --- SVG progress ---
+
   const progress =
     phase === "idle" || phase === "complete" || totalForPhase === 0
       ? 0
       : 1 - secondsLeft / totalForPhase;
   const dashOffset = progress * CIRCUMFERENCE;
 
-  const strokeColor =
-    phase === "rest" ? "stroke-emerald-500" : "stroke-orange-500";
-  const isLastThree =
-    (phase === "work" || phase === "rest") && secondsLeft <= 3;
+  const strokeColor = (() => {
+    switch (phase) {
+      case "get_ready": return "stroke-sky-500";
+      case "work": return "stroke-orange-500";
+      case "rep_rest": return "stroke-teal-400";
+      case "set_rest": return "stroke-emerald-500";
+      default: return "stroke-orange-500";
+    }
+  })();
+
+  const isCountdown =
+    secondsLeft <= 3 && secondsLeft > 0 &&
+    phase !== "idle" && phase !== "complete" &&
+    !(phase === "work" && isManual);
+
+  // --- Render ---
 
   return (
     <div className="flex flex-col items-center gap-3">
       {/* SVG circle */}
       <div
         className={cn(
-          "relative w-40 h-40 cursor-pointer select-none",
-          (phase === "work" || phase === "rest") && "active:scale-95 transition-transform"
+          "relative w-40 h-40 cursor-pointer select-none transition-transform",
+          phase !== "idle" && phase !== "complete" && "active:scale-95",
+          flash && "ring-2 ring-primary/50 rounded-full"
         )}
         onClick={handleCircleTap}
         role="button"
@@ -195,26 +339,24 @@ export function ExerciseTimer({
         onKeyDown={(e) => {
           if (e.key === " " || e.key === "Enter") handleCircleTap();
         }}
-        aria-label={paused ? "Resume timer" : "Pause timer"}
+        aria-label={
+          phase === "work" && isManual
+            ? "Complete set"
+            : paused ? "Resume timer" : "Pause timer"
+        }
       >
         <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
           {/* Background track */}
           <circle
-            cx="60"
-            cy="60"
-            r={RADIUS}
-            fill="none"
-            strokeWidth={8}
+            cx="60" cy="60" r={RADIUS}
+            fill="none" strokeWidth={8}
             className="stroke-muted"
           />
-          {/* Progress arc */}
-          {phase !== "idle" && phase !== "complete" && (
+          {/* Progress arc (hidden during manual work and idle/complete) */}
+          {phase !== "idle" && phase !== "complete" && !(phase === "work" && isManual) && (
             <circle
-              cx="60"
-              cy="60"
-              r={RADIUS}
-              fill="none"
-              strokeWidth={8}
+              cx="60" cy="60" r={RADIUS}
+              fill="none" strokeWidth={8}
               strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={dashOffset}
@@ -227,13 +369,10 @@ export function ExerciseTimer({
         </svg>
 
         {/* Center text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center rotate-0">
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
           {phase === "idle" && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStart();
-              }}
+              onClick={(e) => { e.stopPropagation(); handleStart(); }}
               className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
             >
               <Play className="size-8" />
@@ -241,29 +380,62 @@ export function ExerciseTimer({
             </button>
           )}
 
-          {(phase === "work" || phase === "rest") && (
+          {phase === "get_ready" && (
             <>
-              <span
-                className={cn(
-                  "text-3xl font-bold tabular-nums",
-                  isLastThree && "animate-pulse"
-                )}
-              >
+              <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                {secondsLeft}
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-sky-500">
+                Get Ready
+              </span>
+            </>
+          )}
+
+          {phase === "work" && !isManual && (
+            <>
+              <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
                 {formatSeconds(secondsLeft)}
               </span>
-              <span
-                className={cn(
-                  "text-xs font-semibold uppercase tracking-wider mt-0.5",
-                  phase === "work"
-                    ? "text-orange-500"
-                    : "text-emerald-500"
-                )}
-              >
-                {phase === "work" ? "Work" : "Rest"}
+              <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-orange-500">
+                Work
               </span>
-              {paused && (
-                <Pause className="size-5 text-muted-foreground mt-1" />
-              )}
+              {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
+            </>
+          )}
+
+          {phase === "work" && isManual && (
+            <>
+              <span className="text-2xl font-bold">Set {currentSet}</span>
+              <span className="text-xs text-muted-foreground mt-1">
+                {reps > 1 ? `Do ${reps} reps` : "Do your set"}
+              </span>
+              <span className="text-[10px] text-muted-foreground/60 mt-0.5">
+                Tap when done
+              </span>
+            </>
+          )}
+
+          {phase === "rep_rest" && (
+            <>
+              <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                {formatSeconds(secondsLeft)}
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-teal-400">
+                Rep Rest
+              </span>
+              {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
+            </>
+          )}
+
+          {phase === "set_rest" && (
+            <>
+              <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                {formatSeconds(secondsLeft)}
+              </span>
+              <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-emerald-500">
+                Rest
+              </span>
+              {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
             </>
           )}
 
@@ -275,22 +447,36 @@ export function ExerciseTimer({
         </div>
       </div>
 
-      {/* Set counter + controls */}
-      <div className="flex items-center gap-3">
+      {/* Set/rep counter + controls */}
+      <div className="flex flex-col items-center gap-2">
         {phase !== "idle" && (
           <span className="text-xs text-muted-foreground tabular-nums">
             Set {currentSet} / {sets}
+            {hasRepLoop && phase !== "set_rest" && phase !== "complete" && (
+              <> &mdash; Rep {currentRep} / {reps}</>
+            )}
           </span>
         )}
-        {(phase === "work" || phase === "rest" || phase === "complete") && (
-          <button
-            onClick={handleReset}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Reset timer"
-          >
-            <RotateCcw className="size-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {phase === "work" && isManual && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleDoneSet(); }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+            >
+              <CheckCircle2 className="size-4" />
+              Done set
+            </button>
+          )}
+          {phase !== "idle" && (
+            <button
+              onClick={handleReset}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Reset timer"
+            >
+              <RotateCcw className="size-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

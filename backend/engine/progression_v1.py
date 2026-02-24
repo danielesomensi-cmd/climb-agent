@@ -40,7 +40,7 @@ EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "turkish_getup": 0.15,
 }
 HANGBOARD_TOTAL_LOAD_EXERCISES = {
-    "critical_force_test", "dead_hang_easy", "density_hangs",
+    "critical_force_test", "density_hangs",
     "hangboard_moving_hangs", "horst_7_53", "long_duration_hang",
     "lopez_subhangs", "max_hang_10s", "max_hang_7s", "max_hang_ladder",
     "med_test", "one_arm_hang_assisted", "repeater_15_15", "repeater_hang_7_3",
@@ -52,13 +52,12 @@ GRADE_TO_HANG_OFFSET: Dict[str, float] = {
     "7a": 5,   "7a+": 10,
     "7b": 15,  "7b+": 20,
     "7c": 27,
-    "8a": 35,
+    "8a": 35,  "8a+": 40,
     "8b": 45,
 }
 
 HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
     "critical_force_test": 0.80,
-    "dead_hang_easy": 0.50,
     "density_hangs": 0.75,
     "hangboard_moving_hangs": 0.55,
     "horst_7_53": 0.70,

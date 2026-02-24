@@ -315,6 +315,7 @@ export interface GuidedExercise {
     sets?: number;
     reps?: string | number;
     workSeconds?: number;
+    restBetweenRepsSeconds?: number;
     restSeconds?: number;
     loadKg?: number;
     tempo?: string;

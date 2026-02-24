@@ -178,9 +178,16 @@
         "cns": "low",
         "skin": "low"
       },
-      "description": null,
-      "cues": [],
-      "video_url": null,
+      "description": "Sub-maximal neurological primer (Tyler Nelson / C4HP): short explosive-intent isometric contractions on a hangboard edge to activate high-threshold motor units in the finger flexors before training, without accumulating fatigue.",
+      "cues": [
+        "Half-crimp or open-hand on moderate edge (20-23 mm); avoid full crimp",
+        "Apply 80-90% effort with maximal intent, hold only 1-3 seconds per rep",
+        "Neutral wrist, engaged shoulder girdle — slight scapular retraction, do not shrug",
+        "Rest fully between reps (45-90s); quality of neural drive, not metabolic load",
+        "Reduce load via feet-on or pulley so it does not feel near-failure",
+        "Focus on rate of force development and intent to pull hard, not hold duration"
+      ],
+      "video_url": "https://www.youtube.com/watch?v=gHDmBqLfBWc",
       "load_model": "bodyweight_only"
     },
     {
@@ -231,7 +238,7 @@
         "Perfect for daily use or rehab"
       ],
       "video_url": "https://trainingforclimbing.com/video-intro-to-hangboard-training-for-finger-strength-and-endurance/",
-      "load_model": "total_load",
+      "load_model": "bodyweight_only",
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp"
@@ -594,9 +601,9 @@
         "sets": 3,
         "reps": 3,
         "work_seconds": 30,
-        "rest_between_reps_seconds": null,
+        "rest_between_reps_seconds": 90,
         "rest_between_sets_seconds": 180,
-        "notes": "20-40s to near-failure. Open-hand preferred."
+        "notes": "3 grips × 3 hangs = 9 total. Open-hand. Change grip each rep. 90s rest between hangs, 3 min between sets."
       },
       "stress_tags": {
         "elbow": "low",
@@ -604,13 +611,14 @@
         "cns": "low",
         "skin": "low"
       },
-      "description": "Tyler Nelson’s Density Hangs protocol for tendon hypertrophy, stress-shielding and forearm muscle density via long-duration near-failure hangs.",
+      "description": "Tyler Nelson’s Density Hangs protocol (C4HP): 3 sets of 3 reps across different grip positions. Each hang is 20-40s near failure. Targets tendon hypertrophy, stress-shielding, and forearm muscle density.",
       "cues": [
-        "Open-hand grip preferred",
-        "Hang 20-40s to ~95% RPE (near failure)",
-        "2-3 reps per grip, 3-5 min rest",
-        "Choose edge you can hold 20-45s bodyweight",
-        "Elbows extended, focus on tendon health"
+        "3 different grip positions per set (e.g. open-hand, half-crimp, 3-finger drag)",
+        "Each hang: 20-40s at ~RPE 9 (near failure)",
+        "Change grip position on every rep within the set",
+        "90s rest between individual hangs",
+        "3 min rest between sets of 3",
+        "Choose an edge where you can hold 20-45s at bodyweight"
       ],
       "video_url": "https://www.youtube.com/watch?v=YDMdP6juY4w",
       "load_model": "total_load",

@@ -25,11 +25,22 @@ const FEEDBACK_OPTIONS = [
   { value: "very_hard", label: "Very hard", color: "bg-red-500" },
 ];
 
+function formatRest(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? (s > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${m}:00`) : `${s}s`;
+}
+
 function formatPrescription(ex: GuidedExercise): string[] {
   const lines: string[] = [];
   const p = ex.prescription;
 
-  if (p.sets && p.reps) {
+  // Main scheme
+  if (p.sets && p.reps && p.workSeconds) {
+    // Timed reps: "3 × 3 × 30s"
+    const work = p.workSeconds >= 60 ? `${Math.round(p.workSeconds / 60)} min` : `${p.workSeconds}s`;
+    lines.push(`${p.sets} \u00d7 ${p.reps} \u00d7 ${work}`);
+  } else if (p.sets && p.reps) {
     lines.push(`${p.sets} \u00d7 ${p.reps}`);
   } else if (p.sets && p.workSeconds) {
     if (p.workSeconds >= 60) {
@@ -45,11 +56,13 @@ function formatPrescription(ex: GuidedExercise): string[] {
     }
   }
 
+  // Rest info
+  if (p.restBetweenRepsSeconds) {
+    lines.push(`Rep rest: ${formatRest(p.restBetweenRepsSeconds)}`);
+  }
   if (p.restSeconds) {
-    const m = Math.floor(p.restSeconds / 60);
-    const s = p.restSeconds % 60;
-    const rest = m > 0 ? (s > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${m}:00`) : `${s}s`;
-    lines.push(`Rest: ${rest}`);
+    const label = p.restBetweenRepsSeconds ? "Set rest" : "Rest";
+    lines.push(`${label}: ${formatRest(p.restSeconds)}`);
   }
 
   if (p.loadKg) {
@@ -202,12 +215,15 @@ export function GuidedExerciseStep({
           </div>
         )}
 
-        {/* Exercise timer */}
-        {exercise.prescription.workSeconds != null && exercise.prescription.workSeconds > 0 && (
+        {/* Exercise timer — shown for timed exercises AND multi-set rep-based exercises */}
+        {(((exercise.prescription.workSeconds ?? 0) > 0) ||
+          ((exercise.prescription.sets ?? 1) > 1 && (exercise.prescription.restSeconds ?? 0) > 0)) && (
           <ExerciseTimer
-            workSeconds={exercise.prescription.workSeconds}
-            restSeconds={exercise.prescription.restSeconds ?? 0}
+            workSeconds={exercise.prescription.workSeconds ?? 0}
+            restBetweenRepsSeconds={exercise.prescription.restBetweenRepsSeconds ?? 0}
+            restBetweenSetsSeconds={exercise.prescription.restSeconds ?? 0}
             sets={exercise.prescription.sets ?? 1}
+            reps={typeof exercise.prescription.reps === "number" ? exercise.prescription.reps : 1}
             initialSet={
               exercise.completedSets != null &&
               exercise.completedSets < (exercise.prescription.sets ?? 1)
