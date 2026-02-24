@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-23 (Phase 4b guided session + beta prep — 143 exercises, 421 tests)
+> Last updated: 2026-02-24 (bug fixes post-4b: REST timer phase, density hang load calc — 421 tests)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -264,7 +264,7 @@ Implementato in `progression_v1.py:324-442` (`inject_targets()`), closed loop in
 
 **Backend**:
 - `inject_targets()` produce `suggested_total_load_kg`, `suggested_external_load_kg`, `suggested_rep_scheme` per load-based, external-load, e hangboard exercises
-- Fallback chain: working_loads entry → baselines.hangboard → %BW default
+- Fallback chain: working_loads entry → baselines.hangboard → grade-estimated max (via `_FINGER_BENCHMARK`) → 1.10×BW se grade sconosciuto
 - `apply_feedback()` aggiorna `working_loads.entries[]` con adjustment policy (very_easy +15%, easy +7.5%, ok +2.5%, hard -2.5%, very_hard -10%)
 - Persistito via `save_state()` in feedback router
 
@@ -487,6 +487,8 @@ Tabella unica con TUTTI gli item tracciati.
 | B42 | Sunday reminder — confirm next week availability | TODO | beta feedback | — |
 | B43 | Edit profile + assessment data from Settings | TODO | beta feedback | — |
 | B44 | Permettere meno di 3 sessioni/settimana (min 1) | TODO | beta feedback | — |
+| B45 | REST phase timer non funziona nel guided session | ✅ DONE | 4b post | — |
+| B46 | Density hang load errato senza baseline (usava BW anziché grade-stima) | ✅ DONE | 4b post | — |
 
 ---
 
@@ -569,6 +571,10 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 - **Tab "What's next"**: roadmap votabile (7 feature), feedback form → daniele.somensi@gmail.com
 - **Settings**: Edit Equipment (con regenerate dialog), Edit Goal (two-step confirmation + rigenera macrociclo)
 - 421 test verdi
+
+**Bug fix post-4b (2026-02-24):**
+- **B45 REST timer**: `session-card.tsx` leggeva `prescription.rest_s` (campo inesistente) anziché `rest_between_sets_seconds` → `restSeconds` sempre `undefined` → fase REST mai avviata nel timer. Fix: fallback `rest_between_sets_seconds ?? rest_s`.
+- **B46 Density hang load**: `_hangboard_suggested()` usava `bodyweight` come `max_total_load` in assenza di baseline, assumendo 1.0×BW max hang per qualsiasi climber (errato). Fix: stima da grade attuale via `_FINGER_BENCHMARK` (es. 7b+ → 1.20×BW). Intensity `density_hangs` corretta 65% → 75% per allineamento a Tyler Nelson (~75% MVC).
 
 ### Phase 4c — Produzione
 
