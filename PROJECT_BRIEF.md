@@ -82,13 +82,13 @@ backend/
       reports.py            ← GET /api/reports/weekly, /monthly
       quotes.py             ← GET /api/quotes/daily
   catalog/
-    exercises/v1/           ← 143 exercises (JSON)
-    sessions/v1/            ← 33 sessions (JSON)
+    exercises/v1/           ← 145 exercises (JSON)
+    sessions/v1/            ← 35 sessions (JSON)
     templates/v1/           ← 19 templates (JSON)
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 421 pytest tests
+  tests/                    ← 437 pytest tests
 frontend/
   src/
     app/
@@ -170,7 +170,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (421 green)
+# Backend tests (437 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)

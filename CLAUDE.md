@@ -175,7 +175,7 @@ Optional equipment is mentioned in `prescription_defaults.notes` only.
 ## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green.
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 437 tests green (post Phase 4b + NEW-F11 + NEW-F12).
 
 ### Modules
 
@@ -183,7 +183,7 @@ Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green.
 - `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and min 2-week floor per non-deload phase.
 - `backend/engine/planner_v2.py` — Phase-aware weekly planner. 3-pass algorithm: pass 1 places primary/climbing sessions with spacing (gym days processed first), pass 2 fills complementary, pass 3 injects test sessions on last week of eligible phases (`is_last_week_of_phase=True`). Location-aware: respects preferred_location from availability, filters session pool by home/gym compatibility. Gym-priority scoring ensures climbing days are never dropped by target_days cap. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles. Outputs `estimated_load_score` per session and `weekly_load_summary` per week.
 - `backend/engine/replanner_v1.py` — Phase-aware replanner. 13 intents mapped to planner_v2 sessions (incl. "projecting"). `apply_day_override` accepts `phase_id` and applies proportional ripple effect (hard→medium on day+1, force recovery on day+2) with phase mismatch warnings and finger compensation. `suggest_sessions` + `apply_day_add` for quick-add (append, day+1 ripple only). `regenerate_preserving_completed` for availability changes. Imports `_SESSION_META` from planner_v2.
-- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 33 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty. Outputs `session_load_score` (sum of exercise `fatigue_cost` values).
+- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 35 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty. Outputs `session_load_score` (sum of exercise `fatigue_cost` values).
 
 ### Flow
 

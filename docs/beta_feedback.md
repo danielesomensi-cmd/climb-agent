@@ -1,6 +1,6 @@
 # Beta Feedback — climb-agent
 
-> Ultimo aggiornamento: 2026-02-23
+> Ultimo aggiornamento: 2026-02-24
 
 ---
 
@@ -9,6 +9,8 @@
 | Nome | Data onboarding | Note |
 |------|-----------------|------|
 | Alexis | 2026-02-23 | Climber, allena con coach mercoledì, fa padel il lunedì |
+| Davide Vato | 2026-02-23 | Feedback su edit profilo senza reset completo |
+| Luca | 2026-02-23 | Feedback su minimo sessioni/settimana |
 
 ---
 
@@ -51,6 +53,28 @@
 **Opzione B (disponibilità per settimana) scartata** — overkill, cambierebbe struttura macrociclo
 **Priorità:** Media
 **In roadmap:** ✅ → B42
+**Status:** TODO
+
+---
+
+## FB-4 — Edit profilo senza reset completo
+**Da:** Davide Vato
+**Data:** 2026-02-23
+**Descrizione:** L'utente vorrebbe poter aggiornare dati assessment (età, peso, grado massimo) senza dover fare reset completo e ripetere l'intero onboarding.
+**Soluzione concordata:** Sezione "Edit profile & assessment" in Settings. Form che permette di modificare i campi principali (profilo, grades, tests) e ricalcola l'assessment senza toccare macrociclo/storico.
+**Priorità:** Media
+**In roadmap:** ✅ → B43
+**Status:** TODO
+
+---
+
+## FB-5 — Minimo sessioni/settimana troppo alto
+**Da:** Luca
+**Data:** 2026-02-23
+**Descrizione:** Il sistema non permette di selezionare meno di 3 sessioni/settimana durante l'onboarding. Un atleta che si allena 1-2 volte/settimana non può usare l'app.
+**Soluzione concordata:** Abbassare il minimo a 1 sessione/settimana. Il planner adatta il piano al volume disponibile.
+**Priorità:** Alta
+**In roadmap:** ✅ → B44
 **Status:** TODO
 
 ---
