@@ -231,7 +231,10 @@ def test_hangboard_working_loads_override():
 
 
 def test_hangboard_no_baseline():
-    """No baseline → uses bodyweight as max_total."""
+    """No baseline → estimates max_total from grade via _FINGER_BENCHMARK.
+    Fixture has no redpoint_french grade → fallback ratio 1.10×BW.
+    77 × 1.10 = 84.7; 84.7 × 0.70 = 59.29 → 59.5; ext = 59.5 - 77 = -17.5
+    """
     us = _base_user_state()
     us["baselines"] = {}
     day = _day_with_exercises([{
@@ -241,10 +244,10 @@ def test_hangboard_no_baseline():
     out = inject_targets(day, us)
     inst = out["sessions"][0]["exercise_instances"][0]
     sug = inst["suggested"]
-    # 77 * 0.70 = 53.9 → round 54.0
-    assert sug["suggested_total_load_kg"] == 54.0
-    # 54.0 - 77 = -23.0
-    assert sug["suggested_external_load_kg"] == -23.0
+    # 77 * 1.10 * 0.70 = 59.29 → 59.5
+    assert sug["suggested_total_load_kg"] == 59.5
+    # 59.5 - 77 = -17.5
+    assert sug["suggested_external_load_kg"] == -17.5
 
 
 def test_hangboard_feedback():

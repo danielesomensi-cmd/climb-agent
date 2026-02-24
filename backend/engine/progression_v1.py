@@ -4,6 +4,8 @@ from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
+from backend.engine.assessment_v1 import _FINGER_BENCHMARK
+
 FONT_GRADES: List[str] = [
     "5A", "5A+", "5B", "5B+", "5C", "5C+",
     "6A", "6A+", "6B", "6B+", "6C", "6C+",
@@ -45,7 +47,7 @@ HANGBOARD_TOTAL_LOAD_EXERCISES = {
 HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
     "critical_force_test": 0.80,
     "dead_hang_easy": 0.50,
-    "density_hangs": 0.65,
+    "density_hangs": 0.75,
     "hangboard_moving_hangs": 0.55,
     "horst_7_53": 0.70,
     "long_duration_hang": 0.55,
@@ -308,7 +310,17 @@ def _hangboard_suggested(user_state: Dict[str, Any], exercise_id: str, prescript
     intensity = float(intensity)
     baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
     baseline = baselines[0] if baselines else {}
-    max_total = float(baseline.get("max_total_load_kg") or bodyweight)
+    if baseline.get("max_total_load_kg"):
+        max_total = float(baseline["max_total_load_kg"])
+    else:
+        # No hangboard baseline: estimate from current grade via _FINGER_BENCHMARK.
+        # Fallback to 1.10× BW if grade is unknown (conservative intermediate estimate).
+        current_grade = (
+            ((user_state.get("assessment") or {}).get("grades") or {})
+            .get("redpoint_french", "")
+        )
+        ratio = _FINGER_BENCHMARK.get(current_grade, 1.10)
+        max_total = bodyweight * ratio
     target_total = _round_half_step(max_total * intensity)
     suggested_external = _round_half_step(target_total - bodyweight)
     work_s = prescription.get('work_seconds') or prescription.get('hang_seconds', 7)
