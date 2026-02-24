@@ -111,10 +111,11 @@ def test_plan_week_uses_user_state_availability_and_default_gym_id(tmp_path: Pat
     out_path = tmp_path / "plan.json"
     us_path.write_text(json.dumps(user_state), encoding="utf-8")
 
+    repo_root = str(Path(__file__).resolve().parents[2])
     subprocess.run(
         [
             sys.executable,
-            "_archive/scripts_legacy/scripts/plan_week.py",
+            str(Path(repo_root) / "_archive/scripts_legacy/scripts/plan_week.py"),
             "--start-date",
             "2026-01-05",
             "--mode",

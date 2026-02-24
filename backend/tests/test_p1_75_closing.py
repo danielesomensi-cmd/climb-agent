@@ -1,8 +1,11 @@
 """Tests for Phase 1.75 closure items."""
 
+import os
 import unittest
 
 from backend.engine.resolve_session import resolve_session
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class TestResolvedSessionLoadScore(unittest.TestCase):
@@ -10,7 +13,7 @@ class TestResolvedSessionLoadScore(unittest.TestCase):
 
     def _resolve(self, session_id):
         return resolve_session(
-            repo_root=".",
+            repo_root=REPO_ROOT,
             session_path=f"backend/catalog/sessions/v1/{session_id}.json",
             templates_dir="backend/catalog/templates/v1",
             exercises_path="backend/catalog/exercises/v1/exercises.json",
