@@ -91,13 +91,9 @@ export function ExerciseTimer({
   const [paused, setPaused] = useState(false);
   const [transitionId, setTransitionId] = useState(0);
   const [flash, setFlash] = useState(false);
-  const [viewingSet, setViewingSet] = useState(initialSet);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onSetChangeRef = useRef(onSetChange);
   useEffect(() => { onSetChangeRef.current = onSetChange; }, [onSetChange]);
-
-  // Snap viewingSet back to currentSet on set advance or phase change
-  useEffect(() => { setViewingSet(currentSet); }, [currentSet, phase]);
 
   // Refs for countdown beep effect (avoid re-triggering on phase/paused change)
   const phaseRef = useRef(phase);
@@ -272,7 +268,6 @@ export function ExerciseTimer({
     setPhase("idle");
     setCurrentSet(1);
     setCurrentRep(1);
-    setViewingSet(1);
     setSecondsLeft(0);
     setPaused(false);
   }
@@ -283,19 +278,95 @@ export function ExerciseTimer({
       return;
     }
     if (phase !== "idle" && phase !== "complete") {
-      if (paused) {
-        // Resuming — snap viewingSet back to real current set
-        setViewingSet(currentSet);
-      }
       setPaused((p) => !p);
     }
   }
 
-  function handleSetNav(direction: -1 | 1) {
-    const next = viewingSet + direction;
-    if (next < 1 || next > sets) return;
-    setPaused(true);
-    setViewingSet(next);
+  /** Skip to the next phase in the timer sequence. */
+  function handlePhaseForward() {
+    if (phase === "idle" || phase === "complete") return;
+    const wasRunning = !paused;
+
+    if (phase === "get_ready") {
+      setPhase("work");
+      setSecondsLeft(isManual ? 0 : workSeconds);
+    } else if (phase === "work") {
+      if (hasRepLoop && currentRep < reps) {
+        if (restBetweenRepsSeconds > 0) {
+          setPhase("rep_rest");
+          setSecondsLeft(restBetweenRepsSeconds);
+        } else {
+          setCurrentRep((r) => r + 1);
+          setSecondsLeft(workSeconds);
+        }
+      } else {
+        // End of set
+        onSetChangeRef.current?.(currentSet);
+        if (currentSet >= sets) {
+          setPhase("complete");
+          setSecondsLeft(0);
+        } else if (restBetweenSetsSeconds > 0) {
+          setPhase("set_rest");
+          setSecondsLeft(restBetweenSetsSeconds);
+        } else {
+          setCurrentSet((s) => s + 1);
+          setCurrentRep(1);
+          setPhase(isManual ? "work" : "get_ready");
+          setSecondsLeft(isManual ? 0 : GET_READY_SECONDS);
+        }
+      }
+    } else if (phase === "rep_rest") {
+      setCurrentRep((r) => r + 1);
+      setPhase("work");
+      setSecondsLeft(isManual ? 0 : workSeconds);
+    } else if (phase === "set_rest") {
+      setCurrentSet((s) => s + 1);
+      setCurrentRep(1);
+      setPhase(isManual ? "work" : "get_ready");
+      setSecondsLeft(isManual ? 0 : GET_READY_SECONDS);
+    }
+
+    setTransitionId((id) => id + 1);
+    if (!wasRunning) setPaused(true);
+  }
+
+  /** Go back: restart current phase if >2s elapsed, else go to previous phase. */
+  function handlePhaseBack() {
+    if (phase === "idle" || phase === "complete") return;
+    const wasRunning = !paused;
+    const elapsed = totalForPhase - secondsLeft;
+
+    if (elapsed > 2) {
+      // Restart current phase from beginning
+      setSecondsLeft(totalForPhase);
+      if (!wasRunning) setPaused(true);
+      return;
+    }
+
+    // Go to previous phase
+    if (phase === "get_ready") {
+      // Can't go further back — just restart
+      setSecondsLeft(GET_READY_SECONDS);
+    } else if (phase === "work") {
+      if (currentRep > 1 && restBetweenRepsSeconds > 0) {
+        setCurrentRep((r) => r - 1);
+        setPhase("rep_rest");
+        setSecondsLeft(restBetweenRepsSeconds);
+      } else {
+        setPhase(isManual ? "work" : "get_ready");
+        setSecondsLeft(isManual ? 0 : GET_READY_SECONDS);
+      }
+    } else if (phase === "rep_rest") {
+      setPhase("work");
+      setSecondsLeft(isManual ? 0 : workSeconds);
+    } else if (phase === "set_rest") {
+      // Go back to work phase (last rep of current set)
+      setPhase("work");
+      setSecondsLeft(isManual ? 0 : workSeconds);
+    }
+
+    setTransitionId((id) => id + 1);
+    if (!wasRunning) setPaused(true);
   }
 
   // --- SVG progress ---
@@ -321,167 +392,175 @@ export function ExerciseTimer({
     phase !== "idle" && phase !== "complete" &&
     !(phase === "work" && isManual);
 
+  const isActive = phase !== "idle" && phase !== "complete";
+
   // --- Render ---
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* SVG circle */}
-      <div
-        className={cn(
-          "relative w-40 h-40 cursor-pointer select-none transition-transform",
-          phase !== "idle" && phase !== "complete" && "active:scale-95",
-          flash && "ring-2 ring-primary/50 rounded-full"
-        )}
-        onClick={handleCircleTap}
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (e.key === " " || e.key === "Enter") handleCircleTap();
-        }}
-        aria-label={
-          phase === "work" && isManual
-            ? "Complete set"
-            : paused ? "Resume timer" : "Pause timer"
-        }
-      >
-        <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-          {/* Background track */}
-          <circle
-            cx="60" cy="60" r={RADIUS}
-            fill="none" strokeWidth={8}
-            className="stroke-muted"
-          />
-          {/* Progress arc (hidden during manual work and idle/complete) */}
-          {phase !== "idle" && phase !== "complete" && !(phase === "work" && isManual) && (
+      {/* Timer row: ‹ arrow | circle | › arrow */}
+      <div className="flex items-center gap-2">
+        {/* ‹ Back phase arrow — always visible when active */}
+        <button
+          onClick={handlePhaseBack}
+          className={cn(
+            "flex items-center justify-center w-12 h-12 rounded-full border transition-colors",
+            isActive
+              ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95"
+              : "border-transparent text-transparent cursor-default"
+          )}
+          disabled={!isActive}
+          aria-label="Previous phase"
+        >
+          <ChevronLeft className="size-6" />
+        </button>
+
+        {/* SVG circle */}
+        <div
+          className={cn(
+            "relative w-40 h-40 cursor-pointer select-none transition-transform",
+            isActive && "active:scale-95",
+            flash && "ring-2 ring-primary/50 rounded-full"
+          )}
+          onClick={handleCircleTap}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter") handleCircleTap();
+          }}
+          aria-label={
+            phase === "work" && isManual
+              ? "Complete set"
+              : paused ? "Resume timer" : "Pause timer"
+          }
+        >
+          <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+            {/* Background track */}
             <circle
               cx="60" cy="60" r={RADIUS}
               fill="none" strokeWidth={8}
-              strokeLinecap="round"
-              strokeDasharray={CIRCUMFERENCE}
-              strokeDashoffset={dashOffset}
-              className={cn(
-                strokeColor,
-                "transition-[stroke-dashoffset] duration-1000 ease-linear"
-              )}
+              className="stroke-muted"
             />
-          )}
-        </svg>
+            {/* Progress arc (hidden during manual work and idle/complete) */}
+            {isActive && !(phase === "work" && isManual) && (
+              <circle
+                cx="60" cy="60" r={RADIUS}
+                fill="none" strokeWidth={8}
+                strokeLinecap="round"
+                strokeDasharray={CIRCUMFERENCE}
+                strokeDashoffset={dashOffset}
+                className={cn(
+                  strokeColor,
+                  "transition-[stroke-dashoffset] duration-1000 ease-linear"
+                )}
+              />
+            )}
+          </svg>
 
-        {/* Center text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {phase === "idle" && (
-            <button
-              onClick={(e) => { e.stopPropagation(); handleStart(); }}
-              className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Play className="size-8" />
-              <span className="text-xs font-medium">Start</span>
-            </button>
-          )}
+          {/* Center text */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {phase === "idle" && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleStart(); }}
+                className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Play className="size-8" />
+                <span className="text-xs font-medium">Start</span>
+              </button>
+            )}
 
-          {phase === "get_ready" && (
-            <>
-              <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
-                {secondsLeft}
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-sky-500">
-                Get Ready
-              </span>
-            </>
-          )}
+            {phase === "get_ready" && (
+              <>
+                <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                  {secondsLeft}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-sky-500">
+                  Get Ready
+                </span>
+              </>
+            )}
 
-          {phase === "work" && !isManual && (
-            <>
-              <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
-                {formatSeconds(secondsLeft)}
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-orange-500">
-                Work
-              </span>
-              {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
-            </>
-          )}
+            {phase === "work" && !isManual && (
+              <>
+                <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                  {formatSeconds(secondsLeft)}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-orange-500">
+                  Work
+                </span>
+                {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
+              </>
+            )}
 
-          {phase === "work" && isManual && (
-            <>
-              <span className="text-2xl font-bold">Set {currentSet}</span>
-              <span className="text-xs text-muted-foreground mt-1">
-                {reps > 1 ? `Do ${reps} reps` : "Do your set"}
-              </span>
-              <span className="text-[10px] text-muted-foreground/60 mt-0.5">
-                Tap when done
-              </span>
-            </>
-          )}
+            {phase === "work" && isManual && (
+              <>
+                <span className="text-2xl font-bold">Set {currentSet}</span>
+                <span className="text-xs text-muted-foreground mt-1">
+                  {reps > 1 ? `Do ${reps} reps` : "Do your set"}
+                </span>
+                <span className="text-[10px] text-muted-foreground/60 mt-0.5">
+                  Tap when done
+                </span>
+              </>
+            )}
 
-          {phase === "rep_rest" && (
-            <>
-              <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
-                {formatSeconds(secondsLeft)}
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-teal-400">
-                Rep Rest
-              </span>
-              {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
-            </>
-          )}
+            {phase === "rep_rest" && (
+              <>
+                <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                  {formatSeconds(secondsLeft)}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-teal-400">
+                  Rep Rest
+                </span>
+                {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
+              </>
+            )}
 
-          {phase === "set_rest" && (
-            <>
-              <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
-                {formatSeconds(secondsLeft)}
-              </span>
-              <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-emerald-500">
-                Rest
-              </span>
-              {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
-            </>
-          )}
+            {phase === "set_rest" && (
+              <>
+                <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                  {formatSeconds(secondsLeft)}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-emerald-500">
+                  Rest
+                </span>
+                {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
+              </>
+            )}
 
-          {phase === "complete" && (
-            <div className="flex flex-col items-center gap-1 text-green-600">
-              <span className="text-sm font-semibold">Done!</span>
-            </div>
-          )}
+            {phase === "complete" && (
+              <div className="flex flex-col items-center gap-1 text-green-600">
+                <span className="text-sm font-semibold">Done!</span>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* › Forward phase arrow — always visible when active */}
+        <button
+          onClick={handlePhaseForward}
+          className={cn(
+            "flex items-center justify-center w-12 h-12 rounded-full border transition-colors",
+            isActive
+              ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95"
+              : "border-transparent text-transparent cursor-default"
+          )}
+          disabled={!isActive}
+          aria-label="Next phase"
+        >
+          <ChevronRight className="size-6" />
+        </button>
       </div>
 
       {/* Set/rep counter + controls */}
       <div className="flex flex-col items-center gap-2">
-        {phase !== "idle" && (
-          <div className="flex items-center gap-1.5">
-            {/* ‹ arrow — visible only during set_rest */}
-            {phase === "set_rest" && (
-              <button
-                onClick={() => handleSetNav(-1)}
-                disabled={viewingSet <= 1}
-                className="p-0.5 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Previous set"
-              >
-                <ChevronLeft className="size-4" />
-              </button>
+        {isActive && (
+          <span className="text-xs text-muted-foreground tabular-nums">
+            Set {currentSet} / {sets}
+            {hasRepLoop && (
+              <> &mdash; Rep {currentRep} / {reps}</>
             )}
-            <span className="text-xs text-muted-foreground tabular-nums">
-              Set {phase === "set_rest" ? viewingSet : currentSet} / {sets}
-              {phase === "set_rest" && viewingSet < currentSet && (
-                <span className="text-green-500 ml-0.5">✓</span>
-              )}
-              {hasRepLoop && phase !== "set_rest" && phase !== "complete" && (
-                <> &mdash; Rep {currentRep} / {reps}</>
-              )}
-            </span>
-            {/* › arrow — visible only during set_rest */}
-            {phase === "set_rest" && (
-              <button
-                onClick={() => handleSetNav(1)}
-                disabled={viewingSet >= sets}
-                className="p-0.5 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                aria-label="Next set"
-              >
-                <ChevronRight className="size-4" />
-              </button>
-            )}
-          </div>
+          </span>
         )}
         <div className="flex items-center gap-3">
           {phase === "work" && isManual && (
@@ -496,10 +575,11 @@ export function ExerciseTimer({
           {phase !== "idle" && (
             <button
               onClick={handleReset}
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md border border-muted-foreground/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
               aria-label="Reset timer"
             >
               <RotateCcw className="size-4" />
+              Reset
             </button>
           )}
         </div>

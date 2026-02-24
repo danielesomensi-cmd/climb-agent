@@ -415,6 +415,7 @@ export default function GuidedSessionPage() {
         ) : currentExercise ? (
           <>
             <GuidedExerciseStep
+              key={`${state.currentIndex}-${currentExercise.exerciseId}`}
               exercise={currentExercise}
               onDone={handleDone}
               onSkip={handleSkip}
