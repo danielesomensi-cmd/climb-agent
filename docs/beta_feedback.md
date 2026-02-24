@@ -28,7 +28,7 @@
 **Impatto backend:** I giorni con "other activity" sono non disponibili per climbing. Se toggle ON, il giorno dopo riceve moltiplicatore intensità ridotta.
 **Priorità:** Alta
 **In roadmap:** ✅ → B41
-**Status:** TODO
+**Status:** ✅ DONE (B41 implementato: planner_v2 parse `_day_meta`, blocco giorno + riduzione intensità giorno dopo, UI in settings + onboarding)
 
 ---
 
@@ -64,7 +64,7 @@
 **Soluzione concordata:** Sezione "Edit profile & assessment" in Settings. Form che permette di modificare i campi principali (profilo, grades, tests) e ricalcola l'assessment senza toccare macrociclo/storico.
 **Priorità:** Media
 **In roadmap:** ✅ → B43
-**Status:** TODO
+**Status:** ✅ DONE (ProfileAssessmentEditor in Settings — modifica profilo, gradi, test senza reset)
 
 ---
 
@@ -75,7 +75,7 @@
 **Soluzione concordata:** Abbassare il minimo a 1 sessione/settimana. Il planner adatta il piano al volume disponibile.
 **Priorità:** Alta
 **In roadmap:** ✅ → B44
-**Status:** TODO
+**Status:** ✅ DONE (slider min abbassato da 3 a 1 in onboarding + settings)
 
 ---
 

@@ -18,7 +18,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (437 green)
+# Run all tests (440 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -47,7 +47,7 @@ backend/
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 437 pytest tests with fixtures/
+  tests/             # 440 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 21 pages: 7 main views + 12 onboarding steps + root + onboarding index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
@@ -175,7 +175,7 @@ Optional equipment is mentioned in `prescription_defaults.notes` only.
 ## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 437 tests green (post Phase 4b + NEW-F11 + NEW-F12).
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 440 tests green (post Phase 4b + B41 other activities).
 
 ### Modules
 

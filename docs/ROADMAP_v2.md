@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-24 (NEW-F12 leg exercises catalog: pistol_squat_progression + romanian_deadlift + lower_body_gym + heavy_conditioning_gym; 145 esercizi, 35 sessioni, 437 test)
+> Last updated: 2026-02-24 (B41 other activities, B43 profile editor, B44 min-days fix; 145 esercizi, 35 sessioni, 440 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -486,10 +486,10 @@ Tabella unica con TUTTI gli item tracciati.
 | B38 | Injuries filter (contraindications) | TODO | next | — |
 | B39 | Railway persistent volume | ✅ DONE | infra | §10 |
 | B40 | Branch develop/main workflow | TODO | infra | — |
-| B41 | Other activities in availability (block day + optional intensity reduction day after) | TODO | beta feedback | — |
+| B41 | Other activities in availability (block day + optional intensity reduction day after) | ✅ DONE | 4b post | — |
 | B42 | Sunday reminder — confirm next week availability | TODO | beta feedback | — |
-| B43 | Edit profile + assessment data from Settings | TODO | beta feedback | — |
-| B44 | Permettere meno di 3 sessioni/settimana (min 1) | TODO | beta feedback | — |
+| B43 | Edit profile + assessment data from Settings | ✅ DONE | 4b post | — |
+| B44 | Permettere meno di 3 sessioni/settimana (min 1) | ✅ DONE | 4b post | — |
 | B45 | REST phase timer non funziona nel guided session | ✅ DONE | 4b post | — |
 | B46 | Density hang load errato senza baseline (usava BW anziché grade-stima) | ✅ DONE | 4b post | — |
 | B47 | Guided session: nessun banner al resume + set number perso su refresh | ✅ DONE | 4b post | — |
@@ -585,6 +585,9 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 - **B46 Density hang load**: `_hangboard_suggested()` usava `bodyweight` come `max_total_load` in assenza di baseline, assumendo 1.0×BW max hang per qualsiasi climber (errato). Fix: stima da grade attuale via `_FINGER_BENCHMARK` (es. 7b+ → 1.20×BW). Intensity `density_hangs` corretta 65% → 75% per allineamento a Tyler Nelson (~75% MVC).
 - **B47 Guided session persistence**: aggiunto banner "Session resumed" (auto-dismiss 4s) quando lo stato ripristinato da localStorage ha progresso reale. Aggiunto `completedSets` su `GuidedExercise` + prop `initialSet`/`onSetChange` su `ExerciseTimer` → il set number sopravvive al refresh.
 - **NEW-F11 estimate_missing_baselines**: pre-step in `inject_targets()` che stima `max_total_load_kg` da `lead_max_rp` (tabella grade→offset) o `max_weighted_pullup_kg` ((BW+pullup)×0.85) quando nessun baseline reale è presente. Non sovrascrive mai source="test". Frontend: badge "(estimated)" grigio + warning arancione se external<0. 5 nuovi test → 426 totali.
+- **B43 Edit profile/assessment**: ProfileAssessmentEditor in Settings — modifica profilo, gradi, test senza reset completo. Ricalcola assessment.
+- **B44 Min sessioni/settimana**: slider availability abbassato da min=3 a min=1 (onboarding + settings).
+- **B41 Other activities**: planner_v2 parse `_day_meta` da availability, blocca giorni con other_activity, riduce intensità giorno dopo (opzionale). UI controls in settings + onboarding. 3 nuovi test → 440 totali.
 
 ### Phase 4c — Produzione
 
@@ -603,11 +606,11 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 
 | ID | Tester | Data | Descrizione | Status | B-item |
 |----|--------|------|-------------|--------|--------|
-| FB-1 | Alexis | 2026-02-23 | Bloccare giorni per altri sport con riduzione intensità opzionale giorno dopo | TODO | B41 |
+| FB-1 | Alexis | 2026-02-23 | Bloccare giorni per altri sport con riduzione intensità opzionale giorno dopo | ✅ DONE | B41 |
 | FB-2 | Alexis | 2026-02-23 | Sessione su giorno non selezionato — comportamento corretto, non bug | CHIUSO | — |
 | FB-3 | Alexis | 2026-02-23 | Reminder domenicale per confermare disponibilità settimana successiva | TODO | B42 |
-| FB-4 | Davide Vato | 2026-02-23 | Re-enter assessment data senza reset completo (età, peso, grado massimo) | TODO | B43 |
-| FB-5 | Luca | 2026-02-23 | Impossibile selezionare meno di 3 allenamenti/settimana — scala 1 volta a settimana | TODO | B44 |
+| FB-4 | Davide Vato | 2026-02-23 | Re-enter assessment data senza reset completo (età, peso, grado massimo) | ✅ DONE | B43 |
+| FB-5 | Luca | 2026-02-23 | Impossibile selezionare meno di 3 allenamenti/settimana — scala 1 volta a settimana | ✅ DONE | B44 |
 
 ---
 
