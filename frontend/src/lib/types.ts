@@ -50,6 +50,9 @@ export interface DayPlan {
   status?: "planned" | "done" | "skipped";
   outdoor_slot?: boolean;
   pretrip_deload?: boolean;
+  other_activity?: boolean;
+  other_activity_name?: string;
+  prev_other_activity_reduce?: boolean;
 }
 
 export interface WeekPlan {

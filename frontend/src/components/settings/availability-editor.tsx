@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -36,6 +38,7 @@ const SLOTS = [
 ];
 
 type SlotData = { available: boolean; preferred_location: string; gym_id?: string };
+type DayMeta = { other_activity: boolean; other_activity_name?: string; reduce_intensity_after: boolean };
 
 interface Gym {
   name: string;
@@ -43,10 +46,10 @@ interface Gym {
 }
 
 interface AvailabilityEditorProps {
-  initialAvailability: Record<string, Record<string, SlotData>>;
+  initialAvailability: Record<string, Record<string, unknown>>;
   initialPlanningPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number };
   gyms: Gym[];
-  onSave: (availability: Record<string, Record<string, SlotData>>, planningPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number }) => void;
+  onSave: (availability: Record<string, Record<string, unknown>>, planningPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number }) => void;
   onCancel: () => void;
 }
 
@@ -57,11 +60,37 @@ export function AvailabilityEditor({
   onSave,
   onCancel,
 }: AvailabilityEditorProps) {
+  // Extract slots (non _day_meta keys) as SlotData
   const [availability, setAvailability] = useState<Record<string, Record<string, SlotData>>>(
-    () => JSON.parse(JSON.stringify(initialAvailability))
+    () => {
+      const parsed = JSON.parse(JSON.stringify(initialAvailability));
+      // Strip _day_meta from slot data
+      const result: Record<string, Record<string, SlotData>> = {};
+      for (const [day, dayData] of Object.entries(parsed)) {
+        result[day] = {};
+        for (const [key, val] of Object.entries(dayData as Record<string, unknown>)) {
+          if (key !== "_day_meta") result[day][key] = val as SlotData;
+        }
+      }
+      return result;
+    }
   );
   const [planningPrefs, setPlanningPrefs] = useState(
     () => ({ ...initialPlanningPrefs })
+  );
+  const [dayMeta, setDayMeta] = useState<Record<string, DayMeta>>(
+    () => {
+      const result: Record<string, DayMeta> = {};
+      for (const day of WEEKDAYS) {
+        const raw = (initialAvailability[day.key] as Record<string, unknown>)?._day_meta as DayMeta | undefined;
+        result[day.key] = {
+          other_activity: raw?.other_activity ?? false,
+          other_activity_name: raw?.other_activity_name ?? "",
+          reduce_intensity_after: raw?.reduce_intensity_after ?? false,
+        };
+      }
+      return result;
+    }
   );
 
   const getSlot = (day: string, slot: string): SlotData => {
@@ -96,6 +125,26 @@ export function AvailabilityEditor({
   const setGymId = (day: string, slot: string, gymId: string) => {
     const current = getSlot(day, slot);
     updateSlot(day, slot, { ...current, gym_id: gymId });
+  };
+
+  const toggleOtherActivity = (dayKey: string) => {
+    setDayMeta((prev) => ({
+      ...prev,
+      [dayKey]: { ...prev[dayKey], other_activity: !prev[dayKey].other_activity },
+    }));
+  };
+
+  const handleSave = () => {
+    // Merge _day_meta back into availability before saving
+    const enriched: Record<string, Record<string, unknown>> = {};
+    for (const day of WEEKDAYS) {
+      enriched[day.key] = { ...(availability[day.key] ?? {}) };
+      const meta = dayMeta[day.key];
+      if (meta.other_activity) {
+        enriched[day.key]._day_meta = meta;
+      }
+    }
+    onSave(enriched, planningPrefs);
   };
 
   return (
@@ -209,7 +258,7 @@ export function AvailabilityEditor({
               </span>
             </div>
             <Slider
-              min={3}
+              min={1}
               max={7}
               step={1}
               value={[planningPrefs.target_training_days_per_week]}

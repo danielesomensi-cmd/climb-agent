@@ -106,7 +106,21 @@ export function DayCard({
       </CardHeader>
 
       <CardContent className="space-y-2">
-        {day.outdoor_slot ? (
+        {day.prev_other_activity_reduce && !day.other_activity && (
+          <div className="flex items-center gap-2 rounded-lg border border-dashed border-yellow-500/40 p-3 text-xs text-muted-foreground">
+            <span className="text-yellow-500">⚡</span>
+            Other activity yesterday — consider going easy today
+          </div>
+        )}
+        {day.other_activity ? (
+          <div className="flex items-center gap-2 rounded-lg border border-dashed border-amber-500/40 p-3 text-sm">
+            <span className="text-amber-500">🏃</span>
+            <span className="font-medium">
+              {day.other_activity_name ?? "Other activity"}
+            </span>
+            <span className="text-xs text-muted-foreground ml-auto">No climbing today</span>
+          </div>
+        ) : day.outdoor_slot ? (
           <div className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
             <Mountain className="size-4 text-green-500" />
             <span className="font-medium">Outdoor day</span>

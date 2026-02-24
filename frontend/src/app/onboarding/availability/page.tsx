@@ -205,7 +205,7 @@ export default function AvailabilityPage() {
               </span>
             </div>
             <Slider
-              min={3}
+              min={1}
               max={7}
               step={1}
               value={[planningPrefs.target_training_days_per_week]}

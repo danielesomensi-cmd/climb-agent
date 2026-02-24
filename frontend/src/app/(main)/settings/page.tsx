@@ -9,6 +9,7 @@ import type { OutdoorSpot } from "@/lib/types";
 import { AvailabilityEditor } from "@/components/settings/availability-editor";
 import { EquipmentEditor } from "@/components/settings/equipment-editor";
 import { GoalEditor } from "@/components/settings/goal-editor";
+import { ProfileAssessmentEditor } from "@/components/settings/profile-assessment-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +38,8 @@ export default function SettingsPage() {
   const [equipmentSavedOpen, setEquipmentSavedOpen] = useState(false);
   const [goalEditorOpen, setGoalEditorOpen] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [addingSpot, setAddingSpot] = useState(false);
   const [newSpotName, setNewSpotName] = useState("");
@@ -133,6 +136,22 @@ export default function SettingsPage() {
     }
   }
 
+  /** Save updated profile/assessment and recompute assessment */
+  async function handleProfileConfirm(patch: Record<string, unknown>) {
+    setSavingProfile(true);
+    setActionError(null);
+    try {
+      await putState({ assessment: patch });
+      await computeAssessment({ ...state?.assessment, ...patch }, state?.goal);
+      await refresh();
+      setProfileEditorOpen(false);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to update profile");
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   /** Regenerate the assessment profile */
   async function handleRegenAssessment() {
     setRegeneratingAssessment(true);
@@ -217,7 +236,17 @@ export default function SettingsPage() {
             {/* ----- Profile ----- */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Profile</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Profile</CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => setProfileEditorOpen(true)}
+                  >
+                    Edit
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 <InfoRow
@@ -238,6 +267,16 @@ export default function SettingsPage() {
                     return h != null ? `${h} cm` : "—";
                   })()}
                 />
+                <InfoRow
+                  label="Lead RP"
+                  value={(assessment?.grades?.lead_max_rp as string) || "—"}
+                />
+                {assessment?.grades?.boulder_max_rp && (
+                  <InfoRow
+                    label="Boulder RP"
+                    value={assessment.grades.boulder_max_rp as string}
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -700,6 +739,15 @@ export default function SettingsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ----- Profile/assessment editor dialog ----- */}
+      <ProfileAssessmentEditor
+        open={profileEditorOpen}
+        currentAssessment={assessment}
+        onConfirm={handleProfileConfirm}
+        onCancel={() => setProfileEditorOpen(false)}
+        saving={savingProfile}
+      />
 
       {/* ----- Goal editor dialog ----- */}
       <GoalEditor
