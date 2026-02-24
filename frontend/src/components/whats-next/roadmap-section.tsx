@@ -17,10 +17,11 @@ interface Feature {
   slug: string;
   icon: LucideIcon;
   label: string;
+  implemented?: boolean;
 }
 
 const SHORT_TERM: Feature[] = [
-  { slug: "rest-timer", icon: Timer, label: "Rest timer — countdown between sets with beep" },
+  { slug: "rest-timer", icon: Timer, label: "Rest timer — countdown between sets with beep", implemented: true },
   { slug: "outdoor-logging", icon: Mountain, label: "Outdoor session logging — log your crag sessions" },
   { slug: "progress-reports", icon: BarChart3, label: "Progress reports — weekly and monthly stats" },
 ];
@@ -88,6 +89,7 @@ export function RoadmapSection() {
               label={f.label}
               voted={!!votes[f.slug]}
               onToggle={() => toggle(f.slug)}
+              implemented={f.implemented}
             />
           ))}
         </div>
