@@ -8,6 +8,8 @@ interface ExerciseTimerProps {
   workSeconds: number;
   restSeconds: number;
   sets: number;
+  initialSet?: number;  // resume from this set number (default 1)
+  onSetChange?: (completedSets: number) => void;  // called when a work set finishes
 }
 
 type Phase = "idle" | "work" | "rest" | "complete";
@@ -63,13 +65,18 @@ export function ExerciseTimer({
   workSeconds,
   restSeconds,
   sets,
+  initialSet = 1,
+  onSetChange,
 }: ExerciseTimerProps) {
   const [phase, setPhase] = useState<Phase>("idle");
-  const [currentSet, setCurrentSet] = useState(1);
+  const [currentSet, setCurrentSet] = useState(initialSet);
   const [secondsLeft, setSecondsLeft] = useState(workSeconds);
   const [paused, setPaused] = useState(false);
   const [transitionId, setTransitionId] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Keep onSetChange in a ref so the interval callback always has the latest version
+  const onSetChangeRef = useRef(onSetChange);
+  useEffect(() => { onSetChangeRef.current = onSetChange; }, [onSetChange]);
 
   const totalForPhase = phase === "work" ? workSeconds : restSeconds;
 
@@ -104,6 +111,8 @@ export function ExerciseTimer({
         if (prev <= 1) {
           // Transition happens here
           if (phase === "work") {
+            // Notify parent that this work set is complete
+            onSetChangeRef.current?.(currentSet);
             if (currentSet >= sets) {
               // Last set done
               setPhase("complete");
@@ -140,7 +149,7 @@ export function ExerciseTimer({
 
   function handleStart() {
     setPhase("work");
-    setCurrentSet(1);
+    // Keep currentSet as-is (initialSet on first start, or wherever reset left it)
     setSecondsLeft(workSeconds);
     setPaused(false);
     setTransitionId((id) => id + 1);
@@ -149,7 +158,7 @@ export function ExerciseTimer({
   function handleReset() {
     clearTimer();
     setPhase("idle");
-    setCurrentSet(1);
+    setCurrentSet(1);  // Full restart — always go back to set 1
     setSecondsLeft(workSeconds);
     setPaused(false);
   }

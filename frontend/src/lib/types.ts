@@ -334,6 +334,7 @@ export interface GuidedExercise {
   feedbackLabel: string;
   usedLoadKg?: number;
   usedGrade?: string;
+  completedSets?: number;  // sets completed within this exercise (for timer resume)
 }
 
 export interface GuidedSessionState {

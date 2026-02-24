@@ -65,6 +65,7 @@ export default function GuidedSessionPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
+  const [resumed, setResumed] = useState(false);
 
   // Ref to always have latest state for the beforeunload handler
   const stateRef = useRef(state);
@@ -75,6 +76,11 @@ export default function GuidedSessionPage() {
     const saved = loadState(date, sessionId);
     if (saved) {
       setState(saved);
+      // Show resume banner if there's actual progress (not a fresh session)
+      const hasProgress =
+        saved.exercises.some((ex) => ex.status !== "pending") ||
+        saved.currentIndex > 0;
+      if (hasProgress) setResumed(true);
       // If all exercises are done/skipped, show summary
       const allDone = saved.exercises.every((ex) => ex.status !== "pending");
       if (allDone) setShowSummary(true);
@@ -83,6 +89,13 @@ export default function GuidedSessionPage() {
       router.replace(`/today?date=${date}`);
     }
   }, [date, sessionId, router]);
+
+  // Auto-dismiss resume banner after 4 seconds
+  useEffect(() => {
+    if (!resumed) return;
+    const timer = setTimeout(() => setResumed(false), 4000);
+    return () => clearTimeout(timer);
+  }, [resumed]);
 
   // Persist state to localStorage on every change
   useEffect(() => {
@@ -277,6 +290,14 @@ export default function GuidedSessionPage() {
     }
   }, [state, router]);
 
+  const handleSetChange = useCallback(
+    (completedSets: number) => {
+      if (!state) return;
+      updateExercise(state.currentIndex, { completedSets });
+    },
+    [state, updateExercise]
+  );
+
   const handleBack = useCallback(() => {
     if (!state || state.exercises.every((ex) => ex.status === "pending")) {
       router.replace(`/today?date=${date}`);
@@ -336,6 +357,20 @@ export default function GuidedSessionPage() {
 
       {/* Main content */}
       <main className="p-4 space-y-4">
+        {resumed && (
+          <div className="rounded-lg border border-primary/30 bg-primary/10 p-3 flex items-center justify-between text-sm">
+            <span className="text-primary font-medium">Session resumed — continuing from where you left off</span>
+            <button
+              type="button"
+              onClick={() => setResumed(false)}
+              className="text-muted-foreground hover:text-foreground ml-3 transition-colors"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {error && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-center text-sm text-destructive">
             {error}
@@ -358,6 +393,7 @@ export default function GuidedSessionPage() {
               exercise={currentExercise}
               onDone={handleDone}
               onSkip={handleSkip}
+              onSetChange={handleSetChange}
             />
 
             {/* Finish early button */}

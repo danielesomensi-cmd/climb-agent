@@ -14,6 +14,7 @@ interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
   onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string) => void;
   onSkip: () => void;
+  onSetChange?: (completedSets: number) => void;
 }
 
 const FEEDBACK_OPTIONS = [
@@ -66,6 +67,7 @@ export function GuidedExerciseStep({
   exercise,
   onDone,
   onSkip,
+  onSetChange,
 }: GuidedExerciseStepProps) {
   const [feedback, setFeedback] = useState(exercise.feedbackLabel || "ok");
   const [loadInput, setLoadInput] = useState("");
@@ -198,6 +200,13 @@ export function GuidedExerciseStep({
             workSeconds={exercise.prescription.workSeconds}
             restSeconds={exercise.prescription.restSeconds ?? 0}
             sets={exercise.prescription.sets ?? 1}
+            initialSet={
+              exercise.completedSets != null &&
+              exercise.completedSets < (exercise.prescription.sets ?? 1)
+                ? exercise.completedSets + 1
+                : 1
+            }
+            onSetChange={onSetChange}
           />
         )}
 
