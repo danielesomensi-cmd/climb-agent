@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-24 (B48 edit single session multi-session day — doc only)
+> Last updated: 2026-02-24 (B48/B49 edit+reschedule session — doc only)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -316,6 +316,7 @@ Phase 3.2 bundle: B25, B19, B20, B27, NEW-F6, NEW-F7 — all done. B11 deferred 
 | FR-1 | Outdoor as availability location | ✅ DONE | Medium | "Outdoor" option in availability grid. Outdoor slots → logging only, no resolved sessions. Links to B2 outdoor sessions. |
 | — | Report engine | ✅ DONE | Medium | Settimanale (aderenza, volume, highlight), mensile (trend, distribuzione gradi). |
 | B48 | Edit single session (multi-session day) | TODO | Medium | Quando più sessioni nello stesso giorno, "Change plan" tocca solo la sessione selezionata. Le altre sessioni del giorno restano invariate. Dopo la modifica, offrire opzione "Replan rest of week" per ribilanciare il carico. |
+| B49 | Reschedule session to different day/slot/gym | TODO | Medium | Sposta sessione su giorno/slot/palestra diversi. Verifica conflitti, dialog conferma con opzione replan settimanale. Dipende da B48. |
 
 ### §4.2 — Outdoor UI: da completare (TODO)
 
@@ -494,6 +495,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B47 | Guided session: nessun banner al resume + set number perso su refresh | ✅ DONE | 4b post | — |
 | NEW-F11 | estimate_missing_baselines(): stima max_total da grade/pullup quando nessun baseline reale | ✅ DONE | 4b post | §2.8 |
 | B48 | Edit single session senza toccare l'intero giorno (multi-session day) | TODO | next | §4 |
+| B49 | Reschedule session to different day/slot/gym | TODO | next | §4 |
 
 ---
 
