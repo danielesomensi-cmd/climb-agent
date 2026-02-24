@@ -93,6 +93,8 @@ function buildGuidedState(
         grade: (suggested.suggested_grade as string | undefined) ?? (boulderTarget.target_grade as string | undefined),
         repScheme: suggested.suggested_rep_scheme as string | undefined,
         surface: boulderTarget.surface_selected as string | undefined,
+        loadSource: suggested.load_source as string | undefined,
+        loadWarning: suggested.load_warning as string | undefined,
       },
       videoUrl: (inst.video_url as string | undefined) ?? undefined,
       cues: (inst.cues as string[] | undefined) ?? undefined,

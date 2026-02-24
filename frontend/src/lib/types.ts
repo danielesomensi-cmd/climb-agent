@@ -325,6 +325,8 @@ export interface GuidedExercise {
     grade?: string;
     repScheme?: string;
     surface?: string;
+    loadSource?: string;   // "estimated" if derived from grade/pullup (no real test)
+    loadWarning?: string;  // "counterweight_required..." if external < 0
   };
 
   videoUrl?: string;

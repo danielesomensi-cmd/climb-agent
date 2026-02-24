@@ -44,6 +44,17 @@ HANGBOARD_TOTAL_LOAD_EXERCISES = {
     "lopez_subhangs", "max_hang_10s", "max_hang_7s", "max_hang_ladder",
     "med_test", "one_arm_hang_assisted", "repeater_15_15", "repeater_hang_7_3",
 }
+# Grade → estimated max-hang total load offset from bodyweight (French sport grades, lead_max_rp).
+# Source: climbing physiology literature / Lattice Training benchmarks (conservative).
+GRADE_TO_HANG_OFFSET: Dict[str, float] = {
+    "6b": -10, "6c": 0,
+    "7a": 5,   "7a+": 10,
+    "7b": 15,  "7b+": 20,
+    "7c": 27,
+    "8a": 35,
+    "8b": 45,
+}
+
 HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
     "critical_force_test": 0.80,
     "dead_hang_easy": 0.50,
@@ -310,8 +321,10 @@ def _hangboard_suggested(user_state: Dict[str, Any], exercise_id: str, prescript
     intensity = float(intensity)
     baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
     baseline = baselines[0] if baselines else {}
+    baseline_source = ""
     if baseline.get("max_total_load_kg"):
         max_total = float(baseline["max_total_load_kg"])
+        baseline_source = baseline.get("source") or ""
     else:
         # No hangboard baseline: estimate from current grade via _FINGER_BENCHMARK.
         # Fallback to 1.10× BW if grade is unknown (conservative intermediate estimate).
@@ -321,20 +334,94 @@ def _hangboard_suggested(user_state: Dict[str, Any], exercise_id: str, prescript
         )
         ratio = _FINGER_BENCHMARK.get(current_grade, 1.10)
         max_total = bodyweight * ratio
+        baseline_source = "grade_fallback"
     target_total = _round_half_step(max_total * intensity)
     suggested_external = _round_half_step(target_total - bodyweight)
     work_s = prescription.get('work_seconds') or prescription.get('hang_seconds', 7)
     sets = prescription.get('sets') or (prescription.get('sets_range') or [4])[0]
-    return {
+    result: Dict[str, Any] = {
         "schema_version": "progression_targets.v1",
         "suggested_total_load_kg": target_total,
         "suggested_external_load_kg": suggested_external,
         "suggested_rep_scheme": f"{sets}x{work_s}s",
     }
+    if "estimated" in baseline_source or baseline_source == "grade_fallback":
+        result["load_source"] = "estimated"
+    return result
+
+
+def estimate_missing_baselines(user_state: Dict[str, Any]) -> None:
+    """Fill missing hangboard baseline from grade or pullup test (NEW-F11).
+
+    Modifies user_state in-place. Never overwrites a baseline whose source == "test".
+    Triggers when max_total_load_kg is absent, null, or <= (bodyweight - 10).
+    """
+    bodyweight = _get_bodyweight(user_state)
+    baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
+    baseline = baselines[0] if baselines else {}
+
+    # Never overwrite a real test baseline
+    if baseline.get("source") == "test":
+        return
+
+    existing = baseline.get("max_total_load_kg")
+    if existing and float(existing) > bodyweight - 10:
+        return  # Valid baseline present — skip estimation
+
+    # Priority 1: estimate from lead_max_rp grade
+    lead_rp = (
+        ((user_state.get("assessment") or {}).get("grades") or {})
+        .get("lead_max_rp", "")
+    )
+    if lead_rp:
+        lead_rp = lead_rp.lower()
+
+    estimated: Optional[float] = None
+    grade_used: Optional[str] = None
+    source: Optional[str] = None
+
+    if lead_rp and lead_rp in GRADE_TO_HANG_OFFSET:
+        estimated = bodyweight + GRADE_TO_HANG_OFFSET[lead_rp]
+        grade_used = lead_rp
+        source = "estimated_from_grade"
+    else:
+        # Priority 2: estimate from max weighted pullup test
+        pullup_kg = (
+            ((user_state.get("assessment") or {}).get("tests") or {})
+            .get("max_weighted_pullup_kg")
+        )
+        if pullup_kg is not None:
+            estimated = (bodyweight + float(pullup_kg)) * 0.85
+            source = "estimated_from_pullup"
+
+    if estimated is None:
+        return  # Cannot estimate — leave unchanged
+
+    estimated = _round_half_step(estimated)
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    new_entry: Dict[str, Any] = {
+        "max_total_load_kg": estimated,
+        "source": source,
+        "estimated_at": today,
+    }
+    if grade_used:
+        new_entry["grade_used"] = grade_used
+
+    # Write into baselines.hangboard[0]
+    if not user_state.get("baselines"):
+        user_state["baselines"] = {}
+    hb = user_state["baselines"].get("hangboard") or []
+    if hb:
+        hb[0] = {**hb[0], **new_entry}
+    else:
+        user_state["baselines"]["hangboard"] = [new_entry]
 
 
 def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
     out = deepcopy(resolved_day)
+    user_state = deepcopy(user_state)  # Work on a local copy — don't mutate caller state
+    estimate_missing_baselines(user_state)  # Fill missing hangboard baseline (NEW-F11)
     out["targets_schema_version"] = "progression_targets.v1"
     benchmark_grade = _extract_grade_benchmark(user_state)
 
@@ -443,10 +530,17 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     external = _round_half_step(float(entry["next_external_load_kg"]))
                     suggested["suggested_external_load_kg"] = external
                     suggested["suggested_total_load_kg"] = _round_half_step(bodyweight + external)
+                    suggested.pop("load_source", None)  # Overridden by working_loads
                 elif entry and entry.get("next_total_load_kg") is not None:
                     total = _round_half_step(float(entry["next_total_load_kg"]))
                     suggested["suggested_total_load_kg"] = total
                     suggested["suggested_external_load_kg"] = _round_half_step(total - _get_bodyweight(user_state))
+                    suggested.pop("load_source", None)  # Overridden by working_loads
+                # Warn if counterweight is required (external load is negative)
+                if (suggested.get("suggested_external_load_kg") or 0) < 0:
+                    suggested["load_warning"] = (
+                        "counterweight_required — consider re-running max_hang_5s test"
+                    )
 
             if suggested:
                 inst["suggested"] = suggested

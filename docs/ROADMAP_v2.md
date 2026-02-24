@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-24 (guided session persistence: resume banner + set-number — 421 tests)
+> Last updated: 2026-02-24 (NEW-F11 estimate_missing_baselines + load_warning — 426 tests)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -264,7 +264,8 @@ Implementato in `progression_v1.py:324-442` (`inject_targets()`), closed loop in
 
 **Backend**:
 - `inject_targets()` produce `suggested_total_load_kg`, `suggested_external_load_kg`, `suggested_rep_scheme` per load-based, external-load, e hangboard exercises
-- Fallback chain: working_loads entry → baselines.hangboard → grade-estimated max (via `_FINGER_BENCHMARK`) → 1.10×BW se grade sconosciuto
+- Fallback chain: working_loads entry → baselines.hangboard (pre-filled by `estimate_missing_baselines`) → `_FINGER_BENCHMARK` ratio → 1.10×BW se tutto manca
+- **NEW-F11** `estimate_missing_baselines(user_state)`: pre-step in `inject_targets()`. Stima `max_total_load_kg` da `lead_max_rp` (tabella grade→offset, es. 7b+20kg) o da `max_weighted_pullup_kg` ((BW+pullup)×0.85). Non sovrascrive mai source="test". Output `suggested` include `load_source="estimated"` (badge grigio frontend) e `load_warning` se external<0 (testo arancione "⚠ Baseline outdated").
 - `apply_feedback()` aggiorna `working_loads.entries[]` con adjustment policy (very_easy +15%, easy +7.5%, ok +2.5%, hard -2.5%, very_hard -10%)
 - Persistito via `save_state()` in feedback router
 
@@ -490,6 +491,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B45 | REST phase timer non funziona nel guided session | ✅ DONE | 4b post | — |
 | B46 | Density hang load errato senza baseline (usava BW anziché grade-stima) | ✅ DONE | 4b post | — |
 | B47 | Guided session: nessun banner al resume + set number perso su refresh | ✅ DONE | 4b post | — |
+| NEW-F11 | estimate_missing_baselines(): stima max_total da grade/pullup quando nessun baseline reale | ✅ DONE | 4b post | §2.8 |
 
 ---
 
@@ -577,6 +579,7 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 - **B45 REST timer**: `session-card.tsx` leggeva `prescription.rest_s` (campo inesistente) anziché `rest_between_sets_seconds` → `restSeconds` sempre `undefined` → fase REST mai avviata nel timer. Fix: fallback `rest_between_sets_seconds ?? rest_s`.
 - **B46 Density hang load**: `_hangboard_suggested()` usava `bodyweight` come `max_total_load` in assenza di baseline, assumendo 1.0×BW max hang per qualsiasi climber (errato). Fix: stima da grade attuale via `_FINGER_BENCHMARK` (es. 7b+ → 1.20×BW). Intensity `density_hangs` corretta 65% → 75% per allineamento a Tyler Nelson (~75% MVC).
 - **B47 Guided session persistence**: aggiunto banner "Session resumed" (auto-dismiss 4s) quando lo stato ripristinato da localStorage ha progresso reale. Aggiunto `completedSets` su `GuidedExercise` + prop `initialSet`/`onSetChange` su `ExerciseTimer` → il set number sopravvive al refresh.
+- **NEW-F11 estimate_missing_baselines**: pre-step in `inject_targets()` che stima `max_total_load_kg` da `lead_max_rp` (tabella grade→offset) o `max_weighted_pullup_kg` ((BW+pullup)×0.85) quando nessun baseline reale è presente. Non sovrascrive mai source="test". Frontend: badge "(estimated)" grigio + warning arancione se external<0. 5 nuovi test → 426 totali.
 
 ### Phase 4c — Produzione
 

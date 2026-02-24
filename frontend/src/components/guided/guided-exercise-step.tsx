@@ -173,12 +173,15 @@ export function GuidedExerciseStep({
           exercise.suggested.grade != null) && (
           <div className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 p-3">
             <Lightbulb className="size-4 text-primary mt-0.5 shrink-0" />
-            <div className="text-sm space-y-0.5">
+            <div className="text-sm space-y-0.5 w-full">
               {exercise.suggested.externalLoadKg != null && (
                 <p>
                   Suggested: <span className="font-semibold">+{exercise.suggested.externalLoadKg} kg</span>
                   {exercise.suggested.totalLoadKg != null && (
                     <span className="text-muted-foreground"> (total: {exercise.suggested.totalLoadKg} kg)</span>
+                  )}
+                  {exercise.suggested.loadSource === "estimated" && (
+                    <span className="text-xs text-muted-foreground ml-1">(estimated)</span>
                   )}
                 </p>
               )}
@@ -188,6 +191,11 @@ export function GuidedExerciseStep({
                   {exercise.suggested.surface && (
                     <span className="text-muted-foreground"> on {exercise.suggested.surface}</span>
                   )}
+                </p>
+              )}
+              {exercise.suggested.loadWarning && (
+                <p className="text-xs text-orange-500 mt-1">
+                  ⚠ Baseline outdated — run a max hang test for accurate suggestions.
                 </p>
               )}
             </div>

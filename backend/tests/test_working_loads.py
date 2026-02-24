@@ -11,6 +11,7 @@ from backend.engine.progression_v1 import (
     _get_bodyweight,
     _rule_midpoint_pct,
     apply_feedback,
+    estimate_missing_baselines,
     inject_targets,
     step_grade,
 )
@@ -343,3 +344,71 @@ def test_get_bodyweight_fallback():
     assert _get_bodyweight({"bodyweight_kg": 70.0}) == 70.0
     assert _get_bodyweight({"body": {"weight_kg": 65.0}}) == 65.0
     assert _get_bodyweight({}) == 0.0
+
+
+# ─── NEW-F11: estimate_missing_baselines + load_warning (5 tests) ─────────────
+
+def test_estimate_from_grade_7b():
+    """BW=77, lead_max_rp='7b' → estimated max_total = 77+15 = 92 kg (NEW-F11)."""
+    us = _base_user_state()
+    us["baselines"] = {}
+    us["assessment"]["grades"]["lead_max_rp"] = "7b"
+    estimate_missing_baselines(us)
+    baseline = us["baselines"]["hangboard"][0]
+    assert baseline["max_total_load_kg"] == 92.0
+    assert baseline["source"] == "estimated_from_grade"
+    assert baseline["grade_used"] == "7b"
+
+
+def test_no_overwrite_test_baseline():
+    """Baseline with source='test' must never be overwritten by estimation."""
+    us = _base_user_state()
+    us["baselines"] = {"hangboard": [{"max_total_load_kg": 100.0, "source": "test"}]}
+    us["assessment"]["grades"]["lead_max_rp"] = "7b"
+    estimate_missing_baselines(us)
+    # Must remain exactly as-is
+    assert us["baselines"]["hangboard"][0]["max_total_load_kg"] == 100.0
+    assert us["baselines"]["hangboard"][0]["source"] == "test"
+
+
+def test_no_estimate_without_grade_or_pullup():
+    """No grade, no pullup → no estimation, no crash."""
+    us = {
+        "bodyweight_kg": 77.0,
+        "baselines": {},
+        "assessment": {"grades": {}, "tests": {}},
+    }
+    estimate_missing_baselines(us)  # Must not raise
+    # No hangboard baseline created
+    assert not us["baselines"].get("hangboard")
+
+
+def test_load_warning_on_negative_external():
+    """When estimated external < 0, load_warning is injected into suggested (Step 1)."""
+    us = _base_user_state()
+    us["baselines"] = {}
+    us["assessment"]["grades"]["lead_max_rp"] = "6b"  # offset=-10 → estimated=67kg
+    day = _day_with_exercises([{
+        "exercise_id": "density_hangs",
+        "prescription": {"sets": 3, "work_seconds": 30},
+    }])
+    out = inject_targets(day, us)
+    sug = out["sessions"][0]["exercise_instances"][0]["suggested"]
+    # external = round(67 * 0.75, 0.5) - 77 → should be negative
+    assert sug["suggested_external_load_kg"] < 0
+    assert "load_warning" in sug
+    assert "counterweight_required" in sug["load_warning"]
+
+
+def test_load_source_estimated_in_output():
+    """When baseline is estimated, load_source='estimated' appears in suggested."""
+    us = _base_user_state()
+    us["baselines"] = {}
+    us["assessment"]["grades"]["lead_max_rp"] = "7b"
+    day = _day_with_exercises([{
+        "exercise_id": "repeater_hang_7_3",
+        "prescription": {"sets": 6, "work_seconds": 7},
+    }])
+    out = inject_targets(day, us)
+    sug = out["sessions"][0]["exercise_instances"][0]["suggested"]
+    assert sug.get("load_source") == "estimated"
