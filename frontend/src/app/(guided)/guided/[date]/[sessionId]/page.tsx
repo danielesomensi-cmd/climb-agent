@@ -9,6 +9,7 @@ import { GuidedProgressBar } from "@/components/guided/guided-progress-bar";
 import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GuidedSummary } from "@/components/guided/guided-summary";
 import { applyEvents, postFeedback, getWeek } from "@/lib/api";
+import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,30 @@ export default function GuidedSessionPage() {
     }
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, []);
+
+  // Unlock audio on first touch — iOS Safari requires user gesture to start AudioContext
+  useEffect(() => {
+    function onFirstTouch() {
+      unlockAudio();
+      window.removeEventListener("touchstart", onFirstTouch);
+    }
+    window.addEventListener("touchstart", onFirstTouch, { once: true });
+    return () => window.removeEventListener("touchstart", onFirstTouch);
+  }, []);
+
+  // Resume AudioContext when PWA returns to foreground (iOS suspends on background)
+  useEffect(() => {
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        try {
+          const ctx = getAudioContext();
+          if (ctx.state === "suspended") ctx.resume();
+        } catch { /* silent */ }
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
   // ---------------------------------------------------------------------------

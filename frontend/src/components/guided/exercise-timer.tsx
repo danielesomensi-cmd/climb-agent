@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAudioContext, unlockAudio } from "@/lib/audio-unlock";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -29,33 +30,15 @@ const RADIUS = 52;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 // ---------------------------------------------------------------------------
-// Audio — module-level AudioContext for iOS Safari compatibility.
-// Must be created/resumed inside a user-gesture handler (handleStart / handleDoneSet).
+// Audio — uses shared AudioContext from audio-unlock.ts.
+// unlockAudio() is called once on the guided-session page (touchstart +
+// Start button), so the context is already running by the time beep() fires.
 // ---------------------------------------------------------------------------
 
-let sharedAudioCtx: AudioContext | null = null;
-
-function ensureAudioContext(): void {
-  try {
-    if (sharedAudioCtx && sharedAudioCtx.state !== "closed") {
-      if (sharedAudioCtx.state === "suspended") sharedAudioCtx.resume();
-      return;
-    }
-    const Ctx =
-      typeof window !== "undefined"
-        ? window.AudioContext ??
-          (window as unknown as { webkitAudioContext?: typeof AudioContext })
-            .webkitAudioContext
-        : undefined;
-    if (!Ctx) return;
-    sharedAudioCtx = new Ctx();
-  } catch { /* silent */ }
-}
-
 function beep(freq: number, duration: number, volume: number) {
-  const ctx = sharedAudioCtx;
-  if (!ctx || ctx.state !== "running") return;
   try {
+    const ctx = getAudioContext();
+    if (ctx.state !== "running") return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
@@ -257,7 +240,7 @@ export function ExerciseTimer({
   // --- Handlers ---
 
   function handleStart() {
-    ensureAudioContext(); // Unlock audio on iOS (must be inside user gesture)
+    unlockAudio(); // Unlock audio on iOS (must be inside user gesture)
     if (isManual) {
       setPhase("work");
       setSecondsLeft(0);
@@ -270,7 +253,7 @@ export function ExerciseTimer({
   }
 
   function handleDoneSet() {
-    ensureAudioContext(); // Resume audio if suspended
+    unlockAudio(); // Resume audio if suspended
     onSetChangeRef.current?.(currentSet);
     if (currentSet >= sets) {
       setPhase("complete");
