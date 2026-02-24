@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, RotateCcw, CheckCircle2 } from "lucide-react";
+import { Play, Pause, RotateCcw, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
@@ -108,9 +108,13 @@ export function ExerciseTimer({
   const [paused, setPaused] = useState(false);
   const [transitionId, setTransitionId] = useState(0);
   const [flash, setFlash] = useState(false);
+  const [viewingSet, setViewingSet] = useState(initialSet);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onSetChangeRef = useRef(onSetChange);
   useEffect(() => { onSetChangeRef.current = onSetChange; }, [onSetChange]);
+
+  // Snap viewingSet back to currentSet on set advance or phase change
+  useEffect(() => { setViewingSet(currentSet); }, [currentSet, phase]);
 
   // Refs for countdown beep effect (avoid re-triggering on phase/paused change)
   const phaseRef = useRef(phase);
@@ -285,6 +289,7 @@ export function ExerciseTimer({
     setPhase("idle");
     setCurrentSet(1);
     setCurrentRep(1);
+    setViewingSet(1);
     setSecondsLeft(0);
     setPaused(false);
   }
@@ -295,8 +300,19 @@ export function ExerciseTimer({
       return;
     }
     if (phase !== "idle" && phase !== "complete") {
+      if (paused) {
+        // Resuming — snap viewingSet back to real current set
+        setViewingSet(currentSet);
+      }
       setPaused((p) => !p);
     }
+  }
+
+  function handleSetNav(direction: -1 | 1) {
+    const next = viewingSet + direction;
+    if (next < 1 || next > sets) return;
+    setPaused(true);
+    setViewingSet(next);
   }
 
   // --- SVG progress ---
@@ -450,12 +466,39 @@ export function ExerciseTimer({
       {/* Set/rep counter + controls */}
       <div className="flex flex-col items-center gap-2">
         {phase !== "idle" && (
-          <span className="text-xs text-muted-foreground tabular-nums">
-            Set {currentSet} / {sets}
-            {hasRepLoop && phase !== "set_rest" && phase !== "complete" && (
-              <> &mdash; Rep {currentRep} / {reps}</>
+          <div className="flex items-center gap-1.5">
+            {/* ‹ arrow — visible only during set_rest */}
+            {phase === "set_rest" && (
+              <button
+                onClick={() => handleSetNav(-1)}
+                disabled={viewingSet <= 1}
+                className="p-0.5 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous set"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
             )}
-          </span>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              Set {phase === "set_rest" ? viewingSet : currentSet} / {sets}
+              {phase === "set_rest" && viewingSet < currentSet && (
+                <span className="text-green-500 ml-0.5">✓</span>
+              )}
+              {hasRepLoop && phase !== "set_rest" && phase !== "complete" && (
+                <> &mdash; Rep {currentRep} / {reps}</>
+              )}
+            </span>
+            {/* › arrow — visible only during set_rest */}
+            {phase === "set_rest" && (
+              <button
+                onClick={() => handleSetNav(1)}
+                disabled={viewingSet >= sets}
+                className="p-0.5 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next set"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            )}
+          </div>
         )}
         <div className="flex items-center gap-3">
           {phase === "work" && isManual && (
