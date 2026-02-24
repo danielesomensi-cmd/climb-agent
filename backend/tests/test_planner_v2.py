@@ -470,5 +470,47 @@ class TestPlannerV2LoadScore(unittest.TestCase):
         self.assertLessEqual(summary["total_load"], 20 * 3)
 
 
+class TestPlannerV2OtherActivity(unittest.TestCase):
+    """Tests for B41 — other activities in availability."""
+
+    def test_other_activity_blocks_sessions(self):
+        """Day with _day_meta.other_activity=True gets zero sessions and the flag."""
+        avail = _base_availability()
+        avail["wed"]["_day_meta"] = {"other_activity": True, "other_activity_name": "Trail running"}
+        plan = generate_phase_week(**_make_kwargs("base", availability=avail))
+        days = plan["weeks"][0]["days"]
+        wed = next(d for d in days if d["weekday"] == "wed")
+        self.assertEqual(len(wed["sessions"]), 0, "Other-activity day should have no sessions")
+        self.assertTrue(wed.get("other_activity"), "Missing other_activity flag")
+        self.assertEqual(wed.get("other_activity_name"), "Trail running")
+
+    def test_other_activity_reduce_after(self):
+        """Day after other-activity with reduce_intensity_after=True gets no hard sessions and the flag."""
+        avail = _base_availability()
+        avail["wed"]["_day_meta"] = {
+            "other_activity": True,
+            "reduce_intensity_after": True,
+        }
+        plan = generate_phase_week(**_make_kwargs("strength_power", availability=avail))
+        days = plan["weeks"][0]["days"]
+        thu = next(d for d in days if d["weekday"] == "thu")
+        self.assertTrue(thu.get("prev_other_activity_reduce"),
+                        "Missing prev_other_activity_reduce flag on day after")
+        for s in thu["sessions"]:
+            meta = {"hard": s["tags"]["hard"]}
+            self.assertFalse(meta["hard"],
+                             f"Hard session {s['session_id']} on intensity-reduced day")
+
+    def test_other_activity_no_reduce(self):
+        """Day after other-activity without reduce flag gets normal sessions."""
+        avail = _base_availability()
+        avail["wed"]["_day_meta"] = {"other_activity": True}
+        plan = generate_phase_week(**_make_kwargs("strength_power", availability=avail))
+        days = plan["weeks"][0]["days"]
+        thu = next(d for d in days if d["weekday"] == "thu")
+        self.assertNotIn("prev_other_activity_reduce", thu,
+                         "Should NOT have reduce flag when not requested")
+
+
 if __name__ == "__main__":
     unittest.main()

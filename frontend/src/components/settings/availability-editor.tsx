@@ -166,76 +166,119 @@ export function AvailabilityEditor({
 
           {/* Grid rows */}
           {WEEKDAYS.map((day) => (
-            <div
-              key={day.key}
-              className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1 items-start"
-            >
-              <p className="w-10 text-sm font-medium py-2">{day.label}</p>
-              {SLOTS.map((slot) => {
-                const s = getSlot(day.key, slot.key);
-                return (
-                  <div key={slot.key} className="space-y-1">
-                    <button
-                      type="button"
-                      className={`w-full rounded-md border px-2 py-2 text-xs transition-colors ${
-                        s.available
-                          ? "border-primary bg-primary/10 text-primary font-medium"
-                          : "border-muted bg-muted/30 text-muted-foreground hover:border-primary/40"
-                      }`}
-                      onClick={() => toggleSlot(day.key, slot.key)}
-                    >
-                      {s.available ? "Yes" : "-"}
-                    </button>
+            <div key={day.key} className="space-y-1">
+              <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1 items-start">
+                <p className="w-10 text-sm font-medium py-2">{day.label}</p>
+                {SLOTS.map((slot) => {
+                  const s = getSlot(day.key, slot.key);
+                  return (
+                    <div key={slot.key} className="space-y-1">
+                      <button
+                        type="button"
+                        className={`w-full rounded-md border px-2 py-2 text-xs transition-colors ${
+                          s.available
+                            ? "border-primary bg-primary/10 text-primary font-medium"
+                            : "border-muted bg-muted/30 text-muted-foreground hover:border-primary/40"
+                        }`}
+                        onClick={() => toggleSlot(day.key, slot.key)}
+                      >
+                        {s.available ? "Yes" : "-"}
+                      </button>
 
-                    {s.available && (
-                      <div className="space-y-1">
-                        <div className="flex gap-1">
-                          <button
-                            type="button"
-                            className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
-                              s.preferred_location === "home"
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-muted text-muted-foreground"
-                            }`}
-                            onClick={() => setLocation(day.key, slot.key, "home")}
-                          >
-                            Home
-                          </button>
-                          <button
-                            type="button"
-                            className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
-                              s.preferred_location === "gym"
-                                ? "border-primary bg-primary/10 text-primary"
-                                : "border-muted text-muted-foreground"
-                            }`}
-                            onClick={() => setLocation(day.key, slot.key, "gym")}
-                          >
-                            Gym
-                          </button>
+                      {s.available && (
+                        <div className="space-y-1">
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
+                                s.preferred_location === "home"
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-muted text-muted-foreground"
+                              }`}
+                              onClick={() => setLocation(day.key, slot.key, "home")}
+                            >
+                              Home
+                            </button>
+                            <button
+                              type="button"
+                              className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
+                                s.preferred_location === "gym"
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "border-muted text-muted-foreground"
+                              }`}
+                              onClick={() => setLocation(day.key, slot.key, "gym")}
+                            >
+                              Gym
+                            </button>
+                          </div>
+
+                          {s.preferred_location === "gym" && gyms.length > 0 && (
+                            <Select
+                              value={s.gym_id ?? ""}
+                              onValueChange={(v) => setGymId(day.key, slot.key, v)}
+                            >
+                              <SelectTrigger className="h-6 text-[10px] w-full">
+                                <SelectValue placeholder="Which?" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {gyms.map((g, i) => (
+                                  <SelectItem key={i} value={g.name || `gym-${i}`}>
+                                    {g.name || `Gym ${i + 1}`}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
 
-                        {s.preferred_location === "gym" && gyms.length > 0 && (
-                          <Select
-                            value={s.gym_id ?? ""}
-                            onValueChange={(v) => setGymId(day.key, slot.key, v)}
-                          >
-                            <SelectTrigger className="h-6 text-[10px] w-full">
-                              <SelectValue placeholder="Which?" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {gyms.map((g, i) => (
-                                <SelectItem key={i} value={g.name || `gym-${i}`}>
-                                  {g.name || `Gym ${i + 1}`}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                    )}
+              {/* Other activity controls */}
+              <div className="ml-10 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id={`other-${day.key}`}
+                    checked={dayMeta[day.key]?.other_activity ?? false}
+                    onCheckedChange={() => toggleOtherActivity(day.key)}
+                  />
+                  <Label htmlFor={`other-${day.key}`} className="text-xs">
+                    Other sport / activity
+                  </Label>
+                </div>
+                {dayMeta[day.key]?.other_activity && (
+                  <div className="ml-8 space-y-2">
+                    <Input
+                      placeholder="Activity name (e.g. trail running)"
+                      className="h-7 text-xs"
+                      value={dayMeta[day.key]?.other_activity_name ?? ""}
+                      onChange={(e) =>
+                        setDayMeta((prev) => ({
+                          ...prev,
+                          [day.key]: { ...prev[day.key], other_activity_name: e.target.value },
+                        }))
+                      }
+                    />
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id={`reduce-${day.key}`}
+                        checked={dayMeta[day.key]?.reduce_intensity_after ?? false}
+                        onCheckedChange={(v) =>
+                          setDayMeta((prev) => ({
+                            ...prev,
+                            [day.key]: { ...prev[day.key], reduce_intensity_after: v },
+                          }))
+                        }
+                      />
+                      <Label htmlFor={`reduce-${day.key}`} className="text-xs">
+                        Reduce climbing intensity next day
+                      </Label>
+                    </div>
                   </div>
-                );
-              })}
+                )}
+              </div>
             </div>
           ))}
         </CardContent>
@@ -295,7 +338,7 @@ export function AvailabilityEditor({
         </Button>
         <Button
           size="sm"
-          onClick={() => onSave(availability, planningPrefs)}
+          onClick={handleSave}
         >
           Save & regenerate plan
         </Button>

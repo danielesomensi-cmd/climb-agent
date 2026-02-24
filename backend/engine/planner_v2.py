@@ -289,6 +289,18 @@ def generate_phase_week(
     day_keys: List[str] = [_weekday_key(d) for d in day_dates]
     day_sessions: List[List[Dict[str, Any]]] = [[] for _ in range(7)]
 
+    # Extract _day_meta (other-activity flags) from raw availability
+    day_other_activity: List[bool] = [False] * 7
+    day_reduce_after: List[bool] = [False] * 7
+    day_activity_name: List[Optional[str]] = [None] * 7
+    for offset in range(7):
+        raw_day = (availability or {}).get(day_keys[offset]) or {}
+        meta = raw_day.get("_day_meta") if isinstance(raw_day, dict) else None
+        if isinstance(meta, dict) and meta.get("other_activity"):
+            day_other_activity[offset] = True
+            day_activity_name[offset] = meta.get("other_activity_name")
+            day_reduce_after[offset] = bool(meta.get("reduce_intensity_after"))
+
     # Track constraints
     hard_days = 0
     finger_day_offsets: List[int] = []
@@ -300,6 +312,9 @@ def generate_phase_week(
     day_has_available_slot: List[bool] = []
     for offset in range(7):
         day_avail = normalized[day_keys[offset]]
+        if day_other_activity[offset]:
+            day_has_available_slot.append(False)
+            continue
         # Check if ALL available slots on this day are outdoor-only
         available_slots = [s for s in SLOTS if day_avail[s]["available"]]
         if available_slots:
@@ -314,6 +329,12 @@ def generate_phase_week(
                 continue
         has_slot = any(day_avail[slot]["available"] for slot in SLOTS)
         day_has_available_slot.append(has_slot)
+
+    # Reduce intensity on day after other-activity (when flagged)
+    day_intensity_reduced: List[bool] = [False] * 7
+    for offset in range(7):
+        if offset > 0 and day_other_activity[offset - 1] and day_reduce_after[offset - 1]:
+            day_intensity_reduced[offset] = True
 
     # Cap available days to target_training_days_per_week
     available_day_count = sum(day_has_available_slot)
@@ -388,8 +409,12 @@ def generate_phase_week(
 
             skip = False
 
+            # Other-activity intensity reduction: no hard sessions on reduced day
+            if day_intensity_reduced[offset] and meta["hard"]:
+                skip = True
+
             # Pre-trip deload: no hard/max sessions on pretrip dates
-            if day_dates[offset] in pretrip_set and (meta["hard"] or meta["intensity"] == "max"):
+            if not skip and day_dates[offset] in pretrip_set and (meta["hard"] or meta["intensity"] == "max"):
                 skip = True
 
             # Hard day cap
@@ -634,6 +659,12 @@ def generate_phase_week(
             day_entry["outdoor_slot"] = True
         if day_dates[offset] in pretrip_set:
             day_entry["pretrip_deload"] = True
+        if day_other_activity[offset]:
+            day_entry["other_activity"] = True
+            if day_activity_name[offset]:
+                day_entry["other_activity_name"] = day_activity_name[offset]
+        if day_intensity_reduced[offset]:
+            day_entry["prev_other_activity_reduce"] = True
         plan_days.append(day_entry)
 
     finger_days_count = len(finger_day_offsets)
