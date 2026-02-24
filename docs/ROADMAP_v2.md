@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-24 (bug fixes post-4b: REST timer phase, density hang load calc — 421 tests)
+> Last updated: 2026-02-24 (guided session persistence: resume banner + set-number — 421 tests)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -489,6 +489,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B44 | Permettere meno di 3 sessioni/settimana (min 1) | TODO | beta feedback | — |
 | B45 | REST phase timer non funziona nel guided session | ✅ DONE | 4b post | — |
 | B46 | Density hang load errato senza baseline (usava BW anziché grade-stima) | ✅ DONE | 4b post | — |
+| B47 | Guided session: nessun banner al resume + set number perso su refresh | ✅ DONE | 4b post | — |
 
 ---
 
@@ -575,6 +576,7 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 **Bug fix post-4b (2026-02-24):**
 - **B45 REST timer**: `session-card.tsx` leggeva `prescription.rest_s` (campo inesistente) anziché `rest_between_sets_seconds` → `restSeconds` sempre `undefined` → fase REST mai avviata nel timer. Fix: fallback `rest_between_sets_seconds ?? rest_s`.
 - **B46 Density hang load**: `_hangboard_suggested()` usava `bodyweight` come `max_total_load` in assenza di baseline, assumendo 1.0×BW max hang per qualsiasi climber (errato). Fix: stima da grade attuale via `_FINGER_BENCHMARK` (es. 7b+ → 1.20×BW). Intensity `density_hangs` corretta 65% → 75% per allineamento a Tyler Nelson (~75% MVC).
+- **B47 Guided session persistence**: aggiunto banner "Session resumed" (auto-dismiss 4s) quando lo stato ripristinato da localStorage ha progresso reale. Aggiunto `completedSets` su `GuidedExercise` + prop `initialSet`/`onSetChange` su `ExerciseTimer` → il set number sopravvive al refresh.
 
 ### Phase 4c — Produzione
 

@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-24 (bug fixes: REST timer phase, density hang load calc)
+> Last updated: 2026-02-24 (guided session persistence: resume banner + set-number; B45/B46/B47)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
