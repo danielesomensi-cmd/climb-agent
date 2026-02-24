@@ -412,3 +412,137 @@ def test_load_source_estimated_in_output():
     out = inject_targets(day, us)
     sug = out["sessions"][0]["exercise_instances"][0]["suggested"]
     assert sug.get("load_source") == "estimated"
+
+
+# ─── Leg exercises catalog (10 tests) ────────────────────────────────────────
+
+def test_romanian_deadlift_in_external_load_set():
+    """romanian_deadlift must be in EXTERNAL_LOAD_EXERCISES."""
+    assert "romanian_deadlift" in EXTERNAL_LOAD_EXERCISES
+
+
+def test_pistol_squat_not_in_external_load_set():
+    """pistol_squat_progression is bodyweight_only — must NOT be in EXTERNAL_LOAD_EXERCISES."""
+    assert "pistol_squat_progression" not in EXTERNAL_LOAD_EXERCISES
+
+
+def test_romanian_deadlift_fallback_load():
+    """No history → 0.40×BW fallback → 77 * 0.40 = 30.8 → rounds to 31.0."""
+    us = _base_user_state()
+    day = _day_with_exercises([{
+        "exercise_id": "romanian_deadlift",
+        "prescription": {"reps": 6, "sets": 3},
+    }])
+    out = inject_targets(day, us)
+    sug = out["sessions"][0]["exercise_instances"][0]["suggested"]
+    assert sug["suggested_external_load_kg"] == 31.0
+    assert sug["suggested_rep_scheme"] == "3x6"
+
+
+def test_romanian_deadlift_from_history():
+    """Working loads entry → uses stored value for romanian_deadlift."""
+    us = _base_user_state()
+    us["working_loads"]["entries"].append({
+        "exercise_id": "romanian_deadlift",
+        "key": "romanian_deadlift",
+        "setup": {},
+        "next_external_load_kg": 50.0,
+        "updated_at": "2026-01-04",
+    })
+    day = _day_with_exercises([{
+        "exercise_id": "romanian_deadlift",
+        "prescription": {"reps": 6, "sets": 3},
+    }])
+    out = inject_targets(day, us)
+    sug = out["sessions"][0]["exercise_instances"][0]["suggested"]
+    assert sug["suggested_external_load_kg"] == 50.0
+
+
+def test_romanian_deadlift_feedback_updates_working_loads():
+    """apply_feedback updates working_loads for romanian_deadlift."""
+    us = _base_user_state()
+    log = {
+        "date": "2026-01-06",
+        "planned": [{"exercise_instances": [{"exercise_id": "romanian_deadlift", "prescription": {}}]}],
+        "actual": {"exercise_feedback_v1": [{
+            "exercise_id": "romanian_deadlift",
+            "completed": True,
+            "feedback_label": "easy",
+            "used_external_load_kg": 40.0,
+        }]},
+    }
+    updated = apply_feedback(log, us)
+    entries = updated["working_loads"]["entries"]
+    entry = next(e for e in entries if e["exercise_id"] == "romanian_deadlift")
+    # easy midpoint = (0.05+0.10)/2 = 0.075 → 40 * 1.075 = 43.0
+    assert entry["next_external_load_kg"] == 43.0
+    assert entry["last_feedback_label"] == "easy"
+
+
+def test_pistol_squat_no_external_load_suggestion():
+    """pistol_squat_progression is bodyweight_only → no suggested_external_load_kg."""
+    us = _base_user_state()
+    day = _day_with_exercises([{
+        "exercise_id": "pistol_squat_progression",
+        "prescription": {"reps": "4-6", "sets": 3},
+    }])
+    out = inject_targets(day, us)
+    sug = out["sessions"][0]["exercise_instances"][0].get("suggested") or {}
+    assert "suggested_external_load_kg" not in sug
+
+
+def _resolve_session(session_id: str, user_state: dict) -> dict:
+    """Helper: resolve a catalog session with user_state_override."""
+    return resolve_session(
+        repo_root=REPO_ROOT,
+        session_path=f"backend/catalog/sessions/v1/{session_id}.json",
+        templates_dir="backend/catalog/templates",
+        exercises_path="backend/catalog/exercises/v1/exercises.json",
+        out_path=f"output/__test_{session_id}.json",
+        user_state_override=user_state,
+        write_output=False,
+    )
+
+
+def test_lower_body_gym_resolves():
+    """lower_body_gym session resolves to at least one exercise."""
+    us = _base_user_state()
+    us["context"] = {"location": "gym", "gym_id": "test_gym"}
+    us["equipment"] = {"home": [], "gyms": [{"gym_id": "test_gym", "equipment": ["weight"]}]}
+    result = _resolve_session("lower_body_gym", us)
+    instances = result.get("resolved_session", {}).get("exercise_instances", [])
+    assert len(instances) > 0
+
+
+def test_lower_body_gym_contains_squat():
+    """lower_body_gym must include a squat-pattern exercise."""
+    us = _base_user_state()
+    us["context"] = {"location": "gym", "gym_id": "test_gym"}
+    us["equipment"] = {"home": [], "gyms": [{"gym_id": "test_gym", "equipment": ["weight"]}]}
+    result = _resolve_session("lower_body_gym", us)
+    instances = result.get("resolved_session", {}).get("exercise_instances", [])
+    ex_ids = [inst["exercise_id"] for inst in instances]
+    squat_exercises = {"split_squat", "pistol_squat_progression"}
+    assert squat_exercises & set(ex_ids), f"Expected a squat exercise in {ex_ids}"
+
+
+def test_heavy_conditioning_gym_resolves():
+    """heavy_conditioning_gym session resolves to at least one exercise."""
+    us = _base_user_state()
+    us["context"] = {"location": "gym", "gym_id": "test_gym"}
+    us["equipment"] = {"home": [], "gyms": [{"gym_id": "test_gym", "equipment": ["weight", "pullup_bar"]}]}
+    result = _resolve_session("heavy_conditioning_gym", us)
+    instances = result.get("resolved_session", {}).get("exercise_instances", [])
+    assert len(instances) > 0
+
+
+def test_lower_body_gym_not_in_planner_pool():
+    """lower_body_gym must NOT be in the planner's automatic session pool."""
+    from backend.engine.planner_v2 import _SESSION_META
+    assert "lower_body_gym" not in _SESSION_META
+
+
+def test_heavy_conditioning_gym_not_in_planner_pool():
+    """heavy_conditioning_gym must NOT be in the planner's automatic session pool."""
+    from backend.engine.planner_v2 import _SESSION_META
+    assert "heavy_conditioning_gym" not in _SESSION_META

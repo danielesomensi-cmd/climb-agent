@@ -1,0 +1,79 @@
+{
+  "id": "lower_body_gym",
+  "name": "Lower Body Strength (Gym)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "strength_general",
+    "secondary_goals": ["mobility", "core"],
+    "notes": "Dedicated unilateral leg session. Best placed on a rest day from climbing or as a standalone."
+  },
+  "compatibility": {
+    "slot": ["long", "short"],
+    "sports": ["climbing"]
+  },
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 50,
+    "hard_cap_min": 65
+  },
+  "modules": [
+    {
+      "template_id": "warmup_strength",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Focus hip mobility: leg swings, 90/90 switches, air squats."
+    },
+    {
+      "block_id": "main_unilateral",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Primary unilateral squat. Slow eccentric (3s), full depth, control.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["squat"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "accessory_hinge",
+      "required": true,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Posterior chain. RDL or single-leg hinge. 3x6, controlled eccentric.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["hinge"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "core_standard",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown",
+      "notes": "Emphasise hip flexor (couch stretch), pigeon, hamstring fold."
+    }
+  ],
+  "coach_notes": {
+    "warmup_emphasis": "Hip mobility first: leg swings, 90/90, cossack squat before loading.",
+    "post_session": "Hip flexor and hamstring stretching mandatory. 60s couch stretch per side."
+  }
+}

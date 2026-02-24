@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-24 (B48/B49 edit+reschedule session — doc only)
+> Last updated: 2026-02-24 (NEW-F12 leg exercises catalog: pistol_squat_progression + romanian_deadlift + lower_body_gym + heavy_conditioning_gym; 145 esercizi, 35 sessioni, 437 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -232,8 +232,8 @@ Audit sistematico del catalogo esercizi contro la literature review
 
 | Metrica | Prima | Dopo |
 |---------|-------|------|
-| Esercizi totali | 135 | 143 |
-| Nuovi aggiunti | — | +9 (copenhagen_plank, hangboard_moving_hangs, thirty_thirty_intervals, frenchies, uneven_grip_pullup, one_on_one_off_intervals, aerobic_pyramid_intervals, hip_flexor_couch_stretch, lat_overhead_stretch) |
+| Esercizi totali | 135 | 145 |
+| Nuovi aggiunti | — | +9 (copenhagen_plank, hangboard_moving_hangs, thirty_thirty_intervals, frenchies, uneven_grip_pullup, one_on_one_off_intervals, aerobic_pyramid_intervals, hip_flexor_couch_stretch, lat_overhead_stretch) + pistol_squat_progression + romanian_deadlift (NEW-F12) |
 | Rimossi | — | -1 (lattice_lactate_8x8 — protocollo non standard) |
 | Bug fix prescription | — | 11 (work_seconds, sets, rest, load_model, intensity) |
 | Enrichment (desc/cues/video) | — | ~80 esercizi aggiornati |
@@ -496,6 +496,7 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F11 | estimate_missing_baselines(): stima max_total da grade/pullup quando nessun baseline reale | ✅ DONE | 4b post | §2.8 |
 | B48 | Edit single session senza toccare l'intero giorno (multi-session day) | TODO | next | §4 |
 | B49 | Reschedule session to different day/slot/gym | TODO | next | §4 |
+| NEW-F12 | Leg exercises catalog (pistol_squat_progression, romanian_deadlift, lower_body_gym, heavy_conditioning_gym) | ✅ DONE | 4b post | §2.6 |
 
 ---
 

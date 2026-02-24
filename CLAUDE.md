@@ -18,7 +18,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (421 green)
+# Run all tests (437 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -47,7 +47,7 @@ backend/
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 421 pytest tests with fixtures/
+  tests/             # 437 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 21 pages: 7 main views + 12 onboarding steps + root + onboarding index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
@@ -148,8 +148,8 @@ cd frontend && npm run dev    # http://localhost:3000
 
 ## Catalog status (post Phase 0 expansion)
 
-- **Exercises**: 143 in `backend/catalog/exercises/v1/exercises.json`
-- **Sessions**: 33 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup + easy_climbing_deload)
+- **Exercises**: 145 in `backend/catalog/exercises/v1/exercises.json`
+- **Sessions**: 35 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup + easy_climbing_deload + lower_body_gym + heavy_conditioning_gym)
 - **Templates**: 19 in `backend/catalog/templates/v1/` (11 original + 8 new: warmup_climbing/strength/recovery, pulling_strength/endurance, antagonist_prehab, core_standard, cooldown_stretch)
 
 ### Exercise categories covered

@@ -27,7 +27,7 @@ LOAD_BASED_EXERCISES = {"max_hang_5s", "weighted_pullup"}
 GRADE_BASED_EXERCISES = {"limit_bouldering"}
 EXTERNAL_LOAD_EXERCISES = {
     "barbell_row", "bench_press", "face_pull", "farmers_carry",
-    "overhead_press", "split_squat", "turkish_getup",
+    "overhead_press", "romanian_deadlift", "split_squat", "turkish_getup",
 }
 EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "barbell_row": 0.30,
@@ -35,6 +35,7 @@ EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "face_pull": 0.08,
     "farmers_carry": 0.30,
     "overhead_press": 0.25,
+    "romanian_deadlift": 0.40,
     "split_squat": 0.15,
     "turkish_getup": 0.15,
 }

@@ -1147,6 +1147,103 @@
       "load_model": "external_load"
     },
     {
+      "id": "pistol_squat_progression",
+      "name": "Pistol Squat Progression (Chair → Full)",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "unilateral_squat",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": "4-6",
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Start box-assisted (knee height). Progress over weeks: box → TRX → counterweight → full pistol."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Progressive unilateral squat building from chair-assisted to full pistol. Builds single-leg strength, balance, and hip mobility critical for climbing footwork, high steps, and heel-toe hooks.",
+      "cues": [
+        "Begin seated on a box at knee height — stand on one leg, lower back down with control",
+        "Counterbalance arms forward or use TRX — prioritise depth and control over independence",
+        "Heel flat throughout; knee tracks over 2nd–3rd toe — no valgus collapse",
+        "Non-working leg extended forward, parallel to floor at full depth",
+        "3-second eccentric descent for maximum neuromuscular adaptation",
+        "Progression ladder: box squat → TRX-assisted → counterweight → free pistol"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "romanian_deadlift",
+      "name": "Romanian Deadlift (RDL)",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "hip_hinge",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Barbell or dumbbells. Stop at hamstring end-range, before lumbar rounds."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Hip hinge targeting hamstrings, glutes, and erectors. Most climbing-relevant lower body posterior-chain exercise: supports overhang endurance, heel hooks, and high-step stability.",
+      "cues": [
+        "Start standing with barbell or dumbbells at hip crease, slight knee bend — maintain throughout",
+        "Push hips back (not down) — this is a hinge, not a squat",
+        "Bar stays close to shins/legs throughout the descent",
+        "Lower until hamstrings reach end-range — typically just below the knee",
+        "Drive hips forward to stand; squeeze glutes at lockout without lumbar hyperextension",
+        "3-second controlled eccentric — no bouncing at the bottom"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
       "id": "pullup",
       "name": "Pull-up",
       "category": "main_strength",

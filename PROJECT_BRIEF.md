@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-24 (NEW-F11 estimate_missing_baselines + load_warning + B45/B46/B47; 426 tests)
+> Last updated: 2026-02-24 (NEW-F12 leg catalog: pistol_squat_progression + romanian_deadlift + lower_body_gym + heavy_conditioning_gym; 145 exercises, 35 sessions, 437 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -17,10 +17,10 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 
 | Area | Count | Notes |
 |------|-------|-------|
-| Exercises | 143 | 14 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises |
-| Sessions | 33 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload |
+| Exercises | 145 | 14 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +pistol_squat_progression +romanian_deadlift (NEW-F12) |
+| Sessions | 35 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload, lower_body_gym, heavy_conditioning_gym |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | 426 | all green (post Phase 4b + NEW-F11) |
+| Tests | 437 | all green (post Phase 4b + NEW-F11 + NEW-F12) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 27 | 12 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 21 | 7 main views + 12 onboarding steps + root + onboarding index |
