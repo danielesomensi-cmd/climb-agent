@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-24 (NEW-F11 estimate_missing_baselines + load_warning — 426 tests)
+> Last updated: 2026-02-24 (B48 edit single session multi-session day — doc only)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -315,6 +315,7 @@ Phase 3.2 bundle: B25, B19, B20, B27, NEW-F6, NEW-F7 — all done. B11 deferred 
 | UI-18 | Exercise weight/load prescription | → Phase 2.5 | Large | Resolver calculates initial loads from assessment tests. Frontend displays suggested weight. Depends on working_loads population. |
 | FR-1 | Outdoor as availability location | ✅ DONE | Medium | "Outdoor" option in availability grid. Outdoor slots → logging only, no resolved sessions. Links to B2 outdoor sessions. |
 | — | Report engine | ✅ DONE | Medium | Settimanale (aderenza, volume, highlight), mensile (trend, distribuzione gradi). |
+| B48 | Edit single session (multi-session day) | TODO | Medium | Quando più sessioni nello stesso giorno, "Change plan" tocca solo la sessione selezionata. Le altre sessioni del giorno restano invariate. Dopo la modifica, offrire opzione "Replan rest of week" per ribilanciare il carico. |
 
 ### §4.2 — Outdoor UI: da completare (TODO)
 
@@ -492,6 +493,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B46 | Density hang load errato senza baseline (usava BW anziché grade-stima) | ✅ DONE | 4b post | — |
 | B47 | Guided session: nessun banner al resume + set number perso su refresh | ✅ DONE | 4b post | — |
 | NEW-F11 | estimate_missing_baselines(): stima max_total da grade/pullup quando nessun baseline reale | ✅ DONE | 4b post | §2.8 |
+| B48 | Edit single session senza toccare l'intero giorno (multi-session day) | TODO | next | §4 |
 
 ---
 
