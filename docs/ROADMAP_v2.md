@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-24 (B41 other activities, B43 profile editor, B44 min-days fix; 145 esercizi, 35 sessioni, 440 test)
+> Last updated: 2026-02-24 (CAT-01 lead fixes, CAT-02 route_endurance_gym, B49 move session UI; 145 esercizi, 36 sessioni, 447 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -133,7 +133,7 @@ La struttura dipende dallo stimolo primario della sessione.
 |----------|---------------|----------------|-------|
 | strength_long | 3 (warmup, finger_max, core_short) | 7 (warmup_climbing, finger_max, climbing_movement, pulling, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
 | power_contact_gym | 4 (warmup, limit_main, antagonist, cooldown) | 6 (warmup_climbing, limit_boulder, campus_power, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
-| power_endurance_gym | 4 (warmup, pe_main, core_short, cooldown) | 6 (warmup_climbing, pe_climbing, finger_endurance, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
+| power_endurance_gym | 4 (warmup, pe_main, core_short, cooldown) | 6 (warmup_climbing, pe_routes+pe_boulder, finger_endurance, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
 | endurance_aerobic_gym | 4 (warmup, aerobic_main, technique, cooldown) | 6 (warmup_climbing, aerobic_main, capacity_hangboard, core_standard, antagonist_prehab, cooldown_stretch) | ✅ |
 
 **Sessioni aggiuntive verificate** (candidati per enrichment futuro):
@@ -316,7 +316,7 @@ Phase 3.2 bundle: B25, B19, B20, B27, NEW-F6, NEW-F7 — all done. B11 deferred 
 | FR-1 | Outdoor as availability location | ✅ DONE | Medium | "Outdoor" option in availability grid. Outdoor slots → logging only, no resolved sessions. Links to B2 outdoor sessions. |
 | — | Report engine | ✅ DONE | Medium | Settimanale (aderenza, volume, highlight), mensile (trend, distribuzione gradi). |
 | B48 | Edit single session (multi-session day) | TODO | Medium | Quando più sessioni nello stesso giorno, "Change plan" tocca solo la sessione selezionata. Le altre sessioni del giorno restano invariate. Dopo la modifica, offrire opzione "Replan rest of week" per ribilanciare il carico. |
-| B49 | Reschedule session to different day/slot/gym | TODO | Medium | Sposta sessione su giorno/slot/palestra diversi. Verifica conflitti, dialog conferma con opzione replan settimanale. Dipende da B48. |
+| B49 | Reschedule session to different day/slot | ✅ DONE | Medium | MoveSessionDialog: mostra slot liberi nella settimana, muove sessione via `move_session` event. Backend già completo (replanner_v1), UI: MoveSessionDialog + SessionCard Move button + week page integration. |
 
 ### §4.2 — Outdoor UI: da completare (TODO)
 
@@ -495,8 +495,10 @@ Tabella unica con TUTTI gli item tracciati.
 | B47 | Guided session: nessun banner al resume + set number perso su refresh | ✅ DONE | 4b post | — |
 | NEW-F11 | estimate_missing_baselines(): stima max_total da grade/pullup quando nessun baseline reale | ✅ DONE | 4b post | §2.8 |
 | B48 | Edit single session senza toccare l'intero giorno (multi-session day) | TODO | next | §4 |
-| B49 | Reschedule session to different day/slot/gym | TODO | next | §4 |
+| B49 | Reschedule session to different day/slot (move session UI) | ✅ DONE | 4b post | §4 |
 | NEW-F12 | Leg exercises catalog (pistol_squat_progression, romanian_deadlift, lower_body_gym, heavy_conditioning_gym) | ✅ DONE | 4b post | §2.6 |
+| CAT-01 | Lead climbing catalog fixes: strength_long domain filter, pe_gym equipment filter split, resolver equipment support | ✅ DONE | 4b post | §2.3 |
+| CAT-02 | New session route_endurance_gym (lead aerobic base, threshold + ARC) + pool registration (base, PE) | ✅ DONE | 4b post | §2.3 |
 
 ---
 
@@ -588,6 +590,9 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 - **B43 Edit profile/assessment**: ProfileAssessmentEditor in Settings — modifica profilo, gradi, test senza reset completo. Ricalcola assessment.
 - **B44 Min sessioni/settimana**: slider availability abbassato da min=3 a min=1 (onboarding + settings).
 - **B41 Other activities**: planner_v2 parse `_day_meta` da availability, blocca giorni con other_activity, riduce intensità giorno dopo (opzionale). UI controls in settings + onboarding. 3 nuovi test → 440 totali.
+- **CAT-01 Lead fixes**: strength_long `climbing_movement` domain filter allargato a `technique_lead`/`climbing_routes`. power_endurance_gym: split pe_climbing_main in `pe_routes` (equipment: gym_routes, priorità 90) + `pe_boulder` (fallback, priorità 85). resolve_session: aggiunto `required_equipment` param a `pick_best_exercise_p0()` + Stage 2b soft equipment filter.
+- **CAT-02 route_endurance_gym**: nuova sessione lead aerobic base (threshold su routes + ARC su boulder/board). Registrata in `_SESSION_META` (medium, climbing, gym) e `_SESSION_POOL` (base + power_endurance come "available").
+- **B49 Move session UI**: MoveSessionDialog mostra slot liberi nella settimana, SessionCard "Move" button, week page integration via `applyEvents()` con evento `move_session`. 7 nuovi test → 447 totali.
 
 ### Phase 4c — Produzione
 

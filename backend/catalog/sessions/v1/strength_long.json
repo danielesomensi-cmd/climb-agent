@@ -47,7 +47,7 @@
         "primary": {
           "filters": {
             "role": ["technique"],
-            "domain": ["technique_boulder"],
+            "domain": ["technique_boulder", "technique_lead", "climbing_routes"],
             "pattern": ["technique_drill", "climbing_continuous"]
           }
         }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Check, X, Undo2, Play } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ interface SessionCardProps {
   onMarkDone?: () => void;
   onMarkSkipped?: () => void;
   onUndo?: () => void;
+  onMove?: () => void;
 }
 
 /** Format session_id into a readable string: replace _ with spaces, capitalize */
@@ -125,6 +126,7 @@ export function SessionCard({
   onMarkDone,
   onMarkSkipped,
   onUndo,
+  onMove,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const router = useRouter();
@@ -293,6 +295,20 @@ export function SessionCard({
                 >
                   <X className="size-3.5 mr-1" />
                   Skip
+                </Button>
+              )}
+              {onMove && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-muted-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMove();
+                  }}
+                >
+                  <ArrowRightLeft className="size-3.5 mr-1" />
+                  Move
                 </Button>
               )}
             </div>

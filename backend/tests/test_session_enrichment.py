@@ -192,6 +192,84 @@ class TestPowerEndurance(unittest.TestCase):
                             f"Climbing (idx={climbing_idx}) should come before finger (idx={finger_idx})")
 
 
+class TestPowerEnduranceRoutes(unittest.TestCase):
+    """CAT-01 A2: route_intervals preferred when gym_routes available."""
+
+    def _make_route_gym(self):
+        base_us = _load_user_state()
+        us = deepcopy(base_us)
+        us.setdefault("context", {})
+        us["context"]["location"] = "gym"
+        us["context"]["gym_id"] = "coque"
+        # Add a gym with gym_routes equipment
+        us.setdefault("equipment", {})
+        us["equipment"]["gyms"] = [
+            {"gym_id": "coque", "name": "Coque", "equipment": [
+                "gym_routes", "gym_boulder", "hangboard", "dumbbell", "barbell"
+            ]}
+        ]
+        return us
+
+    def test_pe_gym_with_routes_selects_route_intervals(self):
+        """When gym has gym_routes, pe_routes block should select route_intervals."""
+        us = self._make_route_gym()
+        result = _resolve("power_endurance_gym", us)
+        self.assertEqual(result["resolution_status"], "success")
+        ex_ids = [e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]]
+        self.assertIn("route_intervals", ex_ids,
+                       f"Expected route_intervals with gym_routes, got: {ex_ids}")
+
+    def test_pe_gym_without_routes_still_resolves(self):
+        """Without gym_routes, fallback pe_boulder block resolves boulder intervals."""
+        base_us = _load_user_state()
+        result = _resolve("power_endurance_gym", _make_user_state(base_us, "gym", "blocx"))
+        self.assertEqual(result["resolution_status"], "success")
+        ex_ids = [e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]]
+        # Should NOT have route_intervals (no gym_routes at blocx)
+        self.assertNotIn("route_intervals", ex_ids,
+                          f"Unexpected route_intervals without gym_routes: {ex_ids}")
+
+
+class TestRouteEnduranceGym(unittest.TestCase):
+    """CAT-02: route_endurance_gym session resolution tests."""
+
+    def _make_route_gym(self):
+        base_us = _load_user_state()
+        us = deepcopy(base_us)
+        us.setdefault("context", {})
+        us["context"]["location"] = "gym"
+        us["context"]["gym_id"] = "coque"
+        us.setdefault("equipment", {})
+        us["equipment"]["gyms"] = [
+            {"gym_id": "coque", "name": "Coque", "equipment": [
+                "gym_routes", "gym_boulder", "hangboard", "dumbbell", "barbell"
+            ]}
+        ]
+        return us
+
+    def test_route_endurance_resolves_with_routes(self):
+        """Resolve route_endurance_gym at gym with gym_routes: status=success, ≥3 exercises."""
+        us = self._make_route_gym()
+        result = _resolve("route_endurance_gym", us)
+        self.assertEqual(result["resolution_status"], "success")
+        exs = result["resolved_session"]["exercise_instances"]
+        self.assertGreaterEqual(len(exs), 3, f"Expected ≥3 exercises, got {len(exs)}")
+
+    def test_route_endurance_threshold_uses_routes(self):
+        """Threshold block should select a gym_routes exercise."""
+        us = self._make_route_gym()
+        result = _resolve("route_endurance_gym", us)
+        self.assertEqual(result["resolution_status"], "success")
+        exercises = _load_exercises()
+        route_exs = {e["id"] for e in exercises if "gym_routes" in (e.get("equipment_required") or [])}
+        resolved_ids = {e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]}
+        # At least one resolved exercise should require gym_routes
+        self.assertTrue(
+            route_exs & resolved_ids,
+            f"Expected a gym_routes exercise in resolved session, got: {resolved_ids}"
+        )
+
+
 class TestEnduranceAerobic(unittest.TestCase):
     def test_endurance_session_resolves(self):
         """Resolve endurance_aerobic_gym at Blocx: status=success."""

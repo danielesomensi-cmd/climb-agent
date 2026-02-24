@@ -1,0 +1,74 @@
+{
+  "id": "route_endurance_gym",
+  "name": "Route Endurance (Gym — Lead Aerobic Base)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "aerobic_capacity",
+    "secondary_goals": ["power_endurance", "technique_lead"],
+    "notes": "Lead-specific endurance session. Threshold climbing on routes + ARC on boulder/board as complement. Core aerobic base for route climbers."
+  },
+  "compatibility": {
+    "slot": ["long"],
+    "sports": ["climbing"]
+  },
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 90,
+    "hard_cap_min": 110
+  },
+  "modules": [
+    {
+      "template_id": "warmup_climbing",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "threshold_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Threshold climbing on routes — 1 grade below lead onsight. 6x2min/1min rest.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["main"],
+            "domain": ["aerobic_capacity"],
+            "pattern": ["climbing_continuous"],
+            "equipment": ["gym_routes"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "arc_complement",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "ARC on boulder/board as aerobic complement post-threshold.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["main"],
+            "domain": ["aerobic_capacity", "regeneration"],
+            "pattern": ["climbing_continuous"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ]
+}

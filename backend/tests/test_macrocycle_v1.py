@@ -130,6 +130,16 @@ class TestGenerateMacrocycleBasic(unittest.TestCase):
         self.assertIn("technique_focus_gym", pool)
         self.assertIn("finger_strength_home", pool)
 
+    def test_route_endurance_in_base_and_pe_pool(self):
+        """route_endurance_gym appears in base and power_endurance pools."""
+        base_pool = _build_session_pool("base")
+        self.assertIn("route_endurance_gym", base_pool)
+        pe_pool = _build_session_pool("power_endurance")
+        self.assertIn("route_endurance_gym", pe_pool)
+        # Should NOT be in strength_power or deload
+        sp_pool = _build_session_pool("strength_power")
+        self.assertNotIn("route_endurance_gym", sp_pool)
+
     def test_macrocycle_session_pool_performance_phase(self):
         pool = _build_session_pool("performance")
         self.assertIn("technique_focus_gym", pool)

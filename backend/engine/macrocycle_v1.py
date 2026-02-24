@@ -75,6 +75,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "complementary_conditioning": "available",
         "strength_long": "available",
         "power_endurance_gym": "available",
+        "route_endurance_gym": "available",
     },
     "strength_power": {
         "power_contact_gym": "primary",
@@ -94,6 +95,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "flexibility_full": "available",
         "handstand_practice": "available",
         "endurance_aerobic_gym": "available",
+        "route_endurance_gym": "available",
     },
     "performance": {
         "technique_focus_gym": "primary",

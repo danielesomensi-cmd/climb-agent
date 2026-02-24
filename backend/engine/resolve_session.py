@@ -224,6 +224,7 @@ def pick_best_exercise_p0(
     role_req: Any,
     domain_req: Any,
     pattern_req: Any = None,
+    required_equipment: Any = None,
     exclude_ids: Optional[set] = None,
     recent_ex_ids: Optional[List[str]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
@@ -232,6 +233,7 @@ def pick_best_exercise_p0(
       - location_allowed includes location
       - equipment_required subset of available_equipment
       - equipment_required_any has at least one available item
+      - required_equipment: block-level preference (soft — falls back if no match)
       - role matches (ANY)
       - domain matches only if it doesn't zero candidates (ANY)
       - pattern matches only if it doesn't zero candidates (ANY)
@@ -265,6 +267,14 @@ def pick_best_exercise_p0(
             continue
         base2.append(e)
     trace["counts"]["after_equipment"] = len(base2)
+
+    # Stage 2b: block-level equipment preference (soft — falls back if no match)
+    req_eq_block = set(norm_list_str(required_equipment))
+    if req_eq_block:
+        base2b = [e for e in base2 if req_eq_block.issubset(set(ex_equipment_required(e)))]
+        if base2b:
+            base2 = base2b
+    trace["counts"]["after_equipment_pref"] = len(base2)
 
     # Stage 3: role (ANY match)
     base3 = base2
@@ -681,6 +691,7 @@ def _resolve_inline_block(
     role_req = filters.get("role")
     domain_req = filters.get("domain")
     pattern_req = filters.get("pattern")
+    equipment_req = filters.get("equipment")
 
     selected_ex, trace = pick_best_exercise_p0(
         exercises=exercises,
@@ -689,6 +700,7 @@ def _resolve_inline_block(
         role_req=role_req,
         domain_req=domain_req,
         pattern_req=pattern_req,
+        required_equipment=equipment_req,
         exclude_ids=set(recent_ex_ids),
         recent_ex_ids=recent_ex_ids,
     )

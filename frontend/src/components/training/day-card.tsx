@@ -22,6 +22,7 @@ interface DayCardProps {
   onUndo?: (sessionId: string) => void;
   onReplan?: (date: string) => void;
   onQuickAdd?: (date: string) => void;
+  onMoveSession?: (date: string, slot: string, sessionId: string) => void;
   showActions?: boolean;
 }
 
@@ -76,6 +77,7 @@ export function DayCard({
   onUndo,
   onReplan,
   onQuickAdd,
+  onMoveSession,
   showActions = false,
 }: DayCardProps) {
   const today = isToday(day.date);
@@ -144,6 +146,11 @@ export function DayCard({
                 onMarkSkipped ? () => onMarkSkipped(session.session_id) : undefined
               }
               onUndo={onUndo ? () => onUndo(session.session_id) : undefined}
+              onMove={
+                onMoveSession && session.status !== "done" && session.status !== "skipped"
+                  ? () => onMoveSession(day.date, session.slot, session.session_id)
+                  : undefined
+              }
             />
           ))
         )}

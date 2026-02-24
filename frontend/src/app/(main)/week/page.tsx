@@ -6,10 +6,11 @@ import { WeekGrid } from "@/components/training/week-grid";
 import { DayCard } from "@/components/training/day-card";
 import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
+import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getWeek, getState, applyOverride, quickAddSession } from "@/lib/api";
+import { getWeek, getState, applyOverride, quickAddSession, applyEvents } from "@/lib/api";
 import type { WeekPlan, DayPlan, Macrocycle } from "@/lib/types";
 
 /** English labels for phase names */
@@ -43,6 +44,11 @@ export default function WeekPage() {
   const [error, setError] = useState<string | null>(null);
   const [replanDate, setReplanDate] = useState<string | null>(null);
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
+  const [moveSession, setMoveSession] = useState<{
+    date: string;
+    slot: string;
+    sessionId: string;
+  } | null>(null);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -171,6 +177,31 @@ export default function WeekPage() {
     }
   }
 
+  /** Handle move session: call events API with move_session event */
+  async function handleMoveApply(data: { to_date: string; to_slot: string }) {
+    if (!weekPlan || !moveSession) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "move_session",
+            from_date: moveSession.date,
+            from_slot: moveSession.slot,
+            to_date: data.to_date,
+            to_slot: data.to_slot,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to move session");
+    } finally {
+      setMoveSession(null);
+    }
+  }
+
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
   const phaseLabel = phaseId
@@ -265,6 +296,9 @@ export default function WeekPage() {
                   showActions
                   onReplan={(date) => setReplanDate(date)}
                   onQuickAdd={(date) => setQuickAddDate(date)}
+                  onMoveSession={(date, slot, sessionId) =>
+                    setMoveSession({ date, slot, sessionId })
+                  }
                 />
               </div>
             ))}
@@ -298,6 +332,19 @@ export default function WeekPage() {
         onClose={() => setQuickAddDate(null)}
         onApply={handleQuickAddApply}
       />
+
+      {/* Move session dialog */}
+      {weekPlan && (
+        <MoveSessionDialog
+          open={moveSession !== null}
+          sessionId={moveSession?.sessionId ?? ""}
+          fromDate={moveSession?.date ?? ""}
+          fromSlot={moveSession?.slot ?? ""}
+          weekPlan={weekPlan}
+          onClose={() => setMoveSession(null)}
+          onApply={handleMoveApply}
+        />
+      )}
     </>
   );
 }

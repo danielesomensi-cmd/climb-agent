@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-24 (B41 other activities, B43 profile editor, B44 min-days fix; 145 exercises, 35 sessions, 440 tests)
+> Last updated: 2026-02-24 (CAT-01 lead fixes, CAT-02 route_endurance_gym, B49 move session UI; 145 exercises, 36 sessions, 447 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -18,9 +18,9 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Area | Count | Notes |
 |------|-------|-------|
 | Exercises | 145 | 14 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +pistol_squat_progression +romanian_deadlift (NEW-F12) |
-| Sessions | 35 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload, lower_body_gym, heavy_conditioning_gym |
+| Sessions | 36 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload, lower_body_gym, heavy_conditioning_gym, route_endurance_gym |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | 440 | all green (post Phase 4b + B41 other activities) |
+| Tests | 447 | all green (post Phase 4b + CAT-01/CAT-02/B49) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 27 | 12 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 21 | 7 main views + 12 onboarding steps + root + onboarding index |
@@ -83,12 +83,12 @@ backend/
       quotes.py             ← GET /api/quotes/daily
   catalog/
     exercises/v1/           ← 145 exercises (JSON)
-    sessions/v1/            ← 35 sessions (JSON)
+    sessions/v1/            ← 36 sessions (JSON)
     templates/v1/           ← 19 templates (JSON)
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 440 pytest tests
+  tests/                    ← 447 pytest tests
 frontend/
   src/
     app/
@@ -170,7 +170,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (440 green)
+# Backend tests (447 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)
