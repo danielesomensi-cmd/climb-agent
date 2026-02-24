@@ -81,7 +81,7 @@ function buildGuidedState(
         sets: prescription.sets as number | undefined,
         reps: prescription.reps != null ? (prescription.reps as string | number) : undefined,
         workSeconds: (prescription.work_seconds ?? prescription.hang_seconds ?? prescription.duration_seconds) as number | undefined,
-        restSeconds: prescription.rest_s as number | undefined,
+        restSeconds: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
         loadKg: prescription.load_kg as number | undefined,
         tempo: prescription.tempo as string | undefined,
         notes: prescription.notes as string | undefined,
@@ -224,7 +224,7 @@ export function SessionCard({
                           sets: prescription.sets as number | undefined,
                           reps: prescription.reps != null ? String(prescription.reps) : undefined,
                           load_kg: prescription.load_kg as number | undefined,
-                          rest_s: prescription.rest_s as number | undefined,
+                          rest_s: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
                           tempo: prescription.tempo as string | undefined,
                           notes: prescription.notes as string | undefined,
                         }}
