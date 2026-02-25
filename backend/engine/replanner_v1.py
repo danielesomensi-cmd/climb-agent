@@ -325,6 +325,79 @@ def apply_day_add(
     return (updated, warnings)
 
 
+def _is_preservable(session: Dict[str, Any]) -> bool:
+    """Return True if *session* should survive a plan regeneration."""
+    if session.get("status") in ("done", "skipped"):
+        return True
+    if "quick_add" in (session.get("constraints_applied") or []):
+        return True
+    return False
+
+
+def merge_prev_week_sessions(
+    prev_plan: Dict[str, Any],
+    new_plan: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Merge preservable sessions from *prev_plan* into *new_plan* by weekday.
+
+    Unlike ``regenerate_preserving_completed`` (exact-date match), this
+    function matches days by **weekday index** (0=Mon … 6=Sun) so that it
+    works even when the macrocycle start_date has shifted.
+
+    Preservable sessions are those that are done/skipped or added manually
+    via quick-add.
+    """
+    result = deepcopy(new_plan)
+
+    # Build map weekday → list of preservable sessions from old plan
+    preservable: Dict[int, List[Dict[str, Any]]] = {}
+    for day in (prev_plan.get("weeks") or [{}])[0].get("days", []):
+        sessions = [s for s in day.get("sessions", []) if _is_preservable(s)]
+        if sessions:
+            try:
+                wd = datetime.strptime(day["date"], "%Y-%m-%d").weekday()
+            except (KeyError, ValueError):
+                continue
+            preservable.setdefault(wd, []).extend(sessions)
+
+    if not preservable:
+        return result
+
+    # Merge into new plan by weekday
+    for day in (result.get("weeks") or [{}])[0].get("days", []):
+        try:
+            wd = datetime.strptime(day["date"], "%Y-%m-%d").weekday()
+        except (KeyError, ValueError):
+            continue
+        to_merge = preservable.get(wd)
+        if not to_merge:
+            continue
+
+        occupied_slots = {s.get("slot") for s in day.get("sessions", [])}
+        for ps in to_merge:
+            ps_slot = ps.get("slot")
+            if ps_slot in occupied_slots:
+                # Replace auto-generated session in this slot
+                day["sessions"] = [
+                    ps if s.get("slot") == ps_slot else s
+                    for s in day["sessions"]
+                ]
+            else:
+                day.setdefault("sessions", []).append(ps)
+            occupied_slots.add(ps_slot)
+
+        day["sessions"].sort(
+            key=lambda s: (
+                SLOTS.index(s.get("slot", "evening")),
+                s.get("priority", 99),
+                s.get("session_id", ""),
+            )
+        )
+
+    result["plan_revision"] = int(result.get("plan_revision") or 1) + 1
+    return result
+
+
 def regenerate_preserving_completed(
     old_plan: Dict[str, Any],
     new_plan: Dict[str, Any],

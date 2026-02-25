@@ -44,7 +44,14 @@ EMPTY_TEMPLATE: Dict[str, Any] = {
 
 
 def invalidate_week_cache(state: Dict[str, Any]) -> None:
-    """Clear the cached week plan. Call after any action that changes plan inputs."""
+    """Clear the cached week plan. Call after any action that changes plan inputs.
+
+    Stashes the old plan in ``_prev_week_plan`` so that completed and
+    manually-added sessions can be merged back into the next generated plan.
+    """
+    old = state.get("current_week_plan")
+    if old:
+        state["_prev_week_plan"] = old
     state["current_week_plan"] = None
 
 

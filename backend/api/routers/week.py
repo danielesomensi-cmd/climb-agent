@@ -20,7 +20,7 @@ from backend.api.deps import (
 )
 from backend.engine.macrocycle_v1 import compute_pretrip_dates
 from backend.engine.planner_v2 import generate_phase_week
-from backend.engine.replanner_v1 import regenerate_preserving_completed
+from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
 
 logger = logging.getLogger(__name__)
@@ -176,6 +176,18 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
                 week_plan = regenerate_preserving_completed(old_plan, week_plan)
             except Exception:
                 logger.warning("Failed to preserve completed sessions, using fresh plan")
+
+        # Merge preservable sessions (done/skipped + quick-add) from stashed
+        # plan that was saved before cache invalidation (e.g. after macrocycle
+        # regen).  Uses weekday-based matching so it works even when the
+        # macrocycle start_date has shifted.
+        prev_plan = state.get("_prev_week_plan")
+        if prev_plan and is_current_week:
+            try:
+                week_plan = merge_prev_week_sessions(prev_plan, week_plan)
+            except Exception:
+                logger.warning("Failed to merge sessions from previous plan")
+            state.pop("_prev_week_plan", None)
 
         # Cache the freshly generated plan for the current week
         if is_current_week:
