@@ -53,6 +53,8 @@ export const putState = (patch: Record<string, unknown>) =>
   request<UserState>("/api/state", { method: "PUT", body: JSON.stringify(patch) });
 export const deleteState = () =>
   request<{ status: string; state: UserState }>("/api/state", { method: "DELETE" });
+export const getStateStatus = () =>
+  request<{ is_macrocycle_stale: boolean }>("/api/state/status");
 
 // Catalog
 export const getExercises = () =>

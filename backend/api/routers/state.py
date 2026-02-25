@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends
 
 from backend.api.deps import EMPTY_TEMPLATE, get_user_id, load_state, save_state
+from backend.engine.state_checks import is_macrocycle_stale
 
 router = APIRouter(prefix="/api/state", tags=["state"])
 
@@ -35,6 +36,13 @@ def put_state(patch: Dict[str, Any], user_id: Optional[str] = Depends(get_user_i
     _deep_merge(state, patch)
     save_state(state, user_id)
     return state
+
+
+@router.get("/status")
+def get_state_status(user_id: Optional[str] = Depends(get_user_id)):
+    """Lightweight consistency check — no mutations."""
+    state = load_state(user_id)
+    return {"is_macrocycle_stale": is_macrocycle_stale(state)}
 
 
 @router.delete("")

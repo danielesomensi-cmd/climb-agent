@@ -1,15 +1,24 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { RadarChart } from "@/components/onboarding/radar-chart";
 import { MacrocycleTimeline } from "@/components/training/macrocycle-timeline";
 import { useUserState } from "@/lib/hooks/use-state";
+import { generateMacrocycle, getStateStatus } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { Phase } from "@/lib/types";
 
 /** Phase labels */
@@ -48,14 +57,50 @@ function computeCurrentWeek(startDate: string): number {
 export default function PlanPage() {
   const { state, loading, error, refresh } = useUserState();
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
+  const [isStale, setIsStale] = useState(false);
+  const [staleDismissed, setStaleDismissed] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenDialogOpen, setRegenDialogOpen] = useState(false);
+  const [regenError, setRegenError] = useState<string | null>(null);
 
   const macrocycle = state?.macrocycle ?? null;
   const profile = state?.assessment?.profile ?? null;
   const currentWeek = macrocycle ? computeCurrentWeek(macrocycle.start_date) : undefined;
 
+  const checkStale = useCallback(async () => {
+    try {
+      const { is_macrocycle_stale } = await getStateStatus();
+      setIsStale(is_macrocycle_stale);
+    } catch {
+      /* silent — non-critical */
+    }
+  }, []);
+
+  useEffect(() => {
+    checkStale();
+  }, [checkStale]);
+
   function togglePhase(phaseId: string) {
     setExpandedPhase((prev) => (prev === phaseId ? null : phaseId));
   }
+
+  async function handleRegenMacro() {
+    setRegenerating(true);
+    setRegenError(null);
+    try {
+      await generateMacrocycle();
+      await refresh();
+      setRegenDialogOpen(false);
+      setIsStale(false);
+      setStaleDismissed(false);
+    } catch (e) {
+      setRegenError(e instanceof Error ? e.message : "Regeneration failed");
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  const showStaleBanner = isStale && !staleDismissed;
 
   return (
     <>
@@ -114,6 +159,31 @@ export default function PlanPage() {
 
             <Separator />
 
+            {/* Dirty-state banner */}
+            {showStaleBanner && (
+              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-4 space-y-3">
+                <p className="text-sm text-yellow-200">
+                  Your profile has changed. The current plan may no longer be optimal.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => setRegenDialogOpen(true)}
+                    disabled={regenerating}
+                  >
+                    {regenerating ? "Processing..." : "Regenerate plan"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setStaleDismissed(true)}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Macrocycle timeline */}
             <Card>
               <CardHeader>
@@ -135,7 +205,26 @@ export default function PlanPage() {
               </CardContent>
             </Card>
 
+            {/* Regenerate macrocycle button */}
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRegenDialogOpen(true)}
+                disabled={regenerating}
+              >
+                {regenerating ? "Processing..." : "Regenerate Macrocycle"}
+              </Button>
+            </div>
+
             <Separator />
+
+            {/* Regen error */}
+            {regenError && (
+              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-center">
+                <p className="text-sm text-destructive">{regenError}</p>
+              </div>
+            )}
 
             {/* Phase details */}
             <div className="space-y-3">
@@ -226,6 +315,31 @@ export default function PlanPage() {
           </>
         )}
       </main>
+
+      {/* ----- Macrocycle regeneration confirmation dialog ----- */}
+      <Dialog open={regenDialogOpen} onOpenChange={setRegenDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Regenerate macrocycle</DialogTitle>
+            <DialogDescription>
+              This will replace the current macrocycle with a new one.
+              Progression data will be kept, but the weekly plan will change.
+              Proceed?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRegenDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRegenMacro} disabled={regenerating}>
+              {regenerating ? "Processing..." : "Confirm"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

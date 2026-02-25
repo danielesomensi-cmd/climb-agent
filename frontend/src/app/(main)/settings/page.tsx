@@ -27,9 +27,7 @@ export default function SettingsPage() {
   const { state, loading, error, refresh } = useUserState();
   const router = useRouter();
 
-  const [regeneratingAssessment, setRegeneratingAssessment] = useState(false);
   const [regeneratingMacro, setRegeneratingMacro] = useState(false);
-  const [macroDialogOpen, setMacroDialogOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -152,30 +150,13 @@ export default function SettingsPage() {
     }
   }
 
-  /** Regenerate the assessment profile */
-  async function handleRegenAssessment() {
-    setRegeneratingAssessment(true);
-    setActionError(null);
-    try {
-      await computeAssessment(state?.assessment, state?.goal);
-      await refresh();
-    } catch (e) {
-      setActionError(
-        e instanceof Error ? e.message : "Regeneration failed"
-      );
-    } finally {
-      setRegeneratingAssessment(false);
-    }
-  }
-
-  /** Regenerate the macrocycle (with confirmation) */
+  /** Regenerate the macrocycle (used by equipment dialog) */
   async function handleRegenMacro() {
     setRegeneratingMacro(true);
     setActionError(null);
     try {
       await generateMacrocycle();
       await refresh();
-      setMacroDialogOpen(false);
     } catch (e) {
       setActionError(
         e instanceof Error ? e.message : "Regeneration failed"
@@ -556,53 +537,6 @@ export default function SettingsPage() {
 
             <Separator />
 
-            {/* ----- Actions ----- */}
-            <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Actions
-              </h2>
-
-              <Card>
-                <CardContent className="flex items-center justify-between gap-4 py-4">
-                  <div>
-                    <p className="text-sm font-medium">Regenerate Assessment</p>
-                    <p className="text-xs text-muted-foreground">
-                      Recalculate the 6-axis assessment profile
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRegenAssessment}
-                    disabled={regeneratingAssessment}
-                  >
-                    {regeneratingAssessment ? "Processing..." : "Regenerate"}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="flex items-center justify-between gap-4 py-4">
-                  <div>
-                    <p className="text-sm font-medium">Regenerate Macrocycle</p>
-                    <p className="text-xs text-muted-foreground">
-                      Generate a new periodized training plan
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setMacroDialogOpen(true)}
-                    disabled={regeneratingMacro}
-                  >
-                    {regeneratingMacro ? "Processing..." : "Regenerate"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Separator />
-
             {/* ----- Danger zone ----- */}
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-destructive uppercase tracking-wider">
@@ -631,31 +565,6 @@ export default function SettingsPage() {
           </>
         )}
       </main>
-
-      {/* ----- Macrocycle regeneration confirmation dialog ----- */}
-      <Dialog open={macroDialogOpen} onOpenChange={setMacroDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Regenerate macrocycle</DialogTitle>
-            <DialogDescription>
-              This will replace the current macrocycle with a new one.
-              Progression data will be kept, but the weekly plan will change.
-              Proceed?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setMacroDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleRegenMacro} disabled={regeneratingMacro}>
-              {regeneratingMacro ? "Processing..." : "Confirm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* ----- First reset confirmation dialog ----- */}
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>

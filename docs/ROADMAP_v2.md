@@ -502,6 +502,10 @@ Tabella unica con TUTTI gli item tracciati.
 | GS-02 | Fix audio su iPhone PWA (Safari AudioContext singleton + unlock trick) | ✅ DONE | 4b post | §10 |
 | GS-BUG-01 | Timer non si resetta al cambio esercizio (mancava key prop per remount) | ✅ DONE | 4b post | §10 |
 | GS-BUG-03 | Frecce navigazione timer phase-based (sempre visibili, 48px tap target) | ✅ DONE | 4b post | §10 |
+| UI-25 | Pannello Test Maxes & Loads nel tab Plan (history, benchmark, exercise loads) | TODO | next | §9.5 |
+| UI-26 | Fix overflow testo selettore fasi macrociclo (Plan tab) — stringhe troncate illeggibili | TODO | next | §9.5 |
+| UI-27 | Chiarire indicatori numerici giorni nella Week view (aggiungere label/tooltip) | TODO | next | §9.5 |
+| UI-28 | Rivalutare collocazione pulsanti Regenerate Assessment/Macrocycle (Settings vs Plan) | TODO | next | §9.5 |
 
 ---
 
@@ -555,6 +559,42 @@ When both outdoor and gym slots are available on the same day, user can set a pr
 
 Works the same way as UI-23 (gym slot priority). Setting lives in planning_prefs.
 Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
+
+### 9.5 — Plan & Week UI improvements (2026-02-25)
+
+#### UI-25 — Pannello Test Maxes & Loads (Plan tab)
+
+Card collassabile sotto "Assessment profile" nel tab Plan. Tre blocchi:
+
+**Blocco 1 — Test Maxes History:**
+- Timeline compatta per esercizio test, tutte le entry con data e valore in ordine cronologico
+- Entry attiva evidenziata visivamente
+- Entry di tipo `manual_correction` mostrano icona diversa da `test_session`
+- Possibilità di aggiungere `manual_correction` con nota obbligatoria (es. "errore inserimento", "test autonomo")
+- Nessun nuovo file: tutto da `user_state.json` (assessment.tests + working_loads.entries)
+- Principio 3 rispettato (append-only)
+
+**Blocco 2 — Benchmark Comparison (dipende da Phase 2.5):**
+- Per massimali con benchmark documentati (Lattice/Hörst), indicatore "sopra/sotto benchmark" relativo al bodyweight
+- Solo finger strength e pulling strength in v1
+
+**Blocco 3 — Exercise Loads (collassato di default):**
+- Lista esercizi con `load_model: total_load | external_load`
+- Per ognuno: ultimo carico usato + stringa derivazione (es. "19.8kg — da 1RM 22kg, feedback easy")
+- Sola lettura, aggiornato dall'engine
+
+#### UI-26 — Fix overflow testo selettore fasi macrociclo (Plan tab)
+
+Il testo nel selettore orizzontale delle fasi viene troncato in modo errato producendo stringhe illeggibili (es. "Endurance Base rength & Power Endurerformanc"). Gestire overflow correttamente: truncate con ellipsis oppure abbreviazioni predefinite per nome fase.
+
+#### UI-27 — Chiarire indicatori numerici giorni (Week tab)
+
+I pallini con numero (1, 2…) sui giorni nella Week view non sono autoesplicativi. Aggiungere label o tooltip che chiariscano il significato (sessioni pianificate? completate? totali?).
+
+#### UI-28 — Rivalutare collocazione pulsanti Actions
+
+Le card "Regenerate Assessment" e "Regenerate Macrocycle" sono attualmente in Settings. La collocazione ottimale dipende dall'analisi del flusso engine (vedi analisi tecnica §9.5.1).
+Opzioni: auto-trigger dal salvataggio settings, spostamento in Plan (vicino all'effetto), banner "plan out of sync" con CTA, o combinazione. "Danger Zone" (reset) rimane in Settings.
 
 ---
 
