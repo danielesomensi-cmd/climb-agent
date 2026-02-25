@@ -159,11 +159,13 @@ export default function PlanPage() {
 
             <Separator />
 
-            {/* Dirty-state banner */}
+            {/* Dirty-state banner — mutually exclusive with the standalone button below */}
             {showStaleBanner && (
               <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-4 space-y-3">
                 <p className="text-sm text-yellow-200">
-                  Your profile has changed. The current plan may no longer be optimal.
+                  Your profile has changed since this plan was generated.
+                  Only the remaining phases will be updated &mdash; completed
+                  sessions and load progression are safe.
                 </p>
                 <div className="flex gap-2">
                   <Button
@@ -171,7 +173,7 @@ export default function PlanPage() {
                     onClick={() => setRegenDialogOpen(true)}
                     disabled={regenerating}
                   >
-                    {regenerating ? "Processing..." : "Regenerate plan"}
+                    {regenerating ? "Processing..." : "Update remaining plan"}
                   </Button>
                   <Button
                     size="sm"
@@ -205,17 +207,23 @@ export default function PlanPage() {
               </CardContent>
             </Card>
 
-            {/* Regenerate macrocycle button */}
-            <div className="flex justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setRegenDialogOpen(true)}
-                disabled={regenerating}
-              >
-                {regenerating ? "Processing..." : "Regenerate Macrocycle"}
-              </Button>
-            </div>
+            {/* Regenerate macrocycle button — hidden when dirty-state banner is visible */}
+            {!showStaleBanner && (
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRegenDialogOpen(true)}
+                  disabled={regenerating}
+                >
+                  {regenerating ? "Processing..." : "Regenerate Macrocycle"}
+                </Button>
+                <p className="text-[11px] text-muted-foreground text-center max-w-xs">
+                  Recalculates remaining phases based on your current profile.
+                  Completed phases are preserved.
+                </p>
+              </div>
+            )}
 
             <Separator />
 
@@ -321,10 +329,18 @@ export default function PlanPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Update macrocycle</DialogTitle>
-            <DialogDescription>
-              This will regenerate the plan from your current phase onwards,
-              keeping earlier phases intact. Weekly plans will change from this
-              point. Proceed?
+            <DialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  The remaining phases of your plan will be recalculated
+                  based on your current profile.
+                </p>
+                <ul className="space-y-1 text-sm">
+                  <li className="text-green-400">&#10003; Completed sessions: preserved</li>
+                  <li className="text-green-400">&#10003; Load progression: preserved</li>
+                  <li className="text-red-400">&#10007; Remaining planned weeks: will change</li>
+                </ul>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
