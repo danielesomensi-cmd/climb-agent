@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from backend.api.deps import invalidate_week_cache
 from backend.engine.replanner_v1 import merge_prev_week_sessions
 
 
@@ -202,3 +203,159 @@ class TestMergeEdgeCases:
         new = _make_week_plan("2026-02-23", {0: [_session("x")]})
         result = merge_prev_week_sessions(prev, new)
         assert result["weeks"][0]["days"][0]["sessions"][0]["session_id"] == "x"
+
+
+# ---- invalidate_week_cache stashing -----------------------------------------
+
+
+class TestInvalidateWeekCache:
+
+    def test_stashes_old_plan(self):
+        """Old plan is saved to _prev_week_plan before clearing cache."""
+        plan = _make_week_plan("2026-02-23", {0: [_session("x", status="done")]})
+        state = {"current_week_plan": plan}
+        invalidate_week_cache(state)
+        assert state["current_week_plan"] is None
+        assert state["_prev_week_plan"] is plan
+
+    def test_no_overwrite_on_second_call(self):
+        """Second invalidation doesn't overwrite stash (current_week_plan is None)."""
+        plan = _make_week_plan("2026-02-23", {0: [_session("x", status="done")]})
+        state = {"current_week_plan": plan}
+        invalidate_week_cache(state)
+        # Second call: current_week_plan is None, so _prev_week_plan untouched
+        invalidate_week_cache(state)
+        assert state["_prev_week_plan"] is plan
+
+    def test_no_stash_when_no_plan(self):
+        """No stash created if there was no plan to begin with."""
+        state = {"current_week_plan": None}
+        invalidate_week_cache(state)
+        assert "_prev_week_plan" not in state
+
+
+# ---- Integration: full incremental-regen flow --------------------------------
+
+
+class TestIncrementalRegenFlow:
+    """Simulate the full flow: plan with done/manual sessions → invalidate
+    (macrocycle regen) → generate new plan → merge → verify preservation."""
+
+    def test_done_sessions_survive_incremental_regen(self):
+        old_plan = _make_week_plan("2026-02-23", {
+            0: [_session("strength_long", status="done")],
+            1: [_session("power_contact_gym", status="done")],
+            2: [_session("technique_focus_gym")],
+        })
+        state = {"current_week_plan": old_plan, "feedback_log": [
+            {"date": "2026-02-23", "session_id": "strength_long", "difficulty": "ok"},
+        ]}
+
+        # Step 1: macrocycle regen invalidates cache
+        invalidate_week_cache(state)
+        assert state["current_week_plan"] is None
+
+        # Step 2: week router generates fresh plan
+        new_plan = _make_week_plan("2026-02-23", {
+            0: [_session("endurance_aerobic_gym")],
+            1: [_session("technique_focus_gym")],
+            2: [_session("power_endurance_gym")],
+        })
+
+        # Step 3: merge from stash
+        result = merge_prev_week_sessions(state["_prev_week_plan"], new_plan)
+
+        # Done sessions preserved with original session_id and status
+        mon = result["weeks"][0]["days"][0]
+        assert mon["sessions"][0]["session_id"] == "strength_long"
+        assert mon["sessions"][0]["status"] == "done"
+
+        tue = result["weeks"][0]["days"][1]
+        assert tue["sessions"][0]["session_id"] == "power_contact_gym"
+        assert tue["sessions"][0]["status"] == "done"
+
+        # Non-done session was replaced by new plan
+        wed = result["weeks"][0]["days"][2]
+        assert wed["sessions"][0]["session_id"] == "power_endurance_gym"
+        assert wed["sessions"][0].get("status") is None
+
+    def test_quick_add_survives_incremental_regen(self):
+        old_plan = _make_week_plan("2026-02-23", {
+            0: [_session("strength_long")],
+            1: [
+                _session("technique_focus_gym"),
+                _session("core_conditioning_standalone", slot="morning",
+                         constraints_applied=["quick_add"]),
+            ],
+        })
+        state = {"current_week_plan": old_plan}
+        invalidate_week_cache(state)
+
+        new_plan = _make_week_plan("2026-02-23", {
+            0: [_session("endurance_aerobic_gym")],
+            1: [_session("power_contact_gym")],
+        })
+        result = merge_prev_week_sessions(state["_prev_week_plan"], new_plan)
+
+        # Quick-add session survives (appended in free morning slot)
+        tue = result["weeks"][0]["days"][1]
+        ids = {s["session_id"] for s in tue["sessions"]}
+        assert "core_conditioning_standalone" in ids
+
+        # Non-quick-add session was replaced
+        assert "technique_focus_gym" not in ids
+
+    def test_mixed_done_and_quick_add_survive(self):
+        """Both done and quick-add sessions on different days survive."""
+        old_plan = _make_week_plan("2026-02-23", {
+            0: [_session("strength_long", status="done")],
+            2: [_session("prehab_maintenance", slot="morning",
+                         constraints_applied=["quick_add"])],
+            4: [_session("power_contact_gym", status="skipped")],
+        })
+        state = {"current_week_plan": old_plan}
+        invalidate_week_cache(state)
+
+        new_plan = _make_week_plan("2026-02-23", {
+            0: [_session("endurance_aerobic_gym")],
+            2: [_session("technique_focus_gym")],
+            4: [_session("power_endurance_gym")],
+        })
+        result = merge_prev_week_sessions(state["_prev_week_plan"], new_plan)
+
+        # Monday: done preserved
+        assert result["weeks"][0]["days"][0]["sessions"][0]["status"] == "done"
+        # Wednesday: quick-add preserved (appended, different slot)
+        wed_ids = {s["session_id"] for s in result["weeks"][0]["days"][2]["sessions"]}
+        assert "prehab_maintenance" in wed_ids
+        # Friday: skipped preserved
+        assert result["weeks"][0]["days"][4]["sessions"][0]["status"] == "skipped"
+
+
+# ---- Part C: session_log / feedback_log independent of plan ------------------
+
+
+class TestFeedbackLogIndependent:
+
+    def test_feedback_log_survives_cache_invalidation(self):
+        """feedback_log in state is NOT cleared by invalidate_week_cache."""
+        state = {
+            "current_week_plan": _make_week_plan("2026-02-23"),
+            "feedback_log": [
+                {"date": "2026-02-23", "session_id": "strength_long", "difficulty": "ok"},
+                {"date": "2026-02-24", "session_id": "technique_focus_gym", "difficulty": "hard"},
+            ],
+        }
+        invalidate_week_cache(state)
+        assert state["current_week_plan"] is None
+        assert len(state["feedback_log"]) == 2
+        assert state["feedback_log"][0]["session_id"] == "strength_long"
+
+    def test_working_loads_survive_cache_invalidation(self):
+        """working_loads in state are NOT cleared by invalidate_week_cache."""
+        state = {
+            "current_week_plan": _make_week_plan("2026-02-23"),
+            "working_loads": {"entries": [{"exercise_id": "max_hang_5s", "load": 90}]},
+        }
+        invalidate_week_cache(state)
+        assert len(state["working_loads"]["entries"]) == 1
