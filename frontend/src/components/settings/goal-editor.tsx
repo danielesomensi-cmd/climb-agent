@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -58,18 +58,21 @@ export function GoalEditor({
   saving,
 }: GoalEditorProps) {
   const [step, setStep] = useState<"form" | "confirm">("form");
-  const [discipline, setDiscipline] = useState<string>(
-    (currentGoal.discipline as string) || "lead",
-  );
-  const [targetStyle, setTargetStyle] = useState<string>(
-    (currentGoal.target_style as string) || "redpoint",
-  );
-  const [targetGrade, setTargetGrade] = useState<string>(
-    (currentGoal.target_grade as string) || "",
-  );
-  const [deadline, setDeadline] = useState<string>(
-    (currentGoal.deadline as string) || "",
-  );
+  const [discipline, setDiscipline] = useState<string>("lead");
+  const [targetStyle, setTargetStyle] = useState<string>("redpoint");
+  const [targetGrade, setTargetGrade] = useState<string>("");
+  const [deadline, setDeadline] = useState<string>("");
+
+  // Sync form state from props every time the dialog opens
+  useEffect(() => {
+    if (open) {
+      setDiscipline((currentGoal.discipline as string) || "lead");
+      setTargetStyle((currentGoal.target_style as string) || "redpoint");
+      setTargetGrade((currentGoal.target_grade as string) || "");
+      setDeadline((currentGoal.deadline as string) || "");
+      setStep("form");
+    }
+  }, [open, currentGoal]);
 
   // Derive current grade from grades + discipline + style
   const currentGrade = useMemo(() => {

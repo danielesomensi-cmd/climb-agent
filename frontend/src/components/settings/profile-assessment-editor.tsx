@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,19 +57,35 @@ export function ProfileAssessmentEditor({
   const [step, setStep] = useState<"form" | "confirm">("form");
 
   // Body
-  const [weightKg, setWeightKg] = useState<string>(body.weight_kg != null ? String(body.weight_kg) : "");
-  const [heightCm, setHeightCm] = useState<string>(body.height_cm != null ? String(body.height_cm) : "");
+  const [weightKg, setWeightKg] = useState<string>("");
+  const [heightCm, setHeightCm] = useState<string>("");
 
   // Grades
-  const [leadMaxRp, setLeadMaxRp] = useState<string>(grades.lead_max_rp ?? "");
-  const [leadMaxOs, setLeadMaxOs] = useState<string>(grades.lead_max_os ?? "");
-  const [boulderMaxRp, setBoulderMaxRp] = useState<string>(grades.boulder_max_rp ?? "");
-  const [boulderMaxOs, setBoulderMaxOs] = useState<string>(grades.boulder_max_os ?? "");
+  const [leadMaxRp, setLeadMaxRp] = useState<string>("");
+  const [leadMaxOs, setLeadMaxOs] = useState<string>("");
+  const [boulderMaxRp, setBoulderMaxRp] = useState<string>("");
+  const [boulderMaxOs, setBoulderMaxOs] = useState<string>("");
 
   // Tests (optional)
-  const [maxHang, setMaxHang] = useState<string>(tests.max_hang_20mm_5s_total_kg != null ? String(tests.max_hang_20mm_5s_total_kg) : "");
-  const [weightedPullup, setWeightedPullup] = useState<string>(tests.weighted_pullup_1rm_total_kg != null ? String(tests.weighted_pullup_1rm_total_kg) : "");
-  const [repeater, setRepeater] = useState<string>(tests.repeater_7_3_max_sets_20mm != null ? String(tests.repeater_7_3_max_sets_20mm) : "");
+  const [maxHang, setMaxHang] = useState<string>("");
+  const [weightedPullup, setWeightedPullup] = useState<string>("");
+  const [repeater, setRepeater] = useState<string>("");
+
+  // Sync form state from props every time the dialog opens
+  useEffect(() => {
+    if (open) {
+      setWeightKg(body.weight_kg != null ? String(body.weight_kg) : "");
+      setHeightCm(body.height_cm != null ? String(body.height_cm) : "");
+      setLeadMaxRp(grades.lead_max_rp ?? "");
+      setLeadMaxOs(grades.lead_max_os ?? "");
+      setBoulderMaxRp(grades.boulder_max_rp ?? "");
+      setBoulderMaxOs(grades.boulder_max_os ?? "");
+      setMaxHang(tests.max_hang_20mm_5s_total_kg != null ? String(tests.max_hang_20mm_5s_total_kg) : "");
+      setWeightedPullup(tests.weighted_pullup_1rm_total_kg != null ? String(tests.weighted_pullup_1rm_total_kg) : "");
+      setRepeater(tests.repeater_7_3_max_sets_20mm != null ? String(tests.repeater_7_3_max_sets_20mm) : "");
+      setStep("form");
+    }
+  }, [open, body, grades, tests]);
 
   const isValid = leadMaxRp !== "" && leadMaxOs !== "";
 
