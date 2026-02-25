@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-25 (GS-BUG-01/03 timer fix, GS-01 set arrows, GS-02 iOS audio, test cwd-fix; 145 esercizi, 36 sessioni, 447 test)
+> Last updated: 2026-02-25 (UI-28 dirty-state + incremental macrocycle regen + Danger Zone restart; 145 esercizi, 36 sessioni, 472 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -505,7 +505,7 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-25 | Pannello Test Maxes & Loads nel tab Plan (history, benchmark, exercise loads) | TODO | next | §9.5 |
 | UI-26 | Fix overflow testo selettore fasi macrociclo (Plan tab) — stringhe troncate illeggibili | TODO | next | §9.5 |
 | UI-27 | Chiarire indicatori numerici giorni nella Week view (aggiungere label/tooltip) | TODO | next | §9.5 |
-| UI-28 | Rivalutare collocazione pulsanti Regenerate Assessment/Macrocycle (Settings vs Plan) | TODO | next | §9.5 |
+| UI-28 | Dirty-state banner + incremental macrocycle regen + Danger Zone full restart | ✅ DONE | 4b post | §9.5 |
 
 ---
 
@@ -591,10 +591,22 @@ Il testo nel selettore orizzontale delle fasi viene troncato in modo errato prod
 
 I pallini con numero (1, 2…) sui giorni nella Week view non sono autoesplicativi. Aggiungere label o tooltip che chiariscano il significato (sessioni pianificate? completate? totali?).
 
-#### UI-28 — Rivalutare collocazione pulsanti Actions
+#### UI-28 — Dirty-state banner + incremental macrocycle regen + Danger Zone ✅ DONE
 
-Le card "Regenerate Assessment" e "Regenerate Macrocycle" sono attualmente in Settings. La collocazione ottimale dipende dall'analisi del flusso engine (vedi analisi tecnica §9.5.1).
-Opzioni: auto-trigger dal salvataggio settings, spostamento in Plan (vicino all'effetto), banner "plan out of sync" con CTA, o combinazione. "Danger Zone" (reset) rimane in Settings.
+Implementato 2026-02-25 in due commit. 472 test verdi (25 nuovi).
+
+**Backend:**
+- `state_checks.py`: `is_macrocycle_stale(state)` confronta `assessment.profile` vs `macrocycle.assessment_snapshot` (threshold 5 punti per asse)
+- `GET /api/state/status` endpoint (28 endpoint totali)
+- `generate_macrocycle(from_phase=)`: incremental regen che preserva le fasi precedenti. Router risolve `"current"` → phase_id concreto via `current_phase_and_week()`
+- `_compute_remaining_durations()`: alloca settimane rimanenti tra fasi residue con floor enforcement e compression
+
+**Frontend:**
+- Rimosso "Regenerate Assessment" da Settings (auto-triggered da ProfileEditor e GoalEditor)
+- Rimossa intera sezione "Actions" da Settings
+- Plan tab: dirty-state banner giallo ("Your profile has changed") con "Regenerate plan" / "Dismiss" + bottone "Regenerate Macrocycle" sotto timeline → entrambi usano regen incrementale (`from_phase: "current"`)
+- Dialog aggiornato: "regenera dalla fase corrente in poi, le fasi precedenti restano intatte"
+- Settings > Danger Zone: nuova card "Restart Macrocycle" con doppia conferma → full regen da week 1 (senza `from_phase`)
 
 ---
 
@@ -643,6 +655,13 @@ Opzioni: auto-trigger dal salvataggio settings, spostamento in Plan (vicino all'
 - **GS-BUG-01 Timer reset on exercise change**: aggiunto `key` prop su `GuidedExerciseStep` per forzare remount al cambio esercizio → timer si resetta correttamente.
 - **GS-BUG-03 Phase-based arrow navigation**: frecce timer sempre visibili quando attivo (48px tap target). Forward salta alla fase successiva, back ricomincia fase (se >2s) o torna alla fase precedente. Reset button ingrandito con bordo e label.
 - **Test cwd-independence**: 5 test resi indipendenti dalla working directory (path assoluti in test_p1_75_closing, test_planner_v1, test_schema_validation).
+
+**UI-28 Dirty-state + incremental regen (2026-02-25):**
+- **Dirty-state detection**: `state_checks.py` con `is_macrocycle_stale()` (threshold 5 punti/asse). `GET /api/state/status` endpoint. 12 test.
+- **Actions reorganization**: rimosso "Regenerate Assessment" (auto-triggered), rimossa sezione Actions da Settings, spostato "Regenerate Macrocycle" in Plan tab con dirty-state banner.
+- **Incremental macrocycle regen**: `generate_macrocycle(from_phase=)` preserva fasi precedenti, rigenera da `from_phase` in poi con profilo aggiornato. `_compute_remaining_durations()` per allocazione settimane. Router risolve `"current"` → phase_id concreto. 13 test.
+- **Danger Zone full restart**: nuova card "Restart Macrocycle" in Settings con doppia conferma → full regen senza `from_phase`.
+- 472 test verdi totali.
 
 ### Phase 4c — Produzione
 
