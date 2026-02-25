@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-24 (CAT-01 lead fixes, CAT-02 route_endurance_gym, B49 move session UI; 145 exercises, 36 sessions, 447 tests)
+> Last updated: 2026-02-25 (GS-BUG-01/03 timer fix, GS-01 set arrows, GS-02 iOS audio; 145 exercises, 36 sessions, 447 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -202,7 +202,7 @@ from backend.engine.X import Y
 | 2: Tracking + outdoor | ✅ | Outdoor logging, reports, motivational quotes |
 | 2.5: Catalog audit | ✅ | 143 exercises, 10 patches, grade_ref/grade_offset, 377 tests. §2.7 grade resolver ✅, §2.8 working loads ✅ |
 | **4a: Multi-user + deploy** | ✅ | UUID multi-user, Railway/Vercel deploy prep, 395 tests |
-| **4b: Guided Session + Beta prep** | ✅ | Guided session mode, what's next tab, edit equipment/goal, homewall, grade fixes, B39 persistent volume |
+| **4b: Guided Session + Beta prep** | ✅ | Guided session mode, what's next tab, edit equipment/goal, homewall, grade fixes, B39 persistent volume, GS-01/02 set arrows + iOS audio, GS-BUG-01/03 timer fixes |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
 | 4: Evolution | 🔲 | Multi-goal, annual report, notifications |
 

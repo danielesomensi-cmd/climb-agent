@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-24 (CAT-01 lead fixes, CAT-02 route_endurance_gym, B49 move session UI; 145 esercizi, 36 sessioni, 447 test)
+> Last updated: 2026-02-25 (GS-BUG-01/03 timer fix, GS-01 set arrows, GS-02 iOS audio, test cwd-fix; 145 esercizi, 36 sessioni, 447 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -381,8 +381,7 @@ Claude Sonnet come layer conversazionale sopra engine deterministico.
 - P1 ranking nel resolver (recency, intensità, fatica)
 - Periodizzazione multi-macrociclo (stagionale)
 - Notifiche/reminder
-- Guided timer mode (countdown, rest timer colorato, vibrazione/beep PWA)
-  Spec completa in DESIGN_GOAL_MACROCICLO_v1.1.md §12b
+- ~~Guided timer mode~~ → ✅ DONE in Phase 4b (guided session + GS-01/02/BUG-01/BUG-03)
 
 ---
 
@@ -499,6 +498,10 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F12 | Leg exercises catalog (pistol_squat_progression, romanian_deadlift, lower_body_gym, heavy_conditioning_gym) | ✅ DONE | 4b post | §2.6 |
 | CAT-01 | Lead climbing catalog fixes: strength_long domain filter, pe_gym equipment filter split, resolver equipment support | ✅ DONE | 4b post | §2.3 |
 | CAT-02 | New session route_endurance_gym (lead aerobic base, threshold + ARC) + pool registration (base, PE) | ✅ DONE | 4b post | §2.3 |
+| GS-01 | Set navigation arrows durante rest phase nel guided session timer | ✅ DONE | 4b post | §10 |
+| GS-02 | Fix audio su iPhone PWA (Safari AudioContext singleton + unlock trick) | ✅ DONE | 4b post | §10 |
+| GS-BUG-01 | Timer non si resetta al cambio esercizio (mancava key prop per remount) | ✅ DONE | 4b post | §10 |
+| GS-BUG-03 | Frecce navigazione timer phase-based (sempre visibili, 48px tap target) | ✅ DONE | 4b post | §10 |
 
 ---
 
@@ -593,6 +596,13 @@ Depends on: FR-1 (outdoor as availability location — ✅ DONE in Phase 2)
 - **CAT-01 Lead fixes**: strength_long `climbing_movement` domain filter allargato a `technique_lead`/`climbing_routes`. power_endurance_gym: split pe_climbing_main in `pe_routes` (equipment: gym_routes, priorità 90) + `pe_boulder` (fallback, priorità 85). resolve_session: aggiunto `required_equipment` param a `pick_best_exercise_p0()` + Stage 2b soft equipment filter.
 - **CAT-02 route_endurance_gym**: nuova sessione lead aerobic base (threshold su routes + ARC su boulder/board). Registrata in `_SESSION_META` (medium, climbing, gym) e `_SESSION_POOL` (base + power_endurance come "available").
 - **B49 Move session UI**: MoveSessionDialog mostra slot liberi nella settimana, SessionCard "Move" button, week page integration via `applyEvents()` con evento `move_session`. 7 nuovi test → 447 totali.
+
+**Guided Session fixes (2026-02-25):**
+- **GS-01 Set navigation arrows**: durante fase `set_rest`, frecce ‹ › per sfogliare set completati/futuri senza alterare il timer. Click freccia auto-pausa; resume torna al set reale. Indicatore ✓ per set completati.
+- **GS-02 iOS audio fix**: AudioContext estratto in singleton condiviso (`audio-unlock.ts`) con silent buffer unlock trick per Safari/PWA. Listener `touchstart` + `visibilitychange` per mantenere audio attivo tra background/foreground.
+- **GS-BUG-01 Timer reset on exercise change**: aggiunto `key` prop su `GuidedExerciseStep` per forzare remount al cambio esercizio → timer si resetta correttamente.
+- **GS-BUG-03 Phase-based arrow navigation**: frecce timer sempre visibili quando attivo (48px tap target). Forward salta alla fase successiva, back ricomincia fase (se >2s) o torna alla fase precedente. Reset button ingrandito con bordo e label.
+- **Test cwd-independence**: 5 test resi indipendenti dalla working directory (path assoluti in test_p1_75_closing, test_planner_v1, test_schema_validation).
 
 ### Phase 4c — Produzione
 
