@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-25 (UI-28 dirty-state + incremental macrocycle regen + Danger Zone restart; 145 esercizi, 36 sessioni, 472 test)
+> Last updated: 2026-02-25 (B50 editor pre-populate fix; 145 esercizi, 36 sessioni, 472 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -506,6 +506,7 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-26 | Fix overflow testo selettore fasi macrociclo (Plan tab) — stringhe troncate illeggibili | TODO | next | §9.5 |
 | UI-27 | Chiarire indicatori numerici giorni nella Week view (aggiungere label/tooltip) | TODO | next | §9.5 |
 | UI-28 | Dirty-state banner + incremental macrocycle regen + Danger Zone full restart | ✅ DONE | 4b post | §9.5 |
+| B50 | ProfileEditor/GoalEditor pre-populate with current values | ✅ DONE | 4b post | §10 |
 
 ---
 
@@ -662,6 +663,9 @@ Implementato 2026-02-25 in due commit. 472 test verdi (25 nuovi).
 - **Incremental macrocycle regen**: `generate_macrocycle(from_phase=)` preserva fasi precedenti, rigenera da `from_phase` in poi con profilo aggiornato. `_compute_remaining_durations()` per allocazione settimane. Router risolve `"current"` → phase_id concreto. 13 test.
 - **Danger Zone full restart**: nuova card "Restart Macrocycle" in Settings con doppia conferma → full regen senza `from_phase`.
 - 472 test verdi totali.
+
+**Settings editor fix (2026-02-25):**
+- **B50 Pre-populate editors**: ProfileEditor e GoalEditor si aprivano con campi vuoti (placeholder) invece dei valori correnti. Causa: `useState` catturava valori iniziali vuoti perché i componenti erano montati prima del caricamento dello state. Fix: aggiunto `useEffect` che sincronizza lo state del form dai props ad ogni apertura del dialog.
 
 ### Phase 4c — Produzione
 
