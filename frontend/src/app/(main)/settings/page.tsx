@@ -28,6 +28,9 @@ export default function SettingsPage() {
   const router = useRouter();
 
   const [regeneratingMacro, setRegeneratingMacro] = useState(false);
+  const [restartMacroDialogOpen, setRestartMacroDialogOpen] = useState(false);
+  const [restartMacroConfirmOpen, setRestartMacroConfirmOpen] = useState(false);
+  const [restartingMacro, setRestartingMacro] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -163,6 +166,22 @@ export default function SettingsPage() {
       );
     } finally {
       setRegeneratingMacro(false);
+    }
+  }
+
+  /** Full macrocycle restart from week 1 (Danger Zone) */
+  async function handleRestartMacro() {
+    setRestartingMacro(true);
+    setActionError(null);
+    try {
+      await generateMacrocycle();
+      await refresh();
+      setRestartMacroConfirmOpen(false);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Restart failed");
+      setRestartMacroConfirmOpen(false);
+    } finally {
+      setRestartingMacro(false);
     }
   }
 
@@ -546,6 +565,26 @@ export default function SettingsPage() {
               <Card className="border-destructive/30">
                 <CardContent className="flex items-center justify-between gap-4 py-4">
                   <div>
+                    <p className="text-sm font-medium">Restart Macrocycle</p>
+                    <p className="text-xs text-muted-foreground">
+                      Discard the current plan and generate a new one from
+                      week 1. Progression data is kept.
+                    </p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setRestartMacroDialogOpen(true)}
+                    disabled={restartingMacro}
+                  >
+                    {restartingMacro ? "Processing..." : "Restart"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-destructive/30">
+                <CardContent className="flex items-center justify-between gap-4 py-4">
+                  <div>
                     <p className="text-sm font-medium">Reset & Restart</p>
                     <p className="text-xs text-muted-foreground">
                       Delete all data and restart from onboarding.
@@ -565,6 +604,65 @@ export default function SettingsPage() {
           </>
         )}
       </main>
+
+      {/* ----- First restart macrocycle confirmation dialog ----- */}
+      <Dialog open={restartMacroDialogOpen} onOpenChange={setRestartMacroDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Restart Macrocycle</DialogTitle>
+            <DialogDescription>
+              This will discard your entire current plan and generate a brand new
+              macrocycle starting from week 1. All phase progress will be lost.
+              Are you sure?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRestartMacroDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setRestartMacroDialogOpen(false);
+                setRestartMacroConfirmOpen(true);
+              }}
+            >
+              Yes, continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ----- Second restart macrocycle confirmation dialog ----- */}
+      <Dialog open={restartMacroConfirmOpen} onOpenChange={setRestartMacroConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Final confirmation</DialogTitle>
+            <DialogDescription>
+              The current macrocycle will be replaced with a new one starting
+              from this Monday. This cannot be undone. Proceed?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRestartMacroConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRestartMacro}
+              disabled={restartingMacro}
+            >
+              {restartingMacro ? "Processing..." : "Restart from week 1"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ----- First reset confirmation dialog ----- */}
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>

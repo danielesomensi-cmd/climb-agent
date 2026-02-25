@@ -6,6 +6,7 @@ from backend.engine.macrocycle_v1 import (
     PHASE_ORDER,
     PHASE_INTENSITY_CAP,
     _compute_phase_durations,
+    _compute_remaining_durations,
     _adjust_domain_weights,
     _validate_goal,
     _BASE_WEIGHTS,
@@ -303,6 +304,172 @@ class TestGoalValidation(unittest.TestCase):
         goal = _make_goal()  # 7c+ target, 7b current — fine
         mc = generate_macrocycle(goal, profile, _make_user_state(), "2026-03-02")
         self.assertNotIn("warnings", mc)
+
+
+class TestIncrementalRegen(unittest.TestCase):
+    """Tests for incremental macrocycle regeneration (from_phase)."""
+
+    def _make_old_macrocycle(self, profile=None):
+        """Generate a full macrocycle to use as the 'existing' one."""
+        p = profile or _make_profile()
+        goal = _make_goal()
+        state = _make_user_state()
+        mc = generate_macrocycle(goal, p, state, "2026-03-02", 12)
+        return mc
+
+    def test_incremental_keeps_earlier_phases(self):
+        old_mc = self._make_old_macrocycle()
+        state = _make_user_state()
+        state["macrocycle"] = old_mc
+
+        new_profile = _make_profile(finger_strength=90)  # changed
+        mc = generate_macrocycle(
+            _make_goal(), new_profile, state, "2026-03-02", 12,
+            from_phase="power_endurance",
+        )
+
+        # base and strength_power should be identical to old
+        old_base = next(p for p in old_mc["phases"] if p["phase_id"] == "base")
+        new_base = next(p for p in mc["phases"] if p["phase_id"] == "base")
+        self.assertEqual(old_base, new_base)
+
+        old_sp = next(p for p in old_mc["phases"] if p["phase_id"] == "strength_power")
+        new_sp = next(p for p in mc["phases"] if p["phase_id"] == "strength_power")
+        self.assertEqual(old_sp, new_sp)
+
+    def test_incremental_regenerates_from_phase_onwards(self):
+        old_profile = _make_profile()
+        old_mc = self._make_old_macrocycle(old_profile)
+        state = _make_user_state()
+        state["macrocycle"] = old_mc
+
+        new_profile = _make_profile(finger_strength=90, technique=90)
+        mc = generate_macrocycle(
+            _make_goal(), new_profile, state, "2026-03-02", 12,
+            from_phase="power_endurance",
+        )
+
+        # PE phase should have domain_weights computed from NEW profile
+        new_pe = next(p for p in mc["phases"] if p["phase_id"] == "power_endurance")
+        old_pe = next(p for p in old_mc["phases"] if p["phase_id"] == "power_endurance")
+        self.assertNotEqual(new_pe["domain_weights"], old_pe["domain_weights"])
+
+    def test_incremental_total_weeks_preserved(self):
+        old_mc = self._make_old_macrocycle()
+        state = _make_user_state()
+        state["macrocycle"] = old_mc
+
+        mc = generate_macrocycle(
+            _make_goal(), _make_profile(), state, "2026-03-02", 12,
+            from_phase="power_endurance",
+        )
+        total = sum(p["duration_weeks"] for p in mc["phases"])
+        self.assertEqual(total, 12)
+        self.assertEqual(mc["total_weeks"], 12)
+
+    def test_incremental_assessment_snapshot_updated(self):
+        old_mc = self._make_old_macrocycle()
+        state = _make_user_state()
+        state["macrocycle"] = old_mc
+
+        new_profile = _make_profile(finger_strength=99)
+        mc = generate_macrocycle(
+            _make_goal(), new_profile, state, "2026-03-02", 12,
+            from_phase="power_endurance",
+        )
+        self.assertEqual(mc["assessment_snapshot"]["finger_strength"], 99)
+
+    def test_incremental_phase_order_preserved(self):
+        old_mc = self._make_old_macrocycle()
+        state = _make_user_state()
+        state["macrocycle"] = old_mc
+
+        mc = generate_macrocycle(
+            _make_goal(), _make_profile(), state, "2026-03-02", 12,
+            from_phase="strength_power",
+        )
+        phase_ids = [p["phase_id"] for p in mc["phases"]]
+        order_indices = [PHASE_ORDER.index(pid) for pid in phase_ids]
+        self.assertEqual(order_indices, sorted(order_indices))
+
+    def test_incremental_start_weeks_continuous(self):
+        old_mc = self._make_old_macrocycle()
+        state = _make_user_state()
+        state["macrocycle"] = old_mc
+
+        mc = generate_macrocycle(
+            _make_goal(), _make_profile(), state, "2026-03-02", 12,
+            from_phase="power_endurance",
+        )
+        # Verify start_week / end_week are continuous
+        for i in range(1, len(mc["phases"])):
+            prev = mc["phases"][i - 1]
+            curr = mc["phases"][i]
+            self.assertEqual(curr["start_week"], prev["end_week"] + 1)
+
+    def test_incremental_from_last_phase_only_deload(self):
+        old_mc = self._make_old_macrocycle()
+        state = _make_user_state()
+        state["macrocycle"] = old_mc
+
+        mc = generate_macrocycle(
+            _make_goal(), _make_profile(), state, "2026-03-02", 12,
+            from_phase="deload",
+        )
+        # Last phase regenerated, previous 4 kept
+        kept_ids = [p["phase_id"] for p in mc["phases"][:-1]]
+        self.assertEqual(kept_ids, ["base", "strength_power", "power_endurance", "performance"])
+        self.assertEqual(mc["phases"][-1]["phase_id"], "deload")
+
+    def test_incremental_no_existing_macrocycle_raises(self):
+        state = _make_user_state()
+        # No macrocycle in state
+        with self.assertRaises(ValueError):
+            generate_macrocycle(
+                _make_goal(), _make_profile(), state, "2026-03-02", 12,
+                from_phase="power_endurance",
+            )
+
+    def test_from_phase_none_is_full_regen(self):
+        """from_phase=None gives identical result to old behavior."""
+        profile = _make_profile()
+        goal = _make_goal()
+        state = _make_user_state()
+        mc1 = generate_macrocycle(goal, profile, state, "2026-03-02", 12)
+        mc2 = generate_macrocycle(goal, profile, state, "2026-03-02", 12,
+                                  from_phase=None)
+        for key in ("phases", "total_weeks", "start_date", "end_date",
+                     "goal_snapshot", "assessment_snapshot"):
+            self.assertEqual(mc1[key], mc2[key], f"Mismatch on {key}")
+
+
+class TestComputeRemainingDurations(unittest.TestCase):
+    """Tests for _compute_remaining_durations."""
+
+    def test_full_set_sums_correctly(self):
+        profile = _make_profile()
+        d = _compute_remaining_durations(profile, 12, list(PHASE_ORDER))
+        self.assertEqual(sum(d.values()), 12)
+
+    def test_last_three_phases(self):
+        profile = _make_profile()
+        remaining = ["power_endurance", "performance", "deload"]
+        d = _compute_remaining_durations(profile, 5, remaining)
+        self.assertEqual(sum(d.values()), 5)
+        self.assertGreaterEqual(d["power_endurance"], 2)
+        self.assertGreaterEqual(d["performance"], 2)
+
+    def test_very_few_weeks_compresses(self):
+        profile = _make_profile()
+        remaining = ["performance", "deload"]
+        d = _compute_remaining_durations(profile, 2, remaining)
+        self.assertEqual(sum(d.values()), 2)
+        self.assertEqual(d["performance"], 2)
+        self.assertEqual(d["deload"], 0)
+
+    def test_empty_phases(self):
+        d = _compute_remaining_durations(_make_profile(), 5, [])
+        self.assertEqual(d, {})
 
 
 if __name__ == "__main__":

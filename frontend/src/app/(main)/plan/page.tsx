@@ -88,7 +88,7 @@ export default function PlanPage() {
     setRegenerating(true);
     setRegenError(null);
     try {
-      await generateMacrocycle();
+      await generateMacrocycle(undefined, 12, "current");
       await refresh();
       setRegenDialogOpen(false);
       setIsStale(false);
@@ -320,11 +320,11 @@ export default function PlanPage() {
       <Dialog open={regenDialogOpen} onOpenChange={setRegenDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Regenerate macrocycle</DialogTitle>
+            <DialogTitle>Update macrocycle</DialogTitle>
             <DialogDescription>
-              This will replace the current macrocycle with a new one.
-              Progression data will be kept, but the weekly plan will change.
-              Proceed?
+              This will regenerate the plan from your current phase onwards,
+              keeping earlier phases intact. Weekly plans will change from this
+              point. Proceed?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

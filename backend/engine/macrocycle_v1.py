@@ -134,6 +134,11 @@ _WEAKNESS_ADJUSTMENTS: Dict[str, Tuple[str, str]] = {
 
 _MIN_TOTAL_WEEKS = 9  # 4 non-deload phases × 2 weeks + 1 deload
 
+_BASE_DURATIONS: Dict[str, int] = {
+    "base": 4, "strength_power": 3, "power_endurance": 2,
+    "performance": 2, "deload": 1,
+}
+
 
 def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> Dict[str, int]:
     """Compute phase durations based on assessment profile.
@@ -152,13 +157,7 @@ def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> 
             f"(4 phases × 2 weeks + 1 deload), got {total_weeks}"
         )
 
-    durations = {
-        "base": 4,
-        "strength_power": 3,
-        "power_endurance": 2,
-        "performance": 2,
-        "deload": 1,
-    }
+    durations = dict(_BASE_DURATIONS)
 
     # Find the weakest axis
     weakest_axis = None
@@ -192,6 +191,73 @@ def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> 
     actual_total = sum(durations.values())
     if actual_total != total_weeks:
         durations["base"] = max(2, durations["base"] + total_weeks - actual_total)
+
+    return durations
+
+
+def _compute_remaining_durations(
+    profile: Dict[str, int],
+    remaining_weeks: int,
+    remaining_phases: List[str],
+) -> Dict[str, int]:
+    """Allocate *remaining_weeks* among *remaining_phases*.
+
+    Same logic as :func:`_compute_phase_durations` but scoped to the
+    phases that still need to be generated (incremental regen).
+    """
+    if not remaining_phases:
+        return {}
+
+    durations = {p: _BASE_DURATIONS[p] for p in remaining_phases}
+
+    # --- weakness adjustment (only if both phases are in scope) ----------
+    weakest_axis: Optional[str] = None
+    weakest_score = 101
+    for axis in ("power_endurance", "endurance", "finger_strength",
+                 "pulling_strength", "technique"):
+        score = profile.get(axis, 50)
+        if score < weakest_score:
+            weakest_score = score
+            weakest_axis = axis
+
+    if (weakest_axis and weakest_score < 50
+            and weakest_axis in _WEAKNESS_ADJUSTMENTS):
+        ext, shr = _WEAKNESS_ADJUSTMENTS[weakest_axis]
+        if ext in durations and shr in durations and durations[shr] > 2:
+            durations[ext] += 1
+            durations[shr] -= 1
+
+    # --- floor enforcement ------------------------------------------------
+    for p in remaining_phases:
+        floor = 1 if p == "deload" else 2
+        durations[p] = max(floor, durations[p])
+
+    min_needed = sum(1 if p == "deload" else 2 for p in remaining_phases)
+    if remaining_weeks < min_needed:
+        # Not enough weeks — give minimum to each, deload shrinks first
+        durations = {}
+        left = remaining_weeks
+        non_deload = [p for p in remaining_phases if p != "deload"]
+        for p in non_deload:
+            alloc = min(2, left)
+            durations[p] = alloc
+            left -= alloc
+        if "deload" in remaining_phases:
+            durations["deload"] = max(0, left)
+        return durations
+
+    # --- scale to remaining_weeks -----------------------------------------
+    flex = next((p for p in remaining_phases if p != "deload"), remaining_phases[0])
+    current_total = sum(durations.values())
+    if current_total != remaining_weeks:
+        floor = 1 if flex == "deload" else 2
+        durations[flex] = max(floor, durations[flex] + remaining_weeks - current_total)
+
+    # final enforcement
+    actual = sum(durations.values())
+    if actual != remaining_weeks:
+        floor = 1 if flex == "deload" else 2
+        durations[flex] = max(floor, durations[flex] + remaining_weeks - actual)
 
     return durations
 
@@ -302,8 +368,10 @@ def generate_macrocycle(
     user_state: Dict[str, Any],
     start_date: str,
     total_weeks: int = 12,
+    *,
+    from_phase: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Generate a complete macrocycle of total_weeks weeks.
+    """Generate a complete macrocycle of *total_weeks* weeks.
 
     Args:
         goal: Goal dict from user_state.
@@ -311,20 +379,52 @@ def generate_macrocycle(
         user_state: Full user_state for trips and context.
         start_date: YYYY-MM-DD string for the Monday of week 1.
         total_weeks: Total weeks in the macrocycle (default 12).
+        from_phase: If set, keep earlier phases from the existing
+            macrocycle in *user_state* and regenerate from this phase
+            onwards using the updated *assessment_profile*.
+            Must be a valid phase_id from PHASE_ORDER.
 
     Returns:
         Macrocycle dict with phases, domain weights, session pools, etc.
     """
     goal_warnings = _validate_goal(goal)
-    durations = _compute_phase_durations(assessment_profile, total_weeks)
     trips = user_state.get("trips") or []
-
     start = datetime.strptime(start_date, "%Y-%m-%d").date()
-    phases = []
-    current_week = 1
 
-    for phase_id in PHASE_ORDER:
-        duration = durations[phase_id]
+    # --- decide which phases to keep vs regenerate ------------------------
+    if from_phase:
+        old_mc = user_state.get("macrocycle")
+        if not old_mc or not old_mc.get("phases"):
+            raise ValueError(
+                "Cannot do incremental regen: no existing macrocycle in user_state"
+            )
+        if from_phase not in PHASE_ORDER:
+            raise ValueError(f"Unknown phase_id: {from_phase}")
+
+        from_idx = PHASE_ORDER.index(from_phase)
+
+        kept_phases = [
+            p for p in old_mc["phases"]
+            if PHASE_ORDER.index(p["phase_id"]) < from_idx
+        ]
+        weeks_used = sum(p["duration_weeks"] for p in kept_phases)
+        remaining_weeks = total_weeks - weeks_used
+        phases_to_gen = [pid for pid in PHASE_ORDER
+                         if PHASE_ORDER.index(pid) >= from_idx]
+        durations = _compute_remaining_durations(
+            assessment_profile, remaining_weeks, phases_to_gen,
+        )
+        current_week = weeks_used + 1
+    else:
+        kept_phases = []
+        durations = _compute_phase_durations(assessment_profile, total_weeks)
+        phases_to_gen = list(PHASE_ORDER)
+        current_week = 1
+
+    # --- generate new phases ----------------------------------------------
+    new_phases: List[Dict[str, Any]] = []
+    for phase_id in phases_to_gen:
+        duration = durations.get(phase_id, 0)
         if duration <= 0:
             continue
 
@@ -335,14 +435,13 @@ def generate_macrocycle(
         domain_weights = _adjust_domain_weights(base_weights, assessment_profile)
         session_pool = _build_session_pool(phase_id)
 
-        # Check for pre-trip deload overlap
         pretrip_trips = _check_pretrip_overlap(
             trips,
             phase_start_date.isoformat(),
             phase_end_date.isoformat(),
         )
 
-        phase = {
+        phase: Dict[str, Any] = {
             "phase_id": phase_id,
             "phase_name": PHASE_NAMES[phase_id],
             "start_week": current_week,
@@ -365,12 +464,14 @@ def generate_macrocycle(
                 for t in pretrip_trips
             ]
 
-        phases.append(phase)
+        new_phases.append(phase)
         current_week += duration
 
+    # --- assemble result --------------------------------------------------
+    phases = kept_phases + new_phases
     end_date = start + timedelta(weeks=total_weeks) - timedelta(days=1)
 
-    result = {
+    result: Dict[str, Any] = {
         "macrocycle_version": "macrocycle.v1",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "start_date": start_date,

@@ -34,6 +34,7 @@ class MacrocycleRequest(BaseModel):
     """Body for POST /api/macrocycle/generate."""
     start_date: Optional[str] = None
     total_weeks: int = 12
+    from_phase: Optional[str] = None  # "current" or a phase_id for incremental regen
 
 
 # --------------------------------------------------------------------------- #

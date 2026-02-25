@@ -82,10 +82,18 @@ export const computeAssessment = (
   });
 
 // Macrocycle
-export const generateMacrocycle = (startDate?: string, totalWeeks = 12) =>
+export const generateMacrocycle = (
+  startDate?: string,
+  totalWeeks = 12,
+  fromPhase?: string, // "current" = incremental, undefined = full regen
+) =>
   request<{ macrocycle: Macrocycle }>("/api/macrocycle/generate", {
     method: "POST",
-    body: JSON.stringify({ start_date: startDate, total_weeks: totalWeeks }),
+    body: JSON.stringify({
+      start_date: startDate,
+      total_weeks: totalWeeks,
+      from_phase: fromPhase,
+    }),
   });
 
 // Week
