@@ -4,13 +4,14 @@
   "version": "1.0",
   "intent": {
     "primary_goal": "strength_general",
-    "secondary_goals": ["core", "joint_health"],
-    "notes": "Compound barbell/dumbbell session. Row + Press + Hinge. Builds general strength base."
+    "secondary_goals": ["core", "push", "joint_health"],
+    "notes": "Compound barbell/dumbbell session. Row + Press + Dip + Hinge + Core compression. Builds general strength base with full push/pull/core coverage."
   },
   "compatibility": {
     "slot": ["long", "short"],
     "sports": ["climbing"]
   },
+  "required_equipment": ["dumbbell"],
   "context": {
     "location": "gym"
   },
@@ -43,16 +44,33 @@
     },
     {
       "block_id": "compound_push",
-      "required": false,
+      "required": true,
       "priority": 80,
       "module_role": "secondary",
-      "notes": "Overhead press or bench. Antagonist push for shoulder balance.",
+      "notes": "Bench press or dumbbell bench. Chest/push focus. 3x8 reps, rest 90s.",
       "selection": {
         "primary": {
           "filters": {
             "role": ["accessory"],
             "domain": ["strength_general"],
             "pattern": ["push"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "triceps_dip",
+      "required": true,
+      "priority": 75,
+      "module_role": "secondary",
+      "notes": "Dip for triceps and anterior push. 3x10, rest 60s.",
+      "selection": {
+        "primary": {
+          "exercise_id": "dip",
+          "prescription_overrides": {
+            "sets": 3,
+            "reps": 10,
+            "rest_between_sets_seconds": 60
           }
         }
       }
@@ -74,8 +92,25 @@
       }
     },
     {
+      "block_id": "core_compression",
+      "required": true,
+      "priority": 55,
+      "module_role": "secondary",
+      "notes": "Hanging leg raise or ab wheel. Core compression focus. 3x10, rest 60s.",
+      "selection": {
+        "primary": {
+          "exercise_id": "hanging_leg_raise",
+          "prescription_overrides": {
+            "sets": 3,
+            "reps": 10,
+            "rest_between_sets_seconds": 60
+          }
+        }
+      }
+    },
+    {
       "template_id": "core_standard",
-      "required": false,
+      "required": true,
       "priority": 50,
       "module_role": "secondary"
     },
