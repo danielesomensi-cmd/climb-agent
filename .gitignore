@@ -27,6 +27,11 @@ backend/data/users/
 # archive (legacy, not tracked)
 _archive/
 
+# images (local assets, not tracked)
+*.jpg
+*.png
+
 # frontend
 frontend/node_modules/
+.next/
 .DS_Store
