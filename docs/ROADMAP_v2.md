@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-25 (B50 editor pre-populate fix; 145 esercizi, 36 sessioni, 472 test)
+> Last updated: 2026-02-26 (B51-B54 session UX fixes + complementary sport completion; 145 esercizi, 36 sessioni, 497 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -507,6 +507,11 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-27 | Chiarire indicatori numerici giorni nella Week view (aggiungere label/tooltip) | TODO | next | §9.5 |
 | UI-28 | Dirty-state banner + incremental macrocycle regen + Danger Zone full restart | ✅ DONE | 4b post | §9.5 |
 | B50 | ProfileEditor/GoalEditor pre-populate with current values | ✅ DONE | 4b post | §10 |
+| B51 | Session display names in quick-add dialog (human-readable names) | ✅ DONE | 4b post | §10 |
+| B52 | Equipment compatibility filter in quick-add (hide incompatible sessions) | ✅ DONE | 4b post | §10 |
+| B53 | Actual load display in week header (Done: X alongside planned Load) | ✅ DONE | 4b post | §10 |
+| B54 | Heavy Conditioning Gym: add push/triceps/core blocks + audit report | ✅ DONE | 4b post | §2.3 |
+| NEW-F13 | Complementary sport completion with feedback-based load (easy=10, ok=20, hard=30) | ✅ DONE | 4b post | §10 |
 
 ---
 
@@ -666,6 +671,14 @@ Implementato 2026-02-25 in due commit. 472 test verdi (25 nuovi).
 
 **Settings editor fix (2026-02-25):**
 - **B50 Pre-populate editors**: ProfileEditor e GoalEditor si aprivano con campi vuoti (placeholder) invece dei valori correnti. Causa: `useState` catturava valori iniziali vuoti perché i componenti erano montati prima del caricamento dello state. Fix: aggiunto `useEffect` che sincronizza lo state del form dai props ad ogni apertura del dialog.
+
+**Session UX fixes + complementary sport (2026-02-26):**
+- **B51 Session display names**: Quick-add dialog mostrava ID interni (blocx_power_bouldering, gym_aerobic_endurance…) invece di nomi leggibili. Fix: aggiunto campo `name` a 12 session JSON, enriched `/suggest-sessions` API con `session_name`, frontend usa nome se presente.
+- **B52 Equipment compatibility filter**: Quick-add suggeriva sessioni incompatibili con l'attrezzatura della palestra selezionata. Fix: aggiunto `required_equipment` a 18 session JSON, esposto in `/catalog/sessions` e `/suggest-sessions`, frontend filtra suggerimenti e lista "all sessions" contro equipment palestra.
+- **B53 Actual load in week header**: Week view mostrava solo load pianificato. Fix: aggiunto calcolo client-side "Done: X" sommando `estimated_load_score` delle sessioni completate + `other_activity_load`.
+- **B54 Heavy Conditioning Gym incompleta**: Sessione aveva solo compound pull e carry, mancavano push/triceps/core. Fix: `compound_push` reso required, aggiunti blocchi `triceps_dip` (dip 3×10) e `core_compression` (hanging_leg_raise 3×10), `core_standard` template reso required.
+- **B54b Session catalog audit**: Analisi testuale di tutti i 36 file sessione. Identificati 14 file con gap, 5 pattern ricorrenti (nomi mancanti, equipment mancanti, blocchi troppo pochi).
+- **Complementary sport completion**: Nuovo evento `complete_other_activity` con feedback (easy/ok/hard) → load 10/20/30 punti. Evento `undo_other_activity` per annullare. UI: badge completamento, feedback picker inline, undo button. DayCard integrata in Today + Week view. 6 nuovi test → 497 totali.
 
 ### Phase 4c — Produzione
 

@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-25 (B50 editor pre-populate fix; 145 exercises, 36 sessions, 472 tests)
+> Last updated: 2026-02-26 (B51-B54 session UX fixes + complementary sport completion; 145 exercises, 36 sessions, 497 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 145 | 14 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +pistol_squat_progression +romanian_deadlift (NEW-F12) |
 | Sessions | 36 | gym evening (enriched), home lunch, recovery, flexibility, prehab, conditioning, finger maintenance, core standalone, test (repeater, weighted pullup), easy_climbing_deload, lower_body_gym, heavy_conditioning_gym, route_endurance_gym |
 | Templates | 19 | 11 original + 8 new (warmup, pulling, antagonist, core, cooldown) |
-| Tests | 472 | all green (post Phase 4b + CAT-01/CAT-02/B49 + UI-28 incremental regen) |
+| Tests | 497 | all green (post Phase 4b + B51-B54 session UX + complementary sport) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 28 | 12 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 21 | 7 main views + 12 onboarding steps + root + onboarding index |
@@ -88,7 +88,7 @@ backend/
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 447 pytest tests
+  tests/                    ← 497 pytest tests
 frontend/
   src/
     app/
@@ -170,7 +170,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (472 green)
+# Backend tests (497 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)
@@ -202,7 +202,7 @@ from backend.engine.X import Y
 | 2: Tracking + outdoor | ✅ | Outdoor logging, reports, motivational quotes |
 | 2.5: Catalog audit | ✅ | 143 exercises, 10 patches, grade_ref/grade_offset, 377 tests. §2.7 grade resolver ✅, §2.8 working loads ✅ |
 | **4a: Multi-user + deploy** | ✅ | UUID multi-user, Railway/Vercel deploy prep, 395 tests |
-| **4b: Guided Session + Beta prep** | ✅ | Guided session mode, what's next tab, edit equipment/goal, homewall, grade fixes, B39 persistent volume, GS-01/02, GS-BUG-01/03, UI-28 dirty-state + incremental regen, B50 editor pre-populate |
+| **4b: Guided Session + Beta prep** | ✅ | Guided session mode, what's next tab, edit equipment/goal, homewall, grade fixes, B39 persistent volume, GS-01/02, GS-BUG-01/03, UI-28 dirty-state + incremental regen, B50 editor pre-populate, B51-B54 session UX, complementary sport completion |
 | 3.5: LLM Coach | 🔲 | Claude Sonnet conversational layer |
 | 4: Evolution | 🔲 | Multi-goal, annual report, notifications |
 
