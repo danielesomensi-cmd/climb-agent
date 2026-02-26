@@ -7,6 +7,7 @@
   "duration_minutes": 60,
   "intensity": "low",
   "phase_tags": ["deload"],
+  "required_equipment": ["gym_boulder"],
   "description": "Light climbing session for deload weeks. Focus on movement quality and enjoyment at easy grades. No projecting or limit moves.",
   "modules": [
     {

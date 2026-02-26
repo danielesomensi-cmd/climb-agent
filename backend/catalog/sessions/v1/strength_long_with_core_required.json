@@ -10,6 +10,7 @@
     ],
     "notes": "Primary stimulus is max finger force. Secondary modules must not reduce main-set quality."
   },
+  "required_equipment": ["hangboard"],
   "compatibility": {
     "slot": [
       "long"
