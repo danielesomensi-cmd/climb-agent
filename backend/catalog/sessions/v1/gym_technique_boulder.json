@@ -1,6 +1,8 @@
 {
   "id": "gym_technique_boulder",
+  "name": "Technique — Boulder (Gym)",
   "version": "1.0",
+  "required_equipment": ["gym_boulder"],
   "context": {
     "location": "gym",
     "gym_id": null

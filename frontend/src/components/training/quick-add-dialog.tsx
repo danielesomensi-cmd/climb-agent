@@ -76,7 +76,7 @@ export function QuickAddDialog({
   const [location, setLocation] = useState<string>("gym");
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<
-    Array<{ session_id: string; intensity: string; estimated_load_score: number; reason: string }>
+    Array<{ session_id: string; session_name?: string; intensity: string; estimated_load_score: number; reason: string; required_equipment?: string[] }>
   >([]);
   const [allSessions, setAllSessions] = useState<SessionMeta[] | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -138,12 +138,39 @@ export function QuickAddDialog({
 
   const resolvedLocation = location === "home" ? "home" : "gym";
 
-  // Filter all sessions by location
+  // Filter suggestions by equipment compatibility
+  const filteredSuggestions = (() => {
+    if (location === "home" || location === "gym") return suggestions;
+    const gym = gyms.find((g) => g.name === location);
+    if (!gym?.equipment) return suggestions;
+    return suggestions.filter((s) => {
+      const req = s.required_equipment;
+      if (!req || req.length === 0) return true;
+      return req.every((eq) => gym.equipment.includes(eq));
+    });
+  })();
+
+  // Equipment available at the selected location
+  const selectedGymEquipment: string[] | null = (() => {
+    if (location === "home" || location === "gym") return null; // no specific gym selected
+    const gym = gyms.find((g) => g.name === location);
+    return gym?.equipment ?? null;
+  })();
+
+  // Filter all sessions by location + equipment compatibility
   const filteredAll = allSessions?.filter((s) => {
     const loc = s.location?.toLowerCase() ?? "";
-    if (loc === "any" || loc === "both") return true;
-    if (resolvedLocation === "home") return loc.includes("home");
-    return loc.includes("gym");
+    if (loc !== "any" && loc !== "both") {
+      if (resolvedLocation === "home" && !loc.includes("home")) return false;
+      if (resolvedLocation === "gym" && !loc.includes("gym")) return false;
+    }
+    // Equipment filter: if a specific gym is selected and session has requirements,
+    // check that all required equipment is available at that gym
+    const reqEquip = s.required_equipment;
+    if (reqEquip && reqEquip.length > 0 && selectedGymEquipment) {
+      return reqEquip.every((eq) => selectedGymEquipment.includes(eq));
+    }
+    return true;
   });
 
   return (
@@ -231,9 +258,9 @@ export function QuickAddDialog({
               <div className="flex justify-center py-4">
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>
-            ) : suggestions.length > 0 ? (
+            ) : filteredSuggestions.length > 0 ? (
               <div className="space-y-1.5">
-                {suggestions.map((s) => (
+                {filteredSuggestions.map((s) => (
                   <button
                     key={s.session_id}
                     type="button"
@@ -246,7 +273,7 @@ export function QuickAddDialog({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">
-                        {s.session_id.replace(/_/g, " ")}
+                        {s.session_name || s.session_id.replace(/_/g, " ")}
                       </span>
                       <Badge
                         variant="outline"

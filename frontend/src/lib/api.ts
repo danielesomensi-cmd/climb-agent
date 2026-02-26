@@ -138,9 +138,11 @@ export const getSuggestedSessions = (targetDate: string, location: string) =>
   request<{
     suggestions: Array<{
       session_id: string;
+      session_name?: string;
       intensity: string;
       estimated_load_score: number;
       reason: string;
+      required_equipment?: string[];
     }>;
   }>(`/api/replanner/suggest-sessions?target_date=${targetDate}&location=${location}`);
 

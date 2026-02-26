@@ -18,6 +18,7 @@
       "climbing"
     ]
   },
+  "required_equipment": ["hangboard"],
   "context": {
     "location": "home"
   },

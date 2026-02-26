@@ -1,6 +1,8 @@
 {
   "id": "blocx_power_endurance",
+  "name": "Power Endurance (Blocx)",
   "version": "1.0",
+  "required_equipment": ["gym_routes"],
   "context": {
     "location": "gym",
     "gym_id": "blocx"

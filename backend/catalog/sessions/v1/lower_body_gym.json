@@ -11,6 +11,7 @@
     "slot": ["long", "short"],
     "sports": ["climbing"]
   },
+  "required_equipment": ["dumbbell"],
   "context": {
     "location": "gym"
   },

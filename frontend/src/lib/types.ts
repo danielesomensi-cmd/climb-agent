@@ -80,6 +80,7 @@ export interface SessionMeta {
   type: string;
   location: string;
   tags: Record<string, boolean>;
+  required_equipment?: string[];
 }
 
 export interface ResolvedSession {

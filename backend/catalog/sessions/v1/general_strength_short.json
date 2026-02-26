@@ -1,5 +1,6 @@
 {
   "id": "general_strength_short",
+  "name": "General Strength (Short)",
   "version": "1.0",
   "context": {
     "location": "home"

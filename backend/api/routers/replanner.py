@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from copy import deepcopy
 from typing import Optional
@@ -18,6 +19,21 @@ router = APIRouter(prefix="/api/replanner", tags=["replanner"])
 SESSIONS_DIR = "backend/catalog/sessions/v1"
 TEMPLATES_DIR = "backend/catalog/templates/v1"
 EXERCISES_PATH = "backend/catalog/exercises/v1/exercises.json"
+
+
+def _session_display_name(session_id: str) -> str:
+    """Return the human-readable name for a session, reading from its JSON file."""
+    path = REPO_ROOT / SESSIONS_DIR / f"{session_id}.json"
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            name = data.get("session_name") or data.get("name")
+            if name:
+                return name
+        except Exception:
+            pass
+    # Fallback: format session_id as title
+    return session_id.replace("_", " ").title()
 
 
 def _auto_resolve(week_plan: dict, state: dict) -> None:
@@ -119,6 +135,19 @@ def get_suggestions(target_date: str, location: str = "gym", user_id: Optional[s
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Suggestion failed: {e}")
+
+    # Enrich suggestions with human-readable names and equipment info
+    for s in suggestions:
+        s["session_name"] = _session_display_name(s["session_id"])
+        path = REPO_ROOT / SESSIONS_DIR / f"{s['session_id']}.json"
+        if path.exists():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                s["required_equipment"] = data.get("required_equipment", [])
+            except Exception:
+                s["required_equipment"] = []
+        else:
+            s["required_equipment"] = []
 
     return {"suggestions": suggestions}
 

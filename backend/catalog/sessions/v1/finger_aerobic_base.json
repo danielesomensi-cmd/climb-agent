@@ -1,6 +1,8 @@
 {
   "id": "finger_aerobic_base",
+  "name": "Finger Aerobic Base (Home)",
   "version": "1.0",
+  "required_equipment": ["hangboard"],
   "context": {
     "location": "home"
   },

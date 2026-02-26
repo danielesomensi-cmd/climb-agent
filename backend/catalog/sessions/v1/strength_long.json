@@ -16,6 +16,7 @@
     "slot": ["long"],
     "sports": ["climbing"]
   },
+  "required_equipment": ["hangboard"],
   "context": {
     "location": "gym"
   },

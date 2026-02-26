@@ -233,7 +233,16 @@ export default function WeekPage() {
                 <Badge variant="secondary">{phaseLabel}</Badge>
               )}
               {weekPlan?.weekly_load_summary?.total_load != null && (
-                <Badge variant="outline">Load: {weekPlan.weekly_load_summary.total_load}</Badge>
+                <Badge variant="outline">
+                  Load: {weekPlan.weekly_load_summary.total_load}
+                  {" · Done: "}
+                  {days.reduce((sum, d) =>
+                    sum + d.sessions
+                      .filter((s) => s.status === "done")
+                      .reduce((acc, s) => acc + (s.estimated_load_score ?? 0), 0),
+                    0,
+                  )}
+                </Badge>
               )}
             </div>
             <Button

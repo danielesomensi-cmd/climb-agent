@@ -1,5 +1,6 @@
 {
   "id": "deload_recovery",
+  "name": "Deload Recovery (Home)",
   "version": "1.0",
   "context": {
     "location": "home"

@@ -15,6 +15,7 @@
     "slot": ["long"],
     "sports": ["climbing"]
   },
+  "required_equipment": ["gym_boulder"],
   "context": {
     "location": "gym"
   },

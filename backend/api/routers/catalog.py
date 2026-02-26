@@ -36,5 +36,6 @@ def list_sessions():
             "type": data.get("session_type") or data.get("type") or "unknown",
             "location": data.get("location") or (data.get("context") or {}).get("location") or "any",
             "tags": data.get("tags", {}),
+            "required_equipment": data.get("required_equipment", []),
         })
     return {"sessions": sessions, "count": len(sessions)}

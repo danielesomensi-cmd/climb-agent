@@ -1,6 +1,8 @@
 {
   "id": "finger_endurance_short",
+  "name": "Finger Endurance (Short)",
   "version": "1.0",
+  "required_equipment": ["hangboard"],
   "context": {
     "location": "home"
   },
