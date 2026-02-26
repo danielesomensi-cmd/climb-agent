@@ -325,6 +325,23 @@ def apply_day_add(
     return (updated, warnings)
 
 
+def _recompute_day_status(day: Dict[str, Any]) -> None:
+    """Derive day-level status from its sessions' statuses."""
+    sessions = day.get("sessions") or []
+    if not sessions:
+        day.pop("status", None)
+        return
+    statuses = [s.get("status") for s in sessions]
+    if all(st == "done" for st in statuses):
+        day["status"] = "done"
+    elif all(st == "skipped" for st in statuses):
+        day["status"] = "skipped"
+    elif all(st in ("done", "skipped") for st in statuses):
+        day["status"] = "done"
+    else:
+        day.pop("status", None)
+
+
 def _is_preservable(session: Dict[str, Any]) -> bool:
     """Return True if *session* should survive a plan regeneration."""
     if session.get("status") in ("done", "skipped"):
@@ -393,6 +410,10 @@ def merge_prev_week_sessions(
                 s.get("session_id", ""),
             )
         )
+
+    # Recompute day-level status from merged sessions
+    for day in (result.get("weeks") or [{}])[0].get("days", []):
+        _recompute_day_status(day)
 
     result["plan_revision"] = int(result.get("plan_revision") or 1) + 1
     return result
