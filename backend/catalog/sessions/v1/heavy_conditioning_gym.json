@@ -1,6 +1,6 @@
 {
   "id": "heavy_conditioning_gym",
-  "name": "Heavy Complementary Strength (Gym)",
+  "name": "Heavy Conditioning Gym",
   "version": "1.0",
   "intent": {
     "primary_goal": "strength_general",
