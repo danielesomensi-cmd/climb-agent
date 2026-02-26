@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-26 (catalog audit fixes: names, cooldown gaps, core, antagonist, pulling session; 145 esercizi, 37 sessioni, 20 template, 502 test)
+> Last updated: 2026-02-26 (B56-B61 beta feedback; 145 esercizi, 37 sessioni, 20 template, 506 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -513,6 +513,12 @@ Tabella unica con TUTTI gli item tracciati.
 | B54 | Heavy Conditioning Gym: add push/triceps/core blocks + audit report | ✅ DONE | 4b post | §2.3 |
 | NEW-F13 | Complementary sport completion with feedback-based load (easy=10, ok=20, hard=30) | ✅ DONE | 4b post | §10 |
 | B55 | Catalog audit fixes: names, cooldown gaps, core, antagonist, pulling_strength_gym | ✅ DONE | 4b post | §10 |
+| B56 | Heavy Conditioning Gym troppo facile: aggiungere dumbbell bench press (petto, 3×8), bicep curl (3×10), overhead press o lateral raise (3×10). Sessione deve coprire tutti i pattern: push/pull/hinge/core/curl | 🔲 OPEN | catalog | §2.3 |
+| B57 | Active Finger Curls: "Rep rest: 10s" confuso in UI — il timer non gestisce inter-rep rest correttamente. Richiede pattern speciale: timer per singola rep + pausa 10s prima della prossima rep mentre si mantiene il carico. Doppio fix: (1) descrizione esercizio più chiara, (2) UI timer per esercizi con inter-rep rest | 🔲 OPEN | catalog+UI | §7 |
+| B58 | Test Sessions (hangboard) e sessioni climbing appaiono in Work gym — filtro equipment non funziona correttamente. Fix tentato (required_equipment su sessioni climbing) ma problema persiste ancora dopo il fix. Richede investigazione più approfondita: verificare che suggest_sessions() backend filtri per equipment E che il frontend filtri correttamente nella dialog "Add session". | 🔲 OPEN (fix tentato, ancora rotto) | engine+UI | §4 |
+| B59 | "Get Ready" countdown tra le serie: rimuoverlo. Mostrare "Get Ready" solo all'inizio della sessione (primo esercizio). Tra le serie: direttamente il timer REST senza interruzione. | 🔲 OPEN | UI | §7 |
+| B60 | Bug: suoni sessione non funzionavano durante Heavy Conditioning Gym del 26/02. Investigare causa (Web Audio API, permessi iOS, stato app in background). | 🔲 OPEN | bug | §7 |
+| B61 | Feature: voice cues durante sessione — "Rest" quando inizia il rest, "Go" / "Start" quando deve partire il prossimo set. Opzionale (toggle in Settings). Implementare con Web Speech API. | 🔲 OPEN | UI | §7 |
 
 ---
 
