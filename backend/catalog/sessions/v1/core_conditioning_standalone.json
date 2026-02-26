@@ -122,6 +122,12 @@
           }
         }
       }
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
     }
   ]
 }

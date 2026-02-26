@@ -149,5 +149,42 @@ class TestResolveAllRealSessions(unittest.TestCase):
             self.assertEqual(ids_a, ids_b, f"{sid}: non-deterministic resolution")
 
 
+class TestPullingStrengthGym(unittest.TestCase):
+    """Specific tests for the new pulling_strength_gym session."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.base_us = _load_user_state()
+
+    def _resolve_pulling(self):
+        us = _make_user_state(self.base_us, "gym", "blocx")
+        return _resolve("pulling_strength_gym", us)
+
+    def test_resolves_successfully(self):
+        result = self._resolve_pulling()
+        self.assertEqual(result["resolution_status"], "success")
+
+    def test_contains_weighted_pullup(self):
+        result = self._resolve_pulling()
+        ids = [e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]]
+        self.assertIn("weighted_pullup", ids)
+
+    def test_contains_lock_off_isometric(self):
+        result = self._resolve_pulling()
+        ids = [e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]]
+        self.assertIn("lock_off_isometric", ids)
+
+    def test_has_load_score(self):
+        result = self._resolve_pulling()
+        self.assertGreater(result.get("session_load_score", 0), 0)
+
+    def test_has_antagonist_prehab(self):
+        """Antagonist prehab block must be present (required=true)."""
+        result = self._resolve_pulling()
+        block_ids = [b.get("block_uid", "") for b in result["resolved_session"]["blocks"]]
+        has_prehab = any("antagonist" in bid or "prehab" in bid for bid in block_ids)
+        self.assertTrue(has_prehab, f"No antagonist/prehab block found. Blocks: {block_ids}")
+
+
 if __name__ == "__main__":
     unittest.main()

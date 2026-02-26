@@ -150,8 +150,8 @@ cd frontend && npm run dev    # http://localhost:3000
 ## Catalog status (post Phase 0 expansion)
 
 - **Exercises**: 145 in `backend/catalog/exercises/v1/exercises.json`
-- **Sessions**: 36 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup + easy_climbing_deload + lower_body_gym + heavy_conditioning_gym + route_endurance_gym)
-- **Templates**: 19 in `backend/catalog/templates/v1/` (11 original + 8 new: warmup_climbing/strength/recovery, pulling_strength/endurance, antagonist_prehab, core_standard, cooldown_stretch)
+- **Sessions**: 37 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup + easy_climbing_deload + lower_body_gym + heavy_conditioning_gym + route_endurance_gym + pulling_strength_gym)
+- **Templates**: 20 in `backend/catalog/templates/v1/` (11 original + 9 new: warmup_climbing/strength/recovery, pulling_strength/pulling_strength_compound/endurance, antagonist_prehab, core_standard, cooldown_stretch)
 
 ### Exercise categories covered
 - Finger strength: max hang, repeaters, long duration, min edge, pinch, density, one-arm
@@ -176,7 +176,7 @@ Optional equipment is mentioned in `prescription_defaults.notes` only.
 ## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 497 tests green (post Phase 4b + CAT-01/CAT-02/B49 + UI-28 incremental regen).
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 502 tests green (post Phase 4b + CAT-01/CAT-02/B49 + UI-28 incremental regen + B55 catalog audit fixes).
 
 ### Modules
 

@@ -1,0 +1,50 @@
+{
+  "id": "pulling_strength_compound",
+  "name": "Pulling Strength Compound (Module)",
+  "version": "1.0",
+  "category": "strength",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "low",
+    "cns": "high",
+    "elbows": "medium",
+    "skin": "none"
+  },
+
+  "blocks": [
+    {
+      "block_id": "weighted_pullup_main",
+      "type": "main_set",
+      "exercise_id": "weighted_pullup",
+      "prescription": {
+        "sets": 4,
+        "reps": 4,
+        "rest_between_sets_seconds": 150,
+        "notes": "Heavy weighted pull-ups. Primary pulling stimulus. Full rest between sets."
+      }
+    },
+    {
+      "block_id": "lock_off_hold",
+      "type": "main_set",
+      "exercise_id": "lock_off_isometric",
+      "prescription": {
+        "sets": 3,
+        "reps": 3,
+        "rest_between_sets_seconds": 120,
+        "notes": "Lock-off holds at multiple angles. Builds isometric pulling strength for lock-offs on the wall."
+      }
+    },
+    {
+      "block_id": "typewriter_unilateral",
+      "type": "main_set",
+      "exercise_id": "typewriter_pullup",
+      "prescription": {
+        "sets": 3,
+        "reps": 5,
+        "rest_between_sets_seconds": 120,
+        "notes": "Typewriter pull-ups for unilateral pulling power. Optional if fatigued."
+      }
+    }
+  ]
+}

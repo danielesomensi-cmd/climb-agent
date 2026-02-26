@@ -1,6 +1,6 @@
 {
   "id": "blocx_technique_boulder",
-  "name": "Technique — Boulder (Blocx)",
+  "name": "Technique — Boulder (Climbing Gym)",
   "version": "1.0",
   "required_equipment": ["gym_boulder"],
   "context": {
@@ -17,6 +17,11 @@
       "template_id": "gym_technique_boulder",
       "version": "v1",
       "required": true
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "version": "v1",
+      "required": false
     }
   ]
 }

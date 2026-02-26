@@ -22,6 +22,11 @@
       "template_id": "core_short",
       "version": "v1",
       "required": false
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "version": "v1",
+      "required": false
     }
   ]
 }

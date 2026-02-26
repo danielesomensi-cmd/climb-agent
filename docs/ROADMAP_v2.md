@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-26 (B51-B54 session UX fixes + complementary sport completion; 145 esercizi, 36 sessioni, 497 test)
+> Last updated: 2026-02-26 (catalog audit fixes: names, cooldown gaps, core, antagonist, pulling session; 145 esercizi, 37 sessioni, 20 template, 502 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -512,6 +512,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B53 | Actual load display in week header (Done: X alongside planned Load) | ✅ DONE | 4b post | §10 |
 | B54 | Heavy Conditioning Gym: add push/triceps/core blocks + audit report | ✅ DONE | 4b post | §2.3 |
 | NEW-F13 | Complementary sport completion with feedback-based load (easy=10, ok=20, hard=30) | ✅ DONE | 4b post | §10 |
+| B55 | Catalog audit fixes: names, cooldown gaps, core, antagonist, pulling_strength_gym | ✅ DONE | 4b post | §10 |
 
 ---
 
@@ -679,6 +680,16 @@ Implementato 2026-02-25 in due commit. 472 test verdi (25 nuovi).
 - **B54 Heavy Conditioning Gym incompleta**: Sessione aveva solo compound pull e carry, mancavano push/triceps/core. Fix: `compound_push` reso required, aggiunti blocchi `triceps_dip` (dip 3×10) e `core_compression` (hanging_leg_raise 3×10), `core_standard` template reso required.
 - **B54b Session catalog audit**: Analisi testuale di tutti i 36 file sessione. Identificati 14 file con gap, 5 pattern ricorrenti (nomi mancanti, equipment mancanti, blocchi troppo pochi).
 - **Complementary sport completion**: Nuovo evento `complete_other_activity` con feedback (easy/ok/hard) → load 10/20/30 punti. Evento `undo_other_activity` per annullare. UI: badge completamento, feedback picker inline, undo button. DayCard integrata in Today + Week view. 6 nuovi test → 497 totali.
+- **B55 Catalog audit fixes** (post-audit):
+  - GAP-0: Rimosso "Blocx" dai nomi sessioni → "(Climbing Gym)"
+  - GAP-1: Aggiunto cooldown_stretch a 8 sessioni gym/blocx mancanti
+  - GAP-2: Aggiunto core_short + cooldown_stretch a finger_strength_home e finger_maintenance_home
+  - GAP-3: antagonist_prehab alzato a priority 65, required in strength_long e power_contact_gym
+  - GAP-4: Verificata struttura warmup+main+cooldown su tutte le sessioni v1
+  - GAP-5: Nuova sessione pulling_strength_gym (template pulling_strength_compound con weighted_pullup 4×4, lock_off_isometric 3×3, typewriter_pullup 3×5 + antagonist_prehab + cooldown_stretch)
+  - GAP-5b: Aggiunto cooldown_stretch + antagonist_prehab a strength_pull_short e strength_push_short
+  - Nuovo template: pulling_strength_compound (3 blocchi explicit exercise_id)
+  - 5 nuovi test per pulling_strength_gym → 502 totali
 
 ### Phase 4c — Produzione
 

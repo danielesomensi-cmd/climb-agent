@@ -53,8 +53,8 @@
     {
       "block_id": "finger_extensor_prehab",
       "required": false,
-      "priority": 50,
-      "module_role": "cooldown",
+      "priority": 55,
+      "module_role": "secondary",
       "notes": "Finger extensor training + forearm stretches.",
       "selection": {
         "primary": {
@@ -65,6 +65,18 @@
           }
         }
       }
+    },
+    {
+      "template_id": "core_short",
+      "required": false,
+      "priority": 50,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
     }
   ]
 }

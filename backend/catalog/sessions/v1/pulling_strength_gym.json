@@ -1,0 +1,51 @@
+{
+  "id": "pulling_strength_gym",
+  "name": "Pulling Strength (Gym)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "pulling_strength",
+    "secondary_goals": [
+      "core_tension",
+      "joint_health"
+    ],
+    "notes": "Pulling strength focus for climbing. Heavy compound pulls (weighted pullup), lock-offs for isometric strength, typewriter pullups for unilateral power. Antagonist prehab and cooldown for balance."
+  },
+  "compatibility": {
+    "slot": ["long"],
+    "sports": ["climbing"]
+  },
+  "required_equipment": ["pullup_bar"],
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 70,
+    "hard_cap_min": 90
+  },
+  "modules": [
+    {
+      "template_id": "warmup_strength",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "template_id": "pulling_strength_compound",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary"
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": true,
+      "priority": 65,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ]
+}

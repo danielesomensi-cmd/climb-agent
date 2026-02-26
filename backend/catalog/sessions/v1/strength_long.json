@@ -78,8 +78,8 @@
     },
     {
       "template_id": "antagonist_prehab",
-      "required": false,
-      "priority": 50,
+      "required": true,
+      "priority": 65,
       "module_role": "secondary"
     },
     {
