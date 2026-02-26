@@ -289,6 +289,26 @@ function TodayContent() {
     }
   }
 
+  /** Remove a session from the day plan */
+  async function handleRemoveSession(sessionId: string) {
+    if (!weekPlan) return;
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "remove_session",
+            date: targetDate,
+            session_ref: sessionId,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to remove session");
+    }
+  }
+
   /** Submit session feedback */
   async function handleFeedbackSubmit(feedback: Record<string, string>) {
     if (!feedbackSessionId) return;
@@ -405,6 +425,7 @@ function TodayContent() {
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}
             onUndo={handleUndo}
+            onRemoveSession={handleRemoveSession}
             onCompleteOtherActivity={handleCompleteOtherActivity}
             onUndoOtherActivity={handleUndoOtherActivity}
           />

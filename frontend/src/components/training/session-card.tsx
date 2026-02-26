@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ interface SessionCardProps {
   onMarkSkipped?: () => void;
   onUndo?: () => void;
   onMove?: () => void;
+  onRemove?: () => void;
 }
 
 /** Format session_id into a readable string: replace _ with spaces, capitalize */
@@ -127,8 +128,10 @@ export function SessionCard({
   onMarkSkipped,
   onUndo,
   onMove,
+  onRemove,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const router = useRouter();
 
   const isHard = session.tags?.hard === true;
@@ -311,6 +314,50 @@ export function SessionCard({
                   Move
                 </Button>
               )}
+              {onRemove && !confirmRemove && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-500 border-red-300 hover:bg-red-50 dark:hover:bg-red-950"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setConfirmRemove(true);
+                  }}
+                >
+                  <Trash2 className="size-3.5 mr-1" />
+                  Remove
+                </Button>
+              )}
+            </div>
+          )}
+
+          {/* Remove confirmation */}
+          {confirmRemove && (
+            <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 dark:bg-red-950/30 p-2">
+              <span className="text-xs text-red-600 dark:text-red-400">Remove this session?</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs text-muted-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmRemove(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                className="text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConfirmRemove(false);
+                  onRemove?.();
+                }}
+              >
+                Remove
+              </Button>
             </div>
           )}
 

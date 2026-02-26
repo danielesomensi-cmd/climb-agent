@@ -633,3 +633,82 @@ def test_complementary_load_constants():
     assert COMPLEMENTARY_LOAD_OK == 20
     assert COMPLEMENTARY_LOAD_HARD == 30
     assert COMPLEMENTARY_LOAD_MAP == {"easy": 10, "ok": 20, "hard": 30}
+
+
+# ---------- remove_session event tests ----------
+
+
+def test_remove_session_basic():
+    """Removing a planned session leaves the day with fewer sessions."""
+    plan = _plan_snapshot()
+    # Find a day with at least one session
+    day = next(d for d in plan["weeks"][0]["days"] if d.get("sessions"))
+    target_date = day["date"]
+    target_session = day["sessions"][0]
+    original_count = len(day["sessions"])
+
+    updated = apply_events(plan, [
+        {"event_type": "remove_session", "date": target_date, "session_ref": target_session["session_id"]},
+    ])
+
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
+    assert len(updated_day["sessions"]) == original_count - 1
+    assert all(s["session_id"] != target_session["session_id"] for s in updated_day["sessions"])
+
+
+def test_remove_session_done_raises():
+    """Cannot remove a session that has already been marked done."""
+    plan = _plan_snapshot()
+    day = next(d for d in plan["weeks"][0]["days"] if d.get("sessions"))
+    target_date = day["date"]
+    session = day["sessions"][0]
+
+    # First mark it done
+    plan = apply_events(plan, [
+        {"event_type": "mark_done", "date": target_date, "session_ref": session["session_id"]},
+    ])
+
+    with pytest.raises(ValueError, match="Cannot remove a session"):
+        apply_events(plan, [
+            {"event_type": "remove_session", "date": target_date, "session_ref": session["session_id"]},
+        ])
+
+
+def test_remove_session_skipped_raises():
+    """Cannot remove a session that has already been marked skipped."""
+    plan = _plan_snapshot()
+    day = next(d for d in plan["weeks"][0]["days"] if d.get("sessions"))
+    target_date = day["date"]
+    session = day["sessions"][0]
+
+    plan = apply_events(plan, [
+        {"event_type": "mark_skipped", "date": target_date, "session_ref": session["session_id"]},
+    ])
+
+    # The skipped session is replaced with regeneration_easy (status=skipped)
+    with pytest.raises(ValueError, match="Cannot remove a session"):
+        apply_events(plan, [
+            {"event_type": "remove_session", "date": target_date, "session_ref": "regeneration_easy"},
+        ])
+
+
+def test_remove_session_last_on_day():
+    """Removing the only session on a day leaves an empty sessions list."""
+    plan = _plan_snapshot()
+    # Find a day with exactly one session
+    day = next((d for d in plan["weeks"][0]["days"] if len(d.get("sessions", [])) == 1), None)
+    if day is None:
+        # If no single-session day, create one by removing extras
+        day = next(d for d in plan["weeks"][0]["days"] if d.get("sessions"))
+        while len(day["sessions"]) > 1:
+            day["sessions"].pop()
+    target_date = day["date"]
+    session = day["sessions"][0]
+
+    updated = apply_events(plan, [
+        {"event_type": "remove_session", "date": target_date, "session_ref": session["session_id"]},
+    ])
+
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
+    assert len(updated_day["sessions"]) == 0
+    assert "status" not in updated_day

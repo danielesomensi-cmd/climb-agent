@@ -24,6 +24,7 @@ interface DayCardProps {
   onReplan?: (date: string) => void;
   onQuickAdd?: (date: string) => void;
   onMoveSession?: (date: string, slot: string, sessionId: string) => void;
+  onRemoveSession?: (sessionId: string) => void;
   onCompleteOtherActivity?: (date: string, feedback: string) => void;
   onUndoOtherActivity?: (date: string) => void;
   showActions?: boolean;
@@ -87,6 +88,7 @@ export function DayCard({
   onReplan,
   onQuickAdd,
   onMoveSession,
+  onRemoveSession,
   onCompleteOtherActivity,
   onUndoOtherActivity,
   showActions = false,
@@ -225,6 +227,11 @@ export function DayCard({
               onMove={
                 onMoveSession && session.status !== "done" && session.status !== "skipped"
                   ? () => onMoveSession(day.date, session.slot, session.session_id)
+                  : undefined
+              }
+              onRemove={
+                onRemoveSession && session.status !== "done" && session.status !== "skipped"
+                  ? () => onRemoveSession(session.session_id)
                   : undefined
               }
             />

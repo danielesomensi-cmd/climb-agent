@@ -552,6 +552,23 @@ def apply_events(
                 fill_kind = "accessory" if any((s.get("tags") or {}).get("hard") for s in from_day.get("sessions") or []) else "recovery"
                 from_day.setdefault("sessions", []).append(_build_fill_session(updated, from_day, event["from_slot"], kind=fill_kind))
 
+        elif event_type == "remove_session":
+            day = _find_day(updated, event["date"])
+            session_ref = event.get("session_ref")
+            slot = event.get("slot")
+            # Block removal of done/skipped sessions
+            for s in day.get("sessions") or []:
+                if _session_matches(s, session_ref=session_ref, slot=slot):
+                    if s.get("status") in ("done", "skipped"):
+                        raise ValueError(
+                            f"Cannot remove a session with status '{s['status']}'"
+                        )
+                    break
+            _extract_session(day, session_ref=session_ref, slot=slot)
+            # If no sessions left, clear day-level status
+            if not day.get("sessions"):
+                day.pop("status", None)
+
         elif event_type == "mark_skipped":
             day = _find_day(updated, event["date"])
             removed = _extract_session(day, session_ref=event.get("session_ref"), slot=event.get("slot"))
