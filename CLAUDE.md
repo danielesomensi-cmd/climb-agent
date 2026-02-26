@@ -176,7 +176,7 @@ Optional equipment is mentioned in `prescription_defaults.notes` only.
 ## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 502 tests green (post Phase 4b + CAT-01/CAT-02/B49 + UI-28 incremental regen + B55 catalog audit fixes).
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 506 tests green (post Phase 4b + CAT-01/CAT-02/B49 + UI-28 incremental regen + B55 catalog audit fixes + equipment filter + remove session).
 
 ### Modules
 
