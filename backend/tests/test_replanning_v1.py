@@ -5,7 +5,15 @@ from datetime import datetime, timedelta
 import pytest
 
 from backend.engine.planner_v1 import generate_week_plan
-from backend.engine.replanner_v1 import INTENT_TO_SESSION, apply_day_override, apply_events
+from backend.engine.replanner_v1 import (
+    COMPLEMENTARY_LOAD_EASY,
+    COMPLEMENTARY_LOAD_HARD,
+    COMPLEMENTARY_LOAD_MAP,
+    COMPLEMENTARY_LOAD_OK,
+    INTENT_TO_SESSION,
+    apply_day_override,
+    apply_events,
+)
 from backend.engine.planner_v2 import _SESSION_META, generate_phase_week
 from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _build_session_pool, _adjust_domain_weights
 
@@ -530,3 +538,98 @@ def test_finger_compensation_respects_48h_gap():
     dates = sorted(datetime.strptime(d["date"], "%Y-%m-%d").date() for d in comp_days)
     for prev, cur in zip(dates, dates[1:]):
         assert (cur - prev).days > 1, f"Finger sessions too close: {prev} and {cur}"
+
+
+# ---------- Complementary sport completion ----------
+
+
+def _plan_with_other_activity():
+    """Return a plan with an other_activity day (Sunday)."""
+    plan = _plan_snapshot()
+    # Mark Sunday as other_activity
+    sun = next(d for d in plan["weeks"][0]["days"] if d["weekday"] == "sun")
+    sun["other_activity"] = True
+    sun["other_activity_name"] = "Circus"
+    sun["sessions"] = []
+    return plan
+
+
+def test_complete_other_activity_easy():
+    """complete_other_activity with 'easy' feedback sets load=10."""
+    plan = _plan_with_other_activity()
+    sun_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "sun")
+
+    updated = apply_events(plan, [
+        {"event_type": "complete_other_activity", "date": sun_date, "feedback": "easy"},
+    ])
+
+    sun = next(d for d in updated["weeks"][0]["days"] if d["date"] == sun_date)
+    assert sun["other_activity_status"] == "completed"
+    assert sun["other_activity_feedback"] == "easy"
+    assert sun["other_activity_load"] == COMPLEMENTARY_LOAD_EASY
+    assert sun["status"] == "done"
+
+
+def test_complete_other_activity_ok():
+    """complete_other_activity with 'ok' feedback sets load=20."""
+    plan = _plan_with_other_activity()
+    sun_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "sun")
+
+    updated = apply_events(plan, [
+        {"event_type": "complete_other_activity", "date": sun_date, "feedback": "ok"},
+    ])
+
+    sun = next(d for d in updated["weeks"][0]["days"] if d["date"] == sun_date)
+    assert sun["other_activity_load"] == COMPLEMENTARY_LOAD_OK
+
+
+def test_complete_other_activity_hard():
+    """complete_other_activity with 'hard' feedback sets load=30."""
+    plan = _plan_with_other_activity()
+    sun_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "sun")
+
+    updated = apply_events(plan, [
+        {"event_type": "complete_other_activity", "date": sun_date, "feedback": "hard"},
+    ])
+
+    sun = next(d for d in updated["weeks"][0]["days"] if d["date"] == sun_date)
+    assert sun["other_activity_load"] == COMPLEMENTARY_LOAD_HARD
+
+
+def test_undo_other_activity():
+    """undo_other_activity removes completion data."""
+    plan = _plan_with_other_activity()
+    sun_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "sun")
+
+    # Complete then undo
+    completed = apply_events(plan, [
+        {"event_type": "complete_other_activity", "date": sun_date, "feedback": "ok"},
+    ])
+    undone = apply_events(completed, [
+        {"event_type": "undo_other_activity", "date": sun_date},
+    ])
+
+    sun = next(d for d in undone["weeks"][0]["days"] if d["date"] == sun_date)
+    assert "other_activity_status" not in sun
+    assert "other_activity_feedback" not in sun
+    assert "other_activity_load" not in sun
+    assert "status" not in sun
+
+
+def test_complete_other_activity_on_non_activity_day_raises():
+    """complete_other_activity on a regular day should raise ValueError."""
+    plan = _plan_snapshot()
+    mon_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "mon")
+
+    with pytest.raises(ValueError, match="not an other-activity day"):
+        apply_events(plan, [
+            {"event_type": "complete_other_activity", "date": mon_date, "feedback": "ok"},
+        ])
+
+
+def test_complementary_load_constants():
+    """Verify load constants are correctly defined."""
+    assert COMPLEMENTARY_LOAD_EASY == 10
+    assert COMPLEMENTARY_LOAD_OK == 20
+    assert COMPLEMENTARY_LOAD_HARD == 30
+    assert COMPLEMENTARY_LOAD_MAP == {"easy": 10, "ok": 20, "hard": 30}

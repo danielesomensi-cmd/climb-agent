@@ -52,6 +52,9 @@ export interface DayPlan {
   pretrip_deload?: boolean;
   other_activity?: boolean;
   other_activity_name?: string;
+  other_activity_status?: "completed";
+  other_activity_feedback?: "easy" | "ok" | "hard";
+  other_activity_load?: number;
   prev_other_activity_reduce?: boolean;
 }
 

@@ -202,6 +202,36 @@ export default function WeekPage() {
     }
   }
 
+  /** Complete other activity with feedback */
+  async function handleCompleteOtherActivity(date: string, feedback: string) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "complete_other_activity", date, feedback }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to complete activity");
+    }
+  }
+
+  /** Undo other activity completion */
+  async function handleUndoOtherActivity(date: string) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "undo_other_activity", date }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to undo");
+    }
+  }
+
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
   const phaseLabel = phaseId
@@ -237,9 +267,11 @@ export default function WeekPage() {
                   Load: {weekPlan.weekly_load_summary.total_load}
                   {" · Done: "}
                   {days.reduce((sum, d) =>
-                    sum + d.sessions
-                      .filter((s) => s.status === "done")
-                      .reduce((acc, s) => acc + (s.estimated_load_score ?? 0), 0),
+                    sum
+                    + d.sessions
+                        .filter((s) => s.status === "done")
+                        .reduce((acc, s) => acc + (s.estimated_load_score ?? 0), 0)
+                    + (d.other_activity_load ?? 0),
                     0,
                   )}
                 </Badge>
@@ -308,6 +340,8 @@ export default function WeekPage() {
                   onMoveSession={(date, slot, sessionId) =>
                     setMoveSession({ date, slot, sessionId })
                   }
+                  onCompleteOtherActivity={handleCompleteOtherActivity}
+                  onUndoOtherActivity={handleUndoOtherActivity}
                 />
               </div>
             ))}

@@ -25,6 +25,17 @@ INTENT_TO_SESSION = {
 }
 SLOTS = ("morning", "lunch", "evening")
 
+# Load points for complementary sport feedback
+COMPLEMENTARY_LOAD_EASY = 10
+COMPLEMENTARY_LOAD_OK = 20
+COMPLEMENTARY_LOAD_HARD = 30
+
+COMPLEMENTARY_LOAD_MAP = {
+    "easy": COMPLEMENTARY_LOAD_EASY,
+    "ok": COMPLEMENTARY_LOAD_OK,
+    "hard": COMPLEMENTARY_LOAD_HARD,
+}
+
 
 def _parse_date(value: str):
     return datetime.strptime(value, "%Y-%m-%d").date()
@@ -568,6 +579,24 @@ def apply_events(
             # If any session is no longer done/skipped, clear day-level status
             if not all(s.get("status") in ("done", "skipped") for s in day.get("sessions") or []):
                 day.pop("status", None)
+
+        elif event_type == "complete_other_activity":
+            day = _find_day(updated, event["date"])
+            if not day.get("other_activity"):
+                raise ValueError(f"Date {event['date']} is not an other-activity day")
+            feedback = event.get("feedback", "ok")
+            load = COMPLEMENTARY_LOAD_MAP.get(feedback, COMPLEMENTARY_LOAD_OK)
+            day["other_activity_status"] = "completed"
+            day["other_activity_feedback"] = feedback
+            day["other_activity_load"] = load
+            day["status"] = "done"
+
+        elif event_type == "undo_other_activity":
+            day = _find_day(updated, event["date"])
+            day.pop("other_activity_status", None)
+            day.pop("other_activity_feedback", None)
+            day.pop("other_activity_load", None)
+            day.pop("status", None)
 
         elif event_type == "set_availability":
             if availability is not None and event.get("availability"):

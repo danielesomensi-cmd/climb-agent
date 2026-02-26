@@ -250,6 +250,45 @@ function TodayContent() {
     }
   }
 
+  /** Complete an other-activity (complementary sport) with feedback */
+  async function handleCompleteOtherActivity(date: string, feedback: string) {
+    if (!weekPlan) return;
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "complete_other_activity",
+            date,
+            feedback,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to complete activity");
+    }
+  }
+
+  /** Undo other-activity completion */
+  async function handleUndoOtherActivity(date: string) {
+    if (!weekPlan) return;
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "undo_other_activity",
+            date,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to undo");
+    }
+  }
+
   /** Submit session feedback */
   async function handleFeedbackSubmit(feedback: Record<string, string>) {
     if (!feedbackSessionId) return;
@@ -366,6 +405,8 @@ function TodayContent() {
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}
             onUndo={handleUndo}
+            onCompleteOtherActivity={handleCompleteOtherActivity}
+            onUndoOtherActivity={handleUndoOtherActivity}
           />
         )}
 

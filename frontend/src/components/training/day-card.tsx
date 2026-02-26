@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Eye, Mountain, Plus, RefreshCw } from "lucide-react";
+import { Eye, Mountain, Plus, RefreshCw, Check, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,8 +24,16 @@ interface DayCardProps {
   onReplan?: (date: string) => void;
   onQuickAdd?: (date: string) => void;
   onMoveSession?: (date: string, slot: string, sessionId: string) => void;
+  onCompleteOtherActivity?: (date: string, feedback: string) => void;
+  onUndoOtherActivity?: (date: string) => void;
   showActions?: boolean;
 }
+
+const FEEDBACK_OPTIONS = [
+  { value: "easy", label: "Easy", color: "text-green-400 border-green-500/30 bg-green-500/20" },
+  { value: "ok", label: "OK", color: "text-yellow-400 border-yellow-500/30 bg-yellow-500/20" },
+  { value: "hard", label: "Hard", color: "text-orange-400 border-orange-500/30 bg-orange-500/20" },
+];
 
 /** Map English weekday name to short English abbreviation */
 const WEEKDAY_EN: Record<string, string> = {
@@ -78,8 +87,11 @@ export function DayCard({
   onReplan,
   onQuickAdd,
   onMoveSession,
+  onCompleteOtherActivity,
+  onUndoOtherActivity,
   showActions = false,
 }: DayCardProps) {
+  const [feedbackPicking, setFeedbackPicking] = useState(false);
   const today = isToday(day.date);
   const weekdayLabel =
     WEEKDAY_EN[day.weekday.toLowerCase()] ?? day.weekday;
@@ -115,12 +127,76 @@ export function DayCard({
           </div>
         )}
         {day.other_activity ? (
-          <div className="flex items-center gap-2 rounded-lg border border-dashed border-amber-500/40 p-3 text-sm">
-            <span className="text-amber-500">🏃</span>
-            <span className="font-medium">
-              {day.other_activity_name ?? "Other activity"}
-            </span>
-            <span className="text-xs text-muted-foreground ml-auto">No climbing today</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 rounded-lg border border-dashed border-amber-500/40 p-3 text-sm">
+              <span className="text-amber-500">🏃</span>
+              <span className="font-medium">
+                {day.other_activity_name ?? "Other activity"}
+              </span>
+              <span className="text-xs text-muted-foreground ml-auto">No climbing today</span>
+            </div>
+            {day.other_activity_status === "completed" ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge className="bg-green-600 text-white text-[10px]">Completed</Badge>
+                {day.other_activity_feedback && (
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] ${
+                      day.other_activity_feedback === "easy"
+                        ? "bg-green-500/20 text-green-400 border-green-500/30"
+                        : day.other_activity_feedback === "ok"
+                        ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                        : "bg-orange-500/20 text-orange-400 border-orange-500/30"
+                    }`}
+                  >
+                    {day.other_activity_feedback}
+                  </Badge>
+                )}
+                {day.other_activity_load != null && (
+                  <Badge variant="outline" className="text-[10px]">
+                    Load: {day.other_activity_load}
+                  </Badge>
+                )}
+                {onUndoOtherActivity && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-xs text-muted-foreground ml-auto"
+                    onClick={() => onUndoOtherActivity(day.date)}
+                  >
+                    <Undo2 className="size-3.5 mr-1" />
+                    Undo
+                  </Button>
+                )}
+              </div>
+            ) : feedbackPicking ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted-foreground mr-1">How was it?</span>
+                {FEEDBACK_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${opt.color} hover:opacity-80`}
+                    onClick={() => {
+                      setFeedbackPicking(false);
+                      onCompleteOtherActivity?.(day.date, opt.value);
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            ) : onCompleteOtherActivity ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+                onClick={() => setFeedbackPicking(true)}
+              >
+                <Check className="size-3.5 mr-1" />
+                Complete
+              </Button>
+            ) : null}
           </div>
         ) : day.outdoor_slot ? (
           <div className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
