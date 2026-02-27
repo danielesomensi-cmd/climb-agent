@@ -75,6 +75,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "complementary_conditioning": "available",
         "strength_long": "available",
         "power_endurance_gym": "available",
+        "pulling_strength_gym": "available",
         "route_endurance_gym": "available",
     },
     "strength_power": {
