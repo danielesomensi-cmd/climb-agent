@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-27 (B56-B61+B65 beta feedback; 145 esercizi, 37 sessioni, 20 template, 506 test)
+> Last updated: 2026-02-27 (base phase audit: intensity cap, anti-repetition, pool expansion, orphan cleanup; 145 esercizi, 25 sessioni, 20 template, 509 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -515,9 +515,9 @@ Tabella unica con TUTTI gli item tracciati.
 | B55 | Catalog audit fixes: names, cooldown gaps, core, antagonist, pulling_strength_gym | ✅ DONE | 4b post | §10 |
 | B56 | Heavy Conditioning Gym troppo facile: aggiungere dumbbell bench press (petto, 3×8), bicep curl (3×10), overhead press o lateral raise (3×10). Sessione deve coprire tutti i pattern: push/pull/hinge/core/curl | 🔲 OPEN | catalog | §2.3 |
 | B57 | Active Finger Curls: "Rep rest: 10s" confuso in UI — il timer non gestisce inter-rep rest correttamente. Richiede pattern speciale: timer per singola rep + pausa 10s prima della prossima rep mentre si mantiene il carico. Doppio fix: (1) descrizione esercizio più chiara, (2) UI timer per esercizi con inter-rep rest | 🔲 OPEN | catalog+UI | §7 |
-| B58 | Test Sessions (hangboard) e sessioni climbing appaiono in Work gym — filtro equipment non funziona correttamente. Fix tentato (required_equipment su sessioni climbing) ma problema persiste ancora dopo il fix. Richede investigazione più approfondita: verificare che suggest_sessions() backend filtri per equipment E che il frontend filtri correttamente nella dialog "Add session". | 🔲 OPEN (fix tentato, ancora rotto) | engine+UI | §4 |
+| B58 | Test Sessions (hangboard) e sessioni climbing appaiono in Work gym — filtro equipment non funziona correttamente. Fix: aggiunto `required_equipment` a 3 test session JSON (hangboard per max_hang/repeater, pullup_bar per weighted_pullup). | ✅ DONE | engine | §4 |
 | B59 | "Get Ready" countdown tra le serie: rimuoverlo. Mostrare "Get Ready" solo all'inizio della sessione (primo esercizio). Tra le serie: direttamente il timer REST senza interruzione. | 🔲 OPEN | UI | §7 |
-| B60 | Bug: suoni sessione non funzionavano durante Heavy Conditioning Gym del 26/02. Investigare causa (Web Audio API, permessi iOS, stato app in background). | 🔲 OPEN | bug | §7 |
+| B60 | Bug: suoni sessione non funzionavano (Web Audio API, iOS). Fix: `handleStart`/`handleDoneSet` async con `await unlockAudio()`, `beep()` tenta `ctx.resume()` prima di arrendersi, visibility change re-play silent buffer. | ✅ DONE | UI | §7 |
 | B61 | Feature: voice cues durante sessione — "Rest" quando inizia il rest, "Go" / "Start" quando deve partire il prossimo set. Opzionale (toggle in Settings). Implementare con Web Speech API. | 🔲 OPEN | UI | §7 |
 | B65 | Feature: Weekly Report — riepilogo automatico a fine settimana in due fasi: (1) **Report deterministico** (implementabile ora): load actual vs planned, sessioni completate/skippate/aggiunte, compliance %, feedback distribution (quante easy/ok/hard), sport complementari loggati. Dati strutturati, nessun LLM. (2) **Narrative LLM** (Phase 3.5): stessi dati passati come contesto all'LLM coach che genera un testo motivante e actionable — es. "Settimana solida, 4/5 sessioni completate. Due sessioni easy: considera di aumentare il carico". Il report deterministico è prerequisito del report LLM. | 🔲 OPEN (fase 1 fattibile ora, fase 2 in Phase 3.5) | engine+UI+LLM | §7+§3.5 |
 
@@ -697,6 +697,17 @@ Implementato 2026-02-25 in due commit. 472 test verdi (25 nuovi).
   - GAP-5b: Aggiunto cooldown_stretch + antagonist_prehab a strength_pull_short e strength_push_short
   - Nuovo template: pulling_strength_compound (3 blocchi explicit exercise_id)
   - 5 nuovi test per pulling_strength_gym → 502 totali
+
+**Base phase session distribution audit (2026-02-27):**
+- **B58 equipment filter**: Aggiunto `required_equipment` a 3 test session JSON (hangboard, pullup_bar)
+- **B60 audio async**: handleStart/handleDoneSet async con await unlockAudio(), beep() con ctx.resume(), visibility change silent buffer replay
+- **Step 1 — Intensity cap**: finger_strength_home intensity "max"→"high" in `_SESSION_META`, PHASE_INTENSITY_CAP["base"] "medium"→"high" in macrocycle_v1. Pool primario base da 4 a 6 sessioni.
+- **Step 2 — Anti-repetition**: Aggiunto `max_per_week` field in `_SESSION_META` (default 1, endurance_aerobic_gym=2). Tracking `session_count` dict in pass 1 e pass 2 di planner_v2. 3 nuovi test (TestPlannerV2AntiRepetition).
+- **Step 3 — Pool expansion**: Aggiunto `pulling_strength_gym: "available"` a `_SESSION_POOL["base"]`. Pool base: 7 primary + 5 complementary = 12 sessioni.
+- **Step 4 — Orphan cleanup**: 13 sessioni archiviate in `_archive/` (4 blocx_*, 4 gym_*, 3 strength_short, core_conditioning_standalone, strength_long_with_core_required). 5 sessioni registrate in META (heavy_conditioning_gym, lower_body_gym, finger_aerobic_base, deload_recovery, finger_endurance_short). Creato finger_maintenance_gym.json (era in META ma mancava il file). Aggiornato planner_v1 legacy (session IDs rinominati). 25 sessioni attive = 25 entry META, 0% orphan rate.
+- **Step 5 — Location/Equipment audit**: Analisi delle 25 sessioni per location/equipment pattern. Nessuna modifica (solo analisi).
+- **Step 6 — Validazione finale**: 509 test verdi. Generazione settimana per tutte le 5 fasi con 0 violazioni anti-repetition. Letteratura base: ARC ≤3x ✓, Finger ≥1x ✓, Technique ≥1x ✓, Core/Antagonist integrato ✓.
+- 509 test verdi totali.
 
 ### Phase 4c — Produzione
 

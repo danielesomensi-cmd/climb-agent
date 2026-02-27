@@ -18,7 +18,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (497 green)
+# Run all tests (509 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -47,7 +47,7 @@ backend/
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 497 pytest tests with fixtures/
+  tests/             # 509 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 21 pages: 7 main views + 12 onboarding steps + root + onboarding index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
@@ -150,7 +150,7 @@ cd frontend && npm run dev    # http://localhost:3000
 ## Catalog status (post Phase 0 expansion)
 
 - **Exercises**: 145 in `backend/catalog/exercises/v1/exercises.json`
-- **Sessions**: 37 in `backend/catalog/sessions/v1/` (28 original + finger_maintenance_home + core_conditioning_standalone + test_repeater_7_3 + test_max_weighted_pullup + easy_climbing_deload + lower_body_gym + heavy_conditioning_gym + route_endurance_gym + pulling_strength_gym)
+- **Sessions**: 25 in `backend/catalog/sessions/v1/` (13 archived to _archive/). Active: strength_long, power_contact_gym, power_endurance_gym, endurance_aerobic_gym, technique_focus_gym, complementary_conditioning, deload_recovery, finger_strength_home, finger_maintenance_home, finger_maintenance_gym, finger_aerobic_base, finger_endurance_short, prehab_maintenance, flexibility_full, handstand_practice, heavy_conditioning_gym, lower_body_gym, easy_climbing_deload, route_endurance_gym, pulling_strength_gym, test_max_hang_5s, test_repeater_7_3, test_max_weighted_pullup + 2 others
 - **Templates**: 20 in `backend/catalog/templates/v1/` (11 original + 9 new: warmup_climbing/strength/recovery, pulling_strength/pulling_strength_compound/endurance, antagonist_prehab, core_standard, cooldown_stretch)
 
 ### Exercise categories covered
@@ -176,7 +176,7 @@ Optional equipment is mentioned in `prescription_defaults.notes` only.
 ## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 506 tests green (post Phase 4b + CAT-01/CAT-02/B49 + UI-28 incremental regen + B55 catalog audit fixes + equipment filter + remove session).
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 509 tests green (post base phase audit: intensity cap, anti-repetition, pool expansion, orphan cleanup).
 
 ### Modules
 
