@@ -237,7 +237,7 @@ def test_session_requiring_gym_routes_skips_gyms_without_routes():
         s
         for day in plan["weeks"][0]["days"]
         for s in day["sessions"]
-        if s["session_id"] == "gym_power_endurance"
+        if s["session_id"] == "power_endurance_gym"
     ]
     assert sessions
     assert all(s["gym_id"] == "coque" for s in sessions)
@@ -261,6 +261,6 @@ def test_gym_selection_tie_breaks_by_gym_id_on_equal_priority():
         s
         for day in plan["weeks"][0]["days"]
         for s in day["sessions"]
-        if s["session_id"] == "gym_power_bouldering"
+        if s["session_id"] == "power_contact_gym"
     ][0]
     assert boulder["gym_id"] == "alpha"

@@ -536,13 +536,19 @@ def test_heavy_conditioning_gym_resolves():
     assert len(instances) > 0
 
 
-def test_lower_body_gym_not_in_planner_pool():
-    """lower_body_gym must NOT be in the planner's automatic session pool."""
+def test_lower_body_gym_in_meta_but_not_auto_scheduled():
+    """lower_body_gym is in _SESSION_META (for quick-add/resolve) but not in any phase pool."""
     from backend.engine.planner_v2 import _SESSION_META
-    assert "lower_body_gym" not in _SESSION_META
+    from backend.engine.macrocycle_v1 import _SESSION_POOL
+    assert "lower_body_gym" in _SESSION_META
+    for phase, pool in _SESSION_POOL.items():
+        assert "lower_body_gym" not in pool, f"lower_body_gym should not be in {phase} pool"
 
 
-def test_heavy_conditioning_gym_not_in_planner_pool():
-    """heavy_conditioning_gym must NOT be in the planner's automatic session pool."""
+def test_heavy_conditioning_gym_in_meta_but_not_auto_scheduled():
+    """heavy_conditioning_gym is in _SESSION_META (for quick-add/resolve) but not in any phase pool."""
     from backend.engine.planner_v2 import _SESSION_META
-    assert "heavy_conditioning_gym" not in _SESSION_META
+    from backend.engine.macrocycle_v1 import _SESSION_POOL
+    assert "heavy_conditioning_gym" in _SESSION_META
+    for phase, pool in _SESSION_POOL.items():
+        assert "heavy_conditioning_gym" not in pool, f"heavy_conditioning_gym should not be in {phase} pool"

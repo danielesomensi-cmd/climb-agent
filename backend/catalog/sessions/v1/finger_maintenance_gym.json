@@ -1,0 +1,83 @@
+{
+  "id": "finger_maintenance_gym",
+  "name": "Finger Maintenance (Gym — Submaximal Repeaters + Easy Climbing)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "finger_strength_endurance",
+    "secondary_goals": [
+      "finger_strength",
+      "volume_climbing"
+    ],
+    "notes": "Submaximal finger maintenance in gym context. Repeaters at 70-80% of max followed by easy climbing for volume. Medium intensity."
+  },
+  "required_equipment": ["hangboard"],
+  "compatibility": {
+    "slot": [
+      "short",
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 50,
+    "hard_cap_min": 70
+  },
+  "modules": [
+    {
+      "template_id": "warmup_climbing",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "template_id": "finger_strength_endurance",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Submaximal repeaters at 70-80% max total load. Maintenance stimulus."
+    },
+    {
+      "block_id": "easy_climbing_post_finger",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary",
+      "notes": "Easy continuous climbing or traversing post-hangboard for volume.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "domain": ["endurance"],
+            "intensity_max": "low"
+          },
+          "pick": 1
+        }
+      }
+    },
+    {
+      "block_id": "finger_extensor_prehab",
+      "required": false,
+      "priority": 55,
+      "module_role": "secondary",
+      "notes": "Finger extensor training + forearm stretches.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["prehab"],
+            "domain": ["prehab_wrist"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ]
+}

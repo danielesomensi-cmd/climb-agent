@@ -43,7 +43,7 @@ def test_log_update_user_state_counters():
         "plan": {"plan_version": "planner.v1", "start_date": "2026-01-05"},
         "sessions": [
             {"session_id": "strength_long", "intent": "strength", "tags": {"hard": True, "finger": True}},
-            {"session_id": "gym_power_endurance", "intent": "power_endurance", "tags": {"hard": True, "finger": False}},
+            {"session_id": "power_endurance_gym", "intent": "power_endurance", "tags": {"hard": True, "finger": False}},
         ],
     }
 
@@ -74,7 +74,7 @@ def test_resolve_planned_day_fails_for_gym_session_without_gym_id(tmp_path: Path
                         "sessions": [
                             {
                                 "slot": "evening",
-                                "session_id": "gym_power_bouldering",
+                                "session_id": "power_contact_gym",
                                 "location": "gym",
                                 "gym_id": None,
                                 "intent": "power",
@@ -135,7 +135,7 @@ def test_resolve_planned_day_respects_user_state_for_gym_equipment(tmp_path: Pat
                         "sessions": [
                             {
                                 "slot": "evening",
-                                "session_id": "gym_power_bouldering",
+                                "session_id": "power_contact_gym",
                                 "location": "gym",
                                 "gym_id": "blocx",
                                 "intent": "power"

@@ -20,44 +20,44 @@ class SessionSpec:
 
 SESSION_LIBRARY: Dict[str, SessionSpec] = {
     "strength_long": SessionSpec("strength_long", "strength", 1, ("gym", "home"), True, True),
-    "gym_power_bouldering": SessionSpec("gym_power_bouldering", "power", 2, ("gym",), True, False),
-    "gym_power_endurance": SessionSpec("gym_power_endurance", "power_endurance", 2, ("gym",), True, False),
-    "gym_aerobic_endurance": SessionSpec("gym_aerobic_endurance", "aerobic_endurance", 3, ("gym", "home"), False, False),
-    "gym_technique_boulder": SessionSpec("gym_technique_boulder", "technique", 3, ("gym", "outdoor"), False, False),
-    "general_strength_short": SessionSpec("general_strength_short", "accessory", 4, ("home", "gym"), False, False),
+    "power_contact_gym": SessionSpec("power_contact_gym", "power", 2, ("gym",), True, False),
+    "power_endurance_gym": SessionSpec("power_endurance_gym", "power_endurance", 2, ("gym",), True, False),
+    "endurance_aerobic_gym": SessionSpec("endurance_aerobic_gym", "aerobic_endurance", 3, ("gym", "home"), False, False),
+    "technique_focus_gym": SessionSpec("technique_focus_gym", "technique", 3, ("gym", "outdoor"), False, False),
+    "complementary_conditioning": SessionSpec("complementary_conditioning", "accessory", 4, ("home", "gym"), False, False),
     "deload_recovery": SessionSpec("deload_recovery", "recovery", 5, ("home", "gym", "outdoor"), False, False),
     "test_max_hang_5s": SessionSpec("test_max_hang_5s", "strength", 1, ("home", "gym"), True, True),
 }
 
 GYM_CAPABILITY_REQUIREMENTS_ANY: Dict[str, Tuple[str, ...]] = {
-    "gym_power_bouldering": ("gym_boulder",),
-    "gym_power_endurance": ("gym_routes",),
+    "power_contact_gym": ("gym_boulder",),
+    "power_endurance_gym": ("gym_routes",),
 }
 
 MODE_QUEUES: Dict[str, Tuple[str, ...]] = {
     "balanced": (
         "strength_long",
-        "gym_power_bouldering",
-        "gym_power_endurance",
-        "gym_aerobic_endurance",
-        "gym_technique_boulder",
+        "power_contact_gym",
+        "power_endurance_gym",
+        "endurance_aerobic_gym",
+        "technique_focus_gym",
     ),
     "strength": (
         "strength_long",
-        "gym_power_bouldering",
+        "power_contact_gym",
         "strength_long",
-        "gym_technique_boulder",
+        "technique_focus_gym",
     ),
     "endurance": (
         "strength_long",
-        "gym_aerobic_endurance",
-        "gym_power_endurance",
-        "gym_technique_boulder",
+        "endurance_aerobic_gym",
+        "power_endurance_gym",
+        "technique_focus_gym",
     ),
     "maintenance": (
         "strength_long",
-        "gym_technique_boulder",
-        "gym_aerobic_endurance",
+        "technique_focus_gym",
+        "endurance_aerobic_gym",
     ),
 }
 
@@ -357,7 +357,7 @@ def generate_week_plan(
                 last_finger_date = current_date
 
             if candidate.hard and day_availability["lunch"]["available"] and len(sessions) < 3:
-                accessory = SESSION_LIBRARY["general_strength_short"]
+                accessory = SESSION_LIBRARY["complementary_conditioning"]
                 accessory_slot_info = day_availability["lunch"]
                 accessory_location = _pick_location(accessory, accessory_slot_info, locations)
                 if accessory_location and slot != "lunch":

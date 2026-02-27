@@ -280,14 +280,14 @@ class TestEnduranceAerobic(unittest.TestCase):
         self.assertGreaterEqual(len(exs), 3)
 
 
-class TestCoreStandalone(unittest.TestCase):
-    def test_core_standalone_resolves(self):
-        """Resolve core_conditioning_standalone at home: status=success, ≥4 exercises."""
+class TestFingerAerobicBase(unittest.TestCase):
+    def test_finger_aerobic_base_resolves(self):
+        """Resolve finger_aerobic_base at home: status=success, ≥2 exercises."""
         base_us = _load_user_state()
-        result = _resolve("core_conditioning_standalone", _make_user_state(base_us, "home"))
+        result = _resolve("finger_aerobic_base", _make_user_state(base_us, "home"))
         self.assertEqual(result["resolution_status"], "success")
         exs = result["resolved_session"]["exercise_instances"]
-        self.assertGreaterEqual(len(exs), 4, f"Expected ≥4 exercises, got {len(exs)}")
+        self.assertGreaterEqual(len(exs), 2, f"Expected ≥2 exercises, got {len(exs)}")
 
 
 class TestCrossSession(unittest.TestCase):
@@ -343,9 +343,9 @@ class TestCrossSession(unittest.TestCase):
 
     def test_enriched_sessions_deterministic(self):
         """Resolve each of the 5 sessions twice: identical exercise lists."""
-        sessions = GYM_EVENING_SESSIONS + ["core_conditioning_standalone"]
+        sessions = GYM_EVENING_SESSIONS + ["finger_aerobic_base"]
         for sid in sessions:
-            loc = "home" if sid == "core_conditioning_standalone" else "gym"
+            loc = "home" if sid == "finger_aerobic_base" else "gym"
             gym_id = None if loc == "home" else "blocx"
 
             us_a = _make_user_state(self.base_us, loc, gym_id)

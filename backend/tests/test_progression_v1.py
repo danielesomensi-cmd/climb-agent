@@ -40,7 +40,7 @@ def _resolved_day_for_progression() -> dict:
         "date": "2026-01-05",
         "sessions": [
             {
-                "session_id": "gym_power_bouldering",
+                "session_id": "power_contact_gym",
                 "intent": "power",
                 "location": "gym",
                 "gym_id": "blocx",
@@ -280,14 +280,14 @@ def test_gym_limit_bouldering_requires_surface(tmp_path):
         user_state["equipment"]["gyms"][0]["equipment"] = equipment
         out = resolve_session(
             repo_root=repo_root,
-            session_path="backend/catalog/sessions/v1/gym_power_bouldering.json",
+            session_path="backend/catalog/sessions/v1/power_contact_gym.json",
             templates_dir="backend/catalog/templates",
             exercises_path="backend/catalog/exercises/v1/exercises.json",
             out_path="out/tmp/ignore.progression.json",
             user_state_override=user_state,
             write_output=False,
         )
-        day = {"date": "2026-01-05", "sessions": [{"session_id": "gym_power_bouldering", "intent": "power", "location": "gym", "gym_id": "blocx", "tags": {"hard": True}, "exercise_instances": out["resolved_session"]["exercise_instances"]}]}
+        day = {"date": "2026-01-05", "sessions": [{"session_id": "power_contact_gym", "intent": "power", "location": "gym", "gym_id": "blocx", "tags": {"hard": True}, "exercise_instances": out["resolved_session"]["exercise_instances"]}]}
         return inject_targets(day, user_state)
 
     yes = run_with_equipment(["spraywall"])
