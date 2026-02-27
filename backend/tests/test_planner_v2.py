@@ -157,6 +157,44 @@ class TestPlannerV2IntensityCap(unittest.TestCase):
                                  f"Non-low intensity {s['session_id']} in deload")
 
 
+class TestPlannerV2AntiRepetition(unittest.TestCase):
+    """Tests for anti-repetition constraint (max_per_week)."""
+
+    def test_no_session_exceeds_max_per_week(self):
+        """No session should appear more than its max_per_week limit."""
+        plan = generate_phase_week(**_make_kwargs("base",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        from collections import Counter
+        from backend.engine.planner_v2 import _SESSION_META
+        counts = Counter(s["session_id"] for d in plan["weeks"][0]["days"] for s in d["sessions"])
+        for sid, count in counts.items():
+            max_pw = _SESSION_META.get(sid, {}).get("max_per_week", 1)
+            self.assertLessEqual(count, max_pw,
+                f"{sid} appears {count}x but max_per_week={max_pw}")
+
+    def test_endurance_aerobic_allowed_twice(self):
+        """endurance_aerobic_gym should appear up to 2x in base phase."""
+        plan = generate_phase_week(**_make_kwargs("base",
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+        count = sum(1 for d in plan["weeks"][0]["days"] for s in d["sessions"]
+                    if s["session_id"] == "endurance_aerobic_gym")
+        self.assertLessEqual(count, 2, "endurance_aerobic_gym should not exceed 2x")
+        self.assertGreaterEqual(count, 1, "endurance_aerobic_gym should appear at least 1x in base")
+
+    def test_anti_repetition_across_phases(self):
+        """Anti-repetition should work for all phases, not just base."""
+        for phase_id in ("strength_power", "power_endurance", "performance"):
+            plan = generate_phase_week(**_make_kwargs(phase_id,
+                planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 3}))
+            from collections import Counter
+            from backend.engine.planner_v2 import _SESSION_META
+            counts = Counter(s["session_id"] for d in plan["weeks"][0]["days"] for s in d["sessions"])
+            for sid, count in counts.items():
+                max_pw = _SESSION_META.get(sid, {}).get("max_per_week", 1)
+                self.assertLessEqual(count, max_pw,
+                    f"[{phase_id}] {sid} appears {count}x but max_per_week={max_pw}")
+
+
 class TestPlannerV2Deterministic(unittest.TestCase):
     def test_deterministic_output(self):
         kwargs = _make_kwargs("base")

@@ -34,7 +34,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "strength_long": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym", "home")},
     "power_contact_gym": {"hard": True, "finger": False, "intensity": "max", "climbing": True, "location": ("gym",)},
     "power_endurance_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",)},
-    "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",)},
+    "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2},
     "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",)},
     "finger_strength_home": {"hard": True, "finger": True, "intensity": "high", "climbing": True, "location": ("home",)},
     "prehab_maintenance": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
@@ -307,6 +307,7 @@ def generate_phase_week(
     hard_days = 0
     finger_day_offsets: List[int] = []
     hard_day_offsets: List[int] = []
+    session_count: Dict[str, int] = {}  # anti-repetition: session_id → times placed this week
 
     # Determine which days have available slots
     # Track outdoor-only days — they get no sessions from the planner
@@ -411,8 +412,13 @@ def generate_phase_week(
 
             skip = False
 
+            # Anti-repetition: max N times per week (default 1)
+            max_pw = meta.get("max_per_week", 1)
+            if session_count.get(sid, 0) >= max_pw:
+                skip = True
+
             # Other-activity intensity reduction: no hard sessions on reduced day
-            if day_intensity_reduced[offset] and meta["hard"]:
+            if not skip and day_intensity_reduced[offset] and meta["hard"]:
                 skip = True
 
             # Pre-trip deload: no hard/max sessions on pretrip dates
@@ -455,6 +461,7 @@ def generate_phase_week(
                 default_gym_id, gyms or [], "pass1:primary",
             )
             day_sessions[offset].append(entry)
+            session_count[sid] = session_count.get(sid, 0) + 1
             primary_idx += 1
             primary_uses += 1
 
@@ -489,6 +496,14 @@ def generate_phase_week(
             sid = complementary_pool[comp_idx % len(complementary_pool)]
             meta = _SESSION_META[sid]
 
+            # Anti-repetition check
+            max_pw = meta.get("max_per_week", 1)
+            if session_count.get(sid, 0) >= max_pw:
+                comp_idx += 1
+                comp_uses += 1
+                attempts += 1
+                continue
+
             day_avail = normalized[day_keys[offset]]
             result = _find_best_slot(day_avail, meta, locations, prefer_evening=False)
             if result is None:
@@ -503,6 +518,7 @@ def generate_phase_week(
                 default_gym_id, gyms or [], "pass2:complementary",
             )
             day_sessions[offset].append(entry)
+            session_count[sid] = session_count.get(sid, 0) + 1
             comp_idx += 1
             comp_uses += 1
             days_with_sessions += 1
