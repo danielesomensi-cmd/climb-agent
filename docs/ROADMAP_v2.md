@@ -54,6 +54,7 @@
 - Vocabulary aggiornato: §2.10.1 grade prescription, pattern locomotion
 - Bug fix: 11 prescription_defaults corretti, 1 load_model fix (barbell_row), 2 pattern fix (jump_rope, bear_crawl)
 - 377 test verdi
+- ARCH-1 — Equipment-based session filtering (replace location hard filter with equipment matching). See `docs/audit_location_equipment.md`
 
 ---
 
