@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-26 (B56-B61 beta feedback; 145 esercizi, 37 sessioni, 20 template, 506 test)
+> Last updated: 2026-02-27 (B56-B61+B65 beta feedback; 145 esercizi, 37 sessioni, 20 template, 506 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -519,6 +519,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B59 | "Get Ready" countdown tra le serie: rimuoverlo. Mostrare "Get Ready" solo all'inizio della sessione (primo esercizio). Tra le serie: direttamente il timer REST senza interruzione. | 🔲 OPEN | UI | §7 |
 | B60 | Bug: suoni sessione non funzionavano durante Heavy Conditioning Gym del 26/02. Investigare causa (Web Audio API, permessi iOS, stato app in background). | 🔲 OPEN | bug | §7 |
 | B61 | Feature: voice cues durante sessione — "Rest" quando inizia il rest, "Go" / "Start" quando deve partire il prossimo set. Opzionale (toggle in Settings). Implementare con Web Speech API. | 🔲 OPEN | UI | §7 |
+| B65 | Feature: Weekly Report — riepilogo automatico a fine settimana in due fasi: (1) **Report deterministico** (implementabile ora): load actual vs planned, sessioni completate/skippate/aggiunte, compliance %, feedback distribution (quante easy/ok/hard), sport complementari loggati. Dati strutturati, nessun LLM. (2) **Narrative LLM** (Phase 3.5): stessi dati passati come contesto all'LLM coach che genera un testo motivante e actionable — es. "Settimana solida, 4/5 sessioni completate. Due sessioni easy: considera di aumentare il carico". Il report deterministico è prerequisito del report LLM. | 🔲 OPEN (fase 1 fattibile ora, fase 2 in Phase 3.5) | engine+UI+LLM | §7+§3.5 |
 
 ---
 
