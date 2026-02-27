@@ -355,9 +355,13 @@ class TestPlannerV2TestSessions(unittest.TestCase):
 
     def test_last_week_base_has_test_sessions(self):
         """Last week of base phase should include test_max_hang_5s and test_repeater_7_3."""
+        # Use 7-day availability: the expanded base pool (6 primaries) needs more room
+        # for pass 3 to inject test sessions without violating finger/hard spacing.
+        full_avail = {wd: {"evening": {"available": True, "locations": ["gym", "home"]}}
+                      for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
         plan = generate_phase_week(**_make_kwargs("base", is_last_week_of_phase=True,
-            hard_cap_per_week=5,
-            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 5}))
+            hard_cap_per_week=5, availability=full_avail,
+            planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 5}))
         all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
         session_ids = {s["session_id"] for s in all_sessions}
         self.assertIn("test_max_hang_5s", session_ids,

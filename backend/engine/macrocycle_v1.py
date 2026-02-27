@@ -30,7 +30,7 @@ PHASE_ENERGY: Dict[str, str] = {
 }
 
 PHASE_INTENSITY_CAP: Dict[str, str] = {
-    "base": "medium",
+    "base": "high",
     "strength_power": "max",
     "power_endurance": "high",
     "performance": "max",

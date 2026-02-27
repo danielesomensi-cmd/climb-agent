@@ -36,7 +36,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "power_endurance_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",)},
     "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",)},
     "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",)},
-    "finger_strength_home": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("home",)},
+    "finger_strength_home": {"hard": True, "finger": True, "intensity": "high", "climbing": True, "location": ("home",)},
     "prehab_maintenance": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
     "flexibility_full": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
     "yoga_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home",)},
