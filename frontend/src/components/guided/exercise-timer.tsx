@@ -35,9 +35,12 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 // Start button), so the context is already running by the time beep() fires.
 // ---------------------------------------------------------------------------
 
-function beep(freq: number, duration: number, volume: number) {
+async function beep(freq: number, duration: number, volume: number) {
   try {
     const ctx = getAudioContext();
+    if (ctx.state !== "running") {
+      await ctx.resume();
+    }
     if (ctx.state !== "running") return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -235,8 +238,8 @@ export function ExerciseTimer({
 
   // --- Handlers ---
 
-  function handleStart() {
-    unlockAudio(); // Unlock audio on iOS (must be inside user gesture)
+  async function handleStart() {
+    await unlockAudio(); // Unlock audio on iOS (must be inside user gesture)
     if (isManual) {
       setPhase("work");
       setSecondsLeft(0);
@@ -248,8 +251,8 @@ export function ExerciseTimer({
     setTransitionId((id) => id + 1);
   }
 
-  function handleDoneSet() {
-    unlockAudio(); // Resume audio if suspended
+  async function handleDoneSet() {
+    await unlockAudio(); // Resume audio if suspended
     onSetChangeRef.current?.(currentSet);
     if (currentSet >= sets) {
       setPhase("complete");

@@ -126,11 +126,17 @@ export default function GuidedSessionPage() {
 
   // Resume AudioContext when PWA returns to foreground (iOS suspends on background)
   useEffect(() => {
-    function onVisibilityChange() {
+    async function onVisibilityChange() {
       if (document.visibilityState === "visible") {
         try {
           const ctx = getAudioContext();
-          if (ctx.state === "suspended") ctx.resume();
+          if (ctx.state === "suspended") await ctx.resume();
+          // Re-play silent buffer to re-unlock iOS audio gate after background
+          const buffer = ctx.createBuffer(1, 1, 22050);
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(ctx.destination);
+          source.start(0);
         } catch { /* silent */ }
       }
     }

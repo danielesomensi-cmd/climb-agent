@@ -7,6 +7,7 @@
     "secondary_goals": [],
     "notes": "Deterministic v1 test session for max_hang_5s total load baseline refresh."
   },
+  "required_equipment": ["hangboard"],
   "compatibility": {
     "slot": [
       "short",

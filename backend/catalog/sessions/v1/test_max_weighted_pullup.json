@@ -7,6 +7,7 @@
     "secondary_goals": [],
     "notes": "Weighted pullup 1RM baseline refresh."
   },
+  "required_equipment": ["pullup_bar"],
   "compatibility": {
     "slot": ["long"],
     "sports": ["climbing"]
