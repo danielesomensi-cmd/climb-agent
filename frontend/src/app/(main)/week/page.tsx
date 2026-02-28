@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
-import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots } from "@/lib/api";
+import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute } from "@/lib/types";
 
 /** English labels for phase names */
 const PHASE_LABELS: Record<string, string> = {
@@ -65,6 +65,7 @@ export default function WeekPage() {
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
+  const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -117,6 +118,31 @@ export default function WeekPage() {
   useEffect(() => {
     fetchInitial();
   }, [fetchInitial]);
+
+  // Fetch outdoor session routes for days marked "done"
+  useEffect(() => {
+    if (!weekPlan) return;
+    const allDays = weekPlan.weeks.flatMap(w => w.days);
+    const doneDates = allDays
+      .filter(d => d.outdoor_session_status === "done")
+      .map(d => d.date);
+    if (doneDates.length === 0) {
+      setOutdoorRoutesMap({});
+      return;
+    }
+    const minDate = doneDates.sort()[0];
+    getOutdoorSessions(minDate)
+      .then(({ sessions }) => {
+        const map: Record<string, OutdoorRoute[]> = {};
+        for (const s of sessions) {
+          if (doneDates.includes(s.date)) {
+            map[s.date] = [...(map[s.date] || []), ...s.routes];
+          }
+        }
+        setOutdoorRoutesMap(map);
+      })
+      .catch(() => {});
+  }, [weekPlan]);
 
   const totalWeeks = macrocycle?.total_weeks ?? 0;
 
@@ -578,6 +604,7 @@ export default function WeekPage() {
                 <DayCard
                   day={day}
                   gyms={gyms}
+                  outdoorRoutes={outdoorRoutesMap[day.date]}
                   showActions
                   onMarkDone={(sessionId) => handleMarkDone(sessionId, day.date)}
                   onMarkSkipped={(sessionId) => handleMarkSkipped(sessionId, day.date)}

@@ -82,7 +82,10 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
         spot_name: spotName,
         discipline,
         duration_minutes: duration,
-        routes: routes.filter(r => r.name && r.grade),
+        routes: routes.filter(r => r.name && r.grade).map(r => {
+          const { style, ...rest } = r;
+          return style ? { ...rest, style } : rest;
+        }),
         notes: notes || undefined,
       });
       onSuccess?.();
@@ -190,6 +193,25 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                 {gradeList.map(g => (
                   <option key={g} value={g}>{g}</option>
                 ))}
+              </select>
+              <select
+                value={route.style || ""}
+                onChange={e => {
+                  const updated = [...routes];
+                  if (e.target.value) {
+                    (updated[rIdx] as unknown as Record<string, unknown>).style = e.target.value;
+                  } else {
+                    delete (updated[rIdx] as unknown as Record<string, unknown>).style;
+                  }
+                  setRoutes(updated);
+                }}
+                className="w-16 rounded-md border bg-background px-1 py-1 text-xs"
+              >
+                <option value="">Style</option>
+                <option value="onsight">🟢 OS</option>
+                <option value="flash">🟡 FL</option>
+                <option value="redpoint">🔴 RP</option>
+                <option value="project">⚪ PRJ</option>
               </select>
               <button
                 onClick={() => removeRoute(rIdx)}

@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, MapPin, Mountain, Plus, RefreshCw, Check, Undo2, ClipboardList, X } from "lucide-react";
+import { Eye, MapPin, Mountain, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SessionCard } from "@/components/training/session-card";
-import type { DayPlan } from "@/lib/types";
+import type { DayPlan, OutdoorRoute } from "@/lib/types";
 
 interface Gym {
   name: string;
@@ -31,6 +31,7 @@ interface DayCardProps {
   onLogOutdoor?: (date: string) => void;
   onUndoOutdoor?: (date: string) => void;
   onRemoveOutdoor?: (date: string) => void;
+  outdoorRoutes?: OutdoorRoute[];
   showActions?: boolean;
 }
 
@@ -59,6 +60,25 @@ const STATUS_CONFIG: Record<
   planned: { label: "Planned", variant: "secondary" },
   done: { label: "Completed", variant: "default" },
   skipped: { label: "Skipped", variant: "destructive" },
+};
+
+/** Ordered grade list for determining max grade */
+const GRADE_ORDER = [
+  "4", "4+", "4a", "4b", "4c",
+  "5", "5+", "5a", "5a+", "5b", "5b+", "5c", "5c+",
+  "6a", "6a+", "6b", "6b+", "6c", "6c+",
+  "7a", "7a+", "7b", "7b+", "7c", "7c+",
+  "8a", "8a+", "8b", "8b+", "8c", "8c+",
+  "9a", "9a+",
+];
+
+/** Style badge mapping for outdoor routes */
+const STYLE_BADGE: Record<string, { emoji: string; label: string }> = {
+  onsight: { emoji: "🟢", label: "Onsight" },
+  flash: { emoji: "🟡", label: "Flash" },
+  redpoint: { emoji: "🔴", label: "Redpoint" },
+  project: { emoji: "⚪", label: "Project" },
+  repeat: { emoji: "🔵", label: "Repeat" },
 };
 
 /** Check whether a date string (YYYY-MM-DD) corresponds to today */
@@ -99,14 +119,18 @@ export function DayCard({
   onLogOutdoor,
   onUndoOutdoor,
   onRemoveOutdoor,
+  outdoorRoutes,
   showActions = false,
 }: DayCardProps) {
   const [feedbackPicking, setFeedbackPicking] = useState(false);
+  const [outdoorExpanded, setOutdoorExpanded] = useState(false);
   const today = isToday(day.date);
   const weekdayLabel =
     WEEKDAY_EN[day.weekday.toLowerCase()] ?? day.weekday;
   const status = day.status ?? "planned";
   const statusCfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.planned;
+  const hasExpandableOutdoor = day.outdoor_session_status === "done" && (outdoorRoutes?.length ?? 0) > 0;
+  const routeLabel = day.outdoor_discipline === "boulder" ? "problems" : "routes";
 
   return (
     <Card
@@ -215,17 +239,33 @@ export function DayCard({
             {/* Outdoor session card — when spot is set */}
             {day.outdoor_spot_name && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 rounded-lg border border-dashed border-green-500/40 p-3 text-sm">
+                <div
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border border-dashed border-green-500/40 p-3 text-sm",
+                    hasExpandableOutdoor && "cursor-pointer"
+                  )}
+                  onClick={hasExpandableOutdoor ? () => setOutdoorExpanded(v => !v) : undefined}
+                >
                   <Mountain className="size-4 text-green-500" />
                   <span className="font-medium">{day.outdoor_spot_name}</span>
                   <Badge variant="outline" className="text-[10px]">
                     {day.outdoor_discipline ?? "outdoor"}
                   </Badge>
+                  {hasExpandableOutdoor && (
+                    outdoorExpanded
+                      ? <ChevronUp className="size-4 text-muted-foreground ml-auto" />
+                      : <ChevronDown className="size-4 text-muted-foreground ml-auto" />
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
                   {day.outdoor_session_status === "done" ? (
                     <>
                       <Badge className="bg-green-600 text-white text-[10px]">Completed</Badge>
+                      {hasExpandableOutdoor && (
+                        <span className="text-[10px] text-muted-foreground">
+                          {outdoorRoutes!.length} {routeLabel}
+                        </span>
+                      )}
                       {onUndoOutdoor && (
                         <Button
                           size="sm"
@@ -265,6 +305,38 @@ export function DayCard({
                     </>
                   )}
                 </div>
+                {/* Expanded outdoor route details */}
+                {outdoorExpanded && hasExpandableOutdoor && (
+                  <div className="space-y-1.5 rounded-lg border border-green-500/20 bg-green-500/5 p-3">
+                    {outdoorRoutes!.map((route, idx) => {
+                      const style = route.style || (route.attempts.some(a => a.result === "sent") ? "redpoint" : "project");
+                      const badge = STYLE_BADGE[style];
+                      const totalAttempts = route.attempts.length;
+                      const hasNotes = route.attempts.some(a => a.notes);
+                      return (
+                        <div key={idx} className="flex items-center gap-1.5 text-xs">
+                          <span className="font-mono font-medium w-10 shrink-0">{route.grade}</span>
+                          <span className="truncate flex-1 text-muted-foreground">{route.name}</span>
+                          {badge && <span title={badge.label}>{badge.emoji}</span>}
+                          {totalAttempts > 1 && <span className="text-muted-foreground">×{totalAttempts}</span>}
+                          {hasNotes && (
+                            <span title={route.attempts.filter(a => a.notes).map(a => a.notes).join("; ")}>💬</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    <div className="text-[10px] text-muted-foreground pt-1.5 mt-1 border-t border-green-500/20">
+                      {outdoorRoutes!.length} {routeLabel}
+                      {(() => {
+                        const maxR = outdoorRoutes!.reduce((best, r) => {
+                          const rank = GRADE_ORDER.indexOf(r.grade);
+                          return rank > best.rank ? { grade: r.grade, rank } : best;
+                        }, { grade: "", rank: -1 });
+                        return maxR.grade ? ` · max ${maxR.grade}` : "";
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

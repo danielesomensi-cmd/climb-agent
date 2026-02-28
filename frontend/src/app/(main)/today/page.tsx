@@ -10,7 +10,7 @@ import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
-import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots } from "@/lib/api";
+import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Quote, OutdoorSpot } from "@/lib/types";
+import type { WeekPlan, DayPlan, Quote, OutdoorSpot, OutdoorRoute } from "@/lib/types";
 
 /** Full weekday names */
 const WEEKDAY_FULL: Record<number, string> = {
@@ -100,6 +100,7 @@ function TodayContent() {
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
+  const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -200,6 +201,31 @@ function TodayContent() {
 
     getDailyQuote(context).then(setQuote).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekPlan]);
+
+  // Fetch outdoor session routes for days marked "done"
+  useEffect(() => {
+    if (!weekPlan) return;
+    const days = weekPlan.weeks.flatMap(w => w.days);
+    const doneDates = days
+      .filter(d => d.outdoor_session_status === "done")
+      .map(d => d.date);
+    if (doneDates.length === 0) {
+      setOutdoorRoutesMap({});
+      return;
+    }
+    const minDate = doneDates.sort()[0];
+    getOutdoorSessions(minDate)
+      .then(({ sessions }) => {
+        const map: Record<string, OutdoorRoute[]> = {};
+        for (const s of sessions) {
+          if (doneDates.includes(s.date)) {
+            map[s.date] = [...(map[s.date] || []), ...s.routes];
+          }
+        }
+        setOutdoorRoutesMap(map);
+      })
+      .catch(() => {});
   }, [weekPlan]);
 
   /** Find target day in the weekly plan */
@@ -640,6 +666,7 @@ function TodayContent() {
           <DayCard
             day={dayPlan}
             gyms={gyms}
+            outdoorRoutes={outdoorRoutesMap[dayPlan.date]}
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}
             onUndo={handleUndo}
