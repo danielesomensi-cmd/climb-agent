@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, MapPin, Mountain, Plus, RefreshCw, Check, Undo2 } from "lucide-react";
+import { Eye, MapPin, Mountain, Plus, RefreshCw, Check, Undo2, ClipboardList, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,9 @@ interface DayCardProps {
   onChangeGym?: (date: string) => void;
   onCompleteOtherActivity?: (date: string, feedback: string) => void;
   onUndoOtherActivity?: (date: string) => void;
+  onLogOutdoor?: (date: string) => void;
+  onUndoOutdoor?: (date: string) => void;
+  onRemoveOutdoor?: (date: string) => void;
   showActions?: boolean;
 }
 
@@ -93,6 +96,9 @@ export function DayCard({
   onChangeGym,
   onCompleteOtherActivity,
   onUndoOtherActivity,
+  onLogOutdoor,
+  onUndoOutdoor,
+  onRemoveOutdoor,
   showActions = false,
 }: DayCardProps) {
   const [feedbackPicking, setFeedbackPicking] = useState(false);
@@ -130,6 +136,8 @@ export function DayCard({
             Other activity yesterday — consider going easy today
           </div>
         )}
+
+        {/* Other activity (exclusive — no sessions on this day) */}
         {day.other_activity ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2 rounded-lg border border-dashed border-amber-500/40 p-3 text-sm">
@@ -202,42 +210,108 @@ export function DayCard({
               </Button>
             ) : null}
           </div>
-        ) : day.outdoor_slot ? (
-          <div className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
-            <Mountain className="size-4 text-green-500" />
-            <span className="font-medium">Outdoor day</span>
-            <span className="text-xs text-muted-foreground">
-              Log your session after climbing
-            </span>
-          </div>
-        ) : day.sessions.length === 0 ? (
-          <p className="text-xs text-muted-foreground italic">
-            Rest
-          </p>
         ) : (
-          day.sessions.map((session) => (
-            <SessionCard
-              key={session.session_id}
-              session={session}
-              date={day.date}
-              gyms={gyms}
-              onMarkDone={onMarkDone ? () => onMarkDone(session.session_id) : undefined}
-              onMarkSkipped={
-                onMarkSkipped ? () => onMarkSkipped(session.session_id) : undefined
-              }
-              onUndo={onUndo ? () => onUndo(session.session_id) : undefined}
-              onMove={
-                onMoveSession && session.status !== "done" && session.status !== "skipped"
-                  ? () => onMoveSession(day.date, session.slot, session.session_id)
-                  : undefined
-              }
-              onRemove={
-                onRemoveSession && session.status !== "done" && session.status !== "skipped"
-                  ? () => onRemoveSession(session.session_id)
-                  : undefined
-              }
-            />
-          ))
+          <>
+            {/* Outdoor session card — when spot is set */}
+            {day.outdoor_spot_name && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 rounded-lg border border-dashed border-green-500/40 p-3 text-sm">
+                  <Mountain className="size-4 text-green-500" />
+                  <span className="font-medium">{day.outdoor_spot_name}</span>
+                  <Badge variant="outline" className="text-[10px]">
+                    {day.outdoor_discipline ?? "outdoor"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {day.outdoor_session_status === "done" ? (
+                    <>
+                      <Badge className="bg-green-600 text-white text-[10px]">Completed</Badge>
+                      {onUndoOutdoor && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-muted-foreground ml-auto"
+                          onClick={() => onUndoOutdoor(day.date)}
+                        >
+                          <Undo2 className="size-3.5 mr-1" />
+                          Undo
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {onLogOutdoor && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+                          onClick={() => onLogOutdoor(day.date)}
+                        >
+                          <ClipboardList className="size-3 mr-1" />
+                          Log routes
+                        </Button>
+                      )}
+                      {onRemoveOutdoor && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs text-muted-foreground"
+                          onClick={() => onRemoveOutdoor(day.date)}
+                        >
+                          <X className="size-3 mr-1" />
+                          Remove
+                        </Button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Outdoor slot placeholder — planner-generated, no details yet */}
+            {!day.outdoor_spot_name && day.outdoor_slot && (
+              <div className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm">
+                <Mountain className="size-4 text-green-500" />
+                <span className="font-medium">Outdoor day</span>
+                <span className="text-xs text-muted-foreground">
+                  Tap &quot;Add session&quot; to set your spot
+                </span>
+              </div>
+            )}
+
+            {/* Regular sessions */}
+            {day.sessions.length > 0 &&
+              day.sessions.map((session) => (
+                <SessionCard
+                  key={session.session_id}
+                  session={session}
+                  date={day.date}
+                  gyms={gyms}
+                  onMarkDone={onMarkDone ? () => onMarkDone(session.session_id) : undefined}
+                  onMarkSkipped={
+                    onMarkSkipped ? () => onMarkSkipped(session.session_id) : undefined
+                  }
+                  onUndo={onUndo ? () => onUndo(session.session_id) : undefined}
+                  onMove={
+                    onMoveSession && session.status !== "done" && session.status !== "skipped"
+                      ? () => onMoveSession(day.date, session.slot, session.session_id)
+                      : undefined
+                  }
+                  onRemove={
+                    onRemoveSession && session.status !== "done" && session.status !== "skipped"
+                      ? () => onRemoveSession(session.session_id)
+                      : undefined
+                  }
+                />
+              ))}
+
+            {/* Rest — only when nothing else */}
+            {!day.outdoor_spot_name && !day.outdoor_slot && day.sessions.length === 0 && (
+              <p className="text-xs text-muted-foreground italic">
+                Rest
+              </p>
+            )}
+          </>
         )}
 
         {/* Action buttons */}

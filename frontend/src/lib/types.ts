@@ -49,6 +49,10 @@ export interface DayPlan {
   sessions: SessionSlot[];
   status?: "planned" | "done" | "skipped";
   outdoor_slot?: boolean;
+  outdoor_spot_name?: string;
+  outdoor_discipline?: "lead" | "boulder" | "both";
+  outdoor_spot_id?: string;
+  outdoor_session_status?: "planned" | "done";
   pretrip_deload?: boolean;
   other_activity?: boolean;
   other_activity_name?: string;

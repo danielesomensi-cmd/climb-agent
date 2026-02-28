@@ -7,13 +7,15 @@ import { postOutdoorLog } from "@/lib/api";
 interface Props {
   spots: OutdoorSpot[];
   defaultDate?: string;
+  defaultSpotName?: string;
+  defaultDiscipline?: "lead" | "boulder" | "both";
   onSuccess?: () => void;
 }
 
-export default function OutdoorLogForm({ spots, defaultDate, onSuccess }: Props) {
+export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, onSuccess }: Props) {
   const [date, setDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
-  const [spotName, setSpotName] = useState("");
-  const [discipline, setDiscipline] = useState<"lead" | "boulder" | "both">("boulder");
+  const [spotName, setSpotName] = useState(defaultSpotName || "");
+  const [discipline, setDiscipline] = useState<"lead" | "boulder" | "both">(defaultDiscipline || "boulder");
   const [duration, setDuration] = useState(120);
   const [routes, setRoutes] = useState<OutdoorRoute[]>([]);
   const [notes, setNotes] = useState("");

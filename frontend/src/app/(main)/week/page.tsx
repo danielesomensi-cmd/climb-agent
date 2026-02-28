@@ -12,8 +12,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
-import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback } from "@/lib/api";
-import type { WeekPlan, DayPlan, Macrocycle } from "@/lib/types";
+import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots } from "@/lib/api";
+import OutdoorLogForm from "@/components/training/OutdoorLogForm";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot } from "@/lib/types";
 
 /** English labels for phase names */
 const PHASE_LABELS: Record<string, string> = {
@@ -55,6 +62,8 @@ export default function WeekPage() {
   const [feedbackSessionId, setFeedbackSessionId] = useState<string | null>(null);
   const [feedbackDate, setFeedbackDate] = useState<string | null>(null);
   const [changeGymDate, setChangeGymDate] = useState<string | null>(null);
+  const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
+  const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -359,6 +368,85 @@ export default function WeekPage() {
     }
   }
 
+  /** Handle outdoor quick-add from week view */
+  async function handleApplyOutdoor(data: {
+    spot_name: string;
+    discipline: string;
+    spot_id?: string;
+  }) {
+    if (!weekPlan || !quickAddDate) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "add_outdoor",
+            date: quickAddDate,
+            spot_name: data.spot_name,
+            discipline: data.discipline,
+            spot_id: data.spot_id,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add outdoor session");
+    } finally {
+      setQuickAddDate(null);
+    }
+  }
+
+  /** Open outdoor log form */
+  function handleLogOutdoor(date: string) {
+    setOutdoorLogDate(date);
+    getOutdoorSpots().then((data) => setOutdoorSpots(data.spots)).catch(() => {});
+  }
+
+  /** After outdoor log, mark complete */
+  async function handleOutdoorLogSuccess() {
+    if (!weekPlan || !outdoorLogDate) return;
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "complete_outdoor", date: outdoorLogDate }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to mark outdoor as done");
+    } finally {
+      setOutdoorLogDate(null);
+    }
+  }
+
+  /** Undo outdoor completion */
+  async function handleUndoOutdoor(date: string) {
+    if (!weekPlan) return;
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "undo_outdoor", date }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to undo outdoor");
+    }
+  }
+
+  /** Remove outdoor session */
+  async function handleRemoveOutdoor(date: string) {
+    if (!weekPlan) return;
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "remove_outdoor", date }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to remove outdoor session");
+    }
+  }
+
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
   const phaseLabel = phaseId
@@ -500,6 +588,9 @@ export default function WeekPage() {
                   onChangeGym={(date) => setChangeGymDate(date)}
                   onCompleteOtherActivity={handleCompleteOtherActivity}
                   onUndoOtherActivity={handleUndoOtherActivity}
+                  onLogOutdoor={handleLogOutdoor}
+                  onUndoOutdoor={handleUndoOutdoor}
+                  onRemoveOutdoor={handleRemoveOutdoor}
                 />
               </div>
             ))}
@@ -532,6 +623,7 @@ export default function WeekPage() {
         gyms={gyms}
         onClose={() => setQuickAddDate(null)}
         onApply={handleQuickAddApply}
+        onApplyOutdoor={handleApplyOutdoor}
       />
 
       {/* Move session dialog */}
@@ -567,6 +659,27 @@ export default function WeekPage() {
         onClose={() => setChangeGymDate(null)}
         onApply={handleChangeGymApply}
       />
+
+      {/* Outdoor log dialog */}
+      <Dialog open={outdoorLogDate !== null} onOpenChange={(v) => !v && setOutdoorLogDate(null)}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Log Outdoor Session</DialogTitle>
+          </DialogHeader>
+          {outdoorLogDate && (() => {
+            const logDay = days.find((d) => d.date === outdoorLogDate);
+            return (
+              <OutdoorLogForm
+                spots={outdoorSpots}
+                defaultDate={outdoorLogDate}
+                defaultSpotName={logDay?.outdoor_spot_name}
+                defaultDiscipline={logDay?.outdoor_discipline}
+                onSuccess={handleOutdoorLogSuccess}
+              />
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
