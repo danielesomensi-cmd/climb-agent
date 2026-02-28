@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-28 (OD-1 outdoor session flow + B68-B73 backlog; 145 esercizi, 25 sessioni, 20 template, 522 test)
+> Last updated: 2026-03-01 (B74 outdoor route summary in DayCard + style picker; 145 esercizi, 25 sessioni, 20 template, 524 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -533,6 +533,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B71 | ~~Fix JSONL outdoor non segregato per utente~~ — FIXED in OD-1 (user-scoped log directory). | ✅ DONE | engine | §4 |
 | B72 | Outdoor history/stats UI: lista sessioni passate, statistiche per spot/grado, onsight/flash/sent percentages. | 🔲 OPEN | UI | §4 |
 | B73 | Outdoor spots in onboarding: raccogliere durante setup (step locations o dedicato), non solo post-setup in Settings. | 🔲 OPEN | UI | §4 |
+| B74 | Outdoor route summary in DayCard: expand/collapse route list when done (grade + name + style badge + ×N attempts + max grade). Style picker in OutdoorLogForm (onsight/flash/redpoint/project). Today+Week auto-fetch outdoor sessions. | ✅ DONE | UI | §4 |
 
 ---
 
