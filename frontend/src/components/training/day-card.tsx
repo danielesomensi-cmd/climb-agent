@@ -238,15 +238,17 @@ export function DayCard({
           ))
         )}
 
-        {/* Action buttons for week view */}
-        {showActions && (
+        {/* Action buttons */}
+        {(showActions || onReplan || onQuickAdd) && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            <Link href={`/today?date=${day.date}`}>
-              <Button size="sm" variant="outline" className="text-xs px-2 py-1">
-                <Eye className="size-3 mr-1" />
-                View day
-              </Button>
-            </Link>
+            {showActions && (
+              <Link href={`/today?date=${day.date}`}>
+                <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                  <Eye className="size-3 mr-1" />
+                  View day
+                </Button>
+              </Link>
+            )}
             {onReplan && (
               <Button
                 size="sm"

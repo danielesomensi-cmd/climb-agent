@@ -6,7 +6,10 @@ import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
-import { getWeek, getState, applyEvents, postFeedback, getDailyQuote } from "@/lib/api";
+import { QuickAddDialog } from "@/components/training/quick-add-dialog";
+import { ReplanDialog } from "@/components/training/replan-dialog";
+import { MoveSessionDialog } from "@/components/training/move-session-dialog";
+import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession } from "@/lib/api";
 import type { WeekPlan, DayPlan, Quote } from "@/lib/types";
 
 /** Full weekday names */
@@ -77,6 +80,14 @@ function TodayContent() {
     null
   );
   const [quote, setQuote] = useState<Quote | null>(null);
+  const [phaseId, setPhaseId] = useState<string | null>(null);
+  const [replanDate, setReplanDate] = useState<string | null>(null);
+  const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
+  const [moveSession, setMoveSession] = useState<{
+    date: string;
+    slot: string;
+    sessionId: string;
+  } | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -87,6 +98,7 @@ function TodayContent() {
         getState(),
       ]);
       setWeekPlan(weekData.week_plan);
+      setPhaseId(weekData.phase_id ?? null);
       const eq = stateData.equipment as Record<string, unknown> | undefined;
       setGyms(
         (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
@@ -309,6 +321,92 @@ function TodayContent() {
     }
   }
 
+  /** Handle replan: call override API and update week plan */
+  async function handleReplanApply(rdata: {
+    intent: string;
+    location: string;
+    gym_id?: string;
+  }) {
+    if (!weekPlan || !replanDate) return;
+    setError(null);
+    try {
+      const result = await applyOverride({
+        intent: rdata.intent,
+        location: rdata.location,
+        reference_date: replanDate,
+        target_date: replanDate,
+        gym_id: rdata.gym_id,
+        phase_id: phaseId ?? undefined,
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update plan");
+    } finally {
+      setReplanDate(null);
+    }
+  }
+
+  /** Handle quick-add: call quick-add API and update week plan */
+  async function handleQuickAddApply(rdata: {
+    session_id: string;
+    slot: string;
+    location: string;
+    gym_id?: string;
+  }) {
+    if (!weekPlan || !quickAddDate) return;
+    setError(null);
+    try {
+      const result = await quickAddSession({
+        session_id: rdata.session_id,
+        target_date: quickAddDate,
+        slot: rdata.slot,
+        location: rdata.location,
+        gym_id: rdata.gym_id,
+        phase_id: phaseId ?? undefined,
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+      if (result.warnings?.length > 0) {
+        setError(result.warnings.join("; "));
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to add session";
+      if (msg.includes("already occupied")) {
+        setError("That time slot is already taken. Try a different slot or day.");
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setQuickAddDate(null);
+    }
+  }
+
+  /** Handle move session: call events API with move_session event */
+  async function handleMoveApply(data: { to_date: string; to_slot: string }) {
+    if (!weekPlan || !moveSession) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "move_session",
+            from_date: moveSession.date,
+            from_slot: moveSession.slot,
+            to_date: data.to_date,
+            to_slot: data.to_slot,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to move session");
+    } finally {
+      setMoveSession(null);
+    }
+  }
+
   /** Submit session feedback */
   async function handleFeedbackSubmit(feedback: Record<string, string>) {
     if (!feedbackSessionId) return;
@@ -426,6 +524,11 @@ function TodayContent() {
             onMarkSkipped={handleMarkSkipped}
             onUndo={handleUndo}
             onRemoveSession={handleRemoveSession}
+            onReplan={(date) => setReplanDate(date)}
+            onQuickAdd={(date) => setQuickAddDate(date)}
+            onMoveSession={(date, slot, sessionId) =>
+              setMoveSession({ date, slot, sessionId })
+            }
             onCompleteOtherActivity={handleCompleteOtherActivity}
             onUndoOtherActivity={handleUndoOtherActivity}
           />
@@ -494,6 +597,37 @@ function TodayContent() {
         onSubmit={handleFeedbackSubmit}
         exercises={feedbackExercises}
       />
+
+      {/* Replan dialog */}
+      <ReplanDialog
+        open={replanDate !== null}
+        date={replanDate ?? ""}
+        gyms={gyms}
+        onClose={() => setReplanDate(null)}
+        onApply={handleReplanApply}
+      />
+
+      {/* Quick-add dialog */}
+      <QuickAddDialog
+        open={quickAddDate !== null}
+        date={quickAddDate ?? ""}
+        gyms={gyms}
+        onClose={() => setQuickAddDate(null)}
+        onApply={handleQuickAddApply}
+      />
+
+      {/* Move session dialog */}
+      {weekPlan && (
+        <MoveSessionDialog
+          open={moveSession !== null}
+          sessionId={moveSession?.sessionId ?? ""}
+          fromDate={moveSession?.date ?? ""}
+          fromSlot={moveSession?.slot ?? ""}
+          weekPlan={weekPlan}
+          onClose={() => setMoveSession(null)}
+          onApply={handleMoveApply}
+        />
+      )}
     </>
   );
 }
