@@ -22,6 +22,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { isVoiceCuesEnabled, setVoiceCuesEnabled } from "@/lib/voice-cues";
 
 export default function SettingsPage() {
   const { state, loading, error, refresh } = useUserState();
@@ -45,6 +47,9 @@ export default function SettingsPage() {
   const [addingSpot, setAddingSpot] = useState(false);
   const [newSpotName, setNewSpotName] = useState("");
   const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("boulder");
+  const [voiceCuesOn, setVoiceCuesOn] = useState(false);
+
+  useEffect(() => { setVoiceCuesOn(isVoiceCuesEnabled()); }, []);
 
   const loadSpots = useCallback(async () => {
     try {
@@ -551,6 +556,30 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* ----- Session preferences ----- */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Session preferences</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Voice cues</p>
+                    <p className="text-xs text-muted-foreground">
+                      Speak phase transitions during guided sessions
+                    </p>
+                  </div>
+                  <Switch
+                    checked={voiceCuesOn}
+                    onCheckedChange={(checked) => {
+                      setVoiceCuesOn(checked);
+                      setVoiceCuesEnabled(checked);
+                    }}
+                  />
+                </div>
               </CardContent>
             </Card>
 

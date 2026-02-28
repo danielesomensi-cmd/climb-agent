@@ -5,7 +5,7 @@
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": ["core", "push", "joint_health"],
-    "notes": "Compound barbell/dumbbell session. Row + Press + Dip + Hinge + Core compression. Builds general strength base with full push/pull/core coverage."
+    "notes": "Compound barbell/dumbbell session. Row + Press + Dip + Curl + Lateral Raise + Hinge + Core. Builds general strength base with full push/pull/arms/shoulders/core coverage."
   },
   "compatibility": {
     "slot": ["long", "short"],
@@ -16,8 +16,8 @@
     "location": "gym"
   },
   "time_budget": {
-    "target_duration_min": 50,
-    "hard_cap_min": 65
+    "target_duration_min": 60,
+    "hard_cap_min": 75
   },
   "modules": [
     {
@@ -87,6 +87,48 @@
             "role": ["accessory"],
             "domain": ["strength_general"],
             "pattern": ["hinge", "carry"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "arm_curl",
+      "required": true,
+      "priority": 72,
+      "module_role": "secondary",
+      "notes": "Bicep curl isolation. 3x10, rest 60s.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["elbow_flexion"]
+          },
+          "prescription_overrides": {
+            "sets": 3,
+            "reps": 10,
+            "rest_between_sets_seconds": 60
+          }
+        }
+      }
+    },
+    {
+      "block_id": "shoulder_isolation",
+      "required": true,
+      "priority": 71,
+      "module_role": "secondary",
+      "notes": "Lateral raise for medial deltoid. 3x10, rest 60s.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["shoulder_isolation"]
+          },
+          "prescription_overrides": {
+            "sets": 3,
+            "reps": 10,
+            "rest_between_sets_seconds": 60
           }
         }
       }

@@ -6772,7 +6772,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": 10,
         "rest_between_sets_seconds": 120,
-        "notes": "Hang at 50-70% BW on open-hand edge. Small controlled curls at fingertips. Submaximal always."
+        "notes": "Hang at 50-70% BW on open-hand edge. Each rep: curl fingertips for ~3s, then hold 10s static hang before next rep. Maintain grip throughout the set. Submaximal always."
       },
       "stress_tags": {
         "elbow": "low",
@@ -7267,6 +7267,155 @@
         "Option A note: fingers and pulleys take load — avoid if fingers are injured; use Option B or C instead"
       ],
       "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers"
+    },
+    {
+      "id": "dumbbell_bench_press",
+      "name": "Dumbbell Bench Press",
+      "category": "strength_accessory",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "bench_press",
+      "equipment_required": [
+        "dumbbell"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "equipment_required_any": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Flat or slight incline. Full ROM: dumbbells to chest level, press to lockout. Greater ROM than barbell bench and unilateral stability demand."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "load_model": "external_load",
+      "description": "Dumbbell variation of the bench press. Provides greater range of motion than barbell and forces independent stabilization per arm, addressing left-right imbalances common in climbers. Targets pectorals, anterior deltoid, and triceps. Preferred over barbell bench when the goal is shoulder health and balance rather than maximal load.",
+      "cues": [
+        "Retract shoulder blades and plant feet firmly on floor",
+        "Lower dumbbells to chest level — elbows at roughly 45 degrees, not flared 90",
+        "Press to full lockout without losing scapular retraction",
+        "Control the eccentric: 2-3s lowering, no bouncing"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "bicep_curl",
+      "name": "Bicep Curl",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "elbow_flexion",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "bicep_curl",
+      "equipment_required": [
+        "dumbbell"
+      ],
+      "location_allowed": [
+        "gym",
+        "home"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "equipment_required_any": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Standing or seated dumbbell curls. Supinated grip. Full extension at bottom, controlled squeeze at top."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "medium",
+        "cns": "none",
+        "skin": "none"
+      },
+      "load_model": "external_load",
+      "description": "Isolation exercise for the biceps brachii and brachialis. Complements the pull-dominant climbing pattern by targeting elbow flexion through a full range of motion under load. Helps address bicep tendon health and provides balanced arm development. Light-to-moderate loads, higher reps — not a maximal lift.",
+      "cues": [
+        "Stand tall, core braced — no swinging or leaning back",
+        "Full extension at the bottom, controlled curl to full contraction",
+        "Supinated (palms-up) grip throughout",
+        "2s concentric, 2-3s eccentric — no momentum"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "lateral_raise",
+      "name": "Lateral Raise",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "shoulder_isolation",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "lateral_raise",
+      "equipment_required": [
+        "dumbbell"
+      ],
+      "location_allowed": [
+        "gym",
+        "home"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "equipment_required_any": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Light dumbbells. Raise to shoulder height, slight forward lean. Controls the eccentric."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "load_model": "external_load",
+      "description": "Isolation exercise targeting the medial deltoid. Climbers develop strong posterior delts and lats but often neglect lateral shoulder strength, leading to imbalanced shoulder mechanics. Lateral raises build medial deltoid mass and stability, supporting overhead movements and reducing impingement risk. Use light weight with strict form.",
+      "cues": [
+        "Slight forward lean from the hips — do not stand bolt upright",
+        "Raise dumbbells to shoulder height, leading with the elbows",
+        "Do NOT raise above shoulder height — impingement risk",
+        "Control the lowering: 2-3s eccentric, no dropping"
+      ],
+      "video_url": null
     }
   ]
 }

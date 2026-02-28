@@ -176,6 +176,8 @@ Allowed `pattern` values:
 - `flexibility_passive` *(static stretching, yin yoga)*
 - `flexibility_active` *(active mobility, CARs, dynamic flow)*
 - `locomotion` *(cardio/locomotion patterns: jump rope, bear crawl, running)*
+- `elbow_flexion` *(bicep curl / elbow flexion isolation)*
+- `shoulder_isolation` *(lateral raise / medial deltoid isolation)*
 
 - `climbing_limit_boulder`
 - `climbing_intervals`

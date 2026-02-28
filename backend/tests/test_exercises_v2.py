@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 145
+    assert len(exercise_list) == 148
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
@@ -253,3 +253,21 @@ def test_density_hangs_protocol(exercise_map):
     assert pd["work_seconds"] == 30
     assert pd["rest_between_reps_seconds"] == 90, "Nelson protocol: 90s rest between hangs"
     assert pd["rest_between_sets_seconds"] == 180
+
+
+# --- B56: heavy conditioning muscle group expansion ---
+
+B56_EXERCISE_IDS = {"dumbbell_bench_press", "bicep_curl", "lateral_raise"}
+
+
+def test_b56_exercises_exist(exercise_map):
+    """B56 exercises must be present in the catalog."""
+    for eid in B56_EXERCISE_IDS:
+        assert eid in exercise_map, f"B56 exercise {eid} not found in catalog"
+
+
+def test_b56_exercises_patterns(exercise_map):
+    """B56 exercises must have the correct new patterns."""
+    assert exercise_map["bicep_curl"]["pattern"] == "elbow_flexion"
+    assert exercise_map["lateral_raise"]["pattern"] == "shoulder_isolation"
+    assert exercise_map["dumbbell_bench_press"]["pattern"] == "push"

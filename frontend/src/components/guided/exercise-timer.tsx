@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAudioContext, unlockAudio } from "@/lib/audio-unlock";
+import { speakPhaseTransition } from "@/lib/voice-cues";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -101,6 +102,9 @@ export function ExerciseTimer({
   const onSetChangeRef = useRef(onSetChange);
   useEffect(() => { onSetChangeRef.current = onSetChange; }, [onSetChange]);
 
+  // Voice cue: store the phase at transition time so the transitionId effect can speak it
+  const pendingVoiceCueRef = useRef<Phase | null>(null);
+
   // Refs for countdown beep effect (avoid re-triggering on phase/paused change)
   const phaseRef = useRef(phase);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
@@ -123,10 +127,14 @@ export function ExerciseTimer({
 
   // --- Audio effects ---
 
-  // Transition beep + visual flash
+  // Transition beep + voice cue + visual flash
   useEffect(() => {
     if (transitionId > 0) {
       transitionBeep();
+      if (pendingVoiceCueRef.current) {
+        speakPhaseTransition(pendingVoiceCueRef.current);
+        pendingVoiceCueRef.current = null;
+      }
       setFlash(true);
       const t = setTimeout(() => setFlash(false), 300);
       return () => clearTimeout(t);
@@ -183,6 +191,7 @@ export function ExerciseTimer({
 
         if (phase === "get_ready") {
           setPhase("work");
+          pendingVoiceCueRef.current = "work";
           setTransitionId((id) => id + 1);
           if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
           return;
@@ -193,12 +202,14 @@ export function ExerciseTimer({
           if (hasRepLoop && currentRep < reps) {
             if (restBetweenRepsSeconds > 0) {
               setPhase("rep_rest");
+              pendingVoiceCueRef.current = "rep_rest";
               setTransitionId((id) => id + 1);
               startCountdown(restBetweenRepsSeconds);
               return;
             }
             // No rep rest — next rep immediately
             setCurrentRep((r) => r + 1);
+            pendingVoiceCueRef.current = "work";
             setTransitionId((id) => id + 1);
             startCountdown(workSeconds);
             return;
@@ -207,6 +218,7 @@ export function ExerciseTimer({
           onSetChangeRef.current?.(currentSet);
           if (currentSet >= sets) {
             setPhase("complete");
+            pendingVoiceCueRef.current = "complete";
             setTransitionId((id) => id + 1);
             setSecondsLeft(0);
             return;
@@ -214,6 +226,7 @@ export function ExerciseTimer({
           // More sets — go to set rest
           if (restBetweenSetsSeconds > 0) {
             setPhase("set_rest");
+            pendingVoiceCueRef.current = "set_rest";
             setTransitionId((id) => id + 1);
             startCountdown(restBetweenSetsSeconds);
             return;
@@ -222,6 +235,7 @@ export function ExerciseTimer({
           setCurrentSet((s) => s + 1);
           setCurrentRep(1);
           setPhase("work");
+          pendingVoiceCueRef.current = "work";
           setTransitionId((id) => id + 1);
           if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
           return;
@@ -230,6 +244,7 @@ export function ExerciseTimer({
         if (phase === "rep_rest") {
           setCurrentRep((r) => r + 1);
           setPhase("work");
+          pendingVoiceCueRef.current = "work";
           setTransitionId((id) => id + 1);
           startCountdown(workSeconds);
           return;
@@ -239,6 +254,7 @@ export function ExerciseTimer({
           setCurrentSet((s) => s + 1);
           setCurrentRep(1);
           setPhase("work");
+          pendingVoiceCueRef.current = "work";
           setTransitionId((id) => id + 1);
           if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
           return;
@@ -277,9 +293,11 @@ export function ExerciseTimer({
     if (isManual) {
       setPhase("work");
       setSecondsLeft(0);
+      pendingVoiceCueRef.current = "work";
     } else {
       setPhase("get_ready");
       startCountdown(GET_READY_SECONDS);
+      pendingVoiceCueRef.current = "get_ready";
     }
     setPaused(false);
     setTransitionId((id) => id + 1);
@@ -290,11 +308,14 @@ export function ExerciseTimer({
     onSetChangeRef.current?.(currentSet);
     if (currentSet >= sets) {
       setPhase("complete");
+      pendingVoiceCueRef.current = "complete";
     } else if (restBetweenSetsSeconds > 0) {
       setPhase("set_rest");
       startCountdown(restBetweenSetsSeconds);
+      pendingVoiceCueRef.current = "set_rest";
     } else {
       setCurrentSet((s) => s + 1);
+      pendingVoiceCueRef.current = "work";
       // Phase stays "work" (manual), no countdown
     }
     setTransitionId((id) => id + 1);
@@ -327,14 +348,17 @@ export function ExerciseTimer({
 
     if (phase === "get_ready") {
       setPhase("work");
+      pendingVoiceCueRef.current = "work";
       if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     } else if (phase === "work") {
       if (hasRepLoop && currentRep < reps) {
         if (restBetweenRepsSeconds > 0) {
           setPhase("rep_rest");
+          pendingVoiceCueRef.current = "rep_rest";
           startCountdown(restBetweenRepsSeconds);
         } else {
           setCurrentRep((r) => r + 1);
+          pendingVoiceCueRef.current = "work";
           startCountdown(workSeconds);
         }
       } else {
@@ -342,25 +366,30 @@ export function ExerciseTimer({
         onSetChangeRef.current?.(currentSet);
         if (currentSet >= sets) {
           setPhase("complete");
+          pendingVoiceCueRef.current = "complete";
           setSecondsLeft(0);
         } else if (restBetweenSetsSeconds > 0) {
           setPhase("set_rest");
+          pendingVoiceCueRef.current = "set_rest";
           startCountdown(restBetweenSetsSeconds);
         } else {
           setCurrentSet((s) => s + 1);
           setCurrentRep(1);
           setPhase("work");
+          pendingVoiceCueRef.current = "work";
           if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
         }
       }
     } else if (phase === "rep_rest") {
       setCurrentRep((r) => r + 1);
       setPhase("work");
+      pendingVoiceCueRef.current = "work";
       if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     } else if (phase === "set_rest") {
       setCurrentSet((s) => s + 1);
       setCurrentRep(1);
       setPhase("work");
+      pendingVoiceCueRef.current = "work";
       if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     }
 
@@ -556,7 +585,7 @@ export function ExerciseTimer({
                   {formatSeconds(secondsLeft)}
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-teal-400">
-                  Rep Rest
+                  Hold
                 </span>
                 {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
               </>
