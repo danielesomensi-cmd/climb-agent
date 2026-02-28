@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-28 (C-1/C-2/C-3/C-4 UI consistency + gym change; 145 esercizi, 25 sessioni, 20 template, 514 test)
+> Last updated: 2026-02-28 (OD-1 outdoor session flow + B68-B73 backlog; 145 esercizi, 25 sessioni, 20 template, 522 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
