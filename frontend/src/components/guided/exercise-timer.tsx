@@ -218,12 +218,12 @@ export function ExerciseTimer({
             startCountdown(restBetweenSetsSeconds);
             return;
           }
-          // No set rest — next set with get_ready
+          // No set rest — next set directly (no get_ready between sets)
           setCurrentSet((s) => s + 1);
           setCurrentRep(1);
-          setPhase("get_ready");
+          setPhase("work");
           setTransitionId((id) => id + 1);
-          startCountdown(GET_READY_SECONDS);
+          if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
           return;
         }
 
@@ -238,15 +238,9 @@ export function ExerciseTimer({
         if (phase === "set_rest") {
           setCurrentSet((s) => s + 1);
           setCurrentRep(1);
-          if (!isManual) {
-            setPhase("get_ready");
-            setTransitionId((id) => id + 1);
-            startCountdown(GET_READY_SECONDS);
-          } else {
-            setPhase("work");
-            setTransitionId((id) => id + 1);
-            setSecondsLeft(0);
-          }
+          setPhase("work");
+          setTransitionId((id) => id + 1);
+          if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
           return;
         }
 
@@ -355,8 +349,8 @@ export function ExerciseTimer({
         } else {
           setCurrentSet((s) => s + 1);
           setCurrentRep(1);
-          if (isManual) { setPhase("work"); setSecondsLeft(0); }
-          else { setPhase("get_ready"); startCountdown(GET_READY_SECONDS); }
+          setPhase("work");
+          if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
         }
       }
     } else if (phase === "rep_rest") {
@@ -366,8 +360,8 @@ export function ExerciseTimer({
     } else if (phase === "set_rest") {
       setCurrentSet((s) => s + 1);
       setCurrentRep(1);
-      if (isManual) { setPhase("work"); setSecondsLeft(0); }
-      else { setPhase("get_ready"); startCountdown(GET_READY_SECONDS); }
+      setPhase("work");
+      if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     }
 
     setTransitionId((id) => id + 1);
@@ -396,9 +390,17 @@ export function ExerciseTimer({
         setCurrentRep((r) => r - 1);
         setPhase("rep_rest");
         startCountdown(restBetweenRepsSeconds);
+      } else if (currentSet > 1 && restBetweenSetsSeconds > 0) {
+        // Go back to the set rest before this set
+        setPhase("set_rest");
+        startCountdown(restBetweenSetsSeconds);
+      } else if (currentSet === 1 && !isManual) {
+        // Go back to initial get_ready
+        setPhase("get_ready");
+        startCountdown(GET_READY_SECONDS);
       } else {
-        if (isManual) { setPhase("work"); setSecondsLeft(0); }
-        else { setPhase("get_ready"); startCountdown(GET_READY_SECONDS); }
+        // Manual set 1, or set > 1 with no rest — restart current phase
+        if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
       }
     } else if (phase === "rep_rest") {
       setPhase("work");
