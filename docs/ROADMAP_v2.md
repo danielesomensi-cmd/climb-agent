@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-27 (base phase audit: intensity cap, anti-repetition, pool expansion, orphan cleanup; 145 esercizi, 25 sessioni, 20 template, 509 test)
+> Last updated: 2026-02-28 (B67 wall-clock timer, B59 remove get_ready between sets; 145 esercizi, 25 sessioni, 20 template, 509 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -517,10 +517,11 @@ Tabella unica con TUTTI gli item tracciati.
 | B56 | Heavy Conditioning Gym troppo facile: aggiungere dumbbell bench press (petto, 3×8), bicep curl (3×10), overhead press o lateral raise (3×10). Sessione deve coprire tutti i pattern: push/pull/hinge/core/curl | 🔲 OPEN | catalog | §2.3 |
 | B57 | Active Finger Curls: "Rep rest: 10s" confuso in UI — il timer non gestisce inter-rep rest correttamente. Richiede pattern speciale: timer per singola rep + pausa 10s prima della prossima rep mentre si mantiene il carico. Doppio fix: (1) descrizione esercizio più chiara, (2) UI timer per esercizi con inter-rep rest | 🔲 OPEN | catalog+UI | §7 |
 | B58 | Test Sessions (hangboard) e sessioni climbing appaiono in Work gym — filtro equipment non funziona correttamente. Fix: aggiunto `required_equipment` a 3 test session JSON (hangboard per max_hang/repeater, pullup_bar per weighted_pullup). | ✅ DONE | engine | §4 |
-| B59 | "Get Ready" countdown tra le serie: rimuoverlo. Mostrare "Get Ready" solo all'inizio della sessione (primo esercizio). Tra le serie: direttamente il timer REST senza interruzione. | 🔲 OPEN | UI | §7 |
+| B59 | "Get Ready" countdown tra le serie: rimosso. Get Ready solo all'inizio (set 1). Tra le serie: set_rest → work direttamente. Back da work set > 1 torna a set_rest. | ✅ DONE | UI | §7 |
 | B60 | Bug: suoni sessione non funzionavano (Web Audio API, iOS). Fix: `handleStart`/`handleDoneSet` async con `await unlockAudio()`, `beep()` tenta `ctx.resume()` prima di arrendersi, visibility change re-play silent buffer. | ✅ DONE | UI | §7 |
 | B61 | Feature: voice cues durante sessione — "Rest" quando inizia il rest, "Go" / "Start" quando deve partire il prossimo set. Opzionale (toggle in Settings). Implementare con Web Speech API. | 🔲 OPEN | UI | §7 |
 | B65 | Feature: Weekly Report — riepilogo automatico a fine settimana in due fasi: (1) **Report deterministico** (implementabile ora): load actual vs planned, sessioni completate/skippate/aggiunte, compliance %, feedback distribution (quante easy/ok/hard), sport complementari loggati. Dati strutturati, nessun LLM. (2) **Narrative LLM** (Phase 3.5): stessi dati passati come contesto all'LLM coach che genera un testo motivante e actionable — es. "Settimana solida, 4/5 sessioni completate. Due sessioni easy: considera di aumentare il carico". Il report deterministico è prerequisito del report LLM. | 🔲 OPEN (fase 1 fattibile ora, fase 2 in Phase 3.5) | engine+UI+LLM | §7+§3.5 |
+| B67 | Timer guided session si ferma in background iOS (setInterval sospeso). Fix: wall-clock based timer (phaseEndTimeRef = Date.now() + duration, ogni tick calcola remaining = endTime - now). visibilitychange handler per recalc immediato al foreground. Pause + background → resta in pausa. | ✅ DONE | UI | §7 |
 
 ---
 

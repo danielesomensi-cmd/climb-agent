@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-02-27 (base phase audit: intensity cap, anti-repetition, pool expansion, orphan cleanup; 145 exercises, 25 sessions, 20 templates, 509 tests)
+> Last updated: 2026-02-28 (B67 wall-clock timer, B59 remove get_ready between sets; 145 exercises, 25 sessions, 20 templates, 509 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
