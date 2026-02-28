@@ -526,6 +526,13 @@ Tabella unica con TUTTI gli item tracciati.
 | C-2 | Day view missing Quick-add dialog. Added QuickAddDialog integration to today/page.tsx. | ✅ DONE | UI | §8 |
 | C-3 | Day view missing Replan + Move dialogs. Added ReplanDialog + MoveSessionDialog to today/page.tsx. | ✅ DONE | UI | §8 |
 | C-4 | Daily gym/location change: new `change_gym` event in replanner with equipment-aware fallback (complementary_conditioning → regeneration_easy + finger compensation). GymPickerDialog in both views. 5 new tests. | ✅ DONE | engine+UI | §8 |
+| OD-1 | Outdoor session flow (Model B): add_outdoor/complete_outdoor/undo_outdoor/remove_outdoor events, QuickAddDialog outdoor mode with spot picker + inline creation, DayCard outdoor card with log/undo/remove, OutdoorLogForm wired in Today+Week views. Fix multi-user JSONL. 8 new tests. | ✅ DONE | engine+UI | §8 |
+| B68 | Outdoor load score stimato: formula n_routes × grade_weight × style_modifier × duration_factor. Outdoor sessions contribute to weekly load totals. | 🔲 OPEN | engine | §4 |
+| B69 | Evento done_outdoor nel tracking settimanale: marca giorno come fatto nel done count + adherence %. | 🔲 OPEN | engine | §4 |
+| B70 | Ripple effect post-outdoor: ridurre volume giorno dopo se load outdoor alto. Simile a ripple effect indoor. | 🔲 OPEN | engine | §4 |
+| B71 | ~~Fix JSONL outdoor non segregato per utente~~ — FIXED in OD-1 (user-scoped log directory). | ✅ DONE | engine | §4 |
+| B72 | Outdoor history/stats UI: lista sessioni passate, statistiche per spot/grado, onsight/flash/sent percentages. | 🔲 OPEN | UI | §4 |
+| B73 | Outdoor spots in onboarding: raccogliere durante setup (step locations o dedicato), non solo post-setup in Settings. | 🔲 OPEN | UI | §4 |
 
 ---
 
