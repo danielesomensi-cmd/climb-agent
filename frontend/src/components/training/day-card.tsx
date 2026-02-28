@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, Mountain, Plus, RefreshCw, Check, Undo2 } from "lucide-react";
+import { Eye, MapPin, Mountain, Plus, RefreshCw, Check, Undo2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ interface DayCardProps {
   onQuickAdd?: (date: string) => void;
   onMoveSession?: (date: string, slot: string, sessionId: string) => void;
   onRemoveSession?: (sessionId: string) => void;
+  onChangeGym?: (date: string) => void;
   onCompleteOtherActivity?: (date: string, feedback: string) => void;
   onUndoOtherActivity?: (date: string) => void;
   showActions?: boolean;
@@ -89,6 +90,7 @@ export function DayCard({
   onQuickAdd,
   onMoveSession,
   onRemoveSession,
+  onChangeGym,
   onCompleteOtherActivity,
   onUndoOtherActivity,
   showActions = false,
@@ -239,7 +241,7 @@ export function DayCard({
         )}
 
         {/* Action buttons */}
-        {(showActions || onReplan || onQuickAdd) && (
+        {(showActions || onReplan || onQuickAdd || onChangeGym) && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             {showActions && (
               <Link href={`/today?date=${day.date}`}>
@@ -269,6 +271,17 @@ export function DayCard({
               >
                 <Plus className="size-3 mr-1" />
                 Add session
+              </Button>
+            )}
+            {onChangeGym && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs px-2 py-1"
+                onClick={() => onChangeGym(day.date)}
+              >
+                <MapPin className="size-3 mr-1" />
+                Change location
               </Button>
             )}
           </div>

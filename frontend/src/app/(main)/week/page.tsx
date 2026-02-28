@@ -7,6 +7,7 @@ import { DayCard } from "@/components/training/day-card";
 import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
+import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -53,6 +54,7 @@ export default function WeekPage() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSessionId, setFeedbackSessionId] = useState<string | null>(null);
   const [feedbackDate, setFeedbackDate] = useState<string | null>(null);
+  const [changeGymDate, setChangeGymDate] = useState<string | null>(null);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -330,6 +332,33 @@ export default function WeekPage() {
     }
   }
 
+  /** Handle gym/location change for a day */
+  async function handleChangeGymApply(data: {
+    gym_id?: string;
+    location: string;
+  }) {
+    if (!weekPlan || !changeGymDate) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "change_gym",
+            date: changeGymDate,
+            gym_id: data.gym_id,
+            location: data.location,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to change location");
+    } finally {
+      setChangeGymDate(null);
+    }
+  }
+
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
   const phaseLabel = phaseId
@@ -468,6 +497,7 @@ export default function WeekPage() {
                   onMoveSession={(date, slot, sessionId) =>
                     setMoveSession({ date, slot, sessionId })
                   }
+                  onChangeGym={(date) => setChangeGymDate(date)}
                   onCompleteOtherActivity={handleCompleteOtherActivity}
                   onUndoOtherActivity={handleUndoOtherActivity}
                 />
@@ -527,6 +557,15 @@ export default function WeekPage() {
         }}
         onSubmit={handleFeedbackSubmit}
         exercises={feedbackExercises}
+      />
+
+      {/* Gym/location picker dialog */}
+      <GymPickerDialog
+        open={changeGymDate !== null}
+        date={changeGymDate ?? ""}
+        gyms={gyms}
+        onClose={() => setChangeGymDate(null)}
+        onApply={handleChangeGymApply}
       />
     </>
   );

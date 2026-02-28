@@ -9,6 +9,7 @@ import { FeedbackDialog } from "@/components/training/feedback-dialog";
 import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
+import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession } from "@/lib/api";
 import type { WeekPlan, DayPlan, Quote } from "@/lib/types";
 
@@ -88,6 +89,7 @@ function TodayContent() {
     slot: string;
     sessionId: string;
   } | null>(null);
+  const [changeGymDate, setChangeGymDate] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -407,6 +409,33 @@ function TodayContent() {
     }
   }
 
+  /** Handle gym/location change for a day */
+  async function handleChangeGymApply(data: {
+    gym_id?: string;
+    location: string;
+  }) {
+    if (!weekPlan || !changeGymDate) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "change_gym",
+            date: changeGymDate,
+            gym_id: data.gym_id,
+            location: data.location,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to change location");
+    } finally {
+      setChangeGymDate(null);
+    }
+  }
+
   /** Submit session feedback */
   async function handleFeedbackSubmit(feedback: Record<string, string>) {
     if (!feedbackSessionId) return;
@@ -529,6 +558,7 @@ function TodayContent() {
             onMoveSession={(date, slot, sessionId) =>
               setMoveSession({ date, slot, sessionId })
             }
+            onChangeGym={(date) => setChangeGymDate(date)}
             onCompleteOtherActivity={handleCompleteOtherActivity}
             onUndoOtherActivity={handleUndoOtherActivity}
           />
@@ -628,6 +658,15 @@ function TodayContent() {
           onApply={handleMoveApply}
         />
       )}
+
+      {/* Gym/location picker dialog */}
+      <GymPickerDialog
+        open={changeGymDate !== null}
+        date={changeGymDate ?? ""}
+        gyms={gyms}
+        onClose={() => setChangeGymDate(null)}
+        onApply={handleChangeGymApply}
+      />
     </>
   );
 }

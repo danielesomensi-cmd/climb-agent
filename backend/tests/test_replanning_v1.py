@@ -712,3 +712,217 @@ def test_remove_session_last_on_day():
     updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
     assert len(updated_day["sessions"]) == 0
     assert "status" not in updated_day
+
+
+# ---------- Change gym tests (C-4) ----------
+
+
+def _gym_plan():
+    """Plan with gym sessions for change_gym testing."""
+    profile = {"finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
+               "technique": 50, "endurance": 40, "body_composition": 65}
+    base_weights = _BASE_WEIGHTS["base"]
+    domain_weights = _adjust_domain_weights(base_weights, profile)
+    session_pool = _build_session_pool("base")
+    return generate_phase_week(
+        phase_id="base",
+        domain_weights=domain_weights,
+        session_pool=session_pool,
+        start_date="2026-01-05",
+        availability={
+            "mon": {"evening": {"available": True, "locations": ["gym"], "gym_id": "gym_a"}},
+            "tue": {"evening": {"available": True, "locations": ["gym"], "gym_id": "gym_a"}},
+            "wed": {"evening": {"available": True, "locations": ["gym"], "gym_id": "gym_a"}},
+            "thu": {"evening": {"available": True, "locations": ["gym"], "gym_id": "gym_a"}},
+        },
+        allowed_locations=["home", "gym"],
+        hard_cap_per_week=3,
+        planning_prefs={"target_training_days_per_week": 4},
+        default_gym_id="gym_a",
+        gyms=[
+            {"name": "Gym A", "gym_id": "gym_a", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "gym_routes", "dumbbell", "barbell"]},
+            {"name": "Gym B", "gym_id": "gym_b", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "dumbbell"]},
+        ],
+    )
+
+
+def test_change_gym_compatible_updates_gym_id():
+    """Changing to a gym that has all required equipment should just update gym_id."""
+    plan = _gym_plan()
+    gym_b_eq = {"gym_boulder", "hangboard", "pullup_bar", "dumbbell"}
+    # Find a day with a gym session compatible with gym_b
+    day = None
+    for d in plan["weeks"][0]["days"]:
+        for s in d.get("sessions", []):
+            sid = s["session_id"]
+            meta = _SESSION_META.get(sid, {})
+            if "gym" not in meta.get("location", ()):
+                continue  # Skip home-only sessions
+            from backend.engine.replanner_v1 import _get_required_equipment
+            req = set(_get_required_equipment(sid))
+            if not req or req.issubset(gym_b_eq):
+                day = d
+                break
+        if day:
+            break
+
+    if day is None:
+        # Force a compatible gym session
+        day = plan["weeks"][0]["days"][0]
+        day["sessions"] = [{
+            "slot": "evening", "session_id": "pulling_strength_gym",
+            "location": "gym", "gym_id": "gym_a", "intensity": "high",
+            "tags": {"hard": True, "finger": False},
+        }]
+
+    target_date = day["date"]
+    original_sid = next(
+        s["session_id"] for s in day["sessions"]
+        if "gym" in _SESSION_META.get(s["session_id"], {}).get("location", ())
+    )
+
+    updated = apply_events(
+        plan,
+        [{"event_type": "change_gym", "date": target_date, "gym_id": "Gym B", "location": "gym"}],
+        gyms=[
+            {"name": "Gym A", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "gym_routes", "dumbbell"]},
+            {"name": "Gym B", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "dumbbell"]},
+        ],
+    )
+
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
+    session = updated_day["sessions"][0]
+    assert session["session_id"] == original_sid  # Same session, just new gym
+    assert session["gym_id"] == "Gym B"
+    assert session["location"] == "gym"
+
+
+def test_change_gym_incompatible_replaces_session():
+    """Changing to a gym missing required equipment should replace the session."""
+    plan = _gym_plan()
+    # Find a session that requires gym_routes (not available at gym_b)
+    target_day = None
+    for d in plan["weeks"][0]["days"]:
+        for s in d.get("sessions", []):
+            from backend.engine.replanner_v1 import _get_required_equipment
+            req = set(_get_required_equipment(s["session_id"]))
+            if "gym_routes" in req:
+                target_day = d
+                break
+        if target_day:
+            break
+
+    if target_day is None:
+        # Force a session that needs gym_routes
+        day = plan["weeks"][0]["days"][0]
+        day["sessions"] = [{
+            "slot": "evening", "session_id": "power_endurance_gym",
+            "location": "gym", "gym_id": "gym_a", "intensity": "high",
+            "tags": {"hard": True, "finger": False},
+        }]
+        target_day = day
+
+    target_date = target_day["date"]
+
+    updated = apply_events(
+        plan,
+        [{"event_type": "change_gym", "date": target_date, "gym_id": "Gym B", "location": "gym"}],
+        gyms=[
+            {"name": "Gym A", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "gym_routes"]},
+            {"name": "Gym B", "equipment": ["gym_boulder", "hangboard", "pullup_bar"]},
+        ],
+    )
+
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
+    session = updated_day["sessions"][0]
+    # Should be replaced (complementary_conditioning or regeneration_easy)
+    assert session["session_id"] != "power_endurance_gym"
+    assert session["gym_id"] == "Gym B"
+    # Check adaptation logged
+    adaptations = updated.get("adaptations", [])
+    gym_change = [a for a in adaptations if a.get("type") == "change_gym"]
+    assert len(gym_change) == 1
+    assert gym_change[0]["new_gym_id"] == "Gym B"
+
+
+def test_change_gym_to_home_replaces_gym_only_sessions():
+    """Changing to Home should replace gym-only sessions with home-compatible ones."""
+    plan = _gym_plan()
+    # Force a gym-only session
+    day = plan["weeks"][0]["days"][0]
+    day["sessions"] = [{
+        "slot": "evening", "session_id": "power_contact_gym",
+        "location": "gym", "gym_id": "gym_a", "intensity": "max",
+        "tags": {"hard": True, "finger": False},
+    }]
+    target_date = day["date"]
+
+    updated = apply_events(
+        plan,
+        [{"event_type": "change_gym", "date": target_date, "location": "home"}],
+    )
+
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
+    session = updated_day["sessions"][0]
+    assert session["session_id"] == "complementary_conditioning"
+    assert session["location"] == "home"
+    assert session["gym_id"] is None
+
+
+def test_change_gym_skips_done_sessions():
+    """Done sessions should not be affected by gym change."""
+    plan = _gym_plan()
+    day = plan["weeks"][0]["days"][0]
+    day["sessions"] = [
+        {"slot": "morning", "session_id": "power_contact_gym", "location": "gym",
+         "gym_id": "gym_a", "intensity": "max", "tags": {"hard": True, "finger": False},
+         "status": "done"},
+        {"slot": "evening", "session_id": "technique_focus_gym", "location": "gym",
+         "gym_id": "gym_a", "intensity": "medium", "tags": {"hard": False, "finger": False}},
+    ]
+    target_date = day["date"]
+
+    updated = apply_events(
+        plan,
+        [{"event_type": "change_gym", "date": target_date, "location": "home"}],
+    )
+
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
+    done_session = next(s for s in updated_day["sessions"] if s["slot"] == "morning")
+    assert done_session["session_id"] == "power_contact_gym"  # Untouched
+    assert done_session["gym_id"] == "gym_a"  # Untouched
+
+    planned_session = next(s for s in updated_day["sessions"] if s["slot"] == "evening")
+    assert planned_session["location"] == "home"  # Changed
+
+
+def test_change_gym_finger_compensation():
+    """Losing a finger session to gym change should trigger finger compensation."""
+    plan = _gym_plan()
+    # Force a finger session on day 1 and a replaceable session on day 3+
+    days = plan["weeks"][0]["days"]
+    days[0]["sessions"] = [{
+        "slot": "evening", "session_id": "finger_maintenance_gym",
+        "location": "gym", "gym_id": "gym_a", "intensity": "medium",
+        "tags": {"hard": False, "finger": True},
+    }]
+    # Ensure day 3 has a replaceable complementary session
+    if len(days) > 2:
+        days[2]["sessions"] = [{
+            "slot": "evening", "session_id": "complementary_conditioning",
+            "location": "gym", "gym_id": "gym_a", "intensity": "medium",
+            "tags": {"hard": False, "finger": False},
+        }]
+
+    updated = apply_events(
+        plan,
+        [{"event_type": "change_gym", "date": days[0]["date"], "location": "home"}],
+    )
+
+    # Check finger compensation was attempted
+    adaptations = updated.get("adaptations", [])
+    has_compensation = any(
+        a.get("type") in ("finger_compensation", "finger_compensation_warning")
+        for a in adaptations
+    )
+    assert has_compensation

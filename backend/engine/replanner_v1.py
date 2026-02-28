@@ -1,11 +1,57 @@
 from __future__ import annotations
 
+import json
+import os
 from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from backend.engine.macrocycle_v1 import _build_session_pool
 from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META, generate_phase_week
+
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_SESSIONS_DIR = os.path.join(_REPO_ROOT, "backend", "catalog", "sessions", "v1")
+
+_required_equipment_cache: Dict[str, list] = {}
+
+
+def _get_required_equipment(session_id: str) -> list:
+    """Load required_equipment from session JSON file (cached)."""
+    if session_id in _required_equipment_cache:
+        return _required_equipment_cache[session_id]
+    path = os.path.join(_SESSIONS_DIR, f"{session_id}.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+            eq = data.get("required_equipment", [])
+    except (FileNotFoundError, json.JSONDecodeError):
+        eq = []
+    _required_equipment_cache[session_id] = eq
+    return eq
+
+
+def _find_gym_change_replacement(
+    original_sid: str,
+    new_location: str,
+    gym_equipment: set,
+    is_finger_session: bool,
+) -> str:
+    """Find replacement session when changing gym/location makes original incompatible.
+
+    Fallback chain:
+    1. complementary_conditioning (home+gym, no required_equipment)
+    2. finger_strength_home — only if going home AND original was a finger session
+    3. regeneration_easy (universal final fallback)
+    """
+    # First fallback: complementary_conditioning
+    cc_meta = _meta_for("complementary_conditioning")
+    if new_location in cc_meta.get("location", ()):
+        cc_eq = set(_get_required_equipment("complementary_conditioning"))
+        if not cc_eq or (new_location != "gym") or cc_eq.issubset(gym_equipment):
+            return "complementary_conditioning"
+
+    # Universal fallback
+    return "regeneration_easy"
 
 # Phase-aware intent → session_id mapping (uses planner_v2 session catalog)
 INTENT_TO_SESSION = {
@@ -614,6 +660,78 @@ def apply_events(
             day.pop("other_activity_feedback", None)
             day.pop("other_activity_load", None)
             day.pop("status", None)
+
+        elif event_type == "change_gym":
+            day = _find_day(updated, event["date"])
+            new_location = event.get("location", "gym")
+            new_gym_id = event.get("gym_id")
+
+            # Resolve gym equipment for compatibility check
+            # TODO: generate stable gym_id at onboarding — using name as gym_id for now
+            gym_equipment: set = set()
+            if new_location == "gym" and gyms and new_gym_id:
+                for g in (gyms or []):
+                    if g.get("name") == new_gym_id or g.get("gym_id") == new_gym_id:
+                        gym_equipment = set(g.get("equipment", []))
+                        break
+
+            change_warnings: list = []
+            lost_finger = False
+
+            for s in day.get("sessions", []):
+                if s.get("status") in ("done", "skipped"):
+                    continue
+
+                sid = s.get("session_id", "")
+                meta = _meta_for(sid)
+
+                # Check location compatibility
+                location_ok = new_location in meta.get("location", ("gym", "home"))
+
+                # Check equipment compatibility
+                equipment_ok = True
+                if location_ok and new_location == "gym":
+                    req_eq = set(_get_required_equipment(sid))
+                    if req_eq and not req_eq.issubset(gym_equipment):
+                        equipment_ok = False
+                        missing = req_eq - gym_equipment
+
+                if not location_ok or not equipment_ok:
+                    # Need replacement
+                    replacement = _find_gym_change_replacement(
+                        sid, new_location, gym_equipment, meta.get("finger", False),
+                    )
+                    if meta.get("finger") and not _meta_for(replacement).get("finger"):
+                        lost_finger = True
+                    rep_meta = _meta_for(replacement)
+                    reason = f"incompatible_location={new_location}" if not location_ok else f"missing_equipment={missing}"
+                    s["session_id"] = replacement
+                    s["location"] = new_location
+                    s["gym_id"] = new_gym_id if new_location == "gym" else None
+                    s["intensity"] = rep_meta["intensity"]
+                    s["estimated_load_score"] = _INTENSITY_TO_LOAD.get(rep_meta["intensity"], 40)
+                    s["tags"] = {"hard": rep_meta["hard"], "finger": rep_meta["finger"]}
+                    s["explain"] = [f"gym_change: {sid} → {replacement}", reason]
+                    s.pop("resolved", None)
+                    change_warnings.append(f"{sid} → {replacement} ({reason})")
+                else:
+                    # Compatible — update gym_id/location, clear resolved to force re-resolution
+                    s["location"] = new_location
+                    s["gym_id"] = new_gym_id if new_location == "gym" else None
+                    s.pop("resolved", None)
+
+            # Finger compensation if we lost a finger session
+            if lost_finger:
+                snap_phase = (updated.get("profile_snapshot") or {}).get("phase_id", "base")
+                _compensate_finger(updated, event["date"], snap_phase, new_location, new_gym_id)
+
+            updated.setdefault("adaptations", []).append({
+                "type": "change_gym",
+                "date": event["date"],
+                "new_location": new_location,
+                "new_gym_id": new_gym_id,
+                "warnings": change_warnings,
+            })
 
         elif event_type == "set_availability":
             if availability is not None and event.get("availability"):
