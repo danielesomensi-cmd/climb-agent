@@ -95,6 +95,9 @@ export function ExerciseTimer({
   const [transitionId, setTransitionId] = useState(0);
   const [flash, setFlash] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const phaseEndTimeRef = useRef<number>(0);
+  const secondsLeftRef = useRef(0);
+  useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
   const onSetChangeRef = useRef(onSetChange);
   useEffect(() => { onSetChangeRef.current = onSetChange; }, [onSetChange]);
 
@@ -154,87 +157,124 @@ export function ExerciseTimer({
 
   useEffect(() => clearTimer, [clearTimer]);
 
-  // Main tick — recreated when relevant state changes
+  /** Set wall-clock end time + display value. Use for all non-tick timer updates. */
+  const startCountdown = useCallback((seconds: number) => {
+    phaseEndTimeRef.current = Date.now() + seconds * 1000;
+    setSecondsLeft(seconds);
+  }, []);
+
+  // Main tick — wall-clock based so iOS background suspension doesn't freeze countdown.
+  // Instead of decrementing a counter, each tick computes remaining = endTime - Date.now().
   useEffect(() => {
     clearTimer();
 
     if (phase === "idle" || phase === "complete" || paused) return;
     if (phase === "work" && isManual) return; // manual work has no countdown
 
+    // (Re)compute end time from current remaining seconds.
+    // Handles both: (a) resuming from pause, (b) effect re-run after phase transition.
+    phaseEndTimeRef.current = Date.now() + secondsLeftRef.current * 1000;
+
     intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => {
-        if (prev <= 1) {
-          // --- Phase transition ---
+      const remainingMs = phaseEndTimeRef.current - Date.now();
 
-          if (phase === "get_ready") {
-            setPhase("work");
+      if (remainingMs <= 0) {
+        // --- Phase transition ---
+
+        if (phase === "get_ready") {
+          setPhase("work");
+          setTransitionId((id) => id + 1);
+          if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
+          return;
+        }
+
+        if (phase === "work") {
+          // More reps in this set?
+          if (hasRepLoop && currentRep < reps) {
+            if (restBetweenRepsSeconds > 0) {
+              setPhase("rep_rest");
+              setTransitionId((id) => id + 1);
+              startCountdown(restBetweenRepsSeconds);
+              return;
+            }
+            // No rep rest — next rep immediately
+            setCurrentRep((r) => r + 1);
             setTransitionId((id) => id + 1);
-            if (isManual) return 0;
-            return workSeconds;
+            startCountdown(workSeconds);
+            return;
           }
+          // End of set
+          onSetChangeRef.current?.(currentSet);
+          if (currentSet >= sets) {
+            setPhase("complete");
+            setTransitionId((id) => id + 1);
+            setSecondsLeft(0);
+            return;
+          }
+          // More sets — go to set rest
+          if (restBetweenSetsSeconds > 0) {
+            setPhase("set_rest");
+            setTransitionId((id) => id + 1);
+            startCountdown(restBetweenSetsSeconds);
+            return;
+          }
+          // No set rest — next set with get_ready
+          setCurrentSet((s) => s + 1);
+          setCurrentRep(1);
+          setPhase("get_ready");
+          setTransitionId((id) => id + 1);
+          startCountdown(GET_READY_SECONDS);
+          return;
+        }
 
-          if (phase === "work") {
-            // More reps in this set?
-            if (hasRepLoop && currentRep < reps) {
-              if (restBetweenRepsSeconds > 0) {
-                setPhase("rep_rest");
-                setTransitionId((id) => id + 1);
-                return restBetweenRepsSeconds;
-              }
-              // No rep rest — next rep immediately
-              setCurrentRep((r) => r + 1);
-              setTransitionId((id) => id + 1);
-              return workSeconds;
-            }
-            // End of set
-            onSetChangeRef.current?.(currentSet);
-            if (currentSet >= sets) {
-              setPhase("complete");
-              setTransitionId((id) => id + 1);
-              return 0;
-            }
-            // More sets — go to set rest
-            if (restBetweenSetsSeconds > 0) {
-              setPhase("set_rest");
-              setTransitionId((id) => id + 1);
-              return restBetweenSetsSeconds;
-            }
-            // No set rest — next set with get_ready
-            setCurrentSet((s) => s + 1);
-            setCurrentRep(1);
+        if (phase === "rep_rest") {
+          setCurrentRep((r) => r + 1);
+          setPhase("work");
+          setTransitionId((id) => id + 1);
+          startCountdown(workSeconds);
+          return;
+        }
+
+        if (phase === "set_rest") {
+          setCurrentSet((s) => s + 1);
+          setCurrentRep(1);
+          if (!isManual) {
             setPhase("get_ready");
             setTransitionId((id) => id + 1);
-            return GET_READY_SECONDS;
-          }
-
-          if (phase === "rep_rest") {
-            setCurrentRep((r) => r + 1);
+            startCountdown(GET_READY_SECONDS);
+          } else {
             setPhase("work");
             setTransitionId((id) => id + 1);
-            return workSeconds;
+            setSecondsLeft(0);
           }
-
-          if (phase === "set_rest") {
-            setCurrentSet((s) => s + 1);
-            setCurrentRep(1);
-            if (!isManual) {
-              setPhase("get_ready");
-              setTransitionId((id) => id + 1);
-              return GET_READY_SECONDS;
-            }
-            setPhase("work");
-            setTransitionId((id) => id + 1);
-            return 0;
-          }
-
-          return 0;
+          return;
         }
-        return prev - 1;
-      });
+
+        setSecondsLeft(0);
+        return;
+      }
+
+      // Normal tick — update display from wall clock
+      setSecondsLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
     }, 1000);
 
     return clearTimer;
-  }, [phase, paused, currentSet, currentRep, sets, reps, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, clearTimer]);
+  }, [phase, paused, currentSet, currentRep, sets, reps, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, clearTimer, startCountdown]);
+
+  // Immediate recalc when PWA returns to foreground (iOS suspends setInterval in background).
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      if (phaseRef.current === "idle" || phaseRef.current === "complete") return;
+      if (pausedRef.current) return;
+      if (phaseRef.current === "work" && isManual) return;
+      // Force display update — the next interval tick will handle phase transition if expired
+      const remainingMs = phaseEndTimeRef.current - Date.now();
+      setSecondsLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [isManual]);
 
   // --- Handlers ---
 
@@ -245,7 +285,7 @@ export function ExerciseTimer({
       setSecondsLeft(0);
     } else {
       setPhase("get_ready");
-      setSecondsLeft(GET_READY_SECONDS);
+      startCountdown(GET_READY_SECONDS);
     }
     setPaused(false);
     setTransitionId((id) => id + 1);
@@ -258,7 +298,7 @@ export function ExerciseTimer({
       setPhase("complete");
     } else if (restBetweenSetsSeconds > 0) {
       setPhase("set_rest");
-      setSecondsLeft(restBetweenSetsSeconds);
+      startCountdown(restBetweenSetsSeconds);
     } else {
       setCurrentSet((s) => s + 1);
       // Phase stays "work" (manual), no countdown
@@ -268,6 +308,7 @@ export function ExerciseTimer({
 
   function handleReset() {
     clearTimer();
+    phaseEndTimeRef.current = 0;
     setPhase("idle");
     setCurrentSet(1);
     setCurrentRep(1);
@@ -292,15 +333,15 @@ export function ExerciseTimer({
 
     if (phase === "get_ready") {
       setPhase("work");
-      setSecondsLeft(isManual ? 0 : workSeconds);
+      if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     } else if (phase === "work") {
       if (hasRepLoop && currentRep < reps) {
         if (restBetweenRepsSeconds > 0) {
           setPhase("rep_rest");
-          setSecondsLeft(restBetweenRepsSeconds);
+          startCountdown(restBetweenRepsSeconds);
         } else {
           setCurrentRep((r) => r + 1);
-          setSecondsLeft(workSeconds);
+          startCountdown(workSeconds);
         }
       } else {
         // End of set
@@ -310,23 +351,23 @@ export function ExerciseTimer({
           setSecondsLeft(0);
         } else if (restBetweenSetsSeconds > 0) {
           setPhase("set_rest");
-          setSecondsLeft(restBetweenSetsSeconds);
+          startCountdown(restBetweenSetsSeconds);
         } else {
           setCurrentSet((s) => s + 1);
           setCurrentRep(1);
-          setPhase(isManual ? "work" : "get_ready");
-          setSecondsLeft(isManual ? 0 : GET_READY_SECONDS);
+          if (isManual) { setPhase("work"); setSecondsLeft(0); }
+          else { setPhase("get_ready"); startCountdown(GET_READY_SECONDS); }
         }
       }
     } else if (phase === "rep_rest") {
       setCurrentRep((r) => r + 1);
       setPhase("work");
-      setSecondsLeft(isManual ? 0 : workSeconds);
+      if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     } else if (phase === "set_rest") {
       setCurrentSet((s) => s + 1);
       setCurrentRep(1);
-      setPhase(isManual ? "work" : "get_ready");
-      setSecondsLeft(isManual ? 0 : GET_READY_SECONDS);
+      if (isManual) { setPhase("work"); setSecondsLeft(0); }
+      else { setPhase("get_ready"); startCountdown(GET_READY_SECONDS); }
     }
 
     setTransitionId((id) => id + 1);
@@ -341,7 +382,7 @@ export function ExerciseTimer({
 
     if (elapsed > 2) {
       // Restart current phase from beginning
-      setSecondsLeft(totalForPhase);
+      startCountdown(totalForPhase);
       if (!wasRunning) setPaused(true);
       return;
     }
@@ -349,23 +390,23 @@ export function ExerciseTimer({
     // Go to previous phase
     if (phase === "get_ready") {
       // Can't go further back — just restart
-      setSecondsLeft(GET_READY_SECONDS);
+      startCountdown(GET_READY_SECONDS);
     } else if (phase === "work") {
       if (currentRep > 1 && restBetweenRepsSeconds > 0) {
         setCurrentRep((r) => r - 1);
         setPhase("rep_rest");
-        setSecondsLeft(restBetweenRepsSeconds);
+        startCountdown(restBetweenRepsSeconds);
       } else {
-        setPhase(isManual ? "work" : "get_ready");
-        setSecondsLeft(isManual ? 0 : GET_READY_SECONDS);
+        if (isManual) { setPhase("work"); setSecondsLeft(0); }
+        else { setPhase("get_ready"); startCountdown(GET_READY_SECONDS); }
       }
     } else if (phase === "rep_rest") {
       setPhase("work");
-      setSecondsLeft(isManual ? 0 : workSeconds);
+      if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     } else if (phase === "set_rest") {
       // Go back to work phase (last rep of current set)
       setPhase("work");
-      setSecondsLeft(isManual ? 0 : workSeconds);
+      if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     }
 
     setTransitionId((id) => id + 1);
