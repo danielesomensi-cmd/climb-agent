@@ -630,7 +630,9 @@ def apply_events(
                 if _session_matches(s, session_ref=event.get("session_ref"), slot=event.get("slot")):
                     s["status"] = "done"
                     break
-            if all(s.get("status") == "done" for s in day.get("sessions") or []):
+            all_sessions_done = all(s.get("status") == "done" for s in day.get("sessions") or [])
+            outdoor_ok = day.get("outdoor_session_status", "done") == "done"  # no outdoor = ok
+            if all_sessions_done and outdoor_ok:
                 day["status"] = "done"
 
         elif event_type == "mark_planned":
@@ -660,6 +662,37 @@ def apply_events(
             day.pop("other_activity_feedback", None)
             day.pop("other_activity_load", None)
             day.pop("status", None)
+
+        elif event_type == "add_outdoor":
+            day = _find_day(updated, event["date"])
+            day["outdoor_spot_name"] = event["spot_name"]
+            day["outdoor_discipline"] = event.get("discipline", "both")
+            if event.get("spot_id"):
+                day["outdoor_spot_id"] = event["spot_id"]
+            day["outdoor_session_status"] = "planned"
+
+        elif event_type == "complete_outdoor":
+            day = _find_day(updated, event["date"])
+            if not day.get("outdoor_spot_name"):
+                raise ValueError(f"Date {event['date']} has no outdoor session to complete")
+            day["outdoor_session_status"] = "done"
+            sessions = day.get("sessions") or []
+            all_sessions_done = all(s.get("status") in ("done", "skipped") for s in sessions) if sessions else True
+            if all_sessions_done:
+                day["status"] = "done"
+
+        elif event_type == "undo_outdoor":
+            day = _find_day(updated, event["date"])
+            day["outdoor_session_status"] = "planned"
+            if day.get("status") == "done":
+                day.pop("status", None)
+
+        elif event_type == "remove_outdoor":
+            day = _find_day(updated, event["date"])
+            if day.get("outdoor_session_status") == "done":
+                raise ValueError("Cannot remove a completed outdoor session")
+            for k in ("outdoor_spot_name", "outdoor_discipline", "outdoor_spot_id", "outdoor_session_status"):
+                day.pop(k, None)
 
         elif event_type == "change_gym":
             day = _find_day(updated, event["date"])

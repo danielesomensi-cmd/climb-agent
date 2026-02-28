@@ -926,3 +926,165 @@ def test_change_gym_finger_compensation():
         for a in adaptations
     )
     assert has_compensation
+
+
+# ── Outdoor events ─────────────────────────────────────────────────────
+
+
+def test_add_outdoor_sets_fields():
+    plan = _plan_snapshot()
+    target = plan["weeks"][0]["days"][5]  # Saturday
+    updated = apply_events(plan, [{
+        "event_type": "add_outdoor",
+        "date": target["date"],
+        "spot_name": "Berdorf",
+        "discipline": "lead",
+        "spot_id": "spot_abc",
+    }])
+    day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target["date"])
+    assert day["outdoor_spot_name"] == "Berdorf"
+    assert day["outdoor_discipline"] == "lead"
+    assert day["outdoor_spot_id"] == "spot_abc"
+    assert day["outdoor_session_status"] == "planned"
+
+
+def test_add_outdoor_coexists_with_sessions():
+    plan = _plan_snapshot()
+    # Pick a day with sessions
+    day_with_sessions = next(d for d in plan["weeks"][0]["days"] if d.get("sessions"))
+    orig_count = len(day_with_sessions["sessions"])
+    updated = apply_events(plan, [{
+        "event_type": "add_outdoor",
+        "date": day_with_sessions["date"],
+        "spot_name": "Berdorf",
+        "discipline": "boulder",
+    }])
+    day = next(d for d in updated["weeks"][0]["days"] if d["date"] == day_with_sessions["date"])
+    assert day["outdoor_spot_name"] == "Berdorf"
+    assert len(day.get("sessions", [])) == orig_count  # sessions untouched
+
+
+def test_complete_outdoor_marks_done():
+    plan = _plan_snapshot()
+    target = plan["weeks"][0]["days"][5]
+    # First add outdoor
+    plan = apply_events(plan, [{
+        "event_type": "add_outdoor",
+        "date": target["date"],
+        "spot_name": "Berdorf",
+        "discipline": "lead",
+    }])
+    # Then complete
+    updated = apply_events(plan, [{
+        "event_type": "complete_outdoor",
+        "date": target["date"],
+    }])
+    day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target["date"])
+    assert day["outdoor_session_status"] == "done"
+
+
+def test_complete_outdoor_without_add_raises():
+    plan = _plan_snapshot()
+    target = plan["weeks"][0]["days"][5]
+    with pytest.raises(ValueError, match="no outdoor session"):
+        apply_events(plan, [{
+            "event_type": "complete_outdoor",
+            "date": target["date"],
+        }])
+
+
+def test_undo_outdoor_reverts():
+    plan = _plan_snapshot()
+    target = plan["weeks"][0]["days"][5]
+    plan = apply_events(plan, [{
+        "event_type": "add_outdoor",
+        "date": target["date"],
+        "spot_name": "Berdorf",
+        "discipline": "lead",
+    }])
+    plan = apply_events(plan, [{
+        "event_type": "complete_outdoor",
+        "date": target["date"],
+    }])
+    updated = apply_events(plan, [{
+        "event_type": "undo_outdoor",
+        "date": target["date"],
+    }])
+    day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target["date"])
+    assert day["outdoor_session_status"] == "planned"
+    assert day.get("status") != "done"
+
+
+def test_remove_outdoor_clears_all():
+    plan = _plan_snapshot()
+    target = plan["weeks"][0]["days"][5]
+    plan = apply_events(plan, [{
+        "event_type": "add_outdoor",
+        "date": target["date"],
+        "spot_name": "Berdorf",
+        "discipline": "lead",
+        "spot_id": "spot_abc",
+    }])
+    updated = apply_events(plan, [{
+        "event_type": "remove_outdoor",
+        "date": target["date"],
+    }])
+    day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target["date"])
+    assert "outdoor_spot_name" not in day
+    assert "outdoor_discipline" not in day
+    assert "outdoor_spot_id" not in day
+    assert "outdoor_session_status" not in day
+
+
+def test_remove_outdoor_done_raises():
+    plan = _plan_snapshot()
+    target = plan["weeks"][0]["days"][5]
+    plan = apply_events(plan, [{
+        "event_type": "add_outdoor",
+        "date": target["date"],
+        "spot_name": "Berdorf",
+        "discipline": "lead",
+    }])
+    plan = apply_events(plan, [{
+        "event_type": "complete_outdoor",
+        "date": target["date"],
+    }])
+    with pytest.raises(ValueError, match="Cannot remove a completed outdoor"):
+        apply_events(plan, [{
+            "event_type": "remove_outdoor",
+            "date": target["date"],
+        }])
+
+
+def test_mark_done_indoor_does_not_complete_day_with_planned_outdoor():
+    """When outdoor is planned, marking all indoor sessions done should NOT mark the day done."""
+    plan = _plan_snapshot()
+    day_with_sessions = next(d for d in plan["weeks"][0]["days"] if d.get("sessions"))
+    # Add outdoor
+    plan = apply_events(plan, [{
+        "event_type": "add_outdoor",
+        "date": day_with_sessions["date"],
+        "spot_name": "Berdorf",
+        "discipline": "lead",
+    }])
+    # Mark all indoor sessions done
+    events = []
+    day = next(d for d in plan["weeks"][0]["days"] if d["date"] == day_with_sessions["date"])
+    for s in day["sessions"]:
+        events.append({
+            "event_type": "mark_done",
+            "date": day["date"],
+            "session_ref": s["session_id"],
+            "slot": s["slot"],
+        })
+    updated = apply_events(plan, events)
+    result_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == day_with_sessions["date"])
+    # Day should NOT be marked done because outdoor is still "planned"
+    assert result_day.get("status") != "done"
+    # Now complete outdoor too
+    updated2 = apply_events(updated, [{
+        "event_type": "complete_outdoor",
+        "date": result_day["date"],
+    }])
+    result_day2 = next(d for d in updated2["weeks"][0]["days"] if d["date"] == day_with_sessions["date"])
+    assert result_day2["status"] == "done"

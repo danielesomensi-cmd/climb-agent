@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.api.deps import DATA_DIR, get_user_id, load_state, save_state
+from backend.api.deps import DATA_DIR, USERS_DIR, get_user_id, load_state, save_state
 from backend.api.models import OutdoorSpotCreate, OutdoorSessionLog, ConvertSlotRequest
 from backend.engine.outdoor_log import (
     append_outdoor_session,
@@ -18,7 +18,16 @@ from backend.engine.outdoor_log import (
 
 router = APIRouter(prefix="/api/outdoor", tags=["outdoor"])
 
-LOG_DIR = str(DATA_DIR / "logs")
+_FALLBACK_LOG_DIR = str(DATA_DIR / "logs")
+
+
+def _log_dir(user_id: Optional[str]) -> str:
+    """Return user-scoped log directory, or fallback for legacy/test."""
+    if user_id:
+        d = str(USERS_DIR / user_id / "logs")
+        os.makedirs(d, exist_ok=True)
+        return d
+    return _FALLBACK_LOG_DIR
 
 
 # ── Spots CRUD ──────────────────────────────────────────────────────────
@@ -75,13 +84,13 @@ def delete_outdoor_spot(spot_id: str, user_id: Optional[str] = Depends(get_user_
 # ── Session logging ─────────────────────────────────────────────────────
 
 @router.post("/log")
-def post_outdoor_log(req: OutdoorSessionLog):
+def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get_user_id)):
     """Validate and append an outdoor session to the log."""
     entry = req.model_dump(exclude_none=True)
     entry["log_version"] = "outdoor.v1"
 
     try:
-        log_path = append_outdoor_session(entry, LOG_DIR)
+        log_path = append_outdoor_session(entry, _log_dir(user_id))
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -89,16 +98,16 @@ def post_outdoor_log(req: OutdoorSessionLog):
 
 
 @router.get("/sessions")
-def get_outdoor_sessions(since: Optional[str] = Query(None)):
+def get_outdoor_sessions(since: Optional[str] = Query(None), user_id: Optional[str] = Depends(get_user_id)):
     """List outdoor sessions, optionally filtered by date."""
-    sessions = load_outdoor_sessions(LOG_DIR, since_date=since)
+    sessions = load_outdoor_sessions(_log_dir(user_id), since_date=since)
     return {"sessions": sessions, "count": len(sessions)}
 
 
 @router.get("/stats")
-def get_outdoor_stats(since: Optional[str] = Query(None)):
+def get_outdoor_stats(since: Optional[str] = Query(None), user_id: Optional[str] = Depends(get_user_id)):
     """Get aggregated outdoor climbing statistics."""
-    sessions = load_outdoor_sessions(LOG_DIR, since_date=since)
+    sessions = load_outdoor_sessions(_log_dir(user_id), since_date=since)
     stats = compute_outdoor_stats(sessions)
     return stats
 

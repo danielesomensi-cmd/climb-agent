@@ -229,7 +229,7 @@ class TestOutdoorAPI:
         monkeypatch.setattr(deps, "STATE_PATH", state_path)
 
         log_dir = str(tmp_path / "logs")
-        monkeypatch.setattr(outdoor_router, "LOG_DIR", log_dir)
+        monkeypatch.setattr(outdoor_router, "_FALLBACK_LOG_DIR", log_dir)
 
         from fastapi.testclient import TestClient
         from backend.api.main import app
