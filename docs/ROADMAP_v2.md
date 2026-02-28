@@ -534,6 +534,9 @@ Tabella unica con TUTTI gli item tracciati.
 | B72 | Outdoor history/stats UI: lista sessioni passate, statistiche per spot/grado, onsight/flash/sent percentages. | 🔲 OPEN | UI | §4 |
 | B73 | Outdoor spots in onboarding: raccogliere durante setup (step locations o dedicato), non solo post-setup in Settings. | 🔲 OPEN | UI | §4 |
 | B74 | Outdoor route summary in DayCard: expand/collapse route list when done (grade + name + style badge + ×N attempts + max grade). Style picker in OutdoorLogForm (onsight/flash/redpoint/project). Today+Week auto-fetch outdoor sessions. | ✅ DONE | UI | §4 |
+| **B75** | **🚨 P0 CRITICAL — Data persistence.** UUID in localStorage è fragile — clear browser/new device = stato perso. Fix definitivo: auth reale (Clerk). Fix intermedi: **(a)** endpoint `GET /api/admin/users` per recovery (lista UUID + last access + grade), **(b)** export/import user_state in Settings (backup manuale utente), **(c)** backup periodico volume Railway. Tutti i fix intermedi vanno fatti PRIMA di invitare nuovi beta tester. | 🔲 OPEN | infra | §4a |
+| B75a | Admin recovery endpoint: `GET /api/admin/users` — lista UUID, data ultimo accesso, current_grade. Per rimappare utenti che perdono il localStorage UUID. | 🔲 OPEN | API | §4a |
+| B75b | Export/import user_state: Settings → Export data (JSON download) / Import data (JSON upload). Safety net per beta tester. | 🔲 OPEN | UI | §4a |
 
 ---
 
