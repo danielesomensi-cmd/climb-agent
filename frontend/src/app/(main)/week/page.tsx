@@ -64,6 +64,7 @@ export default function WeekPage() {
   const [changeGymDate, setChangeGymDate] = useState<string | null>(null);
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
+  const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -100,6 +101,8 @@ export default function WeekPage() {
       setPhaseId(weekData.phase_id);
       setDisplayWeekNum(weekData.week_num);
       setMacrocycle(stateData.macrocycle ?? null);
+      const goal = stateData.goal as { current_grade?: string } | undefined;
+      if (goal?.current_grade) setCurrentGrade(goal.current_grade);
       const eq = stateData.equipment as Record<string, unknown> | undefined;
       setGyms(
         (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
@@ -674,6 +677,7 @@ export default function WeekPage() {
                 defaultDate={outdoorLogDate}
                 defaultSpotName={logDay?.outdoor_spot_name}
                 defaultDiscipline={logDay?.outdoor_discipline}
+                defaultGrade={currentGrade ?? undefined}
                 onSuccess={handleOutdoorLogSuccess}
               />
             );

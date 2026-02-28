@@ -4,15 +4,31 @@ import { useState } from "react";
 import type { OutdoorSpot, OutdoorRoute, OutdoorAttempt } from "@/lib/types";
 import { postOutdoorLog } from "@/lib/api";
 
+const FRENCH_SPORT_GRADES = [
+  "4a","4b","4c","5a","5a+","5b","5b+","5c","5c+",
+  "6a","6a+","6b","6b+","6c","6c+",
+  "7a","7a+","7b","7b+","7c","7c+",
+  "8a","8a+","8b","8b+","8c","8c+",
+  "9a","9a+",
+];
+
+const FONT_BOULDER_GRADES = [
+  "4","4+","5","5+",
+  "6a","6a+","6b","6b+","6c","6c+",
+  "7a","7a+","7b","7b+","7c","7c+",
+  "8a","8a+","8b","8b+","8c","8c+",
+];
+
 interface Props {
   spots: OutdoorSpot[];
   defaultDate?: string;
   defaultSpotName?: string;
   defaultDiscipline?: "lead" | "boulder" | "both";
+  defaultGrade?: string;
   onSuccess?: () => void;
 }
 
-export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, onSuccess }: Props) {
+export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, onSuccess }: Props) {
   const [date, setDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
   const [spotName, setSpotName] = useState(defaultSpotName || "");
   const [discipline, setDiscipline] = useState<"lead" | "boulder" | "both">(defaultDiscipline || "boulder");
@@ -22,8 +38,13 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const gradeList = discipline === "lead" || discipline === "both"
+    ? FRENCH_SPORT_GRADES
+    : FONT_BOULDER_GRADES;
+  const initialGrade = defaultGrade && gradeList.includes(defaultGrade) ? defaultGrade : "6a";
+
   const addRoute = () => {
-    setRoutes([...routes, { name: "", grade: "", attempts: [{ result: "sent" }] }]);
+    setRoutes([...routes, { name: "", grade: initialGrade, attempts: [{ result: "sent" }] }]);
   };
 
   const updateRoute = (idx: number, field: keyof OutdoorRoute, value: string) => {
@@ -161,12 +182,15 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                 onChange={e => updateRoute(rIdx, "name", e.target.value)}
                 className="flex-1 rounded-md border bg-background px-2 py-1 text-sm"
               />
-              <input
-                placeholder="Grade"
+              <select
                 value={route.grade}
                 onChange={e => updateRoute(rIdx, "grade", e.target.value)}
                 className="w-20 rounded-md border bg-background px-2 py-1 text-sm"
-              />
+              >
+                {gradeList.map(g => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
               <button
                 onClick={() => removeRoute(rIdx)}
                 className="text-destructive text-sm"

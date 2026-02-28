@@ -99,6 +99,7 @@ function TodayContent() {
   const [changeGymDate, setChangeGymDate] = useState<string | null>(null);
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
+  const [currentGrade, setCurrentGrade] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -110,6 +111,8 @@ function TodayContent() {
       ]);
       setWeekPlan(weekData.week_plan);
       setPhaseId(weekData.phase_id ?? null);
+      const goal = stateData.goal as { current_grade?: string } | undefined;
+      if (goal?.current_grade) setCurrentGrade(goal.current_grade);
       const eq = stateData.equipment as Record<string, unknown> | undefined;
       setGyms(
         (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
@@ -771,6 +774,7 @@ function TodayContent() {
             defaultDate={outdoorLogDate ?? undefined}
             defaultSpotName={dayPlan?.outdoor_spot_name}
             defaultDiscipline={dayPlan?.outdoor_discipline}
+            defaultGrade={currentGrade ?? undefined}
             onSuccess={handleOutdoorLogSuccess}
           />
         </DialogContent>
