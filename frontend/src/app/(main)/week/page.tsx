@@ -10,7 +10,8 @@ import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getWeek, getState, applyOverride, quickAddSession, applyEvents } from "@/lib/api";
+import { FeedbackDialog } from "@/components/training/feedback-dialog";
+import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback } from "@/lib/api";
 import type { WeekPlan, DayPlan, Macrocycle } from "@/lib/types";
 
 /** English labels for phase names */
@@ -49,6 +50,9 @@ export default function WeekPage() {
     slot: string;
     sessionId: string;
   } | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackSessionId, setFeedbackSessionId] = useState<string | null>(null);
+  const [feedbackDate, setFeedbackDate] = useState<string | null>(null);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -232,11 +236,131 @@ export default function WeekPage() {
     }
   }
 
+  /** Mark a session as completed + open feedback dialog */
+  async function handleMarkDone(sessionId: string, date: string) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "mark_done", date, session_ref: sessionId }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+      setFeedbackSessionId(sessionId);
+      setFeedbackDate(date);
+      setFeedbackOpen(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    }
+  }
+
+  /** Mark a session as skipped */
+  async function handleMarkSkipped(sessionId: string, date: string) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "mark_skipped", date, session_ref: sessionId }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save");
+    }
+  }
+
+  /** Undo a session's done/skipped status */
+  async function handleUndoSession(sessionId: string, date: string) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "mark_planned", date, session_ref: sessionId }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to undo");
+    }
+  }
+
+  /** Remove a session from the day plan */
+  async function handleRemoveSession(sessionId: string, date: string) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "remove_session", date, session_ref: sessionId }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to remove session");
+    }
+  }
+
+  /** Submit session feedback */
+  async function handleFeedbackSubmit(feedback: Record<string, string>) {
+    if (!feedbackSessionId || !feedbackDate) return;
+    try {
+      const feedbackItems = Object.entries(feedback).map(
+        ([exercise_id, feedback_label]) => ({
+          exercise_id,
+          feedback_label,
+          completed: true,
+        })
+      );
+      await postFeedback({
+        log_entry: {
+          date: feedbackDate,
+          session_id: feedbackSessionId,
+          actual: { exercise_feedback_v1: feedbackItems },
+        },
+        status: "done",
+      });
+      // Re-fetch week plan so feedback_summary badges appear
+      const weekData = await getWeek(displayWeekNum);
+      setWeekPlan(weekData.week_plan);
+    } catch {
+      // Non-critical
+    } finally {
+      setFeedbackOpen(false);
+      setFeedbackSessionId(null);
+      setFeedbackDate(null);
+    }
+  }
+
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
   const phaseLabel = phaseId
     ? PHASE_LABELS[phaseId] ?? phaseId.replace(/_/g, " ")
     : null;
+
+  // Extract exercises for the feedback dialog
+  const feedbackExercises: Array<{ exercise_id: string; name: string }> =
+    (() => {
+      if (!feedbackSessionId || !feedbackDate) return [];
+      const day = days.find((d) => d.date === feedbackDate);
+      if (!day) return [];
+      const session = day.sessions.find(
+        (s) => s.session_id === feedbackSessionId
+      );
+      if (!session?.resolved) return [];
+      const resolved = session.resolved as Record<string, unknown>;
+      const resolvedSession = resolved.resolved_session as
+        | Record<string, unknown>
+        | undefined;
+      const instances = (resolvedSession?.exercise_instances ?? []) as Array<
+        Record<string, unknown>
+      >;
+      return instances.map((ex) => ({
+        exercise_id: (ex.exercise_id as string) ?? "",
+        name:
+          (ex.name as string) ??
+          (ex.exercise_id as string)?.replace(/_/g, " ") ??
+          "",
+      }));
+    })();
 
   return (
     <>
@@ -335,6 +459,10 @@ export default function WeekPage() {
                   day={day}
                   gyms={gyms}
                   showActions
+                  onMarkDone={(sessionId) => handleMarkDone(sessionId, day.date)}
+                  onMarkSkipped={(sessionId) => handleMarkSkipped(sessionId, day.date)}
+                  onUndo={(sessionId) => handleUndoSession(sessionId, day.date)}
+                  onRemoveSession={(sessionId) => handleRemoveSession(sessionId, day.date)}
                   onReplan={(date) => setReplanDate(date)}
                   onQuickAdd={(date) => setQuickAddDate(date)}
                   onMoveSession={(date, slot, sessionId) =>
@@ -388,6 +516,18 @@ export default function WeekPage() {
           onApply={handleMoveApply}
         />
       )}
+
+      {/* Post-session feedback dialog */}
+      <FeedbackDialog
+        open={feedbackOpen}
+        onClose={() => {
+          setFeedbackOpen(false);
+          setFeedbackSessionId(null);
+          setFeedbackDate(null);
+        }}
+        onSubmit={handleFeedbackSubmit}
+        exercises={feedbackExercises}
+      />
     </>
   );
 }
