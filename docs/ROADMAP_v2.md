@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-02-28 (B67 wall-clock timer, B59 remove get_ready between sets; 145 esercizi, 25 sessioni, 20 template, 509 test)
+> Last updated: 2026-02-28 (C-1/C-2/C-3/C-4 UI consistency + gym change; 145 esercizi, 25 sessioni, 20 template, 514 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -522,6 +522,10 @@ Tabella unica con TUTTI gli item tracciati.
 | B61 | Feature: voice cues durante sessione — "Rest" quando inizia il rest, "Go" / "Start" quando deve partire il prossimo set. Opzionale (toggle in Settings). Implementare con Web Speech API. | 🔲 OPEN | UI | §7 |
 | B65 | Feature: Weekly Report — riepilogo automatico a fine settimana in due fasi: (1) **Report deterministico** (implementabile ora): load actual vs planned, sessioni completate/skippate/aggiunte, compliance %, feedback distribution (quante easy/ok/hard), sport complementari loggati. Dati strutturati, nessun LLM. (2) **Narrative LLM** (Phase 3.5): stessi dati passati come contesto all'LLM coach che genera un testo motivante e actionable — es. "Settimana solida, 4/5 sessioni completate. Due sessioni easy: considera di aumentare il carico". Il report deterministico è prerequisito del report LLM. | 🔲 OPEN (fase 1 fattibile ora, fase 2 in Phase 3.5) | engine+UI+LLM | §7+§3.5 |
 | B67 | Timer guided session si ferma in background iOS (setInterval sospeso). Fix: wall-clock based timer (phaseEndTimeRef = Date.now() + duration, ogni tick calcola remaining = endTime - now). visibilitychange handler per recalc immediato al foreground. Pause + background → resta in pausa. | ✅ DONE | UI | §7 |
+| C-1 | Week view missing Done/Skip/Undo/Remove + FeedbackDialog. Added all session action callbacks to DayCard in week/page.tsx. | ✅ DONE | UI | §8 |
+| C-2 | Day view missing Quick-add dialog. Added QuickAddDialog integration to today/page.tsx. | ✅ DONE | UI | §8 |
+| C-3 | Day view missing Replan + Move dialogs. Added ReplanDialog + MoveSessionDialog to today/page.tsx. | ✅ DONE | UI | §8 |
+| C-4 | Daily gym/location change: new `change_gym` event in replanner with equipment-aware fallback (complementary_conditioning → regeneration_easy + finger compensation). GymPickerDialog in both views. 5 new tests. | ✅ DONE | engine+UI | §8 |
 
 ---
 
