@@ -435,8 +435,14 @@ export interface GuidedExercise {
   status: "pending" | "done" | "skipped";
   feedbackLabel: string;
   usedLoadKg?: number;
+  usedTotalLoadKg?: number;
   usedGrade?: string;
   completedSets?: number;  // sets completed within this exercise (for timer resume)
+
+  // Test measurement exercises (category=test_measurement): single value input
+  testField?: string;   // e.g. "max_hang_duration_20mm_seconds"
+  testUnit?: string;    // e.g. "seconds" or "cm"
+  testMeasurement?: number;
 }
 
 export interface GuidedSessionState {
@@ -447,6 +453,7 @@ export interface GuidedSessionState {
   startedAt: string;
   currentIndex: number;
   exercises: GuidedExercise[];
+  isTestSession?: boolean;
   submitStatus?: "in_progress" | "feedback_pending" | "completed";
 }
 

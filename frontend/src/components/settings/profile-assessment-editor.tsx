@@ -70,6 +70,9 @@ export function ProfileAssessmentEditor({
   const [maxHang, setMaxHang] = useState<string>("");
   const [weightedPullup, setWeightedPullup] = useState<string>("");
   const [repeater, setRepeater] = useState<string>("");
+  const [hangDuration, setHangDuration] = useState<string>("");
+  const [lSit, setLSit] = useState<string>("");
+  const [hipFlex, setHipFlex] = useState<string>("");
 
   // Sync form state from props every time the dialog opens
   useEffect(() => {
@@ -83,6 +86,9 @@ export function ProfileAssessmentEditor({
       setMaxHang(tests.max_hang_20mm_5s_total_kg != null ? String(tests.max_hang_20mm_5s_total_kg) : "");
       setWeightedPullup(tests.weighted_pullup_1rm_total_kg != null ? String(tests.weighted_pullup_1rm_total_kg) : "");
       setRepeater(tests.repeater_7_3_max_sets_20mm != null ? String(tests.repeater_7_3_max_sets_20mm) : "");
+      setHangDuration(tests.max_hang_duration_20mm_seconds != null ? String(tests.max_hang_duration_20mm_seconds) : "");
+      setLSit(tests.l_sit_hold_seconds != null ? String(tests.l_sit_hold_seconds) : "");
+      setHipFlex(tests.hip_flexibility_cm != null ? String(tests.hip_flexibility_cm) : "");
       setStep("form");
     }
   }, [open, body, grades, tests]);
@@ -109,6 +115,9 @@ export function ProfileAssessmentEditor({
     if (maxHang !== "") testsPatch.max_hang_20mm_5s_total_kg = parseFloat(maxHang);
     if (weightedPullup !== "") testsPatch.weighted_pullup_1rm_total_kg = parseFloat(weightedPullup);
     if (repeater !== "") testsPatch.repeater_7_3_max_sets_20mm = parseFloat(repeater);
+    if (hangDuration !== "") testsPatch.max_hang_duration_20mm_seconds = parseFloat(hangDuration);
+    if (lSit !== "") testsPatch.l_sit_hold_seconds = parseFloat(lSit);
+    if (hipFlex !== "") testsPatch.hip_flexibility_cm = parseFloat(hipFlex);
     if (Object.keys(testsPatch).length > 0) patch.tests = testsPatch;
 
     return patch;
@@ -266,6 +275,42 @@ export function ProfileAssessmentEditor({
                       placeholder="e.g. 6"
                       value={repeater}
                       onChange={(e) => setRepeater(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pa-hangduration">Max hang duration (20mm) — seconds</Label>
+                    <Input
+                      id="pa-hangduration"
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="e.g. 65"
+                      value={hangDuration}
+                      onChange={(e) => setHangDuration(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pa-lsit">L-sit hold — seconds</Label>
+                    <Input
+                      id="pa-lsit"
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="e.g. 20"
+                      value={lSit}
+                      onChange={(e) => setLSit(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="pa-hipflex">Hip flexibility straddle — cm</Label>
+                    <Input
+                      id="pa-hipflex"
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="e.g. 120"
+                      value={hipFlex}
+                      onChange={(e) => setHipFlex(e.target.value)}
                     />
                   </div>
                 </div>

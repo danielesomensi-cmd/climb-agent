@@ -1,0 +1,78 @@
+{
+  "id": "finger_max_strength_test",
+  "name": "Finger Max Strength (Test Protocol)",
+  "version": "1.0",
+  "category": "strength",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "high",
+    "cns": "medium",
+    "elbows": "medium",
+    "skin": "medium"
+  },
+
+  "blocks": [
+    {
+      "block_id": "warmup_specific",
+      "type": "warmup_specific",
+      "exercise_id": "dead_hang_easy",
+      "prescription": {
+        "sets": 3,
+        "work_seconds": 10,
+        "rest_between_sets_seconds": 50,
+        "notes": "Easy dead hangs to warm up fingers. Stay well below failure."
+      },
+      "role": ["warmup"],
+      "domain": ["finger_strength"]
+    },
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "exercise_id": "max_hang_5s",
+      "prescription": {
+        "sets": 5,
+        "work_seconds": 5,
+        "rest_between_sets_seconds": 180,
+        "notes": "Test protocol: find your 5s max hang total load on 20mm. Rest fully between sets."
+      },
+      "role": ["main"],
+      "domain": ["finger_strength"]
+    },
+    {
+      "block_id": "test_hang_duration",
+      "type": "test_measurement",
+      "exercise_id": "test_max_hang_duration_20mm",
+      "prescription": {
+        "sets": 1,
+        "notes": "Hang on 20mm at body weight until failure. Record total seconds."
+      },
+      "role": ["test"],
+      "domain": ["finger_strength"]
+    },
+    {
+      "block_id": "test_hip_flexibility",
+      "type": "test_measurement",
+      "exercise_id": "test_hip_flexibility",
+      "prescription": {
+        "sets": 1,
+        "notes": "Seated straddle split. Measure distance between heels in cm."
+      },
+      "role": ["test"],
+      "domain": ["flexibility"]
+    },
+    {
+      "block_id": "cooldown_prehab",
+      "type": "cooldown_prehab",
+      "exercise_id": "wrist_curl",
+      "prescription": {
+        "sets": 2,
+        "reps": 15,
+        "rest_between_sets_seconds": 60,
+        "notes": "Light wrist/forearm prehab after max finger work."
+      },
+      "role": ["prehab"],
+      "domain": ["prehab_elbow"]
+    }
+  ]
+}

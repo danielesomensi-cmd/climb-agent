@@ -12,7 +12,8 @@ import { ExerciseTimer } from "@/components/guided/exercise-timer";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
-  onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string) => void;
+  isTestSession?: boolean;
+  onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number) => void;
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
 }
@@ -78,19 +79,30 @@ function formatPrescription(ex: GuidedExercise): string[] {
 
 export function GuidedExerciseStep({
   exercise,
+  isTestSession,
   onDone,
   onSkip,
   onSetChange,
 }: GuidedExerciseStepProps) {
   const [feedback, setFeedback] = useState(exercise.feedbackLabel || "ok");
   const [loadInput, setLoadInput] = useState("");
+  const [totalLoadInput, setTotalLoadInput] = useState("");
   const [gradeInput, setGradeInput] = useState("");
+  const [measurementInput, setMeasurementInput] = useState("");
+
+  // Test measurement exercises: just a number input, no feedback
+  const isTestMeasurement = exercise.category === "test_measurement" && !!exercise.testField;
+
+  // Test session total_load exercises get two mandatory fields
+  const isTestLoadExercise = !isTestMeasurement && isTestSession && exercise.loadModel === "total_load";
 
   // Determine which kind of editable field to show
   const hasLoadField =
+    !isTestLoadExercise &&
+    !isTestMeasurement &&
     exercise.loadModel !== "bodyweight_only" &&
     (exercise.suggested.externalLoadKg != null || exercise.suggested.totalLoadKg != null);
-  const hasGradeField = exercise.suggested.grade != null;
+  const hasGradeField = !isTestMeasurement && exercise.suggested.grade != null;
 
   // Pre-populate from suggested values or previous user input
   useEffect(() => {
@@ -99,10 +111,18 @@ export function GuidedExerciseStep({
     } else if (exercise.suggested.externalLoadKg != null) {
       setLoadInput(String(exercise.suggested.externalLoadKg));
     }
+    if (exercise.usedTotalLoadKg != null) {
+      setTotalLoadInput(String(exercise.usedTotalLoadKg));
+    } else if (exercise.suggested.totalLoadKg != null) {
+      setTotalLoadInput(String(exercise.suggested.totalLoadKg));
+    }
     if (exercise.usedGrade != null) {
       setGradeInput(exercise.usedGrade);
     } else if (exercise.suggested.grade) {
       setGradeInput(exercise.suggested.grade);
+    }
+    if (exercise.testMeasurement != null) {
+      setMeasurementInput(String(exercise.testMeasurement));
     }
     setFeedback(exercise.feedbackLabel || "ok");
   }, [exercise]);
@@ -112,6 +132,17 @@ export function GuidedExerciseStep({
   const isAlreadySkipped = exercise.status === "skipped";
 
   function handleDone() {
+    if (isTestMeasurement) {
+      const val = measurementInput ? parseFloat(measurementInput) : undefined;
+      onDone("ok", undefined, undefined, undefined, val);
+      return;
+    }
+    if (isTestLoadExercise) {
+      const usedTotal = totalLoadInput ? parseFloat(totalLoadInput) : undefined;
+      const usedExternal = loadInput ? parseFloat(loadInput) : undefined;
+      onDone(feedback, usedExternal, undefined, usedTotal);
+      return;
+    }
     const usedLoad = hasLoadField && loadInput ? parseFloat(loadInput) : undefined;
     const usedGrade = hasGradeField && gradeInput ? gradeInput : undefined;
     onDone(feedback, usedLoad, usedGrade);
@@ -180,114 +211,176 @@ export function GuidedExerciseStep({
           </a>
         )}
 
-        {/* Suggested load/grade */}
-        {(exercise.suggested.externalLoadKg != null ||
-          exercise.suggested.totalLoadKg != null ||
-          exercise.suggested.grade != null) && (
-          <div className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 p-3">
-            <Lightbulb className="size-4 text-primary mt-0.5 shrink-0" />
-            <div className="text-sm space-y-0.5 w-full">
-              {exercise.suggested.externalLoadKg != null && (
-                <p>
-                  Suggested: <span className="font-semibold">+{exercise.suggested.externalLoadKg} kg</span>
-                  {exercise.suggested.totalLoadKg != null && (
-                    <span className="text-muted-foreground"> (total: {exercise.suggested.totalLoadKg} kg)</span>
-                  )}
-                  {exercise.suggested.loadSource === "estimated" && (
-                    <span className="text-xs text-muted-foreground ml-1">(estimated)</span>
-                  )}
-                </p>
-              )}
-              {exercise.suggested.grade && (
-                <p>
-                  Target: <span className="font-semibold">{exercise.suggested.grade}</span>
-                  {exercise.suggested.surface && (
-                    <span className="text-muted-foreground"> on {exercise.suggested.surface}</span>
-                  )}
-                </p>
-              )}
-              {exercise.suggested.loadWarning && (
-                <p className="text-xs text-orange-500 mt-1">
-                  ⚠ Baseline outdated — run a max hang test for accurate suggestions.
-                </p>
-              )}
+        {/* Test measurement: single value input, no feedback/timer */}
+        {isTestMeasurement ? (
+          <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+            <p className="text-xs font-medium text-primary">Record your result</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="measurement-input" className="text-xs text-muted-foreground">
+                Result ({exercise.testUnit ?? "value"}) *
+              </Label>
+              <Input
+                id="measurement-input"
+                type="number"
+                step={exercise.testUnit === "cm" ? "1" : "0.5"}
+                min="0"
+                value={measurementInput}
+                onChange={(e) => setMeasurementInput(e.target.value)}
+                className="w-40 h-9"
+                placeholder={exercise.testUnit === "seconds" ? "e.g. 65" : exercise.testUnit === "cm" ? "e.g. 120" : ""}
+                required
+              />
             </div>
           </div>
-        )}
+        ) : (
+          <>
+            {/* Suggested load/grade */}
+            {(exercise.suggested.externalLoadKg != null ||
+              exercise.suggested.totalLoadKg != null ||
+              exercise.suggested.grade != null) && (
+              <div className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 p-3">
+                <Lightbulb className="size-4 text-primary mt-0.5 shrink-0" />
+                <div className="text-sm space-y-0.5 w-full">
+                  {exercise.suggested.externalLoadKg != null && (
+                    <p>
+                      Suggested: <span className="font-semibold">+{exercise.suggested.externalLoadKg} kg</span>
+                      {exercise.suggested.totalLoadKg != null && (
+                        <span className="text-muted-foreground"> (total: {exercise.suggested.totalLoadKg} kg)</span>
+                      )}
+                      {exercise.suggested.loadSource === "estimated" && (
+                        <span className="text-xs text-muted-foreground ml-1">(estimated)</span>
+                      )}
+                    </p>
+                  )}
+                  {exercise.suggested.grade && (
+                    <p>
+                      Target: <span className="font-semibold">{exercise.suggested.grade}</span>
+                      {exercise.suggested.surface && (
+                        <span className="text-muted-foreground"> on {exercise.suggested.surface}</span>
+                      )}
+                    </p>
+                  )}
+                  {exercise.suggested.loadWarning && (
+                    <p className="text-xs text-orange-500 mt-1">
+                      ⚠ Baseline outdated — run a max hang test for accurate suggestions.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
-        {/* Exercise timer — shown for timed exercises AND multi-set rep-based exercises */}
-        {(((exercise.prescription.workSeconds ?? 0) > 0) ||
-          ((exercise.prescription.sets ?? 1) > 1 && (exercise.prescription.restSeconds ?? 0) > 0)) && (
-          <ExerciseTimer
-            workSeconds={exercise.prescription.workSeconds ?? 0}
-            restBetweenRepsSeconds={exercise.prescription.restBetweenRepsSeconds ?? 0}
-            restBetweenSetsSeconds={exercise.prescription.restSeconds ?? 0}
-            sets={exercise.prescription.sets ?? 1}
-            reps={typeof exercise.prescription.reps === "number" ? exercise.prescription.reps : 1}
-            initialSet={
-              exercise.completedSets != null &&
-              exercise.completedSets < (exercise.prescription.sets ?? 1)
-                ? exercise.completedSets + 1
-                : 1
-            }
-            onSetChange={onSetChange}
-          />
-        )}
+            {/* Exercise timer — shown for timed exercises AND multi-set rep-based exercises */}
+            {(((exercise.prescription.workSeconds ?? 0) > 0) ||
+              ((exercise.prescription.sets ?? 1) > 1 && (exercise.prescription.restSeconds ?? 0) > 0)) && (
+              <ExerciseTimer
+                workSeconds={exercise.prescription.workSeconds ?? 0}
+                restBetweenRepsSeconds={exercise.prescription.restBetweenRepsSeconds ?? 0}
+                restBetweenSetsSeconds={exercise.prescription.restSeconds ?? 0}
+                sets={exercise.prescription.sets ?? 1}
+                reps={typeof exercise.prescription.reps === "number" ? exercise.prescription.reps : 1}
+                initialSet={
+                  exercise.completedSets != null &&
+                  exercise.completedSets < (exercise.prescription.sets ?? 1)
+                    ? exercise.completedSets + 1
+                    : 1
+                }
+                onSetChange={onSetChange}
+              />
+            )}
 
-        {/* Feedback selector */}
-        <div className="space-y-2">
-          <Label className="text-xs text-muted-foreground">How did it feel?</Label>
-          <div className="flex flex-wrap gap-1.5">
-            {FEEDBACK_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setFeedback(opt.value)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                  feedback === opt.value
-                    ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
+            {/* Feedback selector */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">How did it feel?</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {FEEDBACK_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFeedback(opt.value)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                      feedback === opt.value
+                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-        {/* Editable load field */}
-        {hasLoadField && (
-          <div className="space-y-1.5">
-            <Label htmlFor="load-input" className="text-xs text-muted-foreground">
-              Actual load used (kg)
-            </Label>
-            <Input
-              id="load-input"
-              type="number"
-              step="0.5"
-              value={loadInput}
-              onChange={(e) => setLoadInput(e.target.value)}
-              className="w-32 h-9"
-              placeholder="kg"
-            />
-          </div>
-        )}
+            {/* Test session: mandatory total + external load fields */}
+            {isTestLoadExercise && (
+              <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <p className="text-xs font-medium text-primary">Record your test result</p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="total-load-input" className="text-xs text-muted-foreground">
+                    Total load used (kg) *
+                  </Label>
+                  <Input
+                    id="total-load-input"
+                    type="number"
+                    step="0.5"
+                    value={totalLoadInput}
+                    onChange={(e) => setTotalLoadInput(e.target.value)}
+                    className="w-40 h-9"
+                    placeholder="e.g. 90"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="external-load-input" className="text-xs text-muted-foreground">
+                    External load added (kg) *
+                  </Label>
+                  <Input
+                    id="external-load-input"
+                    type="number"
+                    step="0.5"
+                    value={loadInput}
+                    onChange={(e) => setLoadInput(e.target.value)}
+                    className="w-40 h-9"
+                    placeholder="e.g. 18"
+                    required
+                  />
+                </div>
+              </div>
+            )}
 
-        {/* Editable grade field */}
-        {hasGradeField && (
-          <div className="space-y-1.5">
-            <Label htmlFor="grade-input" className="text-xs text-muted-foreground">
-              Actual grade used
-            </Label>
-            <Input
-              id="grade-input"
-              type="text"
-              value={gradeInput}
-              onChange={(e) => setGradeInput(e.target.value)}
-              className="w-32 h-9"
-              placeholder="e.g. 7A"
-            />
-          </div>
+            {/* Editable load field (non-test sessions) */}
+            {hasLoadField && (
+              <div className="space-y-1.5">
+                <Label htmlFor="load-input" className="text-xs text-muted-foreground">
+                  Actual load used (kg)
+                </Label>
+                <Input
+                  id="load-input"
+                  type="number"
+                  step="0.5"
+                  value={loadInput}
+                  onChange={(e) => setLoadInput(e.target.value)}
+                  className="w-32 h-9"
+                  placeholder="kg"
+                />
+              </div>
+            )}
+
+            {/* Editable grade field */}
+            {hasGradeField && (
+              <div className="space-y-1.5">
+                <Label htmlFor="grade-input" className="text-xs text-muted-foreground">
+                  Actual grade used
+                </Label>
+                <Input
+                  id="grade-input"
+                  type="text"
+                  value={gradeInput}
+                  onChange={(e) => setGradeInput(e.target.value)}
+                  className="w-32 h-9"
+                  placeholder="e.g. 7A"
+                />
+              </div>
+            )}
+          </>
         )}
 
         {/* Action buttons */}

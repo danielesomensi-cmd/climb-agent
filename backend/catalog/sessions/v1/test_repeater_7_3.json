@@ -24,7 +24,7 @@
       "module_role": "general_warmup"
     },
     {
-      "template_id": "finger_strength_endurance",
+      "template_id": "finger_strength_endurance_test",
       "required": true,
       "priority": 90,
       "module_role": "primary"

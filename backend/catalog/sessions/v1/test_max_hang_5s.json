@@ -29,7 +29,7 @@
       "module_role": "general_warmup"
     },
     {
-      "template_id": "finger_max_strength",
+      "template_id": "finger_max_strength_test",
       "required": true,
       "priority": 90,
       "module_role": "primary"

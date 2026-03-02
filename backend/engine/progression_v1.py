@@ -681,6 +681,27 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             # Write scalar to assessment.tests
             at["repeater_7_3_max_sets_20mm"] = completed_sets
 
+        # --- Max hang duration (BW, 20mm) ---
+        elif exercise_id == "test_max_hang_duration_20mm":
+            value = item.get("max_hang_duration_20mm_seconds")
+            if value is None:
+                continue
+            at["max_hang_duration_20mm_seconds"] = float(value)
+
+        # --- L-sit hold ---
+        elif exercise_id == "test_l_sit_hold":
+            value = item.get("l_sit_hold_seconds")
+            if value is None:
+                continue
+            at["l_sit_hold_seconds"] = float(value)
+
+        # --- Hip flexibility ---
+        elif exercise_id == "test_hip_flexibility":
+            value = item.get("hip_flexibility_cm")
+            if value is None:
+                continue
+            at["hip_flexibility_cm"] = float(value)
+
         # --- Weighted pull-up ---
         elif exercise_id == "weighted_pullup":
             used_total = item.get("used_total_load_kg")

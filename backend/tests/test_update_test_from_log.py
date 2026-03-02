@@ -146,6 +146,52 @@ class TestAppendOnlyHistory:
         assert state["tests"]["max_strength"][1]["total_load_kg"] == 105.0
 
 
+# ---------------------------------------------------------------------------
+# Max hang duration → assessment.tests
+# ---------------------------------------------------------------------------
+
+class TestMaxHangDurationWritesAssessmentTests:
+    def test_max_hang_duration_writes(self):
+        state = _base_state(75.0)
+        log = _test_log("2026-03-05", "test_max_hang_5s", [
+            {"exercise_id": "test_max_hang_duration_20mm", "max_hang_duration_20mm_seconds": 65.0, "feedback_label": "ok"},
+        ])
+        result = apply_feedback(log, state)
+        assert result["assessment"]["tests"]["max_hang_duration_20mm_seconds"] == 65.0
+
+
+# ---------------------------------------------------------------------------
+# L-sit hold → assessment.tests
+# ---------------------------------------------------------------------------
+
+class TestLSitHoldWritesAssessmentTests:
+    def test_l_sit_hold_writes(self):
+        state = _base_state(75.0)
+        log = _test_log("2026-03-05", "test_max_weighted_pullup", [
+            {"exercise_id": "test_l_sit_hold", "l_sit_hold_seconds": 22.0, "feedback_label": "ok"},
+        ])
+        result = apply_feedback(log, state)
+        assert result["assessment"]["tests"]["l_sit_hold_seconds"] == 22.0
+
+
+# ---------------------------------------------------------------------------
+# Hip flexibility → assessment.tests
+# ---------------------------------------------------------------------------
+
+class TestHipFlexibilityWritesAssessmentTests:
+    def test_hip_flexibility_writes(self):
+        state = _base_state(75.0)
+        log = _test_log("2026-03-05", "test_max_hang_5s", [
+            {"exercise_id": "test_hip_flexibility", "hip_flexibility_cm": 125.0, "feedback_label": "ok"},
+        ])
+        result = apply_feedback(log, state)
+        assert result["assessment"]["tests"]["hip_flexibility_cm"] == 125.0
+
+
+# ---------------------------------------------------------------------------
+# Scalar latest-wins
+# ---------------------------------------------------------------------------
+
 class TestAssessmentScalarLatestWins:
     def test_assessment_scalar_latest_wins(self):
         """Latest test overwrites the scalar in assessment.tests."""

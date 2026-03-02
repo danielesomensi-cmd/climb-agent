@@ -186,5 +186,35 @@ class TestPullingStrengthGym(unittest.TestCase):
         self.assertTrue(has_prehab, f"No antagonist/prehab block found. Blocks: {block_ids}")
 
 
+class TestTestSessionsResolveExactExercise(unittest.TestCase):
+    """Test sessions must resolve exactly the hardcoded test exercise in main block."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.base_us = _load_user_state()
+
+    def _main_exercise_ids(self, session_id):
+        us = _make_user_state(self.base_us, "gym", "blocx")
+        result = _resolve(session_id, us)
+        self.assertEqual(result["resolution_status"], "success")
+        return [
+            e["exercise_id"]
+            for e in result["resolved_session"]["exercise_instances"]
+            if e.get("category") == "main_strength"
+        ]
+
+    def test_max_hang_5s_resolves_exact_exercise(self):
+        ids = self._main_exercise_ids("test_max_hang_5s")
+        self.assertEqual(ids, ["max_hang_5s"])
+
+    def test_repeater_7_3_resolves_exact_exercise(self):
+        ids = self._main_exercise_ids("test_repeater_7_3")
+        self.assertEqual(ids, ["repeater_hang_7_3"])
+
+    def test_max_weighted_pullup_resolves_exact_exercise(self):
+        ids = self._main_exercise_ids("test_max_weighted_pullup")
+        self.assertEqual(ids, ["weighted_pullup"])
+
+
 if __name__ == "__main__":
     unittest.main()

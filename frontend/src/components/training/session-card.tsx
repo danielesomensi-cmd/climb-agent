@@ -103,6 +103,8 @@ function buildGuidedState(
       cues: (inst.cues as string[] | undefined) ?? undefined,
       status: "pending",
       feedbackLabel: "ok",
+      testField: (inst.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
+      testUnit: (inst.attributes as Record<string, unknown> | undefined)?.test_unit as string | undefined,
     };
   });
 
@@ -117,6 +119,7 @@ function buildGuidedState(
     startedAt: new Date().toISOString(),
     currentIndex: 0,
     exercises,
+    isTestSession: session.tags?.test === true,
   };
 }
 

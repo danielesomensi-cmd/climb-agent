@@ -24,7 +24,7 @@
       "module_role": "general_warmup"
     },
     {
-      "template_id": "pulling_strength",
+      "template_id": "pulling_strength_test",
       "required": true,
       "priority": 90,
       "module_role": "primary"

@@ -161,7 +161,7 @@ export default function GuidedSessionPage() {
   );
 
   const handleDone = useCallback(
-    (feedbackLabel: string, usedLoad?: number, usedGrade?: string) => {
+    (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number) => {
       if (!state) return;
       const idx = state.currentIndex;
 
@@ -169,7 +169,9 @@ export default function GuidedSessionPage() {
         status: "done",
         feedbackLabel,
         usedLoadKg: usedLoad,
+        usedTotalLoadKg: usedTotalLoad,
         usedGrade,
+        testMeasurement,
       });
 
       // Advance to next exercise or show summary
@@ -273,10 +275,13 @@ export default function GuidedSessionPage() {
           feedback_label: ex.feedbackLabel,
           completed: ex.status === "done",
         };
+        if (ex.usedTotalLoadKg != null) {
+          item.used_total_load_kg = ex.usedTotalLoadKg;
+        }
         if (ex.usedLoadKg != null) {
           item.used_external_load_kg = ex.usedLoadKg;
-          // If we have totalLoadKg from suggestion, compute used_total_load_kg
-          if (ex.suggested.totalLoadKg != null && ex.suggested.externalLoadKg != null) {
+          // Auto-compute total from external + body weight if not manually set
+          if (ex.usedTotalLoadKg == null && ex.suggested.totalLoadKg != null && ex.suggested.externalLoadKg != null) {
             const bodyWeight = ex.suggested.totalLoadKg - ex.suggested.externalLoadKg;
             item.used_total_load_kg = bodyWeight + ex.usedLoadKg;
           }
@@ -289,6 +294,10 @@ export default function GuidedSessionPage() {
         }
         if (ex.completedSets != null) {
           item.completed_sets = ex.completedSets;
+        }
+        // Test measurement exercises: send the value as the field name directly
+        if (ex.testField && ex.testMeasurement != null) {
+          item[ex.testField] = ex.testMeasurement;
         }
         return item;
       });
@@ -426,6 +435,7 @@ export default function GuidedSessionPage() {
             <GuidedExerciseStep
               key={`${state.currentIndex}-${currentExercise.exerciseId}`}
               exercise={currentExercise}
+              isTestSession={state.isTestSession}
               onDone={handleDone}
               onSkip={handleSkip}
               onSetChange={handleSetChange}

@@ -1,0 +1,58 @@
+{
+  "id": "finger_strength_endurance_test",
+  "name": "Finger Strength-Endurance (Test Protocol)",
+  "version": "1.0",
+  "category": "endurance",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "high",
+    "cns": "medium",
+    "elbows": "medium",
+    "skin": "medium"
+  },
+
+  "blocks": [
+    {
+      "block_id": "warmup_specific",
+      "type": "warmup_specific",
+      "exercise_id": "dead_hang_easy",
+      "prescription": {
+        "sets": 3,
+        "work_seconds": 10,
+        "rest_between_sets_seconds": 50,
+        "notes": "Easy dead hangs to warm up fingers progressively."
+      },
+      "role": ["warmup"],
+      "domain": ["finger_strength"]
+    },
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "exercise_id": "repeater_hang_7_3",
+      "prescription": {
+        "sets": 3,
+        "reps": 6,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": 3,
+        "rest_between_sets_seconds": 180,
+        "notes": "Test protocol: find max sets at ~60-75% max hang load. 7s on / 3s off. Stop when form breaks."
+      },
+      "role": ["main"],
+      "domain": ["finger_strength_endurance"]
+    },
+    {
+      "block_id": "prehab",
+      "type": "prehab",
+      "exercise_id": "elbow_eccentric_curl",
+      "prescription": {
+        "sets": 2,
+        "reps": 12,
+        "rest_between_sets_seconds": 60,
+        "notes": "Light elbow prehab after finger endurance work."
+      },
+      "role": ["prehab"],
+      "domain": ["prehab_elbow"]
+    }
+  ]
+}

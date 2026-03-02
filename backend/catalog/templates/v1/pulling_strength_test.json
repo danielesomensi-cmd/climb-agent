@@ -1,0 +1,41 @@
+{
+  "id": "pulling_strength_test",
+  "name": "Pulling Strength (Test Protocol)",
+  "version": "1.0",
+  "category": "strength",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "low",
+    "cns": "medium",
+    "elbows": "medium",
+    "skin": "none"
+  },
+
+  "blocks": [
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "exercise_id": "weighted_pullup",
+      "prescription": {
+        "sets": 4,
+        "reps": 3,
+        "rest_between_sets_seconds": 180,
+        "notes": "Test protocol: find weighted pullup 1RM. Warm up progressively, then attempt max single."
+      },
+      "role": ["main"],
+      "domain": ["strength_general"]
+    },
+    {
+      "block_id": "test_l_sit",
+      "type": "test_measurement",
+      "exercise_id": "test_l_sit_hold",
+      "prescription": {
+        "sets": 1,
+        "notes": "Full L-sit with straight legs. Hold as long as possible. Record total seconds."
+      },
+      "role": ["test"],
+      "domain": ["core"]
+    }
+  ]
+}

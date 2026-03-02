@@ -7416,6 +7416,131 @@
         "Control the lowering: 2-3s eccentric, no dropping"
       ],
       "video_url": null
+    },
+    {
+      "id": "test_max_hang_duration_20mm",
+      "name": "Max Hang Duration Test (20mm, BW)",
+      "category": "test_measurement",
+      "time_min": 3,
+      "role": ["test"],
+      "domain": ["finger_strength"],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 5,
+      "recency_group": "test_hang_duration",
+      "equipment_required": ["hangboard"],
+      "location_allowed": ["home", "gym"],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Hang on 20mm edge at body weight until failure. Record total seconds."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "medium"
+      },
+      "load_model": "bodyweight_only",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "test_field": "max_hang_duration_20mm_seconds",
+        "test_unit": "seconds"
+      },
+      "description": "Maximum duration dead hang on 20mm edge at body weight only. Measures finger endurance baseline.",
+      "cues": [
+        "Use 20mm edge, body weight only (no added weight)",
+        "Half-crimp grip, shoulders engaged",
+        "Hang until you cannot hold on — record total seconds",
+        "One attempt only"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "test_l_sit_hold",
+      "name": "L-Sit Hold Test (Max Duration)",
+      "category": "test_measurement",
+      "time_min": 2,
+      "role": ["test"],
+      "domain": ["core"],
+      "pattern": "isometric_hold",
+      "intensity_level": "max",
+      "fatigue_cost": 3,
+      "recency_group": "test_l_sit",
+      "equipment_required": [],
+      "location_allowed": ["home", "gym"],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Full L-sit with straight legs. Hold as long as possible. Record total seconds."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "load_model": "bodyweight_only",
+      "attributes": {
+        "test_field": "l_sit_hold_seconds",
+        "test_unit": "seconds"
+      },
+      "description": "Maximum duration L-sit hold with straight legs on parallettes, dip bars, or floor. Measures core and hip flexor strength.",
+      "cues": [
+        "Straight legs, toes pointed",
+        "Lock elbows, depress shoulders",
+        "Hold until form breaks — record total seconds",
+        "One attempt only, fully rested"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "test_hip_flexibility",
+      "name": "Hip Flexibility Test (Straddle Split)",
+      "category": "test_measurement",
+      "time_min": 2,
+      "role": ["test"],
+      "domain": ["flexibility"],
+      "pattern": "static_stretch",
+      "intensity_level": "low",
+      "fatigue_cost": 0,
+      "recency_group": "test_hip_flexibility",
+      "equipment_required": [],
+      "location_allowed": ["home", "gym"],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Seated straddle split. Measure distance between heels in cm."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "load_model": "bodyweight_only",
+      "attributes": {
+        "test_field": "hip_flexibility_cm",
+        "test_unit": "cm"
+      },
+      "description": "Seated straddle split to measure hip adductor flexibility. Sit on floor, legs spread wide, measure distance between heels.",
+      "cues": [
+        "Sit on floor, legs spread as wide as comfortable",
+        "Keep knees straight, toes pointing up",
+        "Measure distance between inner heels in cm",
+        "Warm up before testing — do not force"
+      ],
+      "video_url": null
     }
   ]
 }
