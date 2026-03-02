@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (Testing cluster: NEW-F3b closed loop, §9.2 expanded battery 3→6 tests, §9.1 test week + periodic reminders; 145 esercizi, 25 sessioni, 20 template, 632 test)
+> Last updated: 2026-03-02 (Testing cluster: NEW-F3b closed loop, §9.2 expanded battery 3→6 tests, §9.1 test week + periodic reminders; 145 esercizi, 25 sessioni, 20 template, 635 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
