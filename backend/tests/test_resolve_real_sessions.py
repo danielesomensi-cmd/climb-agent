@@ -215,6 +215,23 @@ class TestTestSessionsResolveExactExercise(unittest.TestCase):
         ids = self._main_exercise_ids("test_max_weighted_pullup")
         self.assertEqual(ids, ["weighted_pullup"])
 
+    def test_max_weighted_pullup_1rm_protocol(self):
+        """Weighted pullup test session must use 1RM protocol: reps==1 and rest>=180."""
+        us = _make_user_state(self.base_us, "gym", "blocx")
+        result = _resolve("test_max_weighted_pullup", us)
+        self.assertEqual(result["resolution_status"], "success")
+        wp = [
+            e for e in result["resolved_session"]["exercise_instances"]
+            if e["exercise_id"] == "weighted_pullup"
+        ]
+        self.assertEqual(len(wp), 1)
+        p = wp[0]["prescription"]
+        self.assertEqual(p["reps"], 1, "1RM test must have reps == 1")
+        self.assertGreaterEqual(
+            p["rest_between_sets_seconds"], 180,
+            "1RM test must have rest >= 180s between sets",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

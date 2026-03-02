@@ -454,6 +454,7 @@ export interface GuidedSessionState {
   currentIndex: number;
   exercises: GuidedExercise[];
   isTestSession?: boolean;
+  bodyweightKg?: number;
   submitStatus?: "in_progress" | "feedback_pending" | "completed";
 }
 

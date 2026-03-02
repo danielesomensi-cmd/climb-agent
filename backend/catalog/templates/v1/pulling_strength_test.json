@@ -18,10 +18,10 @@
       "type": "main_set",
       "exercise_id": "weighted_pullup",
       "prescription": {
-        "sets": 4,
-        "reps": 3,
-        "rest_between_sets_seconds": 180,
-        "notes": "Test protocol: find weighted pullup 1RM. Warm up progressively, then attempt max single."
+        "sets": 5,
+        "reps": 1,
+        "rest_between_sets_seconds": 240,
+        "notes": "1RM test protocol. Pyramid up: set 1 ~50% est. max, set 2 ~70%, set 3 ~85%, set 4 ~95%, set 5 max attempt. Full rest between sets. Stop if form breaks."
       },
       "role": ["main"],
       "domain": ["strength_general"]

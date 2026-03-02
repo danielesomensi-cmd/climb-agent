@@ -8,7 +8,7 @@ import { SessionTimer } from "@/components/guided/session-timer";
 import { GuidedProgressBar } from "@/components/guided/guided-progress-bar";
 import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GuidedSummary } from "@/components/guided/guided-summary";
-import { applyEvents, postFeedback, getWeek } from "@/lib/api";
+import { applyEvents, postFeedback, getWeek, getState } from "@/lib/api";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
 
@@ -85,6 +85,16 @@ export default function GuidedSessionPage() {
       // If all exercises are done/skipped, show summary
       const allDone = saved.exercises.every((ex) => ex.status !== "pending");
       if (allDone) setShowSummary(true);
+      // Fetch bodyweight for test sessions (needed for total load auto-computation)
+      if (saved.isTestSession && !saved.bodyweightKg) {
+        getState().then((stateData) => {
+          const body = (stateData.assessment as Record<string, unknown> | undefined)?.body as Record<string, number> | undefined;
+          const bw = body?.weight_kg;
+          if (bw) {
+            setState((prev) => prev ? { ...prev, bodyweightKg: bw } : prev);
+          }
+        }).catch(() => {});
+      }
     } else {
       // No saved state — redirect back to today
       router.replace(`/today?date=${date}`);
@@ -436,6 +446,7 @@ export default function GuidedSessionPage() {
               key={`${state.currentIndex}-${currentExercise.exerciseId}`}
               exercise={currentExercise}
               isTestSession={state.isTestSession}
+              bodyweightKg={state.bodyweightKg}
               onDone={handleDone}
               onSkip={handleSkip}
               onSetChange={handleSetChange}

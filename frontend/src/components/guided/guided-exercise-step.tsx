@@ -13,6 +13,7 @@ import { ExerciseTimer } from "@/components/guided/exercise-timer";
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
   isTestSession?: boolean;
+  bodyweightKg?: number;
   onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number) => void;
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
@@ -80,13 +81,13 @@ function formatPrescription(ex: GuidedExercise): string[] {
 export function GuidedExerciseStep({
   exercise,
   isTestSession,
+  bodyweightKg,
   onDone,
   onSkip,
   onSetChange,
 }: GuidedExerciseStepProps) {
   const [feedback, setFeedback] = useState(exercise.feedbackLabel || "ok");
   const [loadInput, setLoadInput] = useState("");
-  const [totalLoadInput, setTotalLoadInput] = useState("");
   const [gradeInput, setGradeInput] = useState("");
   const [measurementInput, setMeasurementInput] = useState("");
 
@@ -111,11 +112,6 @@ export function GuidedExerciseStep({
     } else if (exercise.suggested.externalLoadKg != null) {
       setLoadInput(String(exercise.suggested.externalLoadKg));
     }
-    if (exercise.usedTotalLoadKg != null) {
-      setTotalLoadInput(String(exercise.usedTotalLoadKg));
-    } else if (exercise.suggested.totalLoadKg != null) {
-      setTotalLoadInput(String(exercise.suggested.totalLoadKg));
-    }
     if (exercise.usedGrade != null) {
       setGradeInput(exercise.usedGrade);
     } else if (exercise.suggested.grade) {
@@ -138,8 +134,10 @@ export function GuidedExerciseStep({
       return;
     }
     if (isTestLoadExercise) {
-      const usedTotal = totalLoadInput ? parseFloat(totalLoadInput) : undefined;
       const usedExternal = loadInput ? parseFloat(loadInput) : undefined;
+      const usedTotal = usedExternal != null && bodyweightKg != null
+        ? bodyweightKg + usedExternal
+        : undefined;
       onDone(feedback, usedExternal, undefined, usedTotal);
       return;
     }
@@ -309,25 +307,10 @@ export function GuidedExerciseStep({
               </div>
             </div>
 
-            {/* Test session: mandatory total + external load fields */}
+            {/* Test session: external load input with auto-computed total */}
             {isTestLoadExercise && (
               <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
                 <p className="text-xs font-medium text-primary">Record your test result</p>
-                <div className="space-y-1.5">
-                  <Label htmlFor="total-load-input" className="text-xs text-muted-foreground">
-                    Total load used (kg) *
-                  </Label>
-                  <Input
-                    id="total-load-input"
-                    type="number"
-                    step="0.5"
-                    value={totalLoadInput}
-                    onChange={(e) => setTotalLoadInput(e.target.value)}
-                    className="w-40 h-9"
-                    placeholder="e.g. 90"
-                    required
-                  />
-                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="external-load-input" className="text-xs text-muted-foreground">
                     External load added (kg) *
@@ -336,13 +319,25 @@ export function GuidedExerciseStep({
                     id="external-load-input"
                     type="number"
                     step="0.5"
+                    min="0"
                     value={loadInput}
                     onChange={(e) => setLoadInput(e.target.value)}
                     className="w-40 h-9"
-                    placeholder="e.g. 18"
+                    placeholder="e.g. 15"
                     required
                   />
                 </div>
+                {bodyweightKg != null && loadInput && !isNaN(parseFloat(loadInput)) && (
+                  <p className="text-sm text-muted-foreground">
+                    Total load:{" "}
+                    <span className="font-semibold text-foreground">
+                      {(bodyweightKg + parseFloat(loadInput)).toFixed(1)} kg
+                    </span>
+                    <span className="text-xs ml-1">
+                      (your weight {bodyweightKg} kg + {loadInput} kg added)
+                    </span>
+                  </p>
+                )}
               </div>
             )}
 
