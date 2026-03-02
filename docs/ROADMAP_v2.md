@@ -514,8 +514,8 @@ Tabella unica con TUTTI gli item tracciati.
 | B54 | Heavy Conditioning Gym: add push/triceps/core blocks + audit report | ✅ DONE | 4b post | §2.3 |
 | NEW-F13 | Complementary sport completion with feedback-based load (easy=10, ok=20, hard=30) | ✅ DONE | 4b post | §10 |
 | B55 | Catalog audit fixes: names, cooldown gaps, core, antagonist, pulling_strength_gym | ✅ DONE | 4b post | §10 |
-| B56 | Heavy Conditioning Gym troppo facile: aggiungere dumbbell bench press (petto, 3×8), bicep curl (3×10), overhead press o lateral raise (3×10). Sessione deve coprire tutti i pattern: push/pull/hinge/core/curl | 🔲 OPEN | catalog | §2.3 |
-| B57 | Active Finger Curls: "Rep rest: 10s" confuso in UI — il timer non gestisce inter-rep rest correttamente. Richiede pattern speciale: timer per singola rep + pausa 10s prima della prossima rep mentre si mantiene il carico. Doppio fix: (1) descrizione esercizio più chiara, (2) UI timer per esercizi con inter-rep rest | 🔲 OPEN | catalog+UI | §7 |
+| B56 | Heavy Conditioning Gym: aggiunto dumbbell_bench_press, bicep_curl, lateral_raise (145→148 esercizi) + blocchi arm_curl/shoulder_isolation in heavy_conditioning_gym. Pattern: elbow_flexion, shoulder_isolation. (2026-02-28) | ✅ DONE | catalog | §2.3 |
+| B57 | Active Finger Curls: rinominato "Rep rest" → "Hold between reps" in prescription e "Hold" nel timer ring. Note esercizio aggiornate con dettaglio ciclo rep. (2026-02-28) | ✅ DONE | catalog+UI | §7 |
 | B58 | Test Sessions (hangboard) e sessioni climbing appaiono in Work gym — filtro equipment non funziona correttamente. Fix: aggiunto `required_equipment` a 3 test session JSON (hangboard per max_hang/repeater, pullup_bar per weighted_pullup). | ✅ DONE | engine | §4 |
 | B59 | "Get Ready" countdown tra le serie: rimosso. Get Ready solo all'inizio (set 1). Tra le serie: set_rest → work direttamente. Back da work set > 1 torna a set_rest. | ✅ DONE | UI | §7 |
 | B60 | Bug: suoni sessione non funzionavano (Web Audio API, iOS). Fix: `handleStart`/`handleDoneSet` async con `await unlockAudio()`, `beep()` tenta `ctx.resume()` prima di arrendersi, visibility change re-play silent buffer. | ✅ DONE | UI | §7 |
