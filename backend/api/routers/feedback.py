@@ -54,9 +54,14 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
         feedback_history = state.get("feedback_log", [])
         result = check_adaptive_replan(plan, feedback_history, current_date)
         if result["actions"]:
-            state["current_week_plan"] = apply_adaptive_replan(
-                plan, result["actions"]
-            )
+            updated_plan = apply_adaptive_replan(plan, result["actions"])
+            state["current_week_plan"] = updated_plan
+            # Sync to per-week cache so navigation doesn't lose the change
+            start_key = updated_plan.get("start_date", "")
+            if start_key:
+                if "week_plans" not in state:
+                    state["week_plans"] = {}
+                state["week_plans"][start_key] = updated_plan
 
     save_state(state, user_id)
     return {"status": "ok", "state": state}

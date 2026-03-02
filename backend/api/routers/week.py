@@ -122,16 +122,23 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
     # For the current week, try to use the cached plan from state
     is_current_week = (week_num == 0) or (ctx["week_num"] == _current_week_num(macrocycle))
     week_plan = None
+    week_start_key = ctx["start_date"]
+    week_plans = state.get("week_plans") or {}
 
     # Store old plan before force-regeneration
-    old_plan = state.get("current_week_plan") if (force and is_current_week) else None
+    old_plan = week_plans.get(week_start_key) if force else None
+    if old_plan is None and force and is_current_week:
+        old_plan = state.get("current_week_plan")
 
-    if is_current_week and not force:
+    if not force:
         try:
-            cached = state.get("current_week_plan")
+            # Try per-week cache first, then legacy current_week_plan for current week
+            cached = week_plans.get(week_start_key)
+            if cached is None and is_current_week:
+                cached = state.get("current_week_plan")
             if (
                 cached
-                and cached.get("start_date") == ctx["start_date"]
+                and cached.get("start_date") == week_start_key
                 and cached.get("weeks")
                 and len(cached["weeks"]) > 0
                 and cached["weeks"][0].get("days")
@@ -189,10 +196,13 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
                 logger.warning("Failed to merge sessions from previous plan")
             state.pop("_prev_week_plan", None)
 
-        # Cache the freshly generated plan for the current week
+        # Cache the freshly generated plan
+        if "week_plans" not in state:
+            state["week_plans"] = {}
+        state["week_plans"][week_start_key] = week_plan
         if is_current_week:
             state["current_week_plan"] = week_plan
-            save_state(state, user_id)
+        save_state(state, user_id)
 
     # Auto-resolve each session so the frontend gets exercises inline
     _auto_resolve(week_plan, state)
