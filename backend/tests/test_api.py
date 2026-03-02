@@ -509,3 +509,71 @@ class TestFeedback:
         })
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
+
+
+# -----------------------------------------------------------------------
+# Start-week (onboarding)
+# -----------------------------------------------------------------------
+
+class TestStartWeek:
+    """POST /api/onboarding/start-week — shift macrocycle start_date."""
+
+    _ONBOARDING_PAYLOAD = {
+        "profile": {"name": "SW", "age": 28, "weight_kg": 70, "height_cm": 175},
+        "experience": {"climbing_years": 3, "structured_training_years": 1},
+        "grades": {"lead_max_rp": "7a", "lead_max_os": "6b"},
+        "goal": {
+            "goal_type": "lead_grade", "discipline": "lead",
+            "target_grade": "7b+", "target_style": "redpoint",
+            "current_grade": "7a", "deadline": "2026-12-31",
+        },
+        "self_eval": {"primary_weakness": "pump_too_early", "secondary_weakness": "fingers_give_out"},
+        "tests": {}, "limitations": [],
+        "equipment": {"home": ["hangboard"], "gyms": [{"name": "G", "equipment": ["gym_boulder"]}]},
+        "availability": {
+            "mon": {"evening": {"available": True, "preferred_location": "gym"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym"}},
+            "sat": {"morning": {"available": True, "preferred_location": "gym"}},
+        },
+        "planning_prefs": {"hard_day_cap_per_week": 3, "target_training_days_per_week": 3},
+        "trips": [],
+    }
+
+    def _setup(self):
+        r = client.post("/api/onboarding/complete", json=self._ONBOARDING_PAYLOAD)
+        assert r.status_code == 200, r.text
+        return r.json()["macrocycle"]
+
+    def test_start_week_no_offset(self):
+        mc = self._setup()
+        original_start = mc["start_date"]
+        r = client.post("/api/onboarding/start-week", json={"offset_weeks": 0})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["offset_applied"] == 0
+        assert data["start_date"] == original_start
+
+    def test_start_week_shifts_start_date(self):
+        mc = self._setup()
+        original_start = mc["start_date"]
+        r = client.post("/api/onboarding/start-week", json={"offset_weeks": 2})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["offset_applied"] == 2
+        # Should be 14 days earlier
+        from datetime import datetime, timedelta
+        expected = (datetime.strptime(original_start, "%Y-%m-%d") - timedelta(days=14)).strftime("%Y-%m-%d")
+        assert data["start_date"] == expected
+
+    def test_start_week_clamps_to_first_phase(self):
+        mc = self._setup()
+        first_dur = mc["phases"][0]["duration_weeks"]
+        r = client.post("/api/onboarding/start-week", json={"offset_weeks": 99})
+        assert r.status_code == 200
+        data = r.json()
+        assert data["offset_applied"] == first_dur - 1
+
+    def test_start_week_no_macrocycle(self):
+        client.delete("/api/state")
+        r = client.post("/api/onboarding/start-week", json={"offset_weeks": 1})
+        assert r.status_code == 422

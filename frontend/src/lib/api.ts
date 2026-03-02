@@ -70,6 +70,11 @@ export const completeOnboarding = (data: OnboardingData) =>
     method: "POST",
     body: JSON.stringify(data),
   });
+export const setStartWeek = (offsetWeeks: number) =>
+  request<{ status: string; start_date: string; offset_applied: number }>(
+    "/api/onboarding/start-week",
+    { method: "POST", body: JSON.stringify({ offset_weeks: offsetWeeks }) }
+  );
 
 // Assessment
 export const computeAssessment = (

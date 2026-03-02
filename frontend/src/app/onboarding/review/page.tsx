@@ -129,7 +129,7 @@ export default function ReviewPage() {
       setSuccess(true);
       // Brief delay to show success state, then redirect
       setTimeout(() => {
-        router.push("/today");
+        router.push("/onboarding/start-week");
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error generating the plan");

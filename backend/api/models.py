@@ -95,6 +95,11 @@ class FeedbackRequest(BaseModel):
 # Onboarding
 # --------------------------------------------------------------------------- #
 
+class StartWeekRequest(BaseModel):
+    """Body for POST /api/onboarding/start-week."""
+    offset_weeks: int = Field(ge=0)
+
+
 class OnboardingData(BaseModel):
     """Body for POST /api/onboarding/complete."""
     profile: Dict[str, Any] = Field(default_factory=dict)

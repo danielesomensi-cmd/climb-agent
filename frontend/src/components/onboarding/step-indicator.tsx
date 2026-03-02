@@ -10,15 +10,16 @@ const STEPS = [
 
 export function StepIndicator() {
   const pathname = usePathname();
-  const currentStep = STEPS.findIndex((s) => pathname.includes(s));
-  const progress = currentStep >= 0 ? ((currentStep + 1) / STEPS.length) * 100 : 0;
+  const isStartWeek = pathname.includes("start-week");
+  const currentStep = isStartWeek ? STEPS.length - 1 : STEPS.findIndex((s) => pathname.includes(s));
+  const progress = isStartWeek ? 100 : (currentStep >= 0 ? ((currentStep + 1) / STEPS.length) * 100 : 0);
 
   return (
     <div className="px-4 pt-4 pb-2">
       <Progress value={progress} className="h-1.5" />
       <div className="mt-2 flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
-          {currentStep + 1} / {STEPS.length}
+          {isStartWeek ? "Done" : `${currentStep + 1} / ${STEPS.length}`}
         </span>
         <div className="flex gap-1">
           {STEPS.map((step, i) => (
