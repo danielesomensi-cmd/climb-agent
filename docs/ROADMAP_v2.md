@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (B80 per-week cache, B81 outdoor undo dedup; 145 esercizi, 25 sessioni, 20 template, 566 test)
+> Last updated: 2026-03-02 (B65 weekly report LLM-ready; 145 esercizi, 25 sessioni, 20 template, 610 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
