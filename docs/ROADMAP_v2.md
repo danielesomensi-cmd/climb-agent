@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (B79 start-from-week-N onboarding; 145 esercizi, 25 sessioni, 20 template, 557 test)
+> Last updated: 2026-03-02 (B39 persistence verified post-redeploy, B79 start-from-week-N; 145 esercizi, 25 sessioni, 20 template, 557 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
