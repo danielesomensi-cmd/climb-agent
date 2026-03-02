@@ -44,7 +44,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   const initialGrade = defaultGrade && gradeList.includes(defaultGrade) ? defaultGrade : "6a";
 
   const addRoute = () => {
-    setRoutes([...routes, { name: "", grade: initialGrade, attempts: [{ result: "sent" }] }]);
+    setRoutes([{ name: "", grade: initialGrade, attempts: [{ result: "sent" }] }, ...routes]);
   };
 
   const updateRoute = (idx: number, field: keyof OutdoorRoute, value: string) => {
