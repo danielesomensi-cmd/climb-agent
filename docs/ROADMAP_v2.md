@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (B76 outdoor field preservation fix, B61 voice cues default ON; 145 esercizi, 25 sessioni, 20 template, 530 test)
+> Last updated: 2026-03-02 (B77 outdoor log error handling + e2e test; 145 esercizi, 25 sessioni, 20 template, 533 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -538,6 +538,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B75a | Admin recovery endpoint: `GET /api/admin/users` — lista UUID, data ultimo accesso, current_grade. Per rimappare utenti che perdono il localStorage UUID. | 🔲 OPEN | API | §4a |
 | B75b | Export/import user_state: Settings → Export data (JSON download) / Import data (JSON upload). Safety net per beta tester. | 🔲 OPEN | UI | §4a |
 | B76 | Outdoor + other_activity day-level fields persi dopo rigenerazione week plan. `regenerate_preserving_completed()` e `merge_prev_week_sessions()` copiavano solo sessions[], ignorando outdoor_spot_name/status/discipline e other_activity_status/feedback/load. Fix: `_DAY_LEVEL_FIELDS` tuple + restore loop in entrambe le funzioni. 6 nuovi test. (2026-03-02) | ✅ DONE | engine | §4 |
+| B77 | POST /api/outdoor/log: OSError/IOError non catturati — propagavano come 500 generico senza messaggio utile. Fix: catch OSError con messaggio esplicito (path + errore) + post-write verification che il JSONL esista su disco. E2E test cross-week: add_outdoor → log → complete → regen → verify merge + JSONL persistenza. 3 nuovi test (533 totali). (2026-03-02) | ✅ DONE | engine+test | §4 |
 
 ---
 
