@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (B75a admin endpoint, B75b export/import, B76-B78 fixes; 145 esercizi, 25 sessioni, 20 template, 553 test)
+> Last updated: 2026-03-02 (B56/B57/B61 marked DONE, B75 interim complete, B75a/B75b/B76-B78; 145 esercizi, 25 sessioni, 20 template, 553 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -534,7 +534,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B72 | Outdoor history/stats UI: lista sessioni passate, statistiche per spot/grado, onsight/flash/sent percentages. | 🔲 OPEN | UI | §4 |
 | B73 | Outdoor spots in onboarding: raccogliere durante setup (step locations o dedicato), non solo post-setup in Settings. | 🔲 OPEN | UI | §4 |
 | B74 | Outdoor route summary in DayCard: expand/collapse route list when done (grade + name + style badge + ×N attempts + max grade). Style picker in OutdoorLogForm (onsight/flash/redpoint/project). Today+Week auto-fetch outdoor sessions. | ✅ DONE | UI | §4 |
-| **B75** | **🚨 P0 CRITICAL — Data persistence.** UUID in localStorage è fragile — clear browser/new device = stato perso. Fix definitivo: auth reale (Clerk). Fix intermedi: **(a)** endpoint `GET /api/admin/users` per recovery (lista UUID + last access + grade), **(b)** export/import user_state in Settings (backup manuale utente), **(c)** backup periodico volume Railway. Tutti i fix intermedi vanno fatti PRIMA di invitare nuovi beta tester. | 🔲 OPEN | infra | §4a |
+| **B75** | **Data persistence — fix intermedi completati.** (a) admin recovery endpoint ✅ B75a, (b) export/import ✅ B75b, (c) backup periodico volume → low-priority (volume Railway attivo B78). Persistent volume funzionante, export/import disponibile, admin recovery attivo. Fix definitivo: auth reale (Clerk, Phase 4c). (2026-03-02) | ✅ DONE (interim) | infra | §4a |
 | B75a | Admin recovery endpoint: `GET /api/admin/users` protetto da `X-Admin-Key` (ADMIN_SECRET env var). Per ogni utente: uuid, last_access, grade, sessions_completed, onboarding_date. Fallback chain per last_access (feedback_log → macrocycle → assessment → file mtime) e grade (goal → assessment.grades). 11 nuovi test. (2026-03-02) | ✅ DONE | API | §4a |
 | B75b | Export/import user_state: `GET /api/user/export` (Content-Disposition attachment) + `POST /api/user/import` (schema validation + append-only event log). Sezione "Backup & Restore" in Settings con toast feedback. 9 nuovi test. (2026-03-02) | ✅ DONE | API+UI | §4a |
 | B76 | Outdoor + other_activity day-level fields persi dopo rigenerazione week plan. `regenerate_preserving_completed()` e `merge_prev_week_sessions()` copiavano solo sessions[], ignorando outdoor_spot_name/status/discipline e other_activity_status/feedback/load. Fix: `_DAY_LEVEL_FIELDS` tuple + restore loop in entrambe le funzioni. 6 nuovi test. (2026-03-02) | ✅ DONE | engine | §4 |
