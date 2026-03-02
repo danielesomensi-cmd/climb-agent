@@ -649,7 +649,7 @@ Implementato 2026-02-25 in due commit. 472 test verdi (25 nuovi).
 ### Phase 4a — ✅ LIVE (2026-02-22)
 
 - **Frontend**: https://climb-agent.vercel.app ✅ (Vercel, auto-deploy da main, root dir: `frontend/`)
-- **Backend**: https://climb-agent-production.up.railway.app ✅ (Railway, auto-deploy da main, `Procfile` + `requirements.txt`, `$PORT=8080`)
+- **Backend**: https://web-production-fb1e9.up.railway.app ✅ (Railway, auto-deploy da main, `Procfile` + `requirements.txt`, `$PORT=8080`)
 - **Multi-user**: UUID v4 generato dal frontend al primo accesso, salvato in `localStorage`, inviato come header `X-User-ID` su ogni chiamata API
 - **Per-user state**: `backend/data/users/{user_id}/user_state.json` (copia da template al primo accesso)
 - **CORS**: `http://localhost:3000` + `https://climb-agent.vercel.app`

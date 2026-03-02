@@ -222,13 +222,12 @@ source .venv/bin/activate && python -m pytest backend/tests -q
   - URL: https://climb-agent.vercel.app
   - Deploy: automatico da push su main
   - Config: `frontend/` come root directory
-  - Env vars: `NEXT_PUBLIC_API_URL=https://climb-agent-production.up.railway.app`
+  - Env vars: `NEXT_PUBLIC_API_URL=https://web-production-fb1e9.up.railway.app`
 
 - **Backend**: FastAPI/uvicorn su Railway
-  - URL: https://climb-agent-production.up.railway.app
+  - URL: https://web-production-fb1e9.up.railway.app
   - Deploy: automatico da push su main
   - Config: `Procfile` + `requirements.txt` in root
-  - Env vars: `PYTHONPATH=.`
   - Railway usa la porta 8080 internamente (`$PORT=8080`). Il dominio pubblico è mappato sulla porta 8080. Non modificare la porta nel Procfile.
 
 ### Come deployare una modifica
@@ -253,9 +252,14 @@ cd frontend && npm run dev   # porta 3000
 
 Senza header `X-User-ID` → fallback a `backend/data/user_state.json` (per dev/test locali).
 
-### Persistenza dati (B39/B78 — risolto)
+### Variabili d'ambiente (Railway)
 
-Railway persistent volume montato a `/data/climb-agent` con env var `DATA_DIR=/data/climb-agent`. I dati utente sopravvivono ai redeploy. Health check all'avvio logga il path e verifica writable; `/health` endpoint espone `ephemeral_warning`.
+| Variabile | Descrizione | Note |
+|-----------|-------------|------|
+| DATA_DIR | Path volume persistente | `/data/climb-agent` |
+| ADMIN_SECRET | Chiave per GET /api/admin/users | Valore in Railway Variables — non committare mai |
+
+Persistenza: Railway persistent volume montato a `/data/climb-agent`. I dati utente sopravvivono ai redeploy. Health check all'avvio logga il path e verifica writable; `/health` endpoint espone `ephemeral_warning`.
 
 ## Documentation alignment
 
