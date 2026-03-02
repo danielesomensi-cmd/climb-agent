@@ -89,10 +89,23 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
     entry = req.model_dump(exclude_none=True)
     entry["log_version"] = "outdoor.v1"
 
+    log_dir = _log_dir(user_id)
     try:
-        log_path = append_outdoor_session(entry, _log_dir(user_id))
+        log_path = append_outdoor_session(entry, log_dir)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
+    except OSError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to write outdoor log to {log_dir}: {e}",
+        )
+
+    # Verify write actually persisted
+    if not os.path.isfile(log_path):
+        raise HTTPException(
+            status_code=500,
+            detail=f"Outdoor log write succeeded but file not found at {log_path}",
+        )
 
     return {"status": "ok", "log_path": os.path.basename(log_path)}
 
