@@ -111,10 +111,40 @@ app.include_router(admin.router)
 @app.get("/health")
 def health():
     data_dir = str(DATA_DIR)
+    users_dir = str(USERS_DIR)
     is_ephemeral = "/app/backend/data" in data_dir or data_dir.endswith("backend/data")
+
+    # Count user directories
+    users_count = 0
+    try:
+        if os.path.isdir(users_dir):
+            users_count = len([
+                d for d in os.listdir(users_dir)
+                if os.path.isdir(os.path.join(users_dir, d))
+            ])
+    except OSError:
+        pass
+
+    # Persistence marker: written once, survives redeploy if volume is real
+    marker_path = os.path.join(data_dir, ".persistence_marker")
+    marker_exists = os.path.isfile(marker_path)
+    if not marker_exists:
+        try:
+            with open(marker_path, "w") as f:
+                from datetime import datetime, timezone
+                f.write(datetime.now(timezone.utc).isoformat())
+            marker_exists = True
+            marker_fresh = True
+        except OSError:
+            marker_fresh = True
+    else:
+        marker_fresh = False
+
     return {
         "status": "ok",
         "data_dir": data_dir,
         "data_dir_from_env": "DATA_DIR" in os.environ,
         "ephemeral_warning": is_ephemeral,
+        "users_count": users_count,
+        "persistence_marker_survived": not marker_fresh,
     }
