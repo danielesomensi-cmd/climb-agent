@@ -326,6 +326,221 @@ class TestWeek:
 
 
 # -----------------------------------------------------------------------
+# Week navigation
+# -----------------------------------------------------------------------
+
+class TestWeekNavigation:
+    """Test navigating between weeks preserves data and returns consistent results."""
+
+    def _setup_full(self):
+        """Full pipeline: assessment → macrocycle. Returns macrocycle."""
+        client.post("/api/assessment/compute", json={})
+        r = client.post("/api/macrocycle/generate", json={"total_weeks": 12})
+        return r.json()["macrocycle"]
+
+    def test_week_1_then_2_then_1_is_deterministic(self):
+        """Fetching week 1, then week 2, then week 1 again returns same plan."""
+        self._setup_full()
+        r1a = client.get("/api/week/1")
+        assert r1a.status_code == 200
+        plan_1a = r1a.json()["week_plan"]
+
+        r2 = client.get("/api/week/2")
+        assert r2.status_code == 200
+
+        r1b = client.get("/api/week/1")
+        assert r1b.status_code == 200
+        plan_1b = r1b.json()["week_plan"]
+
+        # Same start_date
+        assert plan_1a["start_date"] == plan_1b["start_date"]
+        # Same number of days and sessions
+        days_a = plan_1a["weeks"][0]["days"]
+        days_b = plan_1b["weeks"][0]["days"]
+        assert len(days_a) == len(days_b)
+        for da, db in zip(days_a, days_b):
+            assert da["date"] == db["date"]
+            sids_a = [s["session_id"] for s in da.get("sessions", [])]
+            sids_b = [s["session_id"] for s in db.get("sessions", [])]
+            assert sids_a == sids_b
+
+    def test_done_session_survives_navigation(self):
+        """Mark a session done on current week, navigate away, come back — done persists."""
+        self._setup_full()
+        # Fetch current week and mark first session done
+        r0 = client.get("/api/week/0")
+        assert r0.status_code == 200
+        wp = r0.json()["week_plan"]
+        week_num = r0.json()["week_num"]
+
+        days = wp["weeks"][0]["days"]
+        day_with_session = next((d for d in days if d.get("sessions")), None)
+        if day_with_session is None:
+            return  # No sessions to test (skip gracefully)
+
+        session = day_with_session["sessions"][0]
+        r_done = client.post("/api/replanner/events", json={
+            "week_plan": wp,
+            "events": [{
+                "event_type": "mark_done",
+                "date": day_with_session["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r_done.status_code == 200
+
+        # Navigate away to a different week
+        other_week = week_num + 1 if week_num < 12 else week_num - 1
+        r_other = client.get(f"/api/week/{other_week}")
+        assert r_other.status_code == 200
+
+        # Navigate back to current week (use explicit week_num, not 0)
+        r_back = client.get(f"/api/week/{week_num}")
+        assert r_back.status_code == 200
+        back_plan = r_back.json()["week_plan"]
+
+        # Find the day and verify done status persisted
+        back_day = next(
+            d for d in back_plan["weeks"][0]["days"]
+            if d["date"] == day_with_session["date"]
+        )
+        done_s = next(
+            (s for s in back_day["sessions"]
+             if s["session_id"] == session["session_id"]),
+            None,
+        )
+        assert done_s is not None, "Session disappeared after navigation"
+        assert done_s["status"] == "done", f"Status was '{done_s['status']}' instead of 'done'"
+
+    def test_all_weeks_return_valid_plans(self):
+        """Navigate through all weeks sequentially — all should return valid plans."""
+        mc = self._setup_full()
+        total = sum(p.get("duration_weeks", 1) for p in mc["phases"])
+        for wn in range(1, total + 1):
+            r = client.get(f"/api/week/{wn}")
+            assert r.status_code == 200, f"Week {wn} failed: {r.text}"
+            wp = r.json()["week_plan"]
+            assert wp.get("weeks"), f"Week {wn} has no weeks block"
+            assert wp["weeks"][0].get("days"), f"Week {wn} has no days"
+
+    def test_modify_non_current_week_does_not_clobber_cache(self):
+        """Modifying a non-current week must NOT overwrite current week cache."""
+        mc = self._setup_full()
+        total = sum(p.get("duration_weeks", 1) for p in mc["phases"])
+
+        # Get current week and mark a session done
+        r0 = client.get("/api/week/0")
+        assert r0.status_code == 200
+        wp = r0.json()["week_plan"]
+        current_wn = r0.json()["week_num"]
+
+        days = wp["weeks"][0]["days"]
+        day_with_session = next((d for d in days if d.get("sessions")), None)
+        if day_with_session is None:
+            return
+        session = day_with_session["sessions"][0]
+
+        # Mark done on current week
+        r_done = client.post("/api/replanner/events", json={
+            "week_plan": wp,
+            "events": [{
+                "event_type": "mark_done",
+                "date": day_with_session["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r_done.status_code == 200
+
+        # Now fetch a DIFFERENT week and modify it (add outdoor)
+        other_wn = current_wn + 1 if current_wn < total else current_wn - 1
+        r_other = client.get(f"/api/week/{other_wn}")
+        assert r_other.status_code == 200
+        other_wp = r_other.json()["week_plan"]
+        other_day = other_wp["weeks"][0]["days"][0]
+
+        client.post("/api/replanner/events", json={
+            "week_plan": other_wp,
+            "events": [{
+                "event_type": "add_outdoor",
+                "date": other_day["date"],
+                "spot_name": "Test",
+                "discipline": "lead",
+            }],
+        })
+
+        # Navigate back to current week — done session must still be there
+        r_back = client.get(f"/api/week/{current_wn}")
+        assert r_back.status_code == 200
+        back_plan = r_back.json()["week_plan"]
+        back_day = next(
+            d for d in back_plan["weeks"][0]["days"]
+            if d["date"] == day_with_session["date"]
+        )
+        done_s = next(
+            (s for s in back_day["sessions"]
+             if s["session_id"] == session["session_id"]),
+            None,
+        )
+        assert done_s is not None, "Session disappeared after modifying another week"
+        assert done_s["status"] == "done", (
+            f"Done status was clobbered: got '{done_s['status']}'"
+        )
+
+    def test_start_week_then_navigate(self):
+        """After start-week offset, current week and adjacent weeks are all valid."""
+        # Use onboarding flow to get a macrocycle
+        payload = {
+            "profile": {"name": "Nav", "age": 28, "weight_kg": 70, "height_cm": 175},
+            "experience": {"climbing_years": 3, "structured_training_years": 1},
+            "grades": {"lead_max_rp": "7a", "lead_max_os": "6b"},
+            "goal": {
+                "goal_type": "lead_grade", "discipline": "lead",
+                "target_grade": "7b+", "target_style": "redpoint",
+                "current_grade": "7a", "deadline": "2026-12-31",
+            },
+            "self_eval": {"primary_weakness": "pump_too_early", "secondary_weakness": "fingers_give_out"},
+            "tests": {}, "limitations": [],
+            "equipment": {"home": ["hangboard"], "gyms": [{"name": "G", "equipment": ["gym_boulder"]}]},
+            "availability": {
+                "mon": {"evening": {"available": True, "preferred_location": "gym"}},
+                "wed": {"evening": {"available": True, "preferred_location": "gym"}},
+                "sat": {"morning": {"available": True, "preferred_location": "gym"}},
+            },
+            "planning_prefs": {"hard_day_cap_per_week": 3, "target_training_days_per_week": 3},
+            "trips": [],
+        }
+        r = client.post("/api/onboarding/complete", json=payload)
+        assert r.status_code == 200
+
+        # Apply start-week offset
+        r_sw = client.post("/api/onboarding/start-week", json={"offset_weeks": 2})
+        assert r_sw.status_code == 200
+        assert r_sw.json()["offset_applied"] == 2
+
+        # Current week should now be week 3
+        r0 = client.get("/api/week/0")
+        assert r0.status_code == 200
+        assert r0.json()["week_num"] >= 3  # Could be 3 or more depending on date
+
+        # Navigate to week 1 and 2 (past weeks)
+        for wn in [1, 2]:
+            r = client.get(f"/api/week/{wn}")
+            assert r.status_code == 200, f"Week {wn} after start-week failed"
+            assert r.json()["week_plan"]["weeks"][0]["days"]
+
+        # Navigate forward to week 4
+        r4 = client.get("/api/week/4")
+        assert r4.status_code == 200
+
+        # Back to current
+        r0b = client.get("/api/week/0")
+        assert r0b.status_code == 200
+        assert r0b.json()["week_plan"]["start_date"] == r0.json()["week_plan"]["start_date"]
+
+
+# -----------------------------------------------------------------------
 # Session
 # -----------------------------------------------------------------------
 

@@ -9,7 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, get_user_id, load_state, save_state
+from backend.api.deps import REPO_ROOT, current_phase_and_week, get_user_id, load_state, save_state
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
 from backend.engine.resolve_session import resolve_session
@@ -34,6 +34,27 @@ def _session_display_name(session_id: str) -> str:
             pass
     # Fallback: format session_id as title
     return session_id.replace("_", " ").title()
+
+
+def _is_current_week_plan(updated: dict, state: dict) -> bool:
+    """Return True if the modified plan belongs to the current week.
+
+    Only save to ``current_week_plan`` when this is True so that
+    modifications to non-current weeks don't clobber the cache.
+    """
+    macrocycle = state.get("macrocycle")
+    if not macrocycle or not macrocycle.get("phases"):
+        return True  # no macrocycle → safe to save
+
+    from datetime import datetime, timedelta
+
+    mc_start = datetime.strptime(macrocycle["start_date"], "%Y-%m-%d").date()
+    pi, wi = current_phase_and_week(macrocycle)
+    cumulative = sum(p.get("duration_weeks", 1) for p in macrocycle["phases"][:pi])
+    current_start = (mc_start + timedelta(weeks=cumulative + wi)).isoformat()
+
+    plan_start = updated.get("start_date", "")
+    return plan_start == current_start
 
 
 def _auto_resolve(week_plan: dict, state: dict) -> None:
@@ -96,9 +117,10 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Override failed: {e}")
 
-    # Persist the updated plan so it survives page navigation
-    state["current_week_plan"] = updated
-    save_state(state, user_id)
+    # Persist only if this is the current week (don't clobber cache with other weeks)
+    if _is_current_week_plan(updated, state):
+        state["current_week_plan"] = updated
+        save_state(state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state)
@@ -179,8 +201,9 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Quick-add failed: {e}")
 
-    state["current_week_plan"] = updated
-    save_state(state, user_id)
+    if _is_current_week_plan(updated, state):
+        state["current_week_plan"] = updated
+        save_state(state, user_id)
 
     _auto_resolve(updated, state)
 
@@ -216,9 +239,10 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Events application failed: {e}")
 
-    # Persist the updated plan so it survives page navigation
-    state["current_week_plan"] = updated
-    save_state(state, user_id)
+    # Persist only if this is the current week (don't clobber cache with other weeks)
+    if _is_current_week_plan(updated, state):
+        state["current_week_plan"] = updated
+        save_state(state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state)
