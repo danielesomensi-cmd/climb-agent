@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (B56/B57/B61 marked DONE, B75 interim complete, B75a/B75b/B76-B78; 145 esercizi, 25 sessioni, 20 template, 553 test)
+> Last updated: 2026-03-02 (B79 start-from-week-N onboarding; 145 esercizi, 25 sessioni, 20 template, 557 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -540,6 +540,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B76 | Outdoor + other_activity day-level fields persi dopo rigenerazione week plan. `regenerate_preserving_completed()` e `merge_prev_week_sessions()` copiavano solo sessions[], ignorando outdoor_spot_name/status/discipline e other_activity_status/feedback/load. Fix: `_DAY_LEVEL_FIELDS` tuple + restore loop in entrambe le funzioni. 6 nuovi test. (2026-03-02) | ✅ DONE | engine | §4 |
 | B77 | POST /api/outdoor/log: OSError/IOError non catturati — propagavano come 500 generico senza messaggio utile. Fix: catch OSError con messaggio esplicito (path + errore) + post-write verification che il JSONL esista su disco. E2E test cross-week: add_outdoor → log → complete → regen → verify merge + JSONL persistenza. 3 nuovi test (533 totali). (2026-03-02) | ✅ DONE | engine+test | §4 |
 | B78 | Railway persistent volume non era configurato (B39 status drift). Fix: volume montato a `/data/climb-agent` da dashboard Railway, `DATA_DIR` env var settata. Health check all'avvio (`_check_data_dir()` in main.py) + `/health` endpoint arricchito con `data_dir`, `data_dir_from_env`, `ephemeral_warning`. Verificato in produzione: `ephemeral_warning: false`. (2026-03-02) | ✅ DONE | infra | §10 |
+| B79 | Start-from-week-N in onboarding: dopo generazione macrocycle, nuova pagina chiede "Have you already been training?" e permette di iniziare da week 2/3/4. `POST /api/onboarding/start-week` shifta `macrocycle.start_date` indietro di N settimane (clamped a first_phase_duration-1). Nuova pagina `/onboarding/start-week` con radio group + Skip/Continue. Review page ora redirecta a start-week. Step indicator mostra 100% su start-week. 4 nuovi test (557 totali). (2026-03-02) | ✅ DONE | API+UI | §4b |
 
 ---
 
