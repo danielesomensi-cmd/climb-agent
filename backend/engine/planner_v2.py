@@ -752,3 +752,211 @@ def generate_phase_week(
         }
 
     return week_plan
+
+
+# ---------------------------------------------------------------------------
+# Test week generation
+# ---------------------------------------------------------------------------
+
+# Test schedule: (session_id, is_finger).  Finger tests need 48h spacing.
+_TEST_SESSIONS = [
+    ("test_max_hang_5s", True),          # finger test — day 1
+    ("test_max_weighted_pullup", False),  # non-finger — day 2 (can be consecutive)
+    ("test_repeater_7_3", True),          # finger test — day 3 (48h gap from max_hang)
+]
+
+_FILLER_SESSIONS = ["prehab_maintenance", "flexibility_full"]
+
+
+def generate_test_week(
+    start_date: str,
+    availability: Optional[Dict[str, Any]] = None,
+    allowed_locations: Optional[Sequence[str]] = None,
+    gyms: Optional[Sequence[Dict[str, Any]]] = None,
+    default_gym_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Create a 1-week assessment plan with 3 test sessions on non-consecutive days.
+
+    Places test_max_hang_5s and test_repeater_7_3 (both finger) with at least a
+    48-hour gap.  test_max_weighted_pullup is placed between them (not a finger test).
+    Remaining available days get prehab/flexibility filler sessions.
+    """
+    locations = list(allowed_locations or ["gym", "home"])
+    gyms_list = list(gyms or [])
+    norm_avail = _normalize_availability(availability, locations)
+
+    start = _parse_date(start_date)
+    days_info: List[Dict[str, Any]] = []
+    available_offsets: List[int] = []
+
+    for offset in range(7):
+        d = start + timedelta(days=offset)
+        wd = _weekday_key(d)
+        day_avail = norm_avail.get(wd, {})
+        has_slot = any(slot.get("available") for slot in day_avail.values())
+        days_info.append({
+            "date": d.isoformat(),
+            "weekday": wd,
+            "day_avail": day_avail,
+        })
+        if has_slot:
+            available_offsets.append(offset)
+
+    # Place 3 test sessions on non-consecutive available days
+    # Strategy: pick first available for max_hang, then next non-finger for pullup,
+    # then next available ≥2 days after max_hang for repeater
+    placed: Dict[int, str] = {}  # offset → session_id
+
+    # Place max_hang_5s (finger)
+    hang_offset = None
+    for off in available_offsets:
+        hang_offset = off
+        placed[off] = "test_max_hang_5s"
+        break
+
+    # Place weighted_pullup (non-finger) on next available day after hang
+    pullup_offset = None
+    if hang_offset is not None:
+        for off in available_offsets:
+            if off > hang_offset and off not in placed:
+                pullup_offset = off
+                placed[off] = "test_max_weighted_pullup"
+                break
+
+    # Place repeater (finger) at least 2 days after max_hang
+    if hang_offset is not None:
+        min_repeater = hang_offset + 2  # 48h gap
+        for off in available_offsets:
+            if off >= min_repeater and off not in placed:
+                placed[off] = "test_repeater_7_3"
+                break
+
+    # Build day plan entries
+    plan_days: List[Dict[str, Any]] = []
+    total_load = 0
+    filler_idx = 0
+
+    for offset in range(7):
+        info = days_info[offset]
+        day_avail = info["day_avail"]
+        sessions: List[Dict[str, Any]] = []
+
+        if offset in placed:
+            sid = placed[offset]
+            meta = _SESSION_META.get(sid, {})
+            # Find a slot
+            slot_result = _find_best_slot(day_avail, meta, locations)
+            if slot_result:
+                slot_name, slot_info = slot_result
+                location = _pick_location(meta.get("location", ("gym", "home")), slot_info, locations)
+                gym_id = _select_gym_id(slot_info, default_gym_id, gyms_list) if location == "gym" else None
+                load_score = _INTENSITY_TO_LOAD.get(meta.get("intensity", "high"), 65)
+                total_load += load_score
+                sessions.append({
+                    "slot": slot_name,
+                    "session_id": sid,
+                    "location": location or "gym",
+                    "gym_id": gym_id,
+                    "phase_id": "test_week",
+                    "intensity": meta.get("intensity", "high"),
+                    "estimated_load_score": load_score,
+                    "tags": {"hard": meta.get("hard", True), "finger": meta.get("finger", False), "test": True},
+                    "explain": [f"test_week: {sid}"],
+                })
+        elif offset in available_offsets:
+            # Fill with easy session
+            filler_sid = _FILLER_SESSIONS[filler_idx % len(_FILLER_SESSIONS)]
+            filler_idx += 1
+            meta = _SESSION_META.get(filler_sid, {})
+            slot_result = _find_best_slot(day_avail, meta, locations)
+            if slot_result:
+                slot_name, slot_info = slot_result
+                location = _pick_location(meta.get("location", ("home", "gym")), slot_info, locations)
+                gym_id = _select_gym_id(slot_info, default_gym_id, gyms_list) if location == "gym" else None
+                load_score = _INTENSITY_TO_LOAD.get(meta.get("intensity", "low"), 20)
+                total_load += load_score
+                sessions.append({
+                    "slot": slot_name,
+                    "session_id": filler_sid,
+                    "location": location or "home",
+                    "gym_id": gym_id,
+                    "phase_id": "test_week",
+                    "intensity": meta.get("intensity", "low"),
+                    "estimated_load_score": load_score,
+                    "tags": {"hard": False, "finger": False},
+                    "explain": [f"test_week: filler {filler_sid}"],
+                })
+
+        plan_days.append({
+            "date": info["date"],
+            "weekday": info["weekday"],
+            "sessions": sessions,
+        })
+
+    hard_days_count = sum(1 for d in plan_days if any(s.get("tags", {}).get("hard") for s in d["sessions"]))
+    recovery_days_count = sum(1 for d in plan_days if not d["sessions"] or all(s.get("intensity") == "low" for s in d["sessions"]))
+
+    return {
+        "plan_version": "test_week.v1",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "start_date": start_date,
+        "profile_snapshot": {
+            "phase_id": "test_week",
+            "allowed_locations": locations,
+        },
+        "weekly_load_summary": {
+            "total_load": total_load,
+            "hard_days_count": hard_days_count,
+            "recovery_days_count": recovery_days_count,
+        },
+        "weeks": [
+            {
+                "week_index": 1,
+                "phase": "test_week",
+                "targets": {
+                    "hard_days": hard_days_count,
+                    "finger_days": 2,
+                    "deload_factor": 1.0,
+                },
+                "days": plan_days,
+            }
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Periodic test reminder
+# ---------------------------------------------------------------------------
+
+def should_show_test_reminder(user_state: Dict[str, Any], current_week_num: int) -> Optional[Dict[str, Any]]:
+    """Return reminder dict when (current_week_num + 1) % 6 == 0 (weeks 5, 11, 17...).
+
+    Checks state for postpone/skip overrides.
+    """
+    # Check skip
+    skip_until = user_state.get("test_reminder_skipped_until")
+    if skip_until is not None and current_week_num < int(skip_until):
+        return None
+
+    # Check postpone
+    postponed_to = user_state.get("test_reminder_postponed_to")
+    if postponed_to is not None:
+        if current_week_num < int(postponed_to):
+            return None
+        # If we've reached the postponed week, show it
+        if current_week_num == int(postponed_to):
+            return {
+                "type": "test_week_reminder",
+                "message": "Time to refresh your test baselines! A test week helps keep your plan accurate.",
+                "options": ["confirm", "postpone_1_week", "skip_cycle"],
+            }
+
+    # Regular trigger: weeks 5, 11, 17, 23...
+    if (current_week_num + 1) % 6 == 0:
+        return {
+            "type": "test_week_reminder",
+            "message": "Time to refresh your test baselines! A test week helps keep your plan accurate.",
+            "options": ["confirm", "postpone_1_week", "skip_cycle"],
+        }
+
+    return None

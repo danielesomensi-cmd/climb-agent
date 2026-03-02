@@ -10,7 +10,7 @@ import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
-import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions } from "@/lib/api";
+import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, completeTestWeek } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -101,6 +101,8 @@ function TodayContent() {
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
+  const [isTestWeekMode, setIsTestWeekMode] = useState(false);
+  const [completingTestWeek, setCompletingTestWeek] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -112,6 +114,7 @@ function TodayContent() {
       ]);
       setWeekPlan(weekData.week_plan);
       setPhaseId(weekData.phase_id ?? null);
+      setIsTestWeekMode(weekData.phase_id === "test_week");
       const goal = stateData.goal as { current_grade?: string } | undefined;
       if (goal?.current_grade) setCurrentGrade(goal.current_grade);
       const eq = stateData.equipment as Record<string, unknown> | undefined;
@@ -658,6 +661,33 @@ function TodayContent() {
             >
               Retry
             </button>
+          </div>
+        )}
+
+        {/* Test week banner */}
+        {isTestWeekMode && !loading && (
+          <div className="rounded-lg border border-blue-300 bg-blue-50 p-4 dark:border-blue-600 dark:bg-blue-950">
+            <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+              Test week — complete these sessions to calibrate your plan
+            </p>
+            {dayPlan && dayPlan.sessions.every((s) => s.status === "done" || s.status === "skipped") && dayPlan.sessions.length > 0 && (
+              <button
+                className="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                disabled={completingTestWeek}
+                onClick={async () => {
+                  setCompletingTestWeek(true);
+                  try {
+                    await completeTestWeek();
+                    window.location.href = "/plan";
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "Failed to complete test week");
+                    setCompletingTestWeek(false);
+                  }
+                }}
+              >
+                {completingTestWeek ? "Generating plan..." : "Generate my training plan"}
+              </button>
+            )}
           </div>
         )}
 

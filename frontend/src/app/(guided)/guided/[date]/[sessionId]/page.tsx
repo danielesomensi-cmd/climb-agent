@@ -287,6 +287,9 @@ export default function GuidedSessionPage() {
         if (ex.suggested.surface) {
           item.surface_selected = ex.suggested.surface;
         }
+        if (ex.completedSets != null) {
+          item.completed_sets = ex.completedSets;
+        }
         return item;
       });
 

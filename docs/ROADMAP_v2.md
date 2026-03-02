@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (B65 weekly report LLM-ready; 145 esercizi, 25 sessioni, 20 template, 610 test)
+> Last updated: 2026-03-02 (Testing cluster: NEW-F3b closed loop, §9.2 expanded battery 3→6 tests, §9.1 test week + periodic reminders; 145 esercizi, 25 sessioni, 20 template, 632 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -434,7 +434,7 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F1 | Prescription climbing vuota | ✅ DONE | 4b | §2.7 |
 | NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
 | NEW-F3a | Test sessions scheduling | ✅ DONE | 1.75 | §2.4 |
-| NEW-F3b | assessment.tests closed loop | TODO | 2.5 | §2.4 |
+| NEW-F3b | assessment.tests closed loop | ✅ DONE (2026-03-02) — test results (max_hang, repeater, pullup) → assessment.tests + baselines; guided session sends completedSets; 8 new tests | 2.5 | §2.4 |
 | NEW-F4 | Ripple effect proporzionale | ✅ DONE | 1.75 | §2.4 |
 | NEW-F5 | Durate fase negative | ✅ DONE | 1.75 | §2.1 |
 | NEW-F6 | Warning phase_mismatch | ✅ DONE | 3.2 | §3 |
@@ -548,33 +548,36 @@ Tabella unica con TUTTI gli item tracciati.
 
 ## §9 — Future features (from UI testing insights, feb 2026)
 
-### 9.1 — Testing week in onboarding (Phase 2.5)
-After onboarding review step, offer the user two options:
+### 9.1 — Testing week in onboarding ✅ DONE (2026-03-02)
+After onboarding review step, two options:
 - "Start training now" — generates macrocycle immediately with available data
-- "Do a test week first (recommended)" — generates a special 1-week assessment plan
+- "Do a test week first" — generates a special 1-week assessment plan
 
-The test week includes 3-4 sessions:
+`generate_test_week()` in planner_v2.py places 3 test sessions on non-consecutive days (48h finger gap):
 - Day 1: test_max_hang_5s (finger strength)
 - Day 2: test_max_weighted_pullup (pulling strength)
-- Day 3: test_repeater_7_3 (power endurance)
-- Day 4 (optional): continuous_climbing_minutes (endurance)
+- Day 3: test_repeater_7_3 (power endurance, 48h gap from max_hang)
+- Remaining days: prehab/flexibility fillers
 
-After completing the test week, results update assessment.tests → profile is recomputed
-→ then the real macrocycle is generated with precise data.
+API: POST /api/onboarding/test-week, POST /api/onboarding/test-week-complete
+Week endpoint returns test_week when test_week_mode=True.
+Periodic test reminder: `should_show_test_reminder()` fires at weeks 5, 11, 17... with postpone/skip.
+POST /api/week/test-reminder-response handles confirm/postpone/skip.
+Frontend: review page fork, today page banner + completion trigger, api client functions.
+8 new backend tests (test_test_week.py).
 
-Depends on: Phase 2 tracking (to capture test results automatically)
+### 9.2 — Expanded onboarding test battery ✅ DONE (2026-03-02)
+Expanded from 3 to 6 evidence-based tests (all optional):
+1. Max hang 20mm/5s (existing) — finger_strength axis
+2. Repeater 7/3 (existing) — power_endurance axis
+3. Weighted pull-up 1RM (existing) — pulling_strength axis
+4. **Max hang duration 20mm** (NEW) — endurance axis (±8 max; Hörst test #3)
+5. **L-sit hold** (NEW) — body_composition axis (±5; 9c test tier 2)
+6. **Hip flexibility straddle** (NEW) — informational only v1 (Lattice, r=.53-.95)
 
-### 9.2 — Expanded onboarding test battery (Phase 3.2)
-Add more optional test fields to onboarding step 7 (tests):
-- Core: max plank hold (seconds)
-- Flexibility: can touch toes (boolean), shoulder mobility (boolean)
-- Aerobic: resting heart rate, continuous climbing time (minutes)
-- Pulling: max pull-ups (reps)
-
-These are ALL optional with "Skip" prominent. Purpose:
-- Gives the system a more complete initial profile
-- Communicates seriousness and depth to the user
-- Even displaying the option (without filling) signals "this matters"
+Assessment engine: `_compute_endurance()` and `_compute_body_composition()` accept optional `tests` param.
+Frontend: tests page has 6 sections + info banner, review page shows X/6.
+6 new backend tests in test_assessment_v1.py.
 
 ### 9.3 — Outdoor vs gym priority preference (Phase 2)
 In onboarding, after availability step, ask:

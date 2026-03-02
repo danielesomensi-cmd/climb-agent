@@ -113,6 +113,12 @@ class OnboardingData(BaseModel):
     availability: Dict[str, Any] = Field(default_factory=dict)
     planning_prefs: Dict[str, Any] = Field(default_factory=dict)
     trips: List[Dict[str, Any]] = Field(default_factory=list)
+    test_week_requested: bool = False
+
+
+class TestReminderResponse(BaseModel):
+    """Body for POST /api/week/test-reminder-response."""
+    option: str  # "confirm" | "postpone_1_week" | "skip_cycle"
 
 
 # --------------------------------------------------------------------------- #

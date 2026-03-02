@@ -246,6 +246,7 @@ def _compute_endurance(
     pe_score: int,
     experience: Dict[str, Any],
     self_eval: Dict[str, Any],
+    tests: Optional[Dict[str, Any]] = None,
 ) -> int:
     score = pe_score * 0.8
     climbing_years = experience.get("climbing_years") or 0
@@ -260,12 +261,29 @@ def _compute_endurance(
     elif self_eval.get("secondary_weakness") == "cant_manage_rests":
         score -= 5
 
+    # Max hang duration modifier (Hörst test #3: sustained finger endurance)
+    tests = tests or {}
+    hang_duration = tests.get("max_hang_duration_20mm_seconds")
+    if hang_duration is not None:
+        hang_duration = float(hang_duration)
+        if hang_duration >= 90:
+            score += 8
+        elif hang_duration >= 60:
+            score += 4
+        elif hang_duration >= 45:
+            pass  # +0
+        elif hang_duration >= 30:
+            score -= 4
+        else:
+            score -= 8
+
     return _clamp(score)
 
 
 def _compute_body_composition(
     body: Dict[str, Any],
     finger_score: int,
+    tests: Optional[Dict[str, Any]] = None,
 ) -> int:
     bf = body.get("body_fat_pct")
     if bf is not None:
@@ -288,6 +306,22 @@ def _compute_body_composition(
     else:
         # Estimate from finger strength score — if strong for weight, good composition
         score = min(70.0, finger_score * 0.9)
+
+    # L-sit hold modifier (9c test tier 2: core + hip flexors)
+    tests = tests or {}
+    l_sit = tests.get("l_sit_hold_seconds")
+    if l_sit is not None:
+        l_sit = float(l_sit)
+        if l_sit >= 30:
+            score += 5
+        elif l_sit >= 20:
+            score += 3
+        elif l_sit >= 10:
+            pass  # +0
+        elif l_sit >= 5:
+            score -= 3
+        else:
+            score -= 5
 
     return _clamp(score)
 
@@ -320,8 +354,8 @@ def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any])
     pulling = _compute_pulling_strength(tests, body, self_eval, target_grade, current_grade)
     pe = _compute_power_endurance(grades, self_eval, tests, target_grade)
     technique = _compute_technique(grades, self_eval)
-    endurance = _compute_endurance(pe, experience, self_eval)
-    body_comp = _compute_body_composition(body, finger)
+    endurance = _compute_endurance(pe, experience, self_eval, tests)
+    body_comp = _compute_body_composition(body, finger, tests)
 
     return {
         "finger_strength": finger,

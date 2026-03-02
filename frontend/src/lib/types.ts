@@ -179,6 +179,9 @@ export interface OnboardingData {
     max_hang_20mm_5s_total_kg?: number;
     weighted_pullup_1rm_total_kg?: number;
     repeater_7_3_max_sets_20mm?: number;
+    max_hang_duration_20mm_seconds?: number;
+    l_sit_hold_seconds?: number;
+    hip_flexibility_cm?: number;
     last_test_date?: string;
   };
   limitations: Array<{
@@ -207,6 +210,7 @@ export interface OnboardingData {
     discipline: string;
     priority: string;
   }>;
+  test_week_requested?: boolean;
 }
 
 // -----------------------------------------------------------------------
@@ -469,5 +473,7 @@ export interface UserState {
   planning_prefs: Record<string, unknown>;
   limitations: Record<string, unknown>;
   trips: Array<Record<string, unknown>>;
+  test_week_mode?: boolean;
+  test_week?: WeekPlan | null;
   [key: string]: unknown;
 }

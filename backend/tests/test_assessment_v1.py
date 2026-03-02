@@ -270,5 +270,79 @@ class TestPERepeaterIntegration(unittest.TestCase):
         self.assertLessEqual(profile["power_endurance"], 100)
 
 
+class TestEnduranceHangDuration(unittest.TestCase):
+    """Tests for max_hang_duration_20mm_seconds modifier on endurance axis."""
+
+    def test_endurance_hang_duration_bonus(self):
+        """>=90s hang adds 8 points to endurance."""
+        assessment_base = _make_assessment(primary_weakness="technique_errors", secondary_weakness="cant_read_routes")
+        goal = _make_goal("7c+", "7b")
+        base = compute_assessment_profile(assessment_base, goal)["endurance"]
+
+        assessment_with = _make_assessment(primary_weakness="technique_errors", secondary_weakness="cant_read_routes")
+        assessment_with["tests"]["max_hang_duration_20mm_seconds"] = 95
+        with_bonus = compute_assessment_profile(assessment_with, goal)["endurance"]
+        self.assertEqual(with_bonus, min(100, base + 8))
+
+    def test_endurance_hang_duration_penalty(self):
+        """<30s subtracts 8 from endurance."""
+        assessment_base = _make_assessment(primary_weakness="technique_errors", secondary_weakness="cant_read_routes")
+        goal = _make_goal("7c+", "7b")
+        base = compute_assessment_profile(assessment_base, goal)["endurance"]
+
+        assessment_with = _make_assessment(primary_weakness="technique_errors", secondary_weakness="cant_read_routes")
+        assessment_with["tests"]["max_hang_duration_20mm_seconds"] = 20
+        with_penalty = compute_assessment_profile(assessment_with, goal)["endurance"]
+        self.assertEqual(with_penalty, max(0, base - 8))
+
+    def test_endurance_no_hang_duration_unchanged(self):
+        """Missing hang duration = existing behavior (no change)."""
+        assessment = _make_assessment()
+        goal = _make_goal()
+        base = compute_assessment_profile(assessment, goal)["endurance"]
+
+        assessment2 = _make_assessment()
+        assessment2["tests"]["max_hang_duration_20mm_seconds"] = None
+        same = compute_assessment_profile(assessment2, goal)["endurance"]
+        self.assertEqual(base, same)
+
+
+class TestBodyCompLSit(unittest.TestCase):
+    """Tests for l_sit_hold_seconds modifier on body_composition axis."""
+
+    def test_body_comp_lsit_bonus(self):
+        """>=30s L-sit adds 5 points."""
+        assessment_base = _make_assessment(body_fat_pct=14)
+        goal = _make_goal()
+        base = compute_assessment_profile(assessment_base, goal)["body_composition"]
+
+        assessment_with = _make_assessment(body_fat_pct=14)
+        assessment_with["tests"]["l_sit_hold_seconds"] = 35
+        with_bonus = compute_assessment_profile(assessment_with, goal)["body_composition"]
+        self.assertEqual(with_bonus, min(100, base + 5))
+
+    def test_body_comp_lsit_penalty(self):
+        """<5s subtracts 5."""
+        assessment_base = _make_assessment(body_fat_pct=14)
+        goal = _make_goal()
+        base = compute_assessment_profile(assessment_base, goal)["body_composition"]
+
+        assessment_with = _make_assessment(body_fat_pct=14)
+        assessment_with["tests"]["l_sit_hold_seconds"] = 3
+        with_penalty = compute_assessment_profile(assessment_with, goal)["body_composition"]
+        self.assertEqual(with_penalty, max(0, base - 5))
+
+    def test_body_comp_no_lsit_unchanged(self):
+        """Missing L-sit = existing behavior."""
+        assessment = _make_assessment()
+        goal = _make_goal()
+        base = compute_assessment_profile(assessment, goal)["body_composition"]
+
+        assessment2 = _make_assessment()
+        assessment2["tests"]["l_sit_hold_seconds"] = None
+        same = compute_assessment_profile(assessment2, goal)["body_composition"]
+        self.assertEqual(base, same)
+
+
 if __name__ == "__main__":
     unittest.main()

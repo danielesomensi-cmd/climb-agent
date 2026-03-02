@@ -16,10 +16,10 @@ import {
 } from "@/components/ui/card";
 
 interface TestSection {
-  key: "max_hang" | "weighted_pullup" | "repeater";
+  key: "max_hang" | "weighted_pullup" | "repeater" | "hang_duration" | "l_sit" | "hip_flex";
   title: string;
   description: string;
-  fieldKey: "max_hang_20mm_5s_total_kg" | "weighted_pullup_1rm_total_kg" | "repeater_7_3_max_sets_20mm";
+  fieldKey: "max_hang_20mm_5s_total_kg" | "weighted_pullup_1rm_total_kg" | "repeater_7_3_max_sets_20mm" | "max_hang_duration_20mm_seconds" | "l_sit_hold_seconds" | "hip_flexibility_cm";
   fieldLabel: string;
   example: string;
   unit: string;
@@ -56,6 +56,36 @@ const TEST_SECTIONS: TestSection[] = [
     example: "E.g.: 24 reps",
     unit: "reps",
   },
+  {
+    key: "hang_duration",
+    title: "Max Hang Duration (20mm)",
+    description:
+      "Hang bodyweight-only on a 20mm edge, half crimp, as long as possible. Stop when you drop.",
+    fieldKey: "max_hang_duration_20mm_seconds",
+    fieldLabel: "Duration (seconds)",
+    example: "E.g.: 65 seconds. Moderate ~45s, advanced 60-90s, elite ~120s",
+    unit: "seconds",
+  },
+  {
+    key: "l_sit",
+    title: "L-sit Hold",
+    description:
+      "Hold an L-sit position with straight legs on parallel bars, dip bars, or rings. Time until form breaks.",
+    fieldKey: "l_sit_hold_seconds",
+    fieldLabel: "Duration (seconds)",
+    example: "E.g.: 20 seconds",
+    unit: "seconds",
+  },
+  {
+    key: "hip_flex",
+    title: "Hip Flexibility (Straddle Split)",
+    description:
+      "Sit with legs spread as wide as possible, back against wall, knees straight. Measure distance between heels in cm.",
+    fieldKey: "hip_flexibility_cm",
+    fieldLabel: "Distance (cm)",
+    example: "E.g.: 120 cm",
+    unit: "cm",
+  },
 ];
 
 export default function TestsPage() {
@@ -67,6 +97,9 @@ export default function TestsPage() {
     max_hang: tests.max_hang_20mm_5s_total_kg != null,
     weighted_pullup: tests.weighted_pullup_1rm_total_kg != null,
     repeater: tests.repeater_7_3_max_sets_20mm != null,
+    hang_duration: tests.max_hang_duration_20mm_seconds != null,
+    l_sit: tests.l_sit_hold_seconds != null,
+    hip_flex: tests.hip_flexibility_cm != null,
   });
 
   const toggleTest = (key: string, fieldKey: TestSection["fieldKey"], checked: boolean) => {
@@ -100,6 +133,9 @@ export default function TestsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-200">
+            Accurate test data helps climb-agent build a plan tailored to your specific strengths and weaknesses. After onboarding, we&apos;ll offer a dedicated test week to establish or refresh baselines.
+          </div>
           {TEST_SECTIONS.map((section) => (
             <div key={section.key} className="space-y-3 rounded-lg border p-4">
               <div className="flex items-center justify-between">
@@ -133,7 +169,7 @@ export default function TestsPage() {
                       id={`field-${section.key}`}
                       type="number"
                       min={0}
-                      step={section.unit === "reps" ? 1 : 0.5}
+                      step={section.unit === "kg" ? 0.5 : 1}
                       value={tests[section.fieldKey] ?? ""}
                       onChange={(e) => setField(section.fieldKey, e.target.value)}
                       placeholder={section.example}

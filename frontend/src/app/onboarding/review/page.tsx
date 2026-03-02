@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
-import { completeOnboarding } from "@/lib/api";
+import { completeOnboarding, generateTestWeek } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -82,6 +82,9 @@ export default function ReviewPage() {
     if (data.tests.max_hang_20mm_5s_total_kg != null) count++;
     if (data.tests.weighted_pullup_1rm_total_kg != null) count++;
     if (data.tests.repeater_7_3_max_sets_20mm != null) count++;
+    if (data.tests.max_hang_duration_20mm_seconds != null) count++;
+    if (data.tests.l_sit_hold_seconds != null) count++;
+    if (data.tests.hip_flexibility_cm != null) count++;
     return count;
   }, [data.tests]);
 
@@ -127,12 +130,28 @@ export default function ReviewPage() {
       await completeOnboarding(data);
       sessionStorage.removeItem("climb_onboarding_draft");
       setSuccess(true);
-      // Brief delay to show success state, then redirect
       setTimeout(() => {
         router.push("/onboarding/start-week");
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error generating the plan");
+      setLoading(false);
+    }
+  };
+
+  const handleTestWeek = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      await completeOnboarding({ ...data, test_week_requested: true });
+      await generateTestWeek();
+      sessionStorage.removeItem("climb_onboarding_draft");
+      setSuccess(true);
+      setTimeout(() => {
+        router.push("/today");
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error generating the test week");
       setLoading(false);
     }
   };
@@ -146,6 +165,12 @@ export default function ReviewPage() {
       parts.push(`Pull-up: ${data.tests.weighted_pullup_1rm_total_kg}kg`);
     if (data.tests.repeater_7_3_max_sets_20mm != null)
       parts.push(`Repeater: ${data.tests.repeater_7_3_max_sets_20mm} reps`);
+    if (data.tests.max_hang_duration_20mm_seconds != null)
+      parts.push(`Duration: ${data.tests.max_hang_duration_20mm_seconds}s`);
+    if (data.tests.l_sit_hold_seconds != null)
+      parts.push(`L-sit: ${data.tests.l_sit_hold_seconds}s`);
+    if (data.tests.hip_flexibility_cm != null)
+      parts.push(`Flex: ${data.tests.hip_flexibility_cm}cm`);
     return parts.length > 0 ? parts.join(", ") : "";
   }, [data.tests]);
 
@@ -215,7 +240,7 @@ export default function ReviewPage() {
             value={
               testCount === 0
                 ? "No tests entered"
-                : `${testCount}/3 test${testValues ? ` (${testValues})` : ""}`
+                : `${testCount}/6 test${testCount !== 1 ? "s" : ""}${testValues ? ` (${testValues})` : ""}`
             }
             editHref="/onboarding/tests"
             router={router}
@@ -282,6 +307,10 @@ export default function ReviewPage() {
         </div>
       )}
 
+      <div className="rounded-md border border-muted px-4 py-3 text-sm text-muted-foreground">
+        A test week helps calibrate your plan with precise data. You can always start training immediately.
+      </div>
+
       <div className="flex justify-between">
         <Button
           variant="outline"
@@ -290,13 +319,23 @@ export default function ReviewPage() {
         >
           Back
         </Button>
-        <Button
-          size="lg"
-          disabled={loading}
-          onClick={handleGenerate}
-        >
-          {loading ? "Generating..." : "Generate your plan"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="lg"
+            disabled={loading}
+            onClick={handleGenerate}
+          >
+            {loading ? "Generating..." : "Start training now"}
+          </Button>
+          <Button
+            size="lg"
+            disabled={loading}
+            onClick={handleTestWeek}
+          >
+            {loading ? "Generating..." : "Do a test week first"}
+          </Button>
+        </div>
       </div>
     </div>
   );

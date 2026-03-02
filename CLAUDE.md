@@ -18,7 +18,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (610 green)
+# Run all tests (632 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -40,21 +40,21 @@ mypy backend/engine/
 backend/
   engine/            # Core logic: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (14 routers, 32 endpoints)
+  api/               # FastAPI REST API (14 routers, 36 endpoints)
     main.py          # App setup, CORS, router mounting (14 routers)
     models.py        # Pydantic request/response models
     deps.py          # Shared deps (load_state, save_state, next_monday)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes, user, admin
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 610 pytest tests with fixtures/
+  tests/             # 632 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 23 pages: 8 main views + 13 onboarding steps + root + onboarding index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
                      # guided/ (session-timer, progress-bar, exercise-step, summary)
                      # whats-next/ (roadmap-section, feature-item, feedback-section)
                      # settings/ (equipment-editor, goal-editor)
-  src/lib/           # api.ts (28 endpoint functions), types.ts, hooks/
+  src/lib/           # api.ts (30 endpoint functions), types.ts, hooks/
 docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, ROADMAP_v2.md, audit_post_fix.md, e2e_test_results.md
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```
@@ -77,7 +77,7 @@ Data paths are relative to the repo root:
 
 ## API (Phase 3)
 
-FastAPI app with 14 routers and 32 endpoints + health check.
+FastAPI app with 14 routers and 36 endpoints + health check.
 
 ```bash
 # Start (exclude data dir from reload)
@@ -101,9 +101,12 @@ source .venv/bin/activate && python -m pytest backend/tests/test_api.py -q
 | GET | `/api/onboarding/defaults` | Option lists for onboarding form |
 | POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle |
 | POST | `/api/onboarding/start-week` | Shift macrocycle start_date back N weeks |
+| POST | `/api/onboarding/test-week` | Generate test week plan (test_week_mode required) |
+| POST | `/api/onboarding/test-week-complete` | Recompute profile + generate macrocycle, clear test week |
 | POST | `/api/assessment/compute` | Recompute 6-axis profile |
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
-| GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
+| GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions, test_week_mode aware) |
+| POST | `/api/week/test-reminder-response` | Handle periodic test reminder (confirm/postpone/skip) |
 | POST | `/api/session/resolve` | Resolve a single session to exercises |
 | POST | `/api/replanner/override` | Apply day override (intent-based, auto-resolves sessions) |
 | POST | `/api/replanner/events` | Apply events (done/skipped) to week plan |
@@ -136,7 +139,7 @@ cd frontend && npm run dev    # http://localhost:3000
 - **Framework**: Next.js 14 (App Router, "use client" for all pages)
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **State**: React hooks (useUserState, useOnboarding context)
-- **API client**: Typed fetch wrapper in `src/lib/api.ts` (28 endpoint functions)
+- **API client**: Typed fetch wrapper in `src/lib/api.ts` (30 endpoint functions)
 - **PWA**: manifest.json + service worker
 
 ### Pages (23)
@@ -185,9 +188,9 @@ Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Curren
 
 ### Modules
 
-- `backend/engine/assessment_v1.py` — 6-axis profile computation (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition). Each axis 0-100, benchmark-based when test data available, grade-estimated otherwise. PE score uses repeater test (40%) + RP-OS gap (40%) + self_eval (20%) to avoid double counting.
+- `backend/engine/assessment_v1.py` — 6-axis profile computation (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition). Each axis 0-100, benchmark-based when test data available, grade-estimated otherwise. PE score uses repeater test (40%) + RP-OS gap (40%) + self_eval (20%) to avoid double counting. Endurance axis gets ±8 modifier from max_hang_duration_20mm_seconds; body_composition gets ±5 from l_sit_hold_seconds. Hip flexibility stored but informational only in v1.
 - `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and min 2-week floor per non-deload phase.
-- `backend/engine/planner_v2.py` — Phase-aware weekly planner. 3-pass algorithm: pass 1 places primary/climbing sessions with spacing (gym days processed first), pass 2 fills complementary, pass 3 injects test sessions on last week of eligible phases (`is_last_week_of_phase=True`). Location-aware: respects preferred_location from availability, filters session pool by home/gym compatibility. Gym-priority scoring ensures climbing days are never dropped by target_days cap. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles. Outputs `estimated_load_score` per session and `weekly_load_summary` per week.
+- `backend/engine/planner_v2.py` — Phase-aware weekly planner. 3-pass algorithm: pass 1 places primary/climbing sessions with spacing (gym days processed first), pass 2 fills complementary, pass 3 injects test sessions on last week of eligible phases (`is_last_week_of_phase=True`). Location-aware: respects preferred_location from availability, filters session pool by home/gym compatibility. Gym-priority scoring ensures climbing days are never dropped by target_days cap. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles. Outputs `estimated_load_score` per session and `weekly_load_summary` per week. Also: `generate_test_week()` creates a 1-week assessment plan (3 test sessions with 48h finger spacing + filler), `should_show_test_reminder()` fires periodic reminders at weeks 5, 11, 17... with postpone/skip.
 - `backend/engine/replanner_v1.py` — Phase-aware replanner. 13 intents mapped to planner_v2 sessions (incl. "projecting"). `apply_day_override` accepts `phase_id` and applies proportional ripple effect (hard→medium on day+1, force recovery on day+2) with phase mismatch warnings and finger compensation. `suggest_sessions` + `apply_day_add` for quick-add (append, day+1 ripple only). `regenerate_preserving_completed` for availability changes. Imports `_SESSION_META` from planner_v2.
 - `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 36 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty. Outputs `session_load_score` (sum of exercise `fatigue_cost` values).
 

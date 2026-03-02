@@ -623,32 +623,89 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
     test_sessions = [s for s in planned_sessions if str(s.get("session_id") or "").startswith("test_") or bool((s.get("tags") or {}).get("test"))]
     if not test_sessions:
         return
+    date_str = str(log_entry.get("date") or "")
+    assessment = updated.setdefault("assessment", {})
+    at = assessment.setdefault("tests", {})
+
     for item in feedback_items:
-        if str(item.get("exercise_id") or "") != "max_hang_5s":
-            continue
-        used_total = item.get("used_total_load_kg")
-        if used_total is None:
-            continue
-        total = _round_half_step(float(used_total))
-        external = _round_half_step(total - bodyweight)
-        tests = updated.setdefault("tests", {})
-        max_strength = tests.setdefault("max_strength", [])
-        entry = {
-            "test_id": "max_hang_5s_total_load",
-            "date": str(log_entry.get("date") or ""),
-            "exercise_id": "max_hang_5s",
-            "bodyweight_kg": bodyweight,
-            "total_load_kg": total,
-            "external_load_kg": external,
-            "setup": {"hang_seconds": 5},
-            "freshness_policy": {"stale_after_days": 90},
-            "confidence": "high",
-        }
-        max_strength.append(entry)
-        max_strength.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
-        baselines = updated.setdefault("baselines", {}).setdefault("hangboard", [{"max_total_load_kg": total}])
-        if baselines:
-            baselines[0]["max_total_load_kg"] = total
+        exercise_id = str(item.get("exercise_id") or "")
+
+        # --- Max hang 5s ---
+        if exercise_id == "max_hang_5s":
+            used_total = item.get("used_total_load_kg")
+            if used_total is None:
+                continue
+            total = _round_half_step(float(used_total))
+            external = _round_half_step(total - bodyweight)
+            tests = updated.setdefault("tests", {})
+            max_strength = tests.setdefault("max_strength", [])
+            entry = {
+                "test_id": "max_hang_5s_total_load",
+                "date": date_str,
+                "exercise_id": "max_hang_5s",
+                "bodyweight_kg": bodyweight,
+                "total_load_kg": total,
+                "external_load_kg": external,
+                "setup": {"hang_seconds": 5},
+                "freshness_policy": {"stale_after_days": 90},
+                "confidence": "high",
+            }
+            max_strength.append(entry)
+            max_strength.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
+            baselines = updated.setdefault("baselines", {}).setdefault("hangboard", [{"max_total_load_kg": total}])
+            if baselines:
+                baselines[0]["max_total_load_kg"] = total
+                baselines[0]["source"] = "test"
+                baselines[0]["updated_at"] = date_str
+            # Write scalar to assessment.tests
+            at["max_hang_20mm_5s_total_kg"] = total
+
+        # --- Repeater 7/3 ---
+        elif exercise_id == "repeater_hang_7_3":
+            completed_sets = item.get("completed_sets")
+            if completed_sets is None:
+                continue
+            completed_sets = int(completed_sets)
+            tests = updated.setdefault("tests", {})
+            rep_history = tests.setdefault("repeater_strength_endurance", [])
+            rep_history.append({
+                "test_id": "repeater_7_3_max_sets",
+                "date": date_str,
+                "exercise_id": "repeater_hang_7_3",
+                "bodyweight_kg": bodyweight,
+                "completed_sets": completed_sets,
+                "freshness_policy": {"stale_after_days": 90},
+                "confidence": "high",
+            })
+            rep_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
+            # Write scalar to assessment.tests
+            at["repeater_7_3_max_sets_20mm"] = completed_sets
+
+        # --- Weighted pull-up ---
+        elif exercise_id == "weighted_pullup":
+            used_total = item.get("used_total_load_kg")
+            used_external = item.get("used_external_load_kg")
+            if used_total is None and used_external is not None:
+                used_total = float(used_external) + bodyweight
+            if used_total is None:
+                continue
+            total = _round_half_step(float(used_total))
+            external = _round_half_step(total - bodyweight)
+            tests = updated.setdefault("tests", {})
+            pull_history = tests.setdefault("pulling_strength", [])
+            pull_history.append({
+                "test_id": "weighted_pullup_1rm",
+                "date": date_str,
+                "exercise_id": "weighted_pullup",
+                "bodyweight_kg": bodyweight,
+                "total_load_kg": total,
+                "external_load_kg": external,
+                "freshness_policy": {"stale_after_days": 90},
+                "confidence": "high",
+            })
+            pull_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
+            # Write scalar to assessment.tests
+            at["weighted_pullup_1rm_total_kg"] = total
 
 
 def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
