@@ -484,7 +484,7 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-24 | Feedback con carico/grado — pre-popolare dal suggested | ✅ DONE | 4b | §2.8 |
 | B37 | Add exercise to existing session | TODO | next | — |
 | B38 | Injuries filter (contraindications) | TODO | next | — |
-| B39 | Railway persistent volume. **Status drift**: was marked DONE but volume never actually configured — `railway.json` has no volume mount, `DATA_DIR` env var not set. All user data on ephemeral filesystem, lost on every deploy. See B78 for fix instructions. | 🔲 OPEN | infra | §10 |
+| B39 | Railway persistent volume. Was marked DONE but volume never configured (status drift). Fixed 2026-03-02: volume mounted at `/data/climb-agent`, `DATA_DIR` env var set, health check confirms `ephemeral_warning: false`. | ✅ DONE | infra | §10 |
 | B40 | Branch develop/main workflow | TODO | infra | — |
 | B41 | Other activities in availability (block day + optional intensity reduction day after) | ✅ DONE | 4b post | — |
 | B42 | Sunday reminder — confirm next week availability | TODO | beta feedback | — |
@@ -539,7 +539,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B75b | Export/import user_state: `GET /api/user/export` (Content-Disposition attachment) + `POST /api/user/import` (schema validation + append-only event log). Sezione "Backup & Restore" in Settings con toast feedback. 9 nuovi test. (2026-03-02) | ✅ DONE | API+UI | §4a |
 | B76 | Outdoor + other_activity day-level fields persi dopo rigenerazione week plan. `regenerate_preserving_completed()` e `merge_prev_week_sessions()` copiavano solo sessions[], ignorando outdoor_spot_name/status/discipline e other_activity_status/feedback/load. Fix: `_DAY_LEVEL_FIELDS` tuple + restore loop in entrambe le funzioni. 6 nuovi test. (2026-03-02) | ✅ DONE | engine | §4 |
 | B77 | POST /api/outdoor/log: OSError/IOError non catturati — propagavano come 500 generico senza messaggio utile. Fix: catch OSError con messaggio esplicito (path + errore) + post-write verification che il JSONL esista su disco. E2E test cross-week: add_outdoor → log → complete → regen → verify merge + JSONL persistenza. 3 nuovi test (533 totali). (2026-03-02) | ✅ DONE | engine+test | §4 |
-| **B78** | **🚨 P0 — Railway persistent volume non configurato (blocca B39).** `railway.json` non ha volume mount, `DATA_DIR` env var non settata → tutti i dati utente su filesystem ephemeral, persi ad ogni deploy. **Fix dal dashboard Railway** (non da codice): **(1)** Service → Settings → Volumes → Mount path: `/data/climb-agent`; **(2)** Service → Variables → `DATA_DIR=/data/climb-agent`; **(3)** Redeploy. Dopo il fix, verificare dal log che il startup health check confermi `DATA_DIR=/data/climb-agent` e `writable=true`. Aggiunto health check all'avvio (`backend/api/main.py`): logga path effettivo, verifica writable, warning se path ephemeral. | 🔲 OPEN (richiede azione dashboard) | infra | §10 |
+| B78 | Railway persistent volume non era configurato (B39 status drift). Fix: volume montato a `/data/climb-agent` da dashboard Railway, `DATA_DIR` env var settata. Health check all'avvio (`_check_data_dir()` in main.py) + `/health` endpoint arricchito con `data_dir`, `data_dir_from_env`, `ephemeral_warning`. Verificato in produzione: `ephemeral_warning: false`. (2026-03-02) | ✅ DONE | infra | §10 |
 
 ---
 

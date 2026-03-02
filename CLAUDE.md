@@ -252,9 +252,9 @@ cd frontend && npm run dev   # porta 3000
 
 Senza header `X-User-ID` → fallback a `backend/data/user_state.json` (per dev/test locali).
 
-### Problema dati persistenza
+### Persistenza dati (B39/B78 — risolto)
 
-I file user_state.json sono in `backend/data/users/{id}/` e vengono persi ad ogni nuovo deploy Railway perché il filesystem è ephemeral. Fix pianificato: Railway persistent volume (B39).
+Railway persistent volume montato a `/data/climb-agent` con env var `DATA_DIR=/data/climb-agent`. I dati utente sopravvivono ai redeploy. Health check all'avvio logga il path e verifica writable; `/health` endpoint espone `ephemeral_warning`.
 
 ## Documentation alignment
 
