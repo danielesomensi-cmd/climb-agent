@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 from backend.api.deps import DATA_DIR, USERS_DIR
 from backend.api.routers import (
+    admin,
     assessment,
     catalog,
     feedback,
@@ -104,6 +105,7 @@ app.include_router(outdoor.router)
 app.include_router(reports.router)
 app.include_router(quotes.router)
 app.include_router(user.router)
+app.include_router(admin.router)
 
 
 @app.get("/health")
