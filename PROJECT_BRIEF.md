@@ -170,7 +170,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (524 green)
+# Backend tests (557 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)
