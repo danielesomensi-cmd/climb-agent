@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-03-02 (Test session fix: dedicated templates + measurement exercises + guided UI + settings editor; 151 exercises, 25 sessions, 23 templates, 638 tests)
+> Last updated: 2026-03-02 (Test load UI single-field + 1RM protocol fix; 151 exercises, 25 sessions, 23 templates, 639 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 151 | 15 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +3 test_measurement (hang duration, L-sit, hip flex) |
 | Sessions | 25 | 25 active (13 archived), gym evening (enriched), home, recovery, flexibility, prehab, conditioning, finger (maintenance/strength/endurance/aerobic), test (×3), deload, lower_body, heavy_conditioning, route_endurance, pulling_strength |
 | Templates | 23 | 11 original + 9 new + 3 test (warmup, pulling/pulling_compound, antagonist, core, cooldown, 3 test protocols) |
-| Tests | 638 | all green (post test session fix + measurement exercises) |
+| Tests | 639 | all green (post test load UI + 1RM protocol fix) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 36 | 14 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 23 | 8 main views + 13 onboarding steps + root + onboarding index |

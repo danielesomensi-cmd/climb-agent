@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (Test session fix: dedicated templates + measurement exercises + guided UI + settings editor; 151 esercizi, 25 sessioni, 23 template, 638 test)
+> Last updated: 2026-03-02 (Test load UI single-field + 1RM protocol fix; 151 esercizi, 25 sessioni, 23 template, 639 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
