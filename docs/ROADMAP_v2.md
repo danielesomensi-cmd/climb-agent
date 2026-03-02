@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (B75b export/import, B76 outdoor preservation, B61 voice cues default ON; 145 esercizi, 25 sessioni, 20 template, 542 test)
+> Last updated: 2026-03-02 (B77 outdoor log fix, B78 Railway volume confirmed, B39 reopened+fixed, B75b export/import; 145 esercizi, 25 sessioni, 20 template, 542 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---

@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-03-02 (B75b export/import, B76 outdoor preservation; 145 exercises, 25 sessions, 20 templates, 542 tests)
+> Last updated: 2026-03-02 (B77 outdoor log fix, B78 Railway volume confirmed, B39 fixed, B75b export/import; 145 exercises, 25 sessions, 20 templates, 542 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
