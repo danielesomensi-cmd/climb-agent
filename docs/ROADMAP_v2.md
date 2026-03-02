@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-01 (B74 outdoor route summary in DayCard + style picker; 145 esercizi, 25 sessioni, 20 template, 524 test)
+> Last updated: 2026-03-02 (B76 outdoor field preservation fix, B61 voice cues default ON; 145 esercizi, 25 sessioni, 20 template, 530 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -519,7 +519,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B58 | Test Sessions (hangboard) e sessioni climbing appaiono in Work gym — filtro equipment non funziona correttamente. Fix: aggiunto `required_equipment` a 3 test session JSON (hangboard per max_hang/repeater, pullup_bar per weighted_pullup). | ✅ DONE | engine | §4 |
 | B59 | "Get Ready" countdown tra le serie: rimosso. Get Ready solo all'inizio (set 1). Tra le serie: set_rest → work direttamente. Back da work set > 1 torna a set_rest. | ✅ DONE | UI | §7 |
 | B60 | Bug: suoni sessione non funzionavano (Web Audio API, iOS). Fix: `handleStart`/`handleDoneSet` async con `await unlockAudio()`, `beep()` tenta `ctx.resume()` prima di arrendersi, visibility change re-play silent buffer. | ✅ DONE | UI | §7 |
-| B61 | Feature: voice cues durante sessione — "Rest" quando inizia il rest, "Go" / "Start" quando deve partire il prossimo set. Opzionale (toggle in Settings). Implementare con Web Speech API. | 🔲 OPEN | UI | §7 |
+| B61 | Voice cues durante sessione guidata — Web Speech API: "Go" (work), "Rest" (set_rest), "Hold" (rep_rest), "Done" (complete), "Get ready". Toggle in Settings, default ON. (2026-03-02) | ✅ DONE | UI | §7 |
 | B65 | Feature: Weekly Report — riepilogo automatico a fine settimana in due fasi: (1) **Report deterministico** (implementabile ora): load actual vs planned, sessioni completate/skippate/aggiunte, compliance %, feedback distribution (quante easy/ok/hard), sport complementari loggati. Dati strutturati, nessun LLM. (2) **Narrative LLM** (Phase 3.5): stessi dati passati come contesto all'LLM coach che genera un testo motivante e actionable — es. "Settimana solida, 4/5 sessioni completate. Due sessioni easy: considera di aumentare il carico". Il report deterministico è prerequisito del report LLM. | 🔲 OPEN (fase 1 fattibile ora, fase 2 in Phase 3.5) | engine+UI+LLM | §7+§3.5 |
 | B67 | Timer guided session si ferma in background iOS (setInterval sospeso). Fix: wall-clock based timer (phaseEndTimeRef = Date.now() + duration, ogni tick calcola remaining = endTime - now). visibilitychange handler per recalc immediato al foreground. Pause + background → resta in pausa. | ✅ DONE | UI | §7 |
 | C-1 | Week view missing Done/Skip/Undo/Remove + FeedbackDialog. Added all session action callbacks to DayCard in week/page.tsx. | ✅ DONE | UI | §8 |
@@ -537,6 +537,7 @@ Tabella unica con TUTTI gli item tracciati.
 | **B75** | **🚨 P0 CRITICAL — Data persistence.** UUID in localStorage è fragile — clear browser/new device = stato perso. Fix definitivo: auth reale (Clerk). Fix intermedi: **(a)** endpoint `GET /api/admin/users` per recovery (lista UUID + last access + grade), **(b)** export/import user_state in Settings (backup manuale utente), **(c)** backup periodico volume Railway. Tutti i fix intermedi vanno fatti PRIMA di invitare nuovi beta tester. | 🔲 OPEN | infra | §4a |
 | B75a | Admin recovery endpoint: `GET /api/admin/users` — lista UUID, data ultimo accesso, current_grade. Per rimappare utenti che perdono il localStorage UUID. | 🔲 OPEN | API | §4a |
 | B75b | Export/import user_state: Settings → Export data (JSON download) / Import data (JSON upload). Safety net per beta tester. | 🔲 OPEN | UI | §4a |
+| B76 | Outdoor + other_activity day-level fields persi dopo rigenerazione week plan. `regenerate_preserving_completed()` e `merge_prev_week_sessions()` copiavano solo sessions[], ignorando outdoor_spot_name/status/discipline e other_activity_status/feedback/load. Fix: `_DAY_LEVEL_FIELDS` tuple + restore loop in entrambe le funzioni. 6 nuovi test. (2026-03-02) | ✅ DONE | engine | §4 |
 
 ---
 

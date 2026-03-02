@@ -332,6 +332,111 @@ class TestIncrementalRegenFlow:
         assert result["weeks"][0]["days"][4]["sessions"][0]["status"] == "skipped"
 
 
+# ---- Part B2: outdoor & other_activity fields survive regen ------------------
+
+from backend.engine.replanner_v1 import regenerate_preserving_completed
+
+
+class TestOutdoorFieldsPreserved:
+    """Day-level outdoor and other_activity fields must survive regeneration."""
+
+    def test_outdoor_fields_preserved_merge(self):
+        """Outdoor fields survive merge_prev_week_sessions (weekday match)."""
+        prev = _make_week_plan("2026-02-23", {
+            2: [_session("technique_focus_gym", status="done")],
+        })
+        # Add outdoor fields to Wednesday
+        prev["weeks"][0]["days"][2]["outdoor_spot_name"] = "Fontainebleau"
+        prev["weeks"][0]["days"][2]["outdoor_spot_id"] = "spot-123"
+        prev["weeks"][0]["days"][2]["outdoor_discipline"] = "boulder"
+        prev["weeks"][0]["days"][2]["outdoor_session_status"] = "done"
+
+        new = _make_week_plan("2026-02-23", {
+            2: [_session("power_contact_gym")],
+        })
+        result = merge_prev_week_sessions(prev, new)
+        wed = result["weeks"][0]["days"][2]
+        assert wed["outdoor_spot_name"] == "Fontainebleau"
+        assert wed["outdoor_spot_id"] == "spot-123"
+        assert wed["outdoor_discipline"] == "boulder"
+        assert wed["outdoor_session_status"] == "done"
+
+    def test_outdoor_fields_preserved_regen(self):
+        """Outdoor fields survive regenerate_preserving_completed (exact date)."""
+        old = _make_week_plan("2026-02-23", {
+            0: [_session("strength_long", status="done")],
+        })
+        old["weeks"][0]["days"][0]["outdoor_spot_name"] = "Kalymnos"
+        old["weeks"][0]["days"][0]["outdoor_session_status"] = "done"
+        old["weeks"][0]["days"][0]["outdoor_discipline"] = "lead"
+
+        new = _make_week_plan("2026-02-23", {
+            0: [_session("endurance_aerobic_gym")],
+        })
+        result = regenerate_preserving_completed(old, new)
+        mon = result["weeks"][0]["days"][0]
+        assert mon["outdoor_spot_name"] == "Kalymnos"
+        assert mon["outdoor_session_status"] == "done"
+        assert mon["outdoor_discipline"] == "lead"
+
+    def test_other_activity_fields_preserved_merge(self):
+        """other_activity_* fields survive merge."""
+        prev = _make_week_plan("2026-02-23")
+        prev["weeks"][0]["days"][3]["other_activity_status"] = "completed"
+        prev["weeks"][0]["days"][3]["other_activity_feedback"] = "ok"
+        prev["weeks"][0]["days"][3]["other_activity_load"] = 20
+
+        new = _make_week_plan("2026-02-23")
+        result = merge_prev_week_sessions(prev, new)
+        thu = result["weeks"][0]["days"][3]
+        assert thu["other_activity_status"] == "completed"
+        assert thu["other_activity_feedback"] == "ok"
+        assert thu["other_activity_load"] == 20
+
+    def test_other_activity_fields_preserved_regen(self):
+        """other_activity_* fields survive regenerate_preserving_completed."""
+        old = _make_week_plan("2026-02-23")
+        old["weeks"][0]["days"][1]["other_activity_status"] = "completed"
+        old["weeks"][0]["days"][1]["other_activity_feedback"] = "hard"
+        old["weeks"][0]["days"][1]["other_activity_load"] = 30
+
+        new = _make_week_plan("2026-02-23")
+        result = regenerate_preserving_completed(old, new)
+        tue = result["weeks"][0]["days"][1]
+        assert tue["other_activity_status"] == "completed"
+        assert tue["other_activity_feedback"] == "hard"
+        assert tue["other_activity_load"] == 30
+
+    def test_outdoor_without_done_sessions_preserved(self):
+        """Outdoor fields preserved even if no done sessions on that day."""
+        prev = _make_week_plan("2026-02-23")
+        # Only outdoor fields, no done sessions
+        prev["weeks"][0]["days"][4]["outdoor_spot_name"] = "Arco"
+        prev["weeks"][0]["days"][4]["outdoor_session_status"] = "planned"
+        prev["weeks"][0]["days"][4]["outdoor_discipline"] = "lead"
+
+        new = _make_week_plan("2026-02-23", {
+            4: [_session("endurance_aerobic_gym")],
+        })
+        result = merge_prev_week_sessions(prev, new)
+        fri = result["weeks"][0]["days"][4]
+        assert fri["outdoor_spot_name"] == "Arco"
+        assert fri["outdoor_session_status"] == "planned"
+
+    def test_outdoor_fields_not_on_clean_days(self):
+        """Days without outdoor fields in old plan stay clean in new plan."""
+        prev = _make_week_plan("2026-02-23")
+        prev["weeks"][0]["days"][0]["outdoor_spot_name"] = "Berdorf"
+        prev["weeks"][0]["days"][0]["outdoor_session_status"] = "done"
+
+        new = _make_week_plan("2026-02-23")
+        result = merge_prev_week_sessions(prev, new)
+        # Monday has outdoor
+        assert result["weeks"][0]["days"][0].get("outdoor_spot_name") == "Berdorf"
+        # Tuesday stays clean
+        assert "outdoor_spot_name" not in result["weeks"][0]["days"][1]
+
+
 # ---- Part C: session_log / feedback_log independent of plan ------------------
 
 

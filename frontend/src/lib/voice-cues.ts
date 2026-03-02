@@ -2,7 +2,8 @@ const STORAGE_KEY = "climb_voice_cues";
 
 export function isVoiceCuesEnabled(): boolean {
   if (typeof window === "undefined") return false;
-  return localStorage.getItem(STORAGE_KEY) === "true";
+  const stored = localStorage.getItem(STORAGE_KEY);
+  return stored === null ? true : stored === "true";
 }
 
 export function setVoiceCuesEnabled(enabled: boolean): void {

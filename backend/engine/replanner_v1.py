@@ -425,16 +425,20 @@ def merge_prev_week_sessions(
 
     # Build map weekday → list of preservable sessions from old plan
     preservable: Dict[int, List[Dict[str, Any]]] = {}
+    prev_day_fields: Dict[int, Dict[str, Any]] = {}
     for day in (prev_plan.get("weeks") or [{}])[0].get("days", []):
+        try:
+            wd = datetime.strptime(day["date"], "%Y-%m-%d").weekday()
+        except (KeyError, ValueError):
+            continue
         sessions = [s for s in day.get("sessions", []) if _is_preservable(s)]
         if sessions:
-            try:
-                wd = datetime.strptime(day["date"], "%Y-%m-%d").weekday()
-            except (KeyError, ValueError):
-                continue
             preservable.setdefault(wd, []).extend(sessions)
+        extras = {k: day[k] for k in _DAY_LEVEL_FIELDS if k in day}
+        if extras:
+            prev_day_fields[wd] = extras
 
-    if not preservable:
+    if not preservable and not prev_day_fields:
         return result
 
     # Merge into new plan by weekday
@@ -443,30 +447,34 @@ def merge_prev_week_sessions(
             wd = datetime.strptime(day["date"], "%Y-%m-%d").weekday()
         except (KeyError, ValueError):
             continue
+
         to_merge = preservable.get(wd)
-        if not to_merge:
-            continue
+        if to_merge:
+            occupied_slots = {s.get("slot") for s in day.get("sessions", [])}
+            for ps in to_merge:
+                ps_slot = ps.get("slot")
+                if ps_slot in occupied_slots:
+                    # Replace auto-generated session in this slot
+                    day["sessions"] = [
+                        ps if s.get("slot") == ps_slot else s
+                        for s in day["sessions"]
+                    ]
+                else:
+                    day.setdefault("sessions", []).append(ps)
+                occupied_slots.add(ps_slot)
 
-        occupied_slots = {s.get("slot") for s in day.get("sessions", [])}
-        for ps in to_merge:
-            ps_slot = ps.get("slot")
-            if ps_slot in occupied_slots:
-                # Replace auto-generated session in this slot
-                day["sessions"] = [
-                    ps if s.get("slot") == ps_slot else s
-                    for s in day["sessions"]
-                ]
-            else:
-                day.setdefault("sessions", []).append(ps)
-            occupied_slots.add(ps_slot)
-
-        day["sessions"].sort(
-            key=lambda s: (
-                SLOTS.index(s.get("slot", "evening")),
-                s.get("priority", 99),
-                s.get("session_id", ""),
+            day["sessions"].sort(
+                key=lambda s: (
+                    SLOTS.index(s.get("slot", "evening")),
+                    s.get("priority", 99),
+                    s.get("session_id", ""),
+                )
             )
-        )
+
+        # Restore day-level fields (outdoor, other_activity)
+        extras = prev_day_fields.get(wd)
+        if extras:
+            day.update(extras)
 
     # Recompute day-level status from merged sessions
     for day in (result.get("weeks") or [{}])[0].get("days", []):
@@ -476,6 +484,13 @@ def merge_prev_week_sessions(
     return result
 
 
+_DAY_LEVEL_FIELDS = (
+    "outdoor_spot_name", "outdoor_spot_id", "outdoor_discipline",
+    "outdoor_session_status", "other_activity_status",
+    "other_activity_feedback", "other_activity_load",
+)
+
+
 def regenerate_preserving_completed(
     old_plan: Dict[str, Any],
     new_plan: Dict[str, Any],
@@ -483,8 +498,9 @@ def regenerate_preserving_completed(
     """Merge completed/skipped sessions from *old_plan* into *new_plan*."""
     result = deepcopy(new_plan)
 
-    # Build map of completed sessions from old plan
+    # Build maps from old plan: sessions + day-level fields
     completed_map: Dict[str, List[Dict[str, Any]]] = {}
+    day_fields_map: Dict[str, Dict[str, Any]] = {}
     for day in (old_plan.get("weeks") or [{}])[0].get("days", []):
         done_sessions = [
             s for s in day.get("sessions", [])
@@ -492,6 +508,9 @@ def regenerate_preserving_completed(
         ]
         if done_sessions:
             completed_map[day["date"]] = done_sessions
+        extras = {k: day[k] for k in _DAY_LEVEL_FIELDS if k in day}
+        if extras:
+            day_fields_map[day["date"]] = extras
 
     # Merge into new plan
     for date_key, completed_sessions in completed_map.items():
@@ -520,6 +539,13 @@ def regenerate_preserving_completed(
         target_day["sessions"].sort(
             key=lambda s: (SLOTS.index(s.get("slot", "evening")), s.get("priority", 99), s.get("session_id", ""))
         )
+
+    # Restore day-level fields (outdoor, other_activity)
+    for date_key, extras in day_fields_map.items():
+        for day in (result.get("weeks") or [{}])[0].get("days", []):
+            if day.get("date") == date_key:
+                day.update(extras)
+                break
 
     result["plan_revision"] = int(result.get("plan_revision") or 1) + 1
     return result
