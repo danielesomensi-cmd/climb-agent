@@ -9,8 +9,9 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, current_phase_and_week, get_user_id, load_state, save_state
+from backend.api.deps import DATA_DIR, REPO_ROOT, USERS_DIR, current_phase_and_week, get_user_id, load_state, save_state
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
+from backend.engine.outdoor_log import remove_outdoor_session
 from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
 from backend.engine.resolve_session import resolve_session
 
@@ -239,6 +240,13 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Events application failed: {e}")
+
+    # Remove outdoor log entries for any undo_outdoor events so re-logging
+    # doesn't produce duplicates.
+    log_dir = str(USERS_DIR / user_id / "logs") if user_id else str(DATA_DIR / "logs")
+    for ev in req.events:
+        if ev.get("event_type") == "undo_outdoor" and ev.get("date"):
+            remove_outdoor_session(log_dir, ev["date"])
 
     _persist_week_plan(updated, state, user_id)
 

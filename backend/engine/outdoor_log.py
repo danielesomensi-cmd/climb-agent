@@ -81,6 +81,41 @@ def append_outdoor_session(entry: Dict[str, Any], log_dir: str) -> str:
     return log_path
 
 
+def remove_outdoor_session(log_dir: str, date: str) -> int:
+    """Remove all outdoor session entries for a given date from the JSONL log.
+
+    Rewrites the log file excluding entries with matching date.
+    Returns the number of entries removed.
+    """
+    log_path = _log_path_for_date(log_dir, date)
+    if not os.path.isfile(log_path):
+        return 0
+
+    kept: list[str] = []
+    removed = 0
+    with open(log_path, "r", encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                entry = json.loads(stripped)
+            except json.JSONDecodeError:
+                kept.append(stripped)
+                continue
+            if entry.get("date") == date:
+                removed += 1
+            else:
+                kept.append(stripped)
+
+    if removed > 0:
+        with open(log_path, "w", encoding="utf-8") as f:
+            for line in kept:
+                f.write(line + "\n")
+
+    return removed
+
+
 def load_outdoor_sessions(
     log_dir: str,
     since_date: Optional[str] = None,

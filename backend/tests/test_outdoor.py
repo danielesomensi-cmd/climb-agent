@@ -15,6 +15,7 @@ from backend.engine.outdoor_log import (
     append_outdoor_session,
     compute_outdoor_stats,
     load_outdoor_sessions,
+    remove_outdoor_session,
     validate_outdoor_entry,
 )
 from backend.engine.planner_v2 import generate_phase_week
@@ -501,3 +502,76 @@ class TestOutdoorE2ECrossWeek:
         })
         assert r.status_code == 500
         assert "Failed to write" in r.json()["detail"]
+
+
+class TestRemoveOutdoorSession:
+    """Tests for remove_outdoor_session (undo support)."""
+
+    def test_remove_deletes_matching_date(self, tmp_path):
+        log_dir = str(tmp_path / "logs")
+        entry = {
+            "log_version": "outdoor.v1",
+            "date": "2026-03-02",
+            "spot_name": "Berdorf",
+            "discipline": "lead",
+            "duration_minutes": 90,
+            "routes": [{"name": "R1", "grade": "6a", "attempts": [{"result": "sent"}]}],
+        }
+        append_outdoor_session(entry, log_dir)
+        assert len(load_outdoor_sessions(log_dir)) == 1
+
+        removed = remove_outdoor_session(log_dir, "2026-03-02")
+        assert removed == 1
+        assert len(load_outdoor_sessions(log_dir)) == 0
+
+    def test_remove_keeps_other_dates(self, tmp_path):
+        log_dir = str(tmp_path / "logs")
+        for d in ["2026-03-01", "2026-03-02", "2026-03-03"]:
+            append_outdoor_session({
+                "log_version": "outdoor.v1", "date": d,
+                "spot_name": "Spot", "discipline": "boulder",
+                "duration_minutes": 60,
+                "routes": [{"name": "R", "grade": "5a", "attempts": [{"result": "sent"}]}],
+            }, log_dir)
+        assert len(load_outdoor_sessions(log_dir)) == 3
+
+        removed = remove_outdoor_session(log_dir, "2026-03-02")
+        assert removed == 1
+        remaining = load_outdoor_sessions(log_dir)
+        assert len(remaining) == 2
+        assert {e["date"] for e in remaining} == {"2026-03-01", "2026-03-03"}
+
+    def test_remove_nonexistent_date_returns_zero(self, tmp_path):
+        log_dir = str(tmp_path / "logs")
+        removed = remove_outdoor_session(log_dir, "2026-03-02")
+        assert removed == 0
+
+    def test_undo_redo_no_duplicates(self, tmp_path):
+        """Simulate: log → undo (remove) → re-log → only 1 entry."""
+        log_dir = str(tmp_path / "logs")
+        entry = {
+            "log_version": "outdoor.v1",
+            "date": "2026-03-02",
+            "spot_name": "Berdorf",
+            "discipline": "lead",
+            "duration_minutes": 90,
+            "routes": [{"name": "R1", "grade": "6a", "attempts": [{"result": "sent"}]}],
+        }
+        # Log
+        append_outdoor_session(entry, log_dir)
+        assert len(load_outdoor_sessions(log_dir)) == 1
+
+        # Undo
+        remove_outdoor_session(log_dir, "2026-03-02")
+        assert len(load_outdoor_sessions(log_dir)) == 0
+
+        # Re-log with different routes
+        entry2 = {**entry, "routes": [
+            {"name": "R2", "grade": "6b", "attempts": [{"result": "sent"}]},
+            {"name": "R3", "grade": "6a+", "attempts": [{"result": "sent"}]},
+        ]}
+        append_outdoor_session(entry2, log_dir)
+        sessions = load_outdoor_sessions(log_dir)
+        assert len(sessions) == 1
+        assert len(sessions[0]["routes"]) == 2
+        assert sessions[0]["routes"][0]["name"] == "R2"
