@@ -2,7 +2,6 @@
 
 import logging
 import os
-import tempfile
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
