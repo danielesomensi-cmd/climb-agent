@@ -18,7 +18,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (533 green)
+# Run all tests (542 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -40,21 +40,21 @@ mypy backend/engine/
 backend/
   engine/            # Core logic: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (12 routers, 28 endpoints)
-    main.py          # App setup, CORS, router mounting (12 routers)
+  api/               # FastAPI REST API (13 routers, 30 endpoints)
+    main.py          # App setup, CORS, router mounting (13 routers)
     models.py        # Pydantic request/response models
     deps.py          # Shared deps (load_state, save_state, next_monday)
-    routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes
+    routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes, user
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 533 pytest tests with fixtures/
+  tests/             # 542 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
   src/app/           # 21 pages: 7 main views + 12 onboarding steps + root + onboarding index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
                      # guided/ (session-timer, progress-bar, exercise-step, summary)
                      # whats-next/ (roadmap-section, feature-item, feedback-section)
                      # settings/ (equipment-editor, goal-editor)
-  src/lib/           # api.ts (25 endpoint functions), types.ts, hooks/
+  src/lib/           # api.ts (27 endpoint functions), types.ts, hooks/
 docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, ROADMAP_v2.md, audit_post_fix.md, e2e_test_results.md
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```
@@ -77,7 +77,7 @@ Data paths are relative to the repo root:
 
 ## API (Phase 3)
 
-FastAPI app with 12 routers and 28 endpoints + health check.
+FastAPI app with 13 routers and 28 endpoints + health check.
 
 ```bash
 # Start (exclude data dir from reload)
@@ -119,6 +119,8 @@ source .venv/bin/activate && python -m pytest backend/tests/test_api.py -q
 | GET | `/api/reports/weekly` | Weekly training report |
 | GET | `/api/reports/monthly` | Monthly training report |
 | GET | `/api/quotes/daily` | Daily motivational quote |
+| GET | `/api/user/export` | Download user_state as JSON backup |
+| POST | `/api/user/import` | Import user_state (validates, overwrites, logs) |
 
 ## Frontend (Phase 3)
 
@@ -132,7 +134,7 @@ cd frontend && npm run dev    # http://localhost:3000
 - **Framework**: Next.js 14 (App Router, "use client" for all pages)
 - **Styling**: Tailwind CSS + shadcn/ui components
 - **State**: React hooks (useUserState, useOnboarding context)
-- **API client**: Typed fetch wrapper in `src/lib/api.ts` (25 endpoint functions)
+- **API client**: Typed fetch wrapper in `src/lib/api.ts` (27 endpoint functions)
 - **PWA**: manifest.json + service worker
 
 ### Pages (21)
@@ -176,7 +178,7 @@ Optional equipment is mentioned in `prescription_defaults.notes` only.
 ## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 533 tests green (post base phase audit: intensity cap, anti-repetition, pool expansion, orphan cleanup).
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 542 tests green (post base phase audit: intensity cap, anti-repetition, pool expansion, orphan cleanup).
 
 ### Modules
 

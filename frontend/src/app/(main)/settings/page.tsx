@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
-import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot } from "@/lib/api";
+import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState } from "@/lib/api";
 import type { OutdoorSpot } from "@/lib/types";
 import { AvailabilityEditor } from "@/components/settings/availability-editor";
 import { EquipmentEditor } from "@/components/settings/equipment-editor";
@@ -48,6 +48,9 @@ export default function SettingsPage() {
   const [newSpotName, setNewSpotName] = useState("");
   const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("boulder");
   const [voiceCuesOn, setVoiceCuesOn] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [backupMsg, setBackupMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => { setVoiceCuesOn(isVoiceCuesEnabled()); }, []);
 
@@ -580,6 +583,75 @@ export default function SettingsPage() {
                     }}
                   />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* ----- Backup & Restore ----- */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Backup &amp; Restore</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Use backups to restore your data if you switch device or browser.
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={exporting}
+                    onClick={async () => {
+                      setExporting(true);
+                      setBackupMsg(null);
+                      try {
+                        await exportUserState();
+                        setBackupMsg({ type: "ok", text: "Backup downloaded" });
+                      } catch {
+                        setBackupMsg({ type: "err", text: "Export failed" });
+                      } finally {
+                        setExporting(false);
+                      }
+                    }}
+                  >
+                    {exporting ? "Exporting..." : "Export data"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={importing}
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = ".json";
+                      input.onchange = async () => {
+                        const file = input.files?.[0];
+                        if (!file) return;
+                        setImporting(true);
+                        setBackupMsg(null);
+                        try {
+                          const text = await file.text();
+                          const data = JSON.parse(text);
+                          await importUserState(data);
+                          setBackupMsg({ type: "ok", text: "Data restored successfully" });
+                          refresh();
+                        } catch (e) {
+                          const msg = e instanceof Error ? e.message : "Import failed";
+                          setBackupMsg({ type: "err", text: msg });
+                        } finally {
+                          setImporting(false);
+                        }
+                      };
+                      input.click();
+                    }}
+                  >
+                    {importing ? "Importing..." : "Import data"}
+                  </Button>
+                </div>
+                {backupMsg && (
+                  <p className={`text-xs ${backupMsg.type === "ok" ? "text-green-500" : "text-destructive"}`}>
+                    {backupMsg.text}
+                  </p>
+                )}
               </CardContent>
             </Card>
 

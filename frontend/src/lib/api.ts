@@ -208,6 +208,34 @@ export const getOutdoorStats = (since?: string) =>
     `/api/outdoor/stats${since ? `?since=${since}` : ""}`
   );
 
+// User backup
+export async function exportUserState(): Promise<void> {
+  const userId = getUserId();
+  const headers: Record<string, string> = {
+    ...(userId ? { "X-User-ID": userId } : {}),
+  };
+  const res = await fetch(`${API_BASE}/api/user/export`, { headers });
+  if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+  const blob = await res.blob();
+  const cd = res.headers.get("content-disposition") || "";
+  const match = cd.match(/filename="?([^"]+)"?/);
+  const filename = match?.[1] || "climb-agent-backup.json";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+export const importUserState = (state: Record<string, unknown>) =>
+  request<{ status: string }>("/api/user/import", {
+    method: "POST",
+    body: JSON.stringify(state),
+  });
+
 // Reports
 export const getWeeklyReport = (weekStart: string) =>
   request<WeeklyReport>(`/api/reports/weekly?week_start=${weekStart}`);
