@@ -18,7 +18,7 @@ climb-agent is a deterministic climbing training engine. It generates personalis
 ## Key commands
 
 ```bash
-# Run all tests (566 green)
+# Run all tests (610 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -47,9 +47,9 @@ backend/
     routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes, user, admin
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 566 pytest tests with fixtures/
+  tests/             # 610 pytest tests with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
-  src/app/           # 22 pages: 7 main views + 13 onboarding steps + root + onboarding index
+  src/app/           # 23 pages: 8 main views + 13 onboarding steps + root + onboarding index
   src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
                      # guided/ (session-timer, progress-bar, exercise-step, summary)
                      # whats-next/ (roadmap-section, feature-item, feedback-section)
@@ -139,13 +139,14 @@ cd frontend && npm run dev    # http://localhost:3000
 - **API client**: Typed fetch wrapper in `src/lib/api.ts` (28 endpoint functions)
 - **PWA**: manifest.json + service worker
 
-### Pages (22)
-7 main views + 13 onboarding steps + root + onboarding index, with validation (date pickers, grade-experience cross-check), multi-week navigation, replan intents, feedback badges, undo done, load score display.
+### Pages (23)
+8 main views + 13 onboarding steps + root + onboarding index, with validation (date pickers, grade-experience cross-check), multi-week navigation, replan intents, feedback badges, undo done, load score display.
 
 - `/today` — Today's sessions (or any day via `?date=YYYY-MM-DD`), mark done/skipped, post-session feedback
-- `/week` — 7-day grid + scrollable day detail cards + "View day" / "Change plan" buttons + replan dialog + multi-week navigation
+- `/week` — 7-day grid + scrollable day detail cards + "View day" / "Change plan" buttons + replan dialog + multi-week navigation + "Weekly Report" button
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
 - `/session/[id]` — Resolved exercises with prescription details, feedback badges, load score
+- `/reports/weekly` — Comprehensive weekly report: adherence ring, load bar, difficulty distribution, highlights, day timeline, progression table, outdoor summary, stimulus balance grid
 - `/whats-next` — Votable roadmap (7 features, localStorage) + feedback form (mailto:)
 - `/settings` — Profile summary, goal editor, equipment editor, regenerate assessment/macrocycle, reset
 - `/guided/[date]/[sessionId]` — Step-by-step guided session with timer, progress dots, inline feedback, summary
@@ -180,7 +181,7 @@ Optional equipment is mentioned in `prescription_defaults.notes` only.
 ## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
 
 The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 566 tests green (post base phase audit: intensity cap, anti-repetition, pool expansion, orphan cleanup).
+Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 610 tests green (post base phase audit: intensity cap, anti-repetition, pool expansion, orphan cleanup).
 
 ### Modules
 

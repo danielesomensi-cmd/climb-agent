@@ -267,18 +267,102 @@ export interface OutdoorStats {
 // Reports
 // -----------------------------------------------------------------------
 
+export interface WeeklyReportContext {
+  phase_id: string | null;
+  phase_week: number | null;
+  phase_total_weeks: number | null;
+  macrocycle_week: number | null;
+  macrocycle_total_weeks: number | null;
+  goal: Record<string, unknown> | null;
+  assessment_profile: Record<string, number> | null;
+}
+
+export interface WeeklyReportAdherence {
+  planned: number;
+  completed: number;
+  skipped: number;
+  added: number;
+  pct: number;
+  skipped_sessions: Array<{ date: string; session_id: string }>;
+}
+
+export interface WeeklyReportLoad {
+  planned_total: number;
+  actual_total: number;
+  load_ratio: number;
+  hard_days: number;
+  recovery_days: number;
+  indoor_minutes: number;
+  outdoor_minutes: number;
+}
+
+export interface WeeklyReportDifficulty {
+  distribution: Record<string, number>;
+  avg_label: string;
+  hardest_session: { date: string; session_id: string; difficulty: string } | null;
+  easiest_session: { date: string; session_id: string; difficulty: string } | null;
+}
+
+export interface WeeklyReportStimulusEntry {
+  sessions_this_week: number;
+  days_since_last: number | null;
+}
+
+export interface WeeklyReportProgression {
+  exercise_id: string;
+  previous_load: number | string;
+  current_load: number | string;
+  change_pct: number | null;
+  direction: "up" | "down" | "same" | "grade_change";
+}
+
+export interface WeeklyReportOutdoor {
+  sessions: number;
+  total_routes: number;
+  sends: number;
+  send_pct: number;
+  top_grade_sent: string | null;
+  onsight_pct: number;
+  spots: string[];
+}
+
+export interface WeeklyReportSession {
+  session_id: string;
+  status: "planned" | "done" | "skipped";
+  slot: string;
+  estimated_load_score: number | null;
+  intensity: string | null;
+  feedback_summary: string | null;
+}
+
+export interface WeeklyReportDay {
+  date: string;
+  weekday: string;
+  sessions: WeeklyReportSession[];
+  outdoor: { spot_name: string; discipline: string; status: string } | null;
+  other_activity: { name: string; status: string; feedback: string } | null;
+  is_rest_day: boolean;
+}
+
+export interface WeeklyReportHighlight {
+  type: "positive" | "progress" | "warning" | "info";
+  key: string;
+  text: string;
+}
+
 export interface WeeklyReport {
   report_type: "weekly";
   week_start: string;
   week_end: string;
-  planned_sessions: number;
-  completed_sessions: number;
-  adherence_pct: number;
-  total_indoor_minutes: number;
-  total_outdoor_minutes: number;
-  session_types: Record<string, number>;
-  outdoor_sessions: number;
-  highlights: string[];
+  context: WeeklyReportContext;
+  adherence: WeeklyReportAdherence;
+  load: WeeklyReportLoad;
+  difficulty: WeeklyReportDifficulty;
+  stimulus_balance: Record<string, WeeklyReportStimulusEntry>;
+  progression: WeeklyReportProgression[];
+  outdoor: WeeklyReportOutdoor;
+  days: WeeklyReportDay[];
+  highlights: WeeklyReportHighlight[];
 }
 
 export interface MonthlyReport {
