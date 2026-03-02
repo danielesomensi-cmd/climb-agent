@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-03-02 (B79 start-from-week, B75a/B75b, B76-B78; 145 exercises, 25 sessions, 20 templates, 557 tests)
+> Last updated: 2026-03-02 (B80 per-week cache, B81 outdoor undo dedup; 145 exercises, 25 sessions, 20 templates, 566 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 145 | 14 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +pistol_squat_progression +romanian_deadlift (NEW-F12) |
 | Sessions | 25 | 25 active (13 archived), gym evening (enriched), home, recovery, flexibility, prehab, conditioning, finger (maintenance/strength/endurance/aerobic), test (×3), deload, lower_body, heavy_conditioning, route_endurance, pulling_strength |
 | Templates | 20 | 11 original + 9 new (warmup, pulling/pulling_compound, antagonist, core, cooldown) |
-| Tests | 557 | all green (post B79 start-from-week) |
+| Tests | 566 | all green (post B80 per-week cache, B81 outdoor undo dedup) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 32 | 14 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 22 | 7 main views + 13 onboarding steps + root + onboarding index |
@@ -88,7 +88,7 @@ backend/
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 557 pytest tests
+  tests/                    ← 566 pytest tests
 frontend/
   src/
     app/
@@ -170,7 +170,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (557 green)
+# Backend tests (566 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)

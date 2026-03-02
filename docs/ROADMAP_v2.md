@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (B39 persistence verified post-redeploy, B79 start-from-week-N; 145 esercizi, 25 sessioni, 20 template, 557 test)
+> Last updated: 2026-03-02 (B80 per-week cache, B81 outdoor undo dedup; 145 esercizi, 25 sessioni, 20 template, 566 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -541,6 +541,8 @@ Tabella unica con TUTTI gli item tracciati.
 | B77 | POST /api/outdoor/log: OSError/IOError non catturati — propagavano come 500 generico senza messaggio utile. Fix: catch OSError con messaggio esplicito (path + errore) + post-write verification che il JSONL esista su disco. E2E test cross-week: add_outdoor → log → complete → regen → verify merge + JSONL persistenza. 3 nuovi test (533 totali). (2026-03-02) | ✅ DONE | engine+test | §4 |
 | B78 | Railway persistent volume non era configurato (B39 status drift). Fix: volume montato a `/data/climb-agent` da dashboard Railway, `DATA_DIR` env var settata. Health check all'avvio (`_check_data_dir()` in main.py) + `/health` endpoint arricchito con `data_dir`, `data_dir_from_env`, `ephemeral_warning`. Verificato in produzione: `ephemeral_warning: false`. (2026-03-02) | ✅ DONE | infra | §10 |
 | B79 | Start-from-week-N in onboarding: dopo generazione macrocycle, nuova pagina chiede "Have you already been training?" e permette di iniziare da week 2/3/4. `POST /api/onboarding/start-week` shifta `macrocycle.start_date` indietro di N settimane (clamped a first_phase_duration-1). Nuova pagina `/onboarding/start-week` con radio group + Skip/Continue. Review page ora redirecta a start-week. Step indicator mostra 100% su start-week. 4 nuovi test (557 totali). (2026-03-02) | ✅ DONE | API+UI | §4b |
+| B80 | Per-week cache: navigare tra settimane diverse perdeva sessioni completate e modifiche manuali. Causa: replanner endpoints sovrascrivevano `current_week_plan` con qualsiasi settimana modificata → cache miss al ritorno sulla settimana corrente → rigenerazione fresca. Fix: `week_plans` dict (keyed by `start_date`) in user_state per persistere modifiche a TUTTE le settimane. `_persist_week_plan()` helper salva in `week_plans` + condizionalmente in `current_week_plan`. Week router legge da `week_plans[start_date]` con fallback a legacy `current_week_plan`. Feedback adaptive replan sincronizzato. 5 nuovi test (562 totali). (2026-03-02) | ✅ DONE | API | §4b |
+| B81 | Outdoor undo duplica vie: `undo_outdoor` cambiava solo `outdoor_session_status` nel piano ma non toccava il JSONL log. Re-loggando le stesse vie venivano appese di nuovo → duplicati. Fix: `remove_outdoor_session(log_dir, date)` in `outdoor_log.py` riscrive il JSONL escludendo entries per la data. L'endpoint `/api/replanner/events` chiama `remove_outdoor_session()` per ogni evento `undo_outdoor`. 4 nuovi test (566 totali). (2026-03-02) | ✅ DONE | engine+API | §4b |
 
 ---
 
