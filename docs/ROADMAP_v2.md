@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-03 (Equipment-aware session placement in planner + quick-add filter; 151 esercizi, 25 sessioni, 23 template, 672 test)
+> Last updated: 2026-03-03 (Outdoor integration B68-B73: load score, adherence, ripple, onboarding spots, history UI; 151 esercizi, 25 sessioni, 23 template, 693 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
