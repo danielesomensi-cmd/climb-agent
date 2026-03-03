@@ -277,6 +277,7 @@ def onboarding_test_week(user_id: Optional[str] = Depends(get_user_id)):
     availability = state.get("availability")
     equipment = state.get("equipment", {})
     gyms = equipment.get("gyms", [])
+    home_eq = equipment.get("home")
     locations = ["gym"] if gyms else ["home"]
     if equipment.get("home_enabled"):
         if "home" not in locations:
@@ -293,6 +294,7 @@ def onboarding_test_week(user_id: Optional[str] = Depends(get_user_id)):
         allowed_locations=locations,
         gyms=gyms,
         default_gym_id=default_gym_id,
+        home_equipment=home_eq,
     )
 
     state["test_week"] = test_week

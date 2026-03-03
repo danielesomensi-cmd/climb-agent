@@ -35,7 +35,7 @@ def _make_kwargs(phase_id="base", **overrides):
         hard_cap_per_week=3,
         planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
         default_gym_id="blocx",
-        gyms=[{"gym_id": "blocx", "equipment": ["spraywall", "board_kilter", "hangboard"]}],
+        gyms=[{"gym_id": "blocx", "equipment": ["spraywall", "board_kilter", "hangboard", "gym_boulder", "gym_routes", "dumbbell", "pullup_bar"]}],
     )
     defaults.update(overrides)
     return defaults
@@ -573,6 +573,107 @@ class TestPlannerV2OtherActivity(unittest.TestCase):
         thu = next(d for d in days if d["weekday"] == "thu")
         self.assertNotIn("prev_other_activity_reduce", thu,
                          "Should NOT have reduce flag when not requested")
+
+
+class TestEquipmentAwarePlacement(unittest.TestCase):
+    """E2E tests: planner respects required_equipment when choosing location."""
+
+    def _gym_home_avail(self):
+        """All days: evening slot, both gym and home viable, prefer home."""
+        avail = {}
+        for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun"):
+            avail[wd] = {
+                "evening": {"available": True, "locations": ["gym", "home"],
+                            "preferred_location": "home"},
+            }
+        return avail
+
+    def _full_gym(self):
+        return [{"gym_id": "test_gym", "equipment": [
+            "hangboard", "gym_boulder", "gym_routes", "dumbbell",
+            "pullup_bar", "campus_board", "kettlebell", "band",
+        ]}]
+
+    def test_pullup_test_at_gym_when_home_lacks_pullup_bar(self):
+        """test_max_weighted_pullup requires pullup_bar.
+        Home has NO pullup_bar → planner must place it at gym."""
+        from backend.engine.planner_v2 import generate_test_week
+        plan = generate_test_week(
+            start_date="2026-03-02",
+            availability=self._gym_home_avail(),
+            allowed_locations=["gym", "home"],
+            gyms=self._full_gym(),
+            default_gym_id="test_gym",
+            home_equipment=["hangboard", "band", "dumbbell"],  # NO pullup_bar
+        )
+        for day in plan["weeks"][0]["days"]:
+            for s in day["sessions"]:
+                if s["session_id"] == "test_max_weighted_pullup":
+                    self.assertEqual(s["location"], "gym",
+                                     "pullup test should be at gym when home lacks pullup_bar")
+                    return
+        self.fail("test_max_weighted_pullup not found in test week")
+
+    def test_pullup_test_at_home_when_home_has_pullup_bar(self):
+        """test_max_weighted_pullup requires pullup_bar.
+        Home HAS pullup_bar + preference is home → planner places it at home."""
+        from backend.engine.planner_v2 import generate_test_week
+        plan = generate_test_week(
+            start_date="2026-03-02",
+            availability=self._gym_home_avail(),
+            allowed_locations=["gym", "home"],
+            gyms=self._full_gym(),
+            default_gym_id="test_gym",
+            home_equipment=["hangboard", "band", "dumbbell", "pullup_bar"],  # HAS pullup_bar
+        )
+        for day in plan["weeks"][0]["days"]:
+            for s in day["sessions"]:
+                if s["session_id"] == "test_max_weighted_pullup":
+                    self.assertEqual(s["location"], "home",
+                                     "pullup test should be at home when home has pullup_bar and preference is home")
+                    return
+        self.fail("test_max_weighted_pullup not found in test week")
+
+    def test_hangboard_sessions_at_gym_when_home_lacks_hangboard(self):
+        """Sessions requiring hangboard should go to gym when home has none."""
+        from backend.engine.planner_v2 import generate_test_week
+        plan = generate_test_week(
+            start_date="2026-03-02",
+            availability=self._gym_home_avail(),
+            allowed_locations=["gym", "home"],
+            gyms=self._full_gym(),
+            default_gym_id="test_gym",
+            home_equipment=["band", "dumbbell"],  # NO hangboard
+        )
+        hangboard_sessions = {"test_max_hang_5s", "test_repeater_7_3"}
+        for day in plan["weeks"][0]["days"]:
+            for s in day["sessions"]:
+                if s["session_id"] in hangboard_sessions:
+                    self.assertEqual(s["location"], "gym",
+                                     f"{s['session_id']} should be at gym when home lacks hangboard")
+
+    def test_phase_week_respects_gym_equipment(self):
+        """pulling_strength_gym requires pullup_bar — gym has it implicitly."""
+        plan = generate_phase_week(**_make_kwargs(
+            "strength_power",
+            availability=self._gym_home_avail(),
+            gyms=self._full_gym(),
+            default_gym_id="test_gym",
+            home_equipment=["hangboard", "band"],  # NO pullup_bar
+        ))
+        for day in plan["weeks"][0]["days"]:
+            for s in day["sessions"]:
+                if s["session_id"] == "pulling_strength_gym":
+                    self.assertEqual(s["location"], "gym",
+                                     "pulling_strength_gym needs pullup_bar → must be at gym")
+
+    def test_no_equipment_info_falls_back_to_allow_all(self):
+        """When no home_equipment or gyms are given, all placements should work (backwards compat)."""
+        plan = generate_phase_week(**_make_kwargs("base"))
+        total_sessions = sum(
+            len(d["sessions"]) for d in plan["weeks"][0]["days"]
+        )
+        self.assertGreater(total_sessions, 0, "Should generate sessions even without equipment info")
 
 
 if __name__ == "__main__":

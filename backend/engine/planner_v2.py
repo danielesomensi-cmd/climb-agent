@@ -31,31 +31,31 @@ WEEKDAYS: Tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 # hard: counts against hard_cap; finger: needs 48h gap; intensity: max/high/medium/low
 # climbing: True for climbing-related sessions (placed first in pass 1)
 _SESSION_META: Dict[str, Dict[str, Any]] = {
-    "strength_long": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym", "home")},
-    "power_contact_gym": {"hard": True, "finger": False, "intensity": "max", "climbing": True, "location": ("gym",)},
-    "power_endurance_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",)},
-    "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2},
-    "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",)},
-    "finger_strength_home": {"hard": True, "finger": True, "intensity": "high", "climbing": True, "location": ("home",)},
+    "strength_long": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym", "home"), "required_equipment": ["hangboard"]},
+    "power_contact_gym": {"hard": True, "finger": False, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "power_endurance_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"]},
+    "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_routes"]},
+    "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "finger_strength_home": {"hard": True, "finger": True, "intensity": "high", "climbing": True, "location": ("home",), "required_equipment": ["hangboard"]},
     "prehab_maintenance": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
     "flexibility_full": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
     "yoga_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home",)},
     "handstand_practice": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "complementary_conditioning": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "regeneration_easy": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym", "outdoor")},
-    "finger_maintenance_home": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",)},
-    "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True},
-    "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True},
-    "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True},
-    "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",)},
-    "finger_maintenance_gym": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("gym",)},
-    "route_endurance_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",)},
-    "pulling_strength_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("gym",)},
-    "heavy_conditioning_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",)},
-    "lower_body_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",)},
-    "finger_aerobic_base": {"hard": False, "finger": True, "intensity": "low", "climbing": False, "location": ("home",)},
+    "finger_maintenance_home": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",), "required_equipment": ["hangboard"]},
+    "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
+    "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
+    "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["pullup_bar"]},
+    "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "finger_maintenance_gym": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["hangboard"]},
+    "route_endurance_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"]},
+    "pulling_strength_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("gym",), "required_equipment": ["pullup_bar"]},
+    "heavy_conditioning_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
+    "lower_body_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
+    "finger_aerobic_base": {"hard": False, "finger": True, "intensity": "low", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "deload_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
-    "finger_endurance_short": {"hard": False, "finger": True, "intensity": "medium", "climbing": False, "location": ("home",)},
+    "finger_endurance_short": {"hard": False, "finger": True, "intensity": "medium", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
 }
 
 _INTENSITY_ORDER = {"low": 0, "medium": 1, "high": 2, "max": 3}
@@ -77,10 +77,69 @@ def _intensity_allowed(session_intensity: str, phase_cap: str) -> bool:
     return _INTENSITY_ORDER.get(session_intensity, 0) <= _INTENSITY_ORDER.get(phase_cap, 3)
 
 
+def _equipment_for_location(
+    location: str,
+    slot_info: Dict[str, Any],
+    home_equipment: Optional[List[str]],
+    gyms: Optional[Sequence[Dict[str, Any]]],
+    default_gym_id: Optional[str],
+) -> Optional[List[str]]:
+    """Return equipment list available at *location* for the given slot.
+
+    Returns None when equipment is unknown (no gym data / no home data),
+    meaning "assume everything is available" (backwards compat).
+    """
+    if location == "gym":
+        # Every gym implicitly has a pullup_bar (commit 6bf5e75).
+        gym_id = slot_info.get("gym_id") or default_gym_id
+        equip: List[str] = []
+        matched = False
+        for g in (gyms or []):
+            if gym_id and g.get("gym_id") == gym_id:
+                equip = list(g.get("equipment", []))
+                matched = True
+                break
+        if not matched and gyms:
+            sorted_g = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
+            equip = list(sorted_g[0].get("equipment", []))
+            matched = True
+        if not matched:
+            return None  # no gym info → assume everything available
+        if "pullup_bar" not in equip:
+            equip.append("pullup_bar")
+        return equip
+    elif location == "home":
+        if home_equipment is None:
+            return None  # no home info → assume everything available
+        return list(home_equipment)
+    return None
+
+
+def _location_has_equipment(
+    location: str,
+    required_equipment: List[str],
+    slot_info: Dict[str, Any],
+    home_equipment: Optional[List[str]],
+    gyms: Optional[Sequence[Dict[str, Any]]],
+    default_gym_id: Optional[str],
+) -> bool:
+    """Check if *location* provides all items in *required_equipment*."""
+    if not required_equipment:
+        return True
+    avail = _equipment_for_location(location, slot_info, home_equipment, gyms, default_gym_id)
+    if avail is None:
+        return True  # unknown equipment → assume available (backwards compat)
+    return all(eq in avail for eq in required_equipment)
+
+
 def _pick_location(
     session_locations: Tuple[str, ...],
     slot_info: Dict[str, Any],
     allowed_locations: Sequence[str],
+    required_equipment: Optional[List[str]] = None,
+    home_equipment: Optional[List[str]] = None,
+    gyms: Optional[Sequence[Dict[str, Any]]] = None,
+    default_gym_id: Optional[str] = None,
 ) -> Optional[str]:
     slot_locations = slot_info.get("locations") or list(allowed_locations)
     viable = sorted(set(slot_locations).intersection(session_locations).intersection(allowed_locations))
@@ -89,8 +148,27 @@ def _pick_location(
     preferred = slot_info.get("preferred_location")
     if isinstance(preferred, str):
         if preferred in viable:
+            # Preferred is viable by location rules — check equipment
+            if required_equipment and not _location_has_equipment(
+                preferred, required_equipment, slot_info, home_equipment, gyms, default_gym_id
+            ):
+                # Preferred lacks equipment → try other viable locations
+                for loc in viable:
+                    if loc != preferred and _location_has_equipment(
+                        loc, required_equipment, slot_info, home_equipment, gyms, default_gym_id
+                    ):
+                        return loc
+                return None  # no viable location has the equipment
             return preferred
         return None  # session can't satisfy location preference
+    # No preference — pick first viable with equipment
+    if required_equipment:
+        viable = [
+            loc for loc in viable
+            if _location_has_equipment(loc, required_equipment, slot_info, home_equipment, gyms, default_gym_id)
+        ]
+        if not viable:
+            return None
     return viable[0]
 
 
@@ -162,6 +240,9 @@ def _find_best_slot(
     meta: Dict[str, Any],
     locations: Sequence[str],
     prefer_evening: bool = True,
+    home_equipment: Optional[List[str]] = None,
+    gyms: Optional[Sequence[Dict[str, Any]]] = None,
+    default_gym_id: Optional[str] = None,
 ) -> Optional[Tuple[str, Dict[str, Any]]]:
     """Find the best available slot for a session on a given day.
 
@@ -173,11 +254,18 @@ def _find_best_slot(
     else:
         slot_order = ("lunch", "morning", "evening")
 
+    req_equip = meta.get("required_equipment")
     for slot in slot_order:
         slot_info = day_availability[slot]
         if not slot_info["available"]:
             continue
-        location = _pick_location(meta["location"], slot_info, locations)
+        location = _pick_location(
+            meta["location"], slot_info, locations,
+            required_equipment=req_equip,
+            home_equipment=home_equipment,
+            gyms=gyms,
+            default_gym_id=default_gym_id,
+        )
         if location is not None:
             return slot, slot_info
     return None
@@ -194,9 +282,17 @@ def _make_session_entry(
     default_gym_id: Optional[str],
     gyms: Sequence[Dict[str, Any]],
     pass_label: str,
+    home_equipment: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Build a session entry dict for the week plan."""
-    location = _pick_location(meta["location"], slot_info, locations)
+    req_equip = meta.get("required_equipment")
+    location = _pick_location(
+        meta["location"], slot_info, locations,
+        required_equipment=req_equip,
+        home_equipment=home_equipment,
+        gyms=gyms,
+        default_gym_id=default_gym_id,
+    )
     gym_id = None
     if location == "gym":
         gym_id = _select_gym_id(slot_info, default_gym_id, gyms)
@@ -234,6 +330,7 @@ def generate_phase_week(
     intensity_cap: Optional[str] = None,
     pretrip_dates: Optional[List[str]] = None,
     is_last_week_of_phase: bool = False,
+    home_equipment: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -453,7 +550,8 @@ def generate_phase_week(
                 continue
 
             day_avail = normalized[day_keys[offset]]
-            result = _find_best_slot(day_avail, meta, locations, prefer_evening=True)
+            result = _find_best_slot(day_avail, meta, locations, prefer_evening=True,
+                                     home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
             if result is None:
                 primary_idx += 1
                 primary_uses += 1
@@ -463,7 +561,7 @@ def generate_phase_week(
             slot, slot_info = result
             entry = _make_session_entry(
                 slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
-                default_gym_id, gyms or [], "pass1:primary",
+                default_gym_id, gyms or [], "pass1:primary", home_equipment=home_equipment,
             )
             day_sessions[offset].append(entry)
             session_count[sid] = session_count.get(sid, 0) + 1
@@ -510,7 +608,8 @@ def generate_phase_week(
                 continue
 
             day_avail = normalized[day_keys[offset]]
-            result = _find_best_slot(day_avail, meta, locations, prefer_evening=False)
+            result = _find_best_slot(day_avail, meta, locations, prefer_evening=False,
+                                     home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
             if result is None:
                 comp_idx += 1
                 comp_uses += 1
@@ -520,7 +619,7 @@ def generate_phase_week(
             slot, slot_info = result
             entry = _make_session_entry(
                 slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
-                default_gym_id, gyms or [], "pass2:complementary",
+                default_gym_id, gyms or [], "pass2:complementary", home_equipment=home_equipment,
             )
             day_sessions[offset].append(entry)
             session_count[sid] = session_count.get(sid, 0) + 1
@@ -562,13 +661,15 @@ def generate_phase_week(
                             for fm_sid, fm_meta in fm_candidates:
                                 if fm_meta is None:
                                     continue
-                                result = _find_best_slot(day_avail, fm_meta, locations, prefer_evening=False)
+                                result = _find_best_slot(day_avail, fm_meta, locations, prefer_evening=False,
+                                                         home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
                                 if result:
                                     slot, slot_info = result
                                     fm_entry = _make_session_entry(
                                         slot, fm_sid, fm_meta, slot_info, locations,
                                         phase_id, day_keys[offset],
                                         default_gym_id, gyms or [], "pass2.5:pe_finger_maintenance",
+                                        home_equipment=home_equipment,
                                     )
                                     day_sessions[offset][i] = fm_entry
                                     finger_day_offsets.append(offset)
@@ -581,13 +682,15 @@ def generate_phase_week(
                     for fm_sid, fm_meta in fm_candidates:
                         if fm_meta is None:
                             continue
-                        result = _find_best_slot(day_avail, fm_meta, locations, prefer_evening=False)
+                        result = _find_best_slot(day_avail, fm_meta, locations, prefer_evening=False,
+                                                 home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
                         if result:
                             slot, slot_info = result
                             fm_entry = _make_session_entry(
                                 slot, fm_sid, fm_meta, slot_info, locations,
                                 phase_id, day_keys[offset],
                                 default_gym_id, gyms or [], "pass2.5:pe_finger_maintenance",
+                                home_equipment=home_equipment,
                             )
                             day_sessions[offset].append(fm_entry)
                             finger_day_offsets.append(offset)
@@ -639,7 +742,8 @@ def generate_phase_week(
                 if not day_sessions[offset]:
                     continue
                 day_avail = normalized[day_keys[offset]]
-                result = _find_best_slot(day_avail, test_meta, locations, prefer_evening=True)
+                result = _find_best_slot(day_avail, test_meta, locations, prefer_evening=True,
+                                         home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
                 if result is None:
                     continue
                 slot, slot_info = result
@@ -660,6 +764,7 @@ def generate_phase_week(
                     slot, test_sid, test_meta, slot_info, locations,
                     phase_id, day_keys[offset],
                     default_gym_id, gyms or [], "pass3:test_session",
+                    home_equipment=home_equipment,
                 )
                 day_sessions[offset][replace_idx] = test_entry
                 if test_meta["hard"] and not old_meta.get("hard"):
@@ -774,6 +879,7 @@ def generate_test_week(
     allowed_locations: Optional[Sequence[str]] = None,
     gyms: Optional[Sequence[Dict[str, Any]]] = None,
     default_gym_id: Optional[str] = None,
+    home_equipment: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """Create a 1-week assessment plan with 3 test sessions on non-consecutive days.
 
@@ -844,11 +950,15 @@ def generate_test_week(
         if offset in placed:
             sid = placed[offset]
             meta = _SESSION_META.get(sid, {})
+            req_equip = meta.get("required_equipment")
             # Find a slot
-            slot_result = _find_best_slot(day_avail, meta, locations)
+            slot_result = _find_best_slot(day_avail, meta, locations,
+                                          home_equipment=home_equipment, gyms=gyms_list, default_gym_id=default_gym_id)
             if slot_result:
                 slot_name, slot_info = slot_result
-                location = _pick_location(meta.get("location", ("gym", "home")), slot_info, locations)
+                location = _pick_location(meta.get("location", ("gym", "home")), slot_info, locations,
+                                          required_equipment=req_equip, home_equipment=home_equipment,
+                                          gyms=gyms_list, default_gym_id=default_gym_id)
                 gym_id = _select_gym_id(slot_info, default_gym_id, gyms_list) if location == "gym" else None
                 load_score = _INTENSITY_TO_LOAD.get(meta.get("intensity", "high"), 65)
                 total_load += load_score
@@ -868,10 +978,13 @@ def generate_test_week(
             filler_sid = _FILLER_SESSIONS[filler_idx % len(_FILLER_SESSIONS)]
             filler_idx += 1
             meta = _SESSION_META.get(filler_sid, {})
-            slot_result = _find_best_slot(day_avail, meta, locations)
+            slot_result = _find_best_slot(day_avail, meta, locations,
+                                          home_equipment=home_equipment, gyms=gyms_list, default_gym_id=default_gym_id)
             if slot_result:
                 slot_name, slot_info = slot_result
-                location = _pick_location(meta.get("location", ("home", "gym")), slot_info, locations)
+                location = _pick_location(meta.get("location", ("home", "gym")), slot_info, locations,
+                                          required_equipment=meta.get("required_equipment"),
+                                          home_equipment=home_equipment, gyms=gyms_list, default_gym_id=default_gym_id)
                 gym_id = _select_gym_id(slot_info, default_gym_id, gyms_list) if location == "gym" else None
                 load_score = _INTENSITY_TO_LOAD.get(meta.get("intensity", "low"), 20)
                 total_load += load_score

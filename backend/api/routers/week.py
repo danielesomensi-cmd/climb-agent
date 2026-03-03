@@ -125,6 +125,7 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
     planning_prefs = state.get("planning_prefs", {})
     equipment = state.get("equipment", {})
     gyms = equipment.get("gyms", [])
+    home_equipment = equipment.get("home")
     hard_cap = planning_prefs.get("hard_day_cap_per_week", 3)
 
     # Determine default gym_id (highest priority first)
@@ -184,6 +185,7 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
                 intensity_cap=ctx.get("intensity_cap"),
                 pretrip_dates=pretrip_dates if pretrip_dates else None,
                 is_last_week_of_phase=ctx.get("is_last_week_of_phase", False),
+                home_equipment=home_equipment,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")
@@ -254,6 +256,7 @@ def test_reminder_response(body: TestReminderResponse, user_id: Optional[str] = 
         availability = state.get("availability")
         equipment = state.get("equipment", {})
         gyms = equipment.get("gyms", [])
+        home_eq = equipment.get("home")
         locations = ["gym"] if gyms else ["home"]
         if equipment.get("home_enabled") and "home" not in locations:
             locations.append("home")
@@ -269,6 +272,7 @@ def test_reminder_response(body: TestReminderResponse, user_id: Optional[str] = 
             allowed_locations=locations,
             gyms=gyms,
             default_gym_id=default_gym_id,
+            home_equipment=home_eq,
         )
         state["test_week"] = test_week
         state["test_week_mode"] = True
