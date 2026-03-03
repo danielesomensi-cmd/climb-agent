@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-02 (Test load UI single-field + 1RM protocol fix; 151 esercizi, 25 sessioni, 23 template, 639 test)
+> Last updated: 2026-03-03 (Fix test session assessment.tests update + repeater sets UI; 151 esercizi, 25 sessioni, 23 template, 663 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -434,7 +434,7 @@ Tabella unica con TUTTI gli item tracciati.
 | NEW-F1 | Prescription climbing vuota | ✅ DONE | 4b | §2.7 |
 | NEW-F2 | Equipment climbing mancante | ✅ DONE | 1.75 | §2.1 |
 | NEW-F3a | Test sessions scheduling | ✅ DONE | 1.75 | §2.4 |
-| NEW-F3b | assessment.tests closed loop | ✅ DONE (2026-03-02) — test results (max_hang, repeater, pullup) → assessment.tests + baselines; guided session sends completedSets; 8 new tests | 2.5 | §2.4 |
+| NEW-F3b | assessment.tests closed loop | ✅ DONE (2026-03-03) — test results (max_hang, repeater, pullup) → assessment.tests + baselines; guided session sends completedSets + planned field; session_id fallback when planned missing; repeater sets-completed UI; 24 tests | 2.5 | §2.4 |
 | NEW-F4 | Ripple effect proporzionale | ✅ DONE | 1.75 | §2.4 |
 | NEW-F5 | Durate fase negative | ✅ DONE | 1.75 | §2.1 |
 | NEW-F6 | Warning phase_mismatch | ✅ DONE | 3.2 | §3 |
