@@ -90,12 +90,16 @@ export function GuidedExerciseStep({
   const [loadInput, setLoadInput] = useState("");
   const [gradeInput, setGradeInput] = useState("");
   const [measurementInput, setMeasurementInput] = useState("");
+  const [setsInput, setSetsInput] = useState("");
 
   // Test measurement exercises: just a number input, no feedback
   const isTestMeasurement = exercise.category === "test_measurement" && !!exercise.testField;
 
+  // Repeater test: primary metric is sets completed, not load
+  const isRepeaterTest = isTestSession && exercise.exerciseId === "repeater_hang_7_3";
+
   // Test session total_load exercises get two mandatory fields
-  const isTestLoadExercise = !isTestMeasurement && isTestSession && exercise.loadModel === "total_load";
+  const isTestLoadExercise = !isTestMeasurement && !isRepeaterTest && isTestSession && exercise.loadModel === "total_load";
 
   // Determine which kind of editable field to show
   const hasLoadField =
@@ -120,6 +124,9 @@ export function GuidedExerciseStep({
     if (exercise.testMeasurement != null) {
       setMeasurementInput(String(exercise.testMeasurement));
     }
+    if (exercise.completedSets != null) {
+      setSetsInput(String(exercise.completedSets));
+    }
     setFeedback(exercise.feedbackLabel || "ok");
   }, [exercise]);
 
@@ -131,6 +138,14 @@ export function GuidedExerciseStep({
     if (isTestMeasurement) {
       const val = measurementInput ? parseFloat(measurementInput) : undefined;
       onDone("ok", undefined, undefined, undefined, val);
+      return;
+    }
+    if (isRepeaterTest) {
+      const usedExternal = loadInput ? parseFloat(loadInput) : undefined;
+      const usedTotal = usedExternal != null && bodyweightKg != null
+        ? bodyweightKg + usedExternal
+        : undefined;
+      onDone(feedback, usedExternal, undefined, usedTotal);
       return;
     }
     if (isTestLoadExercise) {
@@ -284,6 +299,61 @@ export function GuidedExerciseStep({
                 }
                 onSetChange={onSetChange}
               />
+            )}
+
+            {/* Repeater test: sets completed + optional load */}
+            {isRepeaterTest && (
+              <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <p className="text-xs font-medium text-primary">Record your test result</p>
+                <div className="space-y-1.5">
+                  <Label htmlFor="sets-input" className="text-xs text-muted-foreground">
+                    Sets completed *
+                  </Label>
+                  <Input
+                    id="sets-input"
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={setsInput}
+                    onChange={(e) => {
+                      setSetsInput(e.target.value);
+                      const parsed = parseInt(e.target.value, 10);
+                      if (!isNaN(parsed) && parsed >= 0 && onSetChange) {
+                        onSetChange(parsed);
+                      }
+                    }}
+                    className="w-40 h-9"
+                    placeholder="e.g. 8"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="repeater-load-input" className="text-xs text-muted-foreground">
+                    External load added (kg)
+                  </Label>
+                  <Input
+                    id="repeater-load-input"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={loadInput}
+                    onChange={(e) => setLoadInput(e.target.value)}
+                    className="w-40 h-9"
+                    placeholder="e.g. 0"
+                  />
+                </div>
+                {bodyweightKg != null && loadInput && !isNaN(parseFloat(loadInput)) && (
+                  <p className="text-sm text-muted-foreground">
+                    Total load:{" "}
+                    <span className="font-semibold text-foreground">
+                      {(bodyweightKg + parseFloat(loadInput)).toFixed(1)} kg
+                    </span>
+                    <span className="text-xs ml-1">
+                      (your weight {bodyweightKg} kg + {loadInput} kg added)
+                    </span>
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Feedback selector */}

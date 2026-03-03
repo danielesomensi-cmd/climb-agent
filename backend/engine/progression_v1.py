@@ -622,7 +622,9 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
     feedback_items = ((log_entry.get("actual") or {}).get("exercise_feedback_v1") or [])
     test_sessions = [s for s in planned_sessions if str(s.get("session_id") or "").startswith("test_") or bool((s.get("tags") or {}).get("test"))]
     if not test_sessions:
-        return
+        top_session_id = str(log_entry.get("session_id") or "")
+        if not top_session_id.startswith("test_"):
+            return
     date_str = str(log_entry.get("date") or "")
     assessment = updated.setdefault("assessment", {})
     at = assessment.setdefault("tests", {})

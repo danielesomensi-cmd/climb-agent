@@ -315,15 +315,23 @@ export default function GuidedSessionPage() {
       const durationSeconds = Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000));
 
       try {
-        await postFeedback({
-          log_entry: {
-            date: state.date,
-            session_id: state.sessionId,
-            session_duration_seconds: durationSeconds,
-            actual: {
-              exercise_feedback_v1: exerciseFeedback,
-            },
+        const logEntry: Record<string, unknown> = {
+          date: state.date,
+          session_id: state.sessionId,
+          session_duration_seconds: durationSeconds,
+          actual: {
+            exercise_feedback_v1: exerciseFeedback,
           },
+        };
+        if (state.isTestSession) {
+          logEntry.planned = [{
+            session_id: state.sessionId,
+            tags: { test: true },
+            exercise_instances: [],
+          }];
+        }
+        await postFeedback({
+          log_entry: logEntry,
           status: "done",
         });
 
