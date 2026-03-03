@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-03 (Fix test session assessment.tests update + repeater sets UI; 151 esercizi, 25 sessioni, 23 template, 663 test)
+> Last updated: 2026-03-03 (Implicit pullup_bar at gym — 17 exercises now resolve correctly; 151 esercizi, 25 sessioni, 23 template, 667 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
