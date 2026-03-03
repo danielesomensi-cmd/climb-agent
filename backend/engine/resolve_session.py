@@ -844,6 +844,10 @@ def resolve_session(
     if any(w in available_equipment for w in weight_subtypes) and "weight" not in available_equipment:
         available_equipment.append("weight")
 
+    # Equipment implications (v2): every gym has a pullup bar.
+    if location == "gym" and "pullup_bar" not in available_equipment:
+        available_equipment.append("pullup_bar")
+
 
     # recent history (MVP)
     recent_ex_ids = load_recent_exercise_ids(repo_root)
