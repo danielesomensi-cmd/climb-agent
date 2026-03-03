@@ -459,6 +459,27 @@ class TestPlannerV2TestSessions(unittest.TestCase):
             self.assertIn("pass3:test_session", ts.get("explain", []),
                           f"Test session {ts['session_id']} missing pass3 label")
 
+    def test_test_sessions_have_test_tag(self):
+        """Pass 3 test sessions must have tags.test = True for frontend guided UI."""
+        plan = generate_phase_week(**_make_kwargs("base", is_last_week_of_phase=True,
+            hard_cap_per_week=5,
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 5}))
+        all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
+        test_sessions = [s for s in all_sessions if s["session_id"].startswith("test_")]
+        self.assertGreater(len(test_sessions), 0, "No test sessions found")
+        for ts in test_sessions:
+            self.assertTrue(ts["tags"].get("test"),
+                            f"Test session {ts['session_id']} missing tags.test=True")
+
+    def test_non_test_sessions_no_test_tag(self):
+        """Regular sessions must NOT have tags.test."""
+        plan = generate_phase_week(**_make_kwargs("base"))
+        all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
+        for s in all_sessions:
+            if not s["session_id"].startswith("test_"):
+                self.assertFalse(s["tags"].get("test"),
+                                 f"Non-test session {s['session_id']} should not have tags.test")
+
 
 class TestPlannerV2LoadScore(unittest.TestCase):
     """Tests for B4 — load score and weekly load summary."""
