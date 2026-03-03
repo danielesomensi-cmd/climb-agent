@@ -461,11 +461,13 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 else:
                     entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
                     next_external = float((entry or {}).get("next_external_load_kg") or 0.0)
+                    bodyweight = _get_bodyweight(user_state)
                     reps = prescription.get("reps") or (prescription.get("reps_range") or [5])[0]
                     sets = prescription.get("sets") or (prescription.get("sets_range") or [4])[0]
                     suggested.update({
                         "schema_version": "progression_targets.v1",
                         "suggested_external_load_kg": _round_half_step(next_external),
+                        "suggested_total_load_kg": _round_half_step(bodyweight + next_external),
                         "suggested_rep_scheme": f"{sets}x{reps}",
                     })
 

@@ -108,6 +108,25 @@ function buildGuidedState(
     };
   });
 
+  // Extract bodyweight from resolved exercise suggested data (avoid async fetch)
+  let bodyweightKg: number | undefined;
+  for (const inst of instances) {
+    const sug = (inst.suggested ?? {}) as Record<string, unknown>;
+    // Priority 1: based_on.bodyweight_kg (from suggest_max_hang_load)
+    const basedOn = sug.based_on as Record<string, number> | undefined;
+    if (basedOn?.bodyweight_kg) {
+      bodyweightKg = basedOn.bodyweight_kg;
+      break;
+    }
+    // Priority 2: compute from total - external
+    const total = sug.suggested_total_load_kg as number | undefined;
+    const external = sug.suggested_external_load_kg as number | undefined;
+    if (total != null && external != null) {
+      bodyweightKg = total - external;
+      break;
+    }
+  }
+
   const sessionName = (resolvedSession?.session_name as string) ??
     session.session_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -120,6 +139,7 @@ function buildGuidedState(
     currentIndex: 0,
     exercises,
     isTestSession: session.tags?.test === true,
+    bodyweightKg,
   };
 }
 
@@ -225,6 +245,7 @@ export function SessionCard({
                 <div className="space-y-1.5">
                   {exercises.map((ex, i) => {
                     const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
+                    const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
                     const exerciseId = (ex.exercise_id as string) ?? "";
                     return (
                       <ExerciseCard
@@ -238,6 +259,9 @@ export function SessionCard({
                           rest_s: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
                           tempo: prescription.tempo as string | undefined,
                           notes: prescription.notes as string | undefined,
+                          suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
+                          suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
+                          load_source: suggested.load_source as string | undefined,
                         }}
                         feedbackLevel={session.exercise_feedback?.[exerciseId]}
                       />

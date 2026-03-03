@@ -20,6 +20,9 @@ interface ExerciseCardProps {
     rest_s?: number;
     tempo?: string;
     notes?: string;
+    suggested_external_load_kg?: number;
+    suggested_total_load_kg?: number;
+    load_source?: string;
   };
   feedbackLevel?: string;
 }
@@ -75,6 +78,17 @@ export function ExerciseCard({ exercise, feedbackLevel }: ExerciseCardProps) {
           {exercise.tempo && (
             <p className="text-[11px] text-muted-foreground/70 mt-0.5">
               Tempo: {exercise.tempo}
+            </p>
+          )}
+          {exercise.suggested_external_load_kg != null && (
+            <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+              Load: +{exercise.suggested_external_load_kg} kg
+              {exercise.suggested_total_load_kg != null && (
+                <span> (total: {exercise.suggested_total_load_kg} kg)</span>
+              )}
+              {exercise.load_source === "estimated" && (
+                <span className="ml-1 opacity-60">(est.)</span>
+              )}
             </p>
           )}
           {exercise.notes && (

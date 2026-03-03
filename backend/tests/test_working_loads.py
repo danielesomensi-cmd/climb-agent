@@ -346,6 +346,28 @@ def test_get_bodyweight_fallback():
     assert _get_bodyweight({}) == 0.0
 
 
+# ─── weighted_pullup total load (1 test) ──────────────────────────────────────
+
+def test_weighted_pullup_inject_targets_has_suggested_total_load_kg():
+    """inject_targets must produce suggested_total_load_kg = BW + external for weighted_pullup."""
+    us = _base_user_state()  # BW=77
+    day = _day_with_exercises([{
+        "exercise_id": "weighted_pullup",
+        "name": "Weighted Pull-up",
+        "category": "main_strength",
+        "load_model": "total_load",
+        "prescription": {"sets": 5, "reps": 1, "rest_between_sets_seconds": 240},
+        "attributes": {},
+    }])
+    result = inject_targets(day, us)
+    inst = result["sessions"][0]["exercise_instances"][0]
+    sug = inst.get("suggested", {})
+    assert "suggested_external_load_kg" in sug
+    assert "suggested_total_load_kg" in sug
+    expected_total = 77.0 + sug["suggested_external_load_kg"]
+    assert abs(sug["suggested_total_load_kg"] - expected_total) <= 0.5
+
+
 # ─── NEW-F11: estimate_missing_baselines + load_warning (5 tests) ─────────────
 
 def test_estimate_from_grade_7b():
