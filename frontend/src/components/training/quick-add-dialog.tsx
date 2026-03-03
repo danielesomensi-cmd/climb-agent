@@ -188,22 +188,29 @@ export function QuickAddDialog({
   const resolvedLocation = location === "home" ? "home" : "gym";
 
   // Filter suggestions by equipment compatibility
+  // Every gym implicitly has a pullup_bar.
   const filteredSuggestions = (() => {
     if (location === "home" || location === "gym") return suggestions;
     const gym = gyms.find((g) => g.name === location);
     if (!gym?.equipment) return suggestions;
+    const gymEquip = [...gym.equipment];
+    if (!gymEquip.includes("pullup_bar")) gymEquip.push("pullup_bar");
     return suggestions.filter((s) => {
       const req = s.required_equipment;
       if (!req || req.length === 0) return true;
-      return req.every((eq) => gym.equipment.includes(eq));
+      return req.every((eq) => gymEquip.includes(eq));
     });
   })();
 
   // Equipment available at the selected location
+  // Every gym implicitly has a pullup_bar (same logic as resolver/planner).
   const selectedGymEquipment: string[] | null = (() => {
     if (location === "home" || location === "gym") return null;
     const gym = gyms.find((g) => g.name === location);
-    return gym?.equipment ?? null;
+    if (!gym?.equipment) return null;
+    const equip = [...gym.equipment];
+    if (!equip.includes("pullup_bar")) equip.push("pullup_bar");
+    return equip;
   })();
 
   // Filter all sessions by location + equipment compatibility
