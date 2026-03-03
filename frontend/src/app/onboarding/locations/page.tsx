@@ -26,10 +26,13 @@ export default function LocationsPage() {
   const router = useRouter();
   const { data, update } = useOnboarding();
   const equipment = data.equipment;
+  const outdoorSpots = data.outdoor_spots;
 
   const [homeEquipment, setHomeEquipment] = useState<EquipmentItem[]>([]);
   const [gymEquipment, setGymEquipment] = useState<EquipmentItem[]>([]);
   const [loadingDefaults, setLoadingDefaults] = useState(true);
+  const [newSpotName, setNewSpotName] = useState("");
+  const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("boulder");
 
   useEffect(() => {
     getOnboardingDefaults()
@@ -222,6 +225,78 @@ export default function LocationsPage() {
           <p className="text-xs text-muted-foreground">
             At least one climbing area is required for climbing sessions
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Outdoor Spots section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Outdoor Spots</CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Optional — you can add these later in Settings
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {outdoorSpots.map((spot, idx) => (
+            <div
+              key={idx}
+              className="flex items-center justify-between rounded-md border px-3 py-2"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">{spot.name}</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  {spot.discipline}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive text-xs"
+                onClick={() =>
+                  update(
+                    "outdoor_spots",
+                    outdoorSpots.filter((_, i) => i !== idx),
+                  )
+                }
+              >
+                Remove
+              </Button>
+            </div>
+          ))}
+
+          <div className="flex gap-2">
+            <Input
+              placeholder="Spot name"
+              value={newSpotName}
+              onChange={(e) => setNewSpotName(e.target.value)}
+              className="flex-1"
+            />
+            <select
+              value={newSpotDiscipline}
+              onChange={(e) =>
+                setNewSpotDiscipline(e.target.value as "lead" | "boulder" | "both")
+              }
+              className="rounded-md border bg-background px-2 py-1 text-sm"
+            >
+              <option value="boulder">Boulder</option>
+              <option value="lead">Lead</option>
+              <option value="both">Both</option>
+            </select>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!newSpotName.trim()}
+              onClick={() => {
+                update("outdoor_spots", [
+                  ...outdoorSpots,
+                  { name: newSpotName.trim(), discipline: newSpotDiscipline },
+                ]);
+                setNewSpotName("");
+              }}
+            >
+              Add
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

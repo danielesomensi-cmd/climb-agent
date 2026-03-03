@@ -13,6 +13,7 @@ import pytest
 
 from backend.engine.outdoor_log import (
     append_outdoor_session,
+    compute_outdoor_load_score,
     compute_outdoor_stats,
     load_outdoor_sessions,
     remove_outdoor_session,
@@ -165,6 +166,125 @@ class TestStats:
         assert stats["grade_histogram"] == {"6a": 2, "6b": 1}
 
 
+# ── Load score ─────────────────────────────────────────────────────────
+
+
+class TestOutdoorLoadScore:
+    def test_empty_routes_returns_zero(self):
+        entry = _make_entry(routes=[])
+        assert compute_outdoor_load_score(entry) == 0
+
+    def test_single_route(self):
+        entry = _make_entry(
+            duration_minutes=120,
+            routes=[{"name": "R1", "grade": "6a", "style": "redpoint",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        score = compute_outdoor_load_score(entry)
+        assert score > 0
+
+    def test_multiple_routes_sum(self):
+        single = _make_entry(
+            duration_minutes=120,
+            routes=[{"name": "R1", "grade": "6a", "style": "redpoint",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        double = _make_entry(
+            duration_minutes=120,
+            routes=[
+                {"name": "R1", "grade": "6a", "style": "redpoint",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "R2", "grade": "6a", "style": "redpoint",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        )
+        assert compute_outdoor_load_score(double) > compute_outdoor_load_score(single)
+
+    def test_style_modifiers_ordering(self):
+        """onsight > flash > redpoint > project > repeat."""
+        def _score(style):
+            return compute_outdoor_load_score(_make_entry(
+                duration_minutes=120,
+                routes=[{"name": "R", "grade": "7a", "style": style,
+                         "attempts": [{"result": "sent"}]}],
+            ))
+
+        assert _score("onsight") > _score("flash") > _score("redpoint") > _score("project") > _score("repeat")
+
+    def test_duration_clamping_low(self):
+        """Duration 30 min → factor clamped to 0.5."""
+        short = _make_entry(
+            duration_minutes=30,
+            routes=[{"name": "R", "grade": "6a", "style": "redpoint",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        very_short = _make_entry(
+            duration_minutes=10,
+            routes=[{"name": "R", "grade": "6a", "style": "redpoint",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        # Both clamped to 0.5 → same score
+        assert compute_outdoor_load_score(short) == compute_outdoor_load_score(very_short)
+
+    def test_duration_clamping_high(self):
+        """Duration 300 min → factor clamped to 1.5."""
+        long = _make_entry(
+            duration_minutes=300,
+            routes=[{"name": "R", "grade": "6a", "style": "redpoint",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        very_long = _make_entry(
+            duration_minutes=500,
+            routes=[{"name": "R", "grade": "6a", "style": "redpoint",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        assert compute_outdoor_load_score(long) == compute_outdoor_load_score(very_long)
+
+    def test_unknown_grade_fallback(self):
+        """Unknown grade uses fallback weight of 10."""
+        entry = _make_entry(
+            duration_minutes=120,
+            routes=[{"name": "R", "grade": "V5", "style": "redpoint",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        score = compute_outdoor_load_score(entry)
+        assert score == 10  # 10 * 1.0 * 1.0
+
+    def test_determinism(self):
+        entry = _make_entry(
+            duration_minutes=120,
+            routes=[
+                {"name": "R1", "grade": "6a", "style": "onsight",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "R2", "grade": "7a", "style": "redpoint",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        )
+        s1 = compute_outdoor_load_score(entry)
+        s2 = compute_outdoor_load_score(entry)
+        assert s1 == s2
+
+    def test_stats_include_load(self):
+        """compute_outdoor_stats should include total_load and avg_load_per_session."""
+        sessions = [
+            _make_entry(
+                duration_minutes=120,
+                routes=[{"name": "R1", "grade": "6a", "style": "redpoint",
+                         "attempts": [{"result": "sent"}]}],
+            ),
+        ]
+        stats = compute_outdoor_stats(sessions)
+        assert "total_load" in stats
+        assert "avg_load_per_session" in stats
+        assert stats["total_load"] > 0
+        assert stats["avg_load_per_session"] == stats["total_load"]
+
+    def test_stats_empty_sessions_load(self):
+        stats = compute_outdoor_stats([])
+        assert stats["total_load"] == 0
+        assert stats["avg_load_per_session"] == 0.0
+
+
 # ── Planner: Outdoor slots ─────────────────────────────────────────────
 
 class TestPlannerOutdoorSlots:
@@ -210,6 +330,104 @@ class TestPlannerOutdoorSlots:
         # Tuesday is outdoor → not counted → Mon, Wed, Thu should all get sessions
         sessions_count = sum(1 for d in days if d["sessions"])
         assert sessions_count == 3  # Mon, Wed, Thu
+
+
+# ── Outdoor ripple ─────────────────────────────────────────────────────
+
+
+class TestOutdoorRipple:
+    """Ripple effect after completing a high-load outdoor session."""
+
+    def _make_week_plan(self, day1_sessions, day2_sessions):
+        return {
+            "start_date": "2026-03-16",
+            "weeks": [{
+                "days": [
+                    {"date": "2026-03-16", "weekday": "mon", "sessions": day1_sessions,
+                     "outdoor_spot_name": "Berdorf", "outdoor_session_status": "planned"},
+                    {"date": "2026-03-17", "weekday": "tue", "sessions": day2_sessions},
+                    {"date": "2026-03-18", "weekday": "wed", "sessions": []},
+                    {"date": "2026-03-19", "weekday": "thu", "sessions": []},
+                    {"date": "2026-03-20", "weekday": "fri", "sessions": []},
+                    {"date": "2026-03-21", "weekday": "sat", "sessions": []},
+                    {"date": "2026-03-22", "weekday": "sun", "sessions": []},
+                ],
+            }],
+        }
+
+    def _make_session(self, sid, **kwargs):
+        s = {
+            "session_id": sid,
+            "slot": "evening",
+            "location": "gym",
+            "status": "planned",
+            "estimated_load_score": 40,
+            "intensity": "medium",
+            "tags": {},
+        }
+        s.update(kwargs)
+        return s
+
+    def test_high_load_triggers_ripple(self):
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_week_plan(
+            [],
+            [self._make_session("strength_long", intensity="max", tags={"hard": True, "finger": True})],
+        )
+        updated = apply_events(plan, [
+            {"event_type": "complete_outdoor", "date": "2026-03-16", "outdoor_load_score": 70},
+        ])
+        day2 = updated["weeks"][0]["days"][1]
+        assert day2["sessions"][0]["session_id"] == "complementary_conditioning"
+        assert "outdoor_ripple" in day2["sessions"][0].get("constraints_applied", [])
+
+    def test_low_load_no_ripple(self):
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_week_plan(
+            [],
+            [self._make_session("strength_long", intensity="max", tags={"hard": True, "finger": True})],
+        )
+        updated = apply_events(plan, [
+            {"event_type": "complete_outdoor", "date": "2026-03-16", "outdoor_load_score": 30},
+        ])
+        day2 = updated["weeks"][0]["days"][1]
+        assert day2["sessions"][0]["session_id"] == "strength_long"
+
+    def test_replaces_hard_to_complementary(self):
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_week_plan(
+            [],
+            [self._make_session("power_contact_gym", intensity="max", tags={"hard": True})],
+        )
+        updated = apply_events(plan, [
+            {"event_type": "complete_outdoor", "date": "2026-03-16", "outdoor_load_score": 80},
+        ])
+        day2 = updated["weeks"][0]["days"][1]
+        assert day2["sessions"][0]["session_id"] == "complementary_conditioning"
+
+    def test_replaces_medium_to_recovery(self):
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_week_plan(
+            [],
+            [self._make_session("endurance_aerobic_gym", intensity="medium", tags={"hard": False})],
+        )
+        updated = apply_events(plan, [
+            {"event_type": "complete_outdoor", "date": "2026-03-16", "outdoor_load_score": 75},
+        ])
+        day2 = updated["weeks"][0]["days"][1]
+        assert day2["sessions"][0]["session_id"] == "deload_recovery"
+
+    def test_keeps_low_sessions(self):
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_week_plan(
+            [],
+            [self._make_session("prehab_maintenance", intensity="low", tags={"hard": False})],
+        )
+        updated = apply_events(plan, [
+            {"event_type": "complete_outdoor", "date": "2026-03-16", "outdoor_load_score": 80},
+        ])
+        day2 = updated["weeks"][0]["days"][1]
+        assert day2["sessions"][0]["session_id"] == "prehab_maintenance"
 
 
 # ── API integration (via TestClient) ────────────────────────────────────
@@ -502,6 +720,72 @@ class TestOutdoorE2ECrossWeek:
         })
         assert r.status_code == 500
         assert "Failed to write" in r.json()["detail"]
+
+
+# ── Onboarding outdoor spots ───────────────────────────────────────────
+
+
+class TestOnboardingOutdoorSpots:
+    """Outdoor spots saved via onboarding flow."""
+
+    @pytest.fixture(autouse=True)
+    def setup_api(self, tmp_path, monkeypatch):
+        from backend.api import deps
+        from backend.api.routers import outdoor as outdoor_router
+
+        state_path = tmp_path / "user_state.json"
+        state_path.write_text(json.dumps({"schema_version": "1.5"}))
+        monkeypatch.setattr(deps, "STATE_PATH", state_path)
+
+        log_dir = str(tmp_path / "logs")
+        monkeypatch.setattr(outdoor_router, "_FALLBACK_LOG_DIR", log_dir)
+
+        from fastapi.testclient import TestClient
+        from backend.api.main import app
+        self.client = TestClient(app)
+        self.state_path = state_path
+
+    def _onboarding_data(self, spots=None):
+        return {
+            "profile": {"name": "Test", "age": 30, "weight_kg": 70, "height_cm": 175},
+            "experience": {"climbing_years": 5, "structured_training_years": 2},
+            "grades": {"lead_max_rp": "6c", "lead_max_os": "6a"},
+            "goal": {"goal_type": "lead_grade", "discipline": "lead",
+                     "target_grade": "7a", "target_style": "redpoint",
+                     "current_grade": "6c", "deadline": "2026-12-31"},
+            "self_eval": {"primary_weakness": "finger_strength", "secondary_weakness": "endurance"},
+            "tests": {},
+            "limitations": [],
+            "equipment": {"home_enabled": True, "home": ["hangboard"], "gyms": [{"name": "MyGym", "equipment": ["gym_boulder"]}]},
+            "availability": {"mon": {"evening": {"available": True, "preferred_location": "gym"}}},
+            "planning_prefs": {"target_training_days_per_week": 3, "hard_day_cap_per_week": 2},
+            "trips": [],
+            "outdoor_spots": spots or [],
+        }
+
+    def test_onboarding_saves_spots(self):
+        data = self._onboarding_data(spots=[
+            {"name": "Berdorf", "discipline": "boulder"},
+            {"name": "Freyr", "discipline": "lead"},
+        ])
+        r = self.client.post("/api/onboarding/complete", json=data)
+        assert r.status_code == 200
+
+        state = json.loads(self.state_path.read_text())
+        spots = state.get("outdoor_spots", [])
+        assert len(spots) == 2
+        assert spots[0]["name"] == "Berdorf"
+        assert spots[0]["discipline"] == "boulder"
+        assert spots[0]["id"].startswith("spot_")
+        assert spots[1]["name"] == "Freyr"
+
+    def test_onboarding_empty_spots_ok(self):
+        data = self._onboarding_data(spots=[])
+        r = self.client.post("/api/onboarding/complete", json=data)
+        assert r.status_code == 200
+
+        state = json.loads(self.state_path.read_text())
+        assert state.get("outdoor_spots") == []
 
 
 class TestRemoveOutdoorSession:

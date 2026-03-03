@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import DATA_DIR, REPO_ROOT, USERS_DIR, current_phase_and_week, get_user_id, load_state, save_state
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
-from backend.engine.outdoor_log import remove_outdoor_session
+from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
 from backend.engine.resolve_session import resolve_session
 
@@ -227,6 +227,15 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     availability = state.get("availability")
     planning_prefs = state.get("planning_prefs")
     gyms = (state.get("equipment") or {}).get("gyms")
+
+    # For complete_outdoor events, compute outdoor load score from JSONL log
+    log_dir = str(USERS_DIR / user_id / "logs") if user_id else str(DATA_DIR / "logs")
+    for ev in req.events:
+        if ev.get("event_type") == "complete_outdoor" and ev.get("date"):
+            outdoor_sessions = load_outdoor_sessions(log_dir, since_date=ev["date"])
+            matching = [s for s in outdoor_sessions if s.get("date") == ev["date"]]
+            if matching:
+                ev["outdoor_load_score"] = compute_outdoor_load_score(matching[-1])
 
     try:
         updated = apply_events(

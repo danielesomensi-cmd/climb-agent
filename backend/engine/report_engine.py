@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from backend.engine.closed_loop_v1 import STIMULUS_CATEGORIES, _session_categories
-from backend.engine.outdoor_log import load_outdoor_sessions
+from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions
 
 # Difficulty label→score mapping (mirrors adaptive_replan.py)
 _LABEL_TO_SCORE: Dict[str, int] = {
@@ -170,6 +170,19 @@ def _build_adherence(week_plan: Optional[Dict[str, Any]], week_start: str) -> Di
                     if session.get("tags", {}).get("added"):
                         added += 1
 
+                # Count outdoor planned/completed per day
+                if day.get("outdoor_spot_name") or day.get("outdoor_slot"):
+                    planned += 1
+                    outdoor_status = day.get("outdoor_session_status")
+                    if outdoor_status == "done":
+                        completed += 1
+                    elif outdoor_status == "skipped":
+                        skipped += 1
+                        skipped_sessions.append({
+                            "date": d,
+                            "session_id": "outdoor",
+                        })
+
     pct = round(completed / planned * 100, 1) if planned else 0.0
 
     return {
@@ -226,6 +239,10 @@ def _build_load(
                 elif not sessions:
                     recovery_days += 1
 
+    # Add outdoor load to actual total
+    outdoor_load = sum(compute_outdoor_load_score(s) for s in outdoor_sessions)
+    actual_total += outdoor_load
+
     load_ratio = round(actual_total / planned_total, 2) if planned_total else 0.0
 
     indoor_minutes = sum(s.get("duration_minutes", 0) for s in indoor_sessions)
@@ -234,6 +251,7 @@ def _build_load(
     return {
         "planned_total": planned_total,
         "actual_total": actual_total,
+        "outdoor_load": outdoor_load,
         "load_ratio": load_ratio,
         "hard_days": hard_days,
         "recovery_days": recovery_days,

@@ -16,6 +16,7 @@ const DEFAULT_DATA: OnboardingData = {
   availability: {},
   planning_prefs: { target_training_days_per_week: 4, hard_day_cap_per_week: 3 },
   trips: [],
+  outdoor_spots: [],
 };
 
 const SESSION_KEY = "climb_onboarding_draft";
@@ -105,6 +106,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         }
         if (state.trips?.length) {
           d.trips = state.trips as OnboardingData["trips"];
+        }
+        const spots = (state as Record<string, unknown>).outdoor_spots;
+        if (Array.isArray(spots) && spots.length > 0) {
+          d.outdoor_spots = spots.map((s: Record<string, unknown>) => ({
+            name: String(s.name || ""),
+            discipline: (s.discipline as "lead" | "boulder" | "both") || "both",
+          }));
         }
         const lim = state.limitations as Record<string, unknown> | undefined;
         if (lim?.details && Array.isArray(lim.details) && lim.details.length > 0) {

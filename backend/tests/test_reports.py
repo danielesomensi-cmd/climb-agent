@@ -206,6 +206,44 @@ class TestAdherence:
         assert report["adherence"]["planned"] == 0
         assert report["adherence"]["pct"] == 0.0
 
+    def test_outdoor_done_counted_in_adherence(self, tmp_log_dir):
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "done")]),
+            _make_plan_day("2026-03-17", [],
+                           outdoor_spot_name="Berdorf",
+                           outdoor_session_status="done"),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        adh = report["adherence"]
+        assert adh["planned"] == 2  # 1 indoor + 1 outdoor
+        assert adh["completed"] == 2
+        assert adh["pct"] == 100.0
+
+    def test_outdoor_planned_but_not_done(self, tmp_log_dir):
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "done")]),
+            _make_plan_day("2026-03-17", [],
+                           outdoor_spot_name="Berdorf",
+                           outdoor_session_status="planned"),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        adh = report["adherence"]
+        assert adh["planned"] == 2
+        assert adh["completed"] == 1  # only indoor
+        assert adh["pct"] == 50.0
+
+    def test_outdoor_slot_without_spot_name(self, tmp_log_dir):
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "done")]),
+            _make_plan_day("2026-03-17", [],
+                           outdoor_slot=True,
+                           outdoor_session_status="done"),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        adh = report["adherence"]
+        assert adh["planned"] == 2
+        assert adh["completed"] == 2
+
     def test_added_sessions_counted(self, tmp_log_dir):
         state = _make_state(current_week_plan=_make_week_plan([
             _make_plan_day("2026-03-16", [
@@ -257,6 +295,30 @@ class TestLoad:
         report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
         assert report["load"]["hard_days"] == 2
         assert report["load"]["recovery_days"] == 4
+
+    def test_outdoor_load_included_in_actual_total(self, tmp_log_dir):
+        """Outdoor load score should be added to actual_total."""
+        _write_outdoor_log(tmp_log_dir, [{
+            "log_version": "outdoor.v1",
+            "date": "2026-03-21",
+            "spot_name": "Crag",
+            "discipline": "lead",
+            "duration_minutes": 120,
+            "routes": [
+                {"name": "R1", "grade": "6a", "style": "redpoint",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "R2", "grade": "7a", "style": "onsight",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        }])
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "done", load=50)]),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        load = report["load"]
+        assert load["outdoor_load"] > 0
+        # actual_total = indoor done (50) + outdoor load
+        assert load["actual_total"] == 50 + load["outdoor_load"]
 
     def test_indoor_and_outdoor_minutes(self, tmp_log_dir):
         _write_indoor_log(tmp_log_dir, [

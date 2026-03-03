@@ -7,8 +7,53 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from backend.engine.assessment_v1 import GRADE_ORDER, grade_index
+
 
 REQUIRED_FIELDS = {"log_version", "date", "spot_name", "discipline", "duration_minutes", "routes"}
+
+# ---------------------------------------------------------------------------
+# Outdoor load score helpers
+# ---------------------------------------------------------------------------
+
+_GRADE_WEIGHT: Dict[str, int] = {g: grade_index(g) + 3 for g in GRADE_ORDER}
+_UNKNOWN_GRADE_WEIGHT = 10
+
+_STYLE_MODIFIER: Dict[str, float] = {
+    "onsight": 1.2,
+    "flash": 1.1,
+    "redpoint": 1.0,
+    "project": 0.7,
+    "repeat": 0.5,
+}
+
+
+def _duration_factor(duration_minutes: int) -> float:
+    """Baseline 120 min, clamped [0.5, 1.5]."""
+    return max(0.5, min(1.5, duration_minutes / 120))
+
+
+def compute_outdoor_load_score(entry: Dict[str, Any]) -> int:
+    """Compute a deterministic load score for an outdoor session.
+
+    Formula: sum(grade_weight × style_modifier per route) × duration_factor.
+    Returns an int in the ~20-85 range, comparable to indoor estimated_load_score.
+    """
+    routes = entry.get("routes") or []
+    if not routes:
+        return 0
+
+    route_sum = 0.0
+    for route in routes:
+        grade = route.get("grade", "")
+        weight = _GRADE_WEIGHT.get(grade, _UNKNOWN_GRADE_WEIGHT)
+        style = route.get("style")
+        modifier = _STYLE_MODIFIER.get(style, 1.0) if style else 1.0
+        route_sum += weight * modifier
+
+    duration = entry.get("duration_minutes", 120)
+    factor = _duration_factor(duration)
+    return round(route_sum * factor)
 VALID_DISCIPLINES = {"lead", "boulder", "both"}
 
 
@@ -157,6 +202,8 @@ def compute_outdoor_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
             "flash_pct": 0.0,
             "sent_pct": 0.0,
             "top_grade_sent": None,
+            "total_load": 0,
+            "avg_load_per_session": 0.0,
         }
 
     total_routes = 0
@@ -192,6 +239,9 @@ def compute_outdoor_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
     # Top grade sent (lexicographic — works for Font/French scales approximately)
     top_grade = max(grades_sent) if grades_sent else None
 
+    total_load = sum(compute_outdoor_load_score(s) for s in sessions)
+    avg_load = round(total_load / len(sessions), 1) if sessions else 0.0
+
     return {
         "total_sessions": len(sessions),
         "total_routes": total_routes,
@@ -200,4 +250,6 @@ def compute_outdoor_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
         "flash_pct": round(flash_count / total_routes * 100, 1) if total_routes else 0.0,
         "sent_pct": round(sent_count / total_routes * 100, 1) if total_routes else 0.0,
         "top_grade_sent": top_grade,
+        "total_load": total_load,
+        "avg_load_per_session": avg_load,
     }

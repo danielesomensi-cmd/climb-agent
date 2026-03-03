@@ -113,6 +113,7 @@ class OnboardingData(BaseModel):
     availability: Dict[str, Any] = Field(default_factory=dict)
     planning_prefs: Dict[str, Any] = Field(default_factory=dict)
     trips: List[Dict[str, Any]] = Field(default_factory=list)
+    outdoor_spots: List[Dict[str, Any]] = Field(default_factory=list)
     test_week_requested: bool = False
 
 

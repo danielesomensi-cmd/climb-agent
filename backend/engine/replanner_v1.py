@@ -82,6 +82,9 @@ COMPLEMENTARY_LOAD_MAP = {
     "hard": COMPLEMENTARY_LOAD_HARD,
 }
 
+# Outdoor load threshold for triggering next-day ripple (matches high intensity)
+OUTDOOR_RIPPLE_THRESHOLD = 65
+
 
 def _parse_date(value: str):
     return datetime.strptime(value, "%Y-%m-%d").date()
@@ -702,6 +705,59 @@ def apply_events(
             if not day.get("outdoor_spot_name"):
                 raise ValueError(f"Date {event['date']} has no outdoor session to complete")
             day["outdoor_session_status"] = "done"
+
+            # Store outdoor load score on the day and apply ripple if high
+            outdoor_load = event.get("outdoor_load_score", 0)
+            day["outdoor_load_score"] = outdoor_load
+            if outdoor_load >= OUTDOOR_RIPPLE_THRESHOLD:
+                target_d = _parse_date(event["date"])
+                ripple_key = (target_d + timedelta(days=1)).isoformat()
+                try:
+                    ripple_day = _find_day(updated, ripple_key)
+                except ValueError:
+                    ripple_day = None
+
+                if ripple_day and ripple_day.get("sessions"):
+                    recovery_meta = _meta_for("regeneration_easy")
+                    comp_meta = _meta_for("complementary_conditioning")
+                    next_sessions = []
+                    for session in ripple_day["sessions"]:
+                        sid = session.get("session_id", "")
+                        smeta = _SESSION_META.get(sid, {})
+                        is_hard = smeta.get("hard") or (session.get("tags") or {}).get("hard")
+                        is_finger = smeta.get("finger") or (session.get("tags") or {}).get("finger")
+                        is_low = (smeta.get("intensity") or session.get("intensity")) == "low"
+
+                        if is_hard or is_finger:
+                            next_sessions.append({
+                                "session_id": "complementary_conditioning",
+                                "slot": session.get("slot", "evening"),
+                                "location": session.get("location", "gym"),
+                                "status": "planned",
+                                "estimated_load_score": _INTENSITY_TO_LOAD.get(comp_meta["intensity"], 40),
+                                "gym_id": session.get("gym_id"),
+                                "intensity": comp_meta["intensity"],
+                                "constraints_applied": ["outdoor_ripple"],
+                                "tags": {"hard": False, "finger": False},
+                                "explain": [f"hard→medium after outdoor load={outdoor_load}"],
+                            })
+                        elif not is_low and (smeta.get("intensity") or session.get("intensity")) == "medium":
+                            next_sessions.append({
+                                "session_id": "deload_recovery",
+                                "slot": session.get("slot", "evening"),
+                                "location": session.get("location", "gym"),
+                                "status": "planned",
+                                "estimated_load_score": _INTENSITY_TO_LOAD.get(recovery_meta["intensity"], 20),
+                                "gym_id": session.get("gym_id"),
+                                "intensity": recovery_meta["intensity"],
+                                "constraints_applied": ["outdoor_ripple"],
+                                "tags": {"hard": False, "finger": False},
+                                "explain": [f"medium→low after outdoor load={outdoor_load}"],
+                            })
+                        else:
+                            next_sessions.append(session)
+                    ripple_day["sessions"] = next_sessions
+
             sessions = day.get("sessions") or []
             all_sessions_done = all(s.get("status") in ("done", "skipped") for s in sessions) if sessions else True
             if all_sessions_done:

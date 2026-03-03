@@ -481,14 +481,24 @@ export default function SettingsPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Outdoor Spots</CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                    onClick={() => setAddingSpot(true)}
-                  >
-                    Add spot
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-primary"
+                      onClick={() => router.push("/outdoor")}
+                    >
+                      View history
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => setAddingSpot(true)}
+                    >
+                      Add spot
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

@@ -210,6 +210,10 @@ export interface OnboardingData {
     discipline: string;
     priority: string;
   }>;
+  outdoor_spots: Array<{
+    name: string;
+    discipline: "lead" | "boulder" | "both";
+  }>;
   test_week_requested?: boolean;
 }
 
@@ -265,6 +269,8 @@ export interface OutdoorStats {
   flash_pct: number;
   sent_pct: number;
   top_grade_sent: string | null;
+  total_load: number;
+  avg_load_per_session: number;
 }
 
 // -----------------------------------------------------------------------
@@ -293,6 +299,7 @@ export interface WeeklyReportAdherence {
 export interface WeeklyReportLoad {
   planned_total: number;
   actual_total: number;
+  outdoor_load: number;
   load_ratio: number;
   hard_days: number;
   recovery_days: number;

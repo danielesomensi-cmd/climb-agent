@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -355,9 +355,17 @@ function WeeklyReportContent() {
             {report.outdoor.sessions > 0 && (
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Mountain className="size-4" /> Outdoor
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Mountain className="size-4" /> Outdoor
+                    </CardTitle>
+                    <button
+                      onClick={() => window.location.href = "/outdoor"}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      View all
+                    </button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3 text-sm">

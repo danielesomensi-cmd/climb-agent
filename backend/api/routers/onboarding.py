@@ -148,6 +148,14 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             "details": data.limitations,
         },
         "trips": data.trips,
+        "outdoor_spots": [
+            {
+                "id": f"spot_{i}_{(s.get('name') or 'unnamed').lower().replace(' ', '_')[:12]}",
+                "name": s.get("name", ""),
+                "discipline": s.get("discipline", "both"),
+            }
+            for i, s in enumerate(data.outdoor_spots)
+        ],
         "macrocycle": None,
         "performance": {
             "current_level": _build_current_level(data.grades),

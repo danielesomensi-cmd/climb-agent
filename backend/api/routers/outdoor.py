@@ -12,6 +12,7 @@ from backend.api.deps import DATA_DIR, USERS_DIR, get_user_id, load_state, save_
 from backend.api.models import OutdoorSpotCreate, OutdoorSessionLog, ConvertSlotRequest
 from backend.engine.outdoor_log import (
     append_outdoor_session,
+    compute_outdoor_load_score,
     compute_outdoor_stats,
     load_outdoor_sessions,
 )
@@ -114,6 +115,9 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
 def get_outdoor_sessions(since: Optional[str] = Query(None), user_id: Optional[str] = Depends(get_user_id)):
     """List outdoor sessions, optionally filtered by date."""
     sessions = load_outdoor_sessions(_log_dir(user_id), since_date=since)
+    # Enrich each session with its load score
+    for s in sessions:
+        s["load_score"] = compute_outdoor_load_score(s)
     return {"sessions": sessions, "count": len(sessions)}
 
 
