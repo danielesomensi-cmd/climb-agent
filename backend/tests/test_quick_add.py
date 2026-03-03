@@ -393,3 +393,25 @@ def test_add_sorts_by_slot_order():
             updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == day["date"])
             assert updated_day["sessions"][0]["slot"] == "morning"
             return
+
+
+def test_quick_add_test_session_has_test_tag():
+    """Quick-add of a test session must propagate tags.test = True."""
+    plan = _v2_plan_snapshot()
+    # Find a rest day or day with a free slot
+    rest_day = next((d for d in plan["weeks"][0]["days"] if not d["sessions"]), None)
+    if rest_day is None:
+        plan["weeks"][0]["days"][-1]["sessions"] = []
+        rest_day = plan["weeks"][0]["days"][-1]
+
+    updated, _ = apply_day_add(
+        plan,
+        session_id="test_max_hang_5s",
+        target_date=rest_day["date"],
+        slot="evening",
+        location="home",
+    )
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == rest_day["date"])
+    test_sessions = [s for s in updated_day["sessions"] if s["session_id"] == "test_max_hang_5s"]
+    assert len(test_sessions) == 1, "test_max_hang_5s should have been added"
+    assert test_sessions[0]["tags"].get("test") is True, "Quick-add test session must have tags.test=True"

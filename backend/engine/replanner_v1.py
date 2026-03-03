@@ -158,7 +158,7 @@ def _build_fill_session(plan: Dict[str, Any], day: Dict[str, Any], slot: str, *,
         "intensity": meta["intensity"],
         "estimated_load_score": _INTENSITY_TO_LOAD.get(meta["intensity"], 40),
         "constraints_applied": ["replanner_fill"],
-        "tags": {"hard": meta["hard"], "finger": meta["finger"]},
+        "tags": {"hard": meta["hard"], "finger": meta["finger"], **({"test": True} if meta.get("test") else {})},
         "explain": ["deterministic refill", f"fill_kind={kind}"],
     }
 
@@ -309,7 +309,7 @@ def apply_day_add(
         "intensity": meta["intensity"],
         "estimated_load_score": _INTENSITY_TO_LOAD.get(meta["intensity"], 40),
         "constraints_applied": ["quick_add"],
-        "tags": {"hard": meta["hard"], "finger": meta["finger"]},
+        "tags": {"hard": meta["hard"], "finger": meta["finger"], **({"test": True} if meta.get("test") else {})},
         "explain": ["user quick-add session", f"added_session={session_id}"],
     }
 
@@ -769,7 +769,7 @@ def apply_events(
                     s["gym_id"] = new_gym_id if new_location == "gym" else None
                     s["intensity"] = rep_meta["intensity"]
                     s["estimated_load_score"] = _INTENSITY_TO_LOAD.get(rep_meta["intensity"], 40)
-                    s["tags"] = {"hard": rep_meta["hard"], "finger": rep_meta["finger"]}
+                    s["tags"] = {"hard": rep_meta["hard"], "finger": rep_meta["finger"], **({"test": True} if rep_meta.get("test") else {})}
                     s["explain"] = [f"gym_change: {sid} → {replacement}", reason]
                     s.pop("resolved", None)
                     change_warnings.append(f"{sid} → {replacement} ({reason})")
@@ -903,7 +903,7 @@ def _compensate_finger(
             "phase_id": phase_id,
             "intensity": comp_meta["intensity"],
             "constraints_applied": ["finger_compensation"],
-            "tags": {"hard": comp_meta["hard"], "finger": comp_meta["finger"]},
+            "tags": {"hard": comp_meta["hard"], "finger": comp_meta["finger"], **({"test": True} if comp_meta.get("test") else {})},
             "explain": ["finger compensation after override", f"lost_date={excluded_date}"],
         }
 
@@ -975,7 +975,7 @@ def apply_day_override(
             "phase_id": effective_phase,
             "intensity": meta["intensity"],
             "constraints_applied": ["manual_override"],
-            "tags": {"hard": meta["hard"], "finger": meta["finger"]},
+            "tags": {"hard": meta["hard"], "finger": meta["finger"], **({"test": True} if meta.get("test") else {})},
             "explain": ["user day override applied", f"override_intent={intent}"],
         }
     ]
