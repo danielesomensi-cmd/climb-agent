@@ -63,6 +63,11 @@ _INTENSITY_ORDER = {"low": 0, "medium": 1, "high": 2, "max": 3}
 # Fallback load score for unresolved sessions (real score uses fatigue_cost from exercises)
 _INTENSITY_TO_LOAD: Dict[str, int] = {"low": 20, "medium": 40, "high": 65, "max": 85}
 
+# Fallback climbing sessions tried (in order) when Pass 1 couldn't place any climbing
+# on a gym-available day due to equipment constraints (Bug B fix).
+# All require only gym_boulder — the most common gym equipment.
+_CLIMBING_FALLBACKS: Tuple[str, ...] = ("technique_focus_gym", "easy_climbing_deload")
+
 
 def _parse_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
@@ -123,9 +128,31 @@ def _location_has_equipment(
     gyms: Optional[Sequence[Dict[str, Any]]],
     default_gym_id: Optional[str],
 ) -> bool:
-    """Check if *location* provides all items in *required_equipment*."""
+    """Check if *location* provides all items in *required_equipment*.
+
+    For gym locations with no specific gym_id, iterates ALL gyms by priority
+    and returns True if ANY gym satisfies the required equipment (Bug A fix).
+    """
     if not required_equipment:
         return True
+    if location == "gym":
+        gym_id = slot_info.get("gym_id") or default_gym_id
+        if gym_id:
+            # Specific gym requested — check only that gym
+            avail = _equipment_for_location(location, slot_info, home_equipment, gyms, default_gym_id)
+            if avail is None:
+                return True
+            return all(eq in avail for eq in required_equipment)
+        # No specific gym: check if ANY gym has all required equipment
+        if not gyms:
+            return True  # no gym info → assume available (backwards compat)
+        for g in sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", ""))):
+            equip = list(g.get("equipment", []))
+            if "pullup_bar" not in equip:
+                equip.append("pullup_bar")
+            if all(eq in equip for eq in required_equipment):
+                return True
+        return False
     avail = _equipment_for_location(location, slot_info, home_equipment, gyms, default_gym_id)
     if avail is None:
         return True  # unknown equipment → assume available (backwards compat)
@@ -218,7 +245,14 @@ def _select_gym_id(
     slot_info: Dict[str, Any],
     default_gym_id: Optional[str],
     gyms: Sequence[Dict[str, Any]],
+    required_equipment: Optional[List[str]] = None,
 ) -> Optional[str]:
+    """Return the gym_id to assign to a session.
+
+    When no specific gym is requested and required_equipment is given,
+    picks the first gym by priority that satisfies all required equipment (Bug A fix).
+    Falls back to first-by-priority gym if none fully satisfies requirements.
+    """
     slot_gym = slot_info.get("gym_id")
     if slot_gym:
         return slot_gym
@@ -226,6 +260,13 @@ def _select_gym_id(
         return default_gym_id
     if gyms:
         sorted_gyms = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
+        if required_equipment:
+            for g in sorted_gyms:
+                equip = list(g.get("equipment", []))
+                if "pullup_bar" not in equip:
+                    equip.append("pullup_bar")
+                if all(eq in equip for eq in required_equipment):
+                    return g.get("gym_id")
         return sorted_gyms[0].get("gym_id")
     return None
 
@@ -295,7 +336,7 @@ def _make_session_entry(
     )
     gym_id = None
     if location == "gym":
-        gym_id = _select_gym_id(slot_info, default_gym_id, gyms)
+        gym_id = _select_gym_id(slot_info, default_gym_id, gyms, required_equipment=req_equip)
 
     return {
         "slot": slot,
@@ -575,6 +616,91 @@ def generate_phase_week(
                 finger_day_offsets.append(offset)
             placed = True
             break
+
+    # ── PASS 1.5: Climbing fallback for gym days left empty by Pass 1 ──
+    # Triggers only when:
+    #   (a) pool has climbing sessions but NONE are gym_boulder-compatible (all require gym_routes),
+    #   (b) the specific gym accessible on the day lacks gym_routes.
+    # In this narrow case Pass 1 could not place any climbing due to equipment mismatch,
+    # so we inject a fallback gym_boulder session rather than losing climbing entirely.
+    pool_has_climbing = any(_SESSION_META.get(sid, {}).get("climbing") for sid in primary_pool)
+    pool_has_gym_boulder_climbing = any(
+        _SESSION_META.get(sid, {}).get("climbing")
+        and "gym_boulder" in _SESSION_META.get(sid, {}).get("required_equipment", [])
+        for sid in primary_pool
+    )
+    # If pool already has gym_boulder climbing options, pass 1 handles them normally.
+    if pool_has_climbing and not pool_has_gym_boulder_climbing:
+        for offset in pass1_day_order:
+            if not day_has_available_slot[offset]:
+                continue
+            # Only apply when pass 1 left the day completely empty
+            if day_sessions[offset]:
+                continue
+            # Only apply when the day has gym availability
+            day_avail = normalized[day_keys[offset]]
+            has_gym_slot = any(
+                day_avail[s]["available"] and (
+                    day_avail[s].get("preferred_location") == "gym"
+                    or "gym" in day_avail[s].get("locations", [])
+                )
+                for s in SLOTS
+            )
+            if not has_gym_slot:
+                continue
+            # Only trigger when the accessible gym actually lacks gym_routes.
+            # If ANY gym on this day has gym_routes, pass 1 should have placed normally;
+            # an empty day here means pool exhaustion, not an equipment gap.
+            day_gym_can_do_routes = False
+            for s_name in SLOTS:
+                if not day_avail[s_name]["available"]:
+                    continue
+                slot_gym = day_avail[s_name].get("gym_id") or default_gym_id
+                if slot_gym:
+                    for g in (gyms or []):
+                        if g.get("gym_id") == slot_gym and "gym_routes" in g.get("equipment", []):
+                            day_gym_can_do_routes = True
+                            break
+                elif gyms:
+                    for g in sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", ""))):
+                        if "gym_routes" in g.get("equipment", []):
+                            day_gym_can_do_routes = True
+                            break
+                if day_gym_can_do_routes:
+                    break
+            if day_gym_can_do_routes:
+                continue  # gym can do routes — pool sessions should have been placed
+            for fb_sid in _CLIMBING_FALLBACKS:
+                fb_meta = _SESSION_META.get(fb_sid)
+                if fb_meta is None:
+                    continue
+                if not _intensity_allowed(fb_meta["intensity"], cap):
+                    continue
+                if session_count.get(fb_sid, 0) >= fb_meta.get("max_per_week", 1):
+                    continue
+                if fb_meta.get("hard") and hard_days >= effective_hard_cap:
+                    continue
+                if fb_meta.get("finger") and finger_day_offsets and (offset - finger_day_offsets[-1]) <= 1:
+                    continue
+                result = _find_best_slot(
+                    day_avail, fb_meta, locations, prefer_evening=True,
+                    home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id,
+                )
+                if result:
+                    slot, slot_info = result
+                    entry = _make_session_entry(
+                        slot, fb_sid, fb_meta, slot_info, locations, phase_id,
+                        day_keys[offset], default_gym_id, gyms or [],
+                        "pass1.5:climbing_fallback", home_equipment=home_equipment,
+                    )
+                    day_sessions[offset].append(entry)
+                    session_count[fb_sid] = session_count.get(fb_sid, 0) + 1
+                    if fb_meta.get("hard"):
+                        hard_days += 1
+                        hard_day_offsets.append(offset)
+                    if fb_meta.get("finger"):
+                        finger_day_offsets.append(offset)
+                    break
 
     # ── PASS 2: Fill remaining days with complementary sessions ──
     days_with_sessions = sum(1 for ds in day_sessions if ds)

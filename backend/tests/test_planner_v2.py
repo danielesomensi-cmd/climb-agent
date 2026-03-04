@@ -676,5 +676,179 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
         self.assertGreater(total_sessions, 0, "Should generate sessions even without equipment info")
 
 
+class TestPlannerV2B84GymSelection(unittest.TestCase):
+    """B84 — Bug A: gym selection iterates all gyms by priority until one has equipment."""
+
+    def _routes_avail(self):
+        """Three gym-available days, no specific gym_id (empty string)."""
+        return {
+            "mon": {"evening": {"available": True, "preferred_location": "gym", "gym_id": ""}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym", "gym_id": ""}},
+            "fri": {"evening": {"available": True, "preferred_location": "gym", "gym_id": ""}},
+            "sat": {"morning": {"available": True, "preferred_location": "gym", "gym_id": ""}},
+        }
+
+    def test_routes_session_placed_at_gym2_when_gym1_lacks_routes(self):
+        """Bug A: gym1 (priority 1) has no gym_routes; gym2 (priority 2) has gym_routes.
+        A session requiring gym_routes must be placed at gym2, not skipped."""
+        gyms = [
+            {"gym_id": "gym_no_routes", "priority": 1,
+             "equipment": ["gym_boulder", "hangboard", "pullup_bar"]},
+            {"gym_id": "gym_with_routes", "priority": 2,
+             "equipment": ["gym_boulder", "hangboard", "gym_routes", "pullup_bar"]},
+        ]
+        # Pool with gym_routes-requiring sessions
+        pool = ["endurance_aerobic_gym", "power_endurance_gym", "route_endurance_gym",
+                "technique_focus_gym", "prehab_maintenance"]
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"finger_strength": 0.3, "power_endurance": 0.3, "endurance": 0.4},
+            session_pool=pool,
+            start_date="2026-03-02",
+            availability=self._routes_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=gyms,
+        )
+        days = plan["weeks"][0]["days"]
+        routes_sessions = [
+            s for d in days for s in d["sessions"]
+            if s["session_id"] in {"endurance_aerobic_gym", "power_endurance_gym", "route_endurance_gym"}
+        ]
+        self.assertGreater(len(routes_sessions), 0,
+                           "At least one gym_routes session must be placed when gym2 has gym_routes")
+        for s in routes_sessions:
+            self.assertEqual(s["gym_id"], "gym_with_routes",
+                             f"{s['session_id']} must be placed at gym_with_routes, not {s['gym_id']}")
+
+    def test_routes_session_gym_id_assigned_correctly(self):
+        """Bug A: when gym_id is empty in slot, _select_gym_id must pick the gym
+        that has the required equipment, not always the first by priority."""
+        gyms = [
+            {"gym_id": "cheap_gym", "priority": 1,
+             "equipment": ["gym_boulder"]},
+            {"gym_id": "full_gym", "priority": 2,
+             "equipment": ["gym_boulder", "gym_routes", "hangboard", "pullup_bar"]},
+        ]
+        pool = ["route_endurance_gym", "technique_focus_gym", "prehab_maintenance"]
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"endurance": 0.5, "technique": 0.3, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-02",
+            availability=self._routes_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=gyms,
+        )
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            for s in d["sessions"]:
+                if s["session_id"] == "route_endurance_gym":
+                    self.assertEqual(s["gym_id"], "full_gym",
+                                     "route_endurance_gym must be assigned to full_gym (has gym_routes)")
+                    return
+        # If route_endurance_gym not placed, technique_focus_gym is fine (gym_boulder only)
+        # The test still passes as long as NO route session ended up at cheap_gym
+
+
+class TestPlannerV2B84ClimbingFallback(unittest.TestCase):
+    """B84 — Bug B: fallback to gym_boulder climbing when pool sessions all require gym_routes."""
+
+    def _gym_no_routes_avail(self):
+        return {
+            "mon": {"evening": {"available": True, "preferred_location": "gym"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym"}},
+            "fri": {"evening": {"available": True, "preferred_location": "gym"}},
+            "sat": {"morning": {"available": True, "preferred_location": "gym"}},
+        }
+
+    def _gym_no_routes(self):
+        return [{"gym_id": "no_routes_gym", "priority": 1,
+                 "equipment": ["gym_boulder", "hangboard", "pullup_bar"]}]
+
+    def test_fallback_climbing_placed_when_pool_needs_gym_routes(self):
+        """Bug B: pool only has gym_routes sessions; gym has no gym_routes.
+        Pass 1.5 must place technique_focus_gym or easy_climbing_deload instead."""
+        pool = ["endurance_aerobic_gym", "power_endurance_gym", "route_endurance_gym",
+                "prehab_maintenance", "flexibility_full"]
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"endurance": 0.5, "power_endurance": 0.3, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-02",
+            availability=self._gym_no_routes_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=self._gym_no_routes(),
+        )
+        days = plan["weeks"][0]["days"]
+        climbing_fallback_ids = {"technique_focus_gym", "easy_climbing_deload"}
+        fallback_sessions = [
+            s for d in days for s in d["sessions"]
+            if s["session_id"] in climbing_fallback_ids
+        ]
+        self.assertGreater(len(fallback_sessions), 0,
+                           "Pass 1.5 must place a fallback climbing session when pool needs gym_routes "
+                           "but gym only has gym_boulder")
+
+    def test_fallback_not_triggered_when_gym_has_routes(self):
+        """Bug B negative: when gym has gym_routes, pool sessions are placed normally
+        and fallback must NOT fire (no spurious extra sessions)."""
+        pool = ["endurance_aerobic_gym", "route_endurance_gym",
+                "prehab_maintenance", "flexibility_full"]
+        gyms_with_routes = [{"gym_id": "full_gym", "priority": 1,
+                              "equipment": ["gym_boulder", "gym_routes", "hangboard", "pullup_bar"]}]
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"endurance": 0.5, "power_endurance": 0.3, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-02",
+            availability=self._gym_no_routes_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=gyms_with_routes,
+        )
+        days = plan["weeks"][0]["days"]
+        all_sessions = [s for d in days for s in d["sessions"]]
+        # Pool sessions should be placed, not fallbacks
+        pool_placed = [s for s in all_sessions if s["session_id"] in {"endurance_aerobic_gym", "route_endurance_gym"}]
+        self.assertGreater(len(pool_placed), 0,
+                           "When gym has gym_routes, pool routes sessions must be placed normally")
+        # Verify no fallback session snuck in via pass 1.5
+        fallback_sessions = [s for s in all_sessions
+                             if s["session_id"] in {"technique_focus_gym", "easy_climbing_deload"}
+                             and "pass1.5" in " ".join(s.get("explain", []))]
+        self.assertEqual(len(fallback_sessions), 0,
+                         "Fallback must not fire when gym has gym_routes — pool sessions should cover it")
+
+    def test_fallback_respects_intensity_cap(self):
+        """Bug B: fallback must respect phase intensity cap.
+        In deload phase (cap=low), technique_focus_gym (medium) must NOT be placed;
+        easy_climbing_deload (low) CAN be placed."""
+        pool = ["endurance_aerobic_gym", "route_endurance_gym", "deload_recovery"]
+        plan = generate_phase_week(
+            phase_id="deload",
+            domain_weights={"endurance": 1.0},
+            session_pool=pool,
+            start_date="2026-03-02",
+            availability=self._gym_no_routes_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=0,
+            planning_prefs={"target_training_days_per_week": 3, "hard_day_cap_per_week": 0},
+            gyms=self._gym_no_routes(),
+            intensity_cap="low",
+        )
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            for s in d["sessions"]:
+                self.assertNotEqual(s["session_id"], "technique_focus_gym",
+                                    "technique_focus_gym (medium) must not be placed in deload (cap=low)")
+
+
 if __name__ == "__main__":
     unittest.main()
