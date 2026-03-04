@@ -47,10 +47,16 @@ export default function WelcomePage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end">
+      <div className="flex flex-col items-end gap-3">
         <Button onClick={() => router.push("/onboarding/profile")}>
-          Let's start
+          Let&apos;s start
         </Button>
+        <button
+          onClick={() => router.push("/onboarding/recover")}
+          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+        >
+          Already have an account? Recover access
+        </button>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
-import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState } from "@/lib/api";
+import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState, generateRecoveryCode } from "@/lib/api";
 import type { OutdoorSpot } from "@/lib/types";
 import { AvailabilityEditor } from "@/components/settings/availability-editor";
 import { EquipmentEditor } from "@/components/settings/equipment-editor";
@@ -49,12 +49,57 @@ export default function SettingsPage() {
   const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("boulder");
   const [voiceCuesOn, setVoiceCuesOn] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [recoveryCode, setRecoveryCode] = useState<string | null>(null);
+  const [generatingCode, setGeneratingCode] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [recoverInputOpen, setRecoverInputOpen] = useState(false);
+  const [recoverInput, setRecoverInput] = useState("");
+  const [recovering, setRecovering] = useState(false);
+  const [recoverError, setRecoverError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [backupMsg, setBackupMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => { setVoiceCuesOn(isVoiceCuesEnabled()); }, []);
   useEffect(() => { setUserId(localStorage.getItem("climb_user_id")); }, []);
+
+  async function handleGenerateCode() {
+    setGeneratingCode(true);
+    try {
+      const { recovery_code } = await generateRecoveryCode();
+      setRecoveryCode(recovery_code);
+    } catch {
+      /* ignore */
+    } finally {
+      setGeneratingCode(false);
+    }
+  }
+
+  // Load existing recovery code on mount (silently)
+  useEffect(() => {
+    generateRecoveryCode().then(({ recovery_code }) => setRecoveryCode(recovery_code)).catch(() => {});
+  }, []);
+
+  async function handleRecoverSubmit() {
+    const trimmed = recoverInput.trim().toUpperCase();
+    if (!trimmed) return;
+    setRecovering(true);
+    setRecoverError(null);
+    try {
+      const { recoverAccount } = await import("@/lib/api");
+      const { uuid } = await recoverAccount(trimmed);
+      localStorage.setItem("climb_user_id", uuid);
+      window.location.href = "/today";
+    } catch (e) {
+      if (e instanceof Error && e.message.includes("404")) {
+        setRecoverError("Code not found. Check and try again.");
+      } else {
+        setRecoverError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setRecovering(false);
+    }
+  }
 
   const loadSpots = useCallback(async () => {
     try {
@@ -571,6 +616,93 @@ export default function SettingsPage() {
                     </div>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* ----- Account ----- */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Account</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Recovery code */}
+                <div>
+                  <p className="text-sm font-medium mb-1">Recovery code</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Use this code to recover your account if you lose access to this device.
+                  </p>
+                  {recoveryCode ? (
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono text-sm font-semibold tracking-widest bg-muted px-3 py-1.5 rounded-md">
+                        {recoveryCode}
+                      </span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(recoveryCode).then(() => {
+                            setCodeCopied(true);
+                            setTimeout(() => setCodeCopied(false), 2000);
+                          });
+                        }}
+                        className="text-xs text-primary underline underline-offset-2"
+                      >
+                        {codeCopied ? "Copied!" : "Copy"}
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={generatingCode}
+                      onClick={handleGenerateCode}
+                    >
+                      {generatingCode ? "Generating..." : "Generate recovery code"}
+                    </Button>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Recover a different account */}
+                <div>
+                  <p className="text-sm font-medium mb-1">Recover a different account</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Enter a recovery code to switch to another account on this device.
+                  </p>
+                  {recoverInputOpen ? (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        placeholder="CLIMB-XXXX-XXXX"
+                        value={recoverInput}
+                        onChange={(e) => setRecoverInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === "Enter" && handleRecoverSubmit()}
+                        className="w-full rounded-md border bg-background px-3 py-1.5 font-mono text-sm tracking-widest uppercase placeholder:normal-case placeholder:tracking-normal"
+                        autoCapitalize="characters"
+                        autoCorrect="off"
+                        spellCheck={false}
+                      />
+                      {recoverError && (
+                        <p className="text-xs text-destructive">{recoverError}</p>
+                      )}
+                      <div className="flex gap-2">
+                        <Button size="sm" disabled={recovering || !recoverInput.trim()} onClick={handleRecoverSubmit}>
+                          {recovering ? "Recovering..." : "Recover"}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => { setRecoverInputOpen(false); setRecoverInput(""); setRecoverError(null); }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setRecoverInputOpen(true)}
+                    >
+                      Enter recovery code
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

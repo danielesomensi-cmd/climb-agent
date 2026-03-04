@@ -251,6 +251,15 @@ export const importUserState = (state: Record<string, unknown>) =>
     body: JSON.stringify(state),
   });
 
+export const generateRecoveryCode = () =>
+  request<{ recovery_code: string }>("/api/user/recovery-code", { method: "POST" });
+
+export const recoverAccount = (recovery_code: string) =>
+  request<{ uuid: string }>("/api/user/recover", {
+    method: "POST",
+    body: JSON.stringify({ recovery_code }),
+  });
+
 // Reports
 export const getWeeklyReport = (weekStart: string) =>
   request<WeeklyReport>(`/api/reports/weekly?week_start=${weekStart}`);
