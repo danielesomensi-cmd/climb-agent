@@ -48,11 +48,13 @@ export default function SettingsPage() {
   const [newSpotName, setNewSpotName] = useState("");
   const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("boulder");
   const [voiceCuesOn, setVoiceCuesOn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [backupMsg, setBackupMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
   useEffect(() => { setVoiceCuesOn(isVoiceCuesEnabled()); }, []);
+  useEffect(() => { setUserId(localStorage.getItem("climb_user_id")); }, []);
 
   const loadSpots = useCallback(async () => {
     try {
@@ -713,6 +715,13 @@ export default function SettingsPage() {
               </Card>
             </div>
           </>
+        )}
+
+        {/* ----- Debug info ----- */}
+        {userId && (
+          <p className="pb-4 text-center text-[10px] text-muted-foreground/40 font-mono">
+            User ID: {userId}
+          </p>
         )}
       </main>
 
