@@ -100,7 +100,7 @@ def _equipment_for_location(
         equip: List[str] = []
         matched = False
         for g in (gyms or []):
-            if gym_id and g.get("gym_id") == gym_id:
+            if gym_id and (g.get("gym_id") == gym_id or g.get("name") == gym_id):
                 equip = list(g.get("equipment", []))
                 matched = True
                 break
@@ -266,8 +266,8 @@ def _select_gym_id(
                 if "pullup_bar" not in equip:
                     equip.append("pullup_bar")
                 if all(eq in equip for eq in required_equipment):
-                    return g.get("gym_id")
-        return sorted_gyms[0].get("gym_id")
+                    return g.get("gym_id") or g.get("name")
+        return sorted_gyms[0].get("gym_id") or sorted_gyms[0].get("name")
     return None
 
 
@@ -658,7 +658,7 @@ def generate_phase_week(
                 slot_gym = day_avail[s_name].get("gym_id") or default_gym_id
                 if slot_gym:
                     for g in (gyms or []):
-                        if g.get("gym_id") == slot_gym and "gym_routes" in g.get("equipment", []):
+                        if (g.get("gym_id") == slot_gym or g.get("name") == slot_gym) and "gym_routes" in g.get("equipment", []):
                             day_gym_can_do_routes = True
                             break
                 elif gyms:

@@ -850,5 +850,112 @@ class TestPlannerV2B84ClimbingFallback(unittest.TestCase):
                                     "technique_focus_gym (medium) must not be placed in deload (cap=low)")
 
 
+class TestPlannerV2B87GymNameLookup(unittest.TestCase):
+    """B87 — gym lookup by name fallback.
+
+    Gyms in user_state have no gym_id field (only 'name').
+    The availability editor stores g.name as gym_id in slot data.
+    So slot may have gym_id="Cocuqe" while gym dict is {name:"Cocuqe"}.
+    _equipment_for_location must match by name when gym_id field is absent.
+    """
+
+    def _two_gyms(self):
+        """Gym A (priority 1, gym_boulder only) + Cocuqe (priority 2, gym_routes only)."""
+        return [
+            {"name": "Gym A", "priority": 1, "equipment": ["gym_boulder", "pullup_bar"]},
+            {"name": "Cocuqe", "priority": 2, "equipment": ["gym_routes", "pullup_bar"]},
+        ]
+
+    def _cocuqe_avail(self):
+        """Thu/Fri/Sat/Sun gym slots (gym_id='Cocuqe'); Mon/Tue/Wed explicitly unavailable."""
+        slot = {"available": True, "preferred_location": "gym", "gym_id": "Cocuqe"}
+        off = {"available": False, "preferred_location": "home", "gym_id": None}
+        return {
+            "mon": {"morning": off, "lunch": off, "evening": off},
+            "tue": {"morning": off, "lunch": off, "evening": off},
+            "wed": {"morning": off, "lunch": off, "evening": off},
+            "thu": {"evening": slot},
+            "fri": {"evening": slot},
+            "sat": {"evening": slot},
+            "sun": {"evening": slot},
+        }
+
+    def test_routes_placed_when_gym_referenced_by_name(self):
+        """With two gyms (Gym A has gym_boulder prio-1; Cocuqe has gym_routes prio-2),
+        slots referencing 'Cocuqe' by name must yield routes sessions placed."""
+        pool = [
+            "endurance_aerobic_gym", "route_endurance_gym",
+            "technique_focus_gym", "prehab_maintenance", "flexibility_full",
+        ]
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"endurance": 0.5, "technique": 0.3, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-05",
+            availability=self._cocuqe_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=self._two_gyms(),
+        )
+        days = plan["weeks"][0]["days"]
+        routes_sessions = [
+            s for d in days for s in d["sessions"]
+            if s["session_id"] in {"endurance_aerobic_gym", "route_endurance_gym"}
+        ]
+        self.assertGreater(len(routes_sessions), 0,
+                           "Routes sessions must be placed when slot explicitly references Cocuqe (gym_routes)")
+
+    def test_session_entry_has_gym_name_when_referenced_by_name(self):
+        """Session entries on Cocuqe days must carry gym_id='Cocuqe', not Gym A."""
+        pool = [
+            "endurance_aerobic_gym", "route_endurance_gym",
+            "technique_focus_gym", "prehab_maintenance", "flexibility_full",
+        ]
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"endurance": 0.5, "technique": 0.3, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-05",
+            availability=self._cocuqe_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=self._two_gyms(),
+        )
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            for s in d["sessions"]:
+                if s.get("location") == "gym":
+                    self.assertEqual(s["gym_id"], "Cocuqe",
+                                     f"Session on Cocuqe day must have gym_id='Cocuqe', got '{s['gym_id']}'")
+
+    def test_gym_a_boulder_session_not_placed_on_cocuqe_day(self):
+        """technique_focus_gym requires gym_boulder which Cocuqe lacks.
+        It must NOT be placed even though Gym A (priority 1) has gym_boulder —
+        because the slot explicitly targets Cocuqe."""
+        pool = [
+            "technique_focus_gym", "endurance_aerobic_gym", "prehab_maintenance",
+        ]
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"technique": 0.5, "endurance": 0.3, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-05",
+            availability=self._cocuqe_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=self._two_gyms(),
+        )
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            for s in d["sessions"]:
+                self.assertNotEqual(
+                    s["session_id"], "technique_focus_gym",
+                    "technique_focus_gym (requires gym_boulder) must NOT be placed when slot targets Cocuqe (gym_routes only)",
+                )
+
+
 if __name__ == "__main__":
     unittest.main()
