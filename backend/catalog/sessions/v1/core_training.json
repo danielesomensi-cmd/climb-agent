@@ -1,0 +1,78 @@
+{
+  "id": "core_training",
+  "name": "Core Training (Climbing-Specific)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "core",
+    "secondary_goals": ["body_tension"],
+    "notes": "Core for climbing — body tension, compression, anti-extension. Direct transfer to steep terrain and heel hooks. All bodyweight, no equipment needed."
+  },
+  "compatibility": {
+    "slot": ["short"],
+    "sports": ["climbing"]
+  },
+  "required_equipment": [],
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 25,
+    "hard_cap_min": 35
+  },
+  "modules": [
+    {
+      "block_id": "anti_extension",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Anti-extension: hollow hold or plank. Builds body tension for steep climbing.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["core"],
+            "pattern": ["anti_extension"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "compression",
+      "required": false,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Compression: toes-to-bar or L-sit. Hip flexor and deep core strength.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["core"],
+            "pattern": ["compression"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "rotation_lateral",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary",
+      "notes": "Rotation or lateral core — windshield wipers, side plank, pallof press.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["core"],
+            "pattern": ["anti_rotation", "lateral_flexion"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 30,
+      "module_role": "cooldown"
+    }
+  ]
+}

@@ -7422,14 +7422,23 @@
       "name": "Max Hang Duration Test (20mm, BW)",
       "category": "test_measurement",
       "time_min": 3,
-      "role": ["test"],
-      "domain": ["finger_strength"],
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
       "pattern": "isometric_hang",
       "intensity_level": "max",
       "fatigue_cost": 5,
       "recency_group": "test_hang_duration",
-      "equipment_required": ["hangboard"],
-      "location_allowed": ["home", "gym"],
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -7465,14 +7474,21 @@
       "name": "L-Sit Hold Test (Max Duration)",
       "category": "test_measurement",
       "time_min": 2,
-      "role": ["test"],
-      "domain": ["core"],
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "core"
+      ],
       "pattern": "isometric_hold",
       "intensity_level": "max",
       "fatigue_cost": 3,
       "recency_group": "test_l_sit",
       "equipment_required": [],
-      "location_allowed": ["home", "gym"],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -7506,14 +7522,21 @@
       "name": "Hip Flexibility Test (Straddle Split)",
       "category": "test_measurement",
       "time_min": 2,
-      "role": ["test"],
-      "domain": ["flexibility"],
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "flexibility"
+      ],
       "pattern": "static_stretch",
       "intensity_level": "low",
       "fatigue_cost": 0,
       "recency_group": "test_hip_flexibility",
       "equipment_required": [],
-      "location_allowed": ["home", "gym"],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
@@ -7541,6 +7564,98 @@
         "Warm up before testing — do not force"
       ],
       "video_url": null
+    },
+    {
+      "id": "goblet_squat",
+      "name": "Goblet Squat",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "goblet_squat",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Bilateral squat holding a dumbbell or kettlebell at chest level. Develops lower body strength and hip mobility with an upright torso. Good entry-level weighted squat for climbers — builds quad and glute strength for high-stepping and mantling.",
+      "cues": [
+        "Hold weight close to chest with elbows pointing down",
+        "Feet shoulder-width apart, toes slightly out",
+        "Sit back and down — aim for thighs parallel or below",
+        "Keep chest up and core braced throughout",
+        "Drive through full foot to stand, squeeze glutes at top"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "glute_bridge",
+      "name": "Glute Bridge",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "glute_bridge",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Supine hip extension targeting glutes and posterior chain. Bodyweight or with weight on hips. Builds hip extension power for heel hooks and hip-driven moves. Low fatigue — suitable as warm-up or accessory.",
+      "cues": [
+        "Lie on back, knees bent, feet flat on floor hip-width apart",
+        "Drive through heels to lift hips until body forms a straight line",
+        "Squeeze glutes hard at top — hold 1-2 seconds",
+        "Lower with control — do not drop hips",
+        "For load: place dumbbell or plate across hip crease"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     }
   ]
 }

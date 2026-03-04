@@ -57,6 +57,9 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "deload_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
     "finger_endurance_short": {"hard": False, "finger": True, "intensity": "medium", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "boulder_circuit_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_boulder"]},
+    "upper_body_weights": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
+    "legs_strength": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
+    "core_training": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 3},
 }
 
 _INTENSITY_ORDER = {"low": 0, "medium": 1, "high": 2, "max": 3}

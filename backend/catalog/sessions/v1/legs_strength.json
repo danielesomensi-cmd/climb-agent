@@ -1,0 +1,78 @@
+{
+  "id": "legs_strength",
+  "name": "Legs Strength (Unilateral Focus)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "strength_general",
+    "secondary_goals": ["joint_health"],
+    "notes": "Unilateral leg strength. Direct transfer to high-step, heel hook, and technical terrain stability. Exercises recommended by Horst and Lattice. Bodyweight or with weights if available."
+  },
+  "compatibility": {
+    "slot": ["short"],
+    "sports": ["climbing"]
+  },
+  "required_equipment": [],
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 30,
+    "hard_cap_min": 40
+  },
+  "modules": [
+    {
+      "block_id": "leg_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup",
+      "notes": "Leg swings, hip circles, bodyweight squats — 5 min.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["warmup", "accessory"],
+            "domain": ["flexibility", "strength_general"],
+            "pattern": ["squat", "hinge", "static_stretch"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "unilateral_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Primary unilateral leg exercise. Prefers split_squat, then pistol_squat_progression, then romanian_deadlift.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["squat", "hinge"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "leg_secondary",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "Secondary leg exercise — different pattern from main. Goblet squat, glute bridge, or cossack squat.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["squat", "hinge"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 30,
+      "module_role": "cooldown"
+    }
+  ]
+}

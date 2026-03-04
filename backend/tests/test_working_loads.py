@@ -544,7 +544,7 @@ def test_lower_body_gym_contains_squat():
     result = _resolve_session("lower_body_gym", us)
     instances = result.get("resolved_session", {}).get("exercise_instances", [])
     ex_ids = [inst["exercise_id"] for inst in instances]
-    squat_exercises = {"split_squat", "pistol_squat_progression"}
+    squat_exercises = {"split_squat", "pistol_squat_progression", "goblet_squat"}
     assert squat_exercises & set(ex_ids), f"Expected a squat exercise in {ex_ids}"
 
 

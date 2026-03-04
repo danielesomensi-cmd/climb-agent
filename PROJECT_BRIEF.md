@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-03-04 (B86 base intensity cap + pool audit, boulder_circuit_gym; 706 tests)
+> Last updated: 2026-03-04 (B83 add-on mini-sessions, B86 base intensity cap; 713 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -17,10 +17,10 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 
 | Area | Count | Notes |
 |------|-------|-------|
-| Exercises | 151 | 15 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +3 test_measurement (hang duration, L-sit, hip flex) |
-| Sessions | 26 | 26 active (13 archived), gym evening (enriched), home, recovery, flexibility, prehab, conditioning, finger (maintenance/strength/endurance/aerobic), test (×3), deload, lower_body, heavy_conditioning, route_endurance, pulling_strength, boulder_circuit |
+| Exercises | 153 | 15 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +3 test_measurement; +2 legs (goblet_squat, glute_bridge) |
+| Sessions | 29 | 29 active (13 archived), +3 add-on mini-sessions (upper_body_weights, legs_strength, core_training), boulder_circuit |
 | Templates | 23 | 11 original + 9 new + 3 test (warmup, pulling/pulling_compound, antagonist, core, cooldown, 3 test protocols) |
-| Tests | 706 | all green (B86 base intensity cap + pool audit) |
+| Tests | 713 | all green (B83 add-on sessions, B86 base intensity cap) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 36 | 14 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 24 | 9 main views + 13 onboarding steps + root + onboarding index |
@@ -82,13 +82,13 @@ backend/
       reports.py            ← GET /api/reports/weekly, /monthly
       quotes.py             ← GET /api/quotes/daily
   catalog/
-    exercises/v1/           ← 151 exercises (JSON)
-    sessions/v1/            ← 26 sessions (JSON), 13 archived
+    exercises/v1/           ← 153 exercises (JSON)
+    sessions/v1/            ← 29 sessions (JSON), 13 archived
     templates/v1/           ← 23 templates (JSON)
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 706 pytest tests
+  tests/                    ← 713 pytest tests
 frontend/
   src/
     app/
@@ -172,7 +172,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (706 green)
+# Backend tests (713 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)

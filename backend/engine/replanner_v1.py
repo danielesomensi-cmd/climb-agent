@@ -181,6 +181,12 @@ def suggest_sessions(
     phase_id = (plan.get("profile_snapshot") or {}).get("phase_id", "base")
     candidates = session_pool if session_pool is not None else _build_session_pool(phase_id)
 
+    # Always include complementary add-on mini-sessions regardless of phase
+    _ALWAYS_SUGGESTIBLE = {"upper_body_weights", "legs_strength", "core_training"}
+    for sid in _ALWAYS_SUGGESTIBLE:
+        if sid not in candidates:
+            candidates.append(sid)
+
     # Filter by location compatibility
     candidates = [
         sid for sid in candidates

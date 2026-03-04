@@ -1,0 +1,68 @@
+{
+  "id": "upper_body_weights",
+  "name": "Upper Body Antagonist (Push)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "strength_general",
+    "secondary_goals": ["joint_health"],
+    "notes": "Antagonist upper body — chest, triceps, anterior shoulders. Balances the pull-dominant pattern of climbing. Elbow and shoulder health. Bodyweight or with weights if available."
+  },
+  "compatibility": {
+    "slot": ["short"],
+    "sports": ["climbing"]
+  },
+  "required_equipment": [],
+  "context": {
+    "location": "home"
+  },
+  "time_budget": {
+    "target_duration_min": 30,
+    "hard_cap_min": 40
+  },
+  "modules": [
+    {
+      "template_id": "antagonist_prehab",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "push_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Primary push movement. Prefers bench_press if weights available, ring_pushup if rings, otherwise pushup.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["push_horizontal"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "push_secondary",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "Secondary push — overhead or variation. Dip, pike_pushup, or overhead_press.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["push_vertical", "push_horizontal"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 30,
+      "module_role": "cooldown"
+    }
+  ]
+}
