@@ -1,0 +1,58 @@
+{
+  "id": "boulder_circuit_gym",
+  "name": "Boulder Circuit (Gym — Volume & Movement Quality)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "volume_climbing",
+    "secondary_goals": ["aerobic_capacity", "technique_footwork", "core"],
+    "notes": "Circuit bouldering at -3/-4 from boulder flash grade. Continuous movement, linked problems, focus on movement quality and aerobic base on boulders. Medium intensity, high volume."
+  },
+  "compatibility": {
+    "slot": ["long"],
+    "sports": ["climbing"]
+  },
+  "required_equipment": ["gym_boulder"],
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 75,
+    "hard_cap_min": 90
+  },
+  "modules": [
+    {
+      "template_id": "warmup_climbing",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "boulder_circuit_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Circuit bouldering: 4-6 problems linked back-to-back at -3/-4 from flash grade. 3-4 circuits with 3-5 min rest between circuits. Focus on smooth movement, silent feet, no falling.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["main"],
+            "domain": ["aerobic_capacity", "volume_climbing"],
+            "pattern": ["climbing_limit_boulder", "climbing_continuous"]
+          }
+        }
+      }
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": true,
+      "priority": 65,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ]
+}

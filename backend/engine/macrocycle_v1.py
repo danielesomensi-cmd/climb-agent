@@ -30,7 +30,7 @@ PHASE_ENERGY: Dict[str, str] = {
 }
 
 PHASE_INTENSITY_CAP: Dict[str, str] = {
-    "base": "high",
+    "base": "medium",
     "strength_power": "max",
     "power_endurance": "high",
     "performance": "max",
@@ -68,14 +68,11 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "endurance_aerobic_gym": "primary",
         "technique_focus_gym": "primary",
         "finger_maintenance_home": "primary",
-        "finger_strength_home": "primary",
+        "boulder_circuit_gym": "primary",
         "prehab_maintenance": "primary",
         "flexibility_full": "available",
         "handstand_practice": "available",
         "complementary_conditioning": "available",
-        "strength_long": "available",
-        "power_endurance_gym": "available",
-        "pulling_strength_gym": "available",
         "route_endurance_gym": "available",
     },
     "strength_power": {
@@ -113,7 +110,6 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "yoga_recovery": "primary",
         "prehab_maintenance": "primary",
         "easy_climbing_deload": "available",
-        "handstand_practice": "available",
     },
 }
 

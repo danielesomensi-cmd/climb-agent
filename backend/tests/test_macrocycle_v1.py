@@ -10,6 +10,7 @@ from backend.engine.macrocycle_v1 import (
     _adjust_domain_weights,
     _validate_goal,
     _BASE_WEIGHTS,
+    _SESSION_POOL,
     _build_session_pool,
     generate_macrocycle,
     apply_deload_week,
@@ -17,6 +18,7 @@ from backend.engine.macrocycle_v1 import (
     should_extend_phase,
     should_trigger_adaptive_deload,
 )
+from backend.engine.planner_v2 import _SESSION_META, _INTENSITY_ORDER
 
 
 def _make_profile(**overrides):
@@ -129,7 +131,13 @@ class TestGenerateMacrocycleBasic(unittest.TestCase):
         pool = _build_session_pool("base")
         self.assertIn("endurance_aerobic_gym", pool)
         self.assertIn("technique_focus_gym", pool)
-        self.assertIn("finger_strength_home", pool)
+        self.assertIn("boulder_circuit_gym", pool)
+        self.assertIn("finger_maintenance_home", pool)
+        # high/max intensity sessions removed — exceed base cap (medium)
+        self.assertNotIn("finger_strength_home", pool)
+        self.assertNotIn("strength_long", pool)
+        self.assertNotIn("power_endurance_gym", pool)
+        self.assertNotIn("pulling_strength_gym", pool)
 
     def test_route_endurance_in_base_and_pe_pool(self):
         """route_endurance_gym appears in base and power_endurance pools."""
@@ -470,6 +478,57 @@ class TestComputeRemainingDurations(unittest.TestCase):
     def test_empty_phases(self):
         d = _compute_remaining_durations(_make_profile(), 5, [])
         self.assertEqual(d, {})
+
+
+class TestPhasePoolIntegrity(unittest.TestCase):
+    """B86 — guard tests: every session in every pool must respect the phase intensity cap."""
+
+    def test_base_phase_no_high_intensity(self):
+        """No session with intensity high or max in base pool."""
+        pool = _build_session_pool("base")
+        for sid in pool:
+            meta = _SESSION_META.get(sid)
+            self.assertIsNotNone(meta, f"{sid} missing from _SESSION_META")
+            self.assertIn(meta["intensity"], ("low", "medium"),
+                          f"{sid} has intensity {meta['intensity']} — exceeds base cap medium")
+
+    def test_base_phase_has_boulder_climbing(self):
+        """At least one boulder climbing session in base pool."""
+        pool = _build_session_pool("base")
+        boulder = [s for s in pool if _SESSION_META.get(s, {}).get("climbing")
+                   and "gym_boulder" in _SESSION_META.get(s, {}).get("required_equipment", [])]
+        self.assertTrue(len(boulder) >= 1, "Base pool needs at least one boulder climbing session")
+
+    def test_base_phase_has_routes_climbing(self):
+        """At least one routes climbing session in base pool."""
+        pool = _build_session_pool("base")
+        routes = [s for s in pool if _SESSION_META.get(s, {}).get("climbing")
+                  and "gym_routes" in _SESSION_META.get(s, {}).get("required_equipment", [])]
+        self.assertTrue(len(routes) >= 1, "Base pool needs at least one routes climbing session")
+
+    def test_boulder_circuit_in_session_meta(self):
+        """boulder_circuit_gym registered in _SESSION_META with correct fields."""
+        meta = _SESSION_META.get("boulder_circuit_gym")
+        self.assertIsNotNone(meta, "boulder_circuit_gym missing from _SESSION_META")
+        self.assertEqual(meta["intensity"], "medium")
+        self.assertEqual(meta["required_equipment"], ["gym_boulder"])
+        self.assertTrue(meta["climbing"])
+        self.assertFalse(meta["hard"])
+        self.assertFalse(meta["finger"])
+
+    def test_all_pool_sessions_respect_intensity_cap(self):
+        """Parametric guard: every session in every phase pool has intensity <= phase cap."""
+        for phase_id, pool_def in _SESSION_POOL.items():
+            cap = PHASE_INTENSITY_CAP.get(phase_id, "max")
+            cap_val = _INTENSITY_ORDER.get(cap, 3)
+            for sid in pool_def:
+                meta = _SESSION_META.get(sid)
+                self.assertIsNotNone(meta, f"{sid} in {phase_id} pool but missing from _SESSION_META")
+                sess_val = _INTENSITY_ORDER.get(meta["intensity"], 0)
+                self.assertLessEqual(
+                    sess_val, cap_val,
+                    f"{sid} (intensity={meta['intensity']}) exceeds {phase_id} cap ({cap})"
+                )
 
 
 if __name__ == "__main__":

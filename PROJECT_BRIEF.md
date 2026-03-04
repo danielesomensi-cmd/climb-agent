@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-03-04 (B82 recovery code, B84 gym selection bugs, B87 gym name fallback; 701 tests)
+> Last updated: 2026-03-04 (B86 base intensity cap + pool audit, boulder_circuit_gym; 706 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -18,9 +18,9 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Area | Count | Notes |
 |------|-------|-------|
 | Exercises | 151 | 15 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +3 test_measurement (hang duration, L-sit, hip flex) |
-| Sessions | 25 | 25 active (13 archived), gym evening (enriched), home, recovery, flexibility, prehab, conditioning, finger (maintenance/strength/endurance/aerobic), test (×3), deload, lower_body, heavy_conditioning, route_endurance, pulling_strength |
+| Sessions | 26 | 26 active (13 archived), gym evening (enriched), home, recovery, flexibility, prehab, conditioning, finger (maintenance/strength/endurance/aerobic), test (×3), deload, lower_body, heavy_conditioning, route_endurance, pulling_strength, boulder_circuit |
 | Templates | 23 | 11 original + 9 new + 3 test (warmup, pulling/pulling_compound, antagonist, core, cooldown, 3 test protocols) |
-| Tests | 701 | all green (B82 recovery code, B84 gym selection, B87 gym name fallback) |
+| Tests | 706 | all green (B86 base intensity cap + pool audit) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 36 | 14 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 24 | 9 main views + 13 onboarding steps + root + onboarding index |
