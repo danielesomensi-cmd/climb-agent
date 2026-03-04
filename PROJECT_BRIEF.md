@@ -65,7 +65,7 @@ backend/
     closed_loop_v1.py       ← Closed-loop feedback processing
     adaptation/             ← Closed-loop (multiplier-based adjustments)
   api/
-    main.py                 ← FastAPI app (12 routers + health)
+    main.py                 ← FastAPI app (14 routers + health)
     models.py               ← Pydantic request/response models
     deps.py                 ← Shared dependencies (state loading, date helpers)
     routers/
@@ -82,13 +82,13 @@ backend/
       reports.py            ← GET /api/reports/weekly, /monthly
       quotes.py             ← GET /api/quotes/daily
   catalog/
-    exercises/v1/           ← 145 exercises (JSON)
-    sessions/v1/            ← 25 sessions (JSON), 13 archived
-    templates/v1/           ← 20 templates (JSON)
+    exercises/v1/           ← 151 exercises (JSON)
+    sessions/v1/            ← 26 sessions (JSON), 13 archived
+    templates/v1/           ← 23 templates (JSON)
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 701 pytest tests
+  tests/                    ← 706 pytest tests
 frontend/
   src/
     app/
@@ -172,7 +172,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (701 green)
+# Backend tests (706 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)
