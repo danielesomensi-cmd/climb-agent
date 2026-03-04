@@ -311,9 +311,10 @@ export default function ReviewPage() {
         A test week helps calibrate your plan with precise data. You can always start training immediately.
       </div>
 
-      <div className="flex justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Button
-          variant="outline"
+          variant="ghost"
+          className="text-sm px-3 py-2"
           onClick={() => router.push("/onboarding/trips")}
           disabled={loading}
         >
@@ -322,14 +323,14 @@ export default function ReviewPage() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            size="lg"
+            className="text-sm px-3 py-2"
             disabled={loading}
             onClick={handleGenerate}
           >
             {loading ? "Generating..." : "Start training now"}
           </Button>
           <Button
-            size="lg"
+            className="text-sm px-3 py-2"
             disabled={loading}
             onClick={handleTestWeek}
           >

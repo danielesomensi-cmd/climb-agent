@@ -75,6 +75,19 @@ class TestState:
         assert r.status_code == 200
         assert r.json()["user"] == {}
 
+    def test_delete_state_clears_outdoor_logs(self, tmp_path, monkeypatch):
+        """DELETE /api/state must remove outdoor JSONL log files."""
+        from backend.api.routers import state as state_mod
+        log_dir = tmp_path / "logs"
+        log_dir.mkdir()
+        (log_dir / "outdoor_sessions_2026.jsonl").write_text('{"test": true}\n')
+        (log_dir / "outdoor_sessions_2025.jsonl").write_text('{"old": true}\n')
+        monkeypatch.setattr(state_mod, "DATA_DIR", tmp_path)
+        r = client.delete("/api/state")
+        assert r.status_code == 200
+        remaining = list(log_dir.glob("outdoor_sessions_*.jsonl"))
+        assert remaining == [], f"Outdoor logs should be cleared after reset: {remaining}"
+
 
 # -----------------------------------------------------------------------
 # Catalog
