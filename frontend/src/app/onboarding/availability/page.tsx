@@ -200,8 +200,8 @@ export default function AvailabilityPage() {
                               <SelectContent>
                                 {gyms.map((g, i) => (
                                   <SelectItem
-                                    key={i}
-                                    value={g.name || `gym-${i}`}
+                                    key={g.gym_id || i}
+                                    value={g.gym_id || g.name || `gym-${i}`}
                                   >
                                     {g.name || `Gym ${i + 1}`}
                                   </SelectItem>

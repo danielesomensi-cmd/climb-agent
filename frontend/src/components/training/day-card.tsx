@@ -11,6 +11,7 @@ import { SessionCard } from "@/components/training/session-card";
 import type { DayPlan, OutdoorRoute } from "@/lib/types";
 
 interface Gym {
+  gym_id?: string;
   name: string;
   equipment: string[];
 }

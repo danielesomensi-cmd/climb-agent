@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import uuid as _uuid
+from uuid import uuid4
 from copy import deepcopy
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -80,6 +81,19 @@ def _user_state_path(user_id: Optional[str]) -> Path:
     return STATE_PATH
 
 
+def _migrate_gym_ids(state: Dict[str, Any]) -> bool:
+    """Ensure every gym has a stable gym_id (B88 migration). Returns True if state was modified."""
+    gyms = state.get("equipment", {}).get("gyms")
+    if not gyms:
+        return False
+    changed = False
+    for gym in gyms:
+        if not gym.get("gym_id"):
+            gym["gym_id"] = uuid4().hex[:8]
+            changed = True
+    return changed
+
+
 def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
     """Load user state from disk. Returns empty template if file missing.
 
@@ -88,7 +102,10 @@ def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
     """
     path = _user_state_path(user_id)
     if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+        state = json.loads(path.read_text(encoding="utf-8"))
+        if _migrate_gym_ids(state):
+            save_state(state, user_id)
+        return state
     if user_id:
         # New user: bootstrap from template
         state = deepcopy(EMPTY_TEMPLATE)

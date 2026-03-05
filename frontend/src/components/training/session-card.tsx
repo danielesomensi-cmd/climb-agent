@@ -10,6 +10,7 @@ import { ExerciseCard } from "@/components/training/exercise-card";
 import type { SessionSlot, GuidedSessionState, GuidedExercise } from "@/lib/types";
 
 interface Gym {
+  gym_id?: string;
   name: string;
   equipment: string[];
 }
@@ -50,10 +51,13 @@ function formatSlot(slot: string): string {
   return slotMap[slot] ?? slot;
 }
 
-/** Resolve location display name — gym_id is the gym name from availability */
+/** Resolve location display name — gym_id is a stable UUID, resolve to gym name */
 function getLocationLabel(session: SessionSlot, gyms?: Gym[]): string {
   if (session.location !== "gym") return "Home";
-  if (session.gym_id) return session.gym_id;
+  if (session.gym_id && gyms) {
+    const gym = gyms.find((g) => (g.gym_id || g.name) === session.gym_id);
+    if (gym) return gym.name;
+  }
   if (gyms && gyms.length > 0 && gyms[0].name) return gyms[0].name;
   return "Gym";
 }

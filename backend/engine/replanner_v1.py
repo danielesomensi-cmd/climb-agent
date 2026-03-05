@@ -787,12 +787,10 @@ def apply_events(
             new_location = event.get("location", "gym")
             new_gym_id = event.get("gym_id")
 
-            # Resolve gym equipment for compatibility check
-            # TODO: generate stable gym_id at onboarding — using name as gym_id for now
             gym_equipment: set = set()
             if new_location == "gym" and gyms and new_gym_id:
                 for g in (gyms or []):
-                    if g.get("name") == new_gym_id or g.get("gym_id") == new_gym_id:
+                    if g.get("gym_id") == new_gym_id:
                         gym_equipment = set(g.get("equipment", []))
                         break
 

@@ -193,7 +193,7 @@ export interface OnboardingData {
   equipment: {
     home_enabled: boolean;
     home: string[];
-    gyms: Array<{ name: string; equipment: string[] }>;
+    gyms: Array<{ gym_id?: string; name: string; equipment: string[] }>;
   };
   availability: Record<
     string,

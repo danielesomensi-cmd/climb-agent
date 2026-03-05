@@ -41,6 +41,7 @@ type SlotData = { available: boolean; preferred_location: string; gym_id?: strin
 type DayMeta = { other_activity: boolean; other_activity_name?: string; reduce_intensity_after: boolean };
 
 interface Gym {
+  gym_id?: string;
   name: string;
   equipment: string[];
 }
@@ -222,7 +223,7 @@ export function AvailabilityEditor({
                               </SelectTrigger>
                               <SelectContent>
                                 {gyms.map((g, i) => (
-                                  <SelectItem key={i} value={g.name || `gym-${i}`}>
+                                  <SelectItem key={g.gym_id || i} value={g.gym_id || g.name || `gym-${i}`}>
                                     {g.name || `Gym ${i + 1}`}
                                   </SelectItem>
                                 ))}

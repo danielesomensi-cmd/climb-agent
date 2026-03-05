@@ -61,7 +61,7 @@ export default function LocationsPage() {
     const nextIndex = equipment.gyms.length + 1;
     update("equipment", {
       ...equipment,
-      gyms: [...equipment.gyms, { name: `Gym ${nextIndex}`, equipment: [] }],
+      gyms: [...equipment.gyms, { gym_id: crypto.randomUUID().slice(0, 8), name: `Gym ${nextIndex}`, equipment: [] }],
     });
   };
 

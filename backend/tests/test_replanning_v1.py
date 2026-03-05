@@ -783,17 +783,17 @@ def test_change_gym_compatible_updates_gym_id():
 
     updated = apply_events(
         plan,
-        [{"event_type": "change_gym", "date": target_date, "gym_id": "Gym B", "location": "gym"}],
+        [{"event_type": "change_gym", "date": target_date, "gym_id": "gym_b", "location": "gym"}],
         gyms=[
-            {"name": "Gym A", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "gym_routes", "dumbbell"]},
-            {"name": "Gym B", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "dumbbell"]},
+            {"gym_id": "gym_a", "name": "Gym A", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "gym_routes", "dumbbell"]},
+            {"gym_id": "gym_b", "name": "Gym B", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "dumbbell"]},
         ],
     )
 
     updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == target_date)
     session = updated_day["sessions"][0]
     assert session["session_id"] == original_sid  # Same session, just new gym
-    assert session["gym_id"] == "Gym B"
+    assert session["gym_id"] == "gym_b"
     assert session["location"] == "gym"
 
 
@@ -826,10 +826,10 @@ def test_change_gym_incompatible_replaces_session():
 
     updated = apply_events(
         plan,
-        [{"event_type": "change_gym", "date": target_date, "gym_id": "Gym B", "location": "gym"}],
+        [{"event_type": "change_gym", "date": target_date, "gym_id": "gym_b", "location": "gym"}],
         gyms=[
-            {"name": "Gym A", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "gym_routes"]},
-            {"name": "Gym B", "equipment": ["gym_boulder", "hangboard", "pullup_bar"]},
+            {"gym_id": "gym_a", "name": "Gym A", "equipment": ["gym_boulder", "hangboard", "pullup_bar", "gym_routes"]},
+            {"gym_id": "gym_b", "name": "Gym B", "equipment": ["gym_boulder", "hangboard", "pullup_bar"]},
         ],
     )
 
@@ -837,12 +837,12 @@ def test_change_gym_incompatible_replaces_session():
     session = updated_day["sessions"][0]
     # Should be replaced (complementary_conditioning or regeneration_easy)
     assert session["session_id"] != "power_endurance_gym"
-    assert session["gym_id"] == "Gym B"
+    assert session["gym_id"] == "gym_b"
     # Check adaptation logged
     adaptations = updated.get("adaptations", [])
     gym_change = [a for a in adaptations if a.get("type") == "change_gym"]
     assert len(gym_change) == 1
-    assert gym_change[0]["new_gym_id"] == "Gym B"
+    assert gym_change[0]["new_gym_id"] == "gym_b"
 
 
 def test_change_gym_to_home_replaces_gym_only_sessions():

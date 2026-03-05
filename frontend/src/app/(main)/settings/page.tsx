@@ -493,7 +493,7 @@ export default function SettingsPage() {
                             if (loc === "home") return `${slotName} (home)`;
                             if (s?.gym_id) {
                               const gym = equipment.gyms?.find(
-                                (g) => g.name === s.gym_id
+                                (g) => (g.gym_id || g.name) === s.gym_id
                               );
                               return `${slotName} (${gym?.name || s.gym_id})`;
                             }

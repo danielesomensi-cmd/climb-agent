@@ -21,6 +21,7 @@ interface EquipmentItem {
 }
 
 interface GymData {
+  gym_id: string;
   name: string;
   equipment: string[];
 }
@@ -65,7 +66,7 @@ export function EquipmentEditor({
   };
 
   const addGym = () => {
-    setGyms((prev) => [...prev, { name: `Gym ${prev.length + 1}`, equipment: [] }]);
+    setGyms((prev) => [...prev, { gym_id: crypto.randomUUID().slice(0, 8), name: `Gym ${prev.length + 1}`, equipment: [] }]);
   };
 
   const removeGym = (index: number) => {

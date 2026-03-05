@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
 interface Gym {
+  gym_id?: string;
   name: string;
   equipment: string[];
 }

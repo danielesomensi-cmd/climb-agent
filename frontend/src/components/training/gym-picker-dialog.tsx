@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Home, MapPin } from "lucide-react";
 
 interface Gym {
+  gym_id?: string;
   name: string;
   equipment: string[];
 }
@@ -89,12 +90,12 @@ export function GymPickerDialog({
               key={gym.name}
               type="button"
               className={`w-full rounded-lg border p-3 text-left text-sm transition-colors ${
-                selected?.gym_id === gym.name
+                selected?.gym_id === (gym.gym_id || gym.name)
                   ? "border-primary bg-primary/10"
                   : "border-border hover:bg-accent"
               }`}
               onClick={() =>
-                setSelected({ gym_id: gym.name, location: "gym" })
+                setSelected({ gym_id: gym.gym_id || gym.name, location: "gym" })
               }
             >
               <div className="flex items-center gap-2">

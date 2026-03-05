@@ -862,13 +862,13 @@ class TestPlannerV2B87GymNameLookup(unittest.TestCase):
     def _two_gyms(self):
         """Gym A (priority 1, gym_boulder only) + Cocuqe (priority 2, gym_routes only)."""
         return [
-            {"name": "Gym A", "priority": 1, "equipment": ["gym_boulder", "pullup_bar"]},
-            {"name": "Cocuqe", "priority": 2, "equipment": ["gym_routes", "pullup_bar"]},
+            {"gym_id": "gym_a", "name": "Gym A", "priority": 1, "equipment": ["gym_boulder", "pullup_bar"]},
+            {"gym_id": "cocuqe", "name": "Cocuqe", "priority": 2, "equipment": ["gym_routes", "pullup_bar"]},
         ]
 
     def _cocuqe_avail(self):
-        """Thu/Fri/Sat/Sun gym slots (gym_id='Cocuqe'); Mon/Tue/Wed explicitly unavailable."""
-        slot = {"available": True, "preferred_location": "gym", "gym_id": "Cocuqe"}
+        """Thu/Fri/Sat/Sun gym slots (gym_id='cocuqe'); Mon/Tue/Wed explicitly unavailable."""
+        slot = {"available": True, "preferred_location": "gym", "gym_id": "cocuqe"}
         off = {"available": False, "preferred_location": "home", "gym_id": None}
         return {
             "mon": {"morning": off, "lunch": off, "evening": off},
@@ -927,8 +927,8 @@ class TestPlannerV2B87GymNameLookup(unittest.TestCase):
         for d in days:
             for s in d["sessions"]:
                 if s.get("location") == "gym":
-                    self.assertEqual(s["gym_id"], "Cocuqe",
-                                     f"Session on Cocuqe day must have gym_id='Cocuqe', got '{s['gym_id']}'")
+                    self.assertEqual(s["gym_id"], "cocuqe",
+                                     f"Session on Cocuqe day must have gym_id='cocuqe', got '{s['gym_id']}'")
 
     def test_gym_a_boulder_session_not_placed_on_cocuqe_day(self):
         """technique_focus_gym requires gym_boulder which Cocuqe lacks.

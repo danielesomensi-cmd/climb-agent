@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from copy import deepcopy
 from typing import Any, Dict, Optional
 
@@ -102,6 +103,16 @@ def onboarding_defaults():
     }
 
 
+def _ensure_gym_ids(equipment: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure every gym in equipment.gyms has a stable gym_id."""
+    gyms = equipment.get("gyms")
+    if gyms:
+        for gym in gyms:
+            if not gym.get("gym_id"):
+                gym["gym_id"] = uuid.uuid4().hex[:8]
+    return equipment
+
+
 def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
     """Convert onboarding form data into a valid user_state dict."""
     profile = data.profile
@@ -139,7 +150,7 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             "target_training_days_per_week": 4,
         },
         "availability": data.availability,
-        "equipment": data.equipment,
+        "equipment": _ensure_gym_ids(data.equipment),
         "limitations": {
             "active_flags": [
                 f"{lim['area']}_{lim.get('side', 'both')}"

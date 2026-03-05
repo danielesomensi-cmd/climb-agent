@@ -26,19 +26,43 @@ _WHOLE_GRADE_TO_INDEX = {g: i for i, g in enumerate(WHOLE_FONT_GRADES)}
 LOAD_BASED_EXERCISES = {"max_hang_5s", "weighted_pullup"}
 GRADE_BASED_EXERCISES = {"limit_bouldering"}
 EXTERNAL_LOAD_EXERCISES = {
-    "barbell_row", "bench_press", "face_pull", "farmers_carry",
-    "overhead_press", "romanian_deadlift", "split_squat", "turkish_getup",
+    "barbell_row", "bench_press", "dumbbell_bench_press", "face_pull",
+    "farmers_carry", "goblet_squat", "overhead_press", "romanian_deadlift",
+    "split_squat", "turkish_getup",
 }
 EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "barbell_row": 0.30,
     "bench_press": 0.40,
+    "dumbbell_bench_press": 0.34,
     "face_pull": 0.08,
     "farmers_carry": 0.30,
+    "goblet_squat": 0.12,
     "overhead_press": 0.25,
     "romanian_deadlift": 0.40,
     "split_squat": 0.15,
     "turkish_getup": 0.15,
 }
+
+# Similarity groups for cross-exercise load transfer (B90).
+# Each group maps exercise_id → coefficient relative to group anchor (1.0).
+# When exercise A has no working_loads but similar exercise B does,
+# A's load is estimated as B's load × (coeff_A / coeff_B).
+_SIMILARITY_GROUPS: Dict[str, Dict[str, float]] = {
+    "push": {
+        "bench_press": 1.0,
+        "dumbbell_bench_press": 0.85,
+    },
+    "squat": {
+        "split_squat": 1.0,
+        "goblet_squat": 0.80,
+    },
+}
+
+# Inverted index: exercise_id → (group_name, coefficient)
+_EXERCISE_TO_GROUP: Dict[str, Tuple[str, float]] = {}
+for _grp_name, _members in _SIMILARITY_GROUPS.items():
+    for _ex_id, _coeff in _members.items():
+        _EXERCISE_TO_GROUP[_ex_id] = (_grp_name, _coeff)
 HANGBOARD_TOTAL_LOAD_EXERCISES = {
     "critical_force_test", "density_hangs",
     "hangboard_moving_hangs", "horst_7_53", "long_duration_hang",
@@ -291,6 +315,73 @@ def _best_entry(user_state: Dict[str, Any], exercise_id: str, setup: Dict[str, A
     return None
 
 
+def _transfer_load(
+    user_state: Dict[str, Any],
+    exercise_id: str,
+    date_value: str,
+    freshness_days: int = 60,
+) -> Optional[float]:
+    """Try to estimate load for *exercise_id* from a similar exercise's working_loads.
+
+    Returns the transferred external load in kg, or None if no transfer is possible.
+    """
+    group_info = _EXERCISE_TO_GROUP.get(exercise_id)
+    if not group_info:
+        return None
+    group_name, target_coeff = group_info
+    group = _SIMILARITY_GROUPS[group_name]
+
+    for donor_id, donor_coeff in group.items():
+        if donor_id == exercise_id:
+            continue
+        entry = _best_entry(user_state, donor_id, {}, date_value, freshness_days)
+        if entry and entry.get("next_external_load_kg") is not None:
+            donor_load = float(entry["next_external_load_kg"])
+            return _round_half_step(donor_load * (target_coeff / donor_coeff))
+    return None
+
+
+def check_load_coherence(
+    user_state: Dict[str, Any],
+    date_value: str = "",
+    freshness_days: int = 60,
+) -> List[Dict[str, Any]]:
+    """Check for outlier load ratios within similarity groups.
+
+    Returns a list of warnings for groups where the actual ratio between
+    exercises deviates more than 2× from the expected coefficient ratio.
+    """
+    warnings: List[Dict[str, Any]] = []
+    for group_name, members in _SIMILARITY_GROUPS.items():
+        loads: Dict[str, float] = {}
+        coeffs: Dict[str, float] = {}
+        for ex_id, coeff in members.items():
+            entry = _best_entry(user_state, ex_id, {}, date_value, freshness_days)
+            if entry and entry.get("next_external_load_kg") is not None:
+                loads[ex_id] = float(entry["next_external_load_kg"])
+                coeffs[ex_id] = coeff
+        if len(loads) < 2:
+            continue
+        ids = list(loads.keys())
+        for i in range(len(ids)):
+            for j in range(i + 1, len(ids)):
+                a, b = ids[i], ids[j]
+                expected_ratio = coeffs[a] / coeffs[b]
+                actual_ratio = loads[a] / loads[b] if loads[b] > 0 else float("inf")
+                deviation = actual_ratio / expected_ratio if expected_ratio > 0 else float("inf")
+                if deviation > 2.0 or deviation < 0.5:
+                    warnings.append({
+                        "group": group_name,
+                        "exercise_a": a,
+                        "exercise_b": b,
+                        "load_a": loads[a],
+                        "load_b": loads[b],
+                        "expected_ratio": round(expected_ratio, 2),
+                        "actual_ratio": round(actual_ratio, 2),
+                    })
+    return warnings
+
+
 def _max_hang_suggested(user_state: Dict[str, Any], prescription: Dict[str, Any], exercise_attrs: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     bodyweight = _get_bodyweight(user_state)
     attrs = exercise_attrs or {}
@@ -511,9 +602,14 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 if entry and entry.get("next_external_load_kg") is not None:
                     next_load = _round_half_step(float(entry["next_external_load_kg"]))
                 else:
-                    bw = _get_bodyweight(user_state)
-                    pct = EXTERNAL_LOAD_FALLBACK_PCT_BW.get(ex_id, 0.15)
-                    next_load = _round_half_step(bw * pct)
+                    transferred = _transfer_load(user_state, ex_id, out.get("date") or "")
+                    if transferred is not None:
+                        next_load = transferred
+                        suggested["load_source"] = "transferred"
+                    else:
+                        bw = _get_bodyweight(user_state)
+                        pct = EXTERNAL_LOAD_FALLBACK_PCT_BW.get(ex_id, 0.15)
+                        next_load = _round_half_step(bw * pct)
                 reps = prescription.get("reps") or (prescription.get("reps_range") or [8])[0]
                 sets = prescription.get("sets") or (prescription.get("sets_range") or [3])[0]
                 suggested.update({

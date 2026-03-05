@@ -16,6 +16,7 @@ import { getSuggestedSessions, getSessions, getOutdoorSpots, addOutdoorSpot } fr
 import type { SessionMeta, OutdoorSpot } from "@/lib/types";
 
 interface Gym {
+  gym_id?: string;
   name: string;
   equipment: string[];
 }
