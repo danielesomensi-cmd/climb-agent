@@ -209,7 +209,7 @@ Dettagli implementazione:
 | ID | Finding | Descrizione | Fix | Stato |
 |----|---------|-------------|-----|-------|
 | NEW-F3a | Test sessions mai pianificate (scheduling) | test_max_hang_5s esiste ma non è in _SESSION_META né in nessun pool. Nessun scheduling periodico. | Pass 3 in planner_v2: `is_last_week_of_phase=True` inietta test sessions (test_max_hang_5s, test_repeater_7_3, test_max_weighted_pullup) su ultima settimana di base/strength_power. Creati 2 nuovi session file. API wired in deps.py/week.py. | ✅ DONE |
-| NEW-F3b | assessment.tests mai aggiornato dal closed loop | Closed loop aggiorna working_loads ma non assessment.tests dopo sessioni test. | Aggiornare assessment.tests nel closed loop quando sessione è un test. Creare test_power_endurance. | TODO (Phase 2) |
+| NEW-F3b | assessment.tests aggiornamento dal closed loop | `_update_test_from_log()` in progression_v1 aggiorna `assessment.tests` per tutti e 6 i test (max_hang, repeater, duration, l_sit, hip_flex, weighted_pullup) + array storici in `tests.*` + baselines. | Verificato 2026-03-05: già implementato. | ✅ DONE |
 | NEW-F4 | Ripple effect proporzionale | Dopo override hard/max, il replanner ora applica downgrade proporzionale. | Delta=1: hard→medium (complementary_conditioning), medium→low (regeneration_easy), low→keep. Delta=2: tutto non-low→recovery. Solo direzione upward (più intenso → più leggero il giorno dopo). | ✅ DONE |
 | F6-partial | Intent "projecting" mancante | 11/12 intent funzionano, ma "projecting" (naturale per climber) non è mappato. | Aggiunto `"projecting": "power_contact_gym"` in INTENT_TO_SESSION. 13 intent totali. | ✅ DONE |
 | NEW-F1 | Prescription climbing vuota | Esercizi climbing hanno solo notes generico. Mancano: grado suggerito, volume, rest. | Moved to Phase 2.5 — see §2.6 | ⏩ Phase 2.5 |
@@ -319,26 +319,13 @@ Phase 3.2 bundle: B25, B19, B20, B27, NEW-F6, NEW-F7 — all done. B11 deferred 
 | B48 | Edit single session (multi-session day) | TODO | Medium | Quando più sessioni nello stesso giorno, "Change plan" tocca solo la sessione selezionata. Le altre sessioni del giorno restano invariate. Dopo la modifica, offrire opzione "Replan rest of week" per ribilanciare il carico. |
 | B49 | Reschedule session to different day/slot | ✅ DONE | Medium | MoveSessionDialog: mostra slot liberi nella settimana, muove sessione via `move_session` event. Backend già completo (replanner_v1), UI: MoveSessionDialog + SessionCard Move button + week page integration. |
 
-### §4.2 — Outdoor UI: da completare (TODO)
+### §4.2 — Outdoor UI ✅ DONE (verificato 2026-03-05)
 
-Il backend outdoor è completo (6 endpoint funzionanti).
-Il frontend è parziale — OutdoorLogForm.tsx esiste ma non è montato. Prima di implementare, definire bene il flusso UX:
-
-**Punti aperti da decidere:**
-- Come si accede al log outdoor? (bottone in DayCard, tab dedicato, modal?)
-- Dove si vedono le sessioni outdoor passate? (sezione in Plan, tab storico, dentro Settings?)
-- Come si vedono le statistiche outdoor? (integrato in reports, pagina dedicata?)
-- Convert-slot: come funziona nella UI? (l'utente converte un giorno outdoor in gym/home)
-
-**Stato tecnico:**
-- ✅ Backend: spots CRUD, log, sessions, stats, convert-slot
-- ✅ OutdoorLogForm.tsx — completo ma non montato
-- ✅ api.ts — 6/7 funzioni presenti (manca convertOutdoorSlot)
-- ❌ Nessuna pagina /outdoor
-- ❌ DayCard mostra "Log your session" ma senza azione
-- ❌ Stats e storico non collegati
-
-Da affrontare quando si decide il design UX dell'outdoor.
+Backend outdoor completo (6 endpoint). Frontend completo:
+- ✅ OutdoorLogForm.tsx montato in `/today` (dialog) e `/week` (dialog)
+- ✅ `/outdoor/page.tsx` — pagina dedicata con stats, sessioni, grade histogram
+- ✅ api.ts — 6 funzioni outdoor presenti
+- ⚠️ Unico residuo: `convertOutdoorSlot` manca in api.ts (backend endpoint esiste)
 
 ### §4.1 Cross-session exercise variety (B28)
 
