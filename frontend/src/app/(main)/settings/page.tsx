@@ -139,7 +139,7 @@ export default function SettingsPage() {
   const equipment = (state?.equipment ?? {}) as {
     home_enabled?: boolean;
     home?: string[];
-    gyms?: Array<{ name: string; equipment: string[] }>;
+    gyms?: Array<{ gym_id: string; name: string; equipment: string[] }>;
   };
   const availability = (state?.availability ?? {}) as Record<
     string,
