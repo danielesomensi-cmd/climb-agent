@@ -113,6 +113,86 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# Boulder-specific weights and session pools
+# ---------------------------------------------------------------------------
+
+_BASE_WEIGHTS_BOULDER: Dict[str, Dict[str, float]] = {
+    "base": {
+        "finger_strength": 0.20, "pulling_strength": 0.15, "power_endurance": 0.05,
+        "volume_climbing": 0.35, "technique": 0.20, "core_prehab": 0.05,
+    },
+    "strength_power": {
+        "finger_strength": 0.40, "pulling_strength": 0.25, "power_endurance": 0.10,
+        "volume_climbing": 0.10, "technique": 0.10, "core_prehab": 0.05,
+    },
+    "power_endurance": {
+        "finger_strength": 0.20, "pulling_strength": 0.15, "power_endurance": 0.30,
+        "volume_climbing": 0.20, "technique": 0.10, "core_prehab": 0.05,
+    },
+    "performance": {
+        "finger_strength": 0.15, "pulling_strength": 0.10, "power_endurance": 0.15,
+        "volume_climbing": 0.30, "technique": 0.25, "core_prehab": 0.05,
+    },
+    "deload": {
+        "finger_strength": 0.05, "pulling_strength": 0.05, "power_endurance": 0.05,
+        "volume_climbing": 0.10, "technique": 0.05, "core_prehab": 0.10,
+    },
+}
+
+_SESSION_POOL_BOULDER: Dict[str, Dict[str, str]] = {
+    "base": {
+        "boulder_circuit_gym": "primary",
+        "technique_focus_gym": "primary",
+        "finger_maintenance_home": "primary",
+        "prehab_maintenance": "primary",
+        "flexibility_full": "available",
+        "handstand_practice": "available",
+        "complementary_conditioning": "available",
+        "core_training": "available",
+    },
+    "strength_power": {
+        "power_contact_gym": "primary",
+        "strength_long": "primary",
+        "finger_strength_home": "primary",
+        "prehab_maintenance": "primary",
+        "technique_focus_gym": "available",
+        "flexibility_full": "available",
+        "handstand_practice": "available",
+        "complementary_conditioning": "available",
+        "core_training": "available",
+    },
+    "power_endurance": {
+        "boulder_circuit_gym": "primary",
+        "prehab_maintenance": "primary",
+        "technique_focus_gym": "available",
+        "finger_strength_home": "available",
+        "flexibility_full": "available",
+        "core_training": "available",
+    },
+    "performance": {
+        "technique_focus_gym": "primary",
+        "prehab_maintenance": "primary",
+        "power_contact_gym": "available",
+        "finger_strength_home": "available",
+        "flexibility_full": "available",
+        "handstand_practice": "available",
+        "core_training": "available",
+    },
+    "deload": {
+        "regeneration_easy": "primary",
+        "flexibility_full": "primary",
+        "yoga_recovery": "primary",
+        "prehab_maintenance": "primary",
+        "easy_climbing_deload": "available",
+    },
+}
+
+_BASE_DURATIONS_BOULDER: Dict[str, int] = {
+    "base": 2, "strength_power": 4, "power_endurance": 1,
+    "performance": 2, "deload": 1,
+}
+
 
 # ---------------------------------------------------------------------------
 # Phase duration computation
@@ -137,24 +217,33 @@ _BASE_DURATIONS: Dict[str, int] = {
 }
 
 
-def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> Dict[str, int]:
+def _compute_phase_durations(
+    profile: Dict[str, int],
+    total_weeks: int = 12,
+    discipline: str = "lead",
+) -> Dict[str, int]:
     """Compute phase durations based on assessment profile.
 
-    Base allocation (12 weeks):
+    Base allocation (12 weeks lead):
         base: 4, strength_power: 3, power_endurance: 2, performance: 2, deload: 1
+
+    Boulder allocation (10 weeks):
+        base: 2, strength_power: 4, power_endurance: 1, performance: 2, deload: 1
 
     Adjustments based on weakest axes (score < 50).
 
     Raises:
         ValueError: If total_weeks < 9 (minimum structural requirement).
     """
-    if total_weeks < _MIN_TOTAL_WEEKS:
+    min_weeks = 5 if discipline == "boulder" else _MIN_TOTAL_WEEKS
+    if total_weeks < min_weeks:
         raise ValueError(
-            f"total_weeks must be >= {_MIN_TOTAL_WEEKS} "
-            f"(4 phases × 2 weeks + 1 deload), got {total_weeks}"
+            f"total_weeks must be >= {min_weeks} "
+            f"(minimum structural requirement), got {total_weeks}"
         )
 
-    durations = dict(_BASE_DURATIONS)
+    base_dur = _BASE_DURATIONS_BOULDER if discipline == "boulder" else _BASE_DURATIONS
+    durations = dict(base_dur)
 
     # Find the weakest axis
     weakest_axis = None
@@ -166,28 +255,32 @@ def _compute_phase_durations(profile: Dict[str, int], total_weeks: int = 12) -> 
             weakest_axis = axis
 
     # Apply adjustment if primary weakness is below threshold
+    shrink_floor = 1 if discipline == "boulder" else 2
     if weakest_axis and weakest_score < 50 and weakest_axis in _WEAKNESS_ADJUSTMENTS:
         extend_phase, shrink_phase = _WEAKNESS_ADJUSTMENTS[weakest_axis]
-        if durations[shrink_phase] > 2:  # Don't shrink below 2
+        if durations[shrink_phase] > shrink_floor:
             durations[extend_phase] += 1
             durations[shrink_phase] -= 1
 
-    # Enforce floor: min 2 weeks per non-deload phase, min 1 for deload
+    # Enforce floor: min 1 week per non-deload phase (boulder PE can be 1),
+    # min 2 for lead non-deload phases, min 1 for deload
+    floor = 1 if discipline == "boulder" else 2
     for phase_id in ("base", "strength_power", "power_endurance", "performance"):
-        durations[phase_id] = max(2, durations[phase_id])
+        durations[phase_id] = max(floor, durations[phase_id])
     durations["deload"] = max(1, durations["deload"])
 
-    # Scale to total_weeks
+    # Scale to total_weeks — flex phase absorbs surplus/deficit
+    # Boulder: strength_power is most flexible; Lead: base is most flexible
+    flex_phase = "strength_power" if discipline == "boulder" else "base"
     current_total = sum(durations.values())
     if current_total != total_weeks:
         diff = total_weeks - current_total
-        # Add/remove from base phase (most flexible)
-        durations["base"] = max(2, durations["base"] + diff)
+        durations[flex_phase] = max(floor, durations[flex_phase] + diff)
 
     # Ensure total sums correctly — re-enforce floor after adjustment
     actual_total = sum(durations.values())
     if actual_total != total_weeks:
-        durations["base"] = max(2, durations["base"] + total_weeks - actual_total)
+        durations[flex_phase] = max(floor, durations[flex_phase] + total_weeks - actual_total)
 
     return durations
 
@@ -196,6 +289,8 @@ def _compute_remaining_durations(
     profile: Dict[str, int],
     remaining_weeks: int,
     remaining_phases: List[str],
+    *,
+    discipline: str = "lead",
 ) -> Dict[str, int]:
     """Allocate *remaining_weeks* among *remaining_phases*.
 
@@ -205,7 +300,8 @@ def _compute_remaining_durations(
     if not remaining_phases:
         return {}
 
-    durations = {p: _BASE_DURATIONS[p] for p in remaining_phases}
+    base_dur = _BASE_DURATIONS_BOULDER if discipline == "boulder" else _BASE_DURATIONS
+    durations = {p: base_dur[p] for p in remaining_phases}
 
     # --- weakness adjustment (only if both phases are in scope) ----------
     weakest_axis: Optional[str] = None
@@ -225,11 +321,12 @@ def _compute_remaining_durations(
             durations[shr] -= 1
 
     # --- floor enforcement ------------------------------------------------
+    non_deload_floor = 1 if discipline == "boulder" else 2
     for p in remaining_phases:
-        floor = 1 if p == "deload" else 2
-        durations[p] = max(floor, durations[p])
+        fl = 1 if p == "deload" else non_deload_floor
+        durations[p] = max(fl, durations[p])
 
-    min_needed = sum(1 if p == "deload" else 2 for p in remaining_phases)
+    min_needed = sum(1 if p == "deload" else non_deload_floor for p in remaining_phases)
     if remaining_weeks < min_needed:
         # Not enough weeks — give minimum to each, deload shrinks first
         durations = {}
@@ -298,9 +395,10 @@ def _adjust_domain_weights(
     return adjusted
 
 
-def _build_session_pool(phase_id: str) -> List[str]:
+def _build_session_pool(phase_id: str, discipline: str = "lead") -> List[str]:
     """Return the ordered session pool for a phase."""
-    pool_def = _SESSION_POOL.get(phase_id, {})
+    pool_map = _SESSION_POOL_BOULDER if discipline == "boulder" else _SESSION_POOL
+    pool_def = pool_map.get(phase_id, {})
     # Primary sessions first, then available
     primary = sorted(k for k, v in pool_def.items() if v == "primary")
     available = sorted(k for k, v in pool_def.items() if v == "available")
@@ -387,6 +485,7 @@ def generate_macrocycle(
     goal_warnings = _validate_goal(goal)
     trips = user_state.get("trips") or []
     start = datetime.strptime(start_date, "%Y-%m-%d").date()
+    discipline = goal.get("discipline", "lead")
 
     # --- decide which phases to keep vs regenerate ------------------------
     if from_phase:
@@ -410,11 +509,12 @@ def generate_macrocycle(
                          if PHASE_ORDER.index(pid) >= from_idx]
         durations = _compute_remaining_durations(
             assessment_profile, remaining_weeks, phases_to_gen,
+            discipline=discipline,
         )
         current_week = weeks_used + 1
     else:
         kept_phases = []
-        durations = _compute_phase_durations(assessment_profile, total_weeks)
+        durations = _compute_phase_durations(assessment_profile, total_weeks, discipline=discipline)
         phases_to_gen = list(PHASE_ORDER)
         current_week = 1
 
@@ -428,9 +528,10 @@ def generate_macrocycle(
         phase_start_date = start + timedelta(weeks=current_week - 1)
         phase_end_date = phase_start_date + timedelta(weeks=duration) - timedelta(days=1)
 
-        base_weights = _BASE_WEIGHTS[phase_id]
+        weights_map = _BASE_WEIGHTS_BOULDER if discipline == "boulder" else _BASE_WEIGHTS
+        base_weights = weights_map[phase_id]
         domain_weights = _adjust_domain_weights(base_weights, assessment_profile)
-        session_pool = _build_session_pool(phase_id)
+        session_pool = _build_session_pool(phase_id, discipline=discipline)
 
         pretrip_trips = _check_pretrip_overlap(
             trips,
@@ -475,6 +576,7 @@ def generate_macrocycle(
         "end_date": end_date.isoformat(),
         "goal_snapshot": {
             "goal_type": goal.get("goal_type"),
+            "discipline": discipline,
             "target_grade": goal.get("target_grade"),
             "current_grade": goal.get("current_grade"),
             "deadline": goal.get("deadline"),
