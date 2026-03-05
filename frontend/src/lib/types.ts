@@ -414,6 +414,13 @@ export interface GuidedExercise {
   blockUid: string;
   loadModel: string;
 
+  // Instruction-only blocks (warmup, mobility) — no exercise selection
+  isInstructionOnly?: boolean;
+  instructionNotes?: string[];
+  instructionOptions?: string[];
+  instructionFocus?: string[];
+  instructionDuration?: [number, number];
+
   prescription: {
     sets?: number;
     reps?: string | number;

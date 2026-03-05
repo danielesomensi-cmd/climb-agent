@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, SkipForward, Lightbulb, Film } from "lucide-react";
+import { Check, SkipForward, Lightbulb, Film, Info, Timer } from "lucide-react";
 import type { GuidedExercise } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 
@@ -133,6 +133,79 @@ export function GuidedExerciseStep({
   const prescriptionLines = formatPrescription(exercise);
   const isAlreadyDone = exercise.status === "done";
   const isAlreadySkipped = exercise.status === "skipped";
+
+  // Instruction-only block (warmup, mobility) — simplified UI
+  if (exercise.isInstructionOnly) {
+    return (
+      <Card className="gap-0 py-0 border-primary/30">
+        <CardHeader className="py-4">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Info className="size-4 text-primary shrink-0" />
+              <CardTitle className="text-base">{exercise.name}</CardTitle>
+            </div>
+            {isAlreadyDone && (
+              <Badge className="bg-green-600 text-white text-[10px]">Done</Badge>
+            )}
+          </div>
+          {exercise.category && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {exercise.category.replace(/_/g, " ")}
+            </p>
+          )}
+        </CardHeader>
+        <CardContent className="pb-4 space-y-3">
+          {exercise.instructionDuration && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <Timer className="size-3.5 text-muted-foreground" />
+              <span>{exercise.instructionDuration[0]}–{exercise.instructionDuration[1]} min</span>
+            </div>
+          )}
+          {exercise.instructionNotes && exercise.instructionNotes.length > 0 && (
+            <div className="space-y-1">
+              {exercise.instructionNotes.map((note, i) => (
+                <p key={i} className="text-sm text-muted-foreground">{note}</p>
+              ))}
+            </div>
+          )}
+          {exercise.instructionOptions && exercise.instructionOptions.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Options:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {exercise.instructionOptions.map((opt) => (
+                  <Badge key={opt} variant="outline" className="text-[10px]">
+                    {opt.replace(/_/g, " ")}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {exercise.instructionFocus && exercise.instructionFocus.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Focus:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {exercise.instructionFocus.map((f) => (
+                  <Badge key={f} variant="outline" className="text-[10px]">
+                    {f.replace(/_/g, " ")}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex items-center gap-2 pt-2">
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white flex-1"
+              onClick={() => onDone("ok")}
+            >
+              <Check className="size-4 mr-1" />
+              {isAlreadyDone ? "Done" : "Done"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   function handleDone() {
     if (isTestMeasurement) {

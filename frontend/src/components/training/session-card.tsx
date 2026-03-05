@@ -62,6 +62,75 @@ function getLocationLabel(session: SessionSlot, gyms?: Gym[]): string {
   return "Gym";
 }
 
+/** Build a GuidedExercise from a resolver exercise instance */
+function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
+  const prescription = (inst.prescription ?? {}) as Record<string, unknown>;
+  const suggested = (inst.suggested ?? {}) as Record<string, unknown>;
+  const boulderTarget = (suggested.suggested_boulder_target ?? {}) as Record<string, unknown>;
+
+  return {
+    exerciseId: (inst.exercise_id as string) ?? "",
+    name: (inst.name as string) ?? ((inst.exercise_id as string) ?? "").replace(/_/g, " "),
+    category: (inst.category as string) ?? "",
+    blockUid: (inst.block_uid as string) ?? "",
+    loadModel: (inst.load_model as string) ?? "",
+    prescription: {
+      sets: prescription.sets as number | undefined,
+      reps: prescription.reps != null ? (prescription.reps as string | number) : undefined,
+      workSeconds: (prescription.work_seconds ?? prescription.hang_seconds ?? prescription.duration_seconds) as number | undefined,
+      restBetweenRepsSeconds: prescription.rest_between_reps_seconds as number | undefined,
+      restSeconds: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
+      loadKg: prescription.load_kg as number | undefined,
+      tempo: prescription.tempo as string | undefined,
+      notes: prescription.notes as string | undefined,
+      intensityPct: (inst.attributes as Record<string, unknown> | undefined)?.intensity_pct as number | undefined,
+    },
+    suggested: {
+      externalLoadKg: suggested.suggested_external_load_kg as number | undefined,
+      totalLoadKg: suggested.suggested_total_load_kg as number | undefined,
+      grade: (suggested.suggested_grade as string | undefined) ?? (boulderTarget.target_grade as string | undefined),
+      repScheme: suggested.suggested_rep_scheme as string | undefined,
+      surface: boulderTarget.surface_selected as string | undefined,
+      loadSource: suggested.load_source as string | undefined,
+      loadWarning: suggested.load_warning as string | undefined,
+    },
+    videoUrl: (inst.video_url as string | undefined) ?? undefined,
+    cues: (inst.cues as string[] | undefined) ?? undefined,
+    status: "pending",
+    feedbackLabel: "ok",
+    testField: (inst.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
+    testUnit: (inst.attributes as Record<string, unknown> | undefined)?.test_unit as string | undefined,
+  };
+}
+
+/** Build a GuidedExercise from an instruction_only block */
+function buildInstructionStep(block: Record<string, unknown>): GuidedExercise {
+  const instructions = (block.instructions ?? {}) as Record<string, unknown>;
+  const notes = (instructions.notes ?? []) as string[];
+  const options = (instructions.options ?? []) as string[];
+  const focus = (instructions.focus ?? []) as string[];
+  const duration = instructions.duration_min_range as [number, number] | undefined;
+  const blockId = (block.block_id as string) ?? "";
+  const blockType = (block.type as string) ?? "";
+
+  return {
+    exerciseId: `instruction_${blockId}`,
+    name: blockId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+    category: blockType,
+    blockUid: (block.block_uid as string) ?? blockId,
+    loadModel: "",
+    isInstructionOnly: true,
+    instructionNotes: notes.length > 0 ? notes : undefined,
+    instructionOptions: options.length > 0 ? options : undefined,
+    instructionFocus: focus.length > 0 ? focus : undefined,
+    instructionDuration: duration,
+    prescription: {},
+    suggested: {},
+    status: "pending",
+    feedbackLabel: "ok",
+  };
+}
+
 /** Build GuidedSessionState from a resolved session slot */
 function buildGuidedState(
   session: SessionSlot,
@@ -70,47 +139,39 @@ function buildGuidedState(
   const resolved = session.resolved as Record<string, unknown> | undefined;
   const resolvedSession = resolved?.resolved_session as Record<string, unknown> | undefined;
   const instances = (resolvedSession?.exercise_instances ?? []) as Array<Record<string, unknown>>;
-  if (instances.length === 0) return null;
+  const blocks = (resolvedSession?.blocks ?? []) as Array<Record<string, unknown>>;
+  if (instances.length === 0 && blocks.length === 0) return null;
 
-  const exercises: GuidedExercise[] = instances.map((inst) => {
-    const prescription = (inst.prescription ?? {}) as Record<string, unknown>;
-    const suggested = (inst.suggested ?? {}) as Record<string, unknown>;
-    const boulderTarget = (suggested.suggested_boulder_target ?? {}) as Record<string, unknown>;
+  // Build ordered exercise list: interleave instruction blocks with exercise instances
+  const exercises: GuidedExercise[] = [];
+  const usedInstances = new Set<number>();
 
-    return {
-      exerciseId: (inst.exercise_id as string) ?? "",
-      name: (inst.name as string) ?? ((inst.exercise_id as string) ?? "").replace(/_/g, " "),
-      category: (inst.category as string) ?? "",
-      blockUid: (inst.block_uid as string) ?? "",
-      loadModel: (inst.load_model as string) ?? "",
-      prescription: {
-        sets: prescription.sets as number | undefined,
-        reps: prescription.reps != null ? (prescription.reps as string | number) : undefined,
-        workSeconds: (prescription.work_seconds ?? prescription.hang_seconds ?? prescription.duration_seconds) as number | undefined,
-        restBetweenRepsSeconds: prescription.rest_between_reps_seconds as number | undefined,
-        restSeconds: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
-        loadKg: prescription.load_kg as number | undefined,
-        tempo: prescription.tempo as string | undefined,
-        notes: prescription.notes as string | undefined,
-        intensityPct: (inst.attributes as Record<string, unknown> | undefined)?.intensity_pct as number | undefined,
-      },
-      suggested: {
-        externalLoadKg: suggested.suggested_external_load_kg as number | undefined,
-        totalLoadKg: suggested.suggested_total_load_kg as number | undefined,
-        grade: (suggested.suggested_grade as string | undefined) ?? (boulderTarget.target_grade as string | undefined),
-        repScheme: suggested.suggested_rep_scheme as string | undefined,
-        surface: boulderTarget.surface_selected as string | undefined,
-        loadSource: suggested.load_source as string | undefined,
-        loadWarning: suggested.load_warning as string | undefined,
-      },
-      videoUrl: (inst.video_url as string | undefined) ?? undefined,
-      cues: (inst.cues as string[] | undefined) ?? undefined,
-      status: "pending",
-      feedbackLabel: "ok",
-      testField: (inst.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
-      testUnit: (inst.attributes as Record<string, unknown> | undefined)?.test_unit as string | undefined,
-    };
-  });
+  for (const block of blocks) {
+    const blockUid = (block.block_uid as string) ?? "";
+    const selExercises = (block.selected_exercises ?? []) as unknown[];
+
+    if (selExercises.length === 0 && block.instructions) {
+      // Instruction-only block — add as informational step
+      exercises.push(buildInstructionStep(block));
+    } else {
+      // Block with exercises — find matching instances by block_uid
+      for (let i = 0; i < instances.length; i++) {
+        if (!usedInstances.has(i) && (instances[i].block_uid as string) === blockUid) {
+          exercises.push(buildGuidedExercise(instances[i]));
+          usedInstances.add(i);
+        }
+      }
+    }
+  }
+
+  // Append any instances not matched to blocks (safety fallback)
+  for (let i = 0; i < instances.length; i++) {
+    if (!usedInstances.has(i)) {
+      exercises.push(buildGuidedExercise(instances[i]));
+    }
+  }
+
+  if (exercises.length === 0) return null;
 
   // Extract bodyweight from resolved exercise suggested data (avoid async fetch)
   let bodyweightKg: number | undefined;
@@ -238,45 +299,91 @@ export function SessionCard({
       {/* Expanded content */}
       {expanded && (
         <CardContent className="pt-0 pb-3 space-y-3">
-          {/* Exercise list from resolved session */}
+          {/* Exercise list from resolved session (with instruction blocks) */}
           {(() => {
-            const instances = (
+            const rs = (
               session.resolved as Record<string, unknown> | undefined
             )?.resolved_session as Record<string, unknown> | undefined;
-            const exercises = (instances?.exercise_instances ?? []) as Array<Record<string, unknown>>;
-            if (exercises.length > 0) {
+            const allInstances = (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
+            const allBlocks = (rs?.blocks ?? []) as Array<Record<string, unknown>>;
+
+            if (allInstances.length === 0 && allBlocks.length === 0) {
               return (
-                <div className="space-y-1.5">
-                  {exercises.map((ex, i) => {
-                    const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
-                    const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
-                    const exerciseId = (ex.exercise_id as string) ?? "";
-                    return (
-                      <ExerciseCard
-                        key={`${exerciseId}-${i}`}
-                        exercise={{
-                          exercise_id: exerciseId,
-                          name: (ex.name as string) ?? exerciseId.replace(/_/g, " ") ?? "",
-                          sets: prescription.sets as number | undefined,
-                          reps: prescription.reps != null ? String(prescription.reps) : undefined,
-                          load_kg: prescription.load_kg as number | undefined,
-                          rest_s: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
-                          tempo: prescription.tempo as string | undefined,
-                          notes: prescription.notes as string | undefined,
-                          suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
-                          suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
-                          load_source: suggested.load_source as string | undefined,
-                        }}
-                        feedbackLevel={session.exercise_feedback?.[exerciseId]}
-                      />
-                    );
-                  })}
+                <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                  No exercises resolved
                 </div>
               );
             }
+
+            // Build ordered list: instruction blocks + exercise cards
+            const items: Array<{ type: "instruction"; block: Record<string, unknown> } | { type: "exercise"; inst: Record<string, unknown> }> = [];
+            const usedIdx = new Set<number>();
+
+            for (const block of allBlocks) {
+              const blockUid = (block.block_uid as string) ?? "";
+              const selEx = (block.selected_exercises ?? []) as unknown[];
+
+              if (selEx.length === 0 && block.instructions) {
+                items.push({ type: "instruction", block });
+              } else {
+                for (let i = 0; i < allInstances.length; i++) {
+                  if (!usedIdx.has(i) && (allInstances[i].block_uid as string) === blockUid) {
+                    items.push({ type: "exercise", inst: allInstances[i] });
+                    usedIdx.add(i);
+                  }
+                }
+              }
+            }
+            for (let i = 0; i < allInstances.length; i++) {
+              if (!usedIdx.has(i)) items.push({ type: "exercise", inst: allInstances[i] });
+            }
+
             return (
-              <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
-                No exercises resolved
+              <div className="space-y-1.5">
+                {items.map((item, i) => {
+                  if (item.type === "instruction") {
+                    const instr = (item.block.instructions ?? {}) as Record<string, unknown>;
+                    const notes = (instr.notes ?? []) as string[];
+                    const dur = instr.duration_min_range as [number, number] | undefined;
+                    const blockId = (item.block.block_id as string) ?? "";
+                    return (
+                      <div key={`instr-${i}`} className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                        <span className="text-primary mt-0.5 text-xs font-medium shrink-0">
+                          {dur ? `${dur[0]}–${dur[1]} min` : ""}
+                        </span>
+                        <div className="text-xs text-muted-foreground">
+                          <span className="font-medium text-foreground">
+                            {blockId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                          </span>
+                          {notes[0] && <span className="ml-1">— {notes[0]}</span>}
+                        </div>
+                      </div>
+                    );
+                  }
+                  const ex = item.inst;
+                  const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
+                  const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
+                  const exerciseId = (ex.exercise_id as string) ?? "";
+                  return (
+                    <ExerciseCard
+                      key={`${exerciseId}-${i}`}
+                      exercise={{
+                        exercise_id: exerciseId,
+                        name: (ex.name as string) ?? exerciseId.replace(/_/g, " ") ?? "",
+                        sets: prescription.sets as number | undefined,
+                        reps: prescription.reps != null ? String(prescription.reps) : undefined,
+                        load_kg: prescription.load_kg as number | undefined,
+                        rest_s: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
+                        tempo: prescription.tempo as string | undefined,
+                        notes: prescription.notes as string | undefined,
+                        suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
+                        suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
+                        load_source: suggested.load_source as string | undefined,
+                      }}
+                      feedbackLevel={session.exercise_feedback?.[exerciseId]}
+                    />
+                  );
+                })}
               </div>
             );
           })()}

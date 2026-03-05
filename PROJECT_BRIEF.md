@@ -1,6 +1,6 @@
 # climb-agent — Project Brief
 
-> Last updated: 2026-03-05 (UI-26/UI-27 UX fixes, B92 video_url audit, §4.2 complete; 736 tests)
+> Last updated: 2026-03-05 (UI-26/UI-27 UX fixes, B92 video_url audit, §4.2 complete; 741 tests)
 > Detailed source of truth: `docs/DESIGN_GOAL_MACROCICLO_v1.1.md`
 
 ---
@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 153 | 15 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +3 test_measurement; +2 legs (goblet_squat, glute_bridge) |
 | Sessions | 29 | 29 active (13 archived), +3 add-on mini-sessions (upper_body_weights, legs_strength, core_training), boulder_circuit |
 | Templates | 23 | 11 original + 9 new + 3 test (warmup, pulling/pulling_compound, antagonist, core, cooldown, 3 test protocols) |
-| Tests | 736 | all green (UI-26/UI-27, B92 video audit, §4.2 complete) |
+| Tests | 741 | all green (B93 warmup instruction blocks + variety) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 36 | 14 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 24 | 9 main views + 13 onboarding steps + root + onboarding index |
@@ -88,7 +88,7 @@ backend/
   data/
     user_state.json         ← User source of truth (v1.5)
     schemas/                ← JSON schemas for log validation
-  tests/                    ← 736 pytest tests
+  tests/                    ← 741 pytest tests
 frontend/
   src/
     app/
@@ -172,7 +172,7 @@ CLAUDE.md                   ← Context for Claude Code
 ## Commands
 
 ```bash
-# Backend tests (736 green)
+# Backend tests (741 green)
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # API dev server (exclude data dir from reload)

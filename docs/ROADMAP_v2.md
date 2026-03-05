@@ -1,6 +1,6 @@
 # ROADMAP v2 — climb-agent
 
-> Last updated: 2026-03-05 (UI-26 phase overflow fix, UI-27 week grid tooltips, B92 video_url audit; 736 test)
+> Last updated: 2026-03-05 (B93 warmup instruction blocks + variety; 741 test)
 > Fonte autoritativa per pianificazione. Allineata con PROJECT_BRIEF.md.
 
 ---
@@ -453,7 +453,7 @@ Tabella unica con TUTTI gli item tracciati.
 | UI-17 | Feedback optional + visible after submit | ✅ DONE | Batch 2 | §3 |
 | UI-18 | Exercise load/weight prescription display | ✅ DONE | 4b | §2.8 |
 | UI-19 | technique_focus_gym resolves wrong | ✅ DONE | Batch 1 | §2 |
-| UI-20 | Warmup variety (always shoulder_car) | TODO | 2.5 | §2.6 |
+| UI-20 | Warmup variety (always shoulder_car). Verified: intra-session dedup already works (L.1070). Cold-start alphabetical fallback is B28 (cross-session). Instruction_only blocks now visible via B93. (2026-03-05) | ✅ DONE | B93 | §2.6 |
 | UI-21 | Session structure info (informational) | ℹ️ | — | — |
 | UI-22 | Week view: multi-week navigation | ✅ DONE | Batch 2 | §3 |
 | FR-1 | Outdoor as availability location option | ✅ DONE | 2 | §4 |
@@ -540,6 +540,7 @@ Tabella unica con TUTTI gli item tracciati.
 | B88 | Stable gym_id at onboarding. UUID hex[:8] generato al momento della creazione gym (onboarding + equipment editor + settings). Migration on-read per utenti esistenti (`_migrate_gym_ids` in deps.py). Rimossi fallback `g.get("name")` da planner_v2 e replanner_v1. Frontend: tutti i Gym interface aggiornati con `gym_id?`, availability/gym-picker usano `gym_id` come valore. session-card risolve gym_id → nome per display. (2026-03-05) | ✅ DONE | engine+api+frontend | §4 |
 | B89 | Weekly report narrative LLM (Phase 3.5). Fase 2 del weekly report (B65). Sostituire le rule-based insights con narrative generata da LLM coach. Dipende da Phase 3.5 (LLM coach layer). | ⏩ deferred | feature/llm | §9 |
 | B90 | Cross-exercise load transfer + coherence check. `_SIMILARITY_GROUPS` definisce gruppi con coefficienti (push: bench_press↔dumbbell_bench_press 0.85×, squat: split_squat↔goblet_squat 0.80×). `_transfer_load()` in progression_v1: quando `_best_entry()` non trova match diretto, cerca nel gruppo similarità e applica coefficiente. `check_load_coherence()` segnala outlier (ratio >2× o <0.5× rispetto ad atteso). Aggiunto `dumbbell_bench_press` e `goblet_squat` a EXTERNAL_LOAD_EXERCISES. 10 nuovi test (736 totali). (2026-03-05) | ✅ DONE | engine | §2.8 |
+| B93 | Warmup completo — instruction_only blocks visibili + exercise variety. **Bug 1**: blocchi instruction_only (pulse_raise, mobility) ora visibili sia nella session card (card informativa con durata + note) sia nel guided mode (step con Done button, no feedback/RPE). `buildGuidedState()` ricostruito per interleave blocchi istruzione + esercizi in ordine corretto. **Bug 2**: intra-session dedup verificato funzionante (L.1070 in resolve_session.py — `recent_ex_ids.append()` già previene duplicati tra warmup e prehab blocks). Cross-session variety rimane B28. 5 nuovi test (741 totali). (2026-03-05) | ✅ DONE | frontend+test | §4 |
 | B92 | Video URL audit. Nulled 33 `video_url` entries from 10 non-trusted domains (latticetraining, climbing.com, gmb.io, strengthclimbing, cameronhorst, rehabhero, gripped, 99boulders, inspirerock, theprehabguys). Kept only youtube.com, hoopersbeta.com, trainingforclimbing.com. 96 URLs remaining. (2026-03-05) | ✅ DONE | catalog | §2.6 |
 | B91 | Boulder macrocycle (`goal_type: boulder_grade`). `generate_macrocycle()` detects `discipline="boulder"` from goal and applies boulder-specific parameters: shorter base (2w), longer strength_power (4-5w), 1w PE, boulder session pools (no route sessions), `_BASE_WEIGHTS_BOULDER` with finger_strength 0.40 in SP phase. Flex phase = strength_power (not base). `_build_session_pool()` accepts `discipline` param. `_compute_phase_durations()` accepts `discipline` param with boulder floor=1w per phase. Frontend already supported discipline selection in onboarding goals page. 12 new tests (726 totali). (2026-03-05) | ✅ DONE | engine | §8 |
 

@@ -49,7 +49,7 @@ function removeState(date: string, sessionId: string) {
 // Constants
 // ---------------------------------------------------------------------------
 
-const WARMUP_CATEGORIES = ["warmup_general", "warmup_specific"];
+const WARMUP_CATEGORIES = ["warmup_general", "warmup_specific", "mobility"];
 
 // ---------------------------------------------------------------------------
 // Page Component
@@ -255,9 +255,9 @@ export default function GuidedSessionPage() {
     setError(null);
 
     try {
-      // Auto-skip remaining warmups
+      // Auto-skip remaining warmups and instruction-only blocks
       const finalExercises = state.exercises.map((ex) => {
-        if (ex.status === "pending" && WARMUP_CATEGORIES.includes(ex.category)) {
+        if (ex.status === "pending" && (WARMUP_CATEGORIES.includes(ex.category) || ex.isInstructionOnly)) {
           return { ...ex, status: "skipped" as const };
         }
         return ex;
@@ -278,8 +278,8 @@ export default function GuidedSessionPage() {
         week_plan: weekPlan,
       });
 
-      // 2. Build and send feedback
-      const exerciseFeedback = finalExercises.map((ex) => {
+      // 2. Build and send feedback (exclude instruction-only blocks)
+      const exerciseFeedback = finalExercises.filter((ex) => !ex.isInstructionOnly).map((ex) => {
         const item: Record<string, unknown> = {
           exercise_id: ex.exerciseId,
           feedback_label: ex.feedbackLabel,
