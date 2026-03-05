@@ -598,8 +598,10 @@ def generate_phase_week(
             result = _find_best_slot(day_avail, meta, locations, prefer_evening=True,
                                      home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
             if result is None:
+                # Equipment/location mismatch for THIS day — don't burn a pool
+                # cycle use.  The session may fit on a later day with different
+                # equipment, so only advance the index and attempt counter.
                 primary_idx += 1
-                primary_uses += 1
                 attempts += 1
                 continue  # try next session for SAME day
 
@@ -742,7 +744,6 @@ def generate_phase_week(
                                      home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
             if result is None:
                 comp_idx += 1
-                comp_uses += 1
                 attempts += 1
                 continue  # try next session for SAME day
 
