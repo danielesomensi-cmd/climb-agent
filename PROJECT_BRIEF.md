@@ -118,7 +118,7 @@ frontend/
       whats-next/           ← roadmap-section, feature-item, feedback-section
       settings/             ← availability-editor, equipment-editor, goal-editor
     lib/
-      api.ts                ← API client (30 endpoint functions)
+      api.ts                ← API client (34 endpoint functions)
       types.ts              ← TypeScript interfaces
       hooks/use-state.ts    ← useUserState hook
 docs/

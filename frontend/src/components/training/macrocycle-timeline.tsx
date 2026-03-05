@@ -69,14 +69,14 @@ export function MacrocycleTimeline({
               <div
                 key={phase.phase_id}
                 className={cn(
-                  "flex items-center justify-center text-xs font-medium truncate px-1",
+                  "flex items-center justify-center text-[10px] sm:text-xs font-medium px-0.5 sm:px-1 leading-tight text-center",
                   bgColor,
                   txtColor
                 )}
                 style={{ width: `${widthPct}%` }}
                 title={`${phase.phase_name} — ${phase.duration_weeks} wk`}
               >
-                {widthPct > 10 ? label : ""}
+                {widthPct > 8 ? label : ""}
               </div>
             );
           })}
@@ -106,7 +106,7 @@ export function MacrocycleTimeline({
               className="text-center"
               style={{ width: `${widthPct}%` }}
             >
-              <p className="text-[10px] font-medium text-muted-foreground truncate">
+              <p className="text-[10px] font-medium text-muted-foreground leading-tight break-words">
                 {label}
               </p>
               <p className="text-[10px] text-muted-foreground">

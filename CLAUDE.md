@@ -54,7 +54,7 @@ frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
                      # guided/ (session-timer, progress-bar, exercise-step, summary)
                      # whats-next/ (roadmap-section, feature-item, feedback-section)
                      # settings/ (equipment-editor, goal-editor)
-  src/lib/           # api.ts (30 endpoint functions), types.ts, hooks/
+  src/lib/           # api.ts (34 endpoint functions), types.ts, hooks/
 docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, ROADMAP_v2.md, audit_post_fix.md, e2e_test_results.md
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```

@@ -223,6 +223,16 @@ export const getOutdoorStats = (since?: string) =>
     `/api/outdoor/stats${since ? `?since=${since}` : ""}`
   );
 
+export const convertOutdoorSlot = (data: {
+  date: string;
+  new_location: string;
+  gym_id?: string;
+}) =>
+  request<{ status: string; suggestions: Array<Record<string, unknown>> }>("/api/outdoor/convert-slot", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
 // User backup
 export async function exportUserState(): Promise<void> {
   const userId = getUserId();

@@ -87,8 +87,11 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick }: WeekGridProps) {
               {formatDateCompact(day.date)}
             </p>
 
-            {/* Status indicator (colored dot) */}
-            <div className="flex items-center justify-center gap-1 mt-1">
+            {/* Status indicator (colored dot + session count) */}
+            <div
+              className="flex items-center justify-center gap-1 mt-1"
+              title={`${sessionCount} session${sessionCount !== 1 ? "s" : ""} · ${status}`}
+            >
               <span
                 className={cn(
                   "inline-block size-2 rounded-full",
@@ -98,6 +101,7 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick }: WeekGridProps) {
               {sessionCount > 0 && (
                 <span className="text-[10px] text-muted-foreground">
                   {sessionCount}
+                  <span className="sr-only"> sessions</span>
                 </span>
               )}
             </div>

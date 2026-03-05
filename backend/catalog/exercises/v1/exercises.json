@@ -511,7 +511,7 @@
         "53s rest = full PCr resynthesis",
         "Last set should feel very hard but form perfect"
       ],
-      "video_url": "https://www.cameronhorst.com/media/v/new-video-k65jc-wnbzb",
+      "video_url": null,
       "load_model": "total_load",
       "attributes": {
         "edge_mm": 20,
@@ -835,7 +835,7 @@
         "Shoulder stable and packed",
         "Progress by reducing assistance"
       ],
-      "video_url": "https://www.cameronhorst.com/media",
+      "video_url": null,
       "load_model": "total_load",
       "attributes": {
         "edge_mm": 20,
@@ -1049,7 +1049,7 @@
         "Move continuously: traverses, up-downs, linking easy problems. Stop = failed set",
         "Breathing stays conversational throughout — you should be able to talk normally"
       ],
-      "video_url": "https://latticetraining.com/blog/what-is-endurance-training-in-climbing/",
+      "video_url": null,
       "load_model": "grade_relative"
     },
     {
@@ -1298,7 +1298,7 @@
         "Scapulae depress and retract as you pull — no shrugging",
         "Controlled 2-3s lowering — no dropping"
       ],
-      "video_url": "https://latticetraining.com/2023/05/25/pull-up-workout-session-upper-body-strength-for-climbing/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -1886,7 +1886,7 @@
         "If too hard: tuck-sit (bent knees) first, then one leg extended",
         "Engage quads aggressively — soft legs kill the position"
       ],
-      "video_url": "https://www.climbing.com/skills/how-to-do-a-front-lever/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -2381,7 +2381,7 @@
         "3-5 reps max per set while velocity is maintained",
         "If reps slow down — rest longer or end set"
       ],
-      "video_url": "https://latticetraining.com/2023/05/25/pull-up-workout-session-upper-body-strength-for-climbing/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -2584,7 +2584,7 @@
         "Eyes and mind can wander — ARC should be so easy it is almost boring",
         "After the set, hold arms above heart for 10-15s then shake out to clear blood"
       ],
-      "video_url": "https://latticetraining.com/blog/what-is-endurance-training-in-climbing/",
+      "video_url": null,
       "load_model": "grade_relative"
     },
     {
@@ -2633,7 +2633,7 @@
         "60s rest: arms down, shake out actively, breathe. Not a full recovery — that is intentional",
         "6 sets total. Sets 5-6 will feel harder — that metabolic accumulation is the training stimulus"
       ],
-      "video_url": "https://latticetraining.com/blog/training-series-endurance/",
+      "video_url": null,
       "load_model": "grade_relative"
     },
     {
@@ -2685,7 +2685,7 @@
         "Boulderers: use the spray wall or traverse at a grade where top moves feel like warm-up",
         "After 4-6 weeks of continuity, transition to ARC for longer continuous sets"
       ],
-      "video_url": "https://latticetraining.com/blog/training-series-endurance/",
+      "video_url": null,
       "load_model": "grade_relative"
     },
     {
@@ -2732,7 +2732,7 @@
         "Conversational pace: ideal session to climb and talk with a partner simultaneously",
         "~10 min per lap. 2 min rest between laps. Total 4 laps = ~50 min gentle movement"
       ],
-      "video_url": "https://latticetraining.com/blog/what-is-endurance-training-in-climbing/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -2779,7 +2779,7 @@
         "Mix movement patterns: cross-through, step-through, flagging. Use traverse as technique time",
         "Hands near heart level on vertical sections — on slab traverses this is automatic"
       ],
-      "video_url": "https://www.climbing.com/skills/climbing-training-complete-guide-part-two-low-intensity-endurance/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -3281,7 +3281,7 @@
         "Hollow body throughout: squeeze glutes and brace deep abs",
         "Stop 1-2s before complete failure on each set — distribute effort across all sets"
       ],
-      "video_url": "https://www.climbing.com/skills/how-to-do-a-front-lever/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -3851,7 +3851,7 @@
         "Mild discomfort during eccentric is normal and expected",
         "Sharp pain = stop immediately"
       ],
-      "video_url": "https://strengthclimbing.com/elbow-pain-the-ultimate-guide-for-rock-climbers/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -3900,7 +3900,7 @@
         "Slow and deliberate: aim for 10+ seconds per full rotation",
         "Note any pinching or restriction — these are signals, not to push through"
       ],
-      "video_url": "https://www.rehabhero.ca/exercise/shoulder-car",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -3952,7 +3952,7 @@
         "Grade 2 below onsight — this is not a fitness drill, it is a precision drill",
         "Practice every warm-up set: silent feet is a lifetime habit, not a beginner exercise"
       ],
-      "video_url": "https://www.climbing.com/skills/how-to-improve-footwork-climbing/",
+      "video_url": null,
       "load_model": "grade_relative",
       "focus": "footwork"
     },
@@ -4005,7 +4005,7 @@
         "Grade 2 below onsight so upper body is not a limiting factor",
         "Progress: move closer to onsight grade while maintaining zero readjusts"
       ],
-      "video_url": "https://www.climbing.com/skills/how-to-improve-your-footwork-for-climbing-2/",
+      "video_url": null,
       "load_model": "grade_relative",
       "focus": "footwork"
     },
@@ -4058,7 +4058,7 @@
         "Grade 1-2 below onsight so movement quality can be maintained throughout",
         "Downclimb all warm-up sets — make it a session default, not an occasional drill"
       ],
-      "video_url": "https://gripped.com/indoor-climbing/five-fun-drills-to-improve-your-climbing-footwork/",
+      "video_url": null,
       "load_model": "grade_relative",
       "focus": "movement"
     },
@@ -4258,7 +4258,7 @@
         "Climb 2-3 grades below max to maintain focus",
         "Zero readjustments allowed after initial placement"
       ],
-      "video_url": "https://www.99boulders.com/bouldering-footwork-drills",
+      "video_url": null,
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4503,7 +4503,7 @@
         "Climb 2-3 grades below max to maintain focus",
         "Focus on toe tip precision, not full-foot smearing"
       ],
-      "video_url": "https://inspirerock.com/3-drills-to-improve-your-footwork/",
+      "video_url": null,
       "load_model": "bodyweight_only",
       "attributes": {}
     },
@@ -4945,7 +4945,7 @@
         "Eyes look at the floor between hands — do not look at the wall",
         "20s hold is the entry target — build to 60s before progressing"
       ],
-      "video_url": "https://gmb.io/handstand/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -4995,7 +4995,7 @@
         "Speed is the enemy: slow, controlled movements improve stability and strength",
         "2 reps = 1 up and 1 down controlled"
       ],
-      "video_url": "https://gmb.io/handstand/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -5045,7 +5045,7 @@
         "Core and glutes must remain tight — no hip sag during the tap",
         "If hips rotate during taps, reduce rep count and focus on core tension first"
       ],
-      "video_url": "https://gmb.io/handstand/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -5094,7 +5094,7 @@
         "Pirouetting out of failed attempts is safer than crashing — learn cartwheel bail",
         "Track freestanding seconds per session — improvement is measured in seconds, not minutes"
       ],
-      "video_url": "https://gmb.io/handstand/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -5145,7 +5145,7 @@
         "Stop at the first rep where lockout is incomplete — do not grind through form breakdown",
         "Pike push-up is the direct regression if reps are not achievable"
       ],
-      "video_url": "https://gmb.io/handstand/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -5443,7 +5443,7 @@
         "Rehearse the crux section individually during rest if execution was messy",
         "Plan attempts around peak freshness: first or second attempt of the session is usually best"
       ],
-      "video_url": "https://latticetraining.com/blog/training-series-endurance/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -6280,7 +6280,7 @@
         "If problems are taking >35 seconds, they are too hard: switch to lower grade",
         "Progress: add 1 problem per session, not 1 grade. Volume before intensity."
       ],
-      "video_url": "https://www.climbing.com/gym-climbing/train-endurance-by-bouldering-bechtel/"
+      "video_url": null
     },
     {
       "id": "linked_boulders_circuit",
@@ -6391,7 +6391,7 @@
         "Keep a timer visible: knowing the remaining time helps pace the effort mentally",
         "300s rest between sets is a minimum — take more if needed to fully recover"
       ],
-      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+      "video_url": null
     },
     {
       "id": "threshold_long_intervals",
@@ -6444,7 +6444,7 @@
         "60s rest: walk, shake out, breathe deeply. Partial recovery is intentional",
         "Same set count and rest structure as threshold_climbing — sessions are interchangeable in programming"
       ],
-      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+      "video_url": null
     },
     {
       "id": "regeneration_climbing",
@@ -6497,7 +6497,7 @@
         "After a hard session: use this to flush lactate and restore forearm blood flow before leaving the gym",
         "Duration flexible: 20 min minimum, but 30+ min gives a stronger aerobic stimulus"
       ],
-      "video_url": "https://latticetraining.com/blog/what-is-endurance-training-in-climbing/"
+      "video_url": null
     },
     {
       "id": "pronator_terres_isometric_hold",
@@ -6738,7 +6738,7 @@
         "Feel shoulder blades spread and rotate outward at the top",
         "Slow and controlled: 5s up, 5s down"
       ],
-      "video_url": "https://theprehabguys.com/rock-climbing-prehab-exercises/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -6788,7 +6788,7 @@
         "Controlled speed in both directions, no snapping",
         "Submaximal: this is health work, stop if any pulley pain"
       ],
-      "video_url": "https://strengthclimbing.com/dr-tyler-nelsons-new-active-finger-strength-training-protocols/",
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -6893,7 +6893,7 @@
         "For strength-endurance: choose a hold where mild pump builds by 3-4 min",
         "After dismounting: hold arms above heart level for 10s, then shake out slowly"
       ],
-      "video_url": "https://strengthclimbing.com/eric-horst-hangboard-moving-hangs-climbing-training-endurance-protocol/"
+      "video_url": null
     },
     {
       "id": "thirty_thirty_intervals",
@@ -7110,7 +7110,7 @@
         "If pump builds by round 6-7, you are too hard: grade down next session",
         "1 min rest: arms below heart level, shake out, breathe. Full but not excessive"
       ],
-      "video_url": "https://latticetraining.com/blog/training-series-endurance/"
+      "video_url": null
     },
     {
       "id": "aerobic_pyramid_intervals",
