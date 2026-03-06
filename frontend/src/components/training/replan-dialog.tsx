@@ -25,7 +25,7 @@ interface ReplanDialogProps {
   onApply: (data: { intent: string; location: string; gym_id?: string }) => void;
 }
 
-const INDOOR_INTENT_OPTIONS = [
+const INTENT_OPTIONS = [
   { value: "rest", label: "Rest", description: "Full rest day" },
   { value: "recovery", label: "Easy", description: "Light recovery or yoga" },
   { value: "projecting", label: "Projecting", description: "Try your project route/boulder" },
@@ -34,13 +34,6 @@ const INDOOR_INTENT_OPTIONS = [
   { value: "power_endurance", label: "Power Endurance", description: "4x4, intervals" },
   { value: "technique", label: "Technique", description: "Drills and movement quality" },
   { value: "hard", label: "Hard", description: "Full intensity session (auto-select)" },
-];
-
-const OUTDOOR_INTENT_OPTIONS = [
-  { value: "outdoor_easy", label: "Easy outdoor", description: "Easy climbing, warm-up routes" },
-  { value: "outdoor_projecting", label: "Projecting", description: "Work your project" },
-  { value: "outdoor_volume", label: "Volume routes", description: "Many routes, endurance focus" },
-  { value: "outdoor_boulder", label: "Boulder outdoor", description: "Outdoor bouldering session" },
 ];
 
 /** Format date as "15 Feb" */
@@ -66,21 +59,11 @@ export function ReplanDialog({
   const [location, setLocation] = useState<string>("gym");
   const [intent, setIntent] = useState<string>("rest");
 
-  const isOutdoor = location === "outdoor";
-  const intentOptions = isOutdoor ? OUTDOOR_INTENT_OPTIONS : INDOOR_INTENT_OPTIONS;
-
   const handleApply = () => {
     let resolvedIntent = intent;
     // For strength/hard + home, use finger_max (most common home hard session)
     if ((intent === "strength" || intent === "hard") && location === "home") {
       resolvedIntent = "finger_max";
-    }
-    if (isOutdoor) {
-      onApply({
-        intent: resolvedIntent,
-        location: "outdoor",
-      });
-      return;
     }
     const isGym = location !== "home";
     onApply({
@@ -148,20 +131,6 @@ export function ReplanDialog({
                       Gym
                     </button>
                   )}
-              <button
-                type="button"
-                className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
-                  location === "outdoor"
-                    ? "border-primary bg-primary/10 text-primary font-medium"
-                    : "border-muted text-muted-foreground hover:border-primary/40"
-                }`}
-                onClick={() => {
-                  setLocation("outdoor");
-                  setIntent("outdoor_easy");
-                }}
-              >
-                Outdoor
-              </button>
             </div>
           </div>
 
@@ -169,7 +138,7 @@ export function ReplanDialog({
           <div className="space-y-2">
             <Label className="text-sm font-medium">What do you want to do?</Label>
             <div className="space-y-1.5">
-              {intentOptions.map((opt) => (
+              {INTENT_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"

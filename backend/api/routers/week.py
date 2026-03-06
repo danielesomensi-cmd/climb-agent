@@ -172,8 +172,6 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
         )
 
         try:
-            # B95: pass today so the planner skips past days on regen
-            today_str = datetime.now().strftime("%Y-%m-%d") if is_current_week else None
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
                 domain_weights=ctx["domain_weights"],
@@ -188,7 +186,6 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
                 pretrip_dates=pretrip_dates if pretrip_dates else None,
                 is_last_week_of_phase=ctx.get("is_last_week_of_phase", False),
                 home_equipment=home_equipment,
-                today=today_str,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")
