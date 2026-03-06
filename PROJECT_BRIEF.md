@@ -20,7 +20,7 @@ Answers the question: **"Given my goal, my weaknesses, and my available time, wh
 | Exercises | 153 | 15 categories, 10 enrichment patches, grade_ref on 23 grade_relative exercises; +3 test_measurement; +2 legs (goblet_squat, glute_bridge) |
 | Sessions | 29 | 29 active (13 archived), +3 add-on mini-sessions (upper_body_weights, legs_strength, core_training), boulder_circuit |
 | Templates | 23 | 11 original + 9 new + 3 test (warmup, pulling/pulling_compound, antagonist, core, cooldown, 3 test protocols) |
-| Tests | 748 | all green (B95 other sport per-slot) |
+| Tests | 758 | all green (B95-B98: other sport per-slot, equipment-aware override, outdoor override, day status recompute) |
 | user_state | v1.5 | goal, assessment (6 axes + repeater test), trips, macrocycle |
 | API endpoints | 36 | 14 routers + health (FastAPI, CORS for Next.js) |
 | Frontend pages | 24 | 9 main views + 13 onboarding steps + root + onboarding index |

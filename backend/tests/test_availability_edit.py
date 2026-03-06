@@ -125,3 +125,70 @@ def test_no_completed_returns_new_unchanged():
     # plan_revision should be bumped
     new_rev = new_plan.get("plan_revision") or 1
     assert result["plan_revision"] == new_rev + 1
+
+
+def test_b95_no_sessions_on_past_days():
+    """B95: After regen with today in mid-week, days before today get no sessions."""
+    profile = {
+        "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
+        "technique": 50, "endurance": 40, "body_composition": 65,
+    }
+    base_weights = _BASE_WEIGHTS["base"]
+    domain_weights = _adjust_domain_weights(base_weights, profile)
+    session_pool = _build_session_pool("base")
+
+    # Week starts 2026-01-05 (Mon), today is Wed 2026-01-07
+    plan = generate_phase_week(
+        phase_id="base",
+        domain_weights=domain_weights,
+        session_pool=session_pool,
+        start_date="2026-01-05",
+        availability=_availability(),
+        allowed_locations=["home", "gym"],
+        hard_cap_per_week=3,
+        planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+        default_gym_id="work_gym",
+        gyms=[{"gym_id": "work_gym", "equipment": ["gym_boulder", "board_kilter"]}],
+        today="2026-01-07",
+    )
+
+    days = plan["weeks"][0]["days"]
+    # Mon (05) and Tue (06) are before today (07) — should have no sessions
+    for day in days:
+        if day["date"] < "2026-01-07":
+            assert day["sessions"] == [], f"Past day {day['date']} should have no sessions"
+    # At least one future day should have sessions
+    future_with_sessions = [d for d in days if d["date"] >= "2026-01-07" and d["sessions"]]
+    assert len(future_with_sessions) >= 1, "Future days should have sessions"
+
+
+def test_b95_no_today_generates_all_days():
+    """B95: Without today param, all days get sessions as before."""
+    plan = _make_plan()
+    days = plan["weeks"][0]["days"]
+    days_with_sessions = [d for d in days if d["sessions"]]
+    assert len(days_with_sessions) >= 3, "Without today, planner should fill days normally"
+
+
+def test_b98_day_status_recomputed_after_regen():
+    """B98: After regen, a day with all sessions done should have status='done'."""
+    old_plan = _make_plan()
+    new_plan = _make_plan()
+
+    # Mark ALL sessions on day 0 as done in old_plan
+    day = old_plan["weeks"][0]["days"][0]
+    assert day["sessions"], "Day 0 must have sessions for this test"
+    for s in day["sessions"]:
+        s["status"] = "done"
+    day["status"] = "done"
+
+    result = regenerate_preserving_completed(old_plan, new_plan)
+    result_day = result["weeks"][0]["days"][0]
+
+    # All sessions should still be done
+    for s in result_day["sessions"]:
+        assert s.get("status") == "done", f"Session {s['session_id']} should be done"
+    # Day-level status must be recomputed to 'done'
+    assert result_day.get("status") == "done", (
+        "Day status should be 'done' after regen when all sessions are done"
+    )
