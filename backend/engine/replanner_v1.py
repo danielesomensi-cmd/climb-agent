@@ -559,6 +559,10 @@ def regenerate_preserving_completed(
                 day.update(extras)
                 break
 
+    # Recompute day-level status from merged sessions (B98)
+    for day in (result.get("weeks") or [{}])[0].get("days", []):
+        _recompute_day_status(day)
+
     result["plan_revision"] = int(result.get("plan_revision") or 1) + 1
     return result
 
