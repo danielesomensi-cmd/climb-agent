@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Mountain, ArrowLeft } from "lucide-react";
+import { Mountain, ArrowLeft, Dumbbell } from "lucide-react";
 import { getSuggestedSessions, getSessions, getOutdoorSpots, addOutdoorSpot } from "@/lib/api";
 import type { SessionMeta, OutdoorSpot } from "@/lib/types";
 
@@ -36,6 +36,10 @@ interface QuickAddDialogProps {
     spot_name: string;
     discipline: string;
     spot_id?: string;
+  }) => void;
+  onApplyOtherSport?: (data: {
+    activity_name: string;
+    slot: string;
   }) => void;
 }
 
@@ -72,6 +76,7 @@ export function QuickAddDialog({
   onClose,
   onApply,
   onApplyOutdoor,
+  onApplyOtherSport,
 }: QuickAddDialogProps) {
   // Indoor state
   const [slot, setSlot] = useState("evening");
@@ -85,8 +90,11 @@ export function QuickAddDialog({
   const [warning, setWarning] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Other sport state
+  const [otherSportName, setOtherSportName] = useState("");
+
   // Outdoor state
-  const [mode, setMode] = useState<"indoor" | "outdoor">("indoor");
+  const [mode, setMode] = useState<"indoor" | "outdoor" | "other_sport">("indoor");
   const [spots, setSpots] = useState<OutdoorSpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<OutdoorSpot | null>(null);
   const [outdoorDiscipline, setOutdoorDiscipline] = useState<"lead" | "boulder" | "both">("lead");
@@ -105,6 +113,7 @@ export function QuickAddDialog({
       setShowAll(false);
       setWarning(null);
       setMode("indoor");
+      setOtherSportName("");
       setSelectedSpot(null);
       setAddingSpot(false);
       setNewSpotName("");
@@ -166,6 +175,11 @@ export function QuickAddDialog({
       discipline: outdoorDiscipline,
       spot_id: selectedSpot.id,
     });
+  };
+
+  const handleApplyOtherSport = () => {
+    if (!otherSportName.trim() || !onApplyOtherSport) return;
+    onApplyOtherSport({ activity_name: otherSportName.trim(), slot });
   };
 
   const handleAddSpot = async () => {
@@ -236,22 +250,83 @@ export function QuickAddDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Outdoor toggle */}
-          {onApplyOutdoor && mode === "indoor" && (
-            <button
-              type="button"
-              className="w-full rounded-lg border border-dashed border-green-500/40 p-3 text-left text-sm transition-colors hover:bg-green-500/5"
-              onClick={() => setMode("outdoor")}
-            >
-              <div className="flex items-center gap-2">
-                <Mountain className="size-4 text-green-500" />
-                <span className="font-medium">Outdoor session</span>
-                <span className="text-xs text-muted-foreground ml-auto">Crag / outdoor</span>
-              </div>
-            </button>
+          {/* Outdoor + Other sport toggles */}
+          {mode === "indoor" && (
+            <div className="space-y-2">
+              {onApplyOutdoor && (
+                <button
+                  type="button"
+                  className="w-full rounded-lg border border-dashed border-green-500/40 p-3 text-left text-sm transition-colors hover:bg-green-500/5"
+                  onClick={() => setMode("outdoor")}
+                >
+                  <div className="flex items-center gap-2">
+                    <Mountain className="size-4 text-green-500" />
+                    <span className="font-medium">Outdoor session</span>
+                    <span className="text-xs text-muted-foreground ml-auto">Crag / outdoor</span>
+                  </div>
+                </button>
+              )}
+              {onApplyOtherSport && (
+                <button
+                  type="button"
+                  className="w-full rounded-lg border border-dashed border-amber-500/40 p-3 text-left text-sm transition-colors hover:bg-amber-500/5"
+                  onClick={() => setMode("other_sport")}
+                >
+                  <div className="flex items-center gap-2">
+                    <Dumbbell className="size-4 text-amber-500" />
+                    <span className="font-medium">Other sport / activity</span>
+                    <span className="text-xs text-muted-foreground ml-auto">Running, swimming, etc.</span>
+                  </div>
+                </button>
+              )}
+            </div>
           )}
 
-          {mode === "outdoor" ? (
+          {mode === "other_sport" ? (
+            <>
+              <button
+                type="button"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setMode("indoor")}
+              >
+                <ArrowLeft className="size-3" />
+                Back to indoor sessions
+              </button>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Activity name</Label>
+                <input
+                  type="text"
+                  placeholder="e.g. Trail running, Swimming, Yoga..."
+                  value={otherSportName}
+                  onChange={(e) => setOtherSportName(e.target.value)}
+                  className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Time slot</Label>
+                <div className="flex gap-2">
+                  {SLOT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`flex-1 rounded-md border px-3 py-1.5 text-sm transition-colors ${
+                        slot === opt.value
+                          ? "border-primary bg-primary/10 text-primary font-medium"
+                          : "border-muted text-muted-foreground hover:border-primary/40"
+                      }`}
+                      onClick={() => setSlot(opt.value)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  This slot will be blocked — climbing sessions can still fill the other slots.
+                </p>
+              </div>
+            </>
+          ) : mode === "outdoor" ? (
             <>
               {/* Back to indoor */}
               <button
@@ -530,7 +605,15 @@ export function QuickAddDialog({
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          {mode === "outdoor" ? (
+          {mode === "other_sport" ? (
+            <Button
+              size="sm"
+              onClick={handleApplyOtherSport}
+              disabled={!otherSportName.trim()}
+            >
+              Add Activity
+            </Button>
+          ) : mode === "outdoor" ? (
             <Button
               size="sm"
               onClick={handleApplyOutdoor}

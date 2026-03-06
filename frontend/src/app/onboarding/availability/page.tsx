@@ -39,8 +39,7 @@ const SLOTS = [
   { key: "evening", label: "Evening" },
 ];
 
-type SlotData = { available: boolean; preferred_location: string; gym_id?: string };
-type DayMeta = { other_activity: boolean; other_activity_name?: string; reduce_intensity_after: boolean };
+type SlotData = { available: boolean; preferred_location: string; gym_id?: string; other_activity_name?: string; reduce_intensity_after?: boolean };
 
 export default function AvailabilityPage() {
   const router = useRouter();
@@ -49,35 +48,7 @@ export default function AvailabilityPage() {
   const planningPrefs = data.planning_prefs;
   const gyms = data.equipment.gyms;
 
-  const [dayMeta, setDayMeta] = useState<Record<string, DayMeta>>(
-    () => {
-      const result: Record<string, DayMeta> = {};
-      for (const day of WEEKDAYS) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const raw = (availability[day.key] as any)?._day_meta as DayMeta | undefined;
-        result[day.key] = {
-          other_activity: raw?.other_activity ?? false,
-          other_activity_name: raw?.other_activity_name ?? "",
-          reduce_intensity_after: raw?.reduce_intensity_after ?? false,
-        };
-      }
-      return result;
-    }
-  );
-
-  const saveWithMeta = () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const enriched: Record<string, Record<string, any>> = {};
-    for (const day of WEEKDAYS) {
-      enriched[day.key] = { ...(availability[day.key] ?? {}) };
-      delete enriched[day.key]._day_meta;
-      const meta = dayMeta[day.key];
-      if (meta?.other_activity) {
-        enriched[day.key]._day_meta = meta;
-      }
-    }
-    update("availability", enriched as typeof availability);
-  };
+  // No separate dayMeta state needed — other_sport is stored per-slot
 
   const getSlot = (day: string, slot: string): SlotData => {
     return availability[day]?.[slot] ?? { available: false, preferred_location: "home" };
@@ -102,8 +73,14 @@ export default function AvailabilityPage() {
     setSlot(day, slot, {
       ...current,
       preferred_location: location,
-      gym_id: location === "home" ? undefined : current.gym_id,
+      gym_id: location === "home" || location === "other_sport" ? undefined : current.gym_id,
+      other_activity_name: location === "other_sport" ? (current.other_activity_name ?? "") : undefined,
+      reduce_intensity_after: location === "other_sport" ? (current.reduce_intensity_after ?? false) : undefined,
     });
+  };
+
+  const updateSlot = (day: string, slot: string, value: SlotData) => {
+    setSlot(day, slot, value);
   };
 
   const setGymId = (day: string, slot: string, gymId: string) => {
@@ -147,16 +124,22 @@ export default function AvailabilityPage() {
                       <button
                         type="button"
                         className={`w-full rounded-md border px-2 py-2 text-xs transition-colors ${
-                          s.available
+                          s.available || s.preferred_location === "other_sport"
                             ? "border-primary bg-primary/10 text-primary font-medium"
                             : "border-muted bg-muted/30 text-muted-foreground hover:border-primary/40"
                         }`}
-                        onClick={() => toggleSlot(day.key, slot.key)}
+                        onClick={() => {
+                          if (s.preferred_location === "other_sport") {
+                            updateSlot(day.key, slot.key, { available: false, preferred_location: "home" });
+                          } else {
+                            toggleSlot(day.key, slot.key);
+                          }
+                        }}
                       >
-                        {s.available ? "Yes" : "-"}
+                        {s.preferred_location === "other_sport" ? "Other" : s.available ? "Yes" : "-"}
                       </button>
 
-                      {s.available && (
+                      {(s.available || s.preferred_location === "other_sport") && (
                         <div className="space-y-1">
                           <div className="flex gap-1">
                             <button
@@ -166,9 +149,7 @@ export default function AvailabilityPage() {
                                   ? "border-primary bg-primary/10 text-primary"
                                   : "border-muted text-muted-foreground"
                               }`}
-                              onClick={() =>
-                                setLocation(day.key, slot.key, "home")
-                              }
+                              onClick={() => setLocation(day.key, slot.key, "home")}
                             >
                               Home
                             </button>
@@ -179,20 +160,27 @@ export default function AvailabilityPage() {
                                   ? "border-primary bg-primary/10 text-primary"
                                   : "border-muted text-muted-foreground"
                               }`}
-                              onClick={() =>
-                                setLocation(day.key, slot.key, "gym")
-                              }
+                              onClick={() => setLocation(day.key, slot.key, "gym")}
                             >
                               Gym
+                            </button>
+                            <button
+                              type="button"
+                              className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
+                                s.preferred_location === "other_sport"
+                                  ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                                  : "border-muted text-muted-foreground"
+                              }`}
+                              onClick={() => setLocation(day.key, slot.key, "other_sport")}
+                            >
+                              Other
                             </button>
                           </div>
 
                           {s.preferred_location === "gym" && gyms.length > 0 && (
                             <Select
                               value={s.gym_id ?? ""}
-                              onValueChange={(v) =>
-                                setGymId(day.key, slot.key, v)
-                              }
+                              onValueChange={(v) => setGymId(day.key, slot.key, v)}
                             >
                               <SelectTrigger className="h-6 text-[10px] w-full">
                                 <SelectValue placeholder="Which?" />
@@ -209,60 +197,37 @@ export default function AvailabilityPage() {
                               </SelectContent>
                             </Select>
                           )}
+
+                          {s.preferred_location === "other_sport" && (
+                            <div className="space-y-1">
+                              <Input
+                                placeholder="e.g. Circus, Running"
+                                className="h-6 text-[10px]"
+                                value={s.other_activity_name ?? ""}
+                                onChange={(e) =>
+                                  updateSlot(day.key, slot.key, { ...s, other_activity_name: e.target.value })
+                                }
+                              />
+                              <div className="flex items-center gap-1">
+                                <Switch
+                                  id={`reduce-${day.key}-${slot.key}`}
+                                  className="scale-75"
+                                  checked={s.reduce_intensity_after ?? false}
+                                  onCheckedChange={(v) =>
+                                    updateSlot(day.key, slot.key, { ...s, reduce_intensity_after: v })
+                                  }
+                                />
+                                <Label htmlFor={`reduce-${day.key}-${slot.key}`} className="text-[10px]">
+                                  Reduce next day
+                                </Label>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Other activity controls */}
-              <div className="ml-10 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id={`other-${day.key}`}
-                    checked={dayMeta[day.key]?.other_activity ?? false}
-                    onCheckedChange={() =>
-                      setDayMeta((prev) => ({
-                        ...prev,
-                        [day.key]: { ...prev[day.key], other_activity: !prev[day.key].other_activity },
-                      }))
-                    }
-                  />
-                  <Label htmlFor={`other-${day.key}`} className="text-xs">
-                    Other sport / activity
-                  </Label>
-                </div>
-                {dayMeta[day.key]?.other_activity && (
-                  <div className="ml-8 space-y-2">
-                    <Input
-                      placeholder="Activity name (e.g. trail running)"
-                      className="h-7 text-xs"
-                      value={dayMeta[day.key]?.other_activity_name ?? ""}
-                      onChange={(e) =>
-                        setDayMeta((prev) => ({
-                          ...prev,
-                          [day.key]: { ...prev[day.key], other_activity_name: e.target.value },
-                        }))
-                      }
-                    />
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id={`reduce-${day.key}`}
-                        checked={dayMeta[day.key]?.reduce_intensity_after ?? false}
-                        onCheckedChange={(v) =>
-                          setDayMeta((prev) => ({
-                            ...prev,
-                            [day.key]: { ...prev[day.key], reduce_intensity_after: v },
-                          }))
-                        }
-                      />
-                      <Label htmlFor={`reduce-${day.key}`} className="text-xs">
-                        Reduce climbing intensity next day
-                      </Label>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           ))}
@@ -329,7 +294,7 @@ export default function AvailabilityPage() {
         >
           Back
         </Button>
-        <Button onClick={() => { saveWithMeta(); router.push("/onboarding/trips"); }}>
+        <Button onClick={() => router.push("/onboarding/trips")}>
           Next
         </Button>
       </div>

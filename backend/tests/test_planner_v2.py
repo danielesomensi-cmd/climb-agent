@@ -536,16 +536,19 @@ class TestPlannerV2LoadScore(unittest.TestCase):
 class TestPlannerV2OtherActivity(unittest.TestCase):
     """Tests for B41 — other activities in availability."""
 
-    def test_other_activity_blocks_sessions(self):
-        """Day with _day_meta.other_activity=True gets zero sessions and the flag."""
+    def test_other_activity_allows_sessions_no_hard(self):
+        """Day with _day_meta.other_activity=True still gets sessions (no hard) and the flag."""
         avail = _base_availability()
         avail["wed"]["_day_meta"] = {"other_activity": True, "other_activity_name": "Trail running"}
-        plan = generate_phase_week(**_make_kwargs("base", availability=avail))
+        plan = generate_phase_week(**_make_kwargs("strength_power", availability=avail))
         days = plan["weeks"][0]["days"]
         wed = next(d for d in days if d["weekday"] == "wed")
-        self.assertEqual(len(wed["sessions"]), 0, "Other-activity day should have no sessions")
         self.assertTrue(wed.get("other_activity"), "Missing other_activity flag")
         self.assertEqual(wed.get("other_activity_name"), "Trail running")
+        # Sessions are allowed, but no hard sessions on this day
+        for s in wed["sessions"]:
+            self.assertFalse(s["tags"]["hard"],
+                             f"Hard session {s['session_id']} on other-activity day")
 
     def test_other_activity_reduce_after(self):
         """Day after other-activity with reduce_intensity_after=True gets no hard sessions and the flag."""
@@ -565,7 +568,7 @@ class TestPlannerV2OtherActivity(unittest.TestCase):
                              f"Hard session {s['session_id']} on intensity-reduced day")
 
     def test_other_activity_no_reduce(self):
-        """Day after other-activity without reduce flag gets normal sessions."""
+        """Day after other-activity without reduce flag gets normal sessions (hard allowed)."""
         avail = _base_availability()
         avail["wed"]["_day_meta"] = {"other_activity": True}
         plan = generate_phase_week(**_make_kwargs("strength_power", availability=avail))
@@ -573,6 +576,26 @@ class TestPlannerV2OtherActivity(unittest.TestCase):
         thu = next(d for d in days if d["weekday"] == "thu")
         self.assertNotIn("prev_other_activity_reduce", thu,
                          "Should NOT have reduce flag when not requested")
+
+    def test_per_slot_other_sport_blocks_slot(self):
+        """Slot with preferred_location='other_sport' is unavailable for climbing but other slots work."""
+        avail = _base_availability()
+        # Mark Wed evening as other_sport (circus)
+        avail["wed"]["evening"] = {
+            "available": True, "preferred_location": "other_sport",
+            "other_activity_name": "Circus",
+        }
+        plan = generate_phase_week(**_make_kwargs("base", availability=avail))
+        days = plan["weeks"][0]["days"]
+        wed = next(d for d in days if d["weekday"] == "wed")
+        # The other_activity flag should be set
+        self.assertTrue(wed.get("other_activity"), "Missing other_activity flag")
+        self.assertEqual(wed.get("other_activity_name"), "Circus")
+        self.assertEqual(wed.get("other_activity_slot"), "evening")
+        # No session should be in the evening slot (blocked by other_sport)
+        for s in wed["sessions"]:
+            self.assertNotEqual(s["slot"], "evening",
+                                "Climbing session placed in other_sport slot")
 
 
 class TestEquipmentAwarePlacement(unittest.TestCase):

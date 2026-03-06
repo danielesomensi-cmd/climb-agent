@@ -506,6 +506,29 @@ function TodayContent() {
     }
   }
 
+  async function handleApplyOtherSport(data: { activity_name: string; slot: string }) {
+    if (!weekPlan || !quickAddDate) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "add_other_activity",
+            date: quickAddDate,
+            activity_name: data.activity_name,
+            slot: data.slot,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add activity");
+    } finally {
+      setQuickAddDate(null);
+    }
+  }
+
   /** Open the outdoor log form for a day */
   function handleLogOutdoor(date: string) {
     setOutdoorLogDate(date);
@@ -796,6 +819,7 @@ function TodayContent() {
         onClose={() => setQuickAddDate(null)}
         onApply={handleQuickAddApply}
         onApplyOutdoor={handleApplyOutdoor}
+        onApplyOtherSport={handleApplyOtherSport}
       />
 
       {/* Move session dialog */}

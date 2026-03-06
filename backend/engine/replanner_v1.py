@@ -300,10 +300,12 @@ def apply_day_add(
     updated.setdefault("adaptations", [])
     target_day = _find_day(updated, target_date)
 
-    # Slot conflict check
+    # Slot conflict check (sessions + other_activity slot)
     for s in target_day.get("sessions", []):
         if s.get("slot") == slot:
             raise ValueError(f"Slot '{slot}' already occupied on {target_date}")
+    if target_day.get("other_activity_slot") == slot:
+        raise ValueError(f"Slot '{slot}' already occupied by other activity on {target_date}")
 
     meta = _meta_for(session_id)
     effective_phase = phase_id or (updated.get("profile_snapshot") or {}).get("phase_id", "base")
@@ -495,7 +497,8 @@ def merge_prev_week_sessions(
 
 _DAY_LEVEL_FIELDS = (
     "outdoor_spot_name", "outdoor_spot_id", "outdoor_discipline",
-    "outdoor_session_status", "other_activity_status",
+    "outdoor_session_status", "other_activity", "other_activity_name",
+    "other_activity_slot", "other_activity_status",
     "other_activity_feedback", "other_activity_load",
 )
 
@@ -697,6 +700,23 @@ def apply_events(
             day.pop("other_activity_feedback", None)
             day.pop("other_activity_load", None)
             day.pop("status", None)
+
+        elif event_type == "add_other_activity":
+            day = _find_day(updated, event["date"])
+            day["other_activity"] = True
+            if event.get("activity_name"):
+                day["other_activity_name"] = event["activity_name"]
+            if event.get("slot"):
+                day["other_activity_slot"] = event["slot"]
+
+        elif event_type == "remove_other_activity":
+            day = _find_day(updated, event["date"])
+            day.pop("other_activity", None)
+            day.pop("other_activity_name", None)
+            day.pop("other_activity_slot", None)
+            day.pop("other_activity_status", None)
+            day.pop("other_activity_feedback", None)
+            day.pop("other_activity_load", None)
 
         elif event_type == "add_outdoor":
             day = _find_day(updated, event["date"])

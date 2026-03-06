@@ -162,15 +162,14 @@ export function DayCard({
           </div>
         )}
 
-        {/* Other activity (exclusive — no sessions on this day) */}
-        {day.other_activity ? (
+        {/* Other activity card — shown alongside sessions, not exclusively */}
+        {day.other_activity && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 rounded-lg border border-dashed border-amber-500/40 p-3 text-sm">
               <span className="text-amber-500">🏃</span>
               <span className="font-medium">
                 {day.other_activity_name ?? "Other activity"}
               </span>
-              <span className="text-xs text-muted-foreground ml-auto">No climbing today</span>
             </div>
             {day.other_activity_status === "completed" ? (
               <div className="flex flex-wrap items-center gap-1.5">
@@ -235,8 +234,8 @@ export function DayCard({
               </Button>
             ) : null}
           </div>
-        ) : (
-          <>
+        )}
+
             {/* Outdoor session card — when spot is set */}
             {day.outdoor_spot_name && (
               <div className="space-y-2">
@@ -379,13 +378,11 @@ export function DayCard({
               ))}
 
             {/* Rest — only when nothing else */}
-            {!day.outdoor_spot_name && !day.outdoor_slot && day.sessions.length === 0 && (
+            {!day.other_activity && !day.outdoor_spot_name && !day.outdoor_slot && day.sessions.length === 0 && (
               <p className="text-xs text-muted-foreground italic">
                 Rest
               </p>
             )}
-          </>
-        )}
 
         {/* Action buttons */}
         {(showActions || onReplan || onQuickAdd || onChangeGym) && (

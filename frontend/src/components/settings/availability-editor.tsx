@@ -37,8 +37,7 @@ const SLOTS = [
   { key: "evening", label: "Evening" },
 ];
 
-type SlotData = { available: boolean; preferred_location: string; gym_id?: string };
-type DayMeta = { other_activity: boolean; other_activity_name?: string; reduce_intensity_after: boolean };
+type SlotData = { available: boolean; preferred_location: string; gym_id?: string; other_activity_name?: string; reduce_intensity_after?: boolean };
 
 interface Gym {
   gym_id?: string;
@@ -61,16 +60,29 @@ export function AvailabilityEditor({
   onSave,
   onCancel,
 }: AvailabilityEditorProps) {
-  // Extract slots (non _day_meta keys) as SlotData
+  // Extract slots (non _day_meta keys) as SlotData.
+  // Migrate legacy _day_meta other_activity into per-slot preferred_location="other_sport".
   const [availability, setAvailability] = useState<Record<string, Record<string, SlotData>>>(
     () => {
       const parsed = JSON.parse(JSON.stringify(initialAvailability));
-      // Strip _day_meta from slot data
       const result: Record<string, Record<string, SlotData>> = {};
       for (const [day, dayData] of Object.entries(parsed)) {
         result[day] = {};
-        for (const [key, val] of Object.entries(dayData as Record<string, unknown>)) {
+        const dd = dayData as Record<string, unknown>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const meta = dd._day_meta as any;
+        for (const [key, val] of Object.entries(dd)) {
           if (key !== "_day_meta") result[day][key] = val as SlotData;
+        }
+        // Migrate legacy day-level other_activity to per-slot
+        if (meta?.other_activity && meta?.other_activity_slot) {
+          const slotKey = meta.other_activity_slot as string;
+          result[day][slotKey] = {
+            available: true,
+            preferred_location: "other_sport",
+            other_activity_name: meta.other_activity_name ?? "",
+            reduce_intensity_after: meta.reduce_intensity_after ?? false,
+          };
         }
       }
       return result;
@@ -78,20 +90,6 @@ export function AvailabilityEditor({
   );
   const [planningPrefs, setPlanningPrefs] = useState(
     () => ({ ...initialPlanningPrefs })
-  );
-  const [dayMeta, setDayMeta] = useState<Record<string, DayMeta>>(
-    () => {
-      const result: Record<string, DayMeta> = {};
-      for (const day of WEEKDAYS) {
-        const raw = (initialAvailability[day.key] as Record<string, unknown>)?._day_meta as DayMeta | undefined;
-        result[day.key] = {
-          other_activity: raw?.other_activity ?? false,
-          other_activity_name: raw?.other_activity_name ?? "",
-          reduce_intensity_after: raw?.reduce_intensity_after ?? false,
-        };
-      }
-      return result;
-    }
   );
 
   const getSlot = (day: string, slot: string): SlotData => {
@@ -119,7 +117,9 @@ export function AvailabilityEditor({
     updateSlot(day, slot, {
       ...current,
       preferred_location: location,
-      gym_id: location === "home" ? undefined : current.gym_id,
+      gym_id: location === "home" || location === "other_sport" ? undefined : current.gym_id,
+      other_activity_name: location === "other_sport" ? (current.other_activity_name ?? "") : undefined,
+      reduce_intensity_after: location === "other_sport" ? (current.reduce_intensity_after ?? false) : undefined,
     });
   };
 
@@ -128,22 +128,11 @@ export function AvailabilityEditor({
     updateSlot(day, slot, { ...current, gym_id: gymId });
   };
 
-  const toggleOtherActivity = (dayKey: string) => {
-    setDayMeta((prev) => ({
-      ...prev,
-      [dayKey]: { ...prev[dayKey], other_activity: !prev[dayKey].other_activity },
-    }));
-  };
-
   const handleSave = () => {
-    // Merge _day_meta back into availability before saving
+    // Save availability as-is — other_sport slots are stored directly
     const enriched: Record<string, Record<string, unknown>> = {};
     for (const day of WEEKDAYS) {
       enriched[day.key] = { ...(availability[day.key] ?? {}) };
-      const meta = dayMeta[day.key];
-      if (meta.other_activity) {
-        enriched[day.key]._day_meta = meta;
-      }
     }
     onSave(enriched, planningPrefs);
   };
@@ -177,16 +166,23 @@ export function AvailabilityEditor({
                       <button
                         type="button"
                         className={`w-full rounded-md border px-2 py-2 text-xs transition-colors ${
-                          s.available
+                          s.available || s.preferred_location === "other_sport"
                             ? "border-primary bg-primary/10 text-primary font-medium"
                             : "border-muted bg-muted/30 text-muted-foreground hover:border-primary/40"
                         }`}
-                        onClick={() => toggleSlot(day.key, slot.key)}
+                        onClick={() => {
+                          if (s.preferred_location === "other_sport") {
+                            // Toggle off: reset to unavailable
+                            updateSlot(day.key, slot.key, { available: false, preferred_location: "home" });
+                          } else {
+                            toggleSlot(day.key, slot.key);
+                          }
+                        }}
                       >
-                        {s.available ? "Yes" : "-"}
+                        {s.preferred_location === "other_sport" ? "Other" : s.available ? "Yes" : "-"}
                       </button>
 
-                      {s.available && (
+                      {(s.available || s.preferred_location === "other_sport") && (
                         <div className="space-y-1">
                           <div className="flex gap-1">
                             <button
@@ -211,6 +207,17 @@ export function AvailabilityEditor({
                             >
                               Gym
                             </button>
+                            <button
+                              type="button"
+                              className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
+                                s.preferred_location === "other_sport"
+                                  ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                                  : "border-muted text-muted-foreground"
+                              }`}
+                              onClick={() => setLocation(day.key, slot.key, "other_sport")}
+                            >
+                              Other
+                            </button>
                           </div>
 
                           {s.preferred_location === "gym" && gyms.length > 0 && (
@@ -230,55 +237,37 @@ export function AvailabilityEditor({
                               </SelectContent>
                             </Select>
                           )}
+
+                          {s.preferred_location === "other_sport" && (
+                            <div className="space-y-1">
+                              <Input
+                                placeholder="e.g. Circus, Running"
+                                className="h-6 text-[10px]"
+                                value={s.other_activity_name ?? ""}
+                                onChange={(e) =>
+                                  updateSlot(day.key, slot.key, { ...s, other_activity_name: e.target.value })
+                                }
+                              />
+                              <div className="flex items-center gap-1">
+                                <Switch
+                                  id={`reduce-${day.key}-${slot.key}`}
+                                  className="scale-75"
+                                  checked={s.reduce_intensity_after ?? false}
+                                  onCheckedChange={(v) =>
+                                    updateSlot(day.key, slot.key, { ...s, reduce_intensity_after: v })
+                                  }
+                                />
+                                <Label htmlFor={`reduce-${day.key}-${slot.key}`} className="text-[10px]">
+                                  Reduce next day
+                                </Label>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   );
                 })}
-              </div>
-
-              {/* Other activity controls */}
-              <div className="ml-10 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id={`other-${day.key}`}
-                    checked={dayMeta[day.key]?.other_activity ?? false}
-                    onCheckedChange={() => toggleOtherActivity(day.key)}
-                  />
-                  <Label htmlFor={`other-${day.key}`} className="text-xs">
-                    Other sport / activity
-                  </Label>
-                </div>
-                {dayMeta[day.key]?.other_activity && (
-                  <div className="ml-8 space-y-2">
-                    <Input
-                      placeholder="Activity name (e.g. trail running)"
-                      className="h-7 text-xs"
-                      value={dayMeta[day.key]?.other_activity_name ?? ""}
-                      onChange={(e) =>
-                        setDayMeta((prev) => ({
-                          ...prev,
-                          [day.key]: { ...prev[day.key], other_activity_name: e.target.value },
-                        }))
-                      }
-                    />
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        id={`reduce-${day.key}`}
-                        checked={dayMeta[day.key]?.reduce_intensity_after ?? false}
-                        onCheckedChange={(v) =>
-                          setDayMeta((prev) => ({
-                            ...prev,
-                            [day.key]: { ...prev[day.key], reduce_intensity_after: v },
-                          }))
-                        }
-                      />
-                      <Label htmlFor={`reduce-${day.key}`} className="text-xs">
-                        Reduce climbing intensity next day
-                      </Label>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           ))}

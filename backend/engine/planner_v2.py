@@ -232,6 +232,11 @@ def _normalize_availability(
                 default["available"] = slot_value
             elif isinstance(slot_value, dict):
                 default["available"] = bool(slot_value.get("available", True))
+                # Slot used for other sport → not available for climbing
+                if slot_value.get("preferred_location") == "other_sport":
+                    default["available"] = False
+                    day_slots[slot] = default
+                    continue
                 if "locations" in slot_value and isinstance(slot_value["locations"], list):
                     default["locations"] = sorted(set(slot_value["locations"]))
                 preferred = slot_value.get("preferred_location")
@@ -438,23 +443,44 @@ def generate_phase_week(
     day_keys: List[str] = [_weekday_key(d) for d in day_dates]
     day_sessions: List[List[Dict[str, Any]]] = [[] for _ in range(7)]
 
-    # Extract _day_meta (other-activity flags) from raw availability
+    # Extract other-activity flags from availability.
+    # Sources: legacy _day_meta OR per-slot preferred_location="other_sport".
     day_other_activity: List[bool] = [False] * 7
     day_reduce_after: List[bool] = [False] * 7
     day_activity_name: List[Optional[str]] = [None] * 7
+    day_activity_slot: List[Optional[str]] = [None] * 7
     for offset in range(7):
         raw_day = (availability or {}).get(day_keys[offset]) or {}
-        meta = raw_day.get("_day_meta") if isinstance(raw_day, dict) else None
+        if not isinstance(raw_day, dict):
+            continue
+        # Legacy _day_meta approach
+        meta = raw_day.get("_day_meta")
         if isinstance(meta, dict) and meta.get("other_activity"):
             day_other_activity[offset] = True
             day_activity_name[offset] = meta.get("other_activity_name")
+            day_activity_slot[offset] = meta.get("other_activity_slot")
             day_reduce_after[offset] = bool(meta.get("reduce_intensity_after"))
+        # Per-slot approach: preferred_location="other_sport"
+        for s_key in SLOTS:
+            slot_val = raw_day.get(s_key)
+            if isinstance(slot_val, dict) and slot_val.get("preferred_location") == "other_sport":
+                day_other_activity[offset] = True
+                day_activity_slot[offset] = s_key
+                day_activity_name[offset] = slot_val.get("other_activity_name") or day_activity_name[offset]
+                day_reduce_after[offset] = day_reduce_after[offset] or bool(slot_val.get("reduce_intensity_after"))
 
     # Track constraints
     hard_days = 0
     finger_day_offsets: List[int] = []
     hard_day_offsets: List[int] = []
     session_count: Dict[str, int] = {}  # anti-repetition: session_id → times placed this week
+
+    # Reduce intensity on day after other-activity (when flagged)
+    # AND on the other-activity day itself (no hard sessions alongside other sport).
+    day_intensity_reduced: List[bool] = [False] * 7
+    for offset in range(7):
+        if offset > 0 and day_other_activity[offset - 1] and day_reduce_after[offset - 1]:
+            day_intensity_reduced[offset] = True
 
     # Determine which days have available slots
     # Track outdoor-only days — they get no sessions from the planner
@@ -463,8 +489,9 @@ def generate_phase_week(
     for offset in range(7):
         day_avail = normalized[day_keys[offset]]
         if day_other_activity[offset]:
-            day_has_available_slot.append(False)
-            continue
+            # other_activity occupies one slot but does NOT block all sessions;
+            # the day is still available but intensity-reduced (no hard sessions).
+            day_intensity_reduced[offset] = True
         # Check if ALL available slots on this day are outdoor-only
         available_slots = [s for s in SLOTS if day_avail[s]["available"]]
         if available_slots:
@@ -479,12 +506,6 @@ def generate_phase_week(
                 continue
         has_slot = any(day_avail[slot]["available"] for slot in SLOTS)
         day_has_available_slot.append(has_slot)
-
-    # Reduce intensity on day after other-activity (when flagged)
-    day_intensity_reduced: List[bool] = [False] * 7
-    for offset in range(7):
-        if offset > 0 and day_other_activity[offset - 1] and day_reduce_after[offset - 1]:
-            day_intensity_reduced[offset] = True
 
     # Cap available days to target_training_days_per_week
     available_day_count = sum(day_has_available_slot)
@@ -922,6 +943,8 @@ def generate_phase_week(
             day_entry["other_activity"] = True
             if day_activity_name[offset]:
                 day_entry["other_activity_name"] = day_activity_name[offset]
+            if day_activity_slot[offset]:
+                day_entry["other_activity_slot"] = day_activity_slot[offset]
         if day_intensity_reduced[offset]:
             day_entry["prev_other_activity_reduce"] = True
         plan_days.append(day_entry)

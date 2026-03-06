@@ -627,6 +627,57 @@ def test_complete_other_activity_on_non_activity_day_raises():
         ])
 
 
+def test_add_other_activity():
+    """add_other_activity sets the day-level flag, name, and slot."""
+    plan = _plan_snapshot()
+    mon_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "mon")
+    result = apply_events(plan, [
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "Swimming", "slot": "evening"},
+    ])
+    mon = next(d for d in result["weeks"][0]["days"] if d["date"] == mon_date)
+    assert mon["other_activity"] is True
+    assert mon["other_activity_name"] == "Swimming"
+    assert mon["other_activity_slot"] == "evening"
+    # Sessions should still be present (not wiped)
+    assert len(mon.get("sessions", [])) > 0
+
+
+def test_add_other_activity_blocks_slot():
+    """quick-add a session into the same slot as other_activity should raise."""
+    from backend.engine.replanner_v1 import apply_day_add
+    plan = _plan_snapshot()
+    mon_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "mon")
+    # Add other activity in morning slot (likely free)
+    plan = apply_events(plan, [
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "Swimming", "slot": "morning"},
+    ])
+    # Quick-add to the same slot should fail
+    with pytest.raises(ValueError, match="already occupied by other activity"):
+        apply_day_add(plan, session_id="core_training", target_date=mon_date,
+                      slot="morning", location="home")
+
+
+def test_remove_other_activity():
+    """remove_other_activity clears all other-activity fields including slot."""
+    plan = _plan_with_other_activity()
+    sun_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "sun")
+    # Add slot info
+    plan = apply_events(plan, [
+        {"event_type": "complete_other_activity", "date": sun_date, "feedback": "hard"},
+    ])
+    # Now remove
+    result = apply_events(plan, [
+        {"event_type": "remove_other_activity", "date": sun_date},
+    ])
+    sun = next(d for d in result["weeks"][0]["days"] if d["date"] == sun_date)
+    assert "other_activity" not in sun
+    assert "other_activity_name" not in sun
+    assert "other_activity_slot" not in sun
+    assert "other_activity_status" not in sun
+    assert "other_activity_feedback" not in sun
+    assert "other_activity_load" not in sun
+
+
 def test_complementary_load_constants():
     """Verify load constants are correctly defined."""
     assert COMPLEMENTARY_LOAD_EASY == 10
