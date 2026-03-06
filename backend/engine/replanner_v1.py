@@ -69,6 +69,14 @@ INTENT_TO_SESSION = {
     "finger_max": "finger_strength_home",
     "projecting": "power_contact_gym",
 }
+
+# B97: outdoor intent → discipline mapping (no session_id — outdoor is logged separately)
+OUTDOOR_INTENT_TO_DISCIPLINE = {
+    "outdoor_easy": "both",
+    "outdoor_projecting": "both",
+    "outdoor_volume": "lead",
+    "outdoor_boulder": "boulder",
+}
 SLOTS = ("morning", "lunch", "evening")
 
 # Load points for complementary sport feedback
@@ -1006,6 +1014,53 @@ def _compensate_finger(
     })
 
 
+def _resolve_intent_for_equipment(
+    intent: str,
+    gym_equipment: Optional[set],
+) -> str:
+    """B96: Resolve intent → session_id, respecting gym equipment constraints.
+
+    If the primary session for the intent requires equipment the gym doesn't have,
+    fall back to an alternative session for the same intent family.
+    """
+    session_id = INTENT_TO_SESSION.get(intent)
+    if session_id is None:
+        raise ValueError(f"Unsupported override intent: {intent}")
+    if gym_equipment is None:
+        return session_id
+
+    # Check equipment compatibility
+    req = _get_required_equipment(session_id)
+    if not req or all(eq in gym_equipment for eq in req):
+        return session_id
+
+    # Intent-family fallbacks: try alternatives that serve the same training goal
+    _INTENT_FALLBACKS: Dict[str, List[str]] = {
+        "strength": ["strength_long", "finger_strength_home", "pulling_strength_gym"],
+        "power": ["power_contact_gym", "boulder_circuit_gym"],
+        "power_endurance": ["power_endurance_gym", "boulder_circuit_gym", "route_endurance_gym"],
+        "endurance": ["endurance_aerobic_gym", "route_endurance_gym", "finger_aerobic_base"],
+        "aerobic_endurance": ["endurance_aerobic_gym", "route_endurance_gym", "finger_aerobic_base"],
+        "projecting": ["power_contact_gym", "boulder_circuit_gym"],
+        "hard": ["strength_long", "power_contact_gym", "boulder_circuit_gym"],
+        "technique": ["technique_focus_gym", "easy_climbing_deload"],
+    }
+
+    fallbacks = _INTENT_FALLBACKS.get(intent, [])
+    for fb_sid in fallbacks:
+        if fb_sid == session_id:
+            continue
+        fb_meta = _SESSION_META.get(fb_sid)
+        if fb_meta is None:
+            continue
+        fb_req = _get_required_equipment(fb_sid)
+        if not fb_req or all(eq in gym_equipment for eq in fb_req):
+            return fb_sid
+
+    # No compatible fallback found — use original (will work with whatever equipment is there)
+    return session_id
+
+
 def apply_day_override(
     plan: Dict[str, Any],
     *,
@@ -1016,6 +1071,7 @@ def apply_day_override(
     phase_id: Optional[str] = None,
     target_date: Optional[str] = None,
     gym_id: Optional[str] = None,
+    gyms: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     updated = deepcopy(plan)
 
@@ -1026,12 +1082,44 @@ def apply_day_override(
         target = _parse_date(reference_date) + timedelta(days=1)
     target_key = target.isoformat()
 
-    session_id = INTENT_TO_SESSION.get(intent)
-    if session_id is None:
-        raise ValueError(f"Unsupported override intent: {intent}")
-
-    meta = _meta_for(session_id)
     effective_phase = phase_id or (updated.get("profile_snapshot") or {}).get("phase_id", "base")
+
+    # B97: outdoor override — mark day as outdoor, clear indoor sessions
+    outdoor_discipline = OUTDOOR_INTENT_TO_DISCIPLINE.get(intent)
+    if location == "outdoor" or outdoor_discipline is not None:
+        if outdoor_discipline is None:
+            outdoor_discipline = "both"
+        target_day = _find_day(updated, target_key)
+        target_day["sessions"] = []
+        target_day["outdoor_spot_name"] = intent.replace("outdoor_", "").replace("_", " ")
+        target_day["outdoor_discipline"] = outdoor_discipline
+        target_day["outdoor_session_status"] = "planned"
+        target_day.pop("status", None)
+
+        updated.setdefault("adaptations", []).append({
+            "type": "day_override",
+            "reference_date": reference_date,
+            "target_date": target_key,
+            "outdoor": True,
+            "discipline": outdoor_discipline,
+        })
+        return updated
+
+    # B96: resolve intent respecting gym equipment
+    gym_equipment: Optional[set] = None
+    if location == "gym" and gyms and gym_id:
+        for g in gyms:
+            if g.get("gym_id") == gym_id:
+                gym_equipment = set(g.get("equipment", []))
+                break
+    elif location == "gym" and gyms:
+        # No specific gym_id — use first gym by priority
+        sorted_g = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
+        if sorted_g:
+            gym_equipment = set(sorted_g[0].get("equipment", []))
+
+    session_id = _resolve_intent_for_equipment(intent, gym_equipment)
+    meta = _meta_for(session_id)
 
     # NEW-F6: detect phase mismatch
     current_phase = (updated.get("profile_snapshot") or {}).get("phase_id", "base")

@@ -108,6 +108,10 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             detail="week_plan is required — generate one from GET /api/week/{week_num} first",
         )
 
+    # B96: pass gyms so override can check equipment compatibility
+    equipment = state.get("equipment", {})
+    gyms = equipment.get("gyms", [])
+
     try:
         updated = apply_day_override(
             week_plan,
@@ -118,6 +122,7 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             phase_id=req.phase_id,
             target_date=req.target_date,
             gym_id=req.gym_id,
+            gyms=gyms,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

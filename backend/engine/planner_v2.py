@@ -381,6 +381,7 @@ def generate_phase_week(
     pretrip_dates: Optional[List[str]] = None,
     is_last_week_of_phase: bool = False,
     home_equipment: Optional[List[str]] = None,
+    today: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -438,6 +439,9 @@ def generate_phase_week(
     start = _parse_date(start_date)
     target_days = prefs.get("target_training_days_per_week", 4)
 
+    # B95: resolve "today" for skipping past days
+    today_date: Optional[date] = _parse_date(today) if today else None
+
     # Build day structures
     day_dates: List[date] = [start + timedelta(days=i) for i in range(7)]
     day_keys: List[str] = [_weekday_key(d) for d in day_dates]
@@ -487,6 +491,10 @@ def generate_phase_week(
     day_is_outdoor: List[bool] = [False] * 7
     day_has_available_slot: List[bool] = []
     for offset in range(7):
+        # B95: skip past days — no sessions assigned to days before today
+        if today_date is not None and day_dates[offset] < today_date:
+            day_has_available_slot.append(False)
+            continue
         day_avail = normalized[day_keys[offset]]
         if day_other_activity[offset]:
             # other_activity occupies one slot but does NOT block all sessions;
