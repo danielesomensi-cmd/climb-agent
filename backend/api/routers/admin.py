@@ -1,9 +1,10 @@
-"""Admin router — GET /api/admin/users (protected by ADMIN_SECRET)."""
+"""Admin router — user management (protected by ADMIN_SECRET)."""
 
 from __future__ import annotations
 
 import json
 import os
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -125,3 +126,14 @@ def list_users(request: Request):
     _require_admin(request)
     users = _scan_users()
     return {"users": users, "total": len(users)}
+
+
+@router.delete("/users/{uuid}")
+def delete_user(uuid: str, request: Request):
+    """Delete a user directory entirely. Requires X-Admin-Key header."""
+    _require_admin(request)
+    user_dir = Path(_deps.USERS_DIR) / uuid
+    if not user_dir.is_dir():
+        raise HTTPException(status_code=404, detail=f"User {uuid} not found")
+    shutil.rmtree(user_dir)
+    return {"status": "deleted", "uuid": uuid}
