@@ -228,10 +228,10 @@ source .venv/bin/activate && python -m pytest backend/tests -q
   - URL: https://climb-agent.vercel.app
   - Deploy: automatico da push su main
   - Config: `frontend/` come root directory
-  - Env vars: `NEXT_PUBLIC_API_URL=https://climb-agent-production.up.railway.app`
+  - Env vars: `NEXT_PUBLIC_API_URL=https://web-production-fb1e9.up.railway.app`
 
 - **Backend**: FastAPI/uvicorn su Railway
-  - URL: https://climb-agent-production.up.railway.app
+  - URL: https://web-production-fb1e9.up.railway.app
   - Deploy: automatico da push su main
   - Config: `Procfile` + `requirements.txt` in root
   - Railway usa la porta 8080 internamente (`$PORT=8080`). Il dominio pubblico è mappato sulla porta 8080. Non modificare la porta nel Procfile.
