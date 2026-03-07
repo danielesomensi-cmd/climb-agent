@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SessionCard } from "@/components/training/session-card";
-import type { DayPlan, OutdoorRoute } from "@/lib/types";
+import type { DayPlan, OutdoorRoute, WeekPlan } from "@/lib/types";
 
 interface Gym {
   gym_id?: string;
@@ -34,6 +34,8 @@ interface DayCardProps {
   onRemoveOutdoor?: (date: string) => void;
   outdoorRoutes?: OutdoorRoute[];
   showActions?: boolean;
+  weekPlan?: WeekPlan | null;
+  onSessionUpdated?: () => void;
 }
 
 const FEEDBACK_OPTIONS = [
@@ -122,6 +124,8 @@ export function DayCard({
   onRemoveOutdoor,
   outdoorRoutes,
   showActions = false,
+  weekPlan,
+  onSessionUpdated,
 }: DayCardProps) {
   const [feedbackPicking, setFeedbackPicking] = useState(false);
   const [outdoorExpanded, setOutdoorExpanded] = useState(false);
@@ -359,6 +363,8 @@ export function DayCard({
                   session={session}
                   date={day.date}
                   gyms={gyms}
+                  weekPlan={weekPlan}
+                  sessionIndex={idx}
                   onMarkDone={onMarkDone ? () => onMarkDone(session.session_id) : undefined}
                   onMarkSkipped={
                     onMarkSkipped ? () => onMarkSkipped(session.session_id) : undefined
@@ -379,6 +385,7 @@ export function DayCard({
                       ? () => onReplan(day.date, idx)
                       : undefined
                   }
+                  onSessionUpdated={onSessionUpdated}
                 />
               ))}
 

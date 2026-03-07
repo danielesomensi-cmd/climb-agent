@@ -647,6 +647,8 @@ export default function WeekPage() {
                   day={day}
                   gyms={gyms}
                   outdoorRoutes={outdoorRoutesMap[day.date]}
+                  weekPlan={weekPlan}
+                  onSessionUpdated={() => fetchWeek(displayWeekNum)}
                   showActions
                   onMarkDone={(sessionId) => handleMarkDone(sessionId, day.date)}
                   onMarkSkipped={(sessionId) => handleMarkSkipped(sessionId, day.date)}

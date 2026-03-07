@@ -695,6 +695,8 @@ function TodayContent() {
             day={dayPlan}
             gyms={gyms}
             outdoorRoutes={outdoorRoutesMap[dayPlan.date]}
+            weekPlan={weekPlan}
+            onSessionUpdated={fetchData}
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}
             onUndo={handleUndo}

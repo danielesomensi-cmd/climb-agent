@@ -1,13 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft, Trash2, MoreHorizontal, Plus, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerDescription,
+} from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
-import type { SessionSlot, GuidedSessionState, GuidedExercise } from "@/lib/types";
+import { getExercises, addExerciseToSession } from "@/lib/api";
+import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 
 interface Gym {
   gym_id?: string;
@@ -19,12 +37,15 @@ interface SessionCardProps {
   session: SessionSlot;
   date: string;
   gyms?: Gym[];
+  weekPlan?: WeekPlan | null;
+  sessionIndex?: number;
   onMarkDone?: () => void;
   onMarkSkipped?: () => void;
   onUndo?: () => void;
   onMove?: () => void;
   onRemove?: () => void;
   onReplan?: () => void;
+  onSessionUpdated?: () => void;
 }
 
 /** Format session_id into a readable string: replace _ with spaces, capitalize */
@@ -52,7 +73,7 @@ function formatSlot(slot: string): string {
   return slotMap[slot] ?? slot;
 }
 
-/** Resolve location display name — gym_id is a stable UUID, resolve to gym name */
+/** Resolve location display name */
 function getLocationLabel(session: SessionSlot, gyms?: Gym[]): string {
   if (session.location !== "gym") return "Home";
   if (session.gym_id && gyms) {
@@ -147,7 +168,6 @@ function buildGuidedState(
   const blocks = (resolvedSession?.blocks ?? []) as Array<Record<string, unknown>>;
   if (instances.length === 0 && blocks.length === 0) return null;
 
-  // Build ordered exercise list: interleave instruction blocks with exercise instances
   const exercises: GuidedExercise[] = [];
   const usedInstances = new Set<number>();
 
@@ -156,10 +176,8 @@ function buildGuidedState(
     const selExercises = (block.selected_exercises ?? []) as unknown[];
 
     if (selExercises.length === 0 && block.instructions) {
-      // Instruction-only block — add as informational step
       exercises.push(buildInstructionStep(block));
     } else {
-      // Block with exercises — find matching instances by block_uid
       for (let i = 0; i < instances.length; i++) {
         if (!usedInstances.has(i) && (instances[i].block_uid as string) === blockUid) {
           exercises.push(buildGuidedExercise(instances[i]));
@@ -169,7 +187,6 @@ function buildGuidedState(
     }
   }
 
-  // Append any instances not matched to blocks (safety fallback)
   for (let i = 0; i < instances.length; i++) {
     if (!usedInstances.has(i)) {
       exercises.push(buildGuidedExercise(instances[i]));
@@ -178,17 +195,14 @@ function buildGuidedState(
 
   if (exercises.length === 0) return null;
 
-  // Extract bodyweight from resolved exercise suggested data (avoid async fetch)
   let bodyweightKg: number | undefined;
   for (const inst of instances) {
     const sug = (inst.suggested ?? {}) as Record<string, unknown>;
-    // Priority 1: based_on.bodyweight_kg (from suggest_max_hang_load)
     const basedOn = sug.based_on as Record<string, number> | undefined;
     if (basedOn?.bodyweight_kg) {
       bodyweightKg = basedOn.bodyweight_kg;
       break;
     }
-    // Priority 2: compute from total - external
     const total = sug.suggested_total_load_kg as number | undefined;
     const external = sug.suggested_external_load_kg as number | undefined;
     if (total != null && external != null) {
@@ -213,19 +227,205 @@ function buildGuidedState(
   };
 }
 
+// ─── Add Exercise Dialog ─────────────────────────────────────────────
+
+function AddExerciseDialog({
+  open,
+  onOpenChange,
+  date,
+  sessionIndex,
+  weekPlan,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  date: string;
+  sessionIndex: number;
+  weekPlan: WeekPlan;
+  onSuccess: () => void;
+}) {
+  const [catalog, setCatalog] = useState<Exercise[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Exercise | null>(null);
+  const [sets, setSets] = useState(3);
+  const [reps, setReps] = useState(10);
+  const [loadKg, setLoadKg] = useState<number | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open && catalog.length === 0) {
+      setLoading(true);
+      getExercises()
+        .then((data) => setCatalog(data.exercises))
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, [open, catalog.length]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return catalog.slice(0, 30);
+    const q = search.toLowerCase();
+    return catalog.filter(
+      (e) =>
+        e.name.toLowerCase().includes(q) ||
+        e.exercise_id.toLowerCase().includes(q) ||
+        e.domain?.toLowerCase().includes(q)
+    );
+  }, [catalog, search]);
+
+  const selectExercise = useCallback((ex: Exercise) => {
+    setSelected(ex);
+    const defaults = ex.prescription_defaults ?? {};
+    setSets((defaults.sets as number) ?? 3);
+    setReps((defaults.reps as number) ?? 10);
+    setLoadKg(defaults.load_kg as number | undefined);
+    setError(null);
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!selected) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const overrides: Record<string, unknown> = { sets, reps };
+      if (loadKg != null) overrides.load_kg = loadKg;
+      await addExerciseToSession({
+        date,
+        session_index: sessionIndex,
+        exercise_id: selected.exercise_id,
+        prescription_override: overrides,
+        week_plan: weekPlan,
+      });
+      onOpenChange(false);
+      setSelected(null);
+      setSearch("");
+      onSuccess();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to add exercise");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Add Exercise</DialogTitle>
+          <DialogDescription>Search the catalog and add an exercise to this session.</DialogDescription>
+        </DialogHeader>
+
+        {!selected ? (
+          <div className="flex flex-col gap-3 flex-1 min-h-0">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+              <Input
+                placeholder="Search exercises..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+                autoFocus
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-1 min-h-0 max-h-[50vh]">
+              {loading && <p className="text-xs text-muted-foreground p-2">Loading catalog...</p>}
+              {!loading && filtered.length === 0 && (
+                <p className="text-xs text-muted-foreground p-2">No exercises found</p>
+              )}
+              {filtered.map((ex) => (
+                <button
+                  key={ex.exercise_id}
+                  className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
+                  onClick={() => selectExercise(ex)}
+                >
+                  <div className="text-sm font-medium">{ex.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {ex.domain} {ex.equipment_required?.length > 0 && `· ${ex.equipment_required.join(", ")}`}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="rounded-md border p-3">
+              <div className="text-sm font-medium">{selected.name}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{selected.domain}</div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs">Sets</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={sets}
+                  onChange={(e) => setSets(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Reps</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={reps}
+                  onChange={(e) => setReps(Number(e.target.value))}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Load (kg)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={loadKg ?? ""}
+                  placeholder="BW"
+                  onChange={(e) => setLoadKg(e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </div>
+            </div>
+
+            {error && <p className="text-xs text-red-500">{error}</p>}
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setSelected(null)}>
+                Back
+              </Button>
+              <Button className="flex-1" onClick={handleSubmit} disabled={submitting}>
+                {submitting ? "Adding..." : "Add exercise"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Session Card ────────────────────────────────────────────────────
+
 export function SessionCard({
   session,
   date,
   gyms,
+  weekPlan,
+  sessionIndex = 0,
   onMarkDone,
   onMarkSkipped,
   onUndo,
   onMove,
   onRemove,
   onReplan,
+  onSessionUpdated,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [addExerciseOpen, setAddExerciseOpen] = useState(false);
   const router = useRouter();
 
   const isHard = session.tags?.hard === true;
@@ -241,310 +441,346 @@ export function SessionCard({
   })();
 
   return (
-    <Card className="gap-0 py-0 overflow-hidden">
-      {/* Header — clickable to expand */}
-      <CardHeader
-        className="cursor-pointer select-none py-3"
-        onClick={() => setExpanded((prev) => !prev)}
-      >
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-sm">
-            {formatSessionName(session.session_id)}
-          </CardTitle>
-          {expanded ? (
-            <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-          )}
-        </div>
+    <>
+      <Card className="gap-0 py-0 overflow-hidden">
+        {/* Header — clickable to expand */}
+        <CardHeader
+          className="cursor-pointer select-none py-3"
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-sm">
+              {formatSessionName(session.session_id)}
+            </CardTitle>
+            <div className="flex items-center gap-1">
+              {/* More actions button */}
+              <button
+                className="flex items-center justify-center size-8 min-w-[44px] min-h-[44px] rounded-md text-muted-foreground hover:bg-accent transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDrawerOpen(true);
+                }}
+                aria-label="Session actions"
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+              {expanded ? (
+                <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+              )}
+            </div>
+          </div>
 
-        {/* Badge row */}
-        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-          <Badge variant="secondary" className="text-[10px]">
-            {locationLabel}
-          </Badge>
-          <Badge variant="outline" className="text-[10px]">
-            {formatSlot(session.slot)}
-          </Badge>
-          {isHard && (
-            <Badge className="bg-red-500 text-white text-[10px]">
-              Hard
+          {/* Badge row */}
+          <div className="flex flex-wrap items-center gap-1.5 mt-1">
+            <Badge variant="secondary" className="text-[10px]">
+              {locationLabel}
             </Badge>
-          )}
-          {isFinger && (
-            <Badge className="bg-orange-500 text-white text-[10px]">
-              Finger
-            </Badge>
-          )}
-          {session.estimated_load_score != null && (
             <Badge variant="outline" className="text-[10px]">
-              Load: {session.estimated_load_score}
+              {formatSlot(session.slot)}
             </Badge>
-          )}
-          {isDone && (
-            <Badge className="bg-green-600 text-white text-[10px]">
-              Completed
-            </Badge>
-          )}
-          {isSkipped && (
-            <Badge className="bg-yellow-500 text-white text-[10px]">
-              Skipped
-            </Badge>
-          )}
-          {isDone && session.feedback_summary && (
-            <Badge
-              variant="outline"
-              className={`text-[10px] ${FEEDBACK_BADGE_STYLE[session.feedback_summary] ?? ""}`}
-            >
-              {session.feedback_summary.replace(/_/g, " ")}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
+            {isHard && (
+              <Badge className="bg-red-500 text-white text-[10px]">
+                Hard
+              </Badge>
+            )}
+            {isFinger && (
+              <Badge className="bg-orange-500 text-white text-[10px]">
+                Finger
+              </Badge>
+            )}
+            {session.estimated_load_score != null && (
+              <Badge variant="outline" className="text-[10px]">
+                Load: {session.estimated_load_score}
+              </Badge>
+            )}
+            {isDone && (
+              <Badge className="bg-green-600 text-white text-[10px]">
+                Completed
+              </Badge>
+            )}
+            {isSkipped && (
+              <Badge className="bg-yellow-500 text-white text-[10px]">
+                Skipped
+              </Badge>
+            )}
+            {isDone && session.feedback_summary && (
+              <Badge
+                variant="outline"
+                className={`text-[10px] ${FEEDBACK_BADGE_STYLE[session.feedback_summary] ?? ""}`}
+              >
+                {session.feedback_summary.replace(/_/g, " ")}
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
 
-      {/* Expanded content */}
-      {expanded && (
-        <CardContent className="pt-0 pb-3 space-y-3">
-          {/* Exercise list from resolved session (with instruction blocks) */}
-          {(() => {
-            const rs = (
-              session.resolved as Record<string, unknown> | undefined
-            )?.resolved_session as Record<string, unknown> | undefined;
-            const allInstances = (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
-            const allBlocks = (rs?.blocks ?? []) as Array<Record<string, unknown>>;
+        {/* Expanded content */}
+        {expanded && (
+          <CardContent className="pt-0 pb-3 space-y-3">
+            {/* Exercise list from resolved session (with instruction blocks) */}
+            {(() => {
+              const rs = (
+                session.resolved as Record<string, unknown> | undefined
+              )?.resolved_session as Record<string, unknown> | undefined;
+              const allInstances = (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
+              const allBlocks = (rs?.blocks ?? []) as Array<Record<string, unknown>>;
 
-            if (allInstances.length === 0 && allBlocks.length === 0) {
-              return (
-                <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
-                  No exercises resolved
-                </div>
-              );
-            }
+              if (allInstances.length === 0 && allBlocks.length === 0) {
+                return (
+                  <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                    No exercises resolved
+                  </div>
+                );
+              }
 
-            // Build ordered list: instruction blocks + exercise cards
-            const items: Array<{ type: "instruction"; block: Record<string, unknown> } | { type: "exercise"; inst: Record<string, unknown> }> = [];
-            const usedIdx = new Set<number>();
+              const items: Array<{ type: "instruction"; block: Record<string, unknown> } | { type: "exercise"; inst: Record<string, unknown> }> = [];
+              const usedIdx = new Set<number>();
 
-            for (const block of allBlocks) {
-              const blockUid = (block.block_uid as string) ?? "";
-              const selEx = (block.selected_exercises ?? []) as unknown[];
+              for (const block of allBlocks) {
+                const blockUid = (block.block_uid as string) ?? "";
+                const selEx = (block.selected_exercises ?? []) as unknown[];
 
-              if (selEx.length === 0 && block.instructions) {
-                items.push({ type: "instruction", block });
-              } else {
-                for (let i = 0; i < allInstances.length; i++) {
-                  if (!usedIdx.has(i) && (allInstances[i].block_uid as string) === blockUid) {
-                    items.push({ type: "exercise", inst: allInstances[i] });
-                    usedIdx.add(i);
+                if (selEx.length === 0 && block.instructions) {
+                  items.push({ type: "instruction", block });
+                } else {
+                  for (let i = 0; i < allInstances.length; i++) {
+                    if (!usedIdx.has(i) && (allInstances[i].block_uid as string) === blockUid) {
+                      items.push({ type: "exercise", inst: allInstances[i] });
+                      usedIdx.add(i);
+                    }
                   }
                 }
               }
-            }
-            for (let i = 0; i < allInstances.length; i++) {
-              if (!usedIdx.has(i)) items.push({ type: "exercise", inst: allInstances[i] });
-            }
+              for (let i = 0; i < allInstances.length; i++) {
+                if (!usedIdx.has(i)) items.push({ type: "exercise", inst: allInstances[i] });
+              }
 
-            return (
-              <div className="space-y-1.5">
-                {items.map((item, i) => {
-                  if (item.type === "instruction") {
-                    const instr = (item.block.instructions ?? {}) as Record<string, unknown>;
-                    const notes = (instr.notes ?? []) as string[];
-                    const dur = instr.duration_min_range as [number, number] | undefined;
-                    const blockId = (item.block.block_id as string) ?? "";
-                    return (
-                      <div key={`instr-${i}`} className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                        <span className="text-primary mt-0.5 text-xs font-medium shrink-0">
-                          {dur ? `${dur[0]}–${dur[1]} min` : ""}
-                        </span>
-                        <div className="text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground">
-                            {blockId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+              return (
+                <div className="space-y-1.5">
+                  {items.map((item, i) => {
+                    if (item.type === "instruction") {
+                      const instr = (item.block.instructions ?? {}) as Record<string, unknown>;
+                      const notes = (instr.notes ?? []) as string[];
+                      const dur = instr.duration_min_range as [number, number] | undefined;
+                      const blockId = (item.block.block_id as string) ?? "";
+                      return (
+                        <div key={`instr-${i}`} className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                          <span className="text-primary mt-0.5 text-xs font-medium shrink-0">
+                            {dur ? `${dur[0]}–${dur[1]} min` : ""}
                           </span>
-                          {notes[0] && <span className="ml-1">— {notes[0]}</span>}
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">
+                              {blockId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </span>
+                            {notes[0] && <span className="ml-1">— {notes[0]}</span>}
+                          </div>
                         </div>
-                      </div>
+                      );
+                    }
+                    const ex = item.inst;
+                    const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
+                    const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
+                    const exerciseId = (ex.exercise_id as string) ?? "";
+                    return (
+                      <ExerciseCard
+                        key={`${exerciseId}-${i}`}
+                        exercise={{
+                          exercise_id: exerciseId,
+                          name: (ex.name as string) ?? exerciseId.replace(/_/g, " ") ?? "",
+                          sets: prescription.sets as number | undefined,
+                          reps: prescription.reps != null ? String(prescription.reps) : undefined,
+                          load_kg: prescription.load_kg as number | undefined,
+                          rest_s: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
+                          tempo: prescription.tempo as string | undefined,
+                          notes: prescription.notes as string | undefined,
+                          suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
+                          suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
+                          load_source: suggested.load_source as string | undefined,
+                        }}
+                        feedbackLevel={session.exercise_feedback?.[exerciseId]}
+                      />
                     );
-                  }
-                  const ex = item.inst;
-                  const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
-                  const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
-                  const exerciseId = (ex.exercise_id as string) ?? "";
-                  return (
-                    <ExerciseCard
-                      key={`${exerciseId}-${i}`}
-                      exercise={{
-                        exercise_id: exerciseId,
-                        name: (ex.name as string) ?? exerciseId.replace(/_/g, " ") ?? "",
-                        sets: prescription.sets as number | undefined,
-                        reps: prescription.reps != null ? String(prescription.reps) : undefined,
-                        load_kg: prescription.load_kg as number | undefined,
-                        rest_s: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
-                        tempo: prescription.tempo as string | undefined,
-                        notes: prescription.notes as string | undefined,
-                        suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
-                        suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
-                        load_source: suggested.load_source as string | undefined,
-                      }}
-                      feedbackLevel={session.exercise_feedback?.[exerciseId]}
-                    />
-                  );
-                })}
-              </div>
-            );
-          })()}
+                  })}
+                </div>
+              );
+            })()}
 
-          {/* Action buttons — hidden for finalized sessions */}
-          {!isFinalized && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              {/* Start guided session button */}
-              {hasExercises && (
+            {/* Action buttons — planned sessions: Start / Done / Skip only */}
+            {!isFinalized && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {hasExercises && (
+                  <Button
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const guidedState = buildGuidedState(session, date);
+                      if (!guidedState) return;
+                      const userId = localStorage.getItem("climb_user_id") ?? "";
+                      const key = `guided_session_${userId}_${date}_${session.session_id}`;
+                      localStorage.setItem(key, JSON.stringify(guidedState));
+                      router.push(`/guided/${date}/${session.session_id}`);
+                    }}
+                  >
+                    <Play className="size-3.5 mr-1" />
+                    Start session
+                  </Button>
+                )}
+                {onMarkDone && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMarkDone();
+                    }}
+                  >
+                    <Check className="size-3.5 mr-1" />
+                    Done
+                  </Button>
+                )}
+                {onMarkSkipped && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-muted-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onMarkSkipped();
+                    }}
+                  >
+                    <X className="size-3.5 mr-1" />
+                    Skip
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Remove confirmation */}
+            {confirmRemove && (
+              <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 dark:bg-red-950/30 p-2">
+                <span className="text-xs text-red-600 dark:text-red-400">Remove this session?</span>
                 <Button
                   size="sm"
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  variant="ghost"
+                  className="text-xs text-muted-foreground"
                   onClick={(e) => {
                     e.stopPropagation();
-                    const guidedState = buildGuidedState(session, date);
-                    if (!guidedState) return;
-                    const userId = localStorage.getItem("climb_user_id") ?? "";
-                    const key = `guided_session_${userId}_${date}_${session.session_id}`;
-                    localStorage.setItem(key, JSON.stringify(guidedState));
-                    router.push(`/guided/${date}/${session.session_id}`);
+                    setConfirmRemove(false);
                   }}
                 >
-                  <Play className="size-3.5 mr-1" />
-                  Start session
+                  Cancel
                 </Button>
-              )}
-              {onMarkDone && (
                 <Button
                   size="sm"
-                  variant="outline"
-                  className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+                  variant="destructive"
+                  className="text-xs"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onMarkDone();
+                    setConfirmRemove(false);
+                    onRemove?.();
                   }}
                 >
-                  <Check className="size-3.5 mr-1" />
-                  Done
-                </Button>
-              )}
-              {onMarkSkipped && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-muted-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMarkSkipped();
-                  }}
-                >
-                  <X className="size-3.5 mr-1" />
-                  Skip
-                </Button>
-              )}
-              {onReplan && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-muted-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onReplan();
-                  }}
-                >
-                  <RefreshCw className="size-3.5 mr-1" />
-                  Change
-                </Button>
-              )}
-              {onMove && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-muted-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onMove();
-                  }}
-                >
-                  <ArrowRightLeft className="size-3.5 mr-1" />
-                  Move
-                </Button>
-              )}
-              {onRemove && !confirmRemove && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-red-500 border-red-300 hover:bg-red-50 dark:hover:bg-red-950"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmRemove(true);
-                  }}
-                >
-                  <Trash2 className="size-3.5 mr-1" />
                   Remove
                 </Button>
-              )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* Remove confirmation */}
-          {confirmRemove && (
-            <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 dark:bg-red-950/30 p-2">
-              <span className="text-xs text-red-600 dark:text-red-400">Remove this session?</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-xs text-muted-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmRemove(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                className="text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setConfirmRemove(false);
-                  onRemove?.();
-                }}
-              >
-                Remove
-              </Button>
-            </div>
-          )}
+            {/* Hint text for planned sessions with exercises */}
+            {!isFinalized && hasExercises && (
+              <p className="text-[11px] text-muted-foreground/60">
+                Tap Start session to begin your guided workout
+              </p>
+            )}
+          </CardContent>
+        )}
+      </Card>
 
-          {/* Hint text for planned sessions with exercises */}
-          {!isFinalized && hasExercises && (
-            <p className="text-[11px] text-muted-foreground/60">
-              Tap Start session to begin your guided workout
-            </p>
-          )}
+      {/* ⋯ Bottom sheet drawer */}
+      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>{formatSessionName(session.session_id)}</DrawerTitle>
+            <DrawerDescription>
+              {isDone ? "Completed" : isSkipped ? "Skipped" : "Planned"} · {locationLabel} · {formatSlot(session.slot)}
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-6 space-y-1">
+            {/* Add Exercise — both planned and done */}
+            {weekPlan && (
+              <DrawerClose asChild>
+                <button
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    setTimeout(() => setAddExerciseOpen(true), 150);
+                  }}
+                >
+                  <Plus className="size-5 text-muted-foreground" />
+                  <span className="text-sm">Add exercise</span>
+                </button>
+              </DrawerClose>
+            )}
 
-          {/* Undo button — shown for finalized sessions */}
-          {isFinalized && onUndo && (
-            <div className="flex items-center">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-xs text-muted-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onUndo();
-                }}
-              >
-                <Undo2 className="size-3.5 mr-1" />
-                Undo
-              </Button>
-            </div>
-          )}
-        </CardContent>
+            {/* Move — planned only */}
+            {!isFinalized && onMove && (
+              <DrawerClose asChild>
+                <button
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
+                  onClick={() => onMove()}
+                >
+                  <ArrowRightLeft className="size-5 text-muted-foreground" />
+                  <span className="text-sm">Move session</span>
+                </button>
+              </DrawerClose>
+            )}
+
+            {/* Remove — planned only */}
+            {!isFinalized && onRemove && (
+              <DrawerClose asChild>
+                <button
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left text-red-500"
+                  onClick={() => {
+                    setConfirmRemove(true);
+                    setExpanded(true);
+                  }}
+                >
+                  <Trash2 className="size-5" />
+                  <span className="text-sm">Remove session</span>
+                </button>
+              </DrawerClose>
+            )}
+
+            {/* Undo — finalized only */}
+            {isFinalized && onUndo && (
+              <DrawerClose asChild>
+                <button
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
+                  onClick={() => onUndo()}
+                >
+                  <Undo2 className="size-5 text-muted-foreground" />
+                  <span className="text-sm">Undo</span>
+                </button>
+              </DrawerClose>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Add Exercise Dialog */}
+      {weekPlan && (
+        <AddExerciseDialog
+          open={addExerciseOpen}
+          onOpenChange={setAddExerciseOpen}
+          date={date}
+          sessionIndex={sessionIndex}
+          weekPlan={weekPlan}
+          onSuccess={() => onSessionUpdated?.()}
+        />
       )}
-    </Card>
+    </>
   );
 }

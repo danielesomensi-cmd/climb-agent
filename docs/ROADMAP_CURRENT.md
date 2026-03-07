@@ -63,6 +63,7 @@ Items that affect first impression for paying users.
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Set up develop branch for staging, main for production deploys. |
 | ~~B110~~ | ~~Fix sync_status.py endpoint count~~ | ~~S~~ | Done: risolto implicitamente con rimozione 2 endpoint test-week. Count 37 ora corretto. |
+| UI-26 | Session card: ⋯ menu + Add Exercise | M | Phase A done: ⋯ button → bottom sheet (Drawer/vaul) con azioni contestuali, AddExerciseDialog con ricerca catalogo + form prescrizione. Phase B pending: Modify session, Modify outdoor. |
 
 ---
 
