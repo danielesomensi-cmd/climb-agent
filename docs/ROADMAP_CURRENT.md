@@ -86,6 +86,29 @@ Claude Sonnet as conversational layer over the deterministic engine.
 
 ---
 
+## Future — Outdoor redesign
+
+> Consolida e sostituisce: B68, B69, B70, B72, B73
+
+Il flusso outdoor attuale è un log passivo post-sessione. Manca una sessione live, il load non è calcolato, e lo storico è minimale. Questo redesign copre tutto il ciclo outdoor.
+
+| # | Area | Effort | Dettaglio |
+|---|------|--------|-----------|
+| 1 | Guided outdoor session mode | L | Start/Stop con timer, log vie inline (nome/grado + stile onsight/flash/redpoint/project + tentativi + effort), summary a fine sessione |
+| 2 | Load calculation | M | Formula: `n_routes × grade_weight × style_modifier × effort_modifier × duration_factor`. Il load outdoor entra nel totale settimanale |
+| 3 | Ripple effect | M | Outdoor load influenza la pianificazione del giorno dopo (ex-B70) |
+| 4 | Done tracking | S | Sessione outdoor conta come "giorno fatto" nell'aderenza settimanale (ex-B69) |
+| 5 | History/stats UI | M | Pagina /outdoor con breakdown per spot: sessioni, grado max, distribuzione gradi, % onsight/flash/sent (ex-B72) |
+| 6 | Outdoor spots in onboarding | S | Raccogliere spot durante onboarding, non solo post-setup (ex-B73) |
+
+**Prerequisito da verificare:** quando un giorno ha `location: "outdoor"`, il planner NON deve pianificare sessioni indoor — il giorno appare come "Outdoor day" senza sessioni risolte.
+
+**Moduli impattati:** planner (slot blocking), guided session (nuovo mode), feedback/adaptation (load), reports (aderenza + load), UI (nuova pagina + flusso inline).
+
+**Priorità:** dopo B38, B48, B37.
+
+---
+
 ## Future — Evolution (Phase 4+)
 
 - **Multi-goal support**: boulder, all-round, outdoor_season goal types (boulder macrocycle already exists via B91)
