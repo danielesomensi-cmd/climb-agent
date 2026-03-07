@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
-import { completeOnboarding, generateTestWeek } from "@/lib/api";
+import { completeOnboarding } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -144,14 +144,13 @@ export default function ReviewPage() {
     setError(null);
     try {
       await completeOnboarding({ ...data, test_week_requested: true });
-      await generateTestWeek();
       sessionStorage.removeItem("climb_onboarding_draft");
       setSuccess(true);
       setTimeout(() => {
-        router.push("/today");
+        router.push("/plan");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error generating the test week");
+      setError(err instanceof Error ? err.message : "Error generating the plan");
       setLoading(false);
     }
   };

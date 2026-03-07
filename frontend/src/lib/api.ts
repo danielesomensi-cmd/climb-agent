@@ -66,7 +66,7 @@ export const getSessions = () =>
 export const getOnboardingDefaults = () =>
   request<OnboardingDefaults>("/api/onboarding/defaults");
 export const completeOnboarding = (data: OnboardingData) =>
-  request<{ profile: AssessmentProfile; macrocycle: Macrocycle | null; test_week_mode?: boolean }>("/api/onboarding/complete", {
+  request<{ profile: AssessmentProfile; macrocycle: Macrocycle }>("/api/onboarding/complete", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -75,16 +75,6 @@ export const setStartWeek = (offsetWeeks: number) =>
     "/api/onboarding/start-week",
     { method: "POST", body: JSON.stringify({ offset_weeks: offsetWeeks }) }
   );
-export const generateTestWeek = () =>
-  request<{ status: string; test_week: WeekPlan }>("/api/onboarding/test-week", {
-    method: "POST",
-    body: JSON.stringify({}),
-  });
-export const completeTestWeek = () =>
-  request<{ profile: AssessmentProfile; macrocycle: Macrocycle }>("/api/onboarding/test-week-complete", {
-    method: "POST",
-    body: JSON.stringify({}),
-  });
 
 // Assessment
 export const computeAssessment = (

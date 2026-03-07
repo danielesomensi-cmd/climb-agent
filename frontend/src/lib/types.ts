@@ -502,7 +502,5 @@ export interface UserState {
   planning_prefs: Record<string, unknown>;
   limitations: Record<string, unknown>;
   trips: Array<Record<string, unknown>>;
-  test_week_mode?: boolean;
-  test_week?: WeekPlan | null;
   [key: string]: unknown;
 }
