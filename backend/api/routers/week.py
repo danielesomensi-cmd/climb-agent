@@ -34,13 +34,27 @@ EXERCISES_PATH = "backend/catalog/exercises/v1/exercises.json"
 
 
 def _auto_resolve(week_plan: dict, state: dict) -> None:
-    """Resolve all sessions in a week plan inline."""
+    """Resolve all sessions in a week plan inline.
+
+    Preserves user-added exercises (source: "user_added") that were appended
+    via POST /api/session/add-exercise — they are re-appended after the
+    deterministic resolution so they survive cache round-trips.
+    """
     for week_block in week_plan.get("weeks", []):
         for day_entry in week_block.get("days", []):
             for session_entry in day_entry.get("sessions", []):
                 session_id = session_entry.get("session_id", "")
                 session_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
                 full_path = REPO_ROOT / session_path
+
+                # Collect user-added exercises before re-resolving
+                prev_resolved = session_entry.get("resolved") or {}
+                prev_rs = prev_resolved.get("resolved_session", {})
+                user_added = [
+                    inst for inst in prev_rs.get("exercise_instances", [])
+                    if inst.get("source") == "user_added"
+                ]
+
                 if not full_path.exists():
                     session_entry["resolved"] = None
                     continue
@@ -60,6 +74,10 @@ def _auto_resolve(week_plan: dict, state: dict) -> None:
                         user_state_override=resolve_state,
                         write_output=False,
                     )
+                    # Re-append user-added exercises
+                    if user_added:
+                        rs = resolved.get("resolved_session", {})
+                        rs.setdefault("exercise_instances", []).extend(user_added)
                     session_entry["resolved"] = resolved
                 except Exception:
                     session_entry["resolved"] = None
