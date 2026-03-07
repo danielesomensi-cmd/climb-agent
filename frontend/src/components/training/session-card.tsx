@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft, Trash2, MoreHorizontal, Plus, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft, Trash2, MoreVertical, Plus, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -280,7 +280,7 @@ function AddExerciseDialog({
     const defaults = ex.prescription_defaults ?? {};
     setSets((defaults.sets as number) ?? 3);
     setReps((defaults.reps as number) ?? 10);
-    setLoadKg(defaults.load_kg as number | undefined);
+    setLoadKg((defaults.load_kg as number | undefined) ?? 0);
     setError(null);
   }, []);
 
@@ -291,13 +291,15 @@ function AddExerciseDialog({
     try {
       const overrides: Record<string, unknown> = { sets, reps };
       if (loadKg != null) overrides.load_kg = loadKg;
-      await addExerciseToSession({
+      const payload = {
         date,
         session_index: sessionIndex,
         exercise_id: selected.exercise_id,
         prescription_override: overrides,
         week_plan: weekPlan,
-      });
+      };
+      console.log("addExerciseToSession payload:", payload);
+      await addExerciseToSession(payload);
       onOpenChange(false);
       setSelected(null);
       setSearch("");
@@ -377,15 +379,15 @@ function AddExerciseDialog({
                 />
               </div>
               <div>
-                <Label className="text-xs">Load (kg)</Label>
+                <Label className="text-xs">Additional weight (kg)</Label>
                 <Input
                   type="number"
                   min={0}
                   step={0.5}
-                  value={loadKg ?? ""}
-                  placeholder="BW"
-                  onChange={(e) => setLoadKg(e.target.value ? Number(e.target.value) : undefined)}
+                  value={loadKg ?? 0}
+                  onChange={(e) => setLoadKg(e.target.value ? Number(e.target.value) : 0)}
                 />
+                <p className="text-[10px] text-muted-foreground mt-1">Added to bodyweight. Enter 0 for BW only.</p>
               </div>
             </div>
 
@@ -455,14 +457,14 @@ export function SessionCard({
             <div className="flex items-center gap-1">
               {/* More actions button */}
               <button
-                className="flex items-center justify-center size-8 min-w-[44px] min-h-[44px] rounded-md text-muted-foreground hover:bg-accent transition-colors"
+                className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-md bg-muted/40 text-muted-foreground hover:bg-accent transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setDrawerOpen(true);
                 }}
                 aria-label="Session actions"
               >
-                <MoreHorizontal className="size-4" />
+                <MoreVertical className="size-4" />
               </button>
               {expanded ? (
                 <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
