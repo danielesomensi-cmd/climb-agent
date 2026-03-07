@@ -14,8 +14,8 @@ Open items that affect production reliability or core UX.
 |----|-------|--------|-------|
 | B48 | Edit single session (multi-session day) | M | "Change plan" should only affect the selected session, not the whole day. Offer "Replan rest of week" after. |
 | B37 | Add exercise to existing session | M | Allow users to append an exercise to a resolved session. |
-| B38 | Injuries filter (contraindications) | M | Resolver should filter out exercises matching user's active contraindications/limitations. Related to UI-9. |
-| UI-9 | Limitation filtering in resolver | M | Verify and enforce limitation-based exercise filtering in resolve_session. |
+| ~~B38~~ | ~~Injuries filter (contraindications)~~ | ~~M~~ | Done: 3-level severity system (monitor/active/severe) in resolver. |
+| ~~UI-9~~ | ~~Limitation filtering in resolver~~ | ~~M~~ | Done: integrated in B38. Frontend severity picker pending (phase 2). |
 | B42 | Sunday reminder — confirm next week availability | S | Weekly push/banner asking user to confirm next week's schedule. From beta feedback (FB-3). |
 | UI-25 | Test Maxes & Loads panel (Plan tab) | L | Collapsible card: test history timeline, benchmark comparison, exercise loads list. See ROADMAP_v2.md §9.5 for full spec. |
 | FR-4 | Outdoor vs gym slot priority preference | S | When both outdoor and gym available same day, user sets preference (outdoor-first / gym-first / alternate). See ROADMAP_v2.md §9.3-9.4. |
@@ -79,7 +79,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | ID | Title | Notes |
 |----|-------|-------|
 | B37 | Add exercise to existing session | User can append exercises to a resolved session (also listed in P1). |
-| B38 | Injuries filter (contraindications) | Resolver respects user limitations (also listed in P1). |
+| ~~B38~~ | ~~Injuries filter (contraindications)~~ | Done (P1). Frontend severity picker + settings UI pending. |
 | — | Override intensity cap warning | Warn when user overrides with session above current phase intensity cap. |
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |

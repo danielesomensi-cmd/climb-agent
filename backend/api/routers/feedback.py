@@ -16,7 +16,8 @@ from backend.engine.adaptive_replan import (
     load_exercises_by_id,
 )
 from backend.engine.closed_loop_v1 import apply_day_result_to_user_state
-from backend.engine.progression_v1 import apply_feedback
+from backend.engine.progression_v1 import apply_feedback, canonical_feedback_label
+from backend.engine.resolve_session import normalize_limitations, _check_exercise_limitation
 
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
@@ -63,5 +64,29 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
                     state["week_plans"] = {}
                 state["week_plans"][start_key] = updated_plan
 
+    # 5. Limitation severity suggestions (B38)
+    limitation_suggestions = []
+    limitation_map = normalize_limitations(state)
+    if limitation_map:
+        exercise_feedback = (req.log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
+        for item in exercise_feedback:
+            label = canonical_feedback_label(item)
+            if label not in ("hard", "very_hard"):
+                continue
+            ex_id = str(item.get("exercise_id") or "").strip()
+            ex_data = exercises_by_id.get(ex_id, {})
+            lim = _check_exercise_limitation(ex_data, limitation_map)
+            if lim and lim["severity"] == "monitor":
+                limitation_suggestions.append({
+                    "exercise_id": ex_id,
+                    "zone": lim["zone"],
+                    "current_severity": "monitor",
+                    "suggested_severity": "active",
+                    "reason": f"{label} feedback on exercise with {lim['zone']} contraindication",
+                })
+
     save_state(state, user_id)
-    return {"status": "ok", "state": state}
+    response = {"status": "ok", "state": state}
+    if limitation_suggestions:
+        response["limitation_suggestions"] = limitation_suggestions
+    return response

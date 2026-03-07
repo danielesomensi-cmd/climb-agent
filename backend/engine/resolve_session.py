@@ -216,6 +216,107 @@ def ex_equipment_required(ex: Dict[str, Any]) -> List[str]:
 def ex_equipment_required_any(ex: Dict[str, Any]) -> List[str]:
     return norm_list_str(ex.get("equipment_required_any"))
 
+
+# ---------------------------
+# Limitation helpers (B38)
+# ---------------------------
+ZONE_TO_CONTRAINDICATION = {
+    "elbow": "elbow_sensitive",
+    "shoulder": "shoulder_sensitive",
+    "wrist": "wrist_sensitive",
+}
+
+SEVERITY_ORDER = {"monitor": 0, "active": 1, "severe": 2}
+
+_SEVERITY_MIGRATION = {
+    "mild": "monitor",
+    "moderate": "active",
+    "lieve": "monitor",
+    "moderato": "active",
+}
+
+
+def normalize_limitations(user_state: Dict[str, Any]) -> Dict[str, str]:
+    """Build limitation_map {zone: severity} from user_state.limitations.
+
+    Handles current format ({active_flags, details}), new list-of-dicts format,
+    and legacy list-of-strings format.  Always picks the highest severity when
+    a zone appears more than once.
+    """
+    limitations = user_state.get("limitations")
+    if not limitations:
+        return {}
+
+    result: Dict[str, str] = {}
+
+    def _ingest(zone: str, raw_severity: str) -> None:
+        severity = _SEVERITY_MIGRATION.get(norm_str(raw_severity), norm_str(raw_severity))
+        if zone in ZONE_TO_CONTRAINDICATION and severity in SEVERITY_ORDER:
+            if zone not in result or SEVERITY_ORDER[severity] > SEVERITY_ORDER.get(result[zone], -1):
+                result[zone] = severity
+
+    if isinstance(limitations, dict):
+        details = limitations.get("details") or []
+        if details:
+            for d in details:
+                _ingest(norm_str(d.get("area") or d.get("zone") or ""), d.get("severity") or "active")
+            return result
+        for flag in (limitations.get("active_flags") or []):
+            for zone in ZONE_TO_CONTRAINDICATION:
+                if norm_str(flag).startswith(zone):
+                    result.setdefault(zone, "active")
+        return result
+
+    if isinstance(limitations, list):
+        for item in limitations:
+            if isinstance(item, str):
+                for zone, contra in ZONE_TO_CONTRAINDICATION.items():
+                    if item == contra or norm_str(item).startswith(zone):
+                        result.setdefault(zone, "active")
+            elif isinstance(item, dict):
+                _ingest(norm_str(item.get("zone") or item.get("area") or ""), item.get("severity") or "active")
+        return result
+
+    return {}
+
+
+def _check_exercise_limitation(
+    exercise: Dict[str, Any],
+    limitation_map: Dict[str, str],
+) -> Optional[Dict[str, str]]:
+    """Return worst limitation match {zone, severity} for exercise, or None."""
+    if not limitation_map:
+        return None
+    ex_contras = set(norm_list_str(exercise.get("contraindications")))
+    if not ex_contras:
+        return None
+    worst: Optional[Dict[str, str]] = None
+    for zone, severity in limitation_map.items():
+        contra = ZONE_TO_CONTRAINDICATION.get(zone)
+        if contra and contra in ex_contras:
+            if worst is None or SEVERITY_ORDER[severity] > SEVERITY_ORDER[worst["severity"]]:
+                worst = {"zone": zone, "severity": severity}
+    return worst
+
+
+def _apply_limitation_to_instance(
+    inst: Dict[str, Any],
+    selected_ex: Dict[str, Any],
+    limitation_map: Dict[str, str],
+) -> None:
+    """Tag instance with limitation info and apply load modifier if needed."""
+    lim = _check_exercise_limitation(selected_ex, limitation_map)
+    if not lim:
+        return
+    inst["limitation_warning"] = lim["severity"]
+    inst["limitation_zone"] = lim["zone"]
+    if lim["severity"] == "active":
+        inst["limitation_load_modifier"] = 0.8
+        presc = inst.get("prescription") or {}
+        presc.setdefault("multiplier", 1.0)
+        presc["multiplier"] = float(presc["multiplier"]) * 0.8
+
+
 def pick_best_exercise_p0(
     *,
     exercises: List[Dict[str, Any]],
@@ -227,6 +328,7 @@ def pick_best_exercise_p0(
     required_equipment: Any = None,
     exclude_ids: Optional[set] = None,
     recent_ex_ids: Optional[List[str]] = None,
+    limitation_map: Optional[Dict[str, str]] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -332,6 +434,25 @@ def pick_best_exercise_p0(
         else:
             trace["pattern_filter_applied"] = False
             trace["counts"]["after_pattern"] = len(base3)
+
+    # Stage 6: limitation filtering (after domain/pattern so we filter the right pool)
+    if limitation_map:
+        severe_contras = {ZONE_TO_CONTRAINDICATION[z] for z, s in limitation_map.items()
+                          if s == "severe" and z in ZONE_TO_CONTRAINDICATION}
+        if severe_contras:
+            base3 = [e for e in base3 if not set(norm_list_str(e.get("contraindications"))) & severe_contras]
+        trace["counts"]["after_limitation_severe"] = len(base3)
+
+        active_contras = {ZONE_TO_CONTRAINDICATION[z] for z, s in limitation_map.items()
+                          if s == "active" and z in ZONE_TO_CONTRAINDICATION}
+        if active_contras:
+            base3_no_contra = [e for e in base3 if not set(norm_list_str(e.get("contraindications"))) & active_contras]
+            if base3_no_contra:
+                base3 = base3_no_contra
+        trace["counts"]["after_limitation_active"] = len(base3)
+
+    if not base3:
+        return None, trace
 
     # Deterministic pick: score_exercise for recency-aware tie-breaking,
     # then exercise_id ascending for final deterministic tie-break
@@ -672,6 +793,7 @@ def _resolve_inline_block(
     blocks_out: List[Dict[str, Any]],
     exercise_instances: List[Dict[str, Any]],
     instance_counter: int,
+    limitation_map: Optional[Dict[str, str]] = None,
 ) -> int:
     """Resolve an inline block (module with block_id + selection, no template_id).
 
@@ -703,6 +825,7 @@ def _resolve_inline_block(
         required_equipment=equipment_req,
         exclude_ids=set(recent_ex_ids),
         recent_ex_ids=recent_ex_ids,
+        limitation_map=limitation_map,
     )
     chosen_by = "p0_inline_block"
 
@@ -783,6 +906,7 @@ def _resolve_inline_block(
             sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
             if sug:
                 inst["suggested"] = sug
+        _apply_limitation_to_instance(inst, selected_ex, limitation_map or {})
         exercise_instances.append(inst)
         recent_ex_ids.append(norm_str(ex_id))
 
@@ -810,6 +934,93 @@ def _resolve_inline_block(
     return instance_counter
 
 
+def _inject_prehab_for_limitations(
+    *,
+    exercise_instances: List[Dict[str, Any]],
+    blocks_out: List[Dict[str, Any]],
+    limitation_map: Dict[str, str],
+    exercises: List[Dict[str, Any]],
+    location: str,
+    available_equipment: List[str],
+    instance_counter: int,
+) -> int:
+    """Auto-inject one prehab exercise per limitation zone if not already present."""
+    prehab_zones = sorted(z for z in limitation_map if z in ZONE_TO_CONTRAINDICATION)
+    if not prehab_zones:
+        return instance_counter
+
+    # Which prehab domains already appear in the session?
+    existing_prehab = set()
+    for inst in exercise_instances:
+        eid = inst.get("exercise_id", "")
+        for ex in exercises:
+            if get_ex_id(ex) == eid:
+                for d in norm_list_str(ex.get("domain")):
+                    if d.startswith("prehab_"):
+                        existing_prehab.add(d)
+                break
+
+    loc = norm_str(location)
+    avail = set(norm_list_str(available_equipment))
+
+    for zone in prehab_zones:
+        prehab_domain = f"prehab_{zone}"
+        if prehab_domain in existing_prehab:
+            continue
+
+        candidates = [
+            e for e in exercises
+            if prehab_domain in norm_list_str(e.get("domain"))
+            and (not ex_location_allowed(e) or loc in set(ex_location_allowed(e)))
+            and set(ex_equipment_required(e)).issubset(avail)
+        ]
+        if not candidates:
+            continue
+
+        candidates.sort(key=lambda e: norm_str(get_ex_id(e)))
+        prehab_ex = candidates[0]
+
+        instance_counter += 1
+        ex_id = get_ex_id(prehab_ex)
+        ex_defaults = prehab_ex.get("defaults") or prehab_ex.get("prescription_defaults") or {}
+        merged = dict(ex_defaults) if isinstance(ex_defaults, dict) else {}
+
+        inst = {
+            "instance_id": f"prehab_{zone}_{instance_counter:02d}",
+            "exercise_id": ex_id,
+            "name": prehab_ex.get("name", ""),
+            "category": prehab_ex.get("category", ""),
+            "video_url": prehab_ex.get("video_url") or None,
+            "cues": prehab_ex.get("cues") or [],
+            "variant": {},
+            "prescription": merged,
+            "attributes": prehab_ex.get("attributes") or {},
+            "load_model": prehab_ex.get("load_model"),
+            "block_uid": f"prehab_injection.{zone}",
+            "source": {
+                "picked_by": "resolver_v0.2/prehab_injection",
+                "template_id": None,
+                "block_id": f"prehab_{zone}",
+            },
+            "limitation_prehab_for": zone,
+        }
+        exercise_instances.append(inst)
+
+        blocks_out.append({
+            "block_uid": f"prehab_injection.{zone}",
+            "block_id": f"prehab_{zone}",
+            "type": "prehab",
+            "template_id": None,
+            "status": "selected",
+            "message": f"Auto-injected prehab for {zone} limitation ({limitation_map[zone]})",
+            "p0_trace": {"counts": {}},
+            "filter_trace": {"p_stage": "prehab_injection"},
+            "selected_exercises": [{"exercise_id": ex_id, "variant": {}, "prescription": merged}],
+        })
+
+    return instance_counter
+
+
 # ---------------------------
 # Resolve session (B + fallback)
 # ---------------------------
@@ -824,6 +1035,7 @@ def resolve_session(
     write_output: bool = True
 ) -> Dict[str, Any]:
     user_state = user_state_override if user_state_override is not None else load_user_state(repo_root)
+    limitation_map = normalize_limitations(user_state) if user_state else {}
 
     session = load_json(os.path.join(repo_root, session_path))
     session_ctx = session.get("context") if isinstance(session.get("context"), dict) else {}
@@ -899,6 +1111,7 @@ def resolve_session(
                 blocks_out=blocks_out,
                 exercise_instances=exercise_instances,
                 instance_counter=instance_counter,
+                limitation_map=limitation_map,
             )
             continue
 
@@ -985,6 +1198,7 @@ def resolve_session(
                         domain_req=domain_req,
                         exclude_ids=set(recent_ex_ids),
                         recent_ex_ids=recent_ex_ids,
+                        limitation_map=limitation_map,
                     )
                     chosen_by = "p0_hard_filters"
 
@@ -1066,8 +1280,9 @@ def resolve_session(
                     sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
                     if sug:
                         inst["suggested"] = sug
+                _apply_limitation_to_instance(inst, selected_ex, limitation_map)
                 exercise_instances.append(inst)
-                recent_ex_ids.append(norm_str(ex_id))  # update “recent” inside this resolution too
+                recent_ex_ids.append(norm_str(ex_id))  # update "recent" inside this resolution too
 
                 selected_list.append({
                     "exercise_id": ex_id,
@@ -1089,6 +1304,20 @@ def resolve_session(
                 "filter_trace": {"p_stage": "P0", **(trace or {"counts": {}, "domain_filter_applied": None})},
                 "selected_exercises": selected_list
             })
+
+    # ---------------------------
+    # B38: Prehab injection for limitations (monitor/active/severe)
+    # ---------------------------
+    if limitation_map:
+        instance_counter = _inject_prehab_for_limitations(
+            exercise_instances=exercise_instances,
+            blocks_out=blocks_out,
+            limitation_map=limitation_map,
+            exercises=exercises,
+            location=location,
+            available_equipment=available_equipment,
+            instance_counter=instance_counter,
+        )
 
     session_instance = {
         "session_instance_version": "1.1",
@@ -1145,6 +1374,12 @@ def resolve_session(
         ex_fatigue.get(inst.get("exercise_id"), 0)
         for inst in exercise_instances
     )
+
+    # B38: force deload if 2+ zones are severe
+    if limitation_map:
+        severe_count = sum(1 for s in limitation_map.values() if s == "severe")
+        if severe_count >= 2:
+            session_instance["force_deload_reason"] = "2+ severe limitations"
 
     # ---------------------------
     # P0 contract: no silent blocks (central normalization)

@@ -254,16 +254,47 @@ Rules:
 
 ---
 
-### 2.9 Safety flags (optional but standardized)
+### 2.9 Safety flags and limitation system
 
-Optional canonical fields:
+#### 2.9.1 Exercise contraindications
 
-- `contraindications`: array of
-  - `elbow_sensitive`
-  - `shoulder_sensitive`
-  - `wrist_sensitive`
+`contraindications`: array of canonical values:
+- `elbow_sensitive`
+- `shoulder_sensitive`
+- `wrist_sensitive`
 
-If present, resolver must avoid selecting these exercises when user_state indicates the corresponding sensitivity.
+Zone-to-contraindication mapping: `elbow` -> `elbow_sensitive`, `shoulder` -> `shoulder_sensitive`, `wrist` -> `wrist_sensitive`.
+
+#### 2.9.2 Limitation severity levels
+
+- `monitor` -- warning only + auto-inject prehab for that zone
+- `active` -- substitute with non-contraindicated variant if available, else reduce load (-20% multiplier) + prehab
+- `severe` -- exclude all contraindicated exercises, replace with zone-specific prehab; if 2+ zones are `severe` simultaneously, flag force-deload
+
+Severity migration from legacy values: `mild` / `lieve` -> `monitor`, `moderate` / `moderato` -> `active`, `severe` -> `severe`.
+
+#### 2.9.3 Limitation schema (user_state.limitations)
+
+Current format (dict with `active_flags` + `details`):
+
+```json
+{
+  "limitations": {
+    "active_flags": ["elbow_left"],
+    "details": [
+      {
+        "area": "elbow",
+        "side": "left",
+        "severity": "active",
+        "notes": "Optional free text",
+        "updated_at": "2026-03-01"
+      }
+    ]
+  }
+}
+```
+
+Also accepted: list-of-dicts format with `zone`/`severity` keys, or legacy list-of-strings (e.g. `["elbow_sensitive"]`, migrated to `active` severity).
 
 ---
 
