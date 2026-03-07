@@ -12,9 +12,9 @@ Open items that affect production reliability or core UX.
 
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
-| B99 | Test week crashata — plan/week non funzionano | L | `test_week_mode=True` → Plan "No plan generated", Week 422 "No macrocycle". Frontend e backend assumono macrociclo. Blocca tutti i nuovi utenti che scelgono test week. |
-| B100 | Piano/test week parte nel passato | M | Onboarding di venerdì → sessioni da lunedì scorso. Start date deve essere domani o lunedì prossimo, a scelta utente. Vale per test week E macrociclo. |
-| B101 | Test week ignora gym selezionate | M | `generate_test_week()` non rispetta `availability` gym_id. Sessioni test finiscono in gym sbagliate. |
+| ~~B99~~ | ~~Test week crashata~~ | ~~L~~ | Done: test_week_mode eliminato, onboarding genera sempre macrociclo con estimate_missing_baselines() + inject_tests in Pass 3. |
+| ~~B100~~ | ~~Piano parte nel passato~~ | ~~M~~ | Done: this_monday() → next_monday() in onboarding. Piano parte sempre dal prossimo lunedì. |
+| ~~B101~~ | ~~Test week ignora gym~~ | ~~M~~ | Non era un bug: planner rispetta gym_id da availability. 5 test di conferma aggiunti. |
 | B102 | Finger mancante dalle zone infortuni | M | Pulegge A2/A4 = infortunio #1 climber. Aggiungere `finger` come zona + `finger_sensitive` contraindication + esercizi `prehab_finger`. |
 | B103 | Gym equipment: nessun preset alla creazione | S | Preselezionare default comuni (gym_boulder, hangboard, pullup_bar). Utente toglie ciò che manca. |
 | B104 | Board mancanti + other equipment | S | Aggiungere `board_tension` e `board_other` al vocabulary — trattati come `board_kilter` (stessi esercizi). Resolver: `equipment_required_any` include tutti i board type. Aggiungere campo `equipment_other` generico (free text, non usato dal motore). |
@@ -33,7 +33,7 @@ Open items that affect production reliability or core UX.
 
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
-| B106 | Loading pin come equipment alternativo | M | v1 done: alias `loading_pin→hangboard` nel resolver + vocabulary + UI onboarding/settings. v2 TODO: gestione unilaterale, doppio tempo, flag `unilateral: true`, durata ~1.5x. Priorità hangboard se disponibile. |
+| ~~B106~~ | ~~Loading pin alias (v1)~~ | ~~M~~ | Done: alias `loading_pin→hangboard` nel resolver + vocabulary + UI. v2 (B109): gestione unilaterale, doppio tempo. |
 | B107 | "Other" per injuries | S | Campo free text nella UI injuries. Zero effetto motore — solo UX completeness. |
 | B108 | Outdoor tooltip in onboarding | S | Non aggiungere outdoor in onboarding (spontaneo, dipende da meteo). Tooltip: "You can add outdoor days in your weekly plan." |
 | B109 | Loading pin: esercizi one-arm | M | Esercizi specifici per loading pin (one-arm hang progressions). Dipende da B106. |
@@ -62,6 +62,7 @@ Items that affect first impression for paying users.
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Set up develop branch for staging, main for production deploys. |
+| B110 | Fix sync_status.py endpoint count | S | Script conta 37 endpoint, reale è 39. Verificare regex/logica di conteggio. |
 
 ---
 
