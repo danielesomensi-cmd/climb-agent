@@ -19,8 +19,8 @@ Open items that affect production reliability or core UX.
 | B103 | Gym equipment: nessun preset alla creazione | S | Preselezionare default comuni (gym_boulder, hangboard, pullup_bar). Utente toglie ciò che manca. |
 | B104 | Board mancanti + other equipment | S | Aggiungere `board_tension` e `board_other` al vocabulary — trattati come `board_kilter` (stessi esercizi). Resolver: `equipment_required_any` include tutti i board type. Aggiungere campo `equipment_other` generico (free text, non usato dal motore). |
 | B105 | Gym lookup disallineato (state.gyms vs state.equipment.gyms) | M | Dati gym in `state["equipment"]["gyms"]` ma alcuni consumer cercano `state["gyms"]`. Mappare e allineare tutti i punti. |
-| B48 | Edit single session (multi-session day) | M | "Change plan" should only affect the selected session, not the whole day. Offer "Replan rest of week" after. |
-| B37 | Add exercise to existing session | M | Allow users to append an exercise to a resolved session. |
+| ~~B48~~ | ~~Edit single session (multi-session day)~~ | ~~M~~ | Done: `session_index` param in override — replaces only targeted session, others untouched. |
+| ~~B37~~ | ~~Add exercise to existing session~~ | ~~M~~ | Done: `POST /api/session/add-exercise` — appends exercise, recalculates load score. |
 | ~~B38~~ | ~~Injuries filter (contraindications)~~ | ~~M~~ | Done: 3-level severity system (monitor/active/severe) in resolver. |
 | ~~UI-9~~ | ~~Limitation filtering in resolver~~ | ~~M~~ | Done: integrated in B38. Frontend severity picker pending (phase 2). |
 | B42 | Sunday reminder — confirm next week availability | S | Weekly push/banner asking user to confirm next week's schedule. From beta feedback (FB-3). |
@@ -33,7 +33,7 @@ Open items that affect production reliability or core UX.
 
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
-| B106 | Loading pin come equipment alternativo | M | `loading_pin` nel vocabulary. Alternativa unilaterale all'hangboard. `equipment_required_any: ["hangboard", "loading_pin"]`. Complessità: unilaterale → doppio tempo, flag `unilateral: true`, durata ~1.5x. Priorità hangboard se disponibile. |
+| B106 | Loading pin come equipment alternativo | M | v1 done: alias `loading_pin→hangboard` nel resolver + vocabulary + UI onboarding/settings. v2 TODO: gestione unilaterale, doppio tempo, flag `unilateral: true`, durata ~1.5x. Priorità hangboard se disponibile. |
 | B107 | "Other" per injuries | S | Campo free text nella UI injuries. Zero effetto motore — solo UX completeness. |
 | B108 | Outdoor tooltip in onboarding | S | Non aggiungere outdoor in onboarding (spontaneo, dipende da meteo). Tooltip: "You can add outdoor days in your weekly plan." |
 | B109 | Loading pin: esercizi one-arm | M | Esercizi specifici per loading pin (one-arm hang progressions). Dipende da B106. |
@@ -96,7 +96,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 
 | ID | Title | Notes |
 |----|-------|-------|
-| B37 | Add exercise to existing session | User can append exercises to a resolved session (also listed in P1). |
+| ~~B37~~ | ~~Add exercise to existing session~~ | Done (P1). |
 | ~~B38~~ | ~~Injuries filter (contraindications)~~ | Done (P1). Frontend severity picker + settings UI pending. |
 | — | Override intensity cap warning | Warn when user overrides with session above current phase intensity cap. |
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |

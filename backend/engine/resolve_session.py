@@ -1056,6 +1056,13 @@ def resolve_session(
     if any(w in available_equipment for w in weight_subtypes) and "weight" not in available_equipment:
         available_equipment.append("weight")
 
+    # Equipment aliases (v1): loading_pin → hangboard.
+    # v2 (B106/B109): gestione unilaterale, doppio tempo, esercizi dedicati
+    EQUIPMENT_ALIASES = {"loading_pin": "hangboard"}
+    for alias, canonical in EQUIPMENT_ALIASES.items():
+        if alias in available_equipment and canonical not in available_equipment:
+            available_equipment.append(canonical)
+
     # Equipment implications (v2): every gym has a pullup bar.
     if location == "gym" and "pullup_bar" not in available_equipment:
         available_equipment.append("pullup_bar")

@@ -50,6 +50,7 @@ Allowed `equipment` values:
 - `gym_routes` *(gym has route walls / rope climbing terrain)*
 - `cable_machine` *(cable pulley machine for antagonist and general strength work)*
 - `leg_press` *(machine for lower-body pressing; useful for antagonist/conditioning)*
+- `loading_pin` *(alternative to hangboard for finger strength training; unilateral (one hand at a time); treated as hangboard alias in v1)*
 
 Rules:
 - Do **not** use `"none"` as an equipment value. Use an empty list: `equipment_required: []`.

@@ -47,6 +47,7 @@ EQUIPMENT_HOME = [
     {"id": "foam_roller", "label": "Foam Roller", "description": "Roller for self-massage and myofascial release"},
     {"id": "resistance_band", "label": "Resistance band", "description": "Elastic band for activation and prehab exercises"},
     {"id": "pinch_block", "label": "Pinch Block", "description": "Block for pinch grip training"},
+    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs. Alternative to hangboard for finger strength"},
 ]
 
 EQUIPMENT_GYM = [
