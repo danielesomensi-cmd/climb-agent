@@ -98,7 +98,7 @@ def onboarding_defaults():
         "weakness_options": WEAKNESS_OPTIONS,
         "equipment_home": EQUIPMENT_HOME,
         "equipment_gym": EQUIPMENT_GYM,
-        "limitation_areas": ["elbow", "shoulder", "wrist", "knee", "back"],
+        "limitation_areas": ["elbow", "finger", "shoulder", "wrist", "knee", "back", "other"],
         "test_descriptions": TEST_DESCRIPTIONS,
         "slots": ["morning", "lunch", "evening"],
         "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],

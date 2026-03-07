@@ -222,6 +222,7 @@ def ex_equipment_required_any(ex: Dict[str, Any]) -> List[str]:
 # ---------------------------
 ZONE_TO_CONTRAINDICATION = {
     "elbow": "elbow_sensitive",
+    "finger": "finger_sensitive",
     "shoulder": "shoulder_sensitive",
     "wrist": "wrist_sensitive",
 }

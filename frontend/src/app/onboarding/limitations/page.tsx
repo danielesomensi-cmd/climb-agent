@@ -24,10 +24,12 @@ import {
 
 const AREAS = [
   { value: "elbow", label: "Elbow" },
+  { value: "finger", label: "Finger" },
   { value: "shoulder", label: "Shoulder" },
   { value: "wrist", label: "Wrist" },
   { value: "knee", label: "Knee" },
   { value: "back", label: "Back" },
+  { value: "other", label: "Other" },
 ];
 
 const SIDES = [

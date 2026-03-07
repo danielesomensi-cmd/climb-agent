@@ -104,6 +104,7 @@ Allowed `domain` values (v1.1, backwards-compatible):
 - `core`
 - `mobility`
 - `prehab_elbow`
+- `prehab_finger`
 - `prehab_shoulder`
 - `prehab_wrist`
 - `contact_strength` *(rate of force development — campus board exercises)*
@@ -261,10 +262,13 @@ Rules:
 
 `contraindications`: array of canonical values:
 - `elbow_sensitive`
+- `finger_sensitive`
 - `shoulder_sensitive`
 - `wrist_sensitive`
 
-Zone-to-contraindication mapping: `elbow` -> `elbow_sensitive`, `shoulder` -> `shoulder_sensitive`, `wrist` -> `wrist_sensitive`.
+Zone-to-contraindication mapping: `elbow` -> `elbow_sensitive`, `finger` -> `finger_sensitive`, `shoulder` -> `shoulder_sensitive`, `wrist` -> `wrist_sensitive`.
+
+Note: `knee`, `back`, and `other` are valid limitation zones (tracked in user state) but have no contraindication mapping — they are informational only.
 
 #### 2.9.2 Limitation severity levels
 

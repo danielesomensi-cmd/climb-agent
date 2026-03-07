@@ -268,7 +268,8 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "elbow_sensitive",
+        "finger_sensitive"
       ],
       "attributes": {
         "edge_mm": 20,
@@ -323,7 +324,8 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "elbow_sensitive",
+        "finger_sensitive"
       ],
       "attributes": {
         "edge_mm": 20,
@@ -378,7 +380,8 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "elbow_sensitive",
+        "finger_sensitive"
       ],
       "attributes": {
         "edge_mm": 20,
@@ -757,7 +760,9 @@
         "home",
         "gym"
       ],
-      "contraindications": [],
+      "contraindications": [
+        "finger_sensitive"
+      ],
       "prescription_defaults": {
         "sets": 3,
         "reps": 6,
@@ -2050,7 +2055,8 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "elbow_sensitive",
+        "finger_sensitive"
       ],
       "prescription_defaults": {
         "sets": 6,
@@ -2146,7 +2152,8 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "elbow_sensitive",
+        "finger_sensitive"
       ],
       "prescription_defaults": {
         "sets": 5,
@@ -2197,6 +2204,7 @@
       ],
       "contraindications": [
         "elbow_sensitive",
+        "finger_sensitive",
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
@@ -2247,6 +2255,7 @@
       ],
       "contraindications": [
         "elbow_sensitive",
+        "finger_sensitive",
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
@@ -2305,6 +2314,7 @@
       ],
       "contraindications": [
         "elbow_sensitive",
+        "finger_sensitive",
         "shoulder_sensitive"
       ],
       "prescription_defaults": {
@@ -5944,7 +5954,9 @@
         "home",
         "gym"
       ],
-      "contraindications": [],
+      "contraindications": [
+        "finger_sensitive"
+      ],
       "prescription_defaults": {
         "sets": 5,
         "reps": null,
@@ -6046,7 +6058,8 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "elbow_sensitive",
+        "finger_sensitive"
       ],
       "prescription_defaults": {
         "sets": 4,
@@ -7656,6 +7669,99 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only"
+    },
+    {
+      "id": "finger_extensor_band",
+      "name": "Finger Extensor Band Extensions",
+      "category": "prehab",
+      "time_min": 5,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_finger"
+      ],
+      "pattern": "finger_extension",
+      "intensity_level": "very_low",
+      "fatigue_cost": 1,
+      "recency_group": "prehab_finger_extensors",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 20,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 30,
+        "notes": "Use rubber band around fingertips. Slow, controlled opening."
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "low",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Finger extensor exercise using a rubber band for antagonist balance and tendon health. Targets the extensor digitorum and reduces flexor/extensor imbalance common in climbers.",
+      "cues": [
+        "Wrap a rubber band around all five fingertips",
+        "Spread fingers wide against the resistance",
+        "Hold open position for 1 second",
+        "Return slowly — don't let the band snap back",
+        "Pain-free range only"
+      ],
+      "load_model": "bodyweight_only",
+      "video_url": null
+    },
+    {
+      "id": "finger_tendon_glides",
+      "name": "Finger Tendon Gliding Exercises",
+      "category": "prehab",
+      "time_min": 5,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_finger"
+      ],
+      "pattern": "tendon_glide",
+      "intensity_level": "very_low",
+      "fatigue_cost": 1,
+      "recency_group": "prehab_finger_glides",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 20,
+        "notes": "Cycle through all 5 positions smoothly. Both hands."
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "low",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Systematic tendon gliding sequence through 5 hand positions (straight, hook, fist, tabletop, straight fist). Promotes differential gliding of FDS/FDP tendons and reduces adhesion risk after finger strain.",
+      "cues": [
+        "Start with fingers straight and extended",
+        "Hook fist: bend fingertips only, keep knuckles straight",
+        "Full fist: close hand completely",
+        "Tabletop: fingers straight but bent at knuckles (90°)",
+        "Straight fist: fingers curled at middle joints, tips touch palm",
+        "Move slowly between positions, hold each 2-3 seconds"
+      ],
+      "load_model": "bodyweight_only",
+      "video_url": null
     }
   ]
 }
