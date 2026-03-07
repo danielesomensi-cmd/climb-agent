@@ -26,6 +26,7 @@ Open items that affect production reliability or core UX.
 | B42 | Sunday reminder — confirm next week availability | S | Weekly push/banner asking user to confirm next week's schedule. From beta feedback (FB-3). |
 | UI-25 | Test Maxes & Loads panel (Plan tab) | L | Collapsible card: test history timeline, benchmark comparison, exercise loads list. See ROADMAP_v2.md §9.5 for full spec. |
 | FR-4 | Outdoor vs gym slot priority preference | S | When both outdoor and gym available same day, user sets preference (outdoor-first / gym-first / alternate). See ROADMAP_v2.md §9.3-9.4. |
+| B113 | AddExerciseDialog: lista incompleta + nessuna descrizione | S | getExercises() potrebbe non restituire tutti i 153 esercizi. Ogni item deve mostrare anche la descrizione breve dal catalogo. Prima cosa domani. |
 
 ---
 
@@ -104,6 +105,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
 | B105 | Gym lookup disallineato | `state["equipment"]["gyms"]` vs `state["gyms"]` — mappare tutti i consumer e unificare |
+| B112 | Equipment filter in Add Exercise | AddExerciseDialog shows all 153 exercises regardless of session location/equipment. Must filter by required_equipment vs available equipment (gym or home). Frontend: hide or gray out incompatible exercises with "Missing: X" label. Backend: validate equipment_required on add-exercise endpoint. This is a core engine principle — equipment compatibility is non-negotiable. Depends on audit_location_equipment.md. |
 
 ---
 
