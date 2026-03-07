@@ -1,15 +1,11 @@
-Aggiorna la documentazione di progetto dopo una sessione di lavoro.
+Run the status sync script and commit:
 
-1. **`docs/ROADMAP_v2.md`**: aggiorna gli stati dei B-items modificati durante la sessione (🔲→✅ o 🔲→🔧). Aggiorna l'header con data odierna e contatori (test, sessioni, esercizi, templates).
+1. Run: `python scripts/sync_status.py`
+2. Review the diff output
+3. If anything changed, commit:
+   ```bash
+   git add PROJECT_BRIEF.md && git commit -m "docs: sync counters"
+   ```
 
-2. **`PROJECT_BRIEF.md`**: aggiorna la tabella delle fasi e i contatori (test count, sessioni, esercizi, templates).
-
-3. **`CLAUDE.md`**: aggiorna il test count nel commento del comando pytest e in qualsiasi altro punto dove appare il numero di test.
-
-**Non toccare** sezioni di design, architettura, o spiegazioni tecniche. Solo contatori e stati.
-
-Poi committa:
-
-```bash
-git add docs/ROADMAP_v2.md PROJECT_BRIEF.md CLAUDE.md && git commit -m "docs: sync post-session"
-```
+Do NOT manually edit counters in any file.
+The sync script is the single source of truth for all project metrics.

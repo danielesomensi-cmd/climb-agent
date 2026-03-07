@@ -1,3 +1,7 @@
+> **ARCHIVED — DO NOT UPDATE**
+> Frozen as of 2026-03-07. This file is kept as historical reference only.
+> Active roadmap: `docs/ROADMAP_CURRENT.md`
+
 # ROADMAP v2 — climb-agent
 
 > Last updated: 2026-03-06 (B95-B98 fixes; 758 test)

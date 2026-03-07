@@ -1,24 +1,26 @@
 # CLAUDE.md — climb-agent
 
-## Author
+## Your role
 
-Daniele **Somensi** (con la S, non Somenzi).
+You are a senior software engineer building climb-agent — a climbing training app heading to paid production. You are meticulous, detail-oriented, and product-minded. You think about edge cases, test coverage, and user experience before writing code. You respond in Italian.
 
-## Project context
+Author: Daniele **Somensi** (with an S, not Z).
 
-climb-agent is a deterministic climbing training engine. It generates personalised weekly training plans, resolves abstract sessions into concrete exercises with sets/reps/load, and adapts progression through closed-loop feedback. No LLM is used at runtime — all logic is rule-based and testable.
+## What climb-agent is
 
-## Principles
+A deterministic climbing training engine. It generates personalised weekly training plans, resolves abstract sessions into concrete exercises with sets/reps/load, and adapts progression through closed-loop feedback. No LLM is used at runtime — all logic is rule-based and testable. Methodology: Hörst 4-3-2-1 adaptive periodization with DUP. Supports both lead and boulder disciplines.
+
+## Non-negotiable principles
 
 - **Deterministic**: Given the same user state and inputs, output is always the same.
 - **Closed-loop**: Every session outcome feeds back into user state for future planning.
 - **Data-driven**: Sessions, exercises, and templates are JSON catalogs — logic is separate from data.
 - **Test-first**: All engine behaviour is covered by pytest. Tests must pass before merging.
 
-## Key commands
+## Commands
 
 ```bash
-# Run all tests (758 green)
+# Run all tests
 source .venv/bin/activate && python -m pytest backend/tests -q
 
 # Run a single test file
@@ -30,88 +32,86 @@ uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8
 # Start frontend dev server (port 3000)
 cd frontend && npm run dev
 
-# Type-check (if mypy is installed)
-mypy backend/engine/
+# Sync project counters into PROJECT_BRIEF.md
+python scripts/sync_status.py
+```
+
+## Import conventions
+
+All Python imports use the `backend.` prefix. Data paths are relative to repo root.
+
+```python
+from backend.engine.planner_v1 import generate_week_plan
+"backend/catalog/sessions/v1/strength_long.json"
 ```
 
 ## Repository structure
 
 ```
 backend/
-  engine/            # Core logic: planner, resolver, replanner, progression, closed-loop
+  engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (14 routers, 36 endpoints)
-    main.py          # App setup, CORS, router mounting (14 routers)
-    models.py        # Pydantic request/response models
-    deps.py          # Shared deps (load_state, save_state, next_monday)
-    routers/         # state, catalog, onboarding, assessment, macrocycle, week, session, replanner, feedback, outdoor, reports, quotes, user, admin
+  api/               # FastAPI REST API (14 routers)
+    routers/         # state, catalog, onboarding, assessment, macrocycle, week,
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
-  tests/             # 744 pytest tests with fixtures/
+  tests/             # pytest test suite with fixtures/
 frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
-  src/app/           # 24 pages: 9 main views + 13 onboarding steps + root + onboarding index
-  src/components/    # layout (TopBar, BottomNav), onboarding (RadarChart), training (DayCard, SessionCard, etc.)
-                     # guided/ (session-timer, progress-bar, exercise-step, summary)
-                     # whats-next/ (roadmap-section, feature-item, feedback-section)
-                     # settings/ (equipment-editor, goal-editor)
-  src/lib/           # api.ts (34 endpoint functions), types.ts, hooks/
-docs/                # vocabulary_v1.md, DESIGN_GOAL_MACROCICLO_v1.1.md, ROADMAP_v2.md, audit_post_fix.md, e2e_test_results.md
+  src/app/           # Pages: main views + onboarding wizard + guided session
+  src/components/    # layout, onboarding, training, guided, settings, whats-next, ui
+  src/lib/           # api.ts, types.ts, hooks/
+docs/                # Design docs, glossary, roadmap, literature reviews
+scripts/             # sync_status.py (auto-update counters)
 _archive/            # Legacy scripts, docs, config (do not modify)
 ```
 
-## Import conventions
+See `PROJECT_BRIEF.md` for current counts (tests, exercises, sessions, endpoints, pages, components).
 
-All Python imports use the `backend.` prefix:
+## Engine architecture
 
-```python
-from backend.engine.planner_v1 import generate_week_plan
-from backend.engine.resolve_session import resolve_session
+```
+user_state.assessment + user_state.goal
+    → compute_assessment_profile()    [assessment_v1]
+    → generate_macrocycle()           [macrocycle_v1]
+    → generate_phase_week()           [planner_v2, per week]
+    → resolve_session()               [resolve_session, per session]
 ```
 
-Data paths are relative to the repo root:
+**Key modules:**
+- `assessment_v1.py` — 6-axis profile (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition), 0-100 per axis
+- `macrocycle_v1.py` — 10-13 week periodized plan, 5 phases (base → strength_power → power_endurance → performance → deload), boulder/lead variants
+- `planner_v2.py` — Phase-aware weekly planner, 3-pass algorithm (primary → complementary → tests), location-aware, gym-priority scoring
+- `replanner_v1.py` — 13 indoor + 3 outdoor intents, ripple effects, equipment-aware overrides, quick-add
+- `resolve_session.py` — Resolves session templates to concrete exercises with sets/reps/load
 
-```python
-"backend/catalog/sessions/v1/strength_long.json"
-"backend/data/user_state.json"
-```
+## API endpoints
 
-## API (Phase 3)
-
-FastAPI app with 14 routers and 36 endpoints + health check.
-
-```bash
-# Start (exclude data dir from reload)
-uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8000
-
-# Test
-source .venv/bin/activate && python -m pytest backend/tests/test_api.py -q
-```
-
-### Endpoints
+38 endpoints total (37 router + 1 app-level health check).
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Health check |
 | GET | `/api/state` | Get full user state |
 | PUT | `/api/state` | Deep-merge patch into state |
-| DELETE | `/api/state` | Reset state to empty |
 | GET | `/api/state/status` | Dirty-state check (is_macrocycle_stale) |
+| DELETE | `/api/state` | Reset state to empty |
 | GET | `/api/catalog/exercises` | List all exercises |
 | GET | `/api/catalog/sessions` | List all session metadata |
 | GET | `/api/onboarding/defaults` | Option lists for onboarding form |
 | POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle |
 | POST | `/api/onboarding/start-week` | Shift macrocycle start_date back N weeks |
-| POST | `/api/onboarding/test-week` | Generate test week plan (test_week_mode required) |
-| POST | `/api/onboarding/test-week-complete` | Recompute profile + generate macrocycle, clear test week |
+| POST | `/api/onboarding/test-week` | Generate test week plan |
+| POST | `/api/onboarding/test-week-complete` | Recompute profile + macrocycle, clear test week |
 | POST | `/api/assessment/compute` | Recompute 6-axis profile |
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
-| GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions, test_week_mode aware) |
-| POST | `/api/week/test-reminder-response` | Handle periodic test reminder (confirm/postpone/skip) |
+| GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
+| POST | `/api/week/test-reminder-response` | Handle periodic test reminder |
 | POST | `/api/session/resolve` | Resolve a single session to exercises |
-| POST | `/api/replanner/override` | Apply day override (intent-based, auto-resolves sessions) |
+| POST | `/api/replanner/override` | Apply day override (intent-based, equipment-aware) |
 | POST | `/api/replanner/events` | Apply events (done/skipped) to week plan |
-| GET | `/api/replanner/suggest-sessions` | Suggest sessions for quick-add (by date + location) |
-| POST | `/api/replanner/quick-add` | Add extra session to a day (append, not replace) |
+| GET | `/api/replanner/suggest-sessions` | Suggest sessions for quick-add |
+| POST | `/api/replanner/quick-add` | Add extra session to a day |
 | POST | `/api/feedback` | Submit session feedback |
 | GET | `/api/outdoor/spots` | List outdoor spots |
 | POST | `/api/outdoor/spots` | Add outdoor spot |
@@ -124,171 +124,68 @@ source .venv/bin/activate && python -m pytest backend/tests/test_api.py -q
 | GET | `/api/reports/monthly` | Monthly training report |
 | GET | `/api/quotes/daily` | Daily motivational quote |
 | GET | `/api/user/export` | Download user_state as JSON backup |
-| POST | `/api/user/import` | Import user_state (validates, overwrites, logs) |
+| POST | `/api/user/import` | Import user_state (validates, overwrites) |
+| POST | `/api/user/recovery-code` | Get or create recovery code (CLIMB-XXXX) |
+| POST | `/api/user/recover` | Recover account from recovery code |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
+| DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 
-## Frontend (Phase 3)
+## Frontend
 
 Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-```bash
-cd frontend && npm run dev    # http://localhost:3000
-```
+**Pages (25):** 9 main views + 14 onboarding steps + 1 root + 1 onboarding index.
 
-### Tech stack
-- **Framework**: Next.js 14 (App Router, "use client" for all pages)
-- **Styling**: Tailwind CSS + shadcn/ui components
-- **State**: React hooks (useUserState, useOnboarding context)
-- **API client**: Typed fetch wrapper in `src/lib/api.ts` (30 endpoint functions)
-- **PWA**: manifest.json + service worker
-
-### Pages (24)
-9 main views + 13 onboarding steps + root + onboarding index, with validation (date pickers, grade-experience cross-check), multi-week navigation, replan intents, feedback badges, undo done, load score display.
-
-- `/today` — Today's sessions (or any day via `?date=YYYY-MM-DD`), mark done/skipped, post-session feedback
-- `/week` — 7-day grid + scrollable day detail cards + "View day" / "Change plan" buttons + replan dialog + multi-week navigation + "Weekly Report" button
+- `/today` — Today's sessions, mark done/skipped, post-session feedback
+- `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
-- `/session/[id]` — Resolved exercises with prescription details, feedback badges, load score
-- `/reports/weekly` — Comprehensive weekly report: adherence ring, load bar, difficulty distribution, highlights, day timeline, progression table, outdoor summary, stimulus balance grid
-- `/outdoor` — Outdoor history: stats cards, per-spot breakdown, session list with load scores, grade histogram
-- `/whats-next` — Votable roadmap (7 features, localStorage) + feedback form (mailto:)
-- `/settings` — Profile summary, goal editor, equipment editor, outdoor spots (with history link), regenerate assessment/macrocycle, reset
-- `/guided/[date]/[sessionId]` — Step-by-step guided session with timer, progress dots, inline feedback, summary
-- `/onboarding/*` — 13-step wizard: welcome → profile → experience → grades → goals → weaknesses → tests → limitations → locations → availability → trips → review → start-week
-
-## Catalog status (post Phase 0 expansion)
-
-- **Exercises**: 153 in `backend/catalog/exercises/v1/exercises.json`
-- **Sessions**: 29 in `backend/catalog/sessions/v1/` (13 archived to _archive/). Active: strength_long, power_contact_gym, power_endurance_gym, endurance_aerobic_gym, technique_focus_gym, complementary_conditioning, deload_recovery, finger_strength_home, finger_maintenance_home, finger_maintenance_gym, finger_aerobic_base, finger_endurance_short, prehab_maintenance, flexibility_full, handstand_practice, heavy_conditioning_gym, lower_body_gym, easy_climbing_deload, route_endurance_gym, pulling_strength_gym, boulder_circuit_gym, upper_body_weights, legs_strength, core_training, test_max_hang_5s, test_repeater_7_3, test_max_weighted_pullup + 2 others
-- **Templates**: 23 in `backend/catalog/templates/v1/` (11 original + 9 new + 3 test: warmup_climbing/strength/recovery, pulling_strength/pulling_strength_compound/endurance, antagonist_prehab, core_standard, cooldown_stretch, finger_max_strength_test, finger_strength_endurance_test, pulling_strength_test)
-
-### Exercise categories covered
-- Finger strength: max hang, repeaters, long duration, min edge, pinch, density, one-arm
-- Power & contact strength: campus (laddering, bumps, dynos), limit bouldering, board bouldering
-- Power endurance: 4x4, linked boulders, route intervals, ARC, threshold
-- Endurance/regeneration: continuity climbing, easy laps, easy traverse
-- Pulling strength: pullup variants (weighted, L-sit, archer, typewriter, one-arm), rows, lock-offs
-- Push/antagonist: pushup, dip, pike pushup, overhead press, ring pushup, bench, face pull
-- Core: hollow hold, L-sit, front lever, hanging leg raise, ab wheel, pallof, side plank, dead bug, windshield wipers, toes-to-bar
-- Prehab: wrist curls, forearm pronation/supination, band external rotation, scapular pullup, finger extensors, elbow eccentrics, shoulder CARs
-- Technique drills: silent feet, no readjust, downclimbing, slow climbing, flag practice
-- Flexibility: hip opener, shoulder stretch, forearm stretch, full body flow, active hip mobility, cossack squat, active leg raise, 90/90 hip switch
-- Cooldown stretches: forearm/wrist, pigeon, frog, shoulder/chest, hamstring fold, spinal twist, deep squat hold
-- Complementary - handstand: wall hold, wall walk-up, shoulder taps, freestanding, HSPU
-- Complementary - conditioning: jump rope, TGU, farmer carry, bear crawl, band pull-apart
-
-### Equipment note
-`pangullich` has been renamed to `campus_board` as canonical equipment ID.
-Equipment marked in `equipment_required` is truly mandatory (cannot do the exercise without it).
-Optional equipment is mentioned in `prescription_defaults.notes` only.
-
-## Macrocycle engine (Phase 1 + Phase 1.5 E2E fixes)
-
-The macrocycle engine implements Hörst 4-3-2-1 adaptive periodization with DUP.
-Post-E2E test (14 findings, 13 resolved in Cluster 1+2): 179 tests green. Current suite: 758 tests green.
-
-### Modules
-
-- `backend/engine/assessment_v1.py` — 6-axis profile computation (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition). Each axis 0-100, benchmark-based when test data available, grade-estimated otherwise. PE score uses repeater test (40%) + RP-OS gap (40%) + self_eval (20%) to avoid double counting. Endurance axis gets ±8 modifier from max_hang_duration_20mm_seconds; body_composition gets ±5 from l_sit_hold_seconds. Hip flexibility stored but informational only in v1.
-- `backend/engine/macrocycle_v1.py` — Macrocycle generator. Produces a 10-13 week periodized plan with 5 phases (base → strength_power → power_endurance → performance → deload). Supports `discipline="boulder"` (from goal) with boulder-specific phase durations (short base, long SP), session pools (no route sessions), and domain weights (`_BASE_WEIGHTS_BOULDER`). Includes deload logic (programmed, adaptive, pre-trip), goal validation (warns if target ≤ current), and configurable floor per phase (1w boulder, 2w lead).
-- `backend/engine/planner_v2.py` — Phase-aware weekly planner. 3-pass algorithm: pass 1 places primary/climbing sessions with spacing (gym days processed first), pass 2 fills complementary, pass 3 injects test sessions on last week of eligible phases (`is_last_week_of_phase=True`). Location-aware: respects preferred_location from availability, filters session pool by home/gym compatibility. Gym-priority scoring ensures climbing days are never dropped by target_days cap. Supports `pretrip_dates` to block hard sessions before trips. Pool cycling with max 2 full cycles. Outputs `estimated_load_score` per session and `weekly_load_summary` per week. Also: `generate_test_week()` creates a 1-week assessment plan (3 test sessions with 48h finger spacing + filler), `should_show_test_reminder()` fires periodic reminders at weeks 5, 11, 17... with postpone/skip.
-- `backend/engine/replanner_v1.py` — Phase-aware replanner. 13 indoor intents + 3 outdoor intents (`outdoor_projecting`, `outdoor_boulder`, `outdoor_volume`) mapped to planner_v2 sessions. `apply_day_override` accepts `phase_id`, `gyms` (B96 equipment-aware: checks required_equipment before placing session), and applies proportional ripple effect (hard→medium on day+1, force recovery on day+2) with phase mismatch warnings and finger compensation. Outdoor overrides (B97) set day-level outdoor fields and clear indoor sessions without ripple. `suggest_sessions` + `apply_day_add` for quick-add (append, day+1 ripple only, slot conflict with other_activity). Events: `add_other_activity`/`remove_other_activity` (B95, slot-aware). `regenerate_preserving_completed` recomputes day status after merge (B98). Imports `_SESSION_META` from planner_v2.
-- `backend/engine/resolve_session.py` — Session resolver. Supports both template_id references and inline blocks with selection spec. All 36 session files resolve correctly. Falls back to assessment test data for suggested loads when baselines are empty. Outputs `session_load_score` (sum of exercise `fatigue_cost` values).
-
-### Flow
-
-```
-user_state.assessment + user_state.goal
-    → compute_assessment_profile()    [assessment_v1]
-    → generate_macrocycle()           [macrocycle_v1]
-    → generate_phase_week()           [planner_v2, per week]
-    → resolve_session()               [resolve_session, per session]
-```
-
-### Schema additions (user_state.json v1.5)
-
-- `goal`: goal_type (`lead_grade` | `boulder_grade`), discipline (`lead` | `boulder`), target_grade, target_style, current_grade, deadline
-- `assessment`: body, experience, grades, tests (incl. repeater_7_3_max_sets_20mm), self_eval, profile (6-axis)
-- `trips[]`: name, start_date, end_date, discipline, priority
-- `macrocycle`: null until generated
-
-## Testing
-
-Tests live in `backend/tests/`. The `conftest.py` adds the repo root to `sys.path` so `import backend.*` works. Run with:
-
-```bash
-source .venv/bin/activate && python -m pytest backend/tests -q
-```
+- `/session/[id]` — Resolved exercises with prescription details, load score
+- `/reports/weekly` — Adherence, load, difficulty distribution, progression table
+- `/outdoor` — Outdoor history, stats, per-spot breakdown, grade histogram
+- `/whats-next` — Votable roadmap + feedback form
+- `/settings` — Profile, goals, equipment, spots, regenerate assessment/macrocycle
+- `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
+- `/onboarding/*` — 14-step wizard: welcome, profile, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover
 
 ## Deployment
 
-### Architettura deployed
+- **Frontend**: Next.js PWA on Vercel — https://climb-agent.vercel.app
+  - Auto-deploys on push to main. Root directory: `frontend/`
+  - Env: `NEXT_PUBLIC_API_URL=https://web-production-fb1e9.up.railway.app`
 
-- **Frontend**: Next.js PWA su Vercel
-  - URL: https://climb-agent.vercel.app
-  - Deploy: automatico da push su main
-  - Config: `frontend/` come root directory
-  - Env vars: `NEXT_PUBLIC_API_URL=https://web-production-fb1e9.up.railway.app`
+- **Backend**: FastAPI/uvicorn on Railway — https://web-production-fb1e9.up.railway.app
+  - Auto-deploys on push to main. Config: `Procfile` + `requirements.txt` in root
+  - Railway uses port 8080 internally (`$PORT=8080`). Do not change the port in Procfile.
 
-- **Backend**: FastAPI/uvicorn su Railway
-  - URL: https://web-production-fb1e9.up.railway.app
-  - Deploy: automatico da push su main
-  - Config: `Procfile` + `requirements.txt` in root
-  - Railway usa la porta 8080 internamente (`$PORT=8080`). Il dominio pubblico è mappato sulla porta 8080. Non modificare la porta nel Procfile.
+- **Deploy**: `git push` to main → both services update within 2-3 minutes.
 
-### Come deployare una modifica
+- **Multi-user**: UUID from `crypto.randomUUID()` stored in localStorage as `climb_user_id`, sent as `X-User-ID` header. State: `backend/data/users/{user_id}/user_state.json`. Without header → fallback to `backend/data/user_state.json` (local dev).
 
-`git push` su main → Railway e Vercel si aggiornano automaticamente entro 2-3 minuti.
+- **Environment variables (Railway)**:
+  | Variable | Description |
+  |----------|-------------|
+  | DATA_DIR | Persistent volume path (`/data/climb-agent`) |
+  | ADMIN_SECRET | Key for admin endpoints (never commit) |
 
-### Multi-user
+- **Persistence**: Railway persistent volume at `/data/climb-agent`. User data survives redeploys. `/health` exposes `ephemeral_warning`.
 
-- Ogni utente ha UUID generato da `crypto.randomUUID()`, salvato in localStorage come `climb_user_id`
-- Inviato come header `X-User-ID` su ogni chiamata API
-- State salvato in `backend/data/users/{user_id}/user_state.json`
+## Documentation architecture
 
-### Sviluppo locale
+- `PROJECT_BRIEF.md` — Project status + auto-updated counters (run `python scripts/sync_status.py`)
+- `docs/ROADMAP_CURRENT.md` — All open items, priorities, future phases
+- `docs/ROADMAP_v2.md` — Archived history (frozen, do not update)
+- `docs/vocabulary_v1.md` — Domain glossary (update when adding enums/types)
+- `docs/DESIGN_GOAL_MACROCICLO_v1.1.md` — Design doc (update when methodology changes)
+- `docs/literature_review_climbing_training.md` — Training science reference
+- `docs/docs_literature_hangboard.md` — Hangboard science reference
+- `docs/audit_location_equipment.md` — Equipment mapping reference
+- `docs/beta_feedback.md` — Beta tester feedback log
 
-```bash
-# Backend
-uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8000
+## Workflow rules
 
-# Frontend
-cd frontend && npm run dev   # porta 3000
-```
-
-Senza header `X-User-ID` → fallback a `backend/data/user_state.json` (per dev/test locali).
-
-### Variabili d'ambiente (Railway)
-
-| Variabile | Descrizione | Note |
-|-----------|-------------|------|
-| DATA_DIR | Path volume persistente | `/data/climb-agent` |
-| ADMIN_SECRET | Chiave per GET /api/admin/users | Valore in Railway Variables — non committare mai |
-
-Persistenza: Railway persistent volume montato a `/data/climb-agent`. I dati utente sopravvivono ai redeploy. Health check all'avvio logga il path e verifica writable; `/health` endpoint espone `ephemeral_warning`.
-
-## Documentation alignment
-
-- **docs/ROADMAP_v2.md** is the authoritative source for planning (what to do, when, B-items, findings)
-- **PROJECT_BRIEF.md** has a compact roadmap table — update phase statuses after each dev session
-- **docs/DESIGN_GOAL_MACROCICLO_v1.1.md** is the design doc (the "why") — don't put planning here
-- **docs/BACKLOG.md and docs/NEXT_STEPS.md** are archived in _archive/ — do not update
-- After every dev session: update ROADMAP_v2.md states + PROJECT_BRIEF.md phase table
-
-## Workflow
-
-Always push at end of session:
-
-```bash
-git add -A && git commit -m 'description' && git push
-```
-
-### Regola: documentazione sempre aggiornata (non negoziabile)
-
-Ogni volta che implementi o chiudi un feature item (B-item, GS-item, fase, task), **nello stesso commit** devi:
-
-1. **Aggiornare `docs/ROADMAP_v2.md`** — marca l'item come ✅ DONE con data e breve descrizione di cosa è stato fatto
-2. **Aggiornare `CLAUDE.md`** — se l'item era listato come aperto o in progress, rifletti lo stato reale (contatori test, sessioni, endpoint, ecc.)
-3. **Se l'item introduce nuovi comportamenti di default o nuove dipendenze**, documentalo nel file rilevante (`CLAUDE.md`, `PROJECT_BRIEF.md`, o design doc)
-
-Codice e documentazione devono essere **sempre allineati**. Non lasciare mai un item implementato segnato come 🔲 OPEN in roadmap.
+- Always respond in Italian.
+- Analyze before implementing — wait for explicit OK on non-trivial changes.
+- Run tests before committing. Run `python scripts/sync_status.py` after every dev session.
+- After closing any roadmap item: update `docs/ROADMAP_CURRENT.md` in the same commit.
+- Code and documentation must always be aligned. Never leave an implemented item marked as open.
+- Push at end of session: `git add -A && git commit -m 'description' && git push`
