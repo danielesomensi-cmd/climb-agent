@@ -86,6 +86,23 @@ Claude Sonnet as conversational layer over the deterministic engine.
 
 ---
 
+## Future — Educational content (methodology explanations)
+
+Two-layer system: detailed reference doc (`docs/training_methodology_explained.md`) + condensed UI cards in Plan page.
+
+**Content covers:** 5 macrocycle phases (why each phase, physiology, what you'll do, how you'll feel), DUP vs linear periodization, feedback loop mechanics, deload science, exercise ordering logic (e.g. hangboard before climbing).
+
+| Step | Effort | Dettaglio |
+|------|--------|-----------|
+| 1. Reference doc | M | Scrivere `docs/training_methodology_explained.md` — no code, usa letteratura esistente |
+| 2. API endpoints | S | Endpoint per servire il contenuto al frontend |
+| 3. UI cards in Plan page | M | Card espandibili sotto ogni fase + sezione "Why this plan" |
+| 4. LLM Coach context | — | Il doc diventa contesto nel system prompt del Coach (Phase 3.5) |
+
+**Dipendenze:** Step 1 non ha dipendenze. UI (Step 3) dipende dal doc. LLM Coach (Step 4) usa il doc come system prompt context.
+
+---
+
 ## Future — Outdoor redesign
 
 > Consolida e sostituisce: B68, B69, B70, B72, B73
