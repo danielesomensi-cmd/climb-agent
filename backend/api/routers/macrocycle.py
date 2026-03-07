@@ -80,6 +80,7 @@ def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_i
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
 
     state["macrocycle"] = macrocycle
+    state.pop("initial_tests_requested", None)
     invalidate_week_cache(state)
     save_state(state, user_id)
 

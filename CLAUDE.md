@@ -87,7 +87,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-39 endpoints total (38 router + 1 app-level health check).
+37 endpoints total (36 router + 1 app-level health check).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -101,8 +101,6 @@ user_state.assessment + user_state.goal
 | GET | `/api/onboarding/defaults` | Option lists for onboarding form |
 | POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle |
 | POST | `/api/onboarding/start-week` | Shift macrocycle start_date back N weeks |
-| POST | `/api/onboarding/test-week` | Generate test week plan |
-| POST | `/api/onboarding/test-week-complete` | Recompute profile + macrocycle, clear test week |
 | POST | `/api/assessment/compute` | Recompute 6-axis profile |
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
 | GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |

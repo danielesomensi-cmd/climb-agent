@@ -382,6 +382,7 @@ def generate_phase_week(
     is_last_week_of_phase: bool = False,
     home_equipment: Optional[List[str]] = None,
     today: Optional[str] = None,
+    inject_tests: bool = False,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -858,8 +859,10 @@ def generate_phase_week(
                             fm_placed = True
                             break
 
-    # ── PASS 3 (optional): Inject test sessions on last week of eligible phase ──
-    if is_last_week_of_phase and phase_id in ("base", "strength_power"):
+    # ── PASS 3 (optional): Inject test sessions ──
+    # Triggers on: last week of base/strength_power, OR explicitly via inject_tests
+    _run_pass3 = inject_tests or (is_last_week_of_phase and phase_id in ("base", "strength_power"))
+    if _run_pass3:
         # Required tests first, then optional
         _test_schedule = [
             ("test_max_hang_5s", True),

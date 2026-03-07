@@ -12,7 +12,7 @@ from backend.api.deps import REPO_ROOT, get_user_id, invalidate_week_cache, load
 from backend.api.models import OnboardingData, StartWeekRequest
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
 from backend.engine.macrocycle_v1 import generate_macrocycle
-from backend.engine.planner_v2 import generate_test_week
+from backend.engine.progression_v1 import estimate_missing_baselines
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
@@ -207,20 +207,21 @@ def _build_current_level(grades: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.post("/complete")
 def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(get_user_id)):
-    """Atomic onboarding: save state + compute assessment + generate macrocycle.
+    """Atomic onboarding: save state + estimate baselines + assessment + macrocycle.
 
-    When test_week_requested=True: saves state + computes initial profile but
-    skips macrocycle generation. Returns macrocycle=null, test_week_mode=true.
+    Always generates a full macrocycle. When test_week_requested=True, sets
+    initial_tests_requested flag so that test sessions are injected into week 1.
     """
-    # 1. Build and save user state
+    # 1. Build user state
     state = _build_user_state_from_onboarding(data)
-    save_state(state, user_id)
 
-    # 2. Compute assessment profile
+    # 2. Estimate missing baselines from grade/pullup before assessment
+    estimate_missing_baselines(state)
+
+    # 3. Compute assessment profile
     assessment = state.get("assessment", {})
     goal = state.get("goal", {})
 
-    # Ensure goal has current_grade from grades
     if not goal.get("current_grade") and assessment.get("grades"):
         grades = assessment["grades"]
         discipline = goal.get("discipline", "lead")
@@ -232,25 +233,21 @@ def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(g
     try:
         profile = compute_assessment_profile(assessment, goal)
     except Exception as e:
+        save_state(state, user_id)
         raise HTTPException(status_code=422, detail=f"Assessment computation failed: {e}")
 
     state["assessment"]["profile"] = profile
-    state["assessment"]["last_assessed"] = next_monday().replace(
-        next_monday()[:4], next_monday()[:4]  # keep as-is
-    )
+    state["assessment"]["last_assessed"] = next_monday()
 
-    # 3a. Test week mode: skip macrocycle, set flag
+    # 4. If user requested initial tests, set flag (tests injected into week 1)
     if data.test_week_requested:
-        state["test_week_mode"] = True
-        save_state(state, user_id)
-        return {"profile": profile, "macrocycle": None, "test_week_mode": True}
+        state["initial_tests_requested"] = True
 
-    # 3b. Normal flow: generate macrocycle
+    # 5. Always generate macrocycle (start = next Monday)
     try:
-        start = this_monday()
+        start = next_monday()
         macrocycle = generate_macrocycle(goal, profile, state, start, 12)
     except Exception as e:
-        # Save state with profile even if macrocycle fails
         save_state(state, user_id)
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
 
@@ -287,70 +284,3 @@ def onboarding_start_week(body: StartWeekRequest, user_id: Optional[str] = Depen
     return {"status": "ok", "start_date": mc["start_date"], "offset_applied": offset}
 
 
-@router.post("/test-week")
-def onboarding_test_week(user_id: Optional[str] = Depends(get_user_id)):
-    """Generate a test week plan and store it in state."""
-    state = load_state(user_id)
-    if not state.get("test_week_mode"):
-        raise HTTPException(status_code=422, detail="Not in test week mode — call /complete with test_week_requested=true first")
-
-    availability = state.get("availability")
-    equipment = state.get("equipment", {})
-    gyms = equipment.get("gyms", [])
-    home_eq = equipment.get("home")
-    locations = ["gym"] if gyms else ["home"]
-    if equipment.get("home_enabled"):
-        if "home" not in locations:
-            locations.append("home")
-
-    default_gym_id = None
-    if gyms:
-        sorted_gyms = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
-        default_gym_id = sorted_gyms[0].get("gym_id")
-
-    test_week = generate_test_week(
-        start_date=this_monday(),
-        availability=availability,
-        allowed_locations=locations,
-        gyms=gyms,
-        default_gym_id=default_gym_id,
-        home_equipment=home_eq,
-    )
-
-    state["test_week"] = test_week
-    save_state(state, user_id)
-
-    return {"status": "ok", "test_week": test_week}
-
-
-@router.post("/test-week-complete")
-def onboarding_test_week_complete(user_id: Optional[str] = Depends(get_user_id)):
-    """Recompute assessment profile (tests updated via feedback loop), generate macrocycle, clear test week mode."""
-    state = load_state(user_id)
-    if not state.get("test_week_mode"):
-        raise HTTPException(status_code=422, detail="Not in test week mode")
-
-    assessment = state.get("assessment", {})
-    goal = state.get("goal", {})
-
-    try:
-        profile = compute_assessment_profile(assessment, goal)
-    except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Assessment recomputation failed: {e}")
-
-    state["assessment"]["profile"] = profile
-
-    try:
-        start = this_monday()
-        macrocycle = generate_macrocycle(goal, profile, state, start, 12)
-    except Exception as e:
-        save_state(state, user_id)
-        raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
-
-    state["macrocycle"] = macrocycle
-    state.pop("test_week_mode", None)
-    state.pop("test_week", None)
-    invalidate_week_cache(state)
-    save_state(state, user_id)
-
-    return {"profile": profile, "macrocycle": macrocycle}

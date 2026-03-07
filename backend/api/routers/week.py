@@ -20,7 +20,7 @@ from backend.api.deps import (
 )
 from backend.api.models import TestReminderResponse
 from backend.engine.macrocycle_v1 import compute_pretrip_dates
-from backend.engine.planner_v2 import generate_phase_week, generate_test_week, should_show_test_reminder
+from backend.engine.planner_v2 import generate_phase_week, should_show_test_reminder
 from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
 
@@ -100,18 +100,6 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
     """
     state = load_state(user_id)
 
-    # Test week mode: return stored test week plan instead of macrocycle week
-    if state.get("test_week_mode") and week_num in (0, 1):
-        test_week = state.get("test_week")
-        if test_week:
-            _auto_resolve(test_week, state)
-            _attach_feedback(test_week, state.get("feedback_log", []))
-            return {
-                "week_num": 1,
-                "phase_id": "test_week",
-                "week_plan": test_week,
-            }
-
     macrocycle = state.get("macrocycle")
     if not macrocycle:
         raise HTTPException(status_code=422, detail="No macrocycle — generate one first")
@@ -174,6 +162,14 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
         try:
             # B95: pass today so the planner skips past days on regen
             today_str = datetime.now().strftime("%Y-%m-%d") if is_current_week else None
+            # Inject initial tests into week 1 of base phase (not if already last week)
+            is_last = ctx.get("is_last_week_of_phase", False)
+            want_tests = (
+                state.get("initial_tests_requested")
+                and ctx.get("is_first_week_of_phase")
+                and ctx["phase_id"] == "base"
+                and not is_last
+            )
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
                 domain_weights=ctx["domain_weights"],
@@ -186,9 +182,10 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
                 gyms=gyms,
                 intensity_cap=ctx.get("intensity_cap"),
                 pretrip_dates=pretrip_dates if pretrip_dates else None,
-                is_last_week_of_phase=ctx.get("is_last_week_of_phase", False),
+                is_last_week_of_phase=is_last,
                 home_equipment=home_equipment,
                 today=today_str,
+                inject_tests=want_tests,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")
@@ -254,36 +251,14 @@ def test_reminder_response(body: TestReminderResponse, user_id: Optional[str] = 
     current_wk = _current_week_num(macrocycle)
 
     if body.option == "confirm":
-        # Generate a test week starting next Monday
-        from backend.api.deps import this_monday as _this_monday
-        availability = state.get("availability")
-        equipment = state.get("equipment", {})
-        gyms = equipment.get("gyms", [])
-        home_eq = equipment.get("home")
-        locations = ["gym"] if gyms else ["home"]
-        if equipment.get("home_enabled") and "home" not in locations:
-            locations.append("home")
-        default_gym_id = None
-        if gyms:
-            sorted_gyms = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
-            default_gym_id = sorted_gyms[0].get("gym_id")
-
-        next_start = (datetime.strptime(_this_monday(), "%Y-%m-%d").date() + timedelta(days=7)).isoformat()
-        test_week = generate_test_week(
-            start_date=next_start,
-            availability=availability,
-            allowed_locations=locations,
-            gyms=gyms,
-            default_gym_id=default_gym_id,
-            home_equipment=home_eq,
-        )
-        state["test_week"] = test_week
-        state["test_week_mode"] = True
-        # Clear any postpone/skip state
+        from backend.api.deps import invalidate_week_cache
+        # Set flag so next week generation injects tests via Pass 3
+        state["initial_tests_requested"] = True
         state.pop("test_reminder_postponed_to", None)
         state.pop("test_reminder_skipped_until", None)
+        invalidate_week_cache(state)
         save_state(state, user_id)
-        return {"status": "ok", "action": "test_week_generated", "test_week": test_week}
+        return {"status": "ok", "action": "tests_scheduled"}
 
     elif body.option == "postpone_1_week":
         state["test_reminder_postponed_to"] = current_wk + 1

@@ -532,10 +532,10 @@ class TestWeekNavigation:
         assert r_sw.status_code == 200
         assert r_sw.json()["offset_applied"] == 2
 
-        # Current week should now be week 3
+        # Current week should be offset by start-week adjustment
         r0 = client.get("/api/week/0")
         assert r0.status_code == 200
-        assert r0.json()["week_num"] >= 3  # Could be 3 or more depending on date
+        assert r0.json()["week_num"] >= 2  # At least week 2 after offset=2
 
         # Navigate to week 1 and 2 (past weeks)
         for wn in [1, 2]:
