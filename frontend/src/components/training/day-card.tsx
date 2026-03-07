@@ -22,7 +22,7 @@ interface DayCardProps {
   onMarkDone?: (sessionId: string) => void;
   onMarkSkipped?: (sessionId: string) => void;
   onUndo?: (sessionId: string) => void;
-  onReplan?: (date: string) => void;
+  onReplan?: (date: string, sessionIndex?: number) => void;
   onQuickAdd?: (date: string) => void;
   onMoveSession?: (date: string, slot: string, sessionId: string) => void;
   onRemoveSession?: (sessionId: string) => void;
@@ -353,9 +353,9 @@ export function DayCard({
 
             {/* Regular sessions */}
             {day.sessions.length > 0 &&
-              day.sessions.map((session) => (
+              day.sessions.map((session, idx) => (
                 <SessionCard
-                  key={session.session_id}
+                  key={`${session.session_id}-${idx}`}
                   session={session}
                   date={day.date}
                   gyms={gyms}
@@ -372,6 +372,11 @@ export function DayCard({
                   onRemove={
                     onRemoveSession && session.status !== "done" && session.status !== "skipped"
                       ? () => onRemoveSession(session.session_id)
+                      : undefined
+                  }
+                  onReplan={
+                    onReplan && day.sessions.length > 1 && session.status !== "done" && session.status !== "skipped"
+                      ? () => onReplan(day.date, idx)
                       : undefined
                   }
                 />
@@ -395,7 +400,7 @@ export function DayCard({
                 </Button>
               </Link>
             )}
-            {onReplan && (
+            {onReplan && day.sessions.length <= 1 && (
               <Button
                 size="sm"
                 variant="outline"

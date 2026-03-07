@@ -21,8 +21,9 @@ interface ReplanDialogProps {
   open: boolean;
   date: string;
   gyms: Gym[];
+  sessionIndex?: number;
   onClose: () => void;
-  onApply: (data: { intent: string; location: string; gym_id?: string }) => void;
+  onApply: (data: { intent: string; location: string; gym_id?: string; session_index?: number }) => void;
 }
 
 const INDOOR_INTENT_OPTIONS = [
@@ -60,6 +61,7 @@ export function ReplanDialog({
   open,
   date,
   gyms,
+  sessionIndex,
   onClose,
   onApply,
 }: ReplanDialogProps) {
@@ -79,6 +81,7 @@ export function ReplanDialog({
       onApply({
         intent: resolvedIntent,
         location: "outdoor",
+        session_index: sessionIndex,
       });
       return;
     }
@@ -87,6 +90,7 @@ export function ReplanDialog({
       intent: resolvedIntent,
       location: isGym ? "gym" : "home",
       gym_id: isGym ? location : undefined,
+      session_index: sessionIndex,
     });
   };
 

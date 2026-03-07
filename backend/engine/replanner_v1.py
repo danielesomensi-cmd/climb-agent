@@ -1072,6 +1072,7 @@ def apply_day_override(
     target_date: Optional[str] = None,
     gym_id: Optional[str] = None,
     gyms: Optional[List[Dict[str, Any]]] = None,
+    session_index: Optional[int] = None,
 ) -> Dict[str, Any]:
     updated = deepcopy(plan)
 
@@ -1138,19 +1139,29 @@ def apply_day_override(
     # NEW-F7: save original sessions before overwriting
     original_sessions = list(target_day.get("sessions") or [])
 
-    target_day["sessions"] = [
-        {
-            "slot": slot,
-            "session_id": session_id,
-            "location": location,
-            "gym_id": effective_gym_id,
-            "phase_id": effective_phase,
-            "intensity": meta["intensity"],
-            "constraints_applied": ["manual_override"],
-            "tags": {"hard": meta["hard"], "finger": meta["finger"], **({"test": True} if meta.get("test") else {})},
-            "explain": ["user day override applied", f"override_intent={intent}"],
-        }
-    ]
+    new_session = {
+        "slot": slot,
+        "session_id": session_id,
+        "location": location,
+        "gym_id": effective_gym_id,
+        "phase_id": effective_phase,
+        "intensity": meta["intensity"],
+        "constraints_applied": ["manual_override"],
+        "tags": {"hard": meta["hard"], "finger": meta["finger"], **({"test": True} if meta.get("test") else {})},
+        "explain": ["user day override applied", f"override_intent={intent}"],
+    }
+
+    # B48: if session_index is provided, replace only that session
+    if session_index is not None and len(original_sessions) > 1:
+        if session_index < 0 or session_index >= len(original_sessions):
+            raise ValueError(
+                f"session_index {session_index} out of range "
+                f"(day has {len(original_sessions)} sessions)"
+            )
+        target_day["sessions"] = list(original_sessions)
+        target_day["sessions"][session_index] = new_session
+    else:
+        target_day["sessions"] = [new_session]
 
     if meta["hard"] or meta["finger"]:
         recovery_meta = _meta_for("regeneration_easy")
@@ -1221,9 +1232,14 @@ def apply_day_override(
             ripple_day["sessions"] = next_sessions
 
     # NEW-F7: finger compensation — if override removed a finger session, try to place it elsewhere
-    original_had_finger = any(
-        (s.get("tags") or {}).get("finger") for s in original_sessions
-    )
+    if session_index is not None and len(original_sessions) > 1:
+        # B48: only check the replaced session, not all originals
+        replaced = original_sessions[session_index]
+        original_had_finger = (replaced.get("tags") or {}).get("finger", False)
+    else:
+        original_had_finger = any(
+            (s.get("tags") or {}).get("finger") for s in original_sessions
+        )
     new_has_finger = meta["finger"]
     if original_had_finger and not new_has_finger:
         _compensate_finger(updated, target_key, effective_phase, location, effective_gym_id)

@@ -90,6 +90,7 @@ function TodayContent() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [phaseId, setPhaseId] = useState<string | null>(null);
   const [replanDate, setReplanDate] = useState<string | null>(null);
+  const [replanSessionIndex, setReplanSessionIndex] = useState<number | undefined>(undefined);
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
   const [moveSession, setMoveSession] = useState<{
     date: string;
@@ -369,6 +370,7 @@ function TodayContent() {
     intent: string;
     location: string;
     gym_id?: string;
+    session_index?: number;
   }) {
     if (!weekPlan || !replanDate) return;
     setError(null);
@@ -381,12 +383,14 @@ function TodayContent() {
         gym_id: rdata.gym_id,
         phase_id: phaseId ?? undefined,
         week_plan: weekPlan,
+        session_index: rdata.session_index,
       });
       setWeekPlan(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update plan");
     } finally {
       setReplanDate(null);
+      setReplanSessionIndex(undefined);
     }
   }
 
@@ -724,7 +728,7 @@ function TodayContent() {
             onMarkSkipped={handleMarkSkipped}
             onUndo={handleUndo}
             onRemoveSession={handleRemoveSession}
-            onReplan={(date) => setReplanDate(date)}
+            onReplan={(date, sessionIndex) => { setReplanDate(date); setReplanSessionIndex(sessionIndex); }}
             onQuickAdd={(date) => setQuickAddDate(date)}
             onMoveSession={(date, slot, sessionId) =>
               setMoveSession({ date, slot, sessionId })
@@ -807,7 +811,8 @@ function TodayContent() {
         open={replanDate !== null}
         date={replanDate ?? ""}
         gyms={gyms}
-        onClose={() => setReplanDate(null)}
+        sessionIndex={replanSessionIndex}
+        onClose={() => { setReplanDate(null); setReplanSessionIndex(undefined); }}
         onApply={handleReplanApply}
       />
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft, RefreshCw, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ interface SessionCardProps {
   onUndo?: () => void;
   onMove?: () => void;
   onRemove?: () => void;
+  onReplan?: () => void;
 }
 
 /** Format session_id into a readable string: replace _ with spaces, capitalize */
@@ -221,6 +222,7 @@ export function SessionCard({
   onUndo,
   onMove,
   onRemove,
+  onReplan,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -440,6 +442,20 @@ export function SessionCard({
                 >
                   <X className="size-3.5 mr-1" />
                   Skip
+                </Button>
+              )}
+              {onReplan && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-muted-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReplan();
+                  }}
+                >
+                  <RefreshCw className="size-3.5 mr-1" />
+                  Change
                 </Button>
               )}
               {onMove && (

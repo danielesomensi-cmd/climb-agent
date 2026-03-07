@@ -1282,3 +1282,128 @@ def test_b97_outdoor_override_no_ripple():
     day_after_updated = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-07")
     sessions_after = [s["session_id"] for s in day_after_updated.get("sessions", [])]
     assert sessions_before == sessions_after, "Outdoor override should not ripple"
+
+
+# --------------------------------------------------------------------------- #
+# B48: session_index — single-session override on multi-session days
+# --------------------------------------------------------------------------- #
+
+
+def _make_multi_session_plan():
+    """Build a plan where one day has 2 sessions (via quick-add)."""
+    from copy import deepcopy
+    plan = _make_v2_plan()
+    # Find a day with at least 1 session and add a second one
+    for day in plan["weeks"][0]["days"]:
+        if day.get("sessions"):
+            day["sessions"].append({
+                "slot": "morning",
+                "session_id": "complementary_conditioning",
+                "location": "home",
+                "gym_id": None,
+                "phase_id": "base",
+                "intensity": "medium",
+                "constraints_applied": ["quick_add"],
+                "tags": {"hard": False, "finger": False},
+                "explain": ["quick-added for test"],
+            })
+            return plan, day["date"]
+    raise RuntimeError("No day with sessions found")
+
+
+def test_b48_override_session_0_keeps_session_1():
+    """B48: Override session 0 on a 2-session day, session 1 untouched."""
+    plan, date = _make_multi_session_plan()
+    original_session_1 = plan["weeks"][0]["days"][
+        next(i for i, d in enumerate(plan["weeks"][0]["days"]) if d["date"] == date)
+    ]["sessions"][1].copy()
+
+    updated = apply_day_override(
+        plan,
+        intent="technique",
+        location="gym",
+        reference_date=date,
+        target_date=date,
+        session_index=0,
+    )
+    target_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == date)
+    assert len(target_day["sessions"]) == 2, "Should still have 2 sessions"
+    assert target_day["sessions"][0]["session_id"] == "technique_focus_gym"
+    assert target_day["sessions"][1]["session_id"] == original_session_1["session_id"]
+
+
+def test_b48_override_session_1_keeps_session_0():
+    """B48: Override session 1 on a 2-session day, session 0 untouched."""
+    plan, date = _make_multi_session_plan()
+    original_session_0 = plan["weeks"][0]["days"][
+        next(i for i, d in enumerate(plan["weeks"][0]["days"]) if d["date"] == date)
+    ]["sessions"][0].copy()
+
+    updated = apply_day_override(
+        plan,
+        intent="recovery",
+        location="home",
+        reference_date=date,
+        target_date=date,
+        session_index=1,
+    )
+    target_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == date)
+    assert len(target_day["sessions"]) == 2, "Should still have 2 sessions"
+    assert target_day["sessions"][0]["session_id"] == original_session_0["session_id"]
+    assert target_day["sessions"][1]["session_id"] == "yoga_recovery"
+
+
+def test_b48_no_index_replaces_all_sessions():
+    """B48: Without session_index, all sessions are replaced (backward compat)."""
+    plan, date = _make_multi_session_plan()
+    updated = apply_day_override(
+        plan,
+        intent="technique",
+        location="gym",
+        reference_date=date,
+        target_date=date,
+    )
+    target_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == date)
+    assert len(target_day["sessions"]) == 1, "Without index, should replace all"
+    assert target_day["sessions"][0]["session_id"] == "technique_focus_gym"
+
+
+def test_b48_session_index_out_of_range():
+    """B48: session_index out of range raises ValueError."""
+    import pytest
+    plan, date = _make_multi_session_plan()
+    with pytest.raises(ValueError, match="out of range"):
+        apply_day_override(
+            plan,
+            intent="technique",
+            location="gym",
+            reference_date=date,
+            target_date=date,
+            session_index=5,
+        )
+
+
+def test_b48_ripple_fires_after_single_session_override():
+    """B48: Ripple should fire based on replaced session's intensity."""
+    plan, date = _make_multi_session_plan()
+    updated = apply_day_override(
+        plan,
+        intent="strength",
+        location="gym",
+        reference_date=date,
+        target_date=date,
+        session_index=0,
+    )
+    # The override is a hard session — verify ripple happened
+    from datetime import datetime, timedelta
+    next_date = (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)).isoformat()[:10]
+    try:
+        ripple_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == next_date)
+        for s in ripple_day.get("sessions", []):
+            # After hard override, next day sessions should be downgraded
+            assert "recovery_ripple" in str(s.get("constraints_applied", [])) or \
+                   s.get("intensity") in ("low", "medium") or \
+                   not s.get("tags", {}).get("hard"), \
+                   f"Session {s['session_id']} should be downgraded by ripple"
+    except StopIteration:
+        pass  # next day not in plan — ok

@@ -52,6 +52,7 @@ export default function WeekPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [replanDate, setReplanDate] = useState<string | null>(null);
+  const [replanSessionIndex, setReplanSessionIndex] = useState<number | undefined>(undefined);
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
   const [moveSession, setMoveSession] = useState<{
     date: string;
@@ -165,6 +166,7 @@ export default function WeekPage() {
     intent: string;
     location: string;
     gym_id?: string;
+    session_index?: number;
   }) {
     if (!weekPlan || !replanDate) return;
     setError(null);
@@ -177,12 +179,14 @@ export default function WeekPage() {
         gym_id: rdata.gym_id,
         phase_id: phaseId ?? undefined,
         week_plan: weekPlan,
+        session_index: rdata.session_index,
       });
       setWeekPlan(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update plan");
     } finally {
       setReplanDate(null);
+      setReplanSessionIndex(undefined);
     }
   }
 
@@ -648,7 +652,7 @@ export default function WeekPage() {
                   onMarkSkipped={(sessionId) => handleMarkSkipped(sessionId, day.date)}
                   onUndo={(sessionId) => handleUndoSession(sessionId, day.date)}
                   onRemoveSession={(sessionId) => handleRemoveSession(sessionId, day.date)}
-                  onReplan={(date) => setReplanDate(date)}
+                  onReplan={(date, sessionIndex) => { setReplanDate(date); setReplanSessionIndex(sessionIndex); }}
                   onQuickAdd={(date) => setQuickAddDate(date)}
                   onMoveSession={(date, slot, sessionId) =>
                     setMoveSession({ date, slot, sessionId })
@@ -680,7 +684,8 @@ export default function WeekPage() {
         open={replanDate !== null}
         date={replanDate ?? ""}
         gyms={gyms}
-        onClose={() => setReplanDate(null)}
+        sessionIndex={replanSessionIndex}
+        onClose={() => { setReplanDate(null); setReplanSessionIndex(undefined); }}
         onApply={handleReplanApply}
       />
 

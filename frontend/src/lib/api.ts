@@ -124,6 +124,18 @@ export const resolveSession = (sessionId: string, context?: Record<string, unkno
     body: JSON.stringify({ session_id: sessionId, context }),
   });
 
+export const addExerciseToSession = (data: {
+  date: string;
+  session_index: number;
+  exercise_id: string;
+  prescription_override?: Record<string, unknown>;
+  week_plan: WeekPlan;
+}) =>
+  request<{ week_plan: WeekPlan }>("/api/session/add-exercise", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
 // Replanner
 export const applyOverride = (data: {
   intent: string;
@@ -134,6 +146,7 @@ export const applyOverride = (data: {
   week_plan: WeekPlan;
   target_date?: string;
   gym_id?: string;
+  session_index?: number;
 }) =>
   request<{ week_plan: WeekPlan }>("/api/replanner/override", {
     method: "POST",

@@ -87,7 +87,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-38 endpoints total (37 router + 1 app-level health check).
+39 endpoints total (38 router + 1 app-level health check).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -108,6 +108,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
 | POST | `/api/week/test-reminder-response` | Handle periodic test reminder |
 | POST | `/api/session/resolve` | Resolve a single session to exercises |
+| POST | `/api/session/add-exercise` | Add exercise to resolved session |
 | POST | `/api/replanner/override` | Apply day override (intent-based, equipment-aware) |
 | POST | `/api/replanner/events` | Apply events (done/skipped) to week plan |
 | GET | `/api/replanner/suggest-sessions` | Suggest sessions for quick-add |

@@ -123,6 +123,7 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             target_date=req.target_date,
             gym_id=req.gym_id,
             gyms=gyms,
+            session_index=req.session_index,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

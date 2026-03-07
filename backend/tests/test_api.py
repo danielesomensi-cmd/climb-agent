@@ -805,3 +805,124 @@ class TestStartWeek:
         client.delete("/api/state")
         r = client.post("/api/onboarding/start-week", json={"offset_weeks": 1})
         assert r.status_code == 422
+
+
+# --------------------------------------------------------------------------- #
+# B37: Add exercise to session
+# --------------------------------------------------------------------------- #
+
+
+class TestAddExercise:
+    """Tests for POST /api/session/add-exercise."""
+
+    @staticmethod
+    def _mock_week_plan():
+        """Build a minimal week plan with a resolved session."""
+        return {
+            "start_date": "2026-01-05",
+            "weeks": [{
+                "days": [
+                    {
+                        "date": "2026-01-05",
+                        "weekday": "monday",
+                        "sessions": [{
+                            "slot": "evening",
+                            "session_id": "finger_strength_gym",
+                            "location": "gym",
+                            "intensity": "high",
+                            "tags": {"hard": True, "finger": True},
+                            "resolved": {
+                                "session_load_score": 10,
+                                "resolved_session": {
+                                    "exercise_instances": [
+                                        {
+                                            "exercise_id": "max_hang_20mm",
+                                            "exercise_name": "Max Hang 20mm",
+                                            "prescription": {"sets": 5, "reps": 1, "duration_s": 10},
+                                            "source": "resolver",
+                                        },
+                                    ],
+                                },
+                            },
+                        }],
+                    },
+                    {
+                        "date": "2026-01-06",
+                        "weekday": "tuesday",
+                        "sessions": [],
+                    },
+                ],
+            }],
+        }
+
+    def test_add_exercise_to_resolved_session(self):
+        """B37: Adding an exercise appends it to the session."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "dead_hang_easy",
+            "week_plan": wp,
+        })
+        assert r.status_code == 200
+        updated = r.json()["week_plan"]
+        day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-05")
+        instances = day["sessions"][0]["resolved"]["resolved_session"]["exercise_instances"]
+        assert len(instances) == 2
+        assert instances[-1]["exercise_id"] == "dead_hang_easy"
+        assert instances[-1]["source"] == "user_added"
+
+    def test_add_exercise_updates_load_score(self):
+        """B37: Load score recalculates after adding exercise."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "dead_hang_easy",
+            "week_plan": wp,
+        })
+        assert r.status_code == 200
+        updated = r.json()["week_plan"]
+        day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-05")
+        new_score = day["sessions"][0]["resolved"].get("session_load_score", 0)
+        assert isinstance(new_score, (int, float))
+
+    def test_add_exercise_not_found(self):
+        """B37: Unknown exercise_id returns 404."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "nonexistent_exercise_xyz",
+            "week_plan": wp,
+        })
+        assert r.status_code == 404
+
+    def test_add_exercise_session_index_out_of_range(self):
+        """B37: Out-of-range session_index returns 422."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 99,
+            "exercise_id": "dead_hang_easy",
+            "week_plan": wp,
+        })
+        assert r.status_code == 422
+
+    def test_add_exercise_with_prescription_override(self):
+        """B37: Custom prescription is applied to added exercise."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "dead_hang_easy",
+            "prescription_override": {"sets": 5, "reps": 3, "load_kg": 20},
+            "week_plan": wp,
+        })
+        assert r.status_code == 200
+        updated = r.json()["week_plan"]
+        day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-05")
+        added = day["sessions"][0]["resolved"]["resolved_session"]["exercise_instances"][-1]
+        assert added["prescription"]["sets"] == 5
+        assert added["prescription"]["reps"] == 3
+        assert added["prescription"]["load_kg"] == 20

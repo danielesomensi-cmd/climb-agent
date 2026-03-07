@@ -47,6 +47,15 @@ class SessionResolveRequest(BaseModel):
     context: Optional[Dict[str, Any]] = None
 
 
+class AddExerciseRequest(BaseModel):
+    """Body for POST /api/session/add-exercise."""
+    date: str
+    session_index: int = 0
+    exercise_id: str
+    prescription_override: Optional[Dict[str, Any]] = None
+    week_plan: Optional[Dict[str, Any]] = None
+
+
 # --------------------------------------------------------------------------- #
 # Replanner
 # --------------------------------------------------------------------------- #
@@ -61,6 +70,7 @@ class OverrideRequest(BaseModel):
     week_plan: Optional[Dict[str, Any]] = None
     target_date: Optional[str] = None
     gym_id: Optional[str] = None
+    session_index: Optional[int] = None
 
 
 class EventsRequest(BaseModel):
