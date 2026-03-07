@@ -63,6 +63,7 @@ EQUIPMENT_GYM = [
     {"id": "bench", "label": "Bench", "description": "Bench for press and support exercises"},
     {"id": "cable_machine", "label": "Cable machine", "description": "Cable pulley machine for pulling and pushing exercises"},
     {"id": "leg_press", "label": "Leg press", "description": "Machine for lower body pressing exercises"},
+    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs. Alternative to hangboard for finger strength"},
 ]
 
 TEST_DESCRIPTIONS = {
