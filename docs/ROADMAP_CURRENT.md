@@ -12,6 +12,13 @@ Open items that affect production reliability or core UX.
 
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
+| B99 | Test week crashata — plan/week non funzionano | L | `test_week_mode=True` → Plan "No plan generated", Week 422 "No macrocycle". Frontend e backend assumono macrociclo. Blocca tutti i nuovi utenti che scelgono test week. |
+| B100 | Piano/test week parte nel passato | M | Onboarding di venerdì → sessioni da lunedì scorso. Start date deve essere domani o lunedì prossimo, a scelta utente. Vale per test week E macrociclo. |
+| B101 | Test week ignora gym selezionate | M | `generate_test_week()` non rispetta `availability` gym_id. Sessioni test finiscono in gym sbagliate. |
+| B102 | Finger mancante dalle zone infortuni | M | Pulegge A2/A4 = infortunio #1 climber. Aggiungere `finger` come zona + `finger_sensitive` contraindication + esercizi `prehab_finger`. |
+| B103 | Gym equipment: nessun preset alla creazione | S | Preselezionare default comuni (gym_boulder, hangboard, pullup_bar). Utente toglie ciò che manca. |
+| B104 | Board mancanti + other equipment | S | Aggiungere `board_tension` e `board_other` al vocabulary — trattati come `board_kilter` (stessi esercizi). Resolver: `equipment_required_any` include tutti i board type. Aggiungere campo `equipment_other` generico (free text, non usato dal motore). |
+| B105 | Gym lookup disallineato (state.gyms vs state.equipment.gyms) | M | Dati gym in `state["equipment"]["gyms"]` ma alcuni consumer cercano `state["gyms"]`. Mappare e allineare tutti i punti. |
 | B48 | Edit single session (multi-session day) | M | "Change plan" should only affect the selected session, not the whole day. Offer "Replan rest of week" after. |
 | B37 | Add exercise to existing session | M | Allow users to append an exercise to a resolved session. |
 | ~~B38~~ | ~~Injuries filter (contraindications)~~ | ~~M~~ | Done: 3-level severity system (monitor/active/severe) in resolver. |
@@ -19,6 +26,17 @@ Open items that affect production reliability or core UX.
 | B42 | Sunday reminder — confirm next week availability | S | Weekly push/banner asking user to confirm next week's schedule. From beta feedback (FB-3). |
 | UI-25 | Test Maxes & Loads panel (Plan tab) | L | Collapsible card: test history timeline, benchmark comparison, exercise loads list. See ROADMAP_v2.md §9.5 for full spec. |
 | FR-4 | Outdoor vs gym slot priority preference | S | When both outdoor and gym available same day, user sets preference (outdoor-first / gym-first / alternate). See ROADMAP_v2.md §9.3-9.4. |
+
+---
+
+## Priority 1b — Beta feedback (Christie, 2026-03-07)
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| B106 | Loading pin come equipment alternativo | M | `loading_pin` nel vocabulary. Alternativa unilaterale all'hangboard. `equipment_required_any: ["hangboard", "loading_pin"]`. Complessità: unilaterale → doppio tempo, flag `unilateral: true`, durata ~1.5x. Priorità hangboard se disponibile. |
+| B107 | "Other" per injuries | S | Campo free text nella UI injuries. Zero effetto motore — solo UX completeness. |
+| B108 | Outdoor tooltip in onboarding | S | Non aggiungere outdoor in onboarding (spontaneo, dipende da meteo). Tooltip: "You can add outdoor days in your weekly plan." |
+| B109 | Loading pin: esercizi one-arm | M | Esercizi specifici per loading pin (one-arm hang progressions). Dipende da B106. |
 
 ---
 
@@ -83,6 +101,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | — | Override intensity cap warning | Warn when user overrides with session above current phase intensity cap. |
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
+| B105 | Gym lookup disallineato | `state["equipment"]["gyms"]` vs `state["gyms"]` — mappare tutti i consumer e unificare |
 
 ---
 
