@@ -447,6 +447,12 @@ export interface GuidedExercise {
   videoUrl?: string;
   cues?: string[];
 
+  // Limitation system (B38)
+  limitationWarning?: "monitor" | "active" | "severe";
+  limitationZone?: string;
+  limitationLoadModifier?: number;
+  limitationPrehabFor?: string;
+
   status: "pending" | "done" | "skipped";
   feedbackLabel: string;
   usedLoadKg?: number;

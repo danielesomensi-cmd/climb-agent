@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Check, SkipForward, Lightbulb, Film, Info, Timer } from "lucide-react";
+import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer } from "lucide-react";
 import type { GuidedExercise } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 
@@ -254,6 +254,36 @@ export function GuidedExerciseStep({
       </CardHeader>
 
       <CardContent className="pb-4 space-y-4">
+        {/* Limitation warning banner (B38) */}
+        {exercise.limitationWarning && (
+          <div className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs ${
+            exercise.limitationWarning === "severe"
+              ? "bg-red-500/15 text-red-400 border border-red-500/30"
+              : exercise.limitationWarning === "active"
+                ? "bg-orange-500/15 text-orange-400 border border-orange-500/30"
+                : "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+          }`}>
+            <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+            <span>
+              {exercise.limitationWarning === "severe" && (
+                <>Caution: {exercise.limitationZone} injury — exercise replaced with prehab</>
+              )}
+              {exercise.limitationWarning === "active" && (
+                <>Caution: {exercise.limitationZone} limitation — {exercise.limitationLoadModifier ? "load reduced by 20%" : "modified variant selected"}</>
+              )}
+              {exercise.limitationWarning === "monitor" && (
+                <>Note: mild {exercise.limitationZone} sensitivity — proceed with awareness</>
+              )}
+            </span>
+          </div>
+        )}
+        {exercise.limitationPrehabFor && !exercise.limitationWarning && (
+          <div className="flex items-start gap-2 rounded-md px-3 py-2 text-xs bg-blue-500/15 text-blue-400 border border-blue-500/30">
+            <Info className="size-3.5 shrink-0 mt-0.5" />
+            <span>Auto-added prehab for {exercise.limitationPrehabFor} limitation</span>
+          </div>
+        )}
+
         {/* Prescription */}
         {prescriptionLines.length > 0 && (
           <div className="space-y-1">

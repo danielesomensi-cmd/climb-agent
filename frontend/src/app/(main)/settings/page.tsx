@@ -9,6 +9,7 @@ import type { OutdoorSpot } from "@/lib/types";
 import { AvailabilityEditor } from "@/components/settings/availability-editor";
 import { EquipmentEditor } from "@/components/settings/equipment-editor";
 import { GoalEditor } from "@/components/settings/goal-editor";
+import { LimitationsEditor, LimitationsSummary } from "@/components/settings/limitations-editor";
 import { ProfileAssessmentEditor } from "@/components/settings/profile-assessment-editor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [editingAvailability, setEditingAvailability] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState(false);
+  const [editingLimitations, setEditingLimitations] = useState(false);
   const [equipmentSavedOpen, setEquipmentSavedOpen] = useState(false);
   const [goalEditorOpen, setGoalEditorOpen] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
@@ -159,6 +161,18 @@ export default function SettingsPage() {
       setEditingAvailability(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to save availability");
+    }
+  }
+
+  /** Save updated limitations */
+  async function handleSaveLimitations(newLimitations: { active_flags?: string[]; details?: Array<{ area: string; side: string; severity: string; notes?: string }> }) {
+    setActionError(null);
+    try {
+      await putState({ limitations: newLimitations });
+      await refresh();
+      setEditingLimitations(false);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to save limitations");
     }
   }
 
@@ -451,6 +465,20 @@ export default function SettingsPage() {
                     )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* ----- Injuries & Limitations ----- */}
+            {editingLimitations ? (
+              <LimitationsEditor
+                initialLimitations={(state?.limitations ?? {}) as { active_flags?: string[]; details?: Array<{ area: string; side: string; severity: string; notes?: string }> }}
+                onSave={handleSaveLimitations}
+                onCancel={() => setEditingLimitations(false)}
+              />
+            ) : (
+              <LimitationsSummary
+                limitations={(state?.limitations ?? {}) as { active_flags?: string[]; details?: Array<{ area: string; side: string; severity: string; notes?: string }> }}
+                onEdit={() => setEditingLimitations(true)}
+              />
             )}
 
             {/* ----- Availability ----- */}

@@ -37,9 +37,9 @@ const SIDES = [
 ];
 
 const SEVERITIES = [
-  { value: "mild", label: "Mild" },
-  { value: "moderate", label: "Moderate" },
-  { value: "severe", label: "Severe" },
+  { value: "monitor", label: "Monitor", desc: "Mild discomfort — keep training but stay aware" },
+  { value: "active", label: "Active", desc: "Noticeable pain — reduce stress on this area" },
+  { value: "severe", label: "Severe", desc: "Significant injury — avoid all exercises that stress this area" },
 ];
 
 interface Limitation {
@@ -190,7 +190,10 @@ export default function LimitationsPage() {
                       <SelectContent>
                         {SEVERITIES.map((s) => (
                           <SelectItem key={s.value} value={s.value}>
-                            {s.label}
+                            <div>
+                              <span className="font-medium">{s.label}</span>
+                              <p className="text-xs text-muted-foreground">{s.desc}</p>
+                            </div>
                           </SelectItem>
                         ))}
                       </SelectContent>

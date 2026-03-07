@@ -100,6 +100,10 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
     feedbackLabel: "ok",
     testField: (inst.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
     testUnit: (inst.attributes as Record<string, unknown> | undefined)?.test_unit as string | undefined,
+    limitationWarning: inst.limitation_warning as GuidedExercise["limitationWarning"],
+    limitationZone: inst.limitation_zone as string | undefined,
+    limitationLoadModifier: inst.limitation_load_modifier as number | undefined,
+    limitationPrehabFor: inst.limitation_prehab_for as string | undefined,
   };
 }
 
