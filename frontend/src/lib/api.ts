@@ -57,8 +57,13 @@ export const getStateStatus = () =>
   request<{ is_macrocycle_stale: boolean }>("/api/state/status");
 
 // Catalog
-export const getExercises = () =>
-  request<{ exercises: Exercise[]; count: number }>("/api/catalog/exercises");
+export const getExercises = async () => {
+  const data = await request<{ exercises: Array<Exercise & { id: string }>; count: number }>("/api/catalog/exercises");
+  return {
+    ...data,
+    exercises: data.exercises.map((e) => ({ ...e, exercise_id: e.exercise_id || e.id })),
+  };
+};
 export const getSessions = () =>
   request<{ sessions: SessionMeta[]; count: number }>("/api/catalog/sessions");
 

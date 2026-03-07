@@ -74,6 +74,7 @@ export interface WeekPlan {
 }
 
 export interface Exercise {
+  id: string;
   exercise_id: string;
   name: string;
   domain: string;
