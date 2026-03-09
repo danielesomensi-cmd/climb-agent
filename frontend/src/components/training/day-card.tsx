@@ -29,6 +29,7 @@ interface DayCardProps {
   onChangeGym?: (date: string) => void;
   onCompleteOtherActivity?: (date: string, feedback: string) => void;
   onUndoOtherActivity?: (date: string) => void;
+  onRemoveOtherActivity?: (date: string) => void;
   onLogOutdoor?: (date: string) => void;
   onUndoOutdoor?: (date: string) => void;
   onRemoveOutdoor?: (date: string) => void;
@@ -119,6 +120,7 @@ export function DayCard({
   onChangeGym,
   onCompleteOtherActivity,
   onUndoOtherActivity,
+  onRemoveOtherActivity,
   onLogOutdoor,
   onUndoOutdoor,
   onRemoveOutdoor,
@@ -174,6 +176,16 @@ export function DayCard({
               <span className="font-medium">
                 {day.other_activity_name ?? "Other activity"}
               </span>
+              {onRemoveOtherActivity && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="ml-auto size-6 text-muted-foreground hover:text-red-400"
+                  onClick={() => onRemoveOtherActivity(day.date)}
+                >
+                  <X className="size-3.5" />
+                </Button>
+              )}
             </div>
             {day.other_activity_status === "completed" ? (
               <div className="flex flex-wrap items-center gap-1.5">

@@ -402,12 +402,17 @@ def apply_day_add(
 
 
 def _recompute_day_status(day: Dict[str, Any]) -> None:
-    """Derive day-level status from its sessions' statuses."""
-    sessions = day.get("sessions") or []
-    if not sessions:
+    """Derive day-level status from sessions, outdoor, and other-activity statuses."""
+    statuses = [s.get("status") for s in (day.get("sessions") or [])]
+
+    if day.get("outdoor_session_status") == "done":
+        statuses.append("done")
+    if day.get("other_activity_status") in ("done", "completed"):
+        statuses.append("done")
+
+    if not statuses:
         day.pop("status", None)
         return
-    statuses = [s.get("status") for s in sessions]
     if all(st == "done" for st in statuses):
         day["status"] = "done"
     elif all(st == "skipped" for st in statuses):

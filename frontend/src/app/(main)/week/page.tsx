@@ -280,6 +280,21 @@ export default function WeekPage() {
     }
   }
 
+  /** Remove other activity from a day */
+  async function handleRemoveOtherActivity(date: string) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "remove_other_activity", date }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to remove activity");
+    }
+  }
+
   /** Mark a session as completed + open feedback dialog */
   async function handleMarkDone(sessionId: string, date: string) {
     if (!weekPlan) return;
@@ -662,6 +677,7 @@ export default function WeekPage() {
                   onChangeGym={(date) => setChangeGymDate(date)}
                   onCompleteOtherActivity={handleCompleteOtherActivity}
                   onUndoOtherActivity={handleUndoOtherActivity}
+                  onRemoveOtherActivity={handleRemoveOtherActivity}
                   onLogOutdoor={handleLogOutdoor}
                   onUndoOutdoor={handleUndoOutdoor}
                   onRemoveOutdoor={handleRemoveOutdoor}

@@ -342,6 +342,20 @@ function TodayContent() {
     }
   }
 
+  /** Remove other activity from a day */
+  async function handleRemoveOtherActivity(date: string) {
+    if (!weekPlan) return;
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "remove_other_activity", date }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to remove activity");
+    }
+  }
+
   /** Remove a session from the day plan */
   async function handleRemoveSession(sessionId: string) {
     if (!weekPlan) return;
@@ -709,6 +723,7 @@ function TodayContent() {
             onChangeGym={(date) => setChangeGymDate(date)}
             onCompleteOtherActivity={handleCompleteOtherActivity}
             onUndoOtherActivity={handleUndoOtherActivity}
+            onRemoveOtherActivity={handleRemoveOtherActivity}
             onLogOutdoor={handleLogOutdoor}
             onUndoOutdoor={handleUndoOutdoor}
             onRemoveOutdoor={handleRemoveOutdoor}
