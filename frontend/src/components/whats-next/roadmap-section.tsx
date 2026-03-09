@@ -9,6 +9,11 @@ import {
   Bot,
   Smartphone,
   ClipboardCheck,
+  PlusCircle,
+  Pencil,
+  ShieldAlert,
+  RotateCcw,
+  CalendarRange,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { FeatureItem } from "./feature-item";
@@ -22,15 +27,20 @@ interface Feature {
 
 const SHORT_TERM: Feature[] = [
   { slug: "rest-timer", icon: Timer, label: "Rest timer — countdown between sets with beep", implemented: true },
-  { slug: "outdoor-logging", icon: Mountain, label: "Outdoor session logging — log your crag sessions" },
-  { slug: "progress-reports", icon: BarChart3, label: "Progress reports — weekly and monthly stats" },
+  { slug: "outdoor-logging", icon: Mountain, label: "Outdoor session logging — log your crag sessions", implemented: true },
+  { slug: "progress-reports", icon: BarChart3, label: "Progress reports — weekly and monthly stats", implemented: true },
+  { slug: "testing-week", icon: ClipboardCheck, label: "Testing week — dedicated assessment week after onboarding", implemented: true },
+  { slug: "add-exercise", icon: PlusCircle, label: "Add exercise to session — customize your workout on the fly" },
+  { slug: "modify-session", icon: Pencil, label: "Modify session — edit a completed session or fix a mistake" },
+  { slug: "injury-tracking", icon: ShieldAlert, label: "Injury tracking — log injuries and automatically filter incompatible exercises" },
 ];
 
 const LONG_TERM: Feature[] = [
   { slug: "kilter-ai", icon: Video, label: "Kilter Board AI analysis — video feedback on your moves" },
   { slug: "ai-coach", icon: Bot, label: "AI coach — chat with your training coach" },
   { slug: "kilter-integration", icon: Smartphone, label: "Kilter App integration — sync your board sessions" },
-  { slug: "testing-week", icon: ClipboardCheck, label: "Testing week — dedicated assessment week after onboarding" },
+  { slug: "season-reset", icon: RotateCcw, label: "Season reset — archive your current cycle and start fresh keeping your history" },
+  { slug: "annual-report", icon: CalendarRange, label: "Annual training report — year-end summary of your progression" },
 ];
 
 const STORAGE_KEY = "climb_whats_next_votes";
