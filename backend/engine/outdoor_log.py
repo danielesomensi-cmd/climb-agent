@@ -207,11 +207,15 @@ def load_outdoor_sessions(
     log_dir: str,
     since_date: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
-    """Load outdoor sessions from JSONL logs, optionally filtered by date."""
-    sessions: List[Dict[str, Any]] = []
+    """Load outdoor sessions from JSONL logs, optionally filtered by date.
+
+    When multiple entries exist for the same date (e.g. after an update that
+    appended a replacement), only the last entry per date is returned.
+    """
+    by_date: Dict[str, Dict[str, Any]] = {}
 
     if not os.path.isdir(log_dir):
-        return sessions
+        return []
 
     for fn in sorted(os.listdir(log_dir)):
         if not fn.startswith("outdoor_sessions_") or not fn.endswith(".jsonl"):
@@ -226,11 +230,12 @@ def load_outdoor_sessions(
                     entry = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                if since_date and entry.get("date", "") < since_date:
+                date = entry.get("date", "")
+                if since_date and date < since_date:
                     continue
-                sessions.append(entry)
+                by_date[date] = entry  # last entry wins
 
-    return sessions
+    return [by_date[d] for d in sorted(by_date)]
 
 
 def compute_outdoor_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:

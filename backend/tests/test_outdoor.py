@@ -126,6 +126,40 @@ class TestAppendLoad:
     def test_load_nonexistent_dir(self):
         assert load_outdoor_sessions("/nonexistent/dir") == []
 
+    def test_duplicate_entries_returns_last_only(self, tmp_log_dir):
+        """When JSONL has multiple entries for same date, only last one is returned."""
+        # Simulate a corrupted/duplicated JSONL (e.g. append without remove)
+        entry_v1 = _make_entry(
+            date="2026-03-08",
+            routes=[
+                {"name": "R1", "grade": "6a", "style": "onsight",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "R2", "grade": "6a+", "style": "flash",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        )
+        entry_v2 = _make_entry(
+            date="2026-03-08",
+            routes=[
+                {"name": "R1", "grade": "6a", "style": "onsight",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "R2", "grade": "6a+", "style": "flash",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "R3", "grade": "6b", "style": "redpoint",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        )
+        # Write both entries raw (bypass update_outdoor_session to simulate corruption)
+        os.makedirs(tmp_log_dir, exist_ok=True)
+        log_path = os.path.join(tmp_log_dir, "outdoor_sessions_2026.jsonl")
+        with open(log_path, "a") as f:
+            f.write(json.dumps(entry_v1) + "\n")
+            f.write(json.dumps(entry_v2) + "\n")
+
+        sessions = load_outdoor_sessions(tmp_log_dir)
+        assert len(sessions) == 1, f"Expected 1 session (deduped), got {len(sessions)}"
+        assert len(sessions[0]["routes"]) == 3, "Should return the last (updated) entry"
+
 
 # ── Stats ───────────────────────────────────────────────────────────────
 
