@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-08
+> Last updated: 2026-03-09
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -12,6 +12,8 @@ Open items that affect production reliability or core UX.
 
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
+| ~~B116~~ | ~~Persistent outdoor log~~ | ~~M~~ | Done: `state.outdoor_log[]` append su `complete_outdoor`, remove su `undo_outdoor`. Entry: date, spot_name, spot_id, discipline, load_score, completed_at. 2 test. |
+| ~~B117~~ | ~~Persistent completion log~~ | ~~M~~ | Done: `state.session_completion_log[]` append su `mark_done`/`mark_skipped`, remove su `mark_planned`. Feedback router attacca difficulty + exercise_count. 4 test. |
 | ~~B99~~ | ~~Test week crashata~~ | ~~L~~ | Done: test_week_mode eliminato, onboarding genera sempre macrociclo con estimate_missing_baselines() + inject_tests in Pass 3. |
 | ~~B100~~ | ~~Piano parte nel passato~~ | ~~M~~ | Done: this_monday() → next_monday() in onboarding. Piano parte sempre dal prossimo lunedì. |
 | ~~B101~~ | ~~Test week ignora gym~~ | ~~M~~ | Non era un bug: planner rispetta gym_id da availability. 5 test di conferma aggiunti. |

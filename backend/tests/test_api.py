@@ -721,6 +721,175 @@ class TestReplanner:
         assert state.get("current_week_plan") is not None
         assert state["current_week_plan"].get("weeks") is not None
 
+    # --- B117: session_completion_log ---
+
+    def test_mark_done_appends_completion_log(self):
+        """B117: mark_done should append entry to session_completion_log in state."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        day = next(d for d in days if d.get("sessions"))
+        session = day["sessions"][0]
+
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "mark_done",
+                "date": day["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r.status_code == 200
+
+        state = json.loads(deps.STATE_PATH.read_text())
+        log = state.get("session_completion_log", [])
+        assert len(log) >= 1
+        entry = log[-1]
+        assert entry["date"] == day["date"]
+        assert entry["session_id"] == session["session_id"]
+        assert entry["status"] == "done"
+        assert "completed_at" in entry
+
+    def test_mark_skipped_appends_completion_log(self):
+        """B117: mark_skipped should append entry with status 'skipped'."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        day = next(d for d in days if d.get("sessions"))
+        session = day["sessions"][0]
+
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "mark_skipped",
+                "date": day["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r.status_code == 200
+
+        state = json.loads(deps.STATE_PATH.read_text())
+        log = state.get("session_completion_log", [])
+        assert len(log) >= 1
+        entry = log[-1]
+        assert entry["date"] == day["date"]
+        assert entry["session_id"] == session["session_id"]
+        assert entry["status"] == "skipped"
+
+    def test_mark_planned_removes_from_completion_log(self):
+        """B117: mark_planned (undo) should remove matching entry from log."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        day = next(d for d in days if d.get("sessions"))
+        session = day["sessions"][0]
+
+        # First mark done
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "mark_done",
+                "date": day["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r.status_code == 200
+        updated_plan = r.json()["week_plan"]
+
+        # Then undo
+        r2 = client.post("/api/replanner/events", json={
+            "week_plan": updated_plan,
+            "events": [{
+                "event_type": "mark_planned",
+                "date": day["date"],
+                "slot": session["slot"],
+                "session_ref": session["session_id"],
+            }],
+        })
+        assert r2.status_code == 200
+
+        state = json.loads(deps.STATE_PATH.read_text())
+        log = state.get("session_completion_log", [])
+        matching = [e for e in log if e["date"] == day["date"] and e["session_id"] == session["session_id"]]
+        assert len(matching) == 0
+
+    # --- B116: outdoor_log ---
+
+    def test_complete_outdoor_appends_outdoor_log(self):
+        """B116: complete_outdoor should append entry to outdoor_log in state."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        target_day = days[-1]  # Use last day
+        target_date = target_day["date"]
+
+        # First add outdoor
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "add_outdoor",
+                "date": target_date,
+                "spot_name": "Arco",
+                "spot_id": "spot_arco",
+                "discipline": "lead",
+            }],
+        })
+        assert r.status_code == 200
+        updated_plan = r.json()["week_plan"]
+
+        # Then complete
+        r2 = client.post("/api/replanner/events", json={
+            "week_plan": updated_plan,
+            "events": [{
+                "event_type": "complete_outdoor",
+                "date": target_date,
+            }],
+        })
+        assert r2.status_code == 200
+
+        state = json.loads(deps.STATE_PATH.read_text())
+        log = state.get("outdoor_log", [])
+        assert len(log) >= 1
+        entry = log[-1]
+        assert entry["date"] == target_date
+        assert entry["spot_name"] == "Arco"
+        assert entry["discipline"] == "lead"
+        assert "completed_at" in entry
+
+    def test_undo_outdoor_removes_from_outdoor_log(self):
+        """B116: undo_outdoor should remove matching entry from outdoor_log."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        target_date = days[-1]["date"]
+
+        # Add + complete
+        r = client.post("/api/replanner/events", json={
+            "week_plan": week_plan,
+            "events": [{
+                "event_type": "add_outdoor",
+                "date": target_date,
+                "spot_name": "Arco",
+                "discipline": "lead",
+            }],
+        })
+        updated_plan = r.json()["week_plan"]
+        r2 = client.post("/api/replanner/events", json={
+            "week_plan": updated_plan,
+            "events": [{"event_type": "complete_outdoor", "date": target_date}],
+        })
+        updated_plan2 = r2.json()["week_plan"]
+
+        # Undo
+        r3 = client.post("/api/replanner/events", json={
+            "week_plan": updated_plan2,
+            "events": [{"event_type": "undo_outdoor", "date": target_date}],
+        })
+        assert r3.status_code == 200
+
+        state = json.loads(deps.STATE_PATH.read_text())
+        log = state.get("outdoor_log", [])
+        matching = [e for e in log if e["date"] == target_date]
+        assert len(matching) == 0
+
 
 # -----------------------------------------------------------------------
 # Feedback

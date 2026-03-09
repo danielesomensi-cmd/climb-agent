@@ -85,6 +85,21 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
                     "reason": f"{label} feedback on exercise with {lim['zone']} contraindication",
                 })
 
+    # 6. Attach feedback to session completion log (B117)
+    log_entry_date = req.log_entry.get("date")
+    log_entry_session = req.log_entry.get("session_id")
+    if log_entry_date and log_entry_session:
+        for entry in reversed(state.get("session_completion_log", [])):
+            if entry.get("date") == log_entry_date and entry.get("session_id") == log_entry_session:
+                # Compute overall difficulty from exercise feedback
+                fb_items = (req.log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
+                labels = [canonical_feedback_label(f) for f in fb_items]
+                labels = [l for l in labels if l]
+                if labels:
+                    entry["difficulty"] = labels[-1] if len(set(labels)) > 1 else labels[0]
+                entry["exercise_count"] = len(fb_items)
+                break
+
     save_state(state, user_id)
     response = {"status": "ok", "state": state}
     if limitation_suggestions:

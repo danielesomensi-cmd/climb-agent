@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 from copy import deepcopy
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -262,6 +263,57 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     for ev in req.events:
         if ev.get("event_type") == "undo_outdoor" and ev.get("date"):
             remove_outdoor_session(log_dir, ev["date"])
+
+    # --- B116: Persistent outdoor log in user_state ---
+    outdoor_log = state.setdefault("outdoor_log", [])
+    for ev in req.events:
+        evt = ev.get("event_type")
+        ev_date = ev.get("date")
+        if evt == "complete_outdoor" and ev_date:
+            # Find day in updated plan to grab spot details
+            day = next(
+                (d for w in updated.get("weeks", []) for d in w.get("days", []) if d.get("date") == ev_date),
+                None,
+            )
+            entry = {
+                "date": ev_date,
+                "spot_name": (day or {}).get("outdoor_spot_name", ev.get("spot_name", "")),
+                "spot_id": (day or {}).get("outdoor_spot_id", ev.get("spot_id", "")),
+                "discipline": (day or {}).get("outdoor_discipline", ev.get("discipline", "both")),
+                "load_score": ev.get("outdoor_load_score", 0),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }
+            outdoor_log.append(entry)
+        elif evt == "undo_outdoor" and ev_date:
+            state["outdoor_log"] = [e for e in outdoor_log if e.get("date") != ev_date]
+
+    # --- B117: Persistent session completion log ---
+    completion_log = state.setdefault("session_completion_log", [])
+    for ev in req.events:
+        evt = ev.get("event_type")
+        ev_date = ev.get("date")
+        if evt == "mark_done" and ev_date:
+            completion_log.append({
+                "date": ev_date,
+                "session_id": ev.get("session_ref", ""),
+                "status": "done",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            })
+        elif evt == "mark_skipped" and ev_date:
+            completion_log.append({
+                "date": ev_date,
+                "session_id": ev.get("session_ref", ""),
+                "status": "skipped",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            })
+        elif evt == "mark_planned" and ev_date:
+            # Undo: remove matching entry
+            ref = ev.get("session_ref", "")
+            state["session_completion_log"] = [
+                e for e in completion_log
+                if not (e.get("date") == ev_date and e.get("session_id") == ref)
+            ]
+            completion_log = state["session_completion_log"]
 
     _persist_week_plan(updated, state, user_id)
 
