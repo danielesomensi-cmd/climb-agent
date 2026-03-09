@@ -27,6 +27,7 @@ Open items that affect production reliability or core UX.
 | UI-25 | Test Maxes & Loads panel (Plan tab) | L | Collapsible card: test history timeline, benchmark comparison, exercise loads list. See ROADMAP_v2.md §9.5 for full spec. |
 | FR-4 | Outdoor vs gym slot priority preference | S | When both outdoor and gym available same day, user sets preference (outdoor-first / gym-first / alternate). See ROADMAP_v2.md §9.3-9.4. |
 | B113 | AddExerciseDialog: lista incompleta + nessuna descrizione | S | getExercises() potrebbe non restituire tutti i 153 esercizi. Ogni item deve mostrare anche la descrizione breve dal catalogo. Prima cosa domani. |
+| ~~B114~~ | ~~Regenerate Plan: past days protection + smart popup~~ | ~~M~~ | Done: `preserve_before` param in `GET /api/week`, `merge_prev_week_sessions` ora matcha per data (non weekday), giorni passati copiati wholesale, oggi con sessioni completate protetto. Frontend: `RegeneratePlanSheet` bottom sheet con 3 opzioni (Today/Tomorrow/Next Monday). |
 
 ---
 
@@ -92,6 +93,8 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | B89 | Weekly report narrative LLM | Phase 2 of B65 weekly report. Replace rule-based insights with LLM-generated narrative. |
 | B11 | Configurable test protocols | Custom test exercises and schedules beyond the 3 defaults. |
 | B29a | Dedicated test exercises in catalog | Separate test-specific exercise entries with test-optimized prescriptions. |
+| — | Science explainers | Il Coach spiega il "perché" di ogni scelta: fisiologia, riferimenti letteratura (Hörst, Eva López, Tyler Nelson). Contestuale alla sessione corrente. |
+| — | Nutrition hints (post-workout) | Consigli contestuali su alimentazione e idratazione post-sessione. Disclaimer legale obbligatorio ("not medical/nutritional advice"). Nice-to-have, non core. |
 
 ---
 
@@ -157,6 +160,7 @@ Il flusso outdoor attuale è un log passivo post-sessione. Manca una sessione li
 - **Notifications/reminders**: push notifications for sessions, test reminders, weekly confirmation
 - **Season reset**: partial re-onboarding preserving historical logs, archive radar profiles as seasonal baselines
 - **Gym preferences**: prefer specific gym for specific day (e.g. "BKL on Mondays")
+- **Crowdsourced gym DB**: utenti condividono le proprie palestre (nome, equipment, location). Nuovi utenti cercano palestre vicine in onboarding → setup immediato. Richiede: tabella `shared_gyms` in Supabase, flag "share this gym", endpoint ricerca per nome/zona, deduplicazione fuzzy (nome + coordinate GPS). Utile solo con massa critica utenti.
 
 ---
 
@@ -170,7 +174,11 @@ Items from audits and brainstorming. Not committed to any timeline.
 | Additional assessment dimensions | Mobility/flexibility, mental game, contact strength as separate axes | audit_post_fix |
 | Deload vs literature | Compare deload structure with Hörst, Lattice, Eva López — may be too light | audit_post_fix |
 | Bouldering discipline expansion | Boulder macrocycle exists (B91), but lead-specific features may need boulder equivalents | memory |
-| Midjourney imagery | Photorealistic climbing images for UI (dark background, Midjourney v6) | memory |
+| Dynamic background imagery | Pool di immagini climbing bilanciate per genere (uomini + donne). Variabili per fase del giorno (mattina/pomeriggio/sera) e potenzialmente meteo (indoor se pioggia, outdoor se sole — richiede API meteo). Midjourney v6 photorealistic, dark background. | memory + roadmap discussion |
+| Liability disclaimer framework | Template disclaimer per contenuti health-adjacent (nutrizione, recupero). Necessario prima di attivare nutrition hints nel Coach | roadmap discussion |
+| Exercise catalog audit v2 | Nuovo audit esercizi contro letteratura espansa e feedback beta. Identificare gap emersi dall'uso reale (153 esercizi attuali). Tipo C. | roadmap discussion |
+| Technique drills from book | Scannerizzare il libro di Daniele sui drill tecnici, estrarre drill, mappare su exercise schema, aggiungere al catalogo. Attualmente ~5-6 drill tecnici, potenziale raddoppio. Tipo C. | roadmap discussion |
+| Quotes pool expansion | Espandere il pool di citazioni motivazionali. Audit quantità attuale, aggiungere citazioni da letteratura climbing + atleti. Task piccolo, alto impatto percepito. | roadmap discussion |
 
 ---
 

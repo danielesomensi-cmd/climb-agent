@@ -107,10 +107,15 @@ export const generateMacrocycle = (
   });
 
 // Week
-export const getWeek = (weekNum: number, force?: boolean) =>
-  request<{ week_num: number; phase_id: string; week_plan: WeekPlan }>(
-    `/api/week/${weekNum}${force ? "?force=true" : ""}`
+export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: string) => {
+  const params = new URLSearchParams();
+  if (force) params.set("force", "true");
+  if (preserveBefore) params.set("preserve_before", preserveBefore);
+  const qs = params.toString();
+  return request<{ week_num: number; phase_id: string; week_plan: WeekPlan }>(
+    `/api/week/${weekNum}${qs ? `?${qs}` : ""}`
   );
+};
 
 // Session
 export const resolveSession = (sessionId: string, context?: Record<string, unknown>) =>

@@ -6,19 +6,16 @@ import { TopBar } from "@/components/layout/top-bar";
 import { RadarChart } from "@/components/onboarding/radar-chart";
 import { MacrocycleTimeline } from "@/components/training/macrocycle-timeline";
 import { useUserState } from "@/lib/hooks/use-state";
-import { generateMacrocycle, getStateStatus } from "@/lib/api";
+import { generateMacrocycle, getStateStatus, getWeek } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  RegeneratePlanSheet,
+  optionToPreserveBefore,
+  type RegenerateStartOption,
+} from "@/components/training/regenerate-plan-sheet";
 import type { Phase } from "@/lib/types";
 
 /** Phase labels */
@@ -84,11 +81,14 @@ export default function PlanPage() {
     setExpandedPhase((prev) => (prev === phaseId ? null : phaseId));
   }
 
-  async function handleRegenMacro() {
+  async function handleRegenMacro(option: RegenerateStartOption) {
     setRegenerating(true);
     setRegenError(null);
     try {
       await generateMacrocycle(undefined, 12, "current");
+      // Force-refresh current week with preserve_before guard
+      const preserveBefore = optionToPreserveBefore(option);
+      await getWeek(0, true, preserveBefore);
       await refresh();
       setRegenDialogOpen(false);
       setIsStale(false);
@@ -324,38 +324,13 @@ export default function PlanPage() {
         )}
       </main>
 
-      {/* ----- Macrocycle regeneration confirmation dialog ----- */}
-      <Dialog open={regenDialogOpen} onOpenChange={setRegenDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Update macrocycle</DialogTitle>
-            <DialogDescription asChild>
-              <div className="space-y-3">
-                <p>
-                  The remaining phases of your plan will be recalculated
-                  based on your current profile.
-                </p>
-                <ul className="space-y-1 text-sm">
-                  <li className="text-green-400">&#10003; Completed sessions: preserved</li>
-                  <li className="text-green-400">&#10003; Load progression: preserved</li>
-                  <li className="text-red-400">&#10007; Remaining planned weeks: will change</li>
-                </ul>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setRegenDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleRegenMacro} disabled={regenerating}>
-              {regenerating ? "Processing..." : "Confirm"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ----- Macrocycle regeneration sheet ----- */}
+      <RegeneratePlanSheet
+        open={regenDialogOpen}
+        onOpenChange={setRegenDialogOpen}
+        onConfirm={handleRegenMacro}
+        loading={regenerating}
+      />
     </>
   );
 }

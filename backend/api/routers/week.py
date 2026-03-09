@@ -110,11 +110,20 @@ def _current_week_num(macrocycle: dict) -> int:
 
 
 @router.get("/{week_num}")
-def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depends(get_user_id)):
+def get_week(
+    week_num: int,
+    force: bool = False,
+    preserve_before: Optional[str] = None,
+    user_id: Optional[str] = Depends(get_user_id),
+):
     """Generate the plan for a given week (1-based). week_num=0 → current week.
 
     When force=True and this is the current week, regenerate from scratch but
     preserve any sessions already marked done/skipped.
+
+    *preserve_before* (YYYY-MM-DD): days before this date are copied wholesale
+    from the previous plan, protecting completed past days from corruption.
+    Defaults to today when force=True on the current week.
     """
     state = load_state(user_id)
 
@@ -177,9 +186,12 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
             state.get("trips", []), week_start, week_end_date.isoformat()
         )
 
+        # B114: resolve preserve_before — default to today for current week
+        today_str = datetime.now().strftime("%Y-%m-%d") if is_current_week else None
+        effective_preserve = preserve_before or today_str
+
         try:
             # B95: pass today so the planner skips past days on regen
-            today_str = datetime.now().strftime("%Y-%m-%d") if is_current_week else None
             # Inject initial tests into week 1 of base phase (not if already last week)
             is_last = ctx.get("is_last_week_of_phase", False)
             want_tests = (
@@ -214,18 +226,21 @@ def get_week(week_num: int, force: bool = False, user_id: Optional[str] = Depend
             and old_plan.get("start_date") == week_plan.get("start_date")
         ):
             try:
-                week_plan = regenerate_preserving_completed(old_plan, week_plan)
+                week_plan = regenerate_preserving_completed(
+                    old_plan, week_plan, preserve_before=effective_preserve,
+                )
             except Exception:
                 logger.warning("Failed to preserve completed sessions, using fresh plan")
 
-        # Merge preservable sessions (done/skipped + quick-add) from stashed
-        # plan that was saved before cache invalidation (e.g. after macrocycle
-        # regen).  Uses weekday-based matching so it works even when the
-        # macrocycle start_date has shifted.
+        # B114: merge preservable sessions from stashed plan (after macrocycle
+        # regen).  Now uses date-based matching with preserve_before guard so
+        # past completed days are never corrupted.
         prev_plan = state.get("_prev_week_plan")
         if prev_plan and is_current_week:
             try:
-                week_plan = merge_prev_week_sessions(prev_plan, week_plan)
+                week_plan = merge_prev_week_sessions(
+                    prev_plan, week_plan, preserve_before=effective_preserve,
+                )
             except Exception:
                 logger.warning("Failed to merge sessions from previous plan")
             state.pop("_prev_week_plan", None)

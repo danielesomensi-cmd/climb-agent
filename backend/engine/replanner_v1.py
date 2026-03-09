@@ -430,50 +430,93 @@ def _is_preservable(session: Dict[str, Any]) -> bool:
 def merge_prev_week_sessions(
     prev_plan: Dict[str, Any],
     new_plan: Dict[str, Any],
+    preserve_before: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Merge preservable sessions from *prev_plan* into *new_plan* by weekday.
+    """Merge preservable sessions from *prev_plan* into *new_plan* by date.
 
-    Unlike ``regenerate_preserving_completed`` (exact-date match), this
-    function matches days by **weekday index** (0=Mon … 6=Sun) so that it
-    works even when the macrocycle start_date has shifted.
+    Days before *preserve_before* (YYYY-MM-DD) are copied wholesale from the
+    previous plan — sessions, status, outdoor fields and all — so that past
+    completed days are never corrupted by regeneration.
 
-    Preservable sessions are those that are done/skipped or added manually
-    via quick-add.
+    For days >= *preserve_before*, only done/skipped/quick-add sessions are
+    merged into the freshly generated plan.
+
+    Falls back to matching by weekday index when the dates don't overlap
+    (e.g. macrocycle start_date shifted).
     """
     result = deepcopy(new_plan)
 
-    # Build map weekday → list of preservable sessions from old plan
-    preservable: Dict[int, List[Dict[str, Any]]] = {}
-    prev_day_fields: Dict[int, Dict[str, Any]] = {}
-    for day in (prev_plan.get("weeks") or [{}])[0].get("days", []):
-        try:
-            wd = datetime.strptime(day["date"], "%Y-%m-%d").weekday()
-        except (KeyError, ValueError):
-            continue
-        sessions = [s for s in day.get("sessions", []) if _is_preservable(s)]
-        if sessions:
-            preservable.setdefault(wd, []).extend(sessions)
-        extras = {k: day[k] for k in _DAY_LEVEL_FIELDS if k in day}
-        if extras:
-            prev_day_fields[wd] = extras
+    preserve_date = (
+        datetime.strptime(preserve_before, "%Y-%m-%d").date()
+        if preserve_before
+        else None
+    )
 
-    if not preservable and not prev_day_fields:
+    # Index previous days by date AND weekday for fallback
+    prev_by_date: Dict[str, Dict[str, Any]] = {}
+    prev_by_wd: Dict[int, Dict[str, Any]] = {}
+    for day in (prev_plan.get("weeks") or [{}])[0].get("days", []):
+        d = day.get("date")
+        if d:
+            prev_by_date[d] = day
+            try:
+                prev_by_wd[datetime.strptime(d, "%Y-%m-%d").weekday()] = day
+            except ValueError:
+                pass
+
+    if not prev_by_date:
         return result
 
-    # Merge into new plan by weekday
-    for day in (result.get("weeks") or [{}])[0].get("days", []):
-        try:
-            wd = datetime.strptime(day["date"], "%Y-%m-%d").weekday()
-        except (KeyError, ValueError):
+    for i, day in enumerate((result.get("weeks") or [{}])[0].get("days", [])):
+        day_date_str = day.get("date")
+        if not day_date_str:
             continue
 
-        to_merge = preservable.get(wd)
+        try:
+            day_date = datetime.strptime(day_date_str, "%Y-%m-%d").date()
+        except ValueError:
+            continue
+
+        # --- Hard guard: days before preserve_before → copy wholesale ---
+        if preserve_date and day_date < preserve_date:
+            prev_day = prev_by_date.get(day_date_str)
+            if not prev_day:
+                wd = day_date.weekday()
+                prev_day = prev_by_wd.get(wd)
+            if prev_day:
+                copied = deepcopy(prev_day)
+                copied["date"] = day_date_str  # keep the new date
+                (result.get("weeks") or [{}])[0]["days"][i] = copied
+            continue
+
+        # --- Days >= preserve_before: merge preservable sessions ---
+        prev_day = prev_by_date.get(day_date_str)
+        if not prev_day:
+            wd = day_date.weekday()
+            prev_day = prev_by_wd.get(wd)
+        if not prev_day:
+            continue
+
+        # Bug 2: if today has any completed session or outdoor log → copy wholesale
+        if preserve_date and day_date == preserve_date:
+            has_completed = any(
+                s.get("status") == "done" for s in prev_day.get("sessions", [])
+            )
+            has_outdoor = prev_day.get("outdoor_session_status") == "done"
+            if has_completed or has_outdoor:
+                copied = deepcopy(prev_day)
+                copied["date"] = day_date_str
+                (result.get("weeks") or [{}])[0]["days"][i] = copied
+                continue
+
+        to_merge = [s for s in prev_day.get("sessions", []) if _is_preservable(s)]
+        prev_extras = {k: prev_day[k] for k in _DAY_LEVEL_FIELDS if k in prev_day}
+
         if to_merge:
             occupied_slots = {s.get("slot") for s in day.get("sessions", [])}
             for ps in to_merge:
                 ps_slot = ps.get("slot")
                 if ps_slot in occupied_slots:
-                    # Replace auto-generated session in this slot
                     day["sessions"] = [
                         ps if s.get("slot") == ps_slot else s
                         for s in day["sessions"]
@@ -490,10 +533,8 @@ def merge_prev_week_sessions(
                 )
             )
 
-        # Restore day-level fields (outdoor, other_activity)
-        extras = prev_day_fields.get(wd)
-        if extras:
-            day.update(extras)
+        if prev_extras:
+            day.update(prev_extras)
 
     # Recompute day-level status from merged sessions
     for day in (result.get("weeks") or [{}])[0].get("days", []):
@@ -514,58 +555,86 @@ _DAY_LEVEL_FIELDS = (
 def regenerate_preserving_completed(
     old_plan: Dict[str, Any],
     new_plan: Dict[str, Any],
+    preserve_before: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Merge completed/skipped sessions from *old_plan* into *new_plan*."""
+    """Merge completed/skipped sessions from *old_plan* into *new_plan*.
+
+    Days before *preserve_before* are copied wholesale from *old_plan*.
+    """
     result = deepcopy(new_plan)
 
-    # Build maps from old plan: sessions + day-level fields
-    completed_map: Dict[str, List[Dict[str, Any]]] = {}
-    day_fields_map: Dict[str, Dict[str, Any]] = {}
-    for day in (old_plan.get("weeks") or [{}])[0].get("days", []):
-        done_sessions = [
-            s for s in day.get("sessions", [])
-            if s.get("status") in ("done", "skipped")
-        ]
-        if done_sessions:
-            completed_map[day["date"]] = done_sessions
-        extras = {k: day[k] for k in _DAY_LEVEL_FIELDS if k in day}
-        if extras:
-            day_fields_map[day["date"]] = extras
+    preserve_date = (
+        datetime.strptime(preserve_before, "%Y-%m-%d").date()
+        if preserve_before
+        else None
+    )
 
-    # Merge into new plan
-    for date_key, completed_sessions in completed_map.items():
-        target_day = None
-        for day in (result.get("weeks") or [{}])[0].get("days", []):
-            if day.get("date") == date_key:
-                target_day = day
-                break
-        if target_day is None:
+    # Index old days by date
+    old_by_date: Dict[str, Dict[str, Any]] = {}
+    for day in (old_plan.get("weeks") or [{}])[0].get("days", []):
+        d = day.get("date")
+        if d:
+            old_by_date[d] = day
+
+    new_days = (result.get("weeks") or [{}])[0].get("days", [])
+    for i, day in enumerate(new_days):
+        date_key = day.get("date")
+        if not date_key or date_key not in old_by_date:
             continue
 
-        occupied_slots = {s.get("slot") for s in target_day.get("sessions", [])}
+        old_day = old_by_date[date_key]
+
+        # B114: days before preserve_before → copy wholesale
+        if preserve_date:
+            try:
+                day_d = datetime.strptime(date_key, "%Y-%m-%d").date()
+            except ValueError:
+                day_d = None
+            if day_d and day_d < preserve_date:
+                new_days[i] = deepcopy(old_day)
+                continue
+            # Bug 2: today with completed sessions → copy wholesale
+            if day_d and day_d == preserve_date:
+                has_completed = any(
+                    s.get("status") == "done" for s in old_day.get("sessions", [])
+                )
+                has_outdoor = old_day.get("outdoor_session_status") == "done"
+                if has_completed or has_outdoor:
+                    new_days[i] = deepcopy(old_day)
+                    continue
+
+        # Normal merge: only done/skipped sessions
+        completed_sessions = [
+            s for s in old_day.get("sessions", [])
+            if s.get("status") in ("done", "skipped")
+        ]
+        if not completed_sessions:
+            # Still restore day-level fields
+            extras = {k: old_day[k] for k in _DAY_LEVEL_FIELDS if k in old_day}
+            if extras:
+                day.update(extras)
+            continue
+
+        occupied_slots = {s.get("slot") for s in day.get("sessions", [])}
         for cs in completed_sessions:
             cs_slot = cs.get("slot")
             if cs_slot in occupied_slots:
-                # Replace the auto-generated session in this slot
-                target_day["sessions"] = [
+                day["sessions"] = [
                     cs if s.get("slot") == cs_slot else s
-                    for s in target_day["sessions"]
+                    for s in day["sessions"]
                 ]
             else:
-                target_day.setdefault("sessions", []).append(cs)
+                day.setdefault("sessions", []).append(cs)
             occupied_slots.add(cs_slot)
 
-        # Re-sort by slot order
-        target_day["sessions"].sort(
+        day["sessions"].sort(
             key=lambda s: (SLOTS.index(s.get("slot", "evening")), s.get("priority", 99), s.get("session_id", ""))
         )
 
-    # Restore day-level fields (outdoor, other_activity)
-    for date_key, extras in day_fields_map.items():
-        for day in (result.get("weeks") or [{}])[0].get("days", []):
-            if day.get("date") == date_key:
-                day.update(extras)
-                break
+        # Restore day-level fields
+        extras = {k: old_day[k] for k in _DAY_LEVEL_FIELDS if k in old_day}
+        if extras:
+            day.update(extras)
 
     # Recompute day-level status from merged sessions (B98)
     for day in (result.get("weeks") or [{}])[0].get("days", []):

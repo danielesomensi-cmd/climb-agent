@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
 import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState, generateRecoveryCode } from "@/lib/api";
+import {
+  RegeneratePlanSheet,
+  optionToPreserveBefore,
+  type RegenerateStartOption,
+} from "@/components/training/regenerate-plan-sheet";
 import type { OutdoorSpot } from "@/lib/types";
 import { AvailabilityEditor } from "@/components/settings/availability-editor";
 import { EquipmentEditor } from "@/components/settings/equipment-editor";
@@ -34,6 +39,11 @@ export default function SettingsPage() {
   const [restartMacroDialogOpen, setRestartMacroDialogOpen] = useState(false);
   const [restartMacroConfirmOpen, setRestartMacroConfirmOpen] = useState(false);
   const [restartingMacro, setRestartingMacro] = useState(false);
+  const [regenSheetOpen, setRegenSheetOpen] = useState(false);
+  const [pendingRegenAction, setPendingRegenAction] = useState<
+    "equipment" | "goal" | "restart" | null
+  >(null);
+  const [pendingGoal, setPendingGoal] = useState<Record<string, unknown> | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -189,16 +199,18 @@ export default function SettingsPage() {
     }
   }
 
-  /** Save updated goal and regenerate plan */
+  /** Save updated goal — open sheet to choose preserve_before */
   async function handleGoalConfirm(newGoal: Record<string, unknown>) {
     setSavingGoal(true);
     setActionError(null);
     try {
       await putState({ goal: newGoal });
       await computeAssessment(state?.assessment, newGoal);
-      await generateMacrocycle();
-      await refresh();
       setGoalEditorOpen(false);
+      // Defer macrocycle regen to the sheet
+      setPendingGoal(newGoal);
+      setPendingRegenAction("goal");
+      setRegenSheetOpen(true);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to update goal");
     } finally {
@@ -222,35 +234,43 @@ export default function SettingsPage() {
     }
   }
 
-  /** Regenerate the macrocycle (used by equipment dialog) */
-  async function handleRegenMacro() {
-    setRegeneratingMacro(true);
-    setActionError(null);
-    try {
-      await generateMacrocycle();
-      await refresh();
-    } catch (e) {
-      setActionError(
-        e instanceof Error ? e.message : "Regeneration failed"
-      );
-    } finally {
-      setRegeneratingMacro(false);
-    }
+  /** Open the regenerate sheet (used by equipment dialog) */
+  function handleRegenMacro() {
+    setPendingRegenAction("equipment");
+    setRegenSheetOpen(true);
   }
 
-  /** Full macrocycle restart from week 1 (Danger Zone) */
-  async function handleRestartMacro() {
-    setRestartingMacro(true);
+  /** Full macrocycle restart from week 1 (Danger Zone) — open sheet */
+  function handleRestartMacro() {
+    setRestartMacroConfirmOpen(false);
+    setPendingRegenAction("restart");
+    setRegenSheetOpen(true);
+  }
+
+  /** Unified handler: called when user picks a start option from the sheet */
+  async function handleRegenSheetConfirm(option: RegenerateStartOption) {
+    const action = pendingRegenAction;
+    setRegenSheetOpen(false);
+    const preserveBefore = optionToPreserveBefore(option);
+
+    if (action === "restart") {
+      setRestartingMacro(true);
+    } else {
+      setRegeneratingMacro(true);
+    }
     setActionError(null);
+
     try {
       await generateMacrocycle();
+      await getWeek(0, true, preserveBefore);
       await refresh();
-      setRestartMacroConfirmOpen(false);
     } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Restart failed");
-      setRestartMacroConfirmOpen(false);
+      setActionError(e instanceof Error ? e.message : "Regeneration failed");
     } finally {
       setRestartingMacro(false);
+      setRegeneratingMacro(false);
+      setPendingRegenAction(null);
+      setPendingGoal(null);
     }
   }
 
@@ -1044,6 +1064,14 @@ export default function SettingsPage() {
         onConfirm={handleGoalConfirm}
         onCancel={() => setGoalEditorOpen(false)}
         saving={savingGoal}
+      />
+
+      {/* ----- Regenerate plan sheet (B114) ----- */}
+      <RegeneratePlanSheet
+        open={regenSheetOpen}
+        onOpenChange={setRegenSheetOpen}
+        onConfirm={handleRegenSheetConfirm}
+        loading={regeneratingMacro || restartingMacro}
       />
     </>
   );
