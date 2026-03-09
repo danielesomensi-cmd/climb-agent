@@ -146,3 +146,89 @@ class TestRecomputeDayStatus:
         )
         _recompute_day_status(day)
         assert "status" not in day
+
+
+class TestApplyEventsRecomputesStatus:
+    """Verify apply_events delegates to _recompute_day_status instead of hardcoding."""
+
+    def _make_plan(self, sessions=None, **day_extra):
+        day = {
+            "date": "2026-03-09",
+            "weekday": "mon",
+            "sessions": sessions or [],
+        }
+        day.update(day_extra)
+        return {
+            "start_date": "2026-03-09",
+            "plan_revision": 1,
+            "weeks": [{"days": [
+                day,
+                {"date": "2026-03-10", "weekday": "tue", "sessions": []},
+                {"date": "2026-03-11", "weekday": "wed", "sessions": []},
+                {"date": "2026-03-12", "weekday": "thu", "sessions": []},
+                {"date": "2026-03-13", "weekday": "fri", "sessions": []},
+                {"date": "2026-03-14", "weekday": "sat", "sessions": []},
+                {"date": "2026-03-15", "weekday": "sun", "sessions": []},
+            ]}],
+        }
+
+    def test_complete_other_activity_indoor_planned_not_done(self):
+        """Bug repro: complete_other_activity with indoor planned → day NOT done."""
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_plan(
+            [_session()],  # indoor planned (no status)
+            other_activity=True,
+            other_activity_name="Yoga",
+        )
+        result = apply_events(plan, [
+            {"event_type": "complete_other_activity", "date": "2026-03-09"},
+        ])
+        day = result["weeks"][0]["days"][0]
+        assert day["other_activity_status"] == "completed"
+        assert "status" not in day, "Day should NOT be 'done' while indoor session is planned"
+
+    def test_complete_outdoor_indoor_planned_not_done(self):
+        """complete_outdoor with indoor planned → day NOT done."""
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_plan(
+            [_session()],  # indoor planned
+            outdoor_spot_name="Berdorf",
+            outdoor_discipline="lead",
+            outdoor_session_status="planned",
+        )
+        result = apply_events(plan, [
+            {"event_type": "complete_outdoor", "date": "2026-03-09"},
+        ])
+        day = result["weeks"][0]["days"][0]
+        assert day["outdoor_session_status"] == "done"
+        assert "status" not in day, "Day should NOT be 'done' while indoor session is planned"
+
+    def test_mark_done_other_activity_pending_not_done(self):
+        """mark_done indoor but other_activity still pending → day NOT done."""
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_plan(
+            [_session()],
+            other_activity=True,
+            other_activity_name="Yoga",
+        )
+        result = apply_events(plan, [
+            {"event_type": "mark_done", "date": "2026-03-09", "slot": "evening"},
+        ])
+        day = result["weeks"][0]["days"][0]
+        assert day["sessions"][0]["status"] == "done"
+        assert "status" not in day, "Day should NOT be 'done' while other_activity is pending"
+
+    def test_all_done_then_day_done(self):
+        """Indoor done + other_activity done → day IS done."""
+        from backend.engine.replanner_v1 import apply_events
+        plan = self._make_plan(
+            [_session()],
+            other_activity=True,
+            other_activity_name="Yoga",
+        )
+        result = apply_events(plan, [
+            {"event_type": "mark_done", "date": "2026-03-09", "slot": "evening"},
+            {"event_type": "complete_other_activity", "date": "2026-03-09"},
+        ])
+        day = result["weeks"][0]["days"][0]
+        assert day["status"] == "done"

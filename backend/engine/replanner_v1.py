@@ -753,7 +753,7 @@ def apply_events(
             recovery = _build_fill_session(updated, day, slot, kind="recovery")
             recovery["status"] = "skipped"
             day.setdefault("sessions", []).append(recovery)
-            day["status"] = "skipped"
+            _recompute_day_status(day)
 
         elif event_type == "mark_done":
             day = _find_day(updated, event["date"])
@@ -761,10 +761,7 @@ def apply_events(
                 if _session_matches(s, session_ref=event.get("session_ref"), slot=event.get("slot")):
                     s["status"] = "done"
                     break
-            all_sessions_done = all(s.get("status") == "done" for s in day.get("sessions") or [])
-            outdoor_ok = day.get("outdoor_session_status", "done") == "done"  # no outdoor = ok
-            if all_sessions_done and outdoor_ok:
-                day["status"] = "done"
+            _recompute_day_status(day)
 
         elif event_type == "mark_planned":
             day = _find_day(updated, event["date"])
@@ -785,7 +782,7 @@ def apply_events(
             day["other_activity_status"] = "completed"
             day["other_activity_feedback"] = feedback
             day["other_activity_load"] = load
-            day["status"] = "done"
+            _recompute_day_status(day)
 
         elif event_type == "undo_other_activity":
             day = _find_day(updated, event["date"])
@@ -877,16 +874,12 @@ def apply_events(
                             next_sessions.append(session)
                     ripple_day["sessions"] = next_sessions
 
-            sessions = day.get("sessions") or []
-            all_sessions_done = all(s.get("status") in ("done", "skipped") for s in sessions) if sessions else True
-            if all_sessions_done:
-                day["status"] = "done"
+            _recompute_day_status(day)
 
         elif event_type == "undo_outdoor":
             day = _find_day(updated, event["date"])
             day["outdoor_session_status"] = "planned"
-            if day.get("status") == "done":
-                day.pop("status", None)
+            _recompute_day_status(day)
 
         elif event_type == "remove_outdoor":
             day = _find_day(updated, event["date"])
