@@ -405,10 +405,17 @@ def _recompute_day_status(day: Dict[str, Any]) -> None:
     """Derive day-level status from sessions, outdoor, and other-activity statuses."""
     statuses = [s.get("status") for s in (day.get("sessions") or [])]
 
-    if day.get("outdoor_session_status") == "done":
+    outdoor_st = day.get("outdoor_session_status")
+    if outdoor_st == "done":
         statuses.append("done")
-    if day.get("other_activity_status") in ("done", "completed"):
+    elif outdoor_st is not None:
+        statuses.append(None)  # blocks "done" until outdoor is completed
+
+    other_st = day.get("other_activity_status")
+    if other_st in ("done", "completed"):
         statuses.append("done")
+    elif day.get("other_activity") and other_st not in ("done", "completed"):
+        statuses.append(None)  # blocks "done" until other_activity is completed
 
     if not statuses:
         day.pop("status", None)

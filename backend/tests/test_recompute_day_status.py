@@ -115,3 +115,34 @@ class TestRecomputeDayStatus:
         )
         _recompute_day_status(day)
         assert day["status"] == "done"
+
+    # --- blocking: outdoor/other_activity not done blocks day status ---
+
+    def test_outdoor_planned_blocks_indoor_done(self):
+        """Indoor done + outdoor planned → day NOT done (outdoor blocks)."""
+        day = _day([_session("done")], outdoor_session_status="planned")
+        _recompute_day_status(day)
+        assert "status" not in day
+
+    def test_other_activity_pending_blocks_indoor_done(self):
+        """Indoor done + other_activity present but not completed → day NOT done."""
+        day = _day([_session("done")], other_activity=True)
+        _recompute_day_status(day)
+        assert "status" not in day
+
+    def test_other_activity_done_indoor_planned_stays_planned(self):
+        """other_activity done + indoor planned → day NOT done (indoor blocks)."""
+        day = _day([_session()], other_activity=True, other_activity_status="done")
+        _recompute_day_status(day)
+        assert "status" not in day
+
+    def test_outdoor_planned_other_done_indoor_done(self):
+        """Indoor done + other done + outdoor planned → NOT done (outdoor blocks)."""
+        day = _day(
+            [_session("done")],
+            outdoor_session_status="planned",
+            other_activity=True,
+            other_activity_status="completed",
+        )
+        _recompute_day_status(day)
+        assert "status" not in day
