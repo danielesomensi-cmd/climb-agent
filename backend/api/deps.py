@@ -46,16 +46,21 @@ EMPTY_TEMPLATE: Dict[str, Any] = {
 
 
 def invalidate_week_cache(state: Dict[str, Any]) -> None:
-    """Clear all cached week plans. Call after any action that changes plan inputs.
+    """Clear cached week plans for current/future weeks only.
 
-    Stashes the old current-week plan in ``_prev_week_plan`` so that completed
-    and manually-added sessions can be merged back into the next generated plan.
+    Past weeks (start_date < today) are preserved — they contain
+    completed session data that must not be lost.
     """
     old = state.get("current_week_plan")
     if old:
         state["_prev_week_plan"] = old
     state["current_week_plan"] = None
-    state["week_plans"] = {}
+
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    old_plans = state.get("week_plans") or {}
+    state["week_plans"] = {
+        k: v for k, v in old_plans.items() if k < today_str
+    }
 
 
 def get_user_id(request: Request) -> Optional[str]:
