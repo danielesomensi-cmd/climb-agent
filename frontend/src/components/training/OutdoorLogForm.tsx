@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { OutdoorSpot, OutdoorRoute, OutdoorAttempt } from "@/lib/types";
-import { postOutdoorLog } from "@/lib/api";
+import type { OutdoorSpot, OutdoorRoute, OutdoorAttempt, OutdoorSession } from "@/lib/types";
+import { postOutdoorLog, putOutdoorLog } from "@/lib/api";
 
 const FRENCH_SPORT_GRADES = [
   "4a","4b","4c","5a","5a+","5b","5b+","5c","5c+",
@@ -25,16 +25,18 @@ interface Props {
   defaultSpotName?: string;
   defaultDiscipline?: "lead" | "boulder" | "both";
   defaultGrade?: string;
+  initialData?: OutdoorSession;
   onSuccess?: () => void;
 }
 
-export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, onSuccess }: Props) {
-  const [date, setDate] = useState(defaultDate || new Date().toISOString().slice(0, 10));
-  const [spotName, setSpotName] = useState(defaultSpotName || "");
-  const [discipline, setDiscipline] = useState<"lead" | "boulder" | "both">(defaultDiscipline || "boulder");
-  const [duration, setDuration] = useState(120);
-  const [routes, setRoutes] = useState<OutdoorRoute[]>([]);
-  const [notes, setNotes] = useState("");
+export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, initialData, onSuccess }: Props) {
+  const isEdit = !!initialData;
+  const [date, setDate] = useState(initialData?.date || defaultDate || new Date().toISOString().slice(0, 10));
+  const [spotName, setSpotName] = useState(initialData?.spot_name || defaultSpotName || "");
+  const [discipline, setDiscipline] = useState<"lead" | "boulder" | "both">(initialData?.discipline || defaultDiscipline || "boulder");
+  const [duration, setDuration] = useState(initialData?.duration_minutes || 120);
+  const [routes, setRoutes] = useState<OutdoorRoute[]>(initialData?.routes || []);
+  const [notes, setNotes] = useState(initialData?.notes || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,7 +79,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     setSubmitting(true);
     setError(null);
     try {
-      await postOutdoorLog({
+      const payload = {
         date,
         spot_name: spotName,
         discipline,
@@ -87,7 +89,12 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
           return style ? { ...rest, style } : rest;
         }),
         notes: notes || undefined,
-      });
+      };
+      if (isEdit) {
+        await putOutdoorLog(payload);
+      } else {
+        await postOutdoorLog(payload);
+      }
       onSuccess?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to log session");
@@ -98,7 +105,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Log Outdoor Session</h3>
+      <h3 className="text-lg font-semibold">{isEdit ? "Edit Outdoor Session" : "Log Outdoor Session"}</h3>
 
       {/* Date */}
       <div>
@@ -269,7 +276,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
         disabled={submitting}
         className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
-        {submitting ? "Saving..." : "Log Session"}
+        {submitting ? "Saving..." : isEdit ? "Save Changes" : "Log Session"}
       </button>
     </div>
   );

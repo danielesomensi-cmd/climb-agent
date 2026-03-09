@@ -226,6 +226,15 @@ export const postOutdoorLog = (session: Omit<OutdoorSession, "log_version">) =>
     body: JSON.stringify(session),
   });
 
+export const getOutdoorLogByDate = (date: string) =>
+  request<{ session: OutdoorSession & { load_score: number } }>(`/api/outdoor/log/${date}`);
+
+export const putOutdoorLog = (session: Omit<OutdoorSession, "log_version">) =>
+  request<{ status: string; load_score: number }>("/api/outdoor/log", {
+    method: "PUT",
+    body: JSON.stringify(session),
+  });
+
 export const getOutdoorSessions = (since?: string) =>
   request<{ sessions: OutdoorSession[]; count: number }>(
     `/api/outdoor/sessions${since ? `?since=${since}` : ""}`

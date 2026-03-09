@@ -12,6 +12,7 @@ Open items that affect production reliability or core UX.
 
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
+| ~~B115~~ | ~~Edit outdoor session~~ | ~~M~~ | Done: `PUT /api/outdoor/log` (update JSONL + state.outdoor_log), `GET /api/outdoor/log/{date}` (singola entry). OutdoorLogForm con `initialData` prop per edit mode. Bottone Edit (Pencil) su outdoor card completata in week + today. 11 test. |
 | ~~B116~~ | ~~Persistent outdoor log~~ | ~~M~~ | Done: `state.outdoor_log[]` append su `complete_outdoor`, remove su `undo_outdoor`. Entry: date, spot_name, spot_id, discipline, load_score, completed_at. 2 test. |
 | ~~B117~~ | ~~Persistent completion log~~ | ~~M~~ | Done: `state.session_completion_log[]` append su `mark_done`/`mark_skipped`, remove su `mark_planned`. Feedback router attacca difficulty + exercise_count. 4 test. |
 | ~~B99~~ | ~~Test week crashata~~ | ~~L~~ | Done: test_week_mode eliminato, onboarding genera sempre macrociclo con estimate_missing_baselines() + inject_tests in Pass 3. |

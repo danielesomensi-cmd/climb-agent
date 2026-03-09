@@ -10,7 +10,7 @@ import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
-import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions } from "@/lib/api";
+import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Quote, OutdoorSpot, OutdoorRoute } from "@/lib/types";
+import type { WeekPlan, DayPlan, Quote, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
 
 /** Full weekday names */
 const WEEKDAY_FULL: Record<number, string> = {
@@ -99,6 +99,8 @@ function TodayContent() {
   } | null>(null);
   const [changeGymDate, setChangeGymDate] = useState<string | null>(null);
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
+  const [outdoorEditDate, setOutdoorEditDate] = useState<string | null>(null);
+  const [outdoorEditData, setOutdoorEditData] = useState<OutdoorSession | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
@@ -594,6 +596,24 @@ function TodayContent() {
     }
   }
 
+  /** Edit outdoor session — fetch entry, open form in edit mode */
+  async function handleEditOutdoor(date: string) {
+    try {
+      const data = await getOutdoorLogByDate(date);
+      setOutdoorEditData(data.session);
+      setOutdoorEditDate(date);
+      getOutdoorSpots().then((d) => setOutdoorSpots(d.spots)).catch(() => {});
+    } catch {
+      setError("No outdoor session found for this date");
+    }
+  }
+
+  async function handleEditOutdoorSuccess() {
+    setOutdoorEditDate(null);
+    setOutdoorEditData(null);
+    await fetchData();
+  }
+
   /** Submit session feedback */
   async function handleFeedbackSubmit(feedback: Record<string, string>) {
     if (!feedbackSessionId) return;
@@ -725,6 +745,7 @@ function TodayContent() {
             onUndoOtherActivity={handleUndoOtherActivity}
             onRemoveOtherActivity={handleRemoveOtherActivity}
             onLogOutdoor={handleLogOutdoor}
+            onEditOutdoor={handleEditOutdoor}
             onUndoOutdoor={handleUndoOutdoor}
             onRemoveOutdoor={handleRemoveOutdoor}
           />
@@ -851,6 +872,22 @@ function TodayContent() {
             defaultGrade={currentGrade ?? undefined}
             onSuccess={handleOutdoorLogSuccess}
           />
+        </DialogContent>
+      </Dialog>
+
+      {/* Outdoor edit dialog */}
+      <Dialog open={outdoorEditDate !== null} onOpenChange={(v) => { if (!v) { setOutdoorEditDate(null); setOutdoorEditData(null); } }}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Outdoor Session</DialogTitle>
+          </DialogHeader>
+          {outdoorEditData && (
+            <OutdoorLogForm
+              spots={outdoorSpots}
+              initialData={outdoorEditData}
+              onSuccess={handleEditOutdoorSuccess}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

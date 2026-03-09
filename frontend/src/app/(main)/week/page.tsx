@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
-import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions } from "@/lib/api";
+import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
 
 /** English labels for phase names */
 const PHASE_LABELS: Record<string, string> = {
@@ -64,6 +64,7 @@ export default function WeekPage() {
   const [feedbackDate, setFeedbackDate] = useState<string | null>(null);
   const [changeGymDate, setChangeGymDate] = useState<string | null>(null);
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
+  const [outdoorEditDate, setOutdoorEditDate] = useState<string | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
@@ -518,6 +519,26 @@ export default function WeekPage() {
     }
   }
 
+  /** Edit outdoor session — fetch entry, open form in edit mode */
+  const [outdoorEditData, setOutdoorEditData] = useState<OutdoorSession | null>(null);
+  async function handleEditOutdoor(date: string) {
+    try {
+      const data = await getOutdoorLogByDate(date);
+      setOutdoorEditData(data.session);
+      setOutdoorEditDate(date);
+      getOutdoorSpots().then((d) => setOutdoorSpots(d.spots)).catch(() => {});
+    } catch {
+      setError("No outdoor session found for this date");
+    }
+  }
+
+  async function handleEditOutdoorSuccess() {
+    setOutdoorEditDate(null);
+    setOutdoorEditData(null);
+    // Refresh outdoor routes map
+    await fetchWeek(displayWeekNum);
+  }
+
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
   const phaseLabel = phaseId
@@ -679,6 +700,7 @@ export default function WeekPage() {
                   onUndoOtherActivity={handleUndoOtherActivity}
                   onRemoveOtherActivity={handleRemoveOtherActivity}
                   onLogOutdoor={handleLogOutdoor}
+                  onEditOutdoor={handleEditOutdoor}
                   onUndoOutdoor={handleUndoOutdoor}
                   onRemoveOutdoor={handleRemoveOutdoor}
                 />
@@ -771,6 +793,22 @@ export default function WeekPage() {
               />
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Outdoor edit dialog */}
+      <Dialog open={outdoorEditDate !== null} onOpenChange={(v) => { if (!v) { setOutdoorEditDate(null); setOutdoorEditData(null); } }}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Outdoor Session</DialogTitle>
+          </DialogHeader>
+          {outdoorEditData && (
+            <OutdoorLogForm
+              spots={outdoorSpots}
+              initialData={outdoorEditData}
+              onSuccess={handleEditOutdoorSuccess}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

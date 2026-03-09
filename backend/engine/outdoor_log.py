@@ -161,6 +161,48 @@ def remove_outdoor_session(log_dir: str, date: str) -> int:
     return removed
 
 
+def update_outdoor_session(log_dir: str, date: str, new_entry: Dict[str, Any]) -> str:
+    """Replace the outdoor session entry for a given date.
+
+    Validates the new entry, removes the old one, and appends the replacement.
+    Returns the JSONL log path.
+    Raises ValueError if validation fails or no entry exists for that date.
+    """
+    log_path = _log_path_for_date(log_dir, date)
+    if not os.path.isfile(log_path):
+        raise ValueError(f"No outdoor log file found for date {date}")
+
+    # Check that an entry for this date actually exists
+    found = False
+    with open(log_path, "r", encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            try:
+                entry = json.loads(stripped)
+            except json.JSONDecodeError:
+                continue
+            if entry.get("date") == date:
+                found = True
+                break
+
+    if not found:
+        raise ValueError(f"No outdoor session found for date {date}")
+
+    # Validate new entry before touching the file
+    errors = validate_outdoor_entry(new_entry)
+    if errors:
+        raise ValueError(f"Invalid outdoor session entry: {'; '.join(errors)}")
+
+    # Remove old, append new
+    remove_outdoor_session(log_dir, date)
+    with open(log_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(new_entry, ensure_ascii=False) + "\n")
+
+    return log_path
+
+
 def load_outdoor_sessions(
     log_dir: str,
     since_date: Optional[str] = None,

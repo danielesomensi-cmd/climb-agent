@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, MapPin, Mountain, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye, MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ interface DayCardProps {
   onUndoOtherActivity?: (date: string) => void;
   onRemoveOtherActivity?: (date: string) => void;
   onLogOutdoor?: (date: string) => void;
+  onEditOutdoor?: (date: string) => void;
   onUndoOutdoor?: (date: string) => void;
   onRemoveOutdoor?: (date: string) => void;
   outdoorRoutes?: OutdoorRoute[];
@@ -122,6 +123,7 @@ export function DayCard({
   onUndoOtherActivity,
   onRemoveOtherActivity,
   onLogOutdoor,
+  onEditOutdoor,
   onUndoOutdoor,
   onRemoveOutdoor,
   outdoorRoutes,
@@ -282,11 +284,22 @@ export function DayCard({
                           {outdoorRoutes!.length} {routeLabel}
                         </span>
                       )}
-                      {onUndoOutdoor && (
+                      {onEditOutdoor && (
                         <Button
                           size="sm"
                           variant="ghost"
                           className="text-xs text-muted-foreground ml-auto"
+                          onClick={() => onEditOutdoor(day.date)}
+                        >
+                          <Pencil className="size-3.5 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                      {onUndoOutdoor && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className={cn("text-xs text-muted-foreground", !onEditOutdoor && "ml-auto")}
                           onClick={() => onUndoOutdoor(day.date)}
                         >
                           <Undo2 className="size-3.5 mr-1" />

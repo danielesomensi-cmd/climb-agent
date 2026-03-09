@@ -87,7 +87,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-37 endpoints total (36 router + 1 app-level health check).
+39 endpoints total (38 router + 1 app-level health check).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -116,6 +116,8 @@ user_state.assessment + user_state.goal
 | POST | `/api/outdoor/spots` | Add outdoor spot |
 | DELETE | `/api/outdoor/spots/{id}` | Remove outdoor spot |
 | POST | `/api/outdoor/log` | Log outdoor session |
+| GET | `/api/outdoor/log/{date}` | Get outdoor session by date |
+| PUT | `/api/outdoor/log` | Update outdoor session |
 | GET | `/api/outdoor/sessions` | List outdoor sessions |
 | GET | `/api/outdoor/stats` | Outdoor statistics |
 | POST | `/api/outdoor/convert-slot` | Convert outdoor slot to gym/home |

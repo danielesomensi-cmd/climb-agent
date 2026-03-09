@@ -15,6 +15,7 @@ from backend.engine.outdoor_log import (
     compute_outdoor_load_score,
     compute_outdoor_stats,
     load_outdoor_sessions,
+    update_outdoor_session,
 )
 
 router = APIRouter(prefix="/api/outdoor", tags=["outdoor"])
@@ -109,6 +110,48 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
         )
 
     return {"status": "ok", "log_path": os.path.basename(log_path)}
+
+
+@router.get("/log/{date}")
+def get_outdoor_log_by_date(date: str, user_id: Optional[str] = Depends(get_user_id)):
+    """Return the outdoor session entry for a specific date."""
+    sessions = load_outdoor_sessions(_log_dir(user_id), since_date=date)
+    matching = [s for s in sessions if s.get("date") == date]
+    if not matching:
+        raise HTTPException(status_code=404, detail=f"No outdoor session found for date {date}")
+    entry = matching[-1]
+    entry["load_score"] = compute_outdoor_load_score(entry)
+    return {"session": entry}
+
+
+@router.put("/log")
+def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get_user_id)):
+    """Update an existing outdoor session (replace entry for the same date)."""
+    entry = req.model_dump(exclude_none=True)
+    entry["log_version"] = "outdoor.v1"
+
+    log_dir = _log_dir(user_id)
+    try:
+        update_outdoor_session(log_dir, req.date, entry)
+    except ValueError as e:
+        detail = str(e)
+        status = 404 if "No outdoor session found" in detail or "No outdoor log file" in detail else 422
+        raise HTTPException(status_code=status, detail=detail)
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update outdoor log: {e}")
+
+    # Update state.outdoor_log[] (B116) with recalculated load_score
+    state = load_state(user_id)
+    outdoor_log = state.get("outdoor_log", [])
+    for ol_entry in outdoor_log:
+        if ol_entry.get("date") == req.date:
+            ol_entry["spot_name"] = entry.get("spot_name", ol_entry.get("spot_name", ""))
+            ol_entry["discipline"] = entry.get("discipline", ol_entry.get("discipline", "both"))
+            ol_entry["load_score"] = compute_outdoor_load_score(entry)
+            break
+    save_state(state, user_id)
+
+    return {"status": "ok", "load_score": compute_outdoor_load_score(entry)}
 
 
 @router.get("/sessions")

@@ -17,6 +17,7 @@ from backend.engine.outdoor_log import (
     compute_outdoor_stats,
     load_outdoor_sessions,
     remove_outdoor_session,
+    update_outdoor_session,
     validate_outdoor_entry,
 )
 from backend.engine.planner_v2 import generate_phase_week
@@ -522,6 +523,118 @@ class TestOutdoorAPI:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
+    def test_get_outdoor_log_by_date(self):
+        self.client.post("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [
+                {"name": "R1", "grade": "6a", "style": "onsight",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        })
+        r = self.client.get("/api/outdoor/log/2026-03-15")
+        assert r.status_code == 200
+        session = r.json()["session"]
+        assert session["spot_name"] == "Berdorf"
+        assert session["date"] == "2026-03-15"
+        assert "load_score" in session
+
+    def test_get_outdoor_log_by_date_not_found(self):
+        r = self.client.get("/api/outdoor/log/2026-01-01")
+        assert r.status_code == 404
+
+    def test_put_outdoor_log(self):
+        self.client.post("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [
+                {"name": "R1", "grade": "6a",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        })
+        r = self.client.put("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [
+                {"name": "R1", "grade": "7a", "style": "flash",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        })
+        assert r.status_code == 200
+        assert r.json()["status"] == "ok"
+        assert "load_score" in r.json()
+
+        # Verify JSONL was updated
+        r2 = self.client.get("/api/outdoor/sessions")
+        sessions = r2.json()["sessions"]
+        assert len(sessions) == 1
+        assert sessions[0]["routes"][0]["grade"] == "7a"
+
+    def test_put_outdoor_log_not_found(self):
+        r = self.client.put("/api/outdoor/log", json={
+            "date": "2026-01-01",
+            "spot_name": "Nowhere",
+            "discipline": "lead",
+            "duration_minutes": 60,
+            "routes": [
+                {"name": "R1", "grade": "5a",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        })
+        assert r.status_code == 404
+
+    def test_put_outdoor_log_updates_state_outdoor_log(self):
+        """B116: PUT should update state.outdoor_log[] with recalculated load_score."""
+        from backend.api import deps
+
+        # Create initial session
+        self.client.post("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [
+                {"name": "R1", "grade": "6a",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        })
+
+        # Simulate B116 outdoor_log entry in state
+        state = json.loads(deps.STATE_PATH.read_text())
+        state.setdefault("outdoor_log", []).append({
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "load_score": 10,
+        })
+        deps.STATE_PATH.write_text(json.dumps(state, indent=2))
+
+        # Update with harder route
+        r = self.client.put("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Freyr",
+            "discipline": "lead",
+            "duration_minutes": 120,
+            "routes": [
+                {"name": "R1", "grade": "7c+", "style": "onsight",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        })
+        assert r.status_code == 200
+
+        state = json.loads(deps.STATE_PATH.read_text())
+        ol = state.get("outdoor_log", [])
+        entry = next(e for e in ol if e["date"] == "2026-03-15")
+        assert entry["spot_name"] == "Freyr"
+        assert entry["discipline"] == "lead"
+        assert entry["load_score"] > 10
+
     def test_get_sessions_and_stats(self):
         self.client.post("/api/outdoor/log", json={
             "date": "2026-03-15",
@@ -786,6 +899,85 @@ class TestOnboardingOutdoorSpots:
 
         state = json.loads(self.state_path.read_text())
         assert state.get("outdoor_spots") == []
+
+
+class TestUpdateOutdoorSession:
+    """Tests for update_outdoor_session (edit support)."""
+
+    def test_update_replaces_entry(self, tmp_path):
+        log_dir = str(tmp_path / "logs")
+        entry = _make_entry(date="2026-03-15")
+        append_outdoor_session(entry, log_dir)
+
+        new_entry = _make_entry(
+            date="2026-03-15",
+            routes=[
+                {"name": "Updated Route", "grade": "7a", "style": "flash",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        )
+        update_outdoor_session(log_dir, "2026-03-15", new_entry)
+
+        sessions = load_outdoor_sessions(log_dir)
+        assert len(sessions) == 1
+        assert sessions[0]["routes"][0]["name"] == "Updated Route"
+        assert sessions[0]["routes"][0]["grade"] == "7a"
+
+    def test_update_not_found_raises(self, tmp_path):
+        log_dir = str(tmp_path / "logs")
+        new_entry = _make_entry(date="2026-03-15")
+        with pytest.raises(ValueError, match="No outdoor"):
+            update_outdoor_session(log_dir, "2026-03-15", new_entry)
+
+    def test_update_recalculates_load(self, tmp_path):
+        log_dir = str(tmp_path / "logs")
+        entry = _make_entry(
+            date="2026-03-15",
+            duration_minutes=120,
+            routes=[{"name": "R1", "grade": "6a", "style": "redpoint",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        append_outdoor_session(entry, log_dir)
+        old_score = compute_outdoor_load_score(entry)
+
+        # Update with harder grade → higher load
+        new_entry = _make_entry(
+            date="2026-03-15",
+            duration_minutes=120,
+            routes=[{"name": "R1", "grade": "7c+", "style": "onsight",
+                     "attempts": [{"result": "sent"}]}],
+        )
+        update_outdoor_session(log_dir, "2026-03-15", new_entry)
+        new_score = compute_outdoor_load_score(new_entry)
+        assert new_score > old_score
+
+    def test_update_keeps_other_dates(self, tmp_path):
+        log_dir = str(tmp_path / "logs")
+        append_outdoor_session(_make_entry(date="2026-03-14"), log_dir)
+        append_outdoor_session(_make_entry(date="2026-03-15"), log_dir)
+        append_outdoor_session(_make_entry(date="2026-03-16"), log_dir)
+
+        new_entry = _make_entry(date="2026-03-15", spot_name="Freyr")
+        update_outdoor_session(log_dir, "2026-03-15", new_entry)
+
+        sessions = load_outdoor_sessions(log_dir)
+        assert len(sessions) == 3
+        updated = next(s for s in sessions if s["date"] == "2026-03-15")
+        assert updated["spot_name"] == "Freyr"
+        assert all(s["spot_name"] == "Berdorf" for s in sessions if s["date"] != "2026-03-15")
+
+    def test_update_invalid_entry_raises(self, tmp_path):
+        log_dir = str(tmp_path / "logs")
+        append_outdoor_session(_make_entry(date="2026-03-15"), log_dir)
+
+        bad_entry = _make_entry(date="2026-03-15", discipline="trad")
+        with pytest.raises(ValueError, match="Invalid"):
+            update_outdoor_session(log_dir, "2026-03-15", bad_entry)
+
+        # Original entry should be untouched
+        sessions = load_outdoor_sessions(log_dir)
+        assert len(sessions) == 1
+        assert sessions[0]["discipline"] == "boulder"
 
 
 class TestRemoveOutdoorSession:
