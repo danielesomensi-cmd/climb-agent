@@ -37,7 +37,7 @@ WEAKNESS_OPTIONS = [
 
 EQUIPMENT_HOME = [
     {"id": "hangboard", "label": "Hangboard", "description": "Finger training board"},
-    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs. Alternative to hangboard for finger strength"},
+    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs"},
     {"id": "homewall", "label": "Homewall", "description": "Home climbing wall (any size or board type)"},
     {"id": "pullup_bar", "label": "Pull-up bar", "description": "Fixed bar for pull-ups and hanging exercises"},
     {"id": "dumbbell", "label": "Dumbbells", "description": "Dumbbells for strength exercises"},
@@ -61,7 +61,7 @@ EQUIPMENT_GYM = [
     {"id": "campus_board", "label": "Campus Board", "description": "Board with rungs for power training"},
     # --- Finger training ---
     {"id": "hangboard", "label": "Hangboard", "description": "Hangboard at the gym"},
-    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs. Alternative to hangboard for finger strength"},
+    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs"},
     {"id": "pinch_block", "label": "Pinch Block", "description": "Block for pinch grip training"},
     # --- Strength equipment ---
     {"id": "pullup_bar", "label": "Pull-up bar", "description": "Fixed bar for pull-ups and hanging exercises"},
