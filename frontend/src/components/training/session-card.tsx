@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, Check, X, Undo2, Play, ArrowRightLeft, Trash2, MoreVertical, Plus, Search } from "lucide-react";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -454,23 +454,21 @@ export function SessionCard({
             <CardTitle className="text-sm">
               {formatSessionName(session.session_id)}
             </CardTitle>
-            <div className="flex items-center gap-1">
-              {/* More actions button */}
+            <div className="flex items-center gap-1.5">
+              {/* Edit actions button */}
               <button
-                className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-md bg-muted/40 text-muted-foreground hover:bg-accent transition-colors"
+                className="flex items-center justify-center min-w-[44px] min-h-[44px] bg-white/10 rounded-lg p-1.5 text-slate-300 hover:bg-white/20 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   setDrawerOpen(true);
                 }}
                 aria-label="Session actions"
               >
-                <MoreVertical className="size-4" />
+                <Pencil className="size-[18px]" />
               </button>
-              {expanded ? (
-                <ChevronUp className="size-4 shrink-0 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-              )}
+              <ChevronDown
+                className={`size-5 shrink-0 text-slate-300 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+              />
             </div>
           </div>
 
