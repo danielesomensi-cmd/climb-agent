@@ -261,7 +261,9 @@ export default function SettingsPage() {
     setActionError(null);
 
     try {
-      await generateMacrocycle();
+      // "restart" = full regen from week 1; everything else = incremental
+      const fromPhase = action === "restart" ? undefined : "current";
+      await generateMacrocycle(undefined, 12, fromPhase);
       await getWeek(0, true, preserveBefore);
       await refresh();
     } catch (e) {
