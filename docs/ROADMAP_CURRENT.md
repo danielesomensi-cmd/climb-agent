@@ -21,7 +21,7 @@ Open items that affect production reliability or core UX.
 | ~~B102~~ | ~~Finger mancante dalle zone infortuni~~ | ~~M~~ | Done: `finger → finger_sensitive` mapping, 11 esercizi marcati, 2 esercizi `prehab_finger` creati (finger_extensor_band, finger_tendon_glides). |
 | B103 | Gym equipment: nessun preset alla creazione | S | Preselezionare default comuni (gym_boulder, hangboard, pullup_bar). Utente toglie ciò che manca. |
 | B104 | Board mancanti + other equipment | S | Aggiungere `board_tension` e `board_other` al vocabulary — trattati come `board_kilter` (stessi esercizi). Resolver: `equipment_required_any` include tutti i board type. Aggiungere campo `equipment_other` generico (free text, non usato dal motore). |
-| B105 | Gym lookup disallineato (state.gyms vs state.equipment.gyms) | M | Dati gym in `state["equipment"]["gyms"]` ma alcuni consumer cercano `state["gyms"]`. Mappare e allineare tutti i punti. |
+| ~~B105~~ | ~~Gym lookup disallineato (state.gyms vs state.equipment.gyms)~~ | ~~M~~ | Non riproducibile: audit completo conferma che tutti i reader e writer usano `state["equipment"]["gyms"]`. Nessun accesso a `state["gyms"]` trovato. Probabilmente risolto implicitamente con B88/B101. |
 | ~~B48~~ | ~~Edit single session (multi-session day)~~ | ~~M~~ | Done: `session_index` param in override — replaces only targeted session, others untouched. |
 | ~~B37~~ | ~~Add exercise to existing session~~ | ~~M~~ | Done: `POST /api/session/add-exercise` — appends exercise, recalculates load score. |
 | ~~B38~~ | ~~Injuries filter (contraindications)~~ | ~~M~~ | Done: 3-level severity system (monitor/active/severe) in resolver. |
@@ -110,7 +110,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | — | Override intensity cap warning | Warn when user overrides with session above current phase intensity cap. |
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
-| B105 | Gym lookup disallineato | `state["equipment"]["gyms"]` vs `state["gyms"]` — mappare tutti i consumer e unificare |
+| ~~B105~~ | ~~Gym lookup disallineato~~ | Chiuso: nessun mismatch trovato (audit 2026-03-10). |
 | B112 | Equipment filter in Add Exercise | AddExerciseDialog shows all 153 exercises regardless of session location/equipment. Must filter by required_equipment vs available equipment (gym or home). Frontend: hide or gray out incompatible exercises with "Missing: X" label. Backend: validate equipment_required on add-exercise endpoint. This is a core engine principle — equipment compatibility is non-negotiable. Depends on audit_location_equipment.md. |
 
 ---
