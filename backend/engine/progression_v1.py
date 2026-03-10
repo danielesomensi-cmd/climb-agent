@@ -95,7 +95,7 @@ HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
     "repeater_15_15": 0.65,
     "repeater_hang_7_3": 0.70,
 }
-SURFACE_PRIORITY = ("board_kilter", "spraywall", "gym_boulder")
+SURFACE_PRIORITY = ("board_kilter", "board_moonboard", "board_other", "spraywall", "gym_boulder")
 VALID_FEEDBACK = {"very_easy", "easy", "ok", "hard", "very_hard"}
 LEGACY_DIFFICULTY_MAP = {
     "too_easy": "very_easy",

@@ -46,6 +46,7 @@ Allowed `equipment` values:
 - `spraywall`
 - `board_kilter`
 - `board_moonboard`
+- `board_other` *(any training board not specifically Kilter or MoonBoard — Tension, Grasshopper, custom, etc.)*
 - `gym_boulder` *(gym has a boulder area with set problems; not board, not spraywall)*
 - `gym_routes` *(gym has route walls / rope climbing terrain)*
 - `cable_machine` *(cable pulley machine for antagonist and general strength work)*
@@ -527,6 +528,7 @@ Canonical boulder surfaces for progression targeting:
 
 - `board_kilter`
 - `board_moonboard`
+- `board_other`
 - `spraywall`
 - `gym_boulder`
 

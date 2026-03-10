@@ -58,6 +58,7 @@ EQUIPMENT_GYM = [
     # --- Boards ---
     {"id": "board_kilter", "label": "Kilter Board", "description": "Digital board with LED problems"},
     {"id": "board_moonboard", "label": "MoonBoard", "description": "Standardized board with online problems"},
+    {"id": "board_other", "label": "Other board", "description": "Tension, Grasshopper, or any other training board"},
     {"id": "campus_board", "label": "Campus Board", "description": "Board with rungs for power training"},
     # --- Finger training ---
     {"id": "hangboard", "label": "Hangboard", "description": "Hangboard at the gym"},

@@ -24,12 +24,14 @@ interface GymData {
   gym_id: string;
   name: string;
   equipment: string[];
+  equipment_other?: string;
 }
 
 interface EquipmentEditorProps {
   initialEquipment: {
     home_enabled?: boolean;
     home?: string[];
+    equipment_other?: string;
     gyms?: GymData[];
   };
   onSave: (equipment: Record<string, unknown>) => void;
@@ -47,6 +49,7 @@ export function EquipmentEditor({
     () => JSON.parse(JSON.stringify(initialEquipment.gyms ?? [])),
   );
 
+  const [homeOther, setHomeOther] = useState(initialEquipment.equipment_other ?? "");
   const [homeOptions, setHomeOptions] = useState<EquipmentItem[]>([]);
   const [gymOptions, setGymOptions] = useState<EquipmentItem[]>([]);
   const [loadingDefaults, setLoadingDefaults] = useState(true);
@@ -77,6 +80,10 @@ export function EquipmentEditor({
     setGyms((prev) => prev.map((g, i) => (i === index ? { ...g, name } : g)));
   };
 
+  const setGymOther = (index: number, value: string) => {
+    setGyms((prev) => prev.map((g, i) => (i === index ? { ...g, equipment_other: value } : g)));
+  };
+
   const toggleGymEquipment = (gymIndex: number, eqId: string, checked: boolean) => {
     setGyms((prev) =>
       prev.map((g, i) => {
@@ -105,6 +112,7 @@ export function EquipmentEditor({
     onSave({
       home_enabled: homeEnabled,
       home: homeEnabled ? home : [],
+      equipment_other: homeOther.trim() || undefined,
       gyms,
     });
   };
@@ -134,22 +142,30 @@ export function EquipmentEditor({
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {homeOptions.map((item) => (
-                  <label key={item.id} className="flex items-start gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={home.includes(item.id)}
-                      onCheckedChange={(checked) => toggleHomeItem(item.id, checked === true)}
-                      className="mt-0.5"
-                    />
-                    <div>
-                      <p className="text-sm font-medium leading-tight">{item.label}</p>
-                      {item.description && (
-                        <p className="text-xs text-muted-foreground">{item.description}</p>
-                      )}
-                    </div>
-                  </label>
-                ))}
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {homeOptions.map((item) => (
+                    <label key={item.id} className="flex items-start gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={home.includes(item.id)}
+                        onCheckedChange={(checked) => toggleHomeItem(item.id, checked === true)}
+                        className="mt-0.5"
+                      />
+                      <div>
+                        <p className="text-sm font-medium leading-tight">{item.label}</p>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground">{item.description}</p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <Input
+                  value={homeOther}
+                  onChange={(e) => setHomeOther(e.target.value)}
+                  placeholder="Other equipment (optional)"
+                  className="text-sm"
+                />
               </div>
             )
           )}
@@ -206,19 +222,27 @@ export function EquipmentEditor({
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  {gymOptions.map((item) => (
-                    <label key={item.id} className="flex items-start gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={gym.equipment.includes(item.id)}
-                        onCheckedChange={(checked) =>
-                          toggleGymEquipment(gymIndex, item.id, checked === true)
-                        }
-                        className="mt-0.5"
-                      />
-                      <p className="text-sm font-medium leading-tight">{item.label}</p>
-                    </label>
-                  ))}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    {gymOptions.map((item) => (
+                      <label key={item.id} className="flex items-start gap-2 cursor-pointer">
+                        <Checkbox
+                          checked={gym.equipment.includes(item.id)}
+                          onCheckedChange={(checked) =>
+                            toggleGymEquipment(gymIndex, item.id, checked === true)
+                          }
+                          className="mt-0.5"
+                        />
+                        <p className="text-sm font-medium leading-tight">{item.label}</p>
+                      </label>
+                    ))}
+                  </div>
+                  <Input
+                    value={gym.equipment_other ?? ""}
+                    onChange={(e) => setGymOther(gymIndex, e.target.value)}
+                    placeholder="Other equipment (optional)"
+                    className="text-sm"
+                  />
                 </div>
               )}
             </div>
