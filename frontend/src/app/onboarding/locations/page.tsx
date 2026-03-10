@@ -94,6 +94,19 @@ export default function LocationsPage() {
     update("equipment", { ...equipment, gyms });
   };
 
+  const GYM_PRESETS: Record<string, string[]> = {
+    Boulder: ["gym_boulder", "spraywall", "hangboard", "campus_board", "pullup_bar", "foam_roller"],
+    Lead: ["gym_routes", "gym_boulder", "hangboard", "campus_board", "pullup_bar", "foam_roller"],
+    Fitness: ["pullup_bar", "weight", "dumbbell", "barbell", "bench", "cable_machine", "resistance_band", "foam_roller", "rings"],
+  };
+
+  const applyPreset = (gymIndex: number, preset: string[]) => {
+    const gyms = equipment.gyms.map((g, i) =>
+      i === gymIndex ? { ...g, equipment: [...preset] } : g,
+    );
+    update("equipment", { ...equipment, gyms });
+  };
+
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       {/* Home section */}
@@ -182,6 +195,21 @@ export default function LocationsPage() {
                   onChange={(e) => setGymName(gymIndex, e.target.value)}
                   placeholder="E.g.: My Climbing Gym"
                 />
+              </div>
+
+              {/* Quick-fill presets */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Quick-fill:</span>
+                {Object.entries(GYM_PRESETS).map(([name, preset]) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className="rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:bg-accent"
+                    onClick={() => applyPreset(gymIndex, preset)}
+                  >
+                    {name}
+                  </button>
+                ))}
               </div>
 
               {loadingDefaults ? (

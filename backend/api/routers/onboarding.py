@@ -37,33 +37,45 @@ WEAKNESS_OPTIONS = [
 
 EQUIPMENT_HOME = [
     {"id": "hangboard", "label": "Hangboard", "description": "Finger training board"},
+    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs. Alternative to hangboard for finger strength"},
     {"id": "homewall", "label": "Homewall", "description": "Home climbing wall (any size or board type)"},
     {"id": "pullup_bar", "label": "Pull-up bar", "description": "Fixed bar for pull-ups and hanging exercises"},
-    {"id": "band", "label": "Assistance band", "description": "Elastic band for assistance or resistance"},
     {"id": "dumbbell", "label": "Dumbbells", "description": "Dumbbells for strength exercises"},
     {"id": "kettlebell", "label": "Kettlebell", "description": "Kettlebell for functional exercises"},
-    {"id": "ab_wheel", "label": "Ab Wheel", "description": "Abdominal wheel"},
+    {"id": "band", "label": "Assistance band", "description": "Elastic band for assistance or resistance"},
+    {"id": "resistance_band", "label": "Resistance band", "description": "Elastic band for activation and prehab exercises"},
     {"id": "rings", "label": "Rings", "description": "Gymnastic rings for suspension exercises"},
     {"id": "foam_roller", "label": "Foam Roller", "description": "Roller for self-massage and myofascial release"},
-    {"id": "resistance_band", "label": "Resistance band", "description": "Elastic band for activation and prehab exercises"},
+    {"id": "ab_wheel", "label": "Ab Wheel", "description": "Abdominal wheel"},
     {"id": "pinch_block", "label": "Pinch Block", "description": "Block for pinch grip training"},
-    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs. Alternative to hangboard for finger strength"},
 ]
 
 EQUIPMENT_GYM = [
+    # --- Climbing areas ---
     {"id": "gym_boulder", "label": "Bouldering area", "description": "Gym with bouldering sector and set problems"},
     {"id": "gym_routes", "label": "Lead / Top-rope walls", "description": "Wall for roped climbing"},
     {"id": "spraywall", "label": "Spraywall", "description": "Wall with fixed holds for custom boulders"},
+    # --- Boards ---
     {"id": "board_kilter", "label": "Kilter Board", "description": "Digital board with LED problems"},
     {"id": "board_moonboard", "label": "MoonBoard", "description": "Standardized board with online problems"},
     {"id": "campus_board", "label": "Campus Board", "description": "Board with rungs for power training"},
+    # --- Finger training ---
     {"id": "hangboard", "label": "Hangboard", "description": "Hangboard at the gym"},
+    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs. Alternative to hangboard for finger strength"},
+    {"id": "pinch_block", "label": "Pinch Block", "description": "Block for pinch grip training"},
+    # --- Strength equipment ---
+    {"id": "pullup_bar", "label": "Pull-up bar", "description": "Fixed bar for pull-ups and hanging exercises"},
+    {"id": "weight", "label": "Weight plates", "description": "Free weight plates for loading exercises"},
     {"id": "dumbbell", "label": "Dumbbells", "description": "Dumbbells for strength"},
     {"id": "barbell", "label": "Barbell", "description": "Barbell for heavy strength exercises"},
     {"id": "bench", "label": "Bench", "description": "Bench for press and support exercises"},
     {"id": "cable_machine", "label": "Cable machine", "description": "Cable pulley machine for pulling and pushing exercises"},
     {"id": "leg_press", "label": "Leg press", "description": "Machine for lower body pressing exercises"},
-    {"id": "loading_pin", "label": "Loading Pin (hangboard alternative)", "description": "Pin for one-arm weighted hangs. Alternative to hangboard for finger strength"},
+    # --- Accessories ---
+    {"id": "resistance_band", "label": "Resistance band", "description": "Elastic band for activation and prehab exercises"},
+    {"id": "rings", "label": "Rings", "description": "Gymnastic rings for suspension exercises"},
+    {"id": "foam_roller", "label": "Foam Roller", "description": "Roller for self-massage and myofascial release"},
+    {"id": "ab_wheel", "label": "Ab Wheel", "description": "Abdominal wheel"},
 ]
 
 TEST_DESCRIPTIONS = {

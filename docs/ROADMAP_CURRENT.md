@@ -19,7 +19,7 @@ Open items that affect production reliability or core UX.
 | ~~B100~~ | ~~Piano parte nel passato~~ | ~~M~~ | Done: this_monday() → next_monday() in onboarding. Piano parte sempre dal prossimo lunedì. |
 | ~~B101~~ | ~~Test week ignora gym~~ | ~~M~~ | Non era un bug: planner rispetta gym_id da availability. 5 test di conferma aggiunti. |
 | ~~B102~~ | ~~Finger mancante dalle zone infortuni~~ | ~~M~~ | Done: `finger → finger_sensitive` mapping, 11 esercizi marcati, 2 esercizi `prehab_finger` creati (finger_extensor_band, finger_tendon_glides). |
-| B103 | Gym equipment: nessun preset alla creazione | S | Preselezionare default comuni (gym_boulder, hangboard, pullup_bar). Utente toglie ciò che manca. |
+| ~~B103~~ | ~~Gym equipment: nessun preset alla creazione~~ | ~~S~~ | Done: 3 quick-fill pill (Boulder/Lead/Fitness) sopra checkbox gym. Replace mode (non additive). Riordinati EQUIPMENT_GYM (20 item, raggruppati) e EQUIPMENT_HOME (loading_pin dopo hangboard). Applicato a settings + onboarding. |
 | B104 | Board mancanti + other equipment | S | Aggiungere `board_tension` e `board_other` al vocabulary — trattati come `board_kilter` (stessi esercizi). Resolver: `equipment_required_any` include tutti i board type. Aggiungere campo `equipment_other` generico (free text, non usato dal motore). |
 | ~~B105~~ | ~~Gym lookup disallineato (state.gyms vs state.equipment.gyms)~~ | ~~M~~ | Non riproducibile: audit completo conferma che tutti i reader e writer usano `state["equipment"]["gyms"]`. Nessun accesso a `state["gyms"]` trovato. Probabilmente risolto implicitamente con B88/B101. |
 | ~~B48~~ | ~~Edit single session (multi-session day)~~ | ~~M~~ | Done: `session_index` param in override — replaces only targeted session, others untouched. |
