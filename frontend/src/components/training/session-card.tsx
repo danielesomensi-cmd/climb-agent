@@ -265,13 +265,15 @@ function AddExerciseDialog({
   }, [open, catalog.length]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return catalog.slice(0, 30);
+    if (!search.trim()) return catalog;
     const q = search.toLowerCase();
     return catalog.filter(
       (e) =>
         e.name.toLowerCase().includes(q) ||
         e.exercise_id.toLowerCase().includes(q) ||
-        e.domain?.toLowerCase().includes(q)
+        (Array.isArray(e.domain) ? e.domain.some(d => d.toLowerCase().includes(q)) : String(e.domain ?? "").toLowerCase().includes(q)) ||
+        (e.category?.toLowerCase().includes(q)) ||
+        (e.description?.toLowerCase().includes(q))
     );
   }, [catalog, search]);
 
@@ -343,8 +345,13 @@ function AddExerciseDialog({
                   onClick={() => selectExercise(ex)}
                 >
                   <div className="text-sm font-medium">{ex.name}</div>
+                  {ex.description && (
+                    <div className="text-xs text-muted-foreground/80 truncate">{ex.description}</div>
+                  )}
                   <div className="text-xs text-muted-foreground">
-                    {ex.domain} {ex.equipment_required?.length > 0 && `· ${ex.equipment_required.join(", ")}`}
+                    {Array.isArray(ex.domain) ? ex.domain.join(", ") : ex.domain}
+                    {ex.category && ` · ${ex.category}`}
+                    {ex.equipment_required?.length > 0 && ` · ${ex.equipment_required.join(", ")}`}
                   </div>
                 </button>
               ))}
@@ -354,7 +361,7 @@ function AddExerciseDialog({
           <div className="space-y-4">
             <div className="rounded-md border p-3">
               <div className="text-sm font-medium">{selected.name}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{selected.domain}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{Array.isArray(selected.domain) ? selected.domain.join(", ") : selected.domain}</div>
             </div>
 
             <div className="grid grid-cols-3 gap-3">

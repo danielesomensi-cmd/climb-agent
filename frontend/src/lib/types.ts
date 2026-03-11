@@ -77,7 +77,9 @@ export interface Exercise {
   id: string;
   exercise_id: string;
   name: string;
-  domain: string;
+  domain: string[];
+  category?: string;
+  description?: string | null;
   role: string;
   equipment_required: string[];
   prescription_defaults: Record<string, unknown>;

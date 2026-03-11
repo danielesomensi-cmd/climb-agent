@@ -100,6 +100,9 @@ export default function AvailabilityPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">When do you train?</CardTitle>
+          <CardDescription>
+            Outdoor days can be added later in your weekly plan based on weather and season.
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Grid header */}

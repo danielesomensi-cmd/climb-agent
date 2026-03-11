@@ -29,7 +29,7 @@ Open items that affect production reliability or core UX.
 | B42 | Sunday reminder — confirm next week availability | S | Weekly push/banner asking user to confirm next week's schedule. From beta feedback (FB-3). |
 | UI-25 | Test Maxes & Loads panel (Plan tab) | L | Collapsible card: test history timeline, benchmark comparison, exercise loads list. See ROADMAP_v2.md §9.5 for full spec. |
 | FR-4 | Outdoor vs gym slot priority preference | S | When both outdoor and gym available same day, user sets preference (outdoor-first / gym-first / alternate). See ROADMAP_v2.md §9.3-9.4. |
-| B113 | AddExerciseDialog: lista incompleta + nessuna descrizione | S | getExercises() potrebbe non restituire tutti i 153 esercizi. Ogni item deve mostrare anche la descrizione breve dal catalogo. Prima cosa domani. |
+| ~~B113~~ | ~~AddExerciseDialog: lista incompleta + nessuna descrizione~~ | ~~S~~ | Done: rimosso `slice(0,30)`, tutti i 155 esercizi visibili in lista scrollabile. Fix ricerca domain (array, non stringa). Aggiunta descrizione (troncata 1 riga) + category + equipment sotto ogni nome. Ricerca estesa a description e category. |
 | ~~B114~~ | ~~Regenerate Plan: past days protection + smart popup~~ | ~~M~~ | Done: `preserve_before` param in `GET /api/week`, `merge_prev_week_sessions` ora matcha per data (non weekday), giorni passati copiati wholesale, oggi con sessioni completate protetto. Frontend: `RegeneratePlanSheet` bottom sheet con 3 opzioni (Today/Tomorrow/Next Monday). |
 | ~~B118~~ | ~~P0: Equipment regen resetta macrociclo a week 1~~ | ~~S~~ | Done: `handleRegenSheetConfirm()` chiamava `generateMacrocycle()` senza `from_phase`, causando full regen (start_date=this_monday). Fix: passa `from_phase="current"` per tutti i path tranne Danger Zone restart. Audit: `plan/page.tsx` già corretto, `onboarding.py` correttamente full. 6 test + restore script. |
 | ~~B119~~ | ~~P0: start_date must always be a Monday~~ | ~~S~~ | Done: `ensure_monday()` in `deps.py` auto-corrects non-Monday dates to previous Monday. Applied at all setters: state PUT, macrocycle generate (full+incremental), start-week shift, engine `generate_macrocycle()`. 15 new tests, zero regressions. Invariant documented in vocabulary_v1.md §5.5.1. Production patched to 2026-02-23. |
@@ -42,7 +42,7 @@ Open items that affect production reliability or core UX.
 |----|-------|--------|-------|
 | ~~B106~~ | ~~Loading pin alias (v1)~~ | ~~M~~ | Done: alias `loading_pin→hangboard` nel resolver + vocabulary + UI. v2 (B109): gestione unilaterale, doppio tempo. |
 | ~~B107~~ | ~~"Other" per injuries~~ | ~~S~~ | Done: "Other" aggiunto come zona in onboarding + settings. Notes field cattura dettagli. Zero effetto motore. |
-| B108 | Outdoor tooltip in onboarding | S | Non aggiungere outdoor in onboarding (spontaneo, dipende da meteo). Tooltip: "You can add outdoor days in your weekly plan." |
+| ~~B108~~ | ~~Outdoor tooltip in onboarding~~ | ~~S~~ | Done: CardDescription nella pagina availability: "Outdoor days can be added later in your weekly plan based on weather and season." |
 | B109 | Loading pin: esercizi one-arm | M | Esercizi specifici per loading pin (one-arm hang progressions). Dipende da B106. |
 
 ---
