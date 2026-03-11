@@ -485,6 +485,10 @@ def generate_macrocycle(
     goal_warnings = _validate_goal(goal)
     trips = user_state.get("trips") or []
     start = datetime.strptime(start_date, "%Y-%m-%d").date()
+    # Invariant: start_date must be a Monday
+    if start.weekday() != 0:
+        start -= timedelta(days=start.weekday())
+        start_date = start.isoformat()
     discipline = goal.get("discipline", "lead")
 
     # --- decide which phases to keep vs regenerate ------------------------

@@ -8,7 +8,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, get_user_id, invalidate_week_cache, load_state, next_monday, this_monday, save_state
+from backend.api.deps import REPO_ROOT, ensure_monday, get_user_id, invalidate_week_cache, load_state, next_monday, this_monday, save_state
 from backend.api.models import OnboardingData, StartWeekRequest
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
 from backend.engine.macrocycle_v1 import generate_macrocycle
@@ -288,7 +288,7 @@ def onboarding_start_week(body: StartWeekRequest, user_id: Optional[str] = Depen
     if offset > 0:
         old_start = datetime.strptime(mc["start_date"], "%Y-%m-%d").date()
         new_start = old_start - timedelta(weeks=offset)
-        mc["start_date"] = new_start.isoformat()
+        mc["start_date"] = ensure_monday(new_start.isoformat())
         # Recompute end_date from new start + total weeks
         total_weeks = sum(p.get("duration_weeks", 1) for p in mc["phases"])
         mc["end_date"] = (new_start + timedelta(weeks=total_weeks)).isoformat()

@@ -60,7 +60,7 @@ class TestEquipmentRegenPreservesWeek:
 
     def test_start_date_preserved_after_incremental_regen(self):
         """from_phase='current' must keep the original macrocycle start_date."""
-        original_start = "2026-02-24"
+        original_start = "2026-02-23"
         mc = _setup_macrocycle(original_start)
         assert mc["start_date"] == original_start
 
@@ -74,7 +74,7 @@ class TestEquipmentRegenPreservesWeek:
 
     def test_week_number_preserved_after_incremental_regen(self):
         """Macrocycle week count and total_weeks must survive incremental regen."""
-        original_start = "2026-02-24"
+        original_start = "2026-02-23"
         mc = _setup_macrocycle(original_start)
         original_total = mc["total_weeks"]
         original_phase_count = len(mc["phases"])
@@ -95,7 +95,7 @@ class TestEquipmentRegenPreservesWeek:
 
     def test_completion_data_survives_incremental_regen(self):
         """session_completion_log must NOT be wiped by macrocycle regeneration."""
-        original_start = "2026-02-24"
+        original_start = "2026-02-23"
         _setup_macrocycle(original_start)
 
         # Seed completion data for week 1 and week 2
@@ -144,7 +144,7 @@ class TestEquipmentRegenPreservesWeek:
 
     def test_full_regen_without_from_phase_resets_start_date(self):
         """Sanity check: without from_phase, start_date IS recalculated (Danger Zone restart)."""
-        original_start = "2026-02-24"
+        original_start = "2026-02-23"
         _setup_macrocycle(original_start)
 
         # Full regen without from_phase (like Danger Zone "Restart Macrocycle")
@@ -158,7 +158,7 @@ class TestEquipmentRegenPreservesWeek:
 
     def test_incremental_regen_earlier_phases_unchanged(self):
         """Phases before the current one must be identical after incremental regen."""
-        original_start = "2026-02-24"
+        original_start = "2026-02-23"
         mc = _setup_macrocycle(original_start)
         original_first_phase = mc["phases"][0].copy()
 
@@ -176,7 +176,7 @@ class TestEquipmentRegenPreservesWeek:
 
     def test_week_plan_accessible_after_incremental_regen(self):
         """After incremental regen, fetching the current week should succeed."""
-        _setup_macrocycle("2026-02-24")
+        _setup_macrocycle("2026-02-23")
 
         r = client.post("/api/macrocycle/generate", json={
             "from_phase": "current",

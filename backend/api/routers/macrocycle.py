@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import (
     current_phase_and_week,
+    ensure_monday,
     get_user_id,
     invalidate_week_cache,
     load_state,
@@ -66,9 +67,15 @@ def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_i
             from_phase = old_mc["phases"][pi]["phase_id"]
 
         start_date = old_mc["start_date"]
+        if ensure_monday(start_date) != start_date:
+            import logging
+            logging.getLogger(__name__).warning(
+                "Incremental regen: existing start_date %s is not a Monday", start_date,
+            )
+            start_date = ensure_monday(start_date)
         total_weeks = old_mc.get("total_weeks", 12)
     else:
-        start_date = req.start_date or this_monday()
+        start_date = ensure_monday(req.start_date) if req.start_date else this_monday()
         total_weeks = req.total_weeks
 
     try:

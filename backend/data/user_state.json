@@ -1,81 +1,5 @@
 {
-  "assessment": {
-    "body": {
-      "body_fat_pct": null,
-      "height_cm": 182,
-      "weight_kg": 77
-    },
-    "experience": {
-      "climbing_years": 15,
-      "structured_training_years": 7
-    },
-    "grades": {
-      "boulder_max_os": "7A+",
-      "boulder_max_rp": "7C",
-      "lead_max_os": "7a+",
-      "lead_max_rp": "8a+"
-    },
-    "last_assessed": "2026-02-23",
-    "profile": {
-      "body_composition": 59,
-      "endurance": 30,
-      "finger_strength": 66,
-      "power_endurance": 37,
-      "pulling_strength": 61,
-      "technique": 35
-    },
-    "self_eval": {
-      "primary_weakness": "pump_too_early",
-      "secondary_weakness": "technique_errors"
-    },
-    "tests": {}
-  },
-  "availability": {
-    "fri": {
-      "evening": {
-        "available": true,
-        "preferred_location": "home"
-      }
-    },
-    "mon": {
-      "evening": {
-        "available": true,
-        "preferred_location": "gym"
-      }
-    },
-    "sat": {
-      "evening": {
-        "available": true,
-        "preferred_location": "home"
-      }
-    },
-    "thu": {
-      "evening": {
-        "available": true,
-        "preferred_location": "home"
-      }
-    },
-    "tue": {
-      "evening": {
-        "available": true,
-        "preferred_location": "gym"
-      }
-    },
-    "wed": {
-      "evening": {
-        "available": true,
-        "preferred_location": "gym"
-      }
-    }
-  },
-  "baselines": {},
-  "body": {
-    "body_fat_pct": null,
-    "height_cm": 182,
-    "weight_kg": 77
-  },
-  "bodyweight_kg": 77,
-  "current_week_plan": {
+  "_prev_week_plan": {
     "generated_at": "2026-02-22T01:36:02",
     "plan_version": "planner.v2",
     "profile_snapshot": {
@@ -270,6 +194,83 @@
       }
     ]
   },
+  "assessment": {
+    "body": {
+      "body_fat_pct": null,
+      "height_cm": 182,
+      "weight_kg": 77
+    },
+    "experience": {
+      "climbing_years": 15,
+      "structured_training_years": 7
+    },
+    "grades": {
+      "boulder_max_os": "7A+",
+      "boulder_max_rp": "7C",
+      "lead_max_os": "7a+",
+      "lead_max_rp": "8a+"
+    },
+    "last_assessed": "2026-02-23",
+    "profile": {
+      "body_composition": 59,
+      "endurance": 30,
+      "finger_strength": 66,
+      "power_endurance": 37,
+      "pulling_strength": 61,
+      "technique": 35
+    },
+    "self_eval": {
+      "primary_weakness": "pump_too_early",
+      "secondary_weakness": "technique_errors"
+    },
+    "tests": {}
+  },
+  "availability": {
+    "fri": {
+      "evening": {
+        "available": true,
+        "preferred_location": "home"
+      }
+    },
+    "mon": {
+      "evening": {
+        "available": true,
+        "preferred_location": "gym"
+      }
+    },
+    "sat": {
+      "evening": {
+        "available": true,
+        "preferred_location": "home"
+      }
+    },
+    "thu": {
+      "evening": {
+        "available": true,
+        "preferred_location": "home"
+      }
+    },
+    "tue": {
+      "evening": {
+        "available": true,
+        "preferred_location": "gym"
+      }
+    },
+    "wed": {
+      "evening": {
+        "available": true,
+        "preferred_location": "gym"
+      }
+    }
+  },
+  "baselines": {},
+  "body": {
+    "body_fat_pct": null,
+    "height_cm": 182,
+    "weight_kg": 77
+  },
+  "bodyweight_kg": 77,
+  "current_week_plan": null,
   "equipment": {
     "gyms": [
       {
@@ -329,6 +330,7 @@
     "goal_snapshot": {
       "current_grade": "8a+",
       "deadline": "2026-08-22",
+      "discipline": "lead",
       "goal_type": "lead_grade",
       "target_grade": "8b"
     },
@@ -524,6 +526,7 @@
       "weight": "kg"
     }
   },
+  "week_plans": {},
   "working_loads": {
     "entries": [],
     "rules": {}

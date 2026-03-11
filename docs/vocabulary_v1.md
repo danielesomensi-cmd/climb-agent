@@ -682,6 +682,10 @@ Allowed `phase_id` values:
 - `performance` — Performance (limit climbing, projecting, outdoor)
 - `deload` — Deload (recovery, mobility, prehab)
 
+### 5.5.1 Macrocycle invariants
+
+- `macrocycle.start_date` **MUST be a Monday** (ISO weekday 0). Enforced by `ensure_monday()` in all setters (onboarding, macrocycle generate, state PUT, start-week shift). Non-Monday values are auto-corrected to the previous Monday.
+
 ### 5.6 Outdoor spots
 
 `outdoor_spots.discipline` values:

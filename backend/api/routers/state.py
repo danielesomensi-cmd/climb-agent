@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends
 
-from backend.api.deps import DATA_DIR, EMPTY_TEMPLATE, USERS_DIR, get_user_id, load_state, save_state
+from backend.api.deps import DATA_DIR, EMPTY_TEMPLATE, USERS_DIR, ensure_monday, get_user_id, load_state, save_state
 from backend.engine.state_checks import is_macrocycle_stale
 
 router = APIRouter(prefix="/api/state", tags=["state"])
@@ -34,6 +34,10 @@ def get_state(user_id: Optional[str] = Depends(get_user_id)):
 @router.put("")
 def put_state(patch: Dict[str, Any], user_id: Optional[str] = Depends(get_user_id)):
     """Deep-merge patch into existing state."""
+    # Auto-correct macrocycle.start_date to Monday if present in patch
+    mc_patch = patch.get("macrocycle")
+    if isinstance(mc_patch, dict) and "start_date" in mc_patch:
+        mc_patch["start_date"] = ensure_monday(mc_patch["start_date"])
     state = load_state(user_id)
     _deep_merge(state, patch)
     save_state(state, user_id)

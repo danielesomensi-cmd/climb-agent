@@ -136,6 +136,12 @@ def save_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
     )
 
 
+def ensure_monday(d: str) -> str:
+    """If *d* (YYYY-MM-DD) is not a Monday, round DOWN to the previous Monday."""
+    dt = datetime.strptime(d, "%Y-%m-%d").date()
+    return (dt - timedelta(days=dt.weekday())).isoformat()
+
+
 def next_monday(from_date: Optional[date] = None) -> str:
     """Return the next Monday as 'YYYY-MM-DD'. If from_date is already Monday, return it."""
     d = from_date or date.today()
