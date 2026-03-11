@@ -81,6 +81,7 @@ function TodayContent() {
   const [gyms, setGyms] = useState<
     Array<{ name: string; equipment: string[] }>
   >([]);
+  const [homeEquipment, setHomeEquipment] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -121,6 +122,7 @@ function TodayContent() {
       setGyms(
         (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
       );
+      setHomeEquipment((eq?.home as string[]) ?? []);
 
       // Retry pending guided session feedback + cleanup old sessions
       if (typeof window !== "undefined") {
@@ -728,6 +730,7 @@ function TodayContent() {
           <DayCard
             day={dayPlan}
             gyms={gyms}
+            homeEquipment={homeEquipment}
             outdoorRoutes={outdoorRoutesMap[dayPlan.date]}
             weekPlan={weekPlan}
             onSessionUpdated={fetchData}

@@ -113,7 +113,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
 | ~~B105~~ | ~~Gym lookup disallineato~~ | Chiuso: nessun mismatch trovato (audit 2026-03-10). |
-| B112 | Equipment filter in Add Exercise | AddExerciseDialog shows all 153 exercises regardless of session location/equipment. Must filter by required_equipment vs available equipment (gym or home). Frontend: hide or gray out incompatible exercises with "Missing: X" label. Backend: validate equipment_required on add-exercise endpoint. This is a core engine principle — equipment compatibility is non-negotiable. Depends on audit_location_equipment.md. |
+| ~~B112~~ | ~~Equipment filter in Add Exercise~~ | Done: frontend-only equipment filtering in AddExerciseDialog. `expandEquipment()` replicates backend implicit equipment expansion (floor, weight subtypes, loading_pin→hangboard, gym→pullup_bar). `isExerciseCompatible()` applies AND/OR equipment checks matching resolver Stage 2. Toggle "Show all exercises" reveals hidden items with "Missing equipment" badge. Equipment context passed via props: page→DayCard→SessionCard→dialog. Backend unchanged. |
 
 ---
 

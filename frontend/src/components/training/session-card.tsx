@@ -26,6 +26,7 @@ import {
 import { ExerciseCard } from "@/components/training/exercise-card";
 import { getExercises, addExerciseToSession } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
+import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 
 interface Gym {
   gym_id?: string;
@@ -37,6 +38,7 @@ interface SessionCardProps {
   session: SessionSlot;
   date: string;
   gyms?: Gym[];
+  homeEquipment?: string[];
   weekPlan?: WeekPlan | null;
   sessionIndex?: number;
   onMarkDone?: () => void;
@@ -227,6 +229,8 @@ function buildGuidedState(
   };
 }
 
+// Equipment expansion + compatibility logic extracted to @/lib/equipment-filter
+
 // ─── Add Exercise Dialog ─────────────────────────────────────────────
 
 function AddExerciseDialog({
@@ -235,6 +239,7 @@ function AddExerciseDialog({
   date,
   sessionIndex,
   weekPlan,
+  availableEquipment,
   onSuccess,
 }: {
   open: boolean;
@@ -242,6 +247,7 @@ function AddExerciseDialog({
   date: string;
   sessionIndex: number;
   weekPlan: WeekPlan;
+  availableEquipment: Set<string> | null;
   onSuccess: () => void;
 }) {
   const [catalog, setCatalog] = useState<Exercise[]>([]);
@@ -253,6 +259,7 @@ function AddExerciseDialog({
   const [loadKg, setLoadKg] = useState<number | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     if (open && catalog.length === 0) {
@@ -264,18 +271,53 @@ function AddExerciseDialog({
     }
   }, [open, catalog.length]);
 
+  // Reset showAll when dialog closes
+  useEffect(() => {
+    if (!open) setShowAll(false);
+  }, [open]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return catalog;
-    const q = search.toLowerCase();
-    return catalog.filter(
-      (e) =>
-        e.name.toLowerCase().includes(q) ||
-        e.exercise_id.toLowerCase().includes(q) ||
-        (Array.isArray(e.domain) ? e.domain.some(d => d.toLowerCase().includes(q)) : String(e.domain ?? "").toLowerCase().includes(q)) ||
-        (e.category?.toLowerCase().includes(q)) ||
-        (e.description?.toLowerCase().includes(q))
-    );
-  }, [catalog, search]);
+    let result = catalog;
+
+    // Text search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.exercise_id.toLowerCase().includes(q) ||
+          (Array.isArray(e.domain) ? e.domain.some(d => d.toLowerCase().includes(q)) : String(e.domain ?? "").toLowerCase().includes(q)) ||
+          (e.category?.toLowerCase().includes(q)) ||
+          (e.description?.toLowerCase().includes(q))
+      );
+    }
+
+    // Equipment filter (skip if no equipment context or showAll)
+    if (availableEquipment && !showAll) {
+      result = result.filter((e) => isExerciseCompatible(e, availableEquipment));
+    }
+
+    return result;
+  }, [catalog, search, availableEquipment, showAll]);
+
+  // Count hidden exercises for the toggle label
+  const hiddenCount = useMemo(() => {
+    if (!availableEquipment || showAll) return 0;
+    // Count how many in the text-filtered set are hidden by equipment
+    let textFiltered = catalog;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      textFiltered = textFiltered.filter(
+        (e) =>
+          e.name.toLowerCase().includes(q) ||
+          e.exercise_id.toLowerCase().includes(q) ||
+          (Array.isArray(e.domain) ? e.domain.some(d => d.toLowerCase().includes(q)) : String(e.domain ?? "").toLowerCase().includes(q)) ||
+          (e.category?.toLowerCase().includes(q)) ||
+          (e.description?.toLowerCase().includes(q))
+      );
+    }
+    return textFiltered.length - filtered.length;
+  }, [catalog, search, availableEquipment, showAll, filtered.length]);
 
   const selectExercise = useCallback((ex: Exercise) => {
     setSelected(ex);
@@ -300,7 +342,6 @@ function AddExerciseDialog({
         prescription_override: overrides,
         week_plan: weekPlan,
       };
-      console.log("addExerciseToSession payload:", payload);
       await addExerciseToSession(payload);
       onOpenChange(false);
       setSelected(null);
@@ -333,28 +374,50 @@ function AddExerciseDialog({
                 autoFocus
               />
             </div>
+            {availableEquipment && (
+              <div className="flex items-center justify-between">
+                <button
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowAll((v) => !v)}
+                >
+                  {showAll
+                    ? "Show compatible only"
+                    : `Show all exercises${hiddenCount > 0 ? ` (+${hiddenCount} hidden)` : ""}`}
+                </button>
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto space-y-1 min-h-0 max-h-[50vh]">
               {loading && <p className="text-xs text-muted-foreground p-2">Loading catalog...</p>}
               {!loading && filtered.length === 0 && (
                 <p className="text-xs text-muted-foreground p-2">No exercises found</p>
               )}
-              {filtered.map((ex) => (
-                <button
-                  key={ex.exercise_id}
-                  className="w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors"
-                  onClick={() => selectExercise(ex)}
-                >
-                  <div className="text-sm font-medium">{ex.name}</div>
-                  {ex.description && (
-                    <div className="text-xs text-muted-foreground/80 truncate">{ex.description}</div>
-                  )}
-                  <div className="text-xs text-muted-foreground">
-                    {Array.isArray(ex.domain) ? ex.domain.join(", ") : ex.domain}
-                    {ex.category && ` · ${ex.category}`}
-                    {ex.equipment_required?.length > 0 && ` · ${ex.equipment_required.join(", ")}`}
-                  </div>
-                </button>
-              ))}
+              {filtered.map((ex) => {
+                const incompatible = showAll && availableEquipment && !isExerciseCompatible(ex, availableEquipment);
+                return (
+                  <button
+                    key={ex.exercise_id}
+                    className={`w-full text-left px-3 py-2 rounded-md hover:bg-accent transition-colors ${incompatible ? "opacity-50" : ""}`}
+                    onClick={() => selectExercise(ex)}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium">{ex.name}</span>
+                      {incompatible && (
+                        <Badge variant="outline" className="text-[10px] text-yellow-500 border-yellow-500/30">
+                          Missing equipment
+                        </Badge>
+                      )}
+                    </div>
+                    {ex.description && (
+                      <div className="text-xs text-muted-foreground/80 truncate">{ex.description}</div>
+                    )}
+                    <div className="text-xs text-muted-foreground">
+                      {Array.isArray(ex.domain) ? ex.domain.join(", ") : ex.domain}
+                      {ex.category && ` · ${ex.category}`}
+                      {ex.equipment_required?.length > 0 && ` · ${ex.equipment_required.join(", ")}`}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ) : (
@@ -421,6 +484,7 @@ export function SessionCard({
   session,
   date,
   gyms,
+  homeEquipment,
   weekPlan,
   sessionIndex = 0,
   onMarkDone,
@@ -436,6 +500,20 @@ export function SessionCard({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
   const router = useRouter();
+
+  // Compute available equipment for this session (expanded with implicit items)
+  const availableEquipment = useMemo<Set<string> | null>(() => {
+    if (session.location === "home" && homeEquipment && homeEquipment.length > 0) {
+      return expandEquipment(homeEquipment, "home");
+    }
+    if (session.location === "gym" && gyms) {
+      const gym = session.gym_id
+        ? gyms.find((g) => (g.gym_id || g.name) === session.gym_id)
+        : gyms[0];
+      if (gym) return expandEquipment(gym.equipment, "gym");
+    }
+    return null;
+  }, [session.location, session.gym_id, gyms, homeEquipment]);
 
   const isHard = session.tags?.hard === true;
   const isFinger = session.tags?.finger === true;
@@ -785,6 +863,7 @@ export function SessionCard({
           date={date}
           sessionIndex={sessionIndex}
           weekPlan={weekPlan}
+          availableEquipment={availableEquipment}
           onSuccess={() => onSessionUpdated?.()}
         />
       )}

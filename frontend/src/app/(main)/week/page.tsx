@@ -49,6 +49,7 @@ export default function WeekPage() {
   const [gyms, setGyms] = useState<
     Array<{ name: string; equipment: string[] }>
   >([]);
+  const [homeEquipment, setHomeEquipment] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [replanDate, setReplanDate] = useState<string | null>(null);
@@ -110,6 +111,7 @@ export default function WeekPage() {
       setGyms(
         (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
       );
+      setHomeEquipment((eq?.home as string[]) ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
@@ -682,6 +684,7 @@ export default function WeekPage() {
                 <DayCard
                   day={day}
                   gyms={gyms}
+                  homeEquipment={homeEquipment}
                   outdoorRoutes={outdoorRoutesMap[day.date]}
                   weekPlan={weekPlan}
                   onSessionUpdated={() => fetchWeek(displayWeekNum)}

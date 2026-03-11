@@ -19,6 +19,7 @@ interface Gym {
 interface DayCardProps {
   day: DayPlan;
   gyms?: Gym[];
+  homeEquipment?: string[];
   onMarkDone?: (sessionId: string) => void;
   onMarkSkipped?: (sessionId: string) => void;
   onUndo?: (sessionId: string) => void;
@@ -111,6 +112,7 @@ function formatDateShort(dateStr: string): string {
 export function DayCard({
   day,
   gyms,
+  homeEquipment,
   onMarkDone,
   onMarkSkipped,
   onUndo,
@@ -388,6 +390,7 @@ export function DayCard({
                   session={session}
                   date={day.date}
                   gyms={gyms}
+                  homeEquipment={homeEquipment}
                   weekPlan={weekPlan}
                   sessionIndex={idx}
                   onMarkDone={onMarkDone ? () => onMarkDone(session.session_id) : undefined}

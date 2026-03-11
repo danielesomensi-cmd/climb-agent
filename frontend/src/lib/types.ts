@@ -82,6 +82,7 @@ export interface Exercise {
   description?: string | null;
   role: string;
   equipment_required: string[];
+  equipment_required_any?: string[];
   prescription_defaults: Record<string, unknown>;
 }
 
