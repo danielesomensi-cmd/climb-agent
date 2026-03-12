@@ -296,7 +296,10 @@ export const recoverAccount = (recovery_code: string) =>
 export const getWeeklyOverride = (weekStart: string) =>
   request<import("./types").WeeklyOverrideResponse>(`/api/weekly-override/${weekStart}`);
 
-export const putWeeklyOverride = (weekStart: string, days: Record<string, { available: boolean; location: string; gym_id?: string | null }>) =>
+export const putWeeklyOverride = (weekStart: string, days: Record<string, {
+  available: boolean;
+  slots?: Record<string, { available: boolean; location: string; gym_id?: string | null }>;
+}>) =>
   request<{ status: string; week_start: string; days: import("./types").DayOverviewEntry[] }>(`/api/weekly-override/${weekStart}`, {
     method: "PUT",
     body: JSON.stringify({ days }),

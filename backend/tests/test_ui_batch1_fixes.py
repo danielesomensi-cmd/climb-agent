@@ -147,6 +147,15 @@ class TestBug1PlannerSlotAndLocation(unittest.TestCase):
         for slot in SLOTS:
             self.assertFalse(normalized["mon"][slot]["available"])
 
+    def test_normalize_absent_day_is_rest(self):
+        """Day completely absent from availability dict → all slots unavailable."""
+        avail = {"mon": {"evening": {"available": True}}}
+        # "sun" is not in avail at all
+        normalized = _normalize_availability(avail, ["home", "gym"])
+        for slot in SLOTS:
+            self.assertFalse(normalized["sun"][slot]["available"],
+                             f"Expected {slot} unavailable for absent day 'sun'")
+
 
 # ---------------------------------------------------------------------------
 # Bug 2: Resolver no duplicate exercises in session

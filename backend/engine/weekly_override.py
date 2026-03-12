@@ -9,9 +9,10 @@ The override is a *temporary layer* — it never modifies state.availability.
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+SLOTS = ("morning", "lunch", "evening")
 
 # Maps brief DayOverride.location to the locations list used by the planner
 _LOCATION_MAP = {
@@ -54,15 +55,7 @@ def build_merged_view(
     override: Optional[Dict[str, Any]],
     gyms: Optional[list] = None,
 ) -> list:
-    """Build a 7-day merged view for the GET endpoint.
-
-    Returns a list of 7 dicts (Monday→Sunday), each with:
-      - ``day``: short weekday key
-      - ``available``: bool
-      - ``location``: "gym" | "outdoor" | "home" | "rest"
-      - ``gym_id``: str | None
-      - ``is_overridden``: bool
-    """
+    """Build a 7-day merged view (day-level summary) for backwards compat."""
     effective = merge_override_into_availability(availability, override)
     override_days = (override or {}).get("days", {})
     result = []
@@ -76,6 +69,106 @@ def build_merged_view(
             "is_overridden": is_overridden,
         })
     return result
+
+
+def build_slot_view(
+    availability: Optional[Dict[str, Any]],
+    override: Optional[Dict[str, Any]],
+    gyms: Optional[list] = None,
+) -> List[Dict[str, Any]]:
+    """Build a 7-day slot-level view for the GET endpoint.
+
+    Each day includes a ``slots`` array with per-slot availability, plus
+    a day-level ``summary`` for compact display and ``is_overridden`` flag.
+    """
+    effective = merge_override_into_availability(availability, override)
+    raw_avail = availability or {}
+    override_days = (override or {}).get("days", {})
+    result = []
+    for wd in WEEKDAYS:
+        long = _short_to_long(wd)
+        is_overridden = long in override_days
+        day_data = effective.get(wd, {})
+
+        # Build default_slots from the *original* (un-merged) availability
+        raw_day = raw_avail.get(wd, {})
+        default_slots = _extract_slots(raw_day)
+
+        # Check day-level available: False
+        if isinstance(day_data.get("available"), bool) and not day_data["available"]:
+            result.append({
+                "day": wd,
+                "available": False,
+                "slots": [],
+                "default_slots": default_slots,
+                "summary": "Rest",
+                "is_overridden": is_overridden,
+            })
+            continue
+
+        slots = []
+        for slot_key in SLOTS:
+            slot_data = day_data.get(slot_key)
+            if not isinstance(slot_data, dict):
+                # Slot not configured → include as unavailable (toggleable by user)
+                slots.append({
+                    "slot": slot_key,
+                    "available": False,
+                    "location": "home",
+                    "gym_id": None,
+                })
+                continue
+            avail = slot_data.get("available", False)
+            pref = slot_data.get("preferred_location", "home")
+            gym_id = slot_data.get("gym_id")
+            location = pref if pref in ("gym", "outdoor", "home") else "home"
+            slots.append({
+                "slot": slot_key,
+                "available": avail,
+                "location": location,
+                "gym_id": gym_id if location == "gym" else None,
+            })
+
+        has_any = any(s["available"] for s in slots)
+        summary = _build_summary(slots, gyms) if has_any else "Rest"
+
+        result.append({
+            "day": wd,
+            "available": has_any,
+            "slots": slots,
+            "default_slots": default_slots,
+            "summary": summary,
+            "is_overridden": is_overridden,
+        })
+    return result
+
+
+def _build_summary(slots: List[Dict[str, Any]], gyms: Optional[list] = None) -> str:
+    """Build a compact summary string from slot data."""
+    parts = []
+    gym_name_cache: Dict[str, str] = {}
+    if gyms:
+        for g in gyms:
+            gid = g.get("gym_id") or g.get("name", "")
+            gym_name_cache[gid] = g.get("name", gid)
+
+    slot_labels = {"morning": "AM", "lunch": "Lunch", "evening": "PM"}
+
+    for s in slots:
+        if not s["available"]:
+            continue
+        loc = s["location"]
+        slot_label = slot_labels.get(s["slot"], s["slot"])
+        if loc == "gym":
+            gid = s.get("gym_id")
+            gname = gym_name_cache.get(gid, gid) if gid else "Gym"
+            parts.append(f"{gname} {slot_label}")
+        elif loc == "outdoor":
+            parts.append(f"Outdoor {slot_label}")
+        else:
+            parts.append(f"Home {slot_label}")
+
+    return ", ".join(parts) if parts else "Rest"
 
 
 # ---------------------------------------------------------------------------
@@ -101,19 +194,51 @@ def _apply_day_override(
     base_day: Dict[str, Any],
     day_override: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Replace a single day's availability based on the override."""
+    """Replace a single day's availability based on the override.
+
+    Supports two formats:
+    - Day-level rest: ``{available: false}`` → entire day unavailable
+    - Slot-level: ``{available: true, slots: {morning: {...}, ...}}`` → per-slot
+    """
     available = day_override.get("available", True)
+
+    if not available:
+        return {"available": False}
+
+    # Slot-level override
+    slot_overrides = day_override.get("slots")
+    if slot_overrides:
+        result: Dict[str, Any] = {}
+        for slot_key in SLOTS:
+            if slot_key in slot_overrides:
+                so = slot_overrides[slot_key]
+                s_avail = so.get("available", True)
+                s_loc = so.get("location", "home")
+                s_gym = so.get("gym_id")
+                locations = _LOCATION_MAP.get(s_loc, ["home"])
+                result[slot_key] = {
+                    "available": s_avail,
+                    "preferred_location": s_loc,
+                    "locations": locations,
+                    "gym_id": s_gym if s_loc == "gym" else None,
+                }
+            else:
+                # Keep original slot data
+                slot_data = base_day.get(slot_key)
+                if isinstance(slot_data, dict):
+                    result[slot_key] = slot_data
+        return result
+
+    # Legacy day-level override (location field) — backwards compat
     location = day_override.get("location", "rest")
     gym_id = day_override.get("gym_id")
 
-    if not available or location == "rest":
+    if location == "rest":
         return {"available": False}
 
     locations = _LOCATION_MAP.get(location, ["home"])
-
-    # Build all slots with the override values
     slots: Dict[str, Any] = {}
-    for slot in ("morning", "lunch", "evening"):
+    for slot in SLOTS:
         slot_data = base_day.get(slot)
         if isinstance(slot_data, dict) and slot_data.get("available", False):
             slots[slot] = {
@@ -123,14 +248,12 @@ def _apply_day_override(
                 "gym_id": gym_id if location == "gym" else None,
             }
         elif isinstance(slot_data, dict):
-            # Slot was not available in defaults — keep it unavailable
             slots[slot] = {
                 "available": False,
                 "preferred_location": location,
                 "locations": locations,
                 "gym_id": None,
             }
-    # If base_day had no explicit slots (legacy format), create evening slot
     if not slots:
         slots["evening"] = {
             "available": True,
@@ -141,17 +264,44 @@ def _apply_day_override(
     return slots
 
 
+def _extract_slots(day_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Extract slot entries from a day's raw availability data.
+
+    Always returns exactly 3 slots (morning, lunch, evening).
+    Missing or rest-day slots are returned as ``available=False``.
+    """
+    is_rest = isinstance(day_data.get("available"), bool) and not day_data["available"]
+    slots = []
+    for slot_key in SLOTS:
+        slot_data = day_data.get(slot_key) if not is_rest else None
+        if not isinstance(slot_data, dict):
+            slots.append({
+                "slot": slot_key,
+                "available": False,
+                "location": "home",
+                "gym_id": None,
+            })
+            continue
+        pref = slot_data.get("preferred_location", "home")
+        location = pref if pref in ("gym", "outdoor", "home") else "home"
+        slots.append({
+            "slot": slot_key,
+            "available": slot_data.get("available", False),
+            "location": location,
+            "gym_id": slot_data.get("gym_id") if location == "gym" else None,
+        })
+    return slots
+
+
 def _summarize_day(day_data: Dict[str, Any]) -> Dict[str, Any]:
     """Summarize a day's availability into a compact view."""
-    # Day-level available: False
     if isinstance(day_data.get("available"), bool) and not day_data["available"]:
         return {"available": False, "location": "rest", "gym_id": None}
 
-    # Check slots
     has_any_available = False
     location = "home"
     gym_id = None
-    for slot in ("morning", "lunch", "evening"):
+    for slot in SLOTS:
         slot_data = day_data.get(slot)
         if isinstance(slot_data, dict) and slot_data.get("available", False):
             has_any_available = True
@@ -163,14 +313,13 @@ def _summarize_day(day_data: Dict[str, Any]) -> Dict[str, Any]:
                 if slot_data.get("gym_id"):
                     gym_id = slot_data["gym_id"]
             elif pref == "other_sport":
-                continue  # skip other sport slots
+                continue
             elif pref == "home" or (isinstance(slot_data.get("locations"), list) and slot_data["locations"] == ["home"]):
                 if location != "gym":
                     location = "home"
 
     if not has_any_available:
-        # Check if day has no slots at all (could be legacy {available: True} without slots)
-        if not any(day_data.get(s) for s in ("morning", "lunch", "evening")):
+        if not any(day_data.get(s) for s in SLOTS):
             return {"available": False, "location": "rest", "gym_id": None}
         return {"available": False, "location": "rest", "gym_id": None}
 

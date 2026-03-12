@@ -208,8 +208,17 @@ def _normalize_availability(
     allowed_locations: Sequence[str],
 ) -> Dict[str, Dict[str, Dict[str, Any]]]:
     normalized: Dict[str, Dict[str, Dict[str, Any]]] = {}
+    raw = availability or {}
     for wd in WEEKDAYS:
-        day = (availability or {}).get(wd) or {}
+        # Day completely absent from availability → rest day (all slots unavailable)
+        if wd not in raw:
+            normalized[wd] = {
+                s: {"available": False, "locations": sorted(set(allowed_locations)),
+                    "preferred_location": None, "gym_id": None}
+                for s in SLOTS
+            }
+            continue
+        day = raw[wd] or {}
         # Detect whether this day dict has any explicit slot keys
         has_explicit_slots = isinstance(day, dict) and any(
             s in day for s in SLOTS
@@ -293,19 +302,26 @@ def _find_best_slot(
     home_equipment: Optional[List[str]] = None,
     gyms: Optional[Sequence[Dict[str, Any]]] = None,
     default_gym_id: Optional[str] = None,
+    occupied_slots: Optional[set] = None,
 ) -> Optional[Tuple[str, Dict[str, Any]]]:
     """Find the best available slot for a session on a given day.
 
     Primary sessions prefer evening > morning > lunch.
     Complementary sessions prefer lunch > morning > evening.
+
+    Args:
+        occupied_slots: Set of slot names already taken on this day (skipped).
     """
     if prefer_evening:
         slot_order = ("evening", "morning", "lunch")
     else:
         slot_order = ("lunch", "morning", "evening")
 
+    _occupied = occupied_slots or set()
     req_equip = meta.get("required_equipment")
     for slot in slot_order:
+        if slot in _occupied:
+            continue
         slot_info = day_availability[slot]
         if not slot_info["available"]:
             continue
@@ -552,6 +568,17 @@ def generate_phase_week(
             if offset not in keep_offsets:
                 day_has_available_slot[offset] = False
 
+    # Count total available slots across all available days (for multi-slot-per-day support)
+    day_available_slots: List[List[str]] = [[] for _ in range(7)]
+    for offset in range(7):
+        if not day_has_available_slot[offset]:
+            continue
+        day_avail = normalized[day_keys[offset]]
+        for s in SLOTS:
+            if day_avail[s]["available"]:
+                day_available_slots[offset].append(s)
+    total_available_slots = sum(len(sl) for sl in day_available_slots)
+
     # ── PASS 1: Place primary sessions (climbing-first) ──
     primary_idx = 0
     primary_uses = 0
@@ -788,6 +815,97 @@ def generate_phase_week(
             comp_uses += 1
             days_with_sessions += 1
             break
+
+    # ── PASS 2.2 (B121): Fill extra slots on multi-slot days ──
+    # When total sessions placed < target AND a day has unused slots, place
+    # additional NON-hard sessions to fill them.
+    total_sessions_placed = sum(len(ds) for ds in day_sessions)
+    session_target = min(target_days, total_available_slots)
+
+    if total_sessions_placed < session_target:
+        # Build combined pool: primary non-hard + all complementary
+        extra_pool = [s for s in filtered_pool if not _SESSION_META[s]["hard"]]
+        if not extra_pool:
+            extra_pool = list(complementary_pool)
+
+        extra_idx = 0
+        extra_uses = 0
+        max_extra_uses = len(extra_pool) * 2 if extra_pool else 0
+
+        for offset in range(7):
+            if total_sessions_placed >= session_target:
+                break
+            if not day_has_available_slot[offset]:
+                continue
+            # Only consider days that already have sessions (extra slot filling)
+            if not day_sessions[offset]:
+                continue
+            if not extra_pool:
+                break
+            if extra_uses >= max_extra_uses:
+                break
+
+            # Determine which slots are already occupied on this day
+            occupied = {entry["slot"] for entry in day_sessions[offset]}
+            # Check if the day has any free slots left
+            free_slots = [s for s in day_available_slots[offset] if s not in occupied]
+            if not free_slots:
+                continue
+
+            attempts = 0
+            while attempts < len(extra_pool) and extra_uses < max_extra_uses:
+                sid = extra_pool[extra_idx % len(extra_pool)]
+                meta = _SESSION_META[sid]
+
+                skip = False
+
+                # No hard sessions in extra slots (B121 constraint)
+                if meta["hard"]:
+                    skip = True
+
+                # Anti-repetition check
+                if not skip:
+                    max_pw = meta.get("max_per_week", 1)
+                    if session_count.get(sid, 0) >= max_pw:
+                        skip = True
+
+                # No consecutive finger days (48h gap)
+                if not skip and meta["finger"] and finger_day_offsets:
+                    if any(abs(offset - fo) <= 1 for fo in finger_day_offsets):
+                        skip = True
+
+                if skip:
+                    extra_idx += 1
+                    extra_uses += 1
+                    attempts += 1
+                    continue
+
+                day_avail = normalized[day_keys[offset]]
+                result = _find_best_slot(
+                    day_avail, meta, locations, prefer_evening=False,
+                    home_equipment=home_equipment, gyms=gyms,
+                    default_gym_id=default_gym_id, occupied_slots=occupied,
+                )
+                if result is None:
+                    extra_idx += 1
+                    attempts += 1
+                    continue
+
+                slot, slot_info = result
+                entry = _make_session_entry(
+                    slot, sid, meta, slot_info, locations, phase_id,
+                    day_keys[offset], default_gym_id, gyms or [],
+                    "pass2.2:extra_slot", home_equipment=home_equipment,
+                )
+                day_sessions[offset].append(entry)
+                occupied.add(slot)
+                session_count[sid] = session_count.get(sid, 0) + 1
+                extra_idx += 1
+                extra_uses += 1
+                total_sessions_placed += 1
+                if meta["finger"]:
+                    finger_day_offsets.append(offset)
+                break
 
     # ── PASS 2.5 (NEW-F9): Ensure PE phase has at least 1 finger maintenance session ──
     if phase_id == "power_endurance":

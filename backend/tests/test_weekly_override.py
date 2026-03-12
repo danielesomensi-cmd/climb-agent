@@ -8,6 +8,7 @@ from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _build_session_pool, _ad
 from backend.engine.planner_v2 import generate_phase_week
 from backend.engine.weekly_override import (
     build_merged_view,
+    build_slot_view,
     merge_override_into_availability,
 )
 
@@ -234,14 +235,17 @@ def test_override_does_not_mutate_original():
 
 def test_api_override_payload_shape():
     """WeeklyOverridePayload serializes correctly."""
-    from backend.api.routers.weekly_override import DayOverridePayload, WeeklyOverridePayload
+    from backend.api.routers.weekly_override import DayOverridePayload, SlotOverridePayload, WeeklyOverridePayload
 
     payload = WeeklyOverridePayload(days={
-        "monday": DayOverridePayload(available=True, location="gym", gym_id="blocx"),
-        "wednesday": DayOverridePayload(available=False, location="rest"),
+        "monday": DayOverridePayload(
+            available=True,
+            slots={"evening": SlotOverridePayload(available=True, location="gym", gym_id="blocx")},
+        ),
+        "wednesday": DayOverridePayload(available=False),
     })
     dumped = {k: v.model_dump() for k, v in payload.days.items()}
-    assert dumped["monday"]["gym_id"] == "blocx"
+    assert dumped["monday"]["slots"]["evening"]["gym_id"] == "blocx"
     assert dumped["wednesday"]["available"] is False
 
 
@@ -295,3 +299,231 @@ def test_merged_view_is_overridden_flag():
 
     mon_view = next(d for d in view if d["day"] == "mon")
     assert mon_view["is_overridden"] is False
+
+
+# ---- Bug A: build_slot_view should return default_slots even for rest-overridden days ----
+
+def test_bug_a_rest_day_preserves_default_slots():
+    """Bug A/B: When a day is rest (via override or default), the GET response
+    must include ``default_slots`` with the original slot data so the frontend
+    can restore availability when un-toggling Rest.
+
+    EXPECTED TO FAIL until fix is applied — build_slot_view currently returns
+    ``slots: []`` for rest days and no ``default_slots`` field.
+    """
+    avail = _default_availability()
+    # Override Monday to rest
+    override = {"days": {"monday": {"available": False}}}
+    view = build_slot_view(avail, override)
+    mon = next(d for d in view if d["day"] == "mon")
+
+    # Day should be marked unavailable
+    assert mon["available"] is False
+
+    # MUST have default_slots with the original Monday slots (3 slots)
+    assert "default_slots" in mon, "Missing default_slots field for rest day"
+    assert len(mon["default_slots"]) == 3
+    # Verify default_slots contain the original data
+    morning = next(s for s in mon["default_slots"] if s["slot"] == "morning")
+    assert morning["available"] is True
+    assert morning["location"] == "home"
+
+
+# ---- Bug B: default_slots also needed for days that are rest by default ----
+
+def test_bug_b_default_rest_day_has_default_slots():
+    """Bug B: Sunday is rest by default (``{available: False}``). The view must
+    still provide ``default_slots`` (empty is ok since there are no slots defined)
+    so the frontend never crashes on missing field.
+    """
+    avail = _default_availability()
+    view = build_slot_view(avail, None)
+    sun = next(d for d in view if d["day"] == "sun")
+    assert sun["available"] is False
+    assert "default_slots" in sun, "Missing default_slots for default-rest day"
+
+
+# ---- Bug C: Slot-level override with gym_id should round-trip through build_slot_view ----
+
+def test_bug_c_slot_override_gym_id_roundtrip():
+    """Bug C: When an override sets a specific slot to gym with a gym_id,
+    build_slot_view must reflect that gym_id. The frontend crashed when
+    selecting gym because the gym_id wasn't properly propagated.
+    """
+    avail = _default_availability()
+    # Slot-level override: Monday evening → gym at blocx
+    override = {
+        "days": {
+            "monday": {
+                "available": True,
+                "slots": {
+                    "evening": {"available": True, "location": "gym", "gym_id": "blocx"},
+                },
+            },
+        },
+    }
+    view = build_slot_view(avail, override)
+    mon = next(d for d in view if d["day"] == "mon")
+
+    assert mon["available"] is True
+    evening = next(s for s in mon["slots"] if s["slot"] == "evening")
+    assert evening["available"] is True
+    assert evening["location"] == "gym"
+    assert evening["gym_id"] == "blocx"
+
+    # Non-overridden slots should keep original values
+    morning = next(s for s in mon["slots"] if s["slot"] == "morning")
+    assert morning["available"] is True
+    assert morning["location"] == "home"
+
+
+# ---- Bug D: Slot-level override must preserve non-overridden slots ----
+
+def test_bug_d_slot_level_preserves_others():
+    """Bug D: When override changes only morning slot, lunch and evening must
+    keep their original availability and location from the default settings.
+    """
+    avail = _default_availability()
+    # Override only Tuesday morning to available+gym
+    override = {
+        "days": {
+            "tuesday": {
+                "available": True,
+                "slots": {
+                    "morning": {"available": True, "location": "gym", "gym_id": "work_gym"},
+                },
+            },
+        },
+    }
+    view = build_slot_view(avail, override)
+    tue = next(d for d in view if d["day"] == "tue")
+
+    # Morning should be overridden
+    morning = next(s for s in tue["slots"] if s["slot"] == "morning")
+    assert morning["available"] is True
+    assert morning["location"] == "gym"
+    assert morning["gym_id"] == "work_gym"
+
+    # Lunch should keep original (available, home)
+    lunch = next(s for s in tue["slots"] if s["slot"] == "lunch")
+    assert lunch["available"] is True
+    assert lunch["location"] == "home"
+
+    # Evening should keep original (available, gym, work_gym)
+    evening = next(s for s in tue["slots"] if s["slot"] == "evening")
+    assert evening["available"] is True
+    assert evening["location"] == "gym"
+    assert evening["gym_id"] == "work_gym"
+
+
+# ---- Bug E: All-rest override → planner produces zero sessions ----
+
+def test_bug_e_all_rest_produces_no_sessions():
+    """Bug E: Override all 7 days to rest → planner must produce 0 sessions
+    across the entire week.
+    """
+    avail = _default_availability()
+    override = {
+        "days": {
+            "monday": {"available": False},
+            "tuesday": {"available": False},
+            "wednesday": {"available": False},
+            "thursday": {"available": False},
+            "friday": {"available": False},
+            "saturday": {"available": False},
+            "sunday": {"available": False},
+        },
+    }
+    effective = merge_override_into_availability(avail, override)
+
+    # Verify all 7 days are unavailable
+    for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun"):
+        day_data = effective.get(wd, {})
+        assert day_data.get("available") is False, f"{wd} should be unavailable"
+
+    profile = {
+        "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
+        "technique": 50, "endurance": 40, "body_composition": 65,
+    }
+    base_weights = _BASE_WEIGHTS["base"]
+    domain_weights = _adjust_domain_weights(base_weights, profile)
+    session_pool = _build_session_pool("base")
+
+    plan = generate_phase_week(
+        phase_id="base",
+        domain_weights=domain_weights,
+        session_pool=session_pool,
+        start_date="2026-01-05",
+        availability=effective,
+        hard_cap_per_week=3,
+        planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+        default_gym_id="work_gym",
+        gyms=[{"gym_id": "work_gym", "equipment": ["gym_boulder", "board_kilter", "hangboard"]}],
+    )
+
+    total_sessions = sum(
+        len(day.get("sessions", []))
+        for day in plan["weeks"][0]["days"]
+    )
+    assert total_sessions == 0, f"Expected 0 sessions with all-rest, got {total_sessions}"
+
+
+# ---- Bug G: Rest-by-default days must have 3 default_slots for restoration ----
+
+def test_bug_g_rest_default_day_has_three_default_slots():
+    """Bug G: Days that are rest by default (e.g. sun with {available: False})
+    must return 3 default_slots so the frontend can activate them.
+    A day absent from availability entirely should also get 3 default_slots
+    with available=False as a fallback for the UI.
+    """
+    avail = _default_availability()
+    # sun is {available: False} — rest by default
+    view = build_slot_view(avail, None)
+    sun = next(d for d in view if d["day"] == "sun")
+    assert sun["available"] is False
+    assert len(sun["default_slots"]) == 3, (
+        f"Expected 3 default_slots for rest-by-default day, got {len(sun['default_slots'])}"
+    )
+    slot_names = {s["slot"] for s in sun["default_slots"]}
+    assert slot_names == {"morning", "lunch", "evening"}
+
+
+# ---- Bug H: All days must always have 3 slots (morning, lunch, evening) ----
+
+def test_bug_h_all_days_have_three_slots():
+    """Bug H: Even if a day only has 'evening' configured in availability,
+    build_slot_view must return all 3 slots (morning, lunch, evening).
+    Missing slots should be returned as available=False so the user can
+    toggle them on in the weekly check-in.
+    """
+    # Availability with only evening on every day (like user's real data)
+    avail = {
+        "mon": {"evening": {"available": True, "preferred_location": "gym"}},
+        "tue": {"evening": {"available": True, "preferred_location": "gym"}},
+        "wed": {"evening": {"available": True, "preferred_location": "gym"}},
+        "thu": {"evening": {"available": True, "preferred_location": "home"}},
+        "fri": {"evening": {"available": True, "preferred_location": "home"}},
+        "sat": {"evening": {"available": True, "preferred_location": "home"}},
+        "sun": {"available": False},
+    }
+    view = build_slot_view(avail, None)
+
+    for day_entry in view:
+        if day_entry["day"] == "sun":
+            continue  # rest day — slots=[] is ok, covered by default_slots
+        assert len(day_entry["slots"]) == 3, (
+            f"{day_entry['day']}: expected 3 slots, got {len(day_entry['slots'])}"
+        )
+        slot_names = {s["slot"] for s in day_entry["slots"]}
+        assert slot_names == {"morning", "lunch", "evening"}, (
+            f"{day_entry['day']}: missing slots, got {slot_names}"
+        )
+
+    # Monday: morning and lunch should be available=False (not configured)
+    mon = next(d for d in view if d["day"] == "mon")
+    morning = next(s for s in mon["slots"] if s["slot"] == "morning")
+    assert morning["available"] is False
+    lunch = next(s for s in mon["slots"] if s["slot"] == "lunch")
+    assert lunch["available"] is False
+    evening = next(s for s in mon["slots"] if s["slot"] == "evening")
+    assert evening["available"] is True

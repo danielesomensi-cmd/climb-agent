@@ -45,11 +45,6 @@ export function WeeklyCheckinCard({ onPlanUpdated }: Props) {
   if (!shouldShowCheckin()) return null;
   if (dismissed) return null;
 
-  // Check sessionStorage
-  if (typeof window !== "undefined" && sessionStorage.getItem(dismissKey)) {
-    return null;
-  }
-
   function handleDismiss() {
     setDismissed(true);
     if (typeof window !== "undefined") {
@@ -70,7 +65,7 @@ export function WeeklyCheckinCard({ onPlanUpdated }: Props) {
           <div className="flex-1">
             <p className="text-sm font-semibold">Plan your week</p>
             <p className="text-xs text-muted-foreground">
-              Review next week&apos;s schedule and adjust if needed
+              Review the week of {new Date(getNextMonday().replace(/-/g, '/')).toLocaleDateString("en-US", { month: "long", day: "numeric" })}
             </p>
           </div>
           <ChevronRight className="h-5 w-5 text-muted-foreground" />

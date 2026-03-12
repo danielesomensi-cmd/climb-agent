@@ -235,6 +235,7 @@
     "mon": {
       "evening": {
         "available": true,
+        "gym_id": "97de15e6",
         "preferred_location": "gym"
       }
     },
@@ -526,7 +527,203 @@
       "weight": "kg"
     }
   },
-  "week_plans": {},
+  "week_plans": {
+    "2026-02-16": {
+      "generated_at": "2026-03-12T16:16:02",
+      "plan_version": "planner.v2",
+      "profile_snapshot": {
+        "allowed_locations": [
+          "gym",
+          "home"
+        ],
+        "domain_weights": {
+          "core_prehab": 0.043,
+          "finger_strength": 0.174,
+          "power_endurance": 0.174,
+          "pulling_strength": 0.13,
+          "technique": 0.217,
+          "volume_climbing": 0.261
+        },
+        "hard_cap_per_week": 3,
+        "intensity_cap": "medium",
+        "phase_id": "base"
+      },
+      "start_date": "2026-02-16",
+      "weekly_load_summary": {
+        "hard_days_count": 0,
+        "recovery_days_count": 2,
+        "total_load": 220
+      },
+      "weeks": [
+        {
+          "days": [
+            {
+              "date": "2026-02-16",
+              "sessions": [
+                {
+                  "estimated_load_score": 40,
+                  "explain": [
+                    "phase=base",
+                    "slot=evening",
+                    "day=mon",
+                    "pass1:primary"
+                  ],
+                  "gym_id": "97de15e6",
+                  "intensity": "medium",
+                  "location": "gym",
+                  "phase_id": "base",
+                  "session_id": "endurance_aerobic_gym",
+                  "slot": "evening",
+                  "tags": {
+                    "finger": false,
+                    "hard": false
+                  }
+                }
+              ],
+              "weekday": "mon"
+            },
+            {
+              "date": "2026-02-17",
+              "sessions": [
+                {
+                  "estimated_load_score": 40,
+                  "explain": [
+                    "phase=base",
+                    "slot=evening",
+                    "day=tue",
+                    "pass1:primary"
+                  ],
+                  "gym_id": "97de15e6",
+                  "intensity": "medium",
+                  "location": "gym",
+                  "phase_id": "base",
+                  "session_id": "technique_focus_gym",
+                  "slot": "evening",
+                  "tags": {
+                    "finger": false,
+                    "hard": false
+                  }
+                }
+              ],
+              "weekday": "tue"
+            },
+            {
+              "date": "2026-02-18",
+              "sessions": [
+                {
+                  "estimated_load_score": 40,
+                  "explain": [
+                    "phase=base",
+                    "slot=evening",
+                    "day=wed",
+                    "pass1:primary"
+                  ],
+                  "gym_id": "97de15e6",
+                  "intensity": "medium",
+                  "location": "gym",
+                  "phase_id": "base",
+                  "session_id": "endurance_aerobic_gym",
+                  "slot": "evening",
+                  "tags": {
+                    "finger": false,
+                    "hard": false
+                  }
+                }
+              ],
+              "weekday": "wed"
+            },
+            {
+              "date": "2026-02-19",
+              "sessions": [
+                {
+                  "estimated_load_score": 40,
+                  "explain": [
+                    "phase=base",
+                    "slot=evening",
+                    "day=thu",
+                    "pass1:primary"
+                  ],
+                  "gym_id": null,
+                  "intensity": "medium",
+                  "location": "home",
+                  "phase_id": "base",
+                  "session_id": "finger_maintenance_home",
+                  "slot": "evening",
+                  "tags": {
+                    "finger": true,
+                    "hard": false
+                  }
+                }
+              ],
+              "weekday": "thu"
+            },
+            {
+              "date": "2026-02-20",
+              "sessions": [
+                {
+                  "estimated_load_score": 20,
+                  "explain": [
+                    "phase=base",
+                    "slot=evening",
+                    "day=fri",
+                    "pass2:complementary"
+                  ],
+                  "gym_id": null,
+                  "intensity": "low",
+                  "location": "home",
+                  "phase_id": "base",
+                  "session_id": "prehab_maintenance",
+                  "slot": "evening",
+                  "tags": {
+                    "finger": false,
+                    "hard": false
+                  }
+                }
+              ],
+              "weekday": "fri"
+            },
+            {
+              "date": "2026-02-21",
+              "sessions": [
+                {
+                  "estimated_load_score": 40,
+                  "explain": [
+                    "phase=base",
+                    "slot=evening",
+                    "day=sat",
+                    "pass2:complementary"
+                  ],
+                  "gym_id": null,
+                  "intensity": "medium",
+                  "location": "home",
+                  "phase_id": "base",
+                  "session_id": "complementary_conditioning",
+                  "slot": "evening",
+                  "tags": {
+                    "finger": false,
+                    "hard": false
+                  }
+                }
+              ],
+              "weekday": "sat"
+            },
+            {
+              "date": "2026-02-22",
+              "sessions": [],
+              "weekday": "sun"
+            }
+          ],
+          "phase": "base",
+          "targets": {
+            "deload_factor": 1.0,
+            "finger_days": 1,
+            "hard_days": 3
+          },
+          "week_index": 1
+        }
+      ]
+    }
+  },
   "working_loads": {
     "entries": [],
     "rules": {}

@@ -413,11 +413,19 @@ export interface Quote {
 // Weekly Check-in (B42)
 // -----------------------------------------------------------------------
 
+export interface SlotEntry {
+  slot: "morning" | "lunch" | "evening";
+  available: boolean;
+  location: "gym" | "outdoor" | "home";
+  gym_id: string | null;
+}
+
 export interface DayOverviewEntry {
   day: string;
   available: boolean;
-  location: "gym" | "outdoor" | "home" | "rest";
-  gym_id: string | null;
+  slots: SlotEntry[];
+  default_slots: SlotEntry[];
+  summary: string;
   is_overridden: boolean;
 }
 
