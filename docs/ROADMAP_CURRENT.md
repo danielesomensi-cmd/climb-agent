@@ -32,6 +32,7 @@ Open items that affect production reliability or core UX.
 | ~~B114~~ | ~~Regenerate Plan: past days protection + smart popup~~ | ~~M~~ | Done: `preserve_before` param in `GET /api/week`, `merge_prev_week_sessions` ora matcha per data (non weekday), giorni passati copiati wholesale, oggi con sessioni completate protetto. Frontend: `RegeneratePlanSheet` bottom sheet con 3 opzioni (Today/Tomorrow/Next Monday). |
 | ~~B118~~ | ~~P0: Equipment regen resetta macrociclo a week 1~~ | ~~S~~ | Done: `handleRegenSheetConfirm()` chiamava `generateMacrocycle()` senza `from_phase`, causando full regen (start_date=this_monday). Fix: passa `from_phase="current"` per tutti i path tranne Danger Zone restart. Audit: `plan/page.tsx` già corretto, `onboarding.py` correttamente full. 6 test + restore script. |
 | ~~B119~~ | ~~P0: start_date must always be a Monday~~ | ~~S~~ | Done: `ensure_monday()` in `deps.py` auto-corrects non-Monday dates to previous Monday. Applied at all setters: state PUT, macrocycle generate (full+incremental), start-week shift, engine `generate_macrocycle()`. 15 new tests, zero regressions. Invariant documented in vocabulary_v1.md §5.5.1. Production patched to 2026-02-23. |
+| ~~B121~~ | ~~Planner non riempie tutti gli slot disponibili~~ | ~~M~~ | Done: Pass 2.2 in planner_v2 — quando un giorno ha più slot (es. lunch+evening) e `target_days > sessions piazzate`, riempie gli slot extra con sessioni non-hard. `_find_best_slot` ora accetta `occupied_slots` per evitare conflitti. 8 nuovi test. |
 
 ---
 

@@ -980,5 +980,123 @@ class TestPlannerV2B87GymNameLookup(unittest.TestCase):
                 )
 
 
+class TestPlannerV2MultiSlotDay(unittest.TestCase):
+    """B121: planner must fill all available slots including multi-slot days."""
+
+    def _multi_slot_availability(self):
+        """Mon eve(home), Tue eve(gym), Wed eve(gym), Thu lunch(home)+eve(gym). Fri-Sun rest."""
+        return {
+            "mon": {"evening": {"available": True, "locations": ["home"]}},
+            "tue": {"evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"}},
+            "wed": {"evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"}},
+            "thu": {
+                "lunch": {"available": True, "locations": ["home"]},
+                "evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"},
+            },
+        }
+
+    def _make_multi_kwargs(self, target_days=6, **overrides):
+        kw = dict(
+            availability=self._multi_slot_availability(),
+            planning_prefs={"target_training_days_per_week": target_days, "hard_day_cap_per_week": 3},
+            home_equipment=["hangboard", "pullup_bar"],
+        )
+        kw.update(overrides)
+        return _make_kwargs("base", **kw)
+
+    def test_two_slots_both_filled_when_target_allows(self):
+        """Day with 2 slots + target allows both → 2 sessions planned."""
+        plan = generate_phase_week(**self._make_multi_kwargs(target_days=6))
+        days = plan["weeks"][0]["days"]
+        thu = days[3]  # Thursday (offset 3)
+        self.assertEqual(len(thu["sessions"]), 2,
+                         f"Thu should have 2 sessions but has {len(thu['sessions'])}: "
+                         f"{[s['session_id'] for s in thu['sessions']]}")
+        slots_used = {s["slot"] for s in thu["sessions"]}
+        self.assertEqual(slots_used, {"lunch", "evening"},
+                         "Thu should use both lunch and evening slots")
+
+    def test_two_slots_target_allows_only_one(self):
+        """Day with 2 slots, target=4 → no need for extra slots, 4 sessions across 4 days."""
+        plan = generate_phase_week(**self._make_multi_kwargs(target_days=4))
+        days = plan["weeks"][0]["days"]
+        total = sum(len(d["sessions"]) for d in days)
+        self.assertEqual(total, 4, f"Should have exactly 4 sessions, got {total}")
+        thu = days[3]
+        self.assertEqual(len(thu["sessions"]), 1)
+
+    def test_all_slots_filled_target_still_higher(self):
+        """All 5 slots filled, target=6 → graceful degradation (5 sessions)."""
+        plan = generate_phase_week(**self._make_multi_kwargs(target_days=6))
+        days = plan["weeks"][0]["days"]
+        total = sum(len(d["sessions"]) for d in days)
+        self.assertEqual(total, 5,
+                         f"Should fill all 5 available slots, got {total}")
+
+    def test_single_slot_per_day_no_regression(self):
+        """Single slot per day → no behavior change (regression check)."""
+        single_slot_avail = {
+            "mon": {"evening": {"available": True, "locations": ["home"]}},
+            "tue": {"evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"}},
+            "wed": {"evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"}},
+            "thu": {"evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"}},
+        }
+        plan = generate_phase_week(**self._make_multi_kwargs(
+            target_days=4,
+            availability=single_slot_avail,
+        ))
+        days = plan["weeks"][0]["days"]
+        total = sum(len(d["sessions"]) for d in days)
+        self.assertEqual(total, 4)
+        for d in days:
+            self.assertLessEqual(len(d["sessions"]), 1)
+
+    def test_mixed_single_and_multi_slot_days(self):
+        """Mix of single-slot and multi-slot days fills correctly."""
+        avail = {
+            "mon": {
+                "morning": {"available": True, "locations": ["home"]},
+                "evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"},
+            },
+            "tue": {"evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"}},
+            "wed": {
+                "lunch": {"available": True, "locations": ["home"]},
+                "evening": {"available": True, "locations": ["gym"], "preferred_location": "gym"},
+            },
+            "thu": {"evening": {"available": True, "locations": ["home"]}},
+        }
+        plan = generate_phase_week(**self._make_multi_kwargs(
+            target_days=6,
+            availability=avail,
+        ))
+        days = plan["weeks"][0]["days"]
+        total = sum(len(d["sessions"]) for d in days)
+        self.assertEqual(total, 6,
+                         f"Should fill all 6 available slots, got {total}")
+
+    def test_extra_slot_session_is_not_hard(self):
+        """Sessions placed in extra slots (pass 2.2) must NOT be hard."""
+        plan = generate_phase_week(**self._make_multi_kwargs(target_days=6))
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            if len(d["sessions"]) > 1:
+                for s in d["sessions"]:
+                    if "pass2.2" in str(s.get("explain", [])):
+                        self.assertFalse(
+                            s["tags"].get("hard", False),
+                            f"Extra-slot session {s['session_id']} must not be hard",
+                        )
+
+    def test_extra_slot_different_from_first(self):
+        """Extra slot session uses a different time slot than the first."""
+        plan = generate_phase_week(**self._make_multi_kwargs(target_days=6))
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            if len(d["sessions"]) > 1:
+                slots = [s["slot"] for s in d["sessions"]]
+                self.assertEqual(len(slots), len(set(slots)),
+                                 f"Duplicate slots on same day: {slots}")
+
+
 if __name__ == "__main__":
     unittest.main()
