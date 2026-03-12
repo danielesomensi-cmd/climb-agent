@@ -36,6 +36,41 @@ cd frontend && npm run dev
 python scripts/sync_status.py
 ```
 
+## Execution model
+
+This project runs with `--dangerously-skip-permissions`. Claude Code executes without interactive approval prompts. Safety is enforced through brief structure and mandatory stop points.
+
+### When you can proceed freely
+
+- Bug fixes isolated to a single module with no planner/replanner/macrocycle impact
+- Catalog additions (exercises, sessions, templates)
+- Test additions or fixes
+- Documentation updates
+- Frontend-only changes (components, pages, styles)
+- Running tests, linting, `sync_status.py`
+
+### When you MUST stop and wait for OK
+
+Any change touching these modules requires a **mandatory analysis phase** before implementation:
+
+- `planner_v2.py` or `replanner_v1.py`
+- `macrocycle_v1.py` or `generate_macrocycle()`
+- `resolve_session.py` (P0 hard filters, template resolution logic)
+- `progression_v1.py` or `closed_loop_v1.py`
+- Any function that calls `generate_macrocycle()` — verify `from_phase="current"` is preserved
+- Any change to `start_date` handling — verify Monday invariant via `ensure_monday()`
+- Schema changes to `user_state.json`
+- Multi-module refactors
+
+**Protocol for high-risk changes:**
+
+1. **Phase 1 — Analysis:** Read all affected files. List every call site, every consumer, every test. Print the full analysis.
+2. **STOP.** Wait for Daniele's explicit OK before proceeding.
+3. **Phase 2 — Implementation:** Apply changes only after approval.
+4. **Phase 3 — Verification:** Run full test suite. Print diff summary of all changed files.
+
+Never skip the STOP between Phase 1 and Phase 2 — even if the change looks trivial.
+
 ## Import conventions
 
 All Python imports use the `backend.` prefix. Data paths are relative to repo root.
