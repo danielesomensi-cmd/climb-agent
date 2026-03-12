@@ -707,7 +707,26 @@ Outdoor session logging conditions:
 - `conditions.rock_condition`: `dry | damp | wet`
 - `conditions.wind`: `none | light | strong`
 
-### 5.7 Assessment profile axes
+### 5.7 Weekly overrides
+
+```
+weekly_overrides: dict[str, WeekOverride]
+  Key: week start_date as ISO string (always a Monday)
+  Value: { days: dict[weekday_long, DayOverride], created_at: ISO datetime }
+
+DayOverride: { available: bool, location: "gym"|"outdoor"|"home"|"rest", gym_id?: string }
+  Only days that differ from settings defaults are stored.
+  Missing days in override = use settings defaults.
+  Weekday keys use full names: monday, tuesday, ..., sunday.
+```
+
+The override is a **temporary layer** — it never modifies `state.availability`.
+The planner merges the override into availability before planning (in `week.py`).
+Past-week overrides are kept for history but are never read by the planner.
+
+---
+
+### 5.8 Assessment profile axes
 
 The 6 normalized axes (0-100) of the assessment radar:
 

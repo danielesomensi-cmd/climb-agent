@@ -26,9 +26,8 @@ Open items that affect production reliability or core UX.
 | ~~B37~~ | ~~Add exercise to existing session~~ | ~~M~~ | Done: `POST /api/session/add-exercise` — appends exercise, recalculates load score. |
 | ~~B38~~ | ~~Injuries filter (contraindications)~~ | ~~M~~ | Done: 3-level severity system (monitor/active/severe) in resolver. |
 | ~~UI-9~~ | ~~Limitation filtering in resolver~~ | ~~M~~ | Done: integrated in B38. Frontend severity picker pending (phase 2). |
-| B42 | Sunday reminder — confirm next week availability | S | Weekly push/banner asking user to confirm next week's schedule. From beta feedback (FB-3). |
-| UI-25 | Test Maxes & Loads panel (Plan tab) | L | Collapsible card: test history timeline, benchmark comparison, exercise loads list. See ROADMAP_v2.md §9.5 for full spec. |
-| FR-4 | Outdoor vs gym slot priority preference | S | When both outdoor and gym available same day, user sets preference (outdoor-first / gym-first / alternate). See ROADMAP_v2.md §9.3-9.4. |
+| ~~B42~~ | ~~Sunday reminder — confirm next week availability~~ | ~~L~~ | Done: Weekly Check-in flow (Sunday + Monday morning grace period). Bottom sheet with 7-day editor: toggle available/rest, switch location (gym/home/outdoor), change gym. Override saved as `weekly_overrides` in user_state (temporary layer, never modifies settings). Planner merges override before planning. 3 new endpoints (GET/PUT/DELETE `/api/weekly-override/{week_start}`). Absorbs FR-4. 11 tests. |
+| ~~FR-4~~ | ~~Outdoor vs gym slot priority preference~~ | ~~—~~ | Archived — absorbed by B42 weekly check-in. User decides day-by-day in the check-in instead of needing a global preference rule. |
 | ~~B113~~ | ~~AddExerciseDialog: lista incompleta + nessuna descrizione~~ | ~~S~~ | Done: rimosso `slice(0,30)`, tutti i 155 esercizi visibili in lista scrollabile. Fix ricerca domain (array, non stringa). Aggiunta descrizione (troncata 1 riga) + category + equipment sotto ogni nome. Ricerca estesa a description e category. |
 | ~~B114~~ | ~~Regenerate Plan: past days protection + smart popup~~ | ~~M~~ | Done: `preserve_before` param in `GET /api/week`, `merge_prev_week_sessions` ora matcha per data (non weekday), giorni passati copiati wholesale, oggi con sessioni completate protetto. Frontend: `RegeneratePlanSheet` bottom sheet con 3 opzioni (Today/Tomorrow/Next Monday). |
 | ~~B118~~ | ~~P0: Equipment regen resetta macrociclo a week 1~~ | ~~S~~ | Done: `handleRegenSheetConfirm()` chiamava `generateMacrocycle()` senza `from_phase`, causando full regen (start_date=this_monday). Fix: passa `from_phase="current"` per tutti i path tranne Danger Zone restart. Audit: `plan/page.tsx` già corretto, `onboarding.py` correttamente full. 6 test + restore script. |
@@ -43,8 +42,6 @@ Open items that affect production reliability or core UX.
 | ~~B106~~ | ~~Loading pin alias (v1)~~ | ~~M~~ | Done: alias `loading_pin→hangboard` nel resolver + vocabulary + UI. v2 (B109): gestione unilaterale, doppio tempo. |
 | ~~B107~~ | ~~"Other" per injuries~~ | ~~S~~ | Done: "Other" aggiunto come zona in onboarding + settings. Notes field cattura dettagli. Zero effetto motore. |
 | ~~B108~~ | ~~Outdoor tooltip in onboarding~~ | ~~S~~ | Done: CardDescription nella pagina availability: "Outdoor days can be added later in your weekly plan based on weather and season." |
-| B109 | Loading pin: esercizi one-arm | M | Esercizi specifici per loading pin (one-arm hang progressions). Dipende da B106. |
-
 ---
 
 ## Priority 2 — Auth + Payments + DB (go-to-market blockers)
@@ -69,8 +66,9 @@ Items that affect first impression for paying users.
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Set up develop branch for staging, main for production deploys. |
+| B109 | Loading pin: esercizi one-arm | M | Esercizi specifici per loading pin (one-arm hang progressions). Dipende da B106. |
 | ~~B110~~ | ~~Fix sync_status.py endpoint count~~ | ~~S~~ | Done: risolto implicitamente con rimozione 2 endpoint test-week. Count 39 (38 router + 1 health) dopo B-115. |
-| UI-26 | Session card: ⋯ menu + Add Exercise | M | Phase A done: ⋯ button → bottom sheet (Drawer/vaul) con azioni contestuali, AddExerciseDialog con ricerca catalogo + form prescrizione. Phase B pending: Modify session, Modify outdoor. |
+| ~~UI-26~~ | ~~Session card: ⋯ menu + Add Exercise~~ | ~~M~~ | Done: Phase A: ⋯ button → bottom sheet con Add Exercise, Move, Remove, Undo. Phase B: "Modify session" nel menu ⋯ (indoor, non finalized) → apre ReplanDialog con session_index. "Edit outdoor" già presente come bottone su outdoor card completata. |
 
 ---
 
@@ -159,6 +157,7 @@ Il flusso outdoor attuale è un log passivo post-sessione. Manca una sessione li
 
 ## Future — Evolution (Phase 4+)
 
+- **UI-25 — Test Maxes & Loads panel (Plan tab)**: Collapsible card: test history timeline, benchmark comparison, exercise loads list
 - **Multi-goal support**: boulder, all-round, outdoor_season goal types (boulder macrocycle already exists via B91)
 - **Annual report**: year-end training summary and progression analysis
 - **Multi-macrocycle periodization**: seasonal planning across multiple cycles

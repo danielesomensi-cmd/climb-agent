@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search } from "lucide-react";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -806,6 +806,19 @@ export function SessionCard({
                 >
                   <Plus className="size-5 text-muted-foreground" />
                   <span className="text-sm">Add exercise</span>
+                </button>
+              </DrawerClose>
+            )}
+
+            {/* Modify session — indoor, planned only */}
+            {!isFinalized && onReplan && (
+              <DrawerClose asChild>
+                <button
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
+                  onClick={() => onReplan()}
+                >
+                  <RefreshCw className="size-5 text-muted-foreground" />
+                  <span className="text-sm">Modify session</span>
                 </button>
               </DrawerClose>
             )}

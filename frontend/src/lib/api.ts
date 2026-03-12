@@ -292,6 +292,21 @@ export const recoverAccount = (recovery_code: string) =>
     body: JSON.stringify({ recovery_code }),
   });
 
+// Weekly Override (B42)
+export const getWeeklyOverride = (weekStart: string) =>
+  request<import("./types").WeeklyOverrideResponse>(`/api/weekly-override/${weekStart}`);
+
+export const putWeeklyOverride = (weekStart: string, days: Record<string, { available: boolean; location: string; gym_id?: string | null }>) =>
+  request<{ status: string; week_start: string; days: import("./types").DayOverviewEntry[] }>(`/api/weekly-override/${weekStart}`, {
+    method: "PUT",
+    body: JSON.stringify({ days }),
+  });
+
+export const deleteWeeklyOverride = (weekStart: string) =>
+  request<{ status: string; week_start: string }>(`/api/weekly-override/${weekStart}`, {
+    method: "DELETE",
+  });
+
 // Reports
 export const getWeeklyReport = (weekStart: string) =>
   request<WeeklyReport>(`/api/reports/weekly?week_start=${weekStart}`);

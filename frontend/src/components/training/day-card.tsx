@@ -409,7 +409,7 @@ export function DayCard({
                       : undefined
                   }
                   onReplan={
-                    onReplan && day.sessions.length > 1 && session.status !== "done" && session.status !== "skipped"
+                    onReplan && session.status !== "done" && session.status !== "skipped"
                       ? () => onReplan(day.date, idx)
                       : undefined
                   }

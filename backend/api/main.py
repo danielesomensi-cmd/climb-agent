@@ -24,6 +24,7 @@ from backend.api.routers import (
     state,
     user,
     week,
+    weekly_override,
 )
 
 logger = logging.getLogger(__name__)
@@ -105,6 +106,7 @@ app.include_router(outdoor.router)
 app.include_router(reports.router)
 app.include_router(quotes.router)
 app.include_router(user.router)
+app.include_router(weekly_override.router)
 app.include_router(admin.router)
 
 

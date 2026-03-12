@@ -410,6 +410,24 @@ export interface Quote {
 }
 
 // -----------------------------------------------------------------------
+// Weekly Check-in (B42)
+// -----------------------------------------------------------------------
+
+export interface DayOverviewEntry {
+  day: string;
+  available: boolean;
+  location: "gym" | "outdoor" | "home" | "rest";
+  gym_id: string | null;
+  is_overridden: boolean;
+}
+
+export interface WeeklyOverrideResponse {
+  week_start: string;
+  has_override: boolean;
+  days: DayOverviewEntry[];
+}
+
+// -----------------------------------------------------------------------
 // Guided Session Mode
 // -----------------------------------------------------------------------
 

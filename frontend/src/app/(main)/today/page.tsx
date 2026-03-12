@@ -10,6 +10,7 @@ import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
+import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
@@ -724,6 +725,11 @@ function TodayContent() {
           </div>
         )}
 
+
+        {/* Weekly check-in card (Sunday / Monday morning grace) */}
+        {!loading && !error && isViewingToday && (
+          <WeeklyCheckinCard onPlanUpdated={fetchData} />
+        )}
 
         {/* Day plan */}
         {!loading && !error && dayPlan && (

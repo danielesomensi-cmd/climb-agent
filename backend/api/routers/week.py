@@ -23,6 +23,7 @@ from backend.engine.macrocycle_v1 import compute_pretrip_dates
 from backend.engine.planner_v2 import generate_phase_week, should_show_test_reminder
 from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
+from backend.engine.weekly_override import merge_override_into_availability
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +143,13 @@ def get_week(
     gyms = equipment.get("gyms", [])
     home_equipment = equipment.get("home")
     hard_cap = planning_prefs.get("hard_day_cap_per_week", 3)
+
+    # B42: merge weekly override into availability (temporary layer, never modifies state)
+    week_start_for_override = ctx["start_date"]
+    weekly_overrides = state.get("weekly_overrides") or {}
+    override = weekly_overrides.get(week_start_for_override)
+    if override:
+        availability = merge_override_into_availability(availability, override)
 
     # Determine default gym_id (highest priority first)
     default_gym_id = None
