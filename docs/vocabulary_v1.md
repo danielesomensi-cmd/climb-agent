@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-02-20
+Last updated: 2026-03-12
 
 ---
 
@@ -474,7 +474,7 @@ Allowed values:
 
 Templates are reusable modules. A template MUST be self-contained (i.e., it can produce a full session_instance by itself).
 
-### Canonical template_ids (19)
+### Canonical template_ids (23)
 
 - `antagonist_prehab`
 - `cooldown_stretch`
@@ -483,7 +483,9 @@ Templates are reusable modules. A template MUST be self-contained (i.e., it can 
 - `deload_recovery`
 - `finger_aerobic_endurance`
 - `finger_max_strength`
+- `finger_max_strength_test`
 - `finger_strength_endurance`
+- `finger_strength_endurance_test`
 - `general_strength_accessories`
 - `general_warmup`
 - `gym_aerobic_endurance`
@@ -492,6 +494,8 @@ Templates are reusable modules. A template MUST be self-contained (i.e., it can 
 - `gym_technique_boulder`
 - `pulling_endurance`
 - `pulling_strength`
+- `pulling_strength_compound`
+- `pulling_strength_test`
 - `warmup_climbing`
 - `warmup_recovery`
 - `warmup_strength`

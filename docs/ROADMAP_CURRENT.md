@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-10
+> Last updated: 2026-03-12
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -69,7 +69,7 @@ Items that affect first impression for paying users.
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Set up develop branch for staging, main for production deploys. |
-| ~~B110~~ | ~~Fix sync_status.py endpoint count~~ | ~~S~~ | Done: risolto implicitamente con rimozione 2 endpoint test-week. Count 37 ora corretto. |
+| ~~B110~~ | ~~Fix sync_status.py endpoint count~~ | ~~S~~ | Done: risolto implicitamente con rimozione 2 endpoint test-week. Count 39 (38 router + 1 health) dopo B-115. |
 | UI-26 | Session card: ⋯ menu + Add Exercise | M | Phase A done: ⋯ button → bottom sheet (Drawer/vaul) con azioni contestuali, AddExerciseDialog con ricerca catalogo + form prescrizione. Phase B pending: Modify session, Modify outdoor. |
 
 ---

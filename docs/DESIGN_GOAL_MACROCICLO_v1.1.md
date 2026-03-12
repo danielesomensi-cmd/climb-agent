@@ -3,7 +3,7 @@
 > Documento di design per il sistema di periodizzazione adattiva.
 > Versione: 1.2 (file: v1.1) — febbraio 2026
 > Stato: documento vivente, aggiornato post Phase 3.2
-> Ultimo audit: 2026-02-19
+> Ultimo audit: 2026-03-12
 
 ---
 
