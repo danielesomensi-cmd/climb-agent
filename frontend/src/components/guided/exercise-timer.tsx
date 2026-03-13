@@ -781,7 +781,7 @@ export function ExerciseTimer({
                   {formatSeconds(secondsLeft)}
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-teal-400">
-                  Hold
+                  Rest
                 </span>
                 {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
               </>

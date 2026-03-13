@@ -598,7 +598,9 @@ export function SessionCard({
             )}
             {isDone && (
               <Badge className="bg-green-600 text-white text-[10px]">
-                Completed
+                Completed{session.session_duration_seconds != null && session.session_duration_seconds > 0
+                  ? ` · ${Math.round(session.session_duration_seconds / 60)} min`
+                  : ""}
               </Badge>
             )}
             {isSkipped && (
@@ -806,7 +808,7 @@ export function SessionCard({
           <DrawerHeader>
             <DrawerTitle>{formatSessionName(session.session_id)}</DrawerTitle>
             <DrawerDescription>
-              {isDone ? "Completed" : isSkipped ? "Skipped" : "Planned"} · {locationLabel} · {formatSlot(session.slot)}
+              {isDone ? `Completed${session.session_duration_seconds != null && session.session_duration_seconds > 0 ? ` · ${Math.round(session.session_duration_seconds / 60)} min` : ""}` : isSkipped ? "Skipped" : "Planned"} · {locationLabel} · {formatSlot(session.slot)}
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-6 space-y-1">

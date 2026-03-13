@@ -98,6 +98,9 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
                 if labels:
                     entry["difficulty"] = labels[-1] if len(set(labels)) > 1 else labels[0]
                 entry["exercise_count"] = len(fb_items)
+                duration = req.log_entry.get("session_duration_seconds")
+                if duration is not None:
+                    entry["session_duration_seconds"] = duration
                 break
 
     save_state(state, user_id)

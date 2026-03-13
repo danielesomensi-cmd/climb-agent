@@ -60,7 +60,7 @@ function formatPrescription(ex: GuidedExercise): string[] {
 
   // Rest info
   if (p.restBetweenRepsSeconds) {
-    lines.push(`Hold between reps: ${formatRest(p.restBetweenRepsSeconds)}`);
+    lines.push(`Rest between reps: ${formatRest(p.restBetweenRepsSeconds)}`);
   }
   if (p.restSeconds) {
     const label = p.restBetweenRepsSeconds ? "Set rest" : "Rest";

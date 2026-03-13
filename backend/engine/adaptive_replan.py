@@ -119,6 +119,9 @@ def append_feedback_log(
     }
     if exercise_feedback:
         entry["exercise_feedback"] = exercise_feedback
+    duration = log_entry.get("session_duration_seconds")
+    if duration is not None:
+        entry["session_duration_seconds"] = duration
     feedback_log.append(entry)
 
     # Trim to last 7 entries by date descending

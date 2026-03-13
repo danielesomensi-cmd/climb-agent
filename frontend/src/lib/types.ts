@@ -41,6 +41,7 @@ export interface SessionSlot {
   intensity?: string;
   feedback_summary?: string;
   exercise_feedback?: Record<string, string>;
+  session_duration_seconds?: number;
 }
 
 export interface DayPlan {

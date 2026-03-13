@@ -152,6 +152,8 @@ def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
                     session_entry["feedback_summary"] = fb["difficulty"]
                     if fb.get("exercise_feedback"):
                         session_entry["exercise_feedback"] = fb["exercise_feedback"]
+                    if fb.get("session_duration_seconds") is not None:
+                        session_entry["session_duration_seconds"] = fb["session_duration_seconds"]
 
 
 def _current_week_num(macrocycle: dict) -> int:
