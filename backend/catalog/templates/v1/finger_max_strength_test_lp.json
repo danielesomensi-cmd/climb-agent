@@ -40,12 +40,12 @@
       "domain": ["finger_strength"]
     },
     {
-      "block_id": "test_hang_duration",
+      "block_id": "test_lift_duration",
       "type": "test_measurement",
-      "exercise_id": "test_max_hang_duration_20mm",
+      "exercise_id": "lp_duration_test",
       "prescription": {
         "sets": 1,
-        "notes": "Hang on 20mm at body weight until failure. Record total seconds."
+        "notes": "Lift at 60% of your max per hand on 20mm until failure. Record total seconds per hand."
       },
       "role": ["test"],
       "domain": ["finger_strength"]

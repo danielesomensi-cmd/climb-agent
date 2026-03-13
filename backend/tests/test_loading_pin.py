@@ -456,6 +456,8 @@ class TestLPPlannerPass3:
         ]
         assert "test_lp_max_5s" in all_sids, f"Expected test_lp_max_5s in {all_sids}"
         assert "test_max_hang_5s" not in all_sids, f"Should NOT have test_max_hang_5s in {all_sids}"
+        assert "test_lp_repeater" in all_sids, f"Expected test_lp_repeater in {all_sids}"
+        assert "test_repeater_7_3" not in all_sids, f"Should NOT have test_repeater_7_3 in {all_sids}"
 
     def test_pass3_uses_hb_test_when_hangboard(self, _base_avail):
         from backend.engine.planner_v2 import generate_phase_week
@@ -479,6 +481,8 @@ class TestLPPlannerPass3:
         ]
         assert "test_max_hang_5s" in all_sids, f"Expected test_max_hang_5s in {all_sids}"
         assert "test_lp_max_5s" not in all_sids
+        assert "test_repeater_7_3" in all_sids, f"Expected test_repeater_7_3 in {all_sids}"
+        assert "test_lp_repeater" not in all_sids
 
     def test_pass3_default_none_uses_hangboard(self, _base_avail):
         from backend.engine.planner_v2 import generate_phase_week

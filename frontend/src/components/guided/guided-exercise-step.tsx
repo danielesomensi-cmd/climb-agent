@@ -101,8 +101,11 @@ export function GuidedExerciseStep({
   // Repeater test: primary metric is sets completed, not load
   const isRepeaterTest = isTestSession && exercise.exerciseId === "repeater_hang_7_3";
 
+  // B120: unilateral test exercises (LP max test) — dual R/L test result input
+  const isUnilateralTest = !isTestMeasurement && !isRepeaterTest && isTestSession && isUnilateral;
+
   // Test session total_load exercises get two mandatory fields
-  const isTestLoadExercise = !isTestMeasurement && !isRepeaterTest && isTestSession && exercise.loadModel === "total_load";
+  const isTestLoadExercise = !isTestMeasurement && !isRepeaterTest && !isUnilateralTest && isTestSession && exercise.loadModel === "total_load";
 
   // Determine which kind of editable field to show
   const hasLoadField =
@@ -233,6 +236,13 @@ export function GuidedExerciseStep({
         ? bodyweightKg + usedExternal
         : undefined;
       onDone(feedback, usedExternal, undefined, usedTotal);
+      return;
+    }
+    // B120: unilateral test (LP max test) — pass per-hand loads
+    if (isUnilateralTest) {
+      const right = loadInputRight ? parseFloat(loadInputRight) : undefined;
+      const left = loadInputLeft ? parseFloat(loadInputLeft) : undefined;
+      onDone(feedback, undefined, undefined, undefined, undefined, { right, left });
       return;
     }
     if (isTestLoadExercise) {
@@ -503,6 +513,47 @@ export function GuidedExerciseStep({
               </div>
             )}
 
+            {/* B120: unilateral test — dual R/L test result input */}
+            {isUnilateralTest && (
+              <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <p className="text-xs font-medium text-primary">Record your test result</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="test-right" className="text-xs text-muted-foreground">
+                      Right hand (kg) *
+                    </Label>
+                    <Input
+                      id="test-right"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={loadInputRight}
+                      onChange={(e) => setLoadInputRight(e.target.value)}
+                      className="h-9"
+                      placeholder="e.g. 47"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="test-left" className="text-xs text-muted-foreground">
+                      Left hand (kg) *
+                    </Label>
+                    <Input
+                      id="test-left"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={loadInputLeft}
+                      onChange={(e) => setLoadInputLeft(e.target.value)}
+                      className="h-9"
+                      placeholder="e.g. 42"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Feedback selector */}
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">How did it feel?</Label>
@@ -558,8 +609,8 @@ export function GuidedExerciseStep({
               </div>
             )}
 
-            {/* Editable load fields — unilateral (per-hand) */}
-            {isUnilateral && !isTestMeasurement && (
+            {/* Editable load fields — unilateral (per-hand), not shown for unilateral tests */}
+            {isUnilateral && !isTestMeasurement && !isUnilateralTest && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">
                   Actual load used (kg)

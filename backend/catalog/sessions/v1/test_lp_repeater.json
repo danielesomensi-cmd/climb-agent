@@ -1,0 +1,37 @@
+{
+  "id": "test_lp_repeater",
+  "name": "Test Session — Loading Pin Repeater 7/3",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "finger_strength_endurance",
+    "secondary_goals": [],
+    "notes": "Loading pin repeater 7/3 baseline refresh for power-endurance assessment."
+  },
+  "required_equipment": ["loading_pin"],
+  "compatibility": {
+    "slot": ["short", "long"],
+    "sports": ["climbing"]
+  },
+  "time_budget": {
+    "target_duration_min": 45,
+    "hard_cap_min": 65
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "template_id": "finger_strength_endurance_test_lp",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary"
+    }
+  ],
+  "tags": {
+    "test": true
+  },
+  "test_id": "lp_repeater_7_3"
+}

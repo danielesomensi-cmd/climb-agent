@@ -47,6 +47,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
     "test_lp_max_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
     "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
+    "test_lp_repeater": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
     "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["pullup_bar"]},
     "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "finger_maintenance_gym": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["hangboard"]},
@@ -986,9 +987,10 @@ def generate_phase_week(
         # Required tests first, then optional
         # Finger test depends on device preference (A120)
         _finger_test_sid = "test_lp_max_5s" if finger_device == "loading_pin" else "test_max_hang_5s"
+        _repeater_test_sid = "test_lp_repeater" if finger_device == "loading_pin" else "test_repeater_7_3"
         _test_schedule = [
             (_finger_test_sid, True),
-            ("test_repeater_7_3", True),
+            (_repeater_test_sid, True),
             ("test_max_weighted_pullup", False),
         ]
         test_placed_offsets: set = set()

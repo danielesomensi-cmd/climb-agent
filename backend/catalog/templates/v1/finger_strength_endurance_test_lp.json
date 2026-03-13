@@ -1,0 +1,56 @@
+{
+  "id": "finger_strength_endurance_test_lp",
+  "name": "Finger Strength-Endurance — Loading Pin Test",
+  "version": "1.0",
+  "category": "endurance",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "high",
+    "cns": "medium",
+    "elbows": "medium",
+    "skin": "none"
+  },
+
+  "blocks": [
+    {
+      "block_id": "warmup_specific",
+      "type": "warmup_specific",
+      "exercise_id": "dead_hang_easy",
+      "prescription": {
+        "sets": 3,
+        "work_seconds": 10,
+        "rest_between_sets_seconds": 50,
+        "notes": "Easy dead hangs to warm up fingers progressively."
+      },
+      "role": ["warmup"],
+      "domain": ["finger_strength"]
+    },
+    {
+      "block_id": "main",
+      "type": "main_set",
+      "exercise_id": "lp_repeater_test",
+      "prescription": {
+        "sets": 1,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": 3,
+        "notes": "Test protocol: lift at 60% of your max per hand. 7s on / 3s off until failure. Count completed reps per hand. Test right hand first, rest 5 min, then left."
+      },
+      "role": ["main"],
+      "domain": ["finger_strength_endurance"]
+    },
+    {
+      "block_id": "prehab",
+      "type": "prehab",
+      "exercise_id": "elbow_eccentric_curl",
+      "prescription": {
+        "sets": 2,
+        "reps": 12,
+        "rest_between_sets_seconds": 60,
+        "notes": "Light elbow prehab after finger endurance work."
+      },
+      "role": ["prehab"],
+      "domain": ["prehab_elbow"]
+    }
+  ]
+}

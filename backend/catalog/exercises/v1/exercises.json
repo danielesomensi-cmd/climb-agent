@@ -8179,6 +8179,119 @@
         "Record right-hand and left-hand values separately"
       ],
       "video_url": null
+    },
+    {
+      "id": "lp_repeater_test",
+      "name": "Loading Pin Repeater Test (7/3)",
+      "category": "test",
+      "time_min": 20,
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "finger_strength_endurance"
+      ],
+      "pattern": "repeater_lift",
+      "intensity_level": "medium",
+      "fatigue_cost": 7,
+      "recency_group": "finger_repeaters",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.60
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": 3,
+        "rest_between_sets_seconds": null,
+        "notes": "Lift at 60% of your max per hand. 7s on / 3s off until failure. Count completed reps. Test right hand first, then left."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "Finger endurance test with loading pin. Lift at 60% of your max per hand with 7s on / 3s off rhythm until failure. Count completed reps per hand.",
+      "cues": [
+        "Calculate load: 60% of your max lift per hand",
+        "Lift for exactly 7 seconds, rest exactly 3 seconds",
+        "Continue until you cannot hold for the full 7 seconds",
+        "Record total reps completed per hand",
+        "Test right hand first, rest 5 minutes, then left hand"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "lp_duration_test",
+      "name": "Loading Pin Duration Test (20mm)",
+      "category": "test",
+      "time_min": 15,
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "isometric_lift",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "finger_endurance",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.60
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Lift at 60% of your max per hand on 20mm and hold until failure. Record total seconds per hand. Test right hand first, rest 5 min, then left."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "Finger endurance test with loading pin. Lift at 60% of your max per hand on 20mm edge and hold continuously until failure. Record total seconds. Equivalent to max hang duration test but shoulder-safe.",
+      "cues": [
+        "Calculate load: 60% of your max lift per hand",
+        "Lift and hold with strict half crimp form",
+        "Hold continuously until you cannot maintain grip",
+        "Record total seconds held",
+        "Test right hand first, rest 5 minutes, then left hand",
+        "One attempt only per hand"
+      ],
+      "video_url": null
     }
   ]
 }
