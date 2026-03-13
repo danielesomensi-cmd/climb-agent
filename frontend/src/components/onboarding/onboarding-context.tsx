@@ -15,6 +15,7 @@ const DEFAULT_DATA: OnboardingData = {
   equipment: { home_enabled: true, home: [], gyms: [] },
   availability: {},
   planning_prefs: { target_training_days_per_week: 4, hard_day_cap_per_week: 3 },
+  preferences: { finger_training_device: "hangboard" },
   trips: [],
   outdoor_spots: [],
 };
@@ -103,6 +104,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         }
         if (state.planning_prefs && Object.keys(state.planning_prefs).length > 0) {
           d.planning_prefs = state.planning_prefs as OnboardingData["planning_prefs"];
+        }
+        const prefs = (state as Record<string, unknown>).preferences as Record<string, unknown> | undefined;
+        if (prefs?.finger_training_device) {
+          d.preferences = { finger_training_device: prefs.finger_training_device as "hangboard" | "loading_pin" };
         }
         if (state.trips?.length) {
           d.trips = state.trips as OnboardingData["trips"];

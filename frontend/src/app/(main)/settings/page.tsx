@@ -153,6 +153,8 @@ export default function SettingsPage() {
     home?: string[];
     gyms?: Array<{ gym_id: string; name: string; equipment: string[] }>;
   };
+  const fingerDevice = ((state as Record<string, unknown>)?.preferences as Record<string, unknown>)?.finger_training_device as "hangboard" | "loading_pin" | undefined ?? "hangboard";
+  const [savingDevice, setSavingDevice] = useState(false);
   const availability = (state?.availability ?? {}) as Record<
     string,
     Record<string, { available: boolean; preferred_location?: string; gym_id?: string }>
@@ -183,6 +185,23 @@ export default function SettingsPage() {
       setEditingLimitations(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to save limitations");
+    }
+  }
+
+  /** Save finger training device preference and regenerate plan */
+  async function handleSaveFingerDevice(dev: "hangboard" | "loading_pin") {
+    setSavingDevice(true);
+    setActionError(null);
+    try {
+      await putState({ preferences: { finger_training_device: dev } });
+      await refresh();
+      // Trigger plan regeneration
+      setPendingRegenAction("equipment");
+      setRegenSheetOpen(true);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to save device preference");
+    } finally {
+      setSavingDevice(false);
     }
   }
 
@@ -488,6 +507,40 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
+
+            {/* ----- Finger Training Device ----- */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Finger Training Device</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-3">
+                  <Button
+                    variant={fingerDevice === "hangboard" ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    disabled={savingDevice}
+                    onClick={() => fingerDevice !== "hangboard" && handleSaveFingerDevice("hangboard")}
+                  >
+                    Hangboard
+                  </Button>
+                  <Button
+                    variant={fingerDevice === "loading_pin" ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    disabled={savingDevice}
+                    onClick={() => fingerDevice !== "loading_pin" && handleSaveFingerDevice("loading_pin")}
+                  >
+                    Loading Pin
+                  </Button>
+                </div>
+                {fingerDevice === "loading_pin" && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    All finger exercises will use loading pin variants.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             {/* ----- Injuries & Limitations ----- */}
             {editingLimitations ? (

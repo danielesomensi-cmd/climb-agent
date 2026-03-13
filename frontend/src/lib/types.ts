@@ -187,6 +187,8 @@ export interface OnboardingData {
     max_hang_duration_20mm_seconds?: number;
     l_sit_hold_seconds?: number;
     hip_flexibility_cm?: number;
+    lp_max_lift_5s_right_kg?: number;
+    lp_max_lift_5s_left_kg?: number;
     last_test_date?: string;
   };
   limitations: Array<{
@@ -208,6 +210,9 @@ export interface OnboardingData {
   planning_prefs: {
     target_training_days_per_week: number;
     hard_day_cap_per_week: number;
+  };
+  preferences: {
+    finger_training_device: "hangboard" | "loading_pin";
   };
   trips: Array<{
     name: string;

@@ -164,6 +164,9 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             "hard_day_cap_per_week": 3,
             "target_training_days_per_week": 4,
         },
+        "preferences": data.preferences or {
+            "finger_training_device": "hangboard",
+        },
         "availability": data.availability,
         "equipment": _ensure_gym_ids(data.equipment),
         "limitations": {
