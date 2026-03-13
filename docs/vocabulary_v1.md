@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-03-12
+Last updated: 2026-03-13
 
 ---
 
@@ -421,12 +421,38 @@ Shared baseline for all hangboard exercises:
 }
 ```
 
+#### `baselines.pulling`
+
+Shared baseline for pulling exercises (B121). Created from `assessment.tests.weighted_pullup_1rm_total_kg`:
+
+```json
+{
+  "weighted_pullup_1rm_total_kg": 130.0,
+  "bodyweight_kg": 77.0,
+  "max_external_load_kg": 53.0,
+  "source": "assessment",
+  "updated_at": "2026-03-13"
+}
+```
+
+Fields:
+- `weighted_pullup_1rm_total_kg` — from `assessment.tests.weighted_pullup_1rm_total_kg`
+- `bodyweight_kg` — from `bodyweight_kg`
+- `max_external_load_kg` — derived: `1rm_total - bodyweight`
+- `source` — `"assessment"` (estimated), `"test_session"` (from explicit test feedback)
+- `updated_at` — ISO date
+
+Affects:
+- `weighted_pullup` (total_load): phase × intensity → % of 1RM
+- `barbell_row` (external_load): `max_external_load_kg × 0.60`
+- `face_pull` (external_load): `max_external_load_kg × 0.15`
+
 #### Suggestion fields per load_model
 
 | load_model | suggested fields | source |
 |------------|-----------------|--------|
-| `total_load` | `suggested_total_load_kg`, `suggested_external_load_kg`, `suggested_rep_scheme` | baselines.hangboard → working_loads |
-| `external_load` | `suggested_external_load_kg`, `suggested_rep_scheme` | working_loads → BW% fallback |
+| `total_load` | `suggested_total_load_kg`, `suggested_external_load_kg`, `suggested_rep_scheme` | baselines.hangboard / baselines.pulling → working_loads |
+| `external_load` | `suggested_external_load_kg`, `suggested_rep_scheme` | working_loads → transfer → baselines.pulling → BW% fallback |
 | `grade_relative` | `suggested_grade`, `grade_ref`, `grade_offset` | assessment.grades + prescription_defaults |
 | `grade_relative` (limit_bouldering) | `suggested_boulder_target` (with surface) | special surface-aware logic |
 | `bodyweight_only` | — | no suggestion needed |

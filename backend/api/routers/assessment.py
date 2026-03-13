@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.api.deps import get_user_id, load_state, save_state
 from backend.api.models import AssessmentRequest
 from backend.engine.assessment_v1 import compute_assessment_profile
+from backend.engine.progression_v1 import estimate_missing_baselines
 
 router = APIRouter(prefix="/api/assessment", tags=["assessment"])
 
@@ -31,6 +32,7 @@ def compute_assessment(req: AssessmentRequest, user_id: Optional[str] = Depends(
 
     # Save profile into state
     state.setdefault("assessment", {})["profile"] = profile
+    estimate_missing_baselines(state)  # B121: re-estimate pulling baseline from test results
     save_state(state, user_id)
 
     return {"profile": profile}

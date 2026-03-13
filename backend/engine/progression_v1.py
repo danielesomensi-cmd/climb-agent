@@ -56,6 +56,37 @@ _SIMILARITY_GROUPS: Dict[str, Dict[str, float]] = {
         "split_squat": 1.0,
         "goblet_squat": 0.80,
     },
+    "pull": {
+        "barbell_row": 1.0,
+        "face_pull": 0.25,
+    },
+}
+
+# Pulling baseline: % of 1RM by (phase, session_intensity) for weighted_pullup.
+# Session intensity comes from _intensity_label(): "easy" / "medium" / "hard".
+PULLING_1RM_PCT: Dict[Tuple[str, str], float] = {
+    ("base", "easy"): 0.55,
+    ("base", "medium"): 0.625,
+    ("base", "hard"): 0.70,
+    ("strength_power", "easy"): 0.65,
+    ("strength_power", "medium"): 0.75,
+    ("strength_power", "hard"): 0.825,
+    ("power_endurance", "easy"): 0.55,
+    ("power_endurance", "medium"): 0.675,
+    ("power_endurance", "hard"): 0.75,
+    ("performance", "easy"): 0.60,
+    ("performance", "medium"): 0.75,
+    ("performance", "hard"): 0.845,
+    ("deload", "easy"): 0.525,
+    ("deload", "medium"): 0.525,
+    ("deload", "hard"): 0.525,
+}
+PULLING_1RM_PCT_DEFAULT = 0.70
+
+# Scaling factors for external_load pulling exercises relative to max_external_load_kg.
+PULLING_EXTERNAL_SCALING: Dict[str, float] = {
+    "barbell_row": 0.60,
+    "face_pull": 0.15,
 }
 
 # Inverted index: exercise_id → (group_name, coefficient)
@@ -159,6 +190,30 @@ def _parse_day(value: str | None) -> Optional[datetime]:
         return datetime.strptime(value, "%Y-%m-%d")
     except ValueError:
         return None
+
+
+def _get_current_phase_id(user_state: Dict[str, Any], date_str: str) -> str:
+    """Extract phase_id from macrocycle for a given date."""
+    mc = user_state.get("macrocycle") or {}
+    phases = mc.get("phases") or []
+    if not phases:
+        return "base"
+    start = _parse_day(mc.get("start_date"))
+    target = _parse_day(date_str)
+    if not start or not target:
+        return str(phases[0].get("phase_id", "base"))
+    elapsed_weeks = max(0, (target - start).days // 7)
+    cumulative = 0
+    for phase in phases:
+        cumulative += phase.get("duration_weeks", 1)
+        if elapsed_weeks < cumulative:
+            return str(phase.get("phase_id", "base"))
+    return str(phases[-1].get("phase_id", "base"))
+
+
+def _get_pulling_baseline(user_state: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Return baselines.pulling dict or None."""
+    return (user_state.get("baselines") or {}).get("pulling")
 
 
 def _is_fresh(updated_at: str | None, target_date: str | None, freshness_days: int) -> bool:
@@ -508,9 +563,17 @@ def _loading_pin_suggested(
 
 
 def estimate_missing_baselines(user_state: Dict[str, Any]) -> None:
-    """Fill missing hangboard baseline from grade or pullup test (NEW-F11).
+    """Fill missing hangboard and pulling baselines from grade/pullup test.
 
     Modifies user_state in-place. Never overwrites a baseline whose source == "test".
+    """
+    _estimate_hangboard_baseline(user_state)
+    _estimate_pulling_baseline(user_state)
+
+
+def _estimate_hangboard_baseline(user_state: Dict[str, Any]) -> None:
+    """Fill missing hangboard baseline from grade or pullup test (NEW-F11).
+
     Triggers when max_total_load_kg is absent, null, or <= (bodyweight - 10).
     """
     bodyweight = _get_bodyweight(user_state)
@@ -542,13 +605,13 @@ def estimate_missing_baselines(user_state: Dict[str, Any]) -> None:
         grade_used = lead_rp
         source = "estimated_from_grade"
     else:
-        # Priority 2: estimate from max weighted pullup test
-        pullup_kg = (
+        # Priority 2: estimate from max weighted pullup test (B121 key fix)
+        pullup_1rm_total = (
             ((user_state.get("assessment") or {}).get("tests") or {})
-            .get("max_weighted_pullup_kg")
+            .get("weighted_pullup_1rm_total_kg")
         )
-        if pullup_kg is not None:
-            estimated = (bodyweight + float(pullup_kg)) * 0.85
+        if pullup_1rm_total is not None:
+            estimated = float(pullup_1rm_total) * 0.85
             source = "estimated_from_pullup"
 
     if estimated is None:
@@ -575,10 +638,47 @@ def estimate_missing_baselines(user_state: Dict[str, Any]) -> None:
         user_state["baselines"]["hangboard"] = [new_entry]
 
 
+def _estimate_pulling_baseline(user_state: Dict[str, Any]) -> None:
+    """Fill baselines.pulling from assessment.tests.weighted_pullup_1rm_total_kg (B121).
+
+    Never overwrites a baseline whose source == "test" or "test_session".
+    """
+    pulling = (user_state.get("baselines") or {}).get("pulling") or {}
+    if pulling.get("source") in ("test", "test_session"):
+        return
+
+    bodyweight = _get_bodyweight(user_state)
+    if bodyweight <= 0:
+        return
+
+    pullup_1rm_total = (
+        ((user_state.get("assessment") or {}).get("tests") or {})
+        .get("weighted_pullup_1rm_total_kg")
+    )
+    if pullup_1rm_total is None:
+        return
+
+    pullup_1rm_total = float(pullup_1rm_total)
+    max_external = _round_half_step(pullup_1rm_total - bodyweight)
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    new_pulling: Dict[str, Any] = {
+        "weighted_pullup_1rm_total_kg": _round_half_step(pullup_1rm_total),
+        "bodyweight_kg": bodyweight,
+        "max_external_load_kg": max_external,
+        "source": "assessment",
+        "updated_at": today,
+    }
+
+    if not user_state.get("baselines"):
+        user_state["baselines"] = {}
+    user_state["baselines"]["pulling"] = new_pulling
+
+
 def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
     out = deepcopy(resolved_day)
     user_state = deepcopy(user_state)  # Work on a local copy — don't mutate caller state
-    estimate_missing_baselines(user_state)  # Fill missing hangboard baseline (NEW-F11)
+    estimate_missing_baselines(user_state)  # Fill missing hangboard + pulling baselines
     out["targets_schema_version"] = "progression_targets.v1"
     benchmark_grade = _extract_grade_benchmark(user_state)
 
@@ -616,9 +716,24 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         write_entry["next_external_load_kg"] = next_external
                         write_entry["updated_at"] = out.get("date")
                 else:
+                    # weighted_pullup: working_loads → baselines.pulling → bodyweight (B121)
                     entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
-                    next_external = float((entry or {}).get("next_external_load_kg") or 0.0)
                     bodyweight = _get_bodyweight(user_state)
+                    next_external: float = 0.0
+                    load_source: Optional[str] = None
+
+                    if entry and entry.get("next_external_load_kg") is not None:
+                        next_external = float(entry["next_external_load_kg"])
+                    else:
+                        pulling = _get_pulling_baseline(user_state)
+                        if pulling and pulling.get("weighted_pullup_1rm_total_kg"):
+                            rm_total = float(pulling["weighted_pullup_1rm_total_kg"])
+                            phase_id = _get_current_phase_id(user_state, out.get("date") or "")
+                            pct = PULLING_1RM_PCT.get((phase_id, intensity), PULLING_1RM_PCT_DEFAULT)
+                            target_total = _round_half_step(rm_total * pct)
+                            next_external = max(0.0, _round_half_step(target_total - bodyweight))
+                            load_source = "baselines.pulling"
+
                     reps = prescription.get("reps") or (prescription.get("reps_range") or [5])[0]
                     sets = prescription.get("sets") or (prescription.get("sets_range") or [4])[0]
                     suggested.update({
@@ -627,6 +742,8 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         "suggested_total_load_kg": _round_half_step(bodyweight + next_external),
                         "suggested_rep_scheme": f"{sets}x{reps}",
                     })
+                    if load_source:
+                        suggested["load_source"] = load_source
 
             if ex_id == "limit_bouldering":
                 options = _surface_options(user_state, session.get("gym_id"))
@@ -672,6 +789,18 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     if transferred is not None:
                         next_load = transferred
                         suggested["load_source"] = "transferred"
+                    elif ex_id in PULLING_EXTERNAL_SCALING:
+                        # B121: use baselines.pulling as anchor for pulling exercises
+                        pulling = _get_pulling_baseline(user_state)
+                        if pulling and pulling.get("max_external_load_kg"):
+                            max_ext = float(pulling["max_external_load_kg"])
+                            scaling = PULLING_EXTERNAL_SCALING[ex_id]
+                            next_load = _round_half_step(max_ext * scaling)
+                            suggested["load_source"] = "baselines.pulling"
+                        else:
+                            bw = _get_bodyweight(user_state)
+                            pct = EXTERNAL_LOAD_FALLBACK_PCT_BW.get(ex_id, 0.15)
+                            next_load = _round_half_step(bw * pct)
                     else:
                         bw = _get_bodyweight(user_state)
                         pct = EXTERNAL_LOAD_FALLBACK_PCT_BW.get(ex_id, 0.15)
@@ -911,6 +1040,15 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             pull_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
             # Write scalar to assessment.tests
             at["weighted_pullup_1rm_total_kg"] = total
+            # B121: update baselines.pulling from test
+            pulling_baselines = updated.setdefault("baselines", {})
+            pulling_baselines["pulling"] = {
+                "weighted_pullup_1rm_total_kg": total,
+                "bodyweight_kg": bodyweight,
+                "max_external_load_kg": external,
+                "source": "test_session",
+                "updated_at": date_str,
+            }
 
         # --- Loading pin max test 5s ---
         elif exercise_id == "lp_max_test_5s":

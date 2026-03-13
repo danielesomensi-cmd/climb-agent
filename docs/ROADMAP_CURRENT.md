@@ -33,6 +33,7 @@ Open items that affect production reliability or core UX.
 | ~~B118~~ | ~~P0: Equipment regen resetta macrociclo a week 1~~ | ~~S~~ | Done: `handleRegenSheetConfirm()` chiamava `generateMacrocycle()` senza `from_phase`, causando full regen (start_date=this_monday). Fix: passa `from_phase="current"` per tutti i path tranne Danger Zone restart. Audit: `plan/page.tsx` già corretto, `onboarding.py` correttamente full. 6 test + restore script. |
 | ~~B119~~ | ~~P0: start_date must always be a Monday~~ | ~~S~~ | Done: `ensure_monday()` in `deps.py` auto-corrects non-Monday dates to previous Monday. Applied at all setters: state PUT, macrocycle generate (full+incremental), start-week shift, engine `generate_macrocycle()`. 15 new tests, zero regressions. Invariant documented in vocabulary_v1.md §5.5.1. Production patched to 2026-02-23. |
 | ~~B121~~ | ~~Planner non riempie tutti gli slot disponibili~~ | ~~M~~ | Done: Pass 2.2 in planner_v2 — quando un giorno ha più slot (es. lunch+evening) e `target_days > sessions piazzate`, riempie gli slot extra con sessioni non-hard. `_find_best_slot` ora accetta `occupied_slots` per evitare conflitti. 8 nuovi test. |
+| ~~B122~~ | ~~P0: Weighted pullup bodyweight-only (baselines.pulling)~~ | ~~M~~ | Done: `baselines.pulling` schema (1rm_total, bodyweight, max_external, source, updated_at). Resolver fallback: working_loads → baselines.pulling → BW. Phase×intensity % table for weighted_pullup. External_load pulling (barbell_row, face_pull) uses max_external×scaling. Key mismatch fix (max_weighted_pullup_kg → weighted_pullup_1rm_total_kg). "pull" similarity group. Test feedback updates baselines.pulling. 20 test. |
 
 ---
 
@@ -111,6 +112,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | — | Override intensity cap warning | Warn when user overrides with session above current phase intensity cap. |
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
+| — | Test results → exercise calibration | Use ALL assessment test results (repeaters, max hang duration, L-sit, hip flexibility) to calibrate exercise difficulty and prescription — not just for radar profile. E.g.: repeater max sets → finger endurance set count; L-sit hold → core exercise progression tier; max hang duration → endurance hang prescriptions. Requires: mapping table test_result → affected exercises → calibration formula. |
 | ~~B105~~ | ~~Gym lookup disallineato~~ | Chiuso: nessun mismatch trovato (audit 2026-03-10). |
 | ~~B112~~ | ~~Equipment filter in Add Exercise~~ | Done: frontend-only equipment filtering in AddExerciseDialog. `expandEquipment()` replicates backend implicit equipment expansion (floor, weight subtypes, loading_pin→hangboard, gym→pullup_bar). `isExerciseCompatible()` applies AND/OR equipment checks matching resolver Stage 2. Toggle "Show all exercises" reveals hidden items with "Missing equipment" badge. Equipment context passed via props: page→DayCard→SessionCard→dialog. Backend unchanged. |
 
