@@ -61,6 +61,34 @@ These must be done before paid launch.
 
 ---
 
+## Priority 2b — Test results → full exercise calibration
+
+> Prerequisite: B122 (baselines.pulling) establishes the pattern. This phase extends it to ALL test results.
+
+Principle: every test result we collect MUST influence exercise prescription — if it doesn't affect anything, we shouldn't ask for it.
+
+|Test result                  |Current use                  |New use                                                                                                                                                                                                           |Impact                           |
+|-----------------------------|-----------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------|
+|L-sit hold (sec)             |radar `body_composition` only|**Core progression tier**: tier 1 (<10s) = dead bug, plank; tier 2 (10-30s) = L-sit raises, hanging leg raise; tier 3 (30s+) = dragon flag, front lever progressions. Resolver selects from tier-appropriate pool.|Exercise selection + prescription|
+|Hip flexibility straddle (cm)|radar `body_composition` only|**Mobility tier**: skip acquired stretches (>140cm = no basic straddle), propose advanced progressions (pancake, middle split). Reduce wasted time on easy drills.                                                |Exercise selection               |
+|Repeater 7/3 max sets        |radar `power_endurance` only |**Finger endurance volume calibration**: max sets → working set count. 4 max → 3 work sets; 8 max → 5-6 work sets. Scales finger endurance session density.                                                       |Prescription (sets/volume)       |
+|Max hang duration (sec)      |radar `endurance` only       |**Endurance hang calibration**: scales hang times in endurance sessions. 30s max vs 90s max → different prescribed durations. May also influence rest periods.                                                    |Prescription (time)              |
+
+Architecture pattern (uniform for all):
+
+```
+test_result → tier OR scaling_factor
+  → resolver uses tier/factor for:
+    a) exercise pool filtering (tier-based selection)
+    b) reps/sets/tempo scaling (prescription adjustment)
+    c) initial progression starting point
+```
+
+Depends on: B122 pattern established, Supabase migration (for proper schema).
+Feeds into: Phase 3.5 LLM Coach (coach explains "why" using tier context).
+
+---
+
 ## Priority 3 — UI polish (parallel with P2)
 
 Items that affect first impression for paying users.
