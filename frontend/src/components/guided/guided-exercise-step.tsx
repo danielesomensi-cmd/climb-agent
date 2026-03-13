@@ -14,7 +14,7 @@ interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
   isTestSession?: boolean;
   bodyweightKg?: number;
-  onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number) => void;
+  onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number }) => void;
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
 }
@@ -88,12 +88,15 @@ export function GuidedExerciseStep({
 }: GuidedExerciseStepProps) {
   const [feedback, setFeedback] = useState(exercise.feedbackLabel || "ok");
   const [loadInput, setLoadInput] = useState("");
+  const [loadInputRight, setLoadInputRight] = useState("");
+  const [loadInputLeft, setLoadInputLeft] = useState("");
   const [gradeInput, setGradeInput] = useState("");
   const [measurementInput, setMeasurementInput] = useState("");
   const [setsInput, setSetsInput] = useState("");
 
   // Test measurement exercises: just a number input, no feedback
   const isTestMeasurement = exercise.category === "test_measurement" && !!exercise.testField;
+  const isUnilateral = exercise.unilateral === true;
 
   // Repeater test: primary metric is sets completed, not load
   const isRepeaterTest = isTestSession && exercise.exerciseId === "repeater_hang_7_3";
@@ -115,6 +118,17 @@ export function GuidedExerciseStep({
       setLoadInput(String(exercise.usedLoadKg));
     } else if (exercise.suggested.externalLoadKg != null) {
       setLoadInput(String(exercise.suggested.externalLoadKg));
+    }
+    // Per-hand loads (unilateral LP exercises)
+    if (exercise.usedLoadKgRight != null) {
+      setLoadInputRight(String(exercise.usedLoadKgRight));
+    } else if (exercise.suggested.rightHand?.externalLoadKg != null) {
+      setLoadInputRight(String(exercise.suggested.rightHand.externalLoadKg));
+    }
+    if (exercise.usedLoadKgLeft != null) {
+      setLoadInputLeft(String(exercise.usedLoadKgLeft));
+    } else if (exercise.suggested.leftHand?.externalLoadKg != null) {
+      setLoadInputLeft(String(exercise.suggested.leftHand.externalLoadKg));
     }
     if (exercise.usedGrade != null) {
       setGradeInput(exercise.usedGrade);
@@ -227,6 +241,13 @@ export function GuidedExerciseStep({
         ? bodyweightKg + usedExternal
         : undefined;
       onDone(feedback, usedExternal, undefined, usedTotal);
+      return;
+    }
+    // Unilateral exercises: pass per-hand loads
+    if (isUnilateral) {
+      const right = loadInputRight ? parseFloat(loadInputRight) : undefined;
+      const left = loadInputLeft ? parseFloat(loadInputLeft) : undefined;
+      onDone(feedback, undefined, undefined, undefined, undefined, { right, left });
       return;
     }
     const usedLoad = hasLoadField && loadInput ? parseFloat(loadInput) : undefined;
@@ -350,8 +371,31 @@ export function GuidedExerciseStep({
           </div>
         ) : (
           <>
-            {/* Suggested load/grade */}
-            {(exercise.suggested.externalLoadKg != null ||
+            {/* Suggested load/grade — unilateral (per-hand) */}
+            {isUnilateral && (exercise.suggested.rightHand?.externalLoadKg != null || exercise.suggested.leftHand?.externalLoadKg != null) && (
+              <div className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 p-3">
+                <Lightbulb className="size-4 text-primary mt-0.5 shrink-0" />
+                <div className="text-sm space-y-0.5 w-full">
+                  <div className="grid grid-cols-2 gap-3">
+                    <p>
+                      Right: <span className="font-semibold">+{exercise.suggested.rightHand?.externalLoadKg ?? 0} kg</span>
+                    </p>
+                    <p>
+                      Left: <span className="font-semibold">+{exercise.suggested.leftHand?.externalLoadKg ?? 0} kg</span>
+                    </p>
+                  </div>
+                  {exercise.suggested.repScheme && (
+                    <p className="text-xs text-muted-foreground">{exercise.suggested.repScheme}</p>
+                  )}
+                  {exercise.suggested.loadSource === "estimated" && (
+                    <p className="text-xs text-muted-foreground">(estimated from hangboard baseline)</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Suggested load/grade — bilateral */}
+            {!isUnilateral && (exercise.suggested.externalLoadKg != null ||
               exercise.suggested.totalLoadKg != null ||
               exercise.suggested.grade != null) && (
               <div className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 p-3">
@@ -514,8 +558,43 @@ export function GuidedExerciseStep({
               </div>
             )}
 
-            {/* Editable load field (non-test sessions) */}
-            {hasLoadField && (
+            {/* Editable load fields — unilateral (per-hand) */}
+            {isUnilateral && !isTestMeasurement && (
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">
+                  Actual load used (kg)
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="load-right" className="text-[11px] text-muted-foreground">Right hand</Label>
+                    <Input
+                      id="load-right"
+                      type="number"
+                      step="0.5"
+                      value={loadInputRight}
+                      onChange={(e) => setLoadInputRight(e.target.value)}
+                      className="h-9"
+                      placeholder="kg"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="load-left" className="text-[11px] text-muted-foreground">Left hand</Label>
+                    <Input
+                      id="load-left"
+                      type="number"
+                      step="0.5"
+                      value={loadInputLeft}
+                      onChange={(e) => setLoadInputLeft(e.target.value)}
+                      className="h-9"
+                      placeholder="kg"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Editable load field — bilateral (non-test sessions) */}
+            {hasLoadField && !isUnilateral && (
               <div className="space-y-1.5">
                 <Label htmlFor="load-input" className="text-xs text-muted-foreground">
                   Actual load used (kg)

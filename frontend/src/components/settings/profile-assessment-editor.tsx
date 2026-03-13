@@ -38,6 +38,7 @@ const BOULDER_GRADES = [
 interface ProfileAssessmentEditorProps {
   open: boolean;
   currentAssessment: Record<string, unknown>;
+  fingerDevice?: "hangboard" | "loading_pin";
   onConfirm: (patch: Record<string, unknown>) => void;
   onCancel: () => void;
   saving: boolean;
@@ -46,6 +47,7 @@ interface ProfileAssessmentEditorProps {
 export function ProfileAssessmentEditor({
   open,
   currentAssessment,
+  fingerDevice = "hangboard",
   onConfirm,
   onCancel,
   saving,
@@ -68,6 +70,8 @@ export function ProfileAssessmentEditor({
 
   // Tests (optional)
   const [maxHang, setMaxHang] = useState<string>("");
+  const [lpRight, setLpRight] = useState<string>("");
+  const [lpLeft, setLpLeft] = useState<string>("");
   const [weightedPullup, setWeightedPullup] = useState<string>("");
   const [repeater, setRepeater] = useState<string>("");
   const [hangDuration, setHangDuration] = useState<string>("");
@@ -84,6 +88,8 @@ export function ProfileAssessmentEditor({
       setBoulderMaxRp(grades.boulder_max_rp ?? "");
       setBoulderMaxOs(grades.boulder_max_os ?? "");
       setMaxHang(tests.max_hang_20mm_5s_total_kg != null ? String(tests.max_hang_20mm_5s_total_kg) : "");
+      setLpRight(tests.lp_max_lift_5s_right_kg != null ? String(tests.lp_max_lift_5s_right_kg) : "");
+      setLpLeft(tests.lp_max_lift_5s_left_kg != null ? String(tests.lp_max_lift_5s_left_kg) : "");
       setWeightedPullup(tests.weighted_pullup_1rm_total_kg != null ? String(tests.weighted_pullup_1rm_total_kg) : "");
       setRepeater(tests.repeater_7_3_max_sets_20mm != null ? String(tests.repeater_7_3_max_sets_20mm) : "");
       setHangDuration(tests.max_hang_duration_20mm_seconds != null ? String(tests.max_hang_duration_20mm_seconds) : "");
@@ -110,9 +116,14 @@ export function ProfileAssessmentEditor({
     if (boulderMaxOs) gradesPatch.boulder_max_os = boulderMaxOs;
     patch.grades = gradesPatch;
 
-    // Tests
+    // Tests — show only the selected finger device's baseline
     const testsPatch: Record<string, number> = {};
-    if (maxHang !== "") testsPatch.max_hang_20mm_5s_total_kg = parseFloat(maxHang);
+    if (fingerDevice === "loading_pin") {
+      if (lpRight !== "") testsPatch.lp_max_lift_5s_right_kg = parseFloat(lpRight);
+      if (lpLeft !== "") testsPatch.lp_max_lift_5s_left_kg = parseFloat(lpLeft);
+    } else {
+      if (maxHang !== "") testsPatch.max_hang_20mm_5s_total_kg = parseFloat(maxHang);
+    }
     if (weightedPullup !== "") testsPatch.weighted_pullup_1rm_total_kg = parseFloat(weightedPullup);
     if (repeater !== "") testsPatch.repeater_7_3_max_sets_20mm = parseFloat(repeater);
     if (hangDuration !== "") testsPatch.max_hang_duration_20mm_seconds = parseFloat(hangDuration);
@@ -243,17 +254,47 @@ export function ProfileAssessmentEditor({
               <div className="space-y-3">
                 <p className="text-sm font-semibold">Test results <span className="font-normal text-muted-foreground">(optional)</span></p>
                 <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pa-maxhang">Max hang 20mm / 5s — total kg</Label>
-                    <Input
-                      id="pa-maxhang"
-                      type="number"
-                      step="0.5"
-                      placeholder="e.g. 90"
-                      value={maxHang}
-                      onChange={(e) => setMaxHang(e.target.value)}
-                    />
-                  </div>
+                  {fingerDevice === "loading_pin" ? (
+                    <div className="space-y-1.5">
+                      <Label>Loading Pin Max Lift 5s — external kg (per hand)</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label htmlFor="pa-lp-right" className="text-xs text-muted-foreground">Right</Label>
+                          <Input
+                            id="pa-lp-right"
+                            type="number"
+                            step="0.5"
+                            placeholder="e.g. 35"
+                            value={lpRight}
+                            onChange={(e) => setLpRight(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor="pa-lp-left" className="text-xs text-muted-foreground">Left</Label>
+                          <Input
+                            id="pa-lp-left"
+                            type="number"
+                            step="0.5"
+                            placeholder="e.g. 33"
+                            value={lpLeft}
+                            onChange={(e) => setLpLeft(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="pa-maxhang">Max hang 20mm / 5s — total kg</Label>
+                      <Input
+                        id="pa-maxhang"
+                        type="number"
+                        step="0.5"
+                        placeholder="e.g. 90"
+                        value={maxHang}
+                        onChange={(e) => setMaxHang(e.target.value)}
+                      />
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                     <Label htmlFor="pa-pullup">Weighted pullup 1RM — total kg</Label>
                     <Input

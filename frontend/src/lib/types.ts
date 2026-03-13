@@ -450,6 +450,7 @@ export interface GuidedExercise {
   category: string;
   blockUid: string;
   loadModel: string;
+  unilateral?: boolean;
 
   // Instruction-only blocks (warmup, mobility) — no exercise selection
   isInstructionOnly?: boolean;
@@ -478,6 +479,8 @@ export interface GuidedExercise {
     surface?: string;
     loadSource?: string;   // "estimated" if derived from grade/pullup (no real test)
     loadWarning?: string;  // "counterweight_required..." if external < 0
+    rightHand?: { externalLoadKg?: number };
+    leftHand?: { externalLoadKg?: number };
   };
 
   videoUrl?: string;
@@ -492,6 +495,8 @@ export interface GuidedExercise {
   status: "pending" | "done" | "skipped";
   feedbackLabel: string;
   usedLoadKg?: number;
+  usedLoadKgRight?: number;
+  usedLoadKgLeft?: number;
   usedTotalLoadKg?: number;
   usedGrade?: string;
   completedSets?: number;  // sets completed within this exercise (for timer resume)

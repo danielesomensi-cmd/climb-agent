@@ -91,6 +91,8 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
   const prescription = (inst.prescription ?? {}) as Record<string, unknown>;
   const suggested = (inst.suggested ?? {}) as Record<string, unknown>;
   const boulderTarget = (suggested.suggested_boulder_target ?? {}) as Record<string, unknown>;
+  const rightHand = suggested.right_hand as Record<string, unknown> | undefined;
+  const leftHand = suggested.left_hand as Record<string, unknown> | undefined;
 
   return {
     exerciseId: (inst.exercise_id as string) ?? "",
@@ -98,6 +100,7 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
     category: (inst.category as string) ?? "",
     blockUid: (inst.block_uid as string) ?? "",
     loadModel: (inst.load_model as string) ?? "",
+    unilateral: !!(inst.unilateral ?? rightHand),
     prescription: {
       sets: prescription.sets as number | undefined,
       reps: prescription.reps != null ? (prescription.reps as string | number) : undefined,
@@ -117,6 +120,8 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
       surface: boulderTarget.surface_selected as string | undefined,
       loadSource: suggested.load_source as string | undefined,
       loadWarning: suggested.load_warning as string | undefined,
+      rightHand: rightHand ? { externalLoadKg: rightHand.suggested_external_load_kg as number | undefined } : undefined,
+      leftHand: leftHand ? { externalLoadKg: leftHand.suggested_external_load_kg as number | undefined } : undefined,
     },
     videoUrl: (inst.video_url as string | undefined) ?? undefined,
     cues: (inst.cues as string[] | undefined) ?? undefined,
@@ -526,6 +531,12 @@ export function SessionCard({
     const rs = r?.resolved_session as Record<string, unknown> | undefined;
     return ((rs?.exercise_instances ?? []) as unknown[]).length > 0;
   })();
+  const hasLoadingPin = (() => {
+    const r = session.resolved as Record<string, unknown> | undefined;
+    const rs = r?.resolved_session as Record<string, unknown> | undefined;
+    const instances = (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
+    return instances.some((i) => String(i.exercise_id ?? "").startsWith("lp_"));
+  })();
 
   return (
     <>
@@ -573,6 +584,11 @@ export function SessionCard({
             {isFinger && (
               <Badge className="bg-orange-500 text-white text-[10px]">
                 Finger
+              </Badge>
+            )}
+            {hasLoadingPin && (
+              <Badge className="bg-purple-500 text-white text-[10px]">
+                Loading Pin
               </Badge>
             )}
             {session.estimated_load_score != null && (

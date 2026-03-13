@@ -171,7 +171,7 @@ export default function GuidedSessionPage() {
   );
 
   const handleDone = useCallback(
-    (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number) => {
+    (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number }) => {
       if (!state) return;
       const idx = state.currentIndex;
 
@@ -182,6 +182,8 @@ export default function GuidedSessionPage() {
         usedTotalLoadKg: usedTotalLoad,
         usedGrade,
         testMeasurement,
+        usedLoadKgRight: perHand?.right,
+        usedLoadKgLeft: perHand?.left,
       });
 
       // Advance to next exercise or show summary
@@ -279,7 +281,25 @@ export default function GuidedSessionPage() {
       });
 
       // 2. Build and send feedback (exclude instruction-only blocks)
-      const exerciseFeedback = finalExercises.filter((ex) => !ex.isInstructionOnly).map((ex) => {
+      const exerciseFeedback: Record<string, unknown>[] = [];
+      for (const ex of finalExercises) {
+        if (ex.isInstructionOnly) continue;
+
+        // Unilateral exercises: split into per-hand feedback entries
+        if (ex.unilateral && (ex.usedLoadKgRight != null || ex.usedLoadKgLeft != null)) {
+          for (const hand of ["right", "left"] as const) {
+            const load = hand === "right" ? ex.usedLoadKgRight : ex.usedLoadKgLeft;
+            exerciseFeedback.push({
+              exercise_id: ex.exerciseId,
+              feedback_label: ex.feedbackLabel,
+              completed: ex.status === "done",
+              hand,
+              used_external_load_kg: load,
+            });
+          }
+          continue;
+        }
+
         const item: Record<string, unknown> = {
           exercise_id: ex.exerciseId,
           feedback_label: ex.feedbackLabel,
@@ -309,8 +329,8 @@ export default function GuidedSessionPage() {
         if (ex.testField && ex.testMeasurement != null) {
           item[ex.testField] = ex.testMeasurement;
         }
-        return item;
-      });
+        exerciseFeedback.push(item);
+      }
 
       const durationSeconds = Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000));
 

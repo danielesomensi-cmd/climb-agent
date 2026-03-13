@@ -1106,6 +1106,7 @@ export default function SettingsPage() {
       <ProfileAssessmentEditor
         open={profileEditorOpen}
         currentAssessment={assessment}
+        fingerDevice={fingerDevice}
         onConfirm={handleProfileConfirm}
         onCancel={() => setProfileEditorOpen(false)}
         saving={savingProfile}
