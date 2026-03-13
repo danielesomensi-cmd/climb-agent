@@ -63,8 +63,8 @@ class TestBaselineSessionUnderTest(unittest.TestCase):
         out = run_case("gym", "blocx")
         self.assertEqual(out.get("resolution_status"), "success")
         # Warmup climbing template
-        self.assert_instruction_only(out, "warmup_climbing.pulse_raise", must_have_keys=("options", "duration_min_range"))
-        self.assert_instruction_only(out, "warmup_climbing.mobility", must_have_keys=("focus", "duration_min_range"))
+        self.assert_selected(out, "warmup_climbing.pulse_raise")
+        self.assert_selected(out, "warmup_climbing.mobility")
         self.assert_selected(out, "warmup_climbing.upper_activation")
         # Finger max strength template
         self.assert_selected(out, "finger_max_strength.warmup_specific")

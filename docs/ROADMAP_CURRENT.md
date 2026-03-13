@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-12
+> Last updated: 2026-03-13
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -34,6 +34,9 @@ Open items that affect production reliability or core UX.
 | ~~B119~~ | ~~P0: start_date must always be a Monday~~ | ~~S~~ | Done: `ensure_monday()` in `deps.py` auto-corrects non-Monday dates to previous Monday. Applied at all setters: state PUT, macrocycle generate (full+incremental), start-week shift, engine `generate_macrocycle()`. 15 new tests, zero regressions. Invariant documented in vocabulary_v1.md §5.5.1. Production patched to 2026-02-23. |
 | ~~B121~~ | ~~Planner non riempie tutti gli slot disponibili~~ | ~~M~~ | Done: Pass 2.2 in planner_v2 — quando un giorno ha più slot (es. lunch+evening) e `target_days > sessions piazzate`, riempie gli slot extra con sessioni non-hard. `_find_best_slot` ora accetta `occupied_slots` per evitare conflitti. 8 nuovi test. |
 | ~~B122~~ | ~~P0: Weighted pullup bodyweight-only (baselines.pulling)~~ | ~~M~~ | Done: `baselines.pulling` schema (1rm_total, bodyweight, max_external, source, updated_at). Resolver fallback: working_loads → baselines.pulling → BW. Phase×intensity % table for weighted_pullup. External_load pulling (barbell_row, face_pull) uses max_external×scaling. Key mismatch fix (max_weighted_pullup_kg → weighted_pullup_1rm_total_kg). "pull" similarity group. Test feedback updates baselines.pulling. 20 test. |
+| ~~D121~~ | ~~Audit: Timer mancanti + Load tracking mancante~~ | ~~M~~ | Done: audit completo 162 esercizi — timer coverage 156/162, load_model distribution mappata. Prehab load tracking (A123 Part 4): 4 esercizi prehab (wrist_curl, reverse_wrist_curl, forearm_pronation_supination, elbow_eccentric_curl) promossi a `external_load` con fallback fissi in kg. |
+| ~~B124~~ | ~~Manual rep loop timer (technique drills, limit bouldering)~~ | ~~S~~ | Done: `hasManualRepLoop` in ExerciseTimer — manual work (`workSeconds=0`) con `reps > 1` e `restBetweenRepsSeconds > 0` cicla rep→rep_rest→rep. Tap "Done rep" avanza, countdown rest tra rep. |
+| ~~A123~~ | ~~Timer enlarge button + voice encouragement pool~~ | ~~M~~ | Done: (1) Expand button bordato con icona Maximize2 + testo "Expand", min 44x44px. Enlarged overlay fullscreen (`bg-[#0a0a0a]`, numeri 120px, phase label colorata, set/rep counter). Tap = play/pause, X o swipe down = chiudi. (2) Voice pool: 8 frasi (3 it-IT, 1 es-ES, 4 en-US), 30% chance su phase "work" al posto di "Go". Lang settato su SpeechSynthesisUtterance. (3) Prehab load tracking: 4 esercizi → `external_load`, fallback fissi (Tyler Twist 1.5kg, pronazione/supinazione 1.0kg, wrist curl 3.0kg, reverse wrist curl 2.0kg). |
 
 ---
 

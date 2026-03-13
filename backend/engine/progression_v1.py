@@ -29,6 +29,9 @@ EXTERNAL_LOAD_EXERCISES = {
     "barbell_row", "bench_press", "dumbbell_bench_press", "face_pull",
     "farmers_carry", "goblet_squat", "overhead_press", "romanian_deadlift",
     "split_squat", "turkish_getup",
+    # Prehab — light fixed loads (A123)
+    "elbow_eccentric_curl", "forearm_pronation_supination",
+    "wrist_curl", "reverse_wrist_curl",
 }
 EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "barbell_row": 0.30,
@@ -41,6 +44,14 @@ EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "romanian_deadlift": 0.40,
     "split_squat": 0.15,
     "turkish_getup": 0.15,
+}
+
+# Fixed fallback in kg for prehab exercises — bodyweight-% makes no sense here (A123).
+EXTERNAL_LOAD_FALLBACK_FIXED_KG: dict[str, float] = {
+    "elbow_eccentric_curl": 1.5,         # Tyler Twist — light dumbbell
+    "forearm_pronation_supination": 1.0,  # hammer / light dumbbell
+    "wrist_curl": 3.0,                   # wrist flexion
+    "reverse_wrist_curl": 2.0,           # wrist extension
 }
 
 # Similarity groups for cross-exercise load transfer (B90).
@@ -789,6 +800,9 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     if transferred is not None:
                         next_load = transferred
                         suggested["load_source"] = "transferred"
+                    elif ex_id in EXTERNAL_LOAD_FALLBACK_FIXED_KG:
+                        # A123: prehab — fixed fallback in kg (not bodyweight-%)
+                        next_load = EXTERNAL_LOAD_FALLBACK_FIXED_KG[ex_id]
                     elif ex_id in PULLING_EXTERNAL_SCALING:
                         # B121: use baselines.pulling as anchor for pulling exercises
                         pulling = _get_pulling_baseline(user_state)

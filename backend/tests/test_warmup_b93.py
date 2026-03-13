@@ -61,50 +61,43 @@ def _resolve(session_name="strength_long"):
     )
 
 
-class TestInstructionOnlyBlocks:
-    """Verify instruction_only blocks appear in resolver output with instructions."""
+class TestWarmupBlocksResolveExercises:
+    """B124: warmup blocks now resolve to real exercises (no longer instruction_only)."""
 
-    def test_instruction_only_blocks_in_output(self):
-        """Resolver must include instruction_only blocks with status='selected' and instructions."""
+    def test_warmup_blocks_resolve_to_exercises(self):
+        """pulse_raise and mobility blocks must resolve real exercises with exercise_id."""
         result = _resolve()
         blocks = result["resolved_session"]["blocks"]
 
-        instruction_blocks = [
-            b for b in blocks if b.get("selected_exercises") == [] and b.get("instructions")
-        ]
-        assert len(instruction_blocks) >= 2, (
-            f"Expected at least 2 instruction_only blocks (pulse_raise, mobility), got {len(instruction_blocks)}"
-        )
-
-        for b in instruction_blocks:
-            assert b["status"] == "selected"
-            instructions = b["instructions"]
-            assert isinstance(instructions, dict)
-            # Must have at least one instruction field
-            assert any(
-                k in instructions
-                for k in ("notes", "options", "focus", "duration_min_range")
-            ), f"Block {b['block_id']} has no instruction content: {instructions}"
-
-    def test_pulse_raise_has_options(self):
-        """pulse_raise block must include options (brisk_walk, easy_jog, etc.)."""
-        result = _resolve()
-        blocks = result["resolved_session"]["blocks"]
         pulse = next((b for b in blocks if b["block_id"] == "pulse_raise"), None)
         assert pulse is not None, "pulse_raise block not found in output"
-        assert pulse["instructions"]["options"] == [
-            "brisk_walk", "easy_jog", "jumping_jacks", "air_squats_flow"
-        ]
-        assert pulse["instructions"]["duration_min_range"] == [3, 5]
+        assert pulse["status"] == "selected"
+        assert len(pulse.get("selected_exercises", [])) == 1, "pulse_raise should select 1 exercise"
+        assert pulse["selected_exercises"][0]["exercise_id"] == "general_pulse_raise"
 
-    def test_mobility_has_focus(self):
-        """mobility block must include focus areas."""
-        result = _resolve()
-        blocks = result["resolved_session"]["blocks"]
         mobility = next((b for b in blocks if b["block_id"] == "mobility"), None)
         assert mobility is not None, "mobility block not found in output"
-        assert "thoracic_spine" in mobility["instructions"]["focus"]
-        assert mobility["instructions"]["duration_min_range"] == [3, 5]
+        assert mobility["status"] == "selected"
+        assert len(mobility.get("selected_exercises", [])) == 1, "mobility should select 1 exercise"
+        assert mobility["selected_exercises"][0]["exercise_id"] == "dynamic_mobility_flow"
+
+    def test_pulse_raise_has_work_seconds(self):
+        """pulse_raise exercise must have work_seconds in prescription for timer."""
+        result = _resolve()
+        instances = result["resolved_session"]["exercise_instances"]
+        pulse_inst = next((e for e in instances if e["exercise_id"] == "general_pulse_raise"), None)
+        assert pulse_inst is not None, "general_pulse_raise not in exercise_instances"
+        rx = pulse_inst.get("prescription", {})
+        assert rx.get("work_seconds", 0) > 0, "general_pulse_raise must have work_seconds for timer"
+
+    def test_mobility_has_work_seconds(self):
+        """mobility exercise must have work_seconds in prescription for timer."""
+        result = _resolve()
+        instances = result["resolved_session"]["exercise_instances"]
+        mob_inst = next((e for e in instances if e["exercise_id"] == "dynamic_mobility_flow"), None)
+        assert mob_inst is not None, "dynamic_mobility_flow not in exercise_instances"
+        rx = mob_inst.get("prescription", {})
+        assert rx.get("work_seconds", 0) > 0, "dynamic_mobility_flow must have work_seconds for timer"
 
 
 class TestWarmupVariety:

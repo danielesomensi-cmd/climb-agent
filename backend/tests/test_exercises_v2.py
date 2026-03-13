@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 164
+    assert len(exercise_list) == 167
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
@@ -235,7 +235,8 @@ def test_timed_rep_exercises_have_correct_volume(exercise_list):
         assert isinstance(sets, int) and sets >= 1, f"{e['id']} sets must be positive int"
         assert isinstance(reps, int) and reps >= 2, f"{e['id']} reps must be >= 2"
         assert isinstance(work_s, (int, float)) and work_s > 0, f"{e['id']} work_seconds must be > 0"
-        assert rest_sets is not None and rest_sets > 0, f"{e['id']} must have rest_between_sets_seconds"
+        if sets > 1:
+            assert rest_sets is not None and rest_sets > 0, f"{e['id']} must have rest_between_sets_seconds"
 
         total_intervals = sets * reps
         assert total_intervals >= 4, (

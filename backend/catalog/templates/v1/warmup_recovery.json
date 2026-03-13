@@ -14,17 +14,19 @@
   "blocks": [
     {
       "block_id": "foam_rolling",
-      "type": "recovery",
-      "mode": "instruction_only",
-      "duration_min_range": [5, 5],
-      "notes": ["Foam roll or lacrosse ball: thoracic spine, lats, quads, calves. 30-60s per area. Gentle pressure."]
+      "type": "warmup_general",
+      "mode": "select_one",
+      "exercise_id": "foam_rolling_general",
+      "role": ["warmup", "recovery"],
+      "domain": ["regeneration"]
     },
     {
       "block_id": "easy_mobility",
-      "type": "mobility",
-      "mode": "instruction_only",
-      "duration_min_range": [5, 5],
-      "notes": ["Very gentle mobility: cat-cow, thread the needle, hip circles, ankle circles. Slow and easy."]
+      "type": "warmup_general",
+      "mode": "select_one",
+      "exercise_id": "dynamic_mobility_flow",
+      "role": ["warmup"],
+      "domain": ["mobility", "flexibility"]
     }
   ],
 

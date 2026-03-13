@@ -925,11 +925,11 @@
       "contraindications": [],
       "prescription_defaults": {
         "sets": 1,
-        "reps": null,
-        "work_seconds": null,
+        "reps": 20,
+        "work_seconds": 7,
         "rest_between_reps_seconds": 3,
         "rest_between_sets_seconds": null,
-        "notes": "7s on / 3s off to failure at fixed load. Determines aerobic threshold of forearm."
+        "notes": "7s on / 3s off to failure at fixed load. Determines aerobic threshold of forearm. Stop when you can't hold anymore."
       },
       "attributes": {
         "edge_mm": 20,
@@ -1981,8 +1981,12 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
+      "description": "Light cardio to raise body temperature before training.",
+      "cues": [
+        "Options: brisk walk, easy jog, jumping jacks, air squats flow",
+        "Goal: warmth and light sweat, not fatigue",
+        "Keep easy — this is preparation, not training"
+      ],
       "video_url": null,
       "load_model": "bodyweight_only"
     },
@@ -3644,6 +3648,7 @@
     },
     {
       "id": "wrist_curl",
+
       "name": "Wrist Curl (Flexion)",
       "category": "prehab",
       "time_min": 5,
@@ -3688,7 +3693,7 @@
         "Keep fingers relaxed throughout"
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
-      "load_model": "bodyweight_only"
+      "load_model": "external_load"
     },
     {
       "id": "reverse_wrist_curl",
@@ -3736,7 +3741,7 @@
         "Keep load light enough to maintain perfect form for all reps"
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
-      "load_model": "bodyweight_only"
+      "load_model": "external_load"
     },
     {
       "id": "forearm_pronation_supination",
@@ -3782,7 +3787,7 @@
         "No sharp pain — reduce weight or range if needed"
       ],
       "video_url": "https://trainingforclimbing.com/treating-climbers-elbow-medial-epicondylitis/",
-      "load_model": "bodyweight_only"
+      "load_model": "external_load"
     },
     {
       "id": "finger_extensor_training",
@@ -3877,7 +3882,7 @@
         "Sharp pain = stop immediately"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "external_load"
     },
     {
       "id": "shoulder_car",
@@ -8292,6 +8297,150 @@
         "One attempt only per hand"
       ],
       "video_url": null
+    },
+    {
+      "id": "dynamic_mobility_flow",
+      "name": "Dynamic Mobility Flow",
+      "category": "warmup_general",
+      "time_min": 5,
+      "role": [
+        "warmup"
+      ],
+      "domain": [
+        "mobility",
+        "flexibility"
+      ],
+      "pattern": "mobility_flow",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "warmup_mobility",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Dynamic mobility only. No long static stretches."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Full-body dynamic mobility routine to prepare joints for training.",
+      "cues": [
+        "Thoracic spine: cat-cow, thread the needle rotations",
+        "Hips: hip circles, leg swings, deep squat hold",
+        "Shoulders: arm circles, shoulder CARs",
+        "Wrists: wrist circles, flexion/extension stretches",
+        "Ankles: ankle circles, calf raises"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "hang_rampup_progressive",
+      "name": "Hang Ramp-up (Progressive)",
+      "category": "warmup_specific",
+      "time_min": 5,
+      "role": [
+        "warmup"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "warmup_hang_rampup",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 240,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Progressive hangs on jugs: 3-5 hangs increasing from bodyweight to ~50% max. Full rest between. Prepares tendons for max effort."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Progressive finger loading on large holds to prepare tendons for max effort.",
+      "cues": [
+        "Start on jugs or large edges",
+        "Hang 1: bodyweight only, 5-10s",
+        "Hang 2: add ~20% of your max, 5s",
+        "Hang 3: add ~40% of your max, 3-5s",
+        "Full rest (60-90s) between hangs",
+        "Stop well short of max — this is warm-up, not training"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "foam_rolling_general",
+      "name": "Foam Rolling (General)",
+      "category": "warmup_general",
+      "time_min": 5,
+      "role": [
+        "warmup",
+        "recovery"
+      ],
+      "domain": [
+        "regeneration"
+      ],
+      "pattern": "self_massage",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "warmup_foam_rolling",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Foam roll or lacrosse ball. 30-60s per area. Gentle pressure."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Self-myofascial release to promote blood flow and reduce stiffness.",
+      "cues": [
+        "Thoracic spine: roll upper back slowly",
+        "Lats: side-lying, roll from armpit to waist",
+        "Quads: prone, roll front of thighs",
+        "Calves: seated, roll from ankle to knee",
+        "Gentle pressure — avoid bony areas and joints"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     }
   ]
 }

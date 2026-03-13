@@ -21,18 +21,18 @@
     {
       "block_id": "pulse_raise",
       "type": "warmup_general",
-      "mode": "instruction_only",
-      "duration_min_range": [3, 5],
-      "options": ["brisk_walk", "easy_jog", "jumping_jacks", "air_squats_flow"],
-      "notes": ["Raise body temperature. Include 5-10 min easy bouldering on large holds as ramp-up."]
+      "mode": "select_one",
+      "exercise_id": "general_pulse_raise",
+      "role": ["warmup"],
+      "domain": ["aerobic_capacity"]
     },
     {
       "block_id": "mobility",
-      "type": "mobility",
-      "mode": "instruction_only",
-      "duration_min_range": [3, 5],
-      "focus": ["thoracic_spine", "hips", "shoulders", "wrists"],
-      "notes": ["Dynamic mobility. Wrist circles, shoulder CARs, hip circles. No long static stretches."]
+      "type": "warmup_general",
+      "mode": "select_one",
+      "exercise_id": "dynamic_mobility_flow",
+      "role": ["warmup"],
+      "domain": ["mobility", "flexibility"]
     },
     {
       "block_id": "upper_activation",
