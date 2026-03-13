@@ -143,6 +143,8 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | ~~B38~~ | ~~Injuries filter (contraindications)~~ | Done (P1). Frontend severity picker + settings UI pending. |
 | — | Override intensity cap warning | Warn when user overrides with session above current phase intensity cap. |
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |
+| ARCH-2 | Unify load_model source of truth | Eliminate hardcoded `EXTERNAL_LOAD_EXERCISES` set in progression_v1. Use `load_model` field from exercise JSON as single source. Requires: resolver passes `load_model` into exercise_instance, progression reads it from there. |
+| ARCH-3 | Generic timer behavior from prescription | Frontend timer derives behavior entirely from `work_seconds` + `reps` + `rest_*` fields. No hardcoded exercise lists or category checks. All exercises with `work_seconds > 0` get a countdown; manual mode otherwise. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
 | — | Test results → exercise calibration | Use ALL assessment test results (repeaters, max hang duration, L-sit, hip flexibility) to calibrate exercise difficulty and prescription — not just for radar profile. E.g.: repeater max sets → finger endurance set count; L-sit hold → core exercise progression tier; max hang duration → endurance hang prescriptions. Requires: mapping table test_result → affected exercises → calibration formula. |
 | ~~B105~~ | ~~Gym lookup disallineato~~ | Chiuso: nessun mismatch trovato (audit 2026-03-10). |
