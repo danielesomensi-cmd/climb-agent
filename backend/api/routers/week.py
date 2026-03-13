@@ -40,10 +40,20 @@ def _auto_resolve(week_plan: dict, state: dict) -> None:
     Preserves user-added exercises (source: "user_added") that were appended
     via POST /api/session/add-exercise — they are re-appended after the
     deterministic resolution so they survive cache round-trips.
+
+    B120: completed/skipped sessions with cached resolved data are never
+    re-resolved — this protects past sessions from device-switch corruption.
     """
     for week_block in week_plan.get("weeks", []):
         for day_entry in week_block.get("days", []):
             for session_entry in day_entry.get("sessions", []):
+                # B120: never re-resolve completed sessions with cached data
+                if (
+                    session_entry.get("status") in ("done", "skipped")
+                    and session_entry.get("resolved")
+                ):
+                    continue
+
                 session_id = session_entry.get("session_id", "")
                 session_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
                 full_path = REPO_ROOT / session_path
@@ -82,6 +92,48 @@ def _auto_resolve(week_plan: dict, state: dict) -> None:
                     session_entry["resolved"] = resolved
                 except Exception:
                     session_entry["resolved"] = None
+
+
+def _cache_completed_resolved(
+    week_plan: dict, state: dict, week_start_key: str, is_current_week: bool
+) -> bool:
+    """B120: persist resolved data for done/skipped sessions into the cached plan.
+
+    This ensures that completed sessions keep their resolved exercises across
+    cache roundtrips — protecting them from re-resolution with changed state
+    (e.g. after a finger_training_device switch).
+
+    Returns True if state was modified (caller should save).
+    """
+    cached = (state.get("week_plans") or {}).get(week_start_key)
+    if not cached:
+        return False
+
+    dirty = False
+    cached_weeks = cached.get("weeks") or []
+    for wb_idx, week_block in enumerate(week_plan.get("weeks", [])):
+        if wb_idx >= len(cached_weeks):
+            break
+        cached_days = cached_weeks[wb_idx].get("days") or []
+        for d_idx, day_entry in enumerate(week_block.get("days", [])):
+            if d_idx >= len(cached_days):
+                break
+            cached_sessions = cached_days[d_idx].get("sessions") or []
+            for s_idx, session_entry in enumerate(day_entry.get("sessions", [])):
+                if s_idx >= len(cached_sessions):
+                    break
+                if (
+                    session_entry.get("status") in ("done", "skipped")
+                    and session_entry.get("resolved")
+                    and not cached_sessions[s_idx].get("resolved")
+                ):
+                    cached_sessions[s_idx]["resolved"] = session_entry["resolved"]
+                    dirty = True
+
+    if dirty and is_current_week:
+        state["current_week_plan"] = cached
+
+    return dirty
 
 
 def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
@@ -265,6 +317,11 @@ def get_week(
 
     # Auto-resolve each session so the frontend gets exercises inline
     _auto_resolve(week_plan, state)
+
+    # B120: persist resolved data for completed sessions so they survive cache
+    # roundtrips and are never re-resolved with changed state (device switch)
+    if _cache_completed_resolved(week_plan, state, week_start_key, is_current_week):
+        save_state(state, user_id)
 
     # Attach feedback summaries from feedback_log (B32)
     _attach_feedback(week_plan, state.get("feedback_log", []))

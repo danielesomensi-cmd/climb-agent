@@ -1,8 +1,9 @@
 """Tests for loading pin integration: resolver device preference, LP load suggestions,
-LP feedback handling, LP test scheduling, and LP baselines.
+LP feedback handling, LP test scheduling, LP baselines, and past-session immutability.
 """
 
 import json
+import os
 from copy import deepcopy
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from backend.engine.resolve_session import (
     ensure_exercise_list,
     load_json,
     pick_best_exercise_p0,
+    resolve_session,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -498,3 +500,351 @@ class TestLPPlannerPass3:
             for s in d.get("sessions", [])
         ]
         assert "test_max_hang_5s" in all_sids
+
+
+# ── B120: Past session immutability ──────────────────────────────────────────
+
+
+SESSIONS_DIR = "backend/catalog/sessions/v1"
+TEMPLATES_DIR = "backend/catalog/templates/v1"
+EXERCISES_PATH_STR = "backend/catalog/exercises/v1/exercises.json"
+
+
+class TestPastSessionImmutability:
+    """B120 PILLAR: completed/past sessions must NEVER change after device switch.
+
+    Simulates the full flow: generate plan → mark sessions done → resolve →
+    cache resolved data → switch device → re-resolve → verify completed
+    sessions are byte-identical to pre-switch snapshot.
+    """
+
+    def _make_week_plan(self, sessions_with_status):
+        """Build a minimal week plan with the given sessions."""
+        days = []
+        for i, (sid, status) in enumerate(sessions_with_status):
+            days.append({
+                "date": f"2026-03-{10 + i:02d}",
+                "sessions": [{
+                    "session_id": sid,
+                    "slot": "evening",
+                    "location": "home",
+                    "status": status,
+                }],
+            })
+        return {
+            "start_date": "2026-03-09",
+            "weeks": [{"days": days}],
+        }
+
+    def test_past_completed_sessions_never_change_on_device_switch(self):
+        """Switching finger_training_device and re-running _auto_resolve must
+        NOT modify any completed session that already has cached resolved data.
+        This is a system invariant (B120 PILLAR)."""
+        from backend.api.routers.week import _auto_resolve
+
+        # 1. State with hangboard device
+        state_hb = _base_state()
+        state_hb["preferences"]["finger_training_device"] = "hangboard"
+        state_hb["equipment"]["home"] = ["hangboard", "loading_pin", "pullup_bar"]
+        state_hb["baselines"] = {"hangboard": [{"max_total_load_kg": 100.0}]}
+
+        # 2. Create plan with a completed session and a planned session
+        plan = self._make_week_plan([
+            ("finger_maintenance_home", "done"),
+            ("prehab_maintenance", "planned"),
+        ])
+
+        # 3. Resolve with hangboard state (simulates first get_week after completion)
+        _auto_resolve(plan, state_hb)
+
+        # Verify both sessions got resolved
+        done_session = plan["weeks"][0]["days"][0]["sessions"][0]
+        planned_session = plan["weeks"][0]["days"][1]["sessions"][0]
+        assert done_session.get("resolved") is not None, "Done session should be resolved"
+        assert planned_session.get("resolved") is not None, "Planned session should be resolved"
+
+        # 4. Snapshot the completed session's resolved data
+        snapshot_resolved = deepcopy(done_session["resolved"])
+        snapshot_exercise_ids = [
+            inst["exercise_id"]
+            for inst in snapshot_resolved.get("resolved_session", {}).get("exercise_instances", [])
+        ]
+
+        # 5. Switch to loading_pin
+        state_lp = deepcopy(state_hb)
+        state_lp["preferences"]["finger_training_device"] = "loading_pin"
+
+        # 6. Re-run _auto_resolve with LP state
+        _auto_resolve(plan, state_lp)
+
+        # 7. ASSERT: completed session resolved data is IDENTICAL to snapshot
+        done_after = plan["weeks"][0]["days"][0]["sessions"][0]
+        assert done_after["resolved"] == snapshot_resolved, (
+            "B120 VIOLATION: completed session resolved data changed after device switch!"
+        )
+        after_exercise_ids = [
+            inst["exercise_id"]
+            for inst in done_after["resolved"].get("resolved_session", {}).get("exercise_instances", [])
+        ]
+        assert after_exercise_ids == snapshot_exercise_ids, (
+            f"B120 VIOLATION: exercise_ids changed from {snapshot_exercise_ids} to {after_exercise_ids}"
+        )
+
+        # 8. Planned session SHOULD be re-resolved with new device
+        planned_after = plan["weeks"][0]["days"][1]["sessions"][0]
+        assert planned_after.get("resolved") is not None
+
+    def test_skipped_sessions_also_immutable(self):
+        """Skipped sessions must also be immutable after device switch."""
+        from backend.api.routers.week import _auto_resolve
+
+        state = _base_state()
+        state["equipment"]["home"] = ["hangboard", "loading_pin", "pullup_bar"]
+
+        plan = self._make_week_plan([("finger_maintenance_home", "skipped")])
+        _auto_resolve(plan, state)
+
+        snapshot = deepcopy(plan["weeks"][0]["days"][0]["sessions"][0]["resolved"])
+        assert snapshot is not None
+
+        # Switch device
+        state["preferences"]["finger_training_device"] = "loading_pin"
+        _auto_resolve(plan, state)
+
+        assert plan["weeks"][0]["days"][0]["sessions"][0]["resolved"] == snapshot
+
+    def test_cache_completed_resolved_persists_to_state(self):
+        """_cache_completed_resolved writes resolved data for done sessions
+        into the cached plan in state, so it survives invalidate_week_cache."""
+        from backend.api.routers.week import _auto_resolve, _cache_completed_resolved
+
+        state = _base_state()
+        state["equipment"]["home"] = ["hangboard", "pullup_bar"]
+
+        plan = self._make_week_plan([("prehab_maintenance", "done")])
+        week_key = plan["start_date"]
+
+        # Simulate cached plan in state (without resolved)
+        state["week_plans"] = {week_key: deepcopy(plan)}
+        state["current_week_plan"] = deepcopy(plan)
+
+        # Resolve
+        _auto_resolve(plan, state)
+        done_resolved = plan["weeks"][0]["days"][0]["sessions"][0].get("resolved")
+        assert done_resolved is not None
+
+        # Cache completed resolved (_cache_completed_resolved calls save_state
+        # internally, but with user_id=None it falls back to local dev path;
+        # we only test the in-memory state dict update here)
+        _cache_completed_resolved(plan, state, week_key, True)
+
+        # Verify cached plan now has resolved data
+        cached = state["week_plans"][week_key]
+        cached_resolved = cached["weeks"][0]["days"][0]["sessions"][0].get("resolved")
+        assert cached_resolved is not None
+        assert cached_resolved == done_resolved
+
+    def test_roundtrip_hb_lp_hb_preserves_completed(self):
+        """Full roundtrip: HB → LP → HB with completed sessions.
+        Completed sessions must remain identical throughout."""
+        from backend.api.routers.week import _auto_resolve
+
+        state = _base_state()
+        state["equipment"]["home"] = ["hangboard", "loading_pin", "pullup_bar"]
+        state["baselines"] = {
+            "hangboard": [{"max_total_load_kg": 100.0}],
+            "loading_pin": [
+                {"max_load_kg": 45.0, "hand": "right", "edge_mm": 20, "grip": "half_crimp", "lift_seconds": 5},
+                {"max_load_kg": 40.0, "hand": "left", "edge_mm": 20, "grip": "half_crimp", "lift_seconds": 5},
+            ],
+        }
+
+        # Step 1: HB — resolve
+        plan = self._make_week_plan([
+            ("finger_maintenance_home", "done"),
+            ("finger_maintenance_home", "planned"),
+        ])
+        _auto_resolve(plan, state)
+        snapshot = deepcopy(plan["weeks"][0]["days"][0]["sessions"][0]["resolved"])
+
+        # Step 2: Switch to LP — re-resolve
+        state["preferences"]["finger_training_device"] = "loading_pin"
+        _auto_resolve(plan, state)
+        assert plan["weeks"][0]["days"][0]["sessions"][0]["resolved"] == snapshot
+
+        # Step 3: Switch back to HB — re-resolve
+        state["preferences"]["finger_training_device"] = "hangboard"
+        _auto_resolve(plan, state)
+        assert plan["weeks"][0]["days"][0]["sessions"][0]["resolved"] == snapshot
+
+
+# ── B120: Replanner guards — completed sessions never overwritten ────────────
+
+
+class TestReplannerImmutabilityGuards:
+    """B120 audit guards: replanner functions must refuse to modify done/skipped sessions."""
+
+    def _week_plan_with_days(self, days_data):
+        """Build a week plan with explicit day data."""
+        return {
+            "start_date": "2026-03-09",
+            "weeks": [{"days": days_data}],
+            "adaptations": [],
+            "profile_snapshot": {"phase_id": "base", "hard_cap_per_week": 3},
+        }
+
+    def _day(self, date, sessions):
+        return {"date": date, "sessions": sessions}
+
+    def _session(self, sid="strength_long", slot="evening", status="planned", hard=True):
+        return {
+            "session_id": sid,
+            "slot": slot,
+            "status": status,
+            "location": "home",
+            "intensity": "high" if hard else "low",
+            "tags": {"hard": hard, "finger": False},
+        }
+
+    def test_override_on_completed_day_raises(self):
+        """apply_day_override must raise when target day has completed sessions."""
+        from backend.engine.replanner_v1 import apply_day_override
+
+        plan = self._week_plan_with_days([
+            self._day("2026-03-10", [self._session(status="done")]),
+            self._day("2026-03-11", [self._session(status="planned")]),
+        ])
+        with pytest.raises(ValueError, match="already completed/skipped"):
+            apply_day_override(
+                plan,
+                intent="strength",
+                location="home",
+                reference_date="2026-03-09",
+                target_date="2026-03-10",
+            )
+
+    def test_override_on_planned_day_succeeds(self):
+        """apply_day_override should work normally on planned sessions."""
+        from backend.engine.replanner_v1 import apply_day_override
+
+        plan = self._week_plan_with_days([
+            self._day("2026-03-10", [self._session(status="planned")]),
+            self._day("2026-03-11", [self._session(status="planned")]),
+        ])
+        result = apply_day_override(
+            plan,
+            intent="recovery",
+            location="home",
+            reference_date="2026-03-09",
+            target_date="2026-03-10",
+        )
+        assert result["weeks"][0]["days"][0]["sessions"][0]["session_id"] != "strength_long"
+
+    def test_override_with_session_index_blocks_done(self):
+        """apply_day_override with session_index must block if that session is done."""
+        from backend.engine.replanner_v1 import apply_day_override
+
+        plan = self._week_plan_with_days([
+            self._day("2026-03-10", [
+                self._session(sid="s1", slot="morning", status="done"),
+                self._session(sid="s2", slot="evening", status="planned"),
+            ]),
+            self._day("2026-03-11", [self._session(status="planned")]),
+        ])
+        # Replacing the done session (index 0) → should fail
+        with pytest.raises(ValueError, match="status is 'done'"):
+            apply_day_override(
+                plan,
+                intent="recovery",
+                location="home",
+                reference_date="2026-03-09",
+                target_date="2026-03-10",
+                session_index=0,
+            )
+        # Replacing the planned session (index 1) → should succeed
+        result = apply_day_override(
+            plan,
+            intent="recovery",
+            location="home",
+            reference_date="2026-03-09",
+            target_date="2026-03-10",
+            session_index=1,
+        )
+        assert result["weeks"][0]["days"][0]["sessions"][0]["status"] == "done"
+        assert result["weeks"][0]["days"][0]["sessions"][1]["session_id"] != "s2"
+
+    def test_outdoor_override_on_completed_day_raises(self):
+        """Outdoor override must raise when target day has completed sessions."""
+        from backend.engine.replanner_v1 import apply_day_override
+
+        plan = self._week_plan_with_days([
+            self._day("2026-03-10", [self._session(status="done")]),
+            self._day("2026-03-11", [self._session(status="planned")]),
+        ])
+        with pytest.raises(ValueError, match="already completed/skipped"):
+            apply_day_override(
+                plan,
+                intent="outdoor_lead",
+                location="outdoor",
+                reference_date="2026-03-09",
+                target_date="2026-03-10",
+            )
+
+    def test_move_completed_session_raises(self):
+        """move_session must raise when session is done/skipped."""
+        from backend.engine.replanner_v1 import apply_events
+
+        plan = self._week_plan_with_days([
+            self._day("2026-03-10", [self._session(sid="s1", status="done")]),
+            self._day("2026-03-11", [self._session(sid="s2", status="planned")]),
+        ])
+        with pytest.raises(ValueError, match="Cannot move a session with status 'done'"):
+            apply_events(plan, events=[{
+                "event_type": "move_session",
+                "from_date": "2026-03-10",
+                "to_date": "2026-03-11",
+                "session_ref": "s1",
+                "from_slot": "evening",
+                "to_slot": "morning",
+            }])
+
+    def test_ripple_skips_completed_sessions(self):
+        """Override ripple must NOT replace done/skipped sessions on adjacent days."""
+        from backend.engine.replanner_v1 import apply_day_override
+
+        plan = self._week_plan_with_days([
+            self._day("2026-03-10", [self._session(status="planned")]),
+            self._day("2026-03-11", [self._session(sid="completed_hard", status="done", hard=True)]),
+            self._day("2026-03-12", [self._session(status="planned")]),
+        ])
+        result = apply_day_override(
+            plan,
+            intent="strength",
+            location="home",
+            reference_date="2026-03-09",
+            target_date="2026-03-10",
+        )
+        # Day+1 (2026-03-11) has a done hard session → must remain untouched
+        ripple_day = result["weeks"][0]["days"][1]
+        assert ripple_day["sessions"][0]["session_id"] == "completed_hard"
+        assert ripple_day["sessions"][0]["status"] == "done"
+
+    def test_quick_add_ripple_skips_completed(self):
+        """Quick-add ripple must NOT replace done/skipped sessions."""
+        from backend.engine.replanner_v1 import apply_day_add
+
+        plan = self._week_plan_with_days([
+            self._day("2026-03-10", [self._session(sid="planned_s", status="planned", hard=False)]),
+            self._day("2026-03-11", [self._session(sid="done_hard", status="done", hard=True)]),
+        ])
+        result, _ = apply_day_add(
+            plan,
+            target_date="2026-03-10",
+            session_id="strength_long",
+            location="home",
+            slot="morning",
+        )
+        # Day+1 done session must remain untouched
+        ripple_day = result["weeks"][0]["days"][1]
+        done_session = next(s for s in ripple_day["sessions"] if s["session_id"] == "done_hard")
+        assert done_session["status"] == "done"

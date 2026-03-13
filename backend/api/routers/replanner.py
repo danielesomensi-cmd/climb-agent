@@ -66,10 +66,21 @@ def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
 
 
 def _auto_resolve(week_plan: dict, state: dict) -> None:
-    """Resolve all sessions in a week plan inline (same logic as week router)."""
+    """Resolve all sessions in a week plan inline (same logic as week router).
+
+    B120: completed/skipped sessions with cached resolved data are never
+    re-resolved — this protects past sessions from device-switch corruption.
+    """
     for week_block in week_plan.get("weeks", []):
         for day_entry in week_block.get("days", []):
             for session_entry in day_entry.get("sessions", []):
+                # B120: never re-resolve completed sessions with cached data
+                if (
+                    session_entry.get("status") in ("done", "skipped")
+                    and session_entry.get("resolved")
+                ):
+                    continue
+
                 session_id = session_entry.get("session_id", "")
                 session_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
                 full_path = REPO_ROOT / session_path

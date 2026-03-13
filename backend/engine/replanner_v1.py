@@ -351,6 +351,10 @@ def apply_day_add(
             comp_meta = _meta_for("complementary_conditioning")
             next_sessions = []
             for session in ripple_day["sessions"]:
+                # B120: never replace completed/skipped sessions via ripple
+                if session.get("status") in ("done", "skipped"):
+                    next_sessions.append(session)
+                    continue
                 is_hard = (session.get("tags") or {}).get("hard")
                 is_low = session.get("intensity") == "low"
                 if is_hard:
@@ -721,8 +725,18 @@ def apply_events(
         event_type = event.get("event_type")
         if event_type == "move_session":
             from_day = _find_day(updated, event["from_date"])
+            # B120: block moving completed/skipped sessions (immutability pillar)
+            ref = event.get("session_ref")
+            from_slot = event.get("from_slot")
+            for s in from_day.get("sessions") or []:
+                if _session_matches(s, session_ref=ref, slot=from_slot):
+                    if s.get("status") in ("done", "skipped"):
+                        raise ValueError(
+                            f"Cannot move a session with status '{s['status']}'"
+                        )
+                    break
             to_day = _find_day(updated, event["to_date"])
-            moved = _extract_session(from_day, session_ref=event.get("session_ref"), slot=event.get("from_slot"))
+            moved = _extract_session(from_day, session_ref=ref, slot=from_slot)
             _insert_or_replace(to_day, moved, event["to_slot"])
 
             if event.get("from_slot") not in _slots_from_day(from_day):
@@ -838,6 +852,10 @@ def apply_events(
                     comp_meta = _meta_for("complementary_conditioning")
                     next_sessions = []
                     for session in ripple_day["sessions"]:
+                        # B120: never replace completed/skipped sessions via ripple
+                        if session.get("status") in ("done", "skipped"):
+                            next_sessions.append(session)
+                            continue
                         sid = session.get("session_id", "")
                         smeta = _SESSION_META.get(sid, {})
                         is_hard = smeta.get("hard") or (session.get("tags") or {}).get("hard")
@@ -1165,6 +1183,16 @@ def apply_day_override(
         if outdoor_discipline is None:
             outdoor_discipline = "both"
         target_day = _find_day(updated, target_key)
+        # B120: refuse to clear completed/skipped sessions (immutability pillar)
+        completed_in_target = [
+            s for s in target_day.get("sessions", [])
+            if s.get("status") in ("done", "skipped")
+        ]
+        if completed_in_target:
+            raise ValueError(
+                f"Cannot override day {target_key} with outdoor: "
+                f"{len(completed_in_target)} session(s) already completed/skipped"
+            )
         target_day["sessions"] = []
         target_day["outdoor_spot_name"] = intent.replace("outdoor_", "").replace("_", " ")
         target_day["outdoor_discipline"] = outdoor_discipline
@@ -1213,6 +1241,26 @@ def apply_day_override(
     # NEW-F7: save original sessions before overwriting
     original_sessions = list(target_day.get("sessions") or [])
 
+    # B120: refuse to overwrite completed/skipped sessions (immutability pillar)
+    completed_in_target = [
+        s for s in original_sessions
+        if s.get("status") in ("done", "skipped")
+    ]
+    if session_index is not None:
+        # Replacing a specific session — block only if THAT session is done/skipped
+        if 0 <= session_index < len(original_sessions):
+            s = original_sessions[session_index]
+            if s.get("status") in ("done", "skipped"):
+                raise ValueError(
+                    f"Cannot override session at index {session_index}: "
+                    f"status is '{s['status']}'"
+                )
+    elif completed_in_target:
+        raise ValueError(
+            f"Cannot override day {target_key}: "
+            f"{len(completed_in_target)} session(s) already completed/skipped"
+        )
+
     new_session = {
         "slot": slot,
         "session_id": session_id,
@@ -1250,6 +1298,10 @@ def apply_day_override(
                 continue
             next_sessions = []
             for session in ripple_day.get("sessions", []):
+                # B120: never replace completed/skipped sessions via ripple
+                if session.get("status") in ("done", "skipped"):
+                    next_sessions.append(session)
+                    continue
                 is_hard = session.get("tags", {}).get("hard")
                 is_low = session.get("intensity") == "low"
 

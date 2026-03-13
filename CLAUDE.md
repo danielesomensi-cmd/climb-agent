@@ -16,6 +16,7 @@ A deterministic climbing training engine. It generates personalised weekly train
 - **Closed-loop**: Every session outcome feeds back into user state for future planning.
 - **Data-driven**: Sessions, exercises, and templates are JSON catalogs — logic is separate from data.
 - **Test-first**: All engine behaviour is covered by pytest. Tests must pass before merging.
+- **Past sessions are immutable**: Completed and past sessions MUST NEVER be modified by any regeneration, device switch, equipment change, or any other user action. The only exception is explicit user edit (pencil icon). This applies to: exercise_id, loads, feedback, completion status, timestamps. Test this invariant after ANY change that triggers plan regeneration.
 
 ## Commands
 
