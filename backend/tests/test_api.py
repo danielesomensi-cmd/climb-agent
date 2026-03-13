@@ -623,20 +623,26 @@ class TestReplanner:
         assert done_s["status"] == "done"
 
     def test_events_mark_skipped_sets_day_status(self):
-        """API-level: mark_skipped should set day status to 'skipped' and replace with recovery."""
+        """API-level: mark_skipped ALL sessions should set day status to 'skipped' and replace with recovery."""
         week_plan = self._get_week_plan()
         days = week_plan["weeks"][0]["days"]
         day = next(d for d in days if d.get("sessions"))
-        session = day["sessions"][0]
+        sessions = day["sessions"]
+
+        # Skip ALL sessions in the day so day-level status becomes "skipped"
+        events = [
+            {
+                "event_type": "mark_skipped",
+                "date": day["date"],
+                "slot": s["slot"],
+                "session_ref": s["session_id"],
+            }
+            for s in sessions
+        ]
 
         r = client.post("/api/replanner/events", json={
             "week_plan": week_plan,
-            "events": [{
-                "event_type": "mark_skipped",
-                "date": day["date"],
-                "slot": session["slot"],
-                "session_ref": session["session_id"],
-            }],
+            "events": events,
         })
         assert r.status_code == 200
         updated_day = next(
@@ -644,8 +650,8 @@ class TestReplanner:
             if d["date"] == day["date"]
         )
         assert updated_day["status"] == "skipped"
-        recovery_s = next(s for s in updated_day["sessions"] if s["slot"] == session["slot"])
-        assert recovery_s["session_id"] == "regeneration_easy"
+        for s in updated_day["sessions"]:
+            assert s["session_id"] == "regeneration_easy"
 
     def test_events_auto_resolves_sessions(self):
         """API-level: events endpoint should auto-resolve recovery sessions."""
