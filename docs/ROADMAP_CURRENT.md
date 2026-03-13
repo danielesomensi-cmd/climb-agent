@@ -97,6 +97,7 @@ Items that affect first impression for paying users.
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Set up develop branch for staging, main for production deploys. |
 | ~~B109~~ | ~~Loading pin: esercizi one-arm~~ | ~~M~~ | Done (A120): 7 LP exercises, resolver finger_device soft filter, per-hand progression/feedback/baselines, conversions module, onboarding device selector, guided R/L UI, session badge, settings device-aware baselines. 20 backend tests. |
+| ~~B120~~ | ~~Fix critici Loading Pin~~ | ~~L~~ | Done: (1) Past session immutability PILLAR — _auto_resolve skips done/skipped, resolved data cached, 6 replanner guards. (2) LP test dual R/L input. (3) LP repeater test (lp_repeater_test exercise + test_lp_repeater session). (4) LP duration test (lp_duration_test exercise, replaces HB hang duration in LP template). 11 new tests. |
 | ~~B110~~ | ~~Fix sync_status.py endpoint count~~ | ~~S~~ | Done: risolto implicitamente con rimozione 2 endpoint test-week. Count 39 (38 router + 1 health) dopo B-115. |
 | ~~UI-26~~ | ~~Session card: ⋯ menu + Add Exercise~~ | ~~M~~ | Done: Phase A: ⋯ button → bottom sheet con Add Exercise, Move, Remove, Undo. Phase B: "Modify session" nel menu ⋯ (indoor, non finalized) → apre ReplanDialog con session_index. "Edit outdoor" già presente come bottone su outdoor card completata. |
 

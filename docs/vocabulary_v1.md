@@ -71,6 +71,8 @@ Allowed `finger_training_device` values:
 When `loading_pin` is selected:
 - Resolver selects `lp_*` exercises instead of hangboard equivalents
 - Test scheduling uses `lp_max_test_5s` instead of `max_hang_5s_total_load`
+- Repeater test uses `lp_repeater_test` (test_lp_repeater session) instead of `repeater_hang_7_3`
+- Duration test uses `lp_duration_test` instead of `test_max_hang_duration_20mm`
 - Baselines use `baselines.loading_pin` (per-hand)
 
 ---
