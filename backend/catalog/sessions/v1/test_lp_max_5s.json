@@ -1,0 +1,42 @@
+{
+  "id": "test_lp_max_5s",
+  "name": "Test Session — Loading Pin Max Lift 5s",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "finger_max_strength",
+    "secondary_goals": [],
+    "notes": "Deterministic v1 test session for loading pin max lift 5s per-hand baseline refresh."
+  },
+  "required_equipment": ["loading_pin"],
+  "compatibility": {
+    "slot": [
+      "short",
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "time_budget": {
+    "target_duration_min": 40,
+    "hard_cap_min": 60
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "template_id": "finger_max_strength_test_lp",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary"
+    }
+  ],
+  "tags": {
+    "test": true
+  },
+  "test_id": "lp_max_lift_5s"
+}

@@ -154,6 +154,10 @@ export default function SettingsPage() {
     gyms?: Array<{ gym_id: string; name: string; equipment: string[] }>;
   };
   const fingerDevice = ((state as Record<string, unknown>)?.preferences as Record<string, unknown>)?.finger_training_device as "hangboard" | "loading_pin" | undefined ?? "hangboard";
+  // TODO(A120-debug): remove after verifying in production
+  if (typeof window !== "undefined" && state) {
+    console.log("[A120] fingerDevice =", fingerDevice, "| raw preferences =", (state as Record<string, unknown>)?.preferences);
+  }
   const [savingDevice, setSavingDevice] = useState(false);
   const availability = (state?.availability ?? {}) as Record<
     string,

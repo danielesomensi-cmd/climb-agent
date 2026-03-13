@@ -416,3 +416,85 @@ class TestLPEquipmentFilter:
         )
         assert selected is not None
         assert selected["id"] in LP_EXERCISE_IDS
+
+
+# ── Planner Pass 3: finger test session selection ──────────────────────────
+
+
+class TestLPPlannerPass3:
+    """Planner Pass 3 should use test_lp_max_5s when finger_device=loading_pin."""
+
+    @pytest.fixture()
+    def _base_avail(self):
+        """Availability with 5 days, enough for tests to be placed."""
+        return {
+            day: {"evening": {"available": True, "preferred_location": "home"}}
+            for day in ["mon", "tue", "wed", "thu", "fri"]
+        }
+
+    def test_pass3_uses_lp_test_when_loading_pin(self, _base_avail):
+        from backend.engine.planner_v2 import generate_phase_week
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"finger_strength": 0.4, "pulling_strength": 0.2,
+                            "power_endurance": 0.2, "technique": 0.1, "endurance": 0.1},
+            session_pool=["strength_long", "finger_strength_home", "prehab_maintenance",
+                          "flexibility_full", "complementary_conditioning"],
+            start_date="2026-03-16",
+            availability=_base_avail,
+            home_equipment=["loading_pin", "pullup_bar", "resistance_band"],
+            inject_tests=True,
+            finger_device="loading_pin",
+            is_last_week_of_phase=True,
+        )
+        all_sids = [
+            s["session_id"]
+            for d in plan["weeks"][0]["days"]
+            for s in d.get("sessions", [])
+        ]
+        assert "test_lp_max_5s" in all_sids, f"Expected test_lp_max_5s in {all_sids}"
+        assert "test_max_hang_5s" not in all_sids, f"Should NOT have test_max_hang_5s in {all_sids}"
+
+    def test_pass3_uses_hb_test_when_hangboard(self, _base_avail):
+        from backend.engine.planner_v2 import generate_phase_week
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"finger_strength": 0.4, "pulling_strength": 0.2,
+                            "power_endurance": 0.2, "technique": 0.1, "endurance": 0.1},
+            session_pool=["strength_long", "finger_strength_home", "prehab_maintenance",
+                          "flexibility_full", "complementary_conditioning"],
+            start_date="2026-03-16",
+            availability=_base_avail,
+            home_equipment=["hangboard", "pullup_bar", "resistance_band"],
+            inject_tests=True,
+            finger_device="hangboard",
+            is_last_week_of_phase=True,
+        )
+        all_sids = [
+            s["session_id"]
+            for d in plan["weeks"][0]["days"]
+            for s in d.get("sessions", [])
+        ]
+        assert "test_max_hang_5s" in all_sids, f"Expected test_max_hang_5s in {all_sids}"
+        assert "test_lp_max_5s" not in all_sids
+
+    def test_pass3_default_none_uses_hangboard(self, _base_avail):
+        from backend.engine.planner_v2 import generate_phase_week
+        plan = generate_phase_week(
+            phase_id="base",
+            domain_weights={"finger_strength": 0.4, "pulling_strength": 0.2,
+                            "power_endurance": 0.2, "technique": 0.1, "endurance": 0.1},
+            session_pool=["strength_long", "finger_strength_home", "prehab_maintenance",
+                          "flexibility_full", "complementary_conditioning"],
+            start_date="2026-03-16",
+            availability=_base_avail,
+            home_equipment=["hangboard", "pullup_bar", "resistance_band"],
+            inject_tests=True,
+            is_last_week_of_phase=True,
+        )
+        all_sids = [
+            s["session_id"]
+            for d in plan["weeks"][0]["days"]
+            for s in d.get("sessions", [])
+        ]
+        assert "test_max_hang_5s" in all_sids

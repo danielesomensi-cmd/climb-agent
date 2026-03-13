@@ -45,6 +45,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "regeneration_easy": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym", "outdoor")},
     "finger_maintenance_home": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",), "required_equipment": ["hangboard"]},
     "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
+    "test_lp_max_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
     "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
     "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["pullup_bar"]},
     "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
@@ -399,6 +400,7 @@ def generate_phase_week(
     home_equipment: Optional[List[str]] = None,
     today: Optional[str] = None,
     inject_tests: bool = False,
+    finger_device: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -982,8 +984,10 @@ def generate_phase_week(
     _run_pass3 = inject_tests or (is_last_week_of_phase and phase_id in ("base", "strength_power"))
     if _run_pass3:
         # Required tests first, then optional
+        # Finger test depends on device preference (A120)
+        _finger_test_sid = "test_lp_max_5s" if finger_device == "loading_pin" else "test_max_hang_5s"
         _test_schedule = [
-            ("test_max_hang_5s", True),
+            (_finger_test_sid, True),
             ("test_repeater_7_3", True),
             ("test_max_weighted_pullup", False),
         ]

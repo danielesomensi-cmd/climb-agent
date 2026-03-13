@@ -208,6 +208,7 @@ def get_week(
                 and ctx["phase_id"] == "base"
                 and not is_last
             )
+            finger_device = (state.get("preferences") or {}).get("finger_training_device")
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
                 domain_weights=ctx["domain_weights"],
@@ -224,6 +225,7 @@ def get_week(
                 home_equipment=home_equipment,
                 today=today_str,
                 inject_tests=want_tests,
+                finger_device=finger_device,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")
