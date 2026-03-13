@@ -504,6 +504,9 @@
     "hard_day_cap_per_week": 3,
     "target_training_days_per_week": 6
   },
+  "preferences": {
+    "finger_training_device": "hangboard"
+  },
   "quote_history": [
     "q001",
     "q002",

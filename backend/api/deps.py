@@ -26,6 +26,7 @@ EMPTY_TEMPLATE: Dict[str, Any] = {
     "availability": {},
     "equipment": {"home": [], "gyms": []},
     "planning_prefs": {},
+    "preferences": {"finger_training_device": "hangboard"},
     "limitations": {"active_flags": [], "details": []},
     "trips": [],
     "macrocycle": None,
