@@ -330,6 +330,7 @@ def pick_best_exercise_p0(
     exclude_ids: Optional[set] = None,
     recent_ex_ids: Optional[List[str]] = None,
     limitation_map: Optional[Dict[str, str]] = None,
+    finger_device: Optional[str] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -378,6 +379,14 @@ def pick_best_exercise_p0(
         if base2b:
             base2 = base2b
     trace["counts"]["after_equipment_pref"] = len(base2)
+
+    # Stage 2c: finger device preference (soft — prefers lp_* or hangboard exercises)
+    if finger_device and len(base2) > 1:
+        preferred_eq = "loading_pin" if finger_device == "loading_pin" else "hangboard"
+        device_match = [e for e in base2 if preferred_eq in set(ex_equipment_required(e))]
+        if device_match:
+            base2 = device_match
+    trace["counts"]["after_finger_device"] = len(base2)
 
     # Stage 3: role (ANY match)
     base3 = base2
@@ -816,6 +825,7 @@ def _resolve_inline_block(
     pattern_req = filters.get("pattern")
     equipment_req = filters.get("equipment")
 
+    _finger_dev = ((user_state or {}).get("preferences") or {}).get("finger_training_device")
     selected_ex, trace = pick_best_exercise_p0(
         exercises=exercises,
         location=location,
@@ -827,6 +837,7 @@ def _resolve_inline_block(
         exclude_ids=set(recent_ex_ids),
         recent_ex_ids=recent_ex_ids,
         limitation_map=limitation_map,
+        finger_device=_finger_dev,
     )
     chosen_by = "p0_inline_block"
 
@@ -1058,11 +1069,13 @@ def resolve_session(
         available_equipment.append("weight")
 
     # Equipment aliases (v1): loading_pin → hangboard.
-    # v2 (B106/B109): gestione unilaterale, doppio tempo, esercizi dedicati
-    EQUIPMENT_ALIASES = {"loading_pin": "hangboard"}
-    for alias, canonical in EQUIPMENT_ALIASES.items():
-        if alias in available_equipment and canonical not in available_equipment:
-            available_equipment.append(canonical)
+    # When finger_training_device == "loading_pin", do NOT alias — use native lp_* exercises.
+    finger_device = ((user_state.get("preferences") or {}).get("finger_training_device")) if user_state else None
+    if finger_device != "loading_pin":
+        EQUIPMENT_ALIASES = {"loading_pin": "hangboard"}
+        for alias, canonical in EQUIPMENT_ALIASES.items():
+            if alias in available_equipment and canonical not in available_equipment:
+                available_equipment.append(canonical)
 
     # Equipment implications (v2): every gym has a pullup bar.
     if location == "gym" and "pullup_bar" not in available_equipment:
@@ -1207,6 +1220,7 @@ def resolve_session(
                         exclude_ids=set(recent_ex_ids),
                         recent_ex_ids=recent_ex_ids,
                         limitation_map=limitation_map,
+                        finger_device=finger_device,
                     )
                     chosen_by = "p0_hard_filters"
 

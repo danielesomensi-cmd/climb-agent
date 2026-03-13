@@ -63,6 +63,20 @@ _EXERCISE_TO_GROUP: Dict[str, Tuple[str, float]] = {}
 for _grp_name, _members in _SIMILARITY_GROUPS.items():
     for _ex_id, _coeff in _members.items():
         _EXERCISE_TO_GROUP[_ex_id] = (_grp_name, _coeff)
+LOADING_PIN_EXERCISES = {
+    "lp_max_lift_5s", "lp_max_lift_7s", "lp_max_lift_10s",
+    "lp_short_lifts", "lp_density_lifts", "lp_repeater_lifts",
+}
+
+LOADING_PIN_DEFAULT_INTENSITY_PCT = {
+    "lp_max_lift_5s": 0.92,
+    "lp_max_lift_7s": 0.90,
+    "lp_max_lift_10s": 0.88,
+    "lp_short_lifts": 0.95,
+    "lp_density_lifts": 0.75,
+    "lp_repeater_lifts": 0.70,
+}
+
 HANGBOARD_TOTAL_LOAD_EXERCISES = {
     "critical_force_test", "density_hangs",
     "hangboard_moving_hangs", "horst_7_53", "long_duration_hang",
@@ -441,6 +455,58 @@ def _hangboard_suggested(user_state: Dict[str, Any], exercise_id: str, prescript
     return result
 
 
+def _loading_pin_suggested(
+    user_state: Dict[str, Any],
+    exercise_id: str,
+    prescription: Dict[str, Any],
+    exercise_attrs: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Compute suggested loads for a loading pin exercise (unilateral, external_load).
+
+    Returns a dict with right_hand and left_hand suggested loads.
+    """
+    attrs = exercise_attrs or {}
+    intensity = float(
+        prescription.get("intensity_pct_of_total_load")
+        or attrs.get("intensity_pct")
+        or LOADING_PIN_DEFAULT_INTENSITY_PCT.get(exercise_id, 0.85)
+    )
+    lp_baselines = (user_state.get("baselines") or {}).get("loading_pin") or []
+    right_max = 0.0
+    left_max = 0.0
+    for bl in lp_baselines:
+        hand = str(bl.get("hand") or "").lower()
+        load = float(bl.get("max_load_kg") or 0)
+        if hand == "right" and load > right_max:
+            right_max = load
+        elif hand == "left" and load > left_max:
+            left_max = load
+
+    # Fallback: estimate from hangboard baseline via conversion
+    if right_max == 0.0 and left_max == 0.0:
+        hb_baselines = (user_state.get("baselines") or {}).get("hangboard") or []
+        if hb_baselines:
+            hb_total = float(hb_baselines[0].get("max_total_load_kg") or 0)
+            if hb_total > 0:
+                from backend.engine.conversions import hangboard_to_loading_pin
+                est = hangboard_to_loading_pin(hb_total)
+                right_max = est["right"]
+                left_max = est["left"]
+
+    work_s = prescription.get("work_seconds") or 5
+    sets = prescription.get("sets") or 5
+    return {
+        "schema_version": "progression_targets.v1",
+        "right_hand": {
+            "suggested_external_load_kg": _round_half_step(right_max * intensity),
+        },
+        "left_hand": {
+            "suggested_external_load_kg": _round_half_step(left_max * intensity),
+        },
+        "suggested_rep_scheme": f"{sets}x{work_s}s",
+    }
+
+
 def estimate_missing_baselines(user_state: Dict[str, Any]) -> None:
     """Fill missing hangboard baseline from grade or pullup test (NEW-F11).
 
@@ -640,6 +706,24 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         "counterweight_required — consider re-running max_hang_5s test"
                     )
 
+            # Loading pin exercises (unilateral, external_load)
+            if ex_id in LOADING_PIN_EXERCISES:
+                lp_sug = _loading_pin_suggested(user_state, ex_id, prescription, exercise_attrs=inst.get("attributes"))
+                suggested.update(lp_sug)
+                # Override from working_loads per-hand
+                for hand in ("right", "left"):
+                    hand_key = f"{ex_id}:{hand}"
+                    hand_entry = None
+                    for wl in _working_entries(user_state):
+                        if str(wl.get("key") or "") == hand_key:
+                            if _is_fresh(wl.get("updated_at"), out.get("date") or "", 60):
+                                hand_entry = wl
+                            break
+                    if hand_entry and hand_entry.get("next_external_load_kg") is not None:
+                        suggested[f"{hand}_hand"]["suggested_external_load_kg"] = _round_half_step(
+                            float(hand_entry["next_external_load_kg"])
+                        )
+
             if suggested:
                 inst["suggested"] = suggested
 
@@ -828,6 +912,33 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             # Write scalar to assessment.tests
             at["weighted_pullup_1rm_total_kg"] = total
 
+        # --- Loading pin max test 5s ---
+        elif exercise_id == "lp_max_test_5s":
+            hand = str(item.get("hand") or "").lower()
+            used_load = item.get("used_external_load_kg")
+            if used_load is None or hand not in ("right", "left"):
+                continue
+            load_kg = _round_half_step(float(used_load))
+            # Update baselines.loading_pin
+            lp_baselines = updated.setdefault("baselines", {}).setdefault("loading_pin", [])
+            existing = next((b for b in lp_baselines if str(b.get("hand") or "").lower() == hand), None)
+            if existing:
+                existing["max_load_kg"] = load_kg
+                existing["source"] = "test"
+                existing["updated_at"] = date_str
+            else:
+                lp_baselines.append({
+                    "max_load_kg": load_kg,
+                    "hand": hand,
+                    "edge_mm": 20,
+                    "grip": "half_crimp",
+                    "lift_seconds": 5,
+                    "source": "test",
+                    "updated_at": date_str,
+                })
+            # Write scalar to assessment.tests
+            at[f"lp_max_lift_5s_{hand}_kg"] = load_kg
+
 
 def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
     updated = deepcopy(user_state)
@@ -946,12 +1057,50 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 }
             )
 
+        elif exercise_id in LOADING_PIN_EXERCISES:
+            # Unilateral: feedback includes hand field
+            hand = str(item.get("hand") or "right").lower()
+            used_load = item.get("used_external_load_kg") or item.get("used_load_kg")
+            if used_load is None:
+                continue
+            base = float(used_load)
+            pct = _rule_midpoint_pct(updated, feedback_label)
+            next_load = _round_half_step(base * (1.0 + pct))
+            hand_key = f"{exercise_id}:{hand}"
+            entries = _working_entries(updated)
+            entry = None
+            for e in entries:
+                if str(e.get("key") or "") == hand_key:
+                    entry = e
+                    break
+            if entry is None:
+                entry = {"exercise_id": exercise_id, "key": hand_key, "hand": hand}
+                entries.append(entry)
+                entries.sort(key=lambda e: str(e.get("key") or ""))
+            entry.update(
+                {
+                    "exercise_id": exercise_id,
+                    "key": hand_key,
+                    "hand": hand,
+                    "last_completed": bool(item.get("completed", False)),
+                    "last_feedback_label": feedback_label,
+                    "last_external_load_kg": _round_half_step(base),
+                    "next_external_load_kg": next_load,
+                    "updated_at": date_value,
+                }
+            )
+
     counters["max_hang_5s_hard_streak"] = max_hang_hard
     counters["max_hang_5s_easy_streak"] = max_hang_easy
+
+    # Determine which test to enqueue based on finger device preference
+    finger_device = ((updated.get("preferences") or {}).get("finger_training_device"))
+    test_id_for_retest = "lp_max_test_5s" if finger_device == "loading_pin" else "max_hang_5s_total_load"
+
     if max_hang_hard >= 2:
         _enqueue_test(
             updated,
-            test_id="max_hang_5s_total_load",
+            test_id=test_id_for_retest,
             date_value=date_value,
             offset_days=7,
             reason="two_recent_hard_feedback_on_max_hang_5s",
@@ -959,7 +1108,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
     elif max_hang_easy >= 2:
         _enqueue_test(
             updated,
-            test_id="max_hang_5s_total_load",
+            test_id=test_id_for_retest,
             date_value=date_value,
             offset_days=14,
             reason="two_recent_easy_feedback_on_max_hang_5s",
