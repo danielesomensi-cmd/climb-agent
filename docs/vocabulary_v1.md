@@ -62,6 +62,19 @@ Rules:
 
 ---
 
+### 1.3 Finger training device
+
+Allowed `finger_training_device` values:
+- `hangboard` (default)
+- `loading_pin`
+
+When `loading_pin` is selected:
+- Resolver selects `lp_*` exercises instead of hangboard equivalents
+- Test scheduling uses `lp_max_test_5s` instead of `max_hang_5s_total_load`
+- Baselines use `baselines.loading_pin` (per-hand)
+
+---
+
 ## 2) Exercise schema (canonical fields)
 
 In v1, selection semantics must rely on **structured fields**, not free-form tags.
@@ -467,6 +480,16 @@ Allowed values:
 - `movement`
 - `constraint`
 - `relaxation`
+
+---
+
+### 2.13 Unilateral flag
+
+`unilateral`: boolean. When true, the exercise is performed one limb at a time.
+The resolver must prescribe sets for each hand separately.
+Working loads and baselines are tracked per-hand when unilateral is true.
+
+Currently used by: loading pin exercises (`lp_*`).
 
 ---
 

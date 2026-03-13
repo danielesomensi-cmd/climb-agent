@@ -7789,6 +7789,396 @@
       ],
       "load_model": "bodyweight_only",
       "video_url": null
+    },
+    {
+      "id": "lp_max_lift_5s",
+      "name": "Loading Pin Max Lift (5s)",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength",
+        "finger_max_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "finger_max_hang",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.92
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": null,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "One-arm maximum lift on a 20mm edge block for 5 seconds. Isolates finger strength without shoulder loading. Perform all sets with right hand first, then repeat with left hand. Use same protocol parameters as max_hang_5s but with external load only (do not add bodyweight).",
+      "cues": [
+        "Stand with block in front, arm straight along your side",
+        "Half crimp grip: DIP straight, PIP bent ~90°",
+        "Lift with legs (slight knee bend), NOT by bending arm or shrugging",
+        "Hold for exactly 5 seconds, controlled release",
+        "Complete all sets one hand, then switch — rest 3 min between sets"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "lp_max_lift_7s",
+      "name": "Loading Pin Max Lift (7s)",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength",
+        "finger_max_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "finger_max_hang",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.90
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": null,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "One-arm near-maximal lift on a 20mm edge block for 7 seconds. Longer hold duration targets both neural recruitment and early structural adaptation. Same protocol as max_hang_7s transposed to loading pin.",
+      "cues": [
+        "Choose load you can hold for exactly 10s max",
+        "Lift precisely 7 seconds — not to failure",
+        "Arm straight, no shrugging or arm bending",
+        "Complete all sets one hand, then switch",
+        "Last set should be very hard but with perfect form"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "lp_max_lift_10s",
+      "name": "Loading Pin Max Lift (10s)",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "finger_max_hang",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.88
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": null,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "85-90% intensity. Longer duration for structural/hypertrophic adaptation."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "low",
+        "cns": "high",
+        "skin": "medium"
+      },
+      "description": "Extended-duration one-arm lift (10 seconds) targeting structural tendon adaptation and finger flexor hypertrophy. Same protocol as max_hang_10s transposed to loading pin with external load only.",
+      "cues": [
+        "Choose load you can hold for exactly 13-14s max",
+        "Lift precisely 10 seconds — do not lift to failure",
+        "Arm straight and relaxed, no shrugging",
+        "Body completely still — controlled isometric hold",
+        "3-minute rest between sets for full phosphocreatine recovery"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "lp_short_lifts",
+      "name": "Loading Pin Short Lifts (Recruitment)",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength",
+        "finger_max_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "finger_max_hang",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.95
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 5,
+        "reps": 5,
+        "work_seconds": 2,
+        "rest_between_reps_seconds": 30,
+        "rest_between_sets_seconds": 180
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "low",
+        "cns": "high",
+        "skin": "low"
+      },
+      "description": "Short explosive lifts (1-3s) targeting neural recruitment. Lift as heavy as possible, release, repeat. Tyler Nelson recruitment pull concept transposed to loading pin. Maximises motor unit activation with minimal fatigue accumulation.",
+      "cues": [
+        "Load near max — you only hold 1-3 seconds",
+        "Explosive lift initiation, controlled release",
+        "5 reps per set, 30s rest between reps",
+        "Complete all sets one hand, then switch",
+        "Focus on maximal force production, not duration"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "lp_density_lifts",
+      "name": "Loading Pin Density Lifts",
+      "category": "main_strength",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_strength_endurance"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "finger_density_hangs",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "open_hand"
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": 90,
+        "rest_between_sets_seconds": 180,
+        "notes": "3 grips × 3 lifts = 9 total per hand. Change grip each rep. 90s rest between lifts, 3 min between sets."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "medium",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Tyler Nelson's Density Hangs protocol transposed to loading pin. 3 sets of 3 reps across different grip positions. Each lift is 20-40s near failure. Targets tendon hypertrophy, stress-shielding, and forearm muscle density. One hand at a time.",
+      "cues": [
+        "3 different grip positions per set (e.g. open-hand, half-crimp, 3-finger drag)",
+        "Each lift: 20-40s at ~RPE 9 (near failure)",
+        "Change grip position on every rep within the set",
+        "90s rest between individual lifts",
+        "3 min rest between sets of 3",
+        "Complete all sets one hand, then switch"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "lp_repeater_lifts",
+      "name": "Loading Pin Repeater Lifts",
+      "category": "strength_accessory",
+      "time_min": 20,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "finger_strength_endurance"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "finger_repeater",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": 6,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": 3,
+        "rest_between_sets_seconds": 120,
+        "notes": "7s on / 3s off repeater protocol. One hand at a time. 6 reps per set."
+      },
+      "stress_tags": {
+        "elbow": "low",
+        "fingers": "medium",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "Classic 7/3 repeater protocol transposed to loading pin. 7 seconds lift, 3 seconds rest, repeated for 6 reps per set. Builds finger strength-endurance with moderate load. One hand at a time.",
+      "cues": [
+        "Lift for exactly 7 seconds, release for 3 seconds",
+        "6 reps per set without putting the weight down between reps",
+        "Moderate load — should be challenging by rep 5-6",
+        "2 minutes rest between sets",
+        "Complete all sets one hand, then switch"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "lp_max_test_5s",
+      "name": "Loading Pin Max Test (5s)",
+      "category": "test",
+      "time_min": 15,
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "finger_strength",
+        "finger_max_strength"
+      ],
+      "pattern": "isometric_hang",
+      "intensity_level": "max",
+      "fatigue_cost": 8,
+      "recency_group": "finger_test",
+      "equipment_required": [
+        "loading_pin"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
+      },
+      "load_model": "external_load",
+      "unilateral": true,
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 5,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Find max load you can hold for exactly 5 seconds per hand. Test each hand separately. Record both values."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "low",
+        "cns": "high",
+        "skin": "medium"
+      },
+      "description": "Maximum strength test for loading pin. Find the heaviest load you can hold for exactly 5 seconds with strict half crimp. Test each hand separately. Record both values. Use progressive warm-up sets building to max.",
+      "cues": [
+        "Warm up thoroughly — at least 4-5 progressive sets per hand",
+        "Start at ~50% estimated max, increase by 2-5kg per attempt",
+        "Max = heaviest load held for exactly 5 seconds with good form",
+        "Test right hand first, then left hand",
+        "Rest 3-5 minutes between max attempts",
+        "Record right-hand and left-hand values separately"
+      ],
+      "video_url": null
     }
   ]
 }
