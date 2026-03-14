@@ -1,6 +1,12 @@
 #!/bin/bash
 # Pre-push hook: run sync_status.py and check for uncommitted changes
 
+# Activate venv if present (needed for pytest collection)
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+if [ -f "$REPO_ROOT/.venv/bin/activate" ]; then
+    source "$REPO_ROOT/.venv/bin/activate"
+fi
+
 echo "Running sync_status.py..."
 python scripts/sync_status.py
 
