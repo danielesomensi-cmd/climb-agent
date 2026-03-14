@@ -905,6 +905,7 @@ def _resolve_inline_block(
             "prescription": merged,
             "attributes": ex_attrs,
             "load_model": selected_ex.get("load_model"),
+            "unilateral": bool(selected_ex.get("unilateral")),
             "block_uid": block_uid,
             "source": {
                 "picked_by": f"resolver_v0.2/{chosen_by}",
@@ -1008,6 +1009,7 @@ def _inject_prehab_for_limitations(
             "prescription": merged,
             "attributes": prehab_ex.get("attributes") or {},
             "load_model": prehab_ex.get("load_model"),
+            "unilateral": bool(prehab_ex.get("unilateral")),
             "block_uid": f"prehab_injection.{zone}",
             "source": {
                 "picked_by": "resolver_v0.2/prehab_injection",
@@ -1289,6 +1291,7 @@ def resolve_session(
                     "prescription": merged,
                     "attributes": ex_attrs,
                     "load_model": selected_ex.get("load_model"),
+                    "unilateral": bool(selected_ex.get("unilateral")),
                     "block_uid": block_uid,
                     "source": {
                         "picked_by": f"resolver_v0.2/{chosen_by or 'unknown'}",

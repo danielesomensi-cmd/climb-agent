@@ -10,7 +10,6 @@ from pathlib import Path
 import pytest
 
 from backend.engine.progression_v1 import (
-    LOADING_PIN_EXERCISES,
     _loading_pin_suggested,
     _round_half_step,
     apply_feedback,

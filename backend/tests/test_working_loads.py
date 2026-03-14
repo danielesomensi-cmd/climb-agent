@@ -5,9 +5,6 @@ from copy import deepcopy
 from pathlib import Path
 
 from backend.engine.progression_v1 import (
-    EXTERNAL_LOAD_EXERCISES,
-    HANGBOARD_TOTAL_LOAD_EXERCISES,
-    LOAD_BASED_EXERCISES,
     _get_bodyweight,
     _rule_midpoint_pct,
     apply_feedback,
@@ -333,10 +330,14 @@ def test_resolve_includes_suggested():
 
 # ─── Misc (2 tests) ──────────────────────────────────────────────────────────
 
-def test_pullup_not_in_load_based():
-    """pullup was removed from LOAD_BASED_EXERCISES (only weighted_pullup remains)."""
-    assert "pullup" not in LOAD_BASED_EXERCISES
-    assert "weighted_pullup" in LOAD_BASED_EXERCISES
+def test_weighted_pullup_has_total_load_model():
+    """weighted_pullup must have load_model=total_load in catalog (ARCH-2)."""
+    import json
+    with open("backend/catalog/exercises/v1/exercises.json") as f:
+        data = json.load(f)
+    by_id = {e["id"]: e for e in data["exercises"]}
+    assert by_id["weighted_pullup"].get("load_model") == "total_load"
+    assert "pullup" not in by_id or by_id["pullup"].get("load_model") != "total_load"
 
 
 def test_get_bodyweight_fallback():
@@ -438,14 +439,22 @@ def test_load_source_estimated_in_output():
 
 # ─── Leg exercises catalog (10 tests) ────────────────────────────────────────
 
-def test_romanian_deadlift_in_external_load_set():
-    """romanian_deadlift must be in EXTERNAL_LOAD_EXERCISES."""
-    assert "romanian_deadlift" in EXTERNAL_LOAD_EXERCISES
+def test_romanian_deadlift_has_external_load_model():
+    """romanian_deadlift must have load_model=external_load in catalog (ARCH-2)."""
+    import json
+    with open("backend/catalog/exercises/v1/exercises.json") as f:
+        data = json.load(f)
+    by_id = {e["id"]: e for e in data["exercises"]}
+    assert by_id["romanian_deadlift"].get("load_model") == "external_load"
 
 
-def test_pistol_squat_not_in_external_load_set():
-    """pistol_squat_progression is bodyweight_only — must NOT be in EXTERNAL_LOAD_EXERCISES."""
-    assert "pistol_squat_progression" not in EXTERNAL_LOAD_EXERCISES
+def test_pistol_squat_not_external_load():
+    """pistol_squat_progression is bodyweight_only in catalog (ARCH-2)."""
+    import json
+    with open("backend/catalog/exercises/v1/exercises.json") as f:
+        data = json.load(f)
+    by_id = {e["id"]: e for e in data["exercises"]}
+    assert by_id["pistol_squat_progression"].get("load_model") == "bodyweight_only"
 
 
 def test_romanian_deadlift_fallback_load():
@@ -574,3 +583,66 @@ def test_heavy_conditioning_gym_in_meta_but_not_auto_scheduled():
     assert "heavy_conditioning_gym" in _SESSION_META
     for phase, pool in _SESSION_POOL.items():
         assert "heavy_conditioning_gym" not in pool, f"heavy_conditioning_gym should not be in {phase} pool"
+
+
+# ─── ARCH-2: load_model data-driven safety net ──────────────────────────────
+
+def test_arch2_all_external_load_exercises_get_suggestion():
+    """ARCH-2 safety net: every exercise with load_model=external_load gets a load suggestion."""
+    import json
+    with open("backend/catalog/exercises/v1/exercises.json") as f:
+        data = json.load(f)
+    us = _base_user_state()
+    external_ids = [e["id"] for e in data["exercises"] if e.get("load_model") == "external_load" and not e.get("unilateral")]
+    for ex_id in external_ids:
+        day = _day_with_exercises([{
+            "exercise_id": ex_id,
+            "load_model": "external_load",
+            "prescription": {"reps": 8, "sets": 3},
+        }])
+        out = inject_targets(day, us)
+        sug = out["sessions"][0]["exercise_instances"][0].get("suggested") or {}
+        assert "suggested_external_load_kg" in sug, (
+            f"ARCH-2 regression: {ex_id} has load_model=external_load but got no load suggestion"
+        )
+
+
+def test_arch2_all_total_load_exercises_get_suggestion():
+    """ARCH-2 safety net: every exercise with load_model=total_load gets a load suggestion."""
+    import json
+    with open("backend/catalog/exercises/v1/exercises.json") as f:
+        data = json.load(f)
+    us = _base_user_state()
+    total_ids = [e["id"] for e in data["exercises"] if e.get("load_model") == "total_load"]
+    for ex_id in total_ids:
+        day = _day_with_exercises([{
+            "exercise_id": ex_id,
+            "load_model": "total_load",
+            "prescription": {"sets": 5, "reps": 1, "work_seconds": 5, "rest_between_sets_seconds": 180},
+            "attributes": {"intensity_pct": 0.80},
+        }])
+        out = inject_targets(day, us)
+        sug = out["sessions"][0]["exercise_instances"][0].get("suggested") or {}
+        assert "suggested_total_load_kg" in sug or "suggested_external_load_kg" in sug, (
+            f"ARCH-2 regression: {ex_id} has load_model=total_load but got no load suggestion"
+        )
+
+
+def test_arch2_bodyweight_only_exercises_get_no_load_suggestion():
+    """ARCH-2 safety net: exercises with load_model=bodyweight_only get NO load suggestion."""
+    import json
+    with open("backend/catalog/exercises/v1/exercises.json") as f:
+        data = json.load(f)
+    us = _base_user_state()
+    bw_ids = [e["id"] for e in data["exercises"] if e.get("load_model") == "bodyweight_only"]
+    for ex_id in bw_ids[:10]:  # Sample 10 to keep test fast
+        day = _day_with_exercises([{
+            "exercise_id": ex_id,
+            "load_model": "bodyweight_only",
+            "prescription": {"reps": 10, "sets": 3},
+        }])
+        out = inject_targets(day, us)
+        sug = out["sessions"][0]["exercise_instances"][0].get("suggested") or {}
+        assert "suggested_external_load_kg" not in sug, (
+            f"ARCH-2 regression: {ex_id} has load_model=bodyweight_only but got a load suggestion"
+        )

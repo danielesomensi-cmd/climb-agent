@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
@@ -23,16 +24,10 @@ WHOLE_FONT_GRADES: List[str] = [
 ]
 _WHOLE_GRADE_TO_INDEX = {g: i for i, g in enumerate(WHOLE_FONT_GRADES)}
 
-LOAD_BASED_EXERCISES = {"max_hang_5s", "weighted_pullup"}
-GRADE_BASED_EXERCISES = {"limit_bouldering"}
-EXTERNAL_LOAD_EXERCISES = {
-    "barbell_row", "bench_press", "dumbbell_bench_press", "face_pull",
-    "farmers_carry", "goblet_squat", "overhead_press", "romanian_deadlift",
-    "split_squat", "turkish_getup",
-    # Prehab — light fixed loads (A123)
-    "elbow_eccentric_curl", "forearm_pronation_supination",
-    "wrist_curl", "reverse_wrist_curl",
-}
+# ARCH-2: load_model dispatch is now data-driven from exercise JSON.
+# These sets are ONLY used for exercise-specific data (fallback loads, intensity %),
+# NOT for deciding which branch of logic to use.
+# The load_model field in each exercise_instance drives the dispatch.
 EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "barbell_row": 0.30,
     "bench_press": 0.40,
@@ -105,10 +100,8 @@ _EXERCISE_TO_GROUP: Dict[str, Tuple[str, float]] = {}
 for _grp_name, _members in _SIMILARITY_GROUPS.items():
     for _ex_id, _coeff in _members.items():
         _EXERCISE_TO_GROUP[_ex_id] = (_grp_name, _coeff)
-LOADING_PIN_EXERCISES = {
-    "lp_max_lift_5s", "lp_max_lift_7s", "lp_max_lift_10s",
-    "lp_short_lifts", "lp_density_lifts", "lp_repeater_lifts",
-}
+
+
 
 LOADING_PIN_DEFAULT_INTENSITY_PCT = {
     "lp_max_lift_5s": 0.92,
@@ -119,12 +112,8 @@ LOADING_PIN_DEFAULT_INTENSITY_PCT = {
     "lp_repeater_lifts": 0.70,
 }
 
-HANGBOARD_TOTAL_LOAD_EXERCISES = {
-    "critical_force_test", "density_hangs",
-    "hangboard_moving_hangs", "horst_7_53", "long_duration_hang",
-    "lopez_subhangs", "max_hang_10s", "max_hang_7s", "max_hang_ladder",
-    "med_test", "one_arm_hang_assisted", "repeater_15_15", "repeater_hang_7_3",
-}
+
+
 # Grade → estimated max-hang total load offset from bodyweight (French sport grades, lead_max_rp).
 # Source: climbing physiology literature / Lattice Training benchmarks (conservative).
 GRADE_TO_HANG_OFFSET: Dict[str, float] = {
@@ -287,6 +276,40 @@ def step_grade(grade: str, steps: int) -> str:
     idx = _WHOLE_GRADE_TO_INDEX[cleaned] + int(steps)
     idx = max(0, min(len(WHOLE_FONT_GRADES) - 1, idx))
     return WHOLE_FONT_GRADES[idx]
+
+
+_CATALOG_CACHE: Optional[Dict[str, Dict[str, Any]]] = None
+
+
+def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
+    """Load exercise catalog keyed by id (cached, ARCH-2).
+
+    Returns dict: exercise_id → {"load_model": str, "unilateral": bool}.
+    Used as fallback when exercise_instance doesn't carry load_model
+    (e.g. in test fixtures or legacy resolved data).
+    """
+    global _CATALOG_CACHE
+    if _CATALOG_CACHE is not None:
+        return _CATALOG_CACHE
+    import json as _json
+    catalog_path = os.path.join(
+        os.path.dirname(__file__), "..", "catalog", "exercises", "v1", "exercises.json"
+    )
+    try:
+        with open(catalog_path) as f:
+            data = _json.load(f)
+        _CATALOG_CACHE = {
+            e["id"]: {"load_model": e.get("load_model"), "unilateral": bool(e.get("unilateral"))}
+            for e in data.get("exercises", [])
+        }
+    except (FileNotFoundError, KeyError):
+        _CATALOG_CACHE = {}
+    return _CATALOG_CACHE
+
+
+def _load_catalog_load_models() -> Dict[str, Optional[str]]:
+    """Return exercise_id → load_model mapping from catalog."""
+    return {eid: info["load_model"] for eid, info in _load_catalog_cache().items()}
 
 
 def _extract_grade_benchmark(user_state: Dict[str, Any]) -> str:
@@ -692,6 +715,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
     estimate_missing_baselines(user_state)  # Fill missing hangboard + pulling baselines
     out["targets_schema_version"] = "progression_targets.v1"
     benchmark_grade = _extract_grade_benchmark(user_state)
+    catalog_lm = _load_catalog_load_models()  # ARCH-2: fallback for instances without load_model
 
     for session in out.get("sessions") or []:
         intensity = _intensity_label(session)
@@ -701,60 +725,63 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             prescription = inst.get("prescription") or {}
             suggested: Dict[str, Any] = dict(inst.get("suggested") or {})
 
-            if ex_id in LOAD_BASED_EXERCISES:
-                if ex_id == "max_hang_5s":
-                    suggested.update(_max_hang_suggested(user_state, prescription, exercise_attrs=inst.get("attributes")))
-                    inject_source = dict(prescription)
-                    inject_source.update(inst.get("suggested") or {})
-                    setup, _ = _progression_setup_and_key(ex_id, inject_source)
-                    entry = _best_entry(user_state, ex_id, setup, out.get("date") or "")
-                    bodyweight = _get_bodyweight(user_state)
+            load_model = inst.get("load_model") or catalog_lm.get(ex_id)
+            is_unilateral = inst.get("unilateral") if "unilateral" in inst else (_load_catalog_cache().get(ex_id, {}).get("unilateral", False))
 
-                    if entry and entry.get("next_external_load_kg") is not None:
-                        external = _round_half_step(float(entry["next_external_load_kg"]))
-                        suggested["suggested_external_load_kg"] = external
-                        suggested["suggested_total_load_kg"] = _round_half_step(bodyweight + external)
-                    elif entry and entry.get("next_total_load_kg") is not None:
-                        total = _round_half_step(float(entry["next_total_load_kg"]))
-                        suggested["suggested_total_load_kg"] = total
-                        suggested["suggested_external_load_kg"] = _round_half_step(total - bodyweight)
-                    elif entry and str(entry.get("last_feedback_label") or "") in {"hard", "very_hard"}:
-                        pct = _rule_midpoint_pct(user_state, str(entry.get("last_feedback_label") or "ok"))
-                        next_external = _round_half_step(float(suggested.get("suggested_external_load_kg") or 0.0) * (1.0 + pct))
-                        suggested["suggested_external_load_kg"] = next_external
-                        suggested["suggested_total_load_kg"] = _round_half_step(bodyweight + next_external)
-                        write_entry = _find_working_load_entry(user_state, ex_id, setup)
-                        write_entry["next_external_load_kg"] = next_external
-                        write_entry["updated_at"] = out.get("date")
+            # --- total_load: special-case exercises with unique logic ---
+            if ex_id == "max_hang_5s":
+                suggested.update(_max_hang_suggested(user_state, prescription, exercise_attrs=inst.get("attributes")))
+                inject_source = dict(prescription)
+                inject_source.update(inst.get("suggested") or {})
+                setup, _ = _progression_setup_and_key(ex_id, inject_source)
+                entry = _best_entry(user_state, ex_id, setup, out.get("date") or "")
+                bodyweight = _get_bodyweight(user_state)
+
+                if entry and entry.get("next_external_load_kg") is not None:
+                    external = _round_half_step(float(entry["next_external_load_kg"]))
+                    suggested["suggested_external_load_kg"] = external
+                    suggested["suggested_total_load_kg"] = _round_half_step(bodyweight + external)
+                elif entry and entry.get("next_total_load_kg") is not None:
+                    total = _round_half_step(float(entry["next_total_load_kg"]))
+                    suggested["suggested_total_load_kg"] = total
+                    suggested["suggested_external_load_kg"] = _round_half_step(total - bodyweight)
+                elif entry and str(entry.get("last_feedback_label") or "") in {"hard", "very_hard"}:
+                    pct = _rule_midpoint_pct(user_state, str(entry.get("last_feedback_label") or "ok"))
+                    next_external = _round_half_step(float(suggested.get("suggested_external_load_kg") or 0.0) * (1.0 + pct))
+                    suggested["suggested_external_load_kg"] = next_external
+                    suggested["suggested_total_load_kg"] = _round_half_step(bodyweight + next_external)
+                    write_entry = _find_working_load_entry(user_state, ex_id, setup)
+                    write_entry["next_external_load_kg"] = next_external
+                    write_entry["updated_at"] = out.get("date")
+            elif ex_id == "weighted_pullup":
+                # weighted_pullup: working_loads → baselines.pulling → bodyweight (B121)
+                entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
+                bodyweight = _get_bodyweight(user_state)
+                next_external: float = 0.0
+                load_source: Optional[str] = None
+
+                if entry and entry.get("next_external_load_kg") is not None:
+                    next_external = float(entry["next_external_load_kg"])
                 else:
-                    # weighted_pullup: working_loads → baselines.pulling → bodyweight (B121)
-                    entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
-                    bodyweight = _get_bodyweight(user_state)
-                    next_external: float = 0.0
-                    load_source: Optional[str] = None
+                    pulling = _get_pulling_baseline(user_state)
+                    if pulling and pulling.get("weighted_pullup_1rm_total_kg"):
+                        rm_total = float(pulling["weighted_pullup_1rm_total_kg"])
+                        phase_id = _get_current_phase_id(user_state, out.get("date") or "")
+                        pct = PULLING_1RM_PCT.get((phase_id, intensity), PULLING_1RM_PCT_DEFAULT)
+                        target_total = _round_half_step(rm_total * pct)
+                        next_external = max(0.0, _round_half_step(target_total - bodyweight))
+                        load_source = "baselines.pulling"
 
-                    if entry and entry.get("next_external_load_kg") is not None:
-                        next_external = float(entry["next_external_load_kg"])
-                    else:
-                        pulling = _get_pulling_baseline(user_state)
-                        if pulling and pulling.get("weighted_pullup_1rm_total_kg"):
-                            rm_total = float(pulling["weighted_pullup_1rm_total_kg"])
-                            phase_id = _get_current_phase_id(user_state, out.get("date") or "")
-                            pct = PULLING_1RM_PCT.get((phase_id, intensity), PULLING_1RM_PCT_DEFAULT)
-                            target_total = _round_half_step(rm_total * pct)
-                            next_external = max(0.0, _round_half_step(target_total - bodyweight))
-                            load_source = "baselines.pulling"
-
-                    reps = prescription.get("reps") or (prescription.get("reps_range") or [5])[0]
-                    sets = prescription.get("sets") or (prescription.get("sets_range") or [4])[0]
-                    suggested.update({
-                        "schema_version": "progression_targets.v1",
-                        "suggested_external_load_kg": _round_half_step(next_external),
-                        "suggested_total_load_kg": _round_half_step(bodyweight + next_external),
-                        "suggested_rep_scheme": f"{sets}x{reps}",
-                    })
-                    if load_source:
-                        suggested["load_source"] = load_source
+                reps = prescription.get("reps") or (prescription.get("reps_range") or [5])[0]
+                sets = prescription.get("sets") or (prescription.get("sets_range") or [4])[0]
+                suggested.update({
+                    "schema_version": "progression_targets.v1",
+                    "suggested_external_load_kg": _round_half_step(next_external),
+                    "suggested_total_load_kg": _round_half_step(bodyweight + next_external),
+                    "suggested_rep_scheme": f"{sets}x{reps}",
+                })
+                if load_source:
+                    suggested["load_source"] = load_source
 
             if ex_id == "limit_bouldering":
                 options = _surface_options(user_state, session.get("gym_id"))
@@ -790,8 +817,8 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     suggested["grade_ref"] = grade_ref
                     suggested["grade_offset"] = grade_offset
 
-            # External load exercises (barbell_row, bench_press, etc.)
-            if ex_id in EXTERNAL_LOAD_EXERCISES:
+            # External load exercises — data-driven from load_model (ARCH-2)
+            if load_model == "external_load" and not is_unilateral:
                 entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
                 if entry and entry.get("next_external_load_kg") is not None:
                     next_load = _round_half_step(float(entry["next_external_load_kg"]))
@@ -827,8 +854,8 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     "suggested_rep_scheme": f"{sets}x{reps}",
                 })
 
-            # Hangboard total_load exercises (repeaters, density hangs, etc.)
-            if ex_id in HANGBOARD_TOTAL_LOAD_EXERCISES:
+            # Hangboard total_load exercises (repeaters, density hangs, etc.) — data-driven (ARCH-2)
+            if load_model == "total_load" and ex_id not in ("max_hang_5s", "weighted_pullup"):
                 hb_suggested = _hangboard_suggested(user_state, ex_id, prescription, exercise_attrs=inst.get("attributes"))
                 suggested.update(hb_suggested)
                 entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
@@ -849,8 +876,8 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         "counterweight_required — consider re-running max_hang_5s test"
                     )
 
-            # Loading pin exercises (unilateral, external_load)
-            if ex_id in LOADING_PIN_EXERCISES:
+            # Loading pin exercises (unilateral, external_load) — data-driven (ARCH-2)
+            if load_model == "external_load" and is_unilateral:
                 lp_sug = _loading_pin_suggested(user_state, ex_id, prescription, exercise_attrs=inst.get("attributes"))
                 suggested.update(lp_sug)
                 # Override from working_loads per-hand
@@ -1116,8 +1143,13 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         session, planned_inst = _lookup_planned_instance(log_entry, exercise_id)
         planned_prescription = (planned_inst.get("prescription") or {}) if planned_inst else {}
         planned_target = (((planned_inst.get("suggested") or {}).get("suggested_boulder_target") or {}) if planned_inst else {})
+        catalog_info = _load_catalog_cache().get(exercise_id, {})
+        fb_load_model = (planned_inst.get("load_model") if planned_inst else None) or item.get("load_model") or catalog_info.get("load_model")
+        fb_unilateral = (planned_inst.get("unilateral") if planned_inst and "unilateral" in planned_inst else None)
+        if fb_unilateral is None:
+            fb_unilateral = item.get("unilateral") if "unilateral" in item else catalog_info.get("unilateral", False)
 
-        if exercise_id in LOAD_BASED_EXERCISES or exercise_id in HANGBOARD_TOTAL_LOAD_EXERCISES:
+        if fb_load_model == "total_load":
             used_total = item.get("used_total_load_kg")
             used_external = item.get("used_external_load_kg")
             if used_total is None and used_external is not None:
@@ -1161,7 +1193,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     max_hang_hard = 0
                     max_hang_easy = 0
 
-        elif exercise_id in EXTERNAL_LOAD_EXERCISES:
+        elif fb_load_model == "external_load" and not fb_unilateral:
             used_load = item.get("used_external_load_kg") or item.get("used_load_kg")
             if used_load is None:
                 continue
@@ -1182,7 +1214,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 }
             )
 
-        elif exercise_id in GRADE_BASED_EXERCISES:
+        elif fb_load_model == "grade_relative" and exercise_id == "limit_bouldering":
             used_grade = normalize_font_grade(item.get("used_grade"))
             if not used_grade:
                 continue
@@ -1209,7 +1241,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 }
             )
 
-        elif exercise_id in LOADING_PIN_EXERCISES:
+        elif fb_load_model == "external_load" and fb_unilateral:
             # Unilateral: feedback includes hand field
             hand = str(item.get("hand") or "right").lower()
             used_load = item.get("used_external_load_kg") or item.get("used_load_kg")
