@@ -23,6 +23,16 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
 import { getExercises, addExerciseToSession } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
@@ -762,35 +772,6 @@ export function SessionCard({
               </div>
             )}
 
-            {/* Remove confirmation */}
-            {confirmRemove && (
-              <div className="flex items-center gap-2 rounded-md border border-red-300 bg-red-50 dark:bg-red-950/30 p-2">
-                <span className="text-xs text-red-600 dark:text-red-400">Remove this session?</span>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs text-muted-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmRemove(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  className="text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setConfirmRemove(false);
-                    onRemove?.();
-                  }}
-                >
-                  Remove
-                </Button>
-              </div>
-            )}
 
             {/* Hint text for planned sessions with exercises */}
             {!isFinalized && hasExercises && (
@@ -860,8 +841,8 @@ export function SessionCard({
                 <button
                   className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left text-red-500"
                   onClick={() => {
-                    setConfirmRemove(true);
-                    setExpanded(true);
+                    setDrawerOpen(false);
+                    setTimeout(() => setConfirmRemove(true), 150);
                   }}
                 >
                   <Trash2 className="size-5" />
@@ -885,6 +866,27 @@ export function SessionCard({
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* Remove confirmation AlertDialog */}
+      <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove this session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This session will be removed from today&apos;s plan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => onRemove?.()}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Add Exercise Dialog */}
       {weekPlan && (
