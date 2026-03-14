@@ -8,48 +8,13 @@
 
 ## Priority 1 — Stability and bug fixes
 
-Open items that affect production reliability or core UX.
-
-| ID | Title | Effort | Notes |
-|----|-------|--------|-------|
-| ~~B115~~ | ~~Edit outdoor session~~ | ~~M~~ | Done: `PUT /api/outdoor/log` (update JSONL + state.outdoor_log), `GET /api/outdoor/log/{date}` (singola entry). OutdoorLogForm con `initialData` prop per edit mode. Bottone Edit (Pencil) su outdoor card completata in week + today. 11 test. |
-| ~~B116~~ | ~~Persistent outdoor log~~ | ~~M~~ | Done: `state.outdoor_log[]` append su `complete_outdoor`, remove su `undo_outdoor`. Entry: date, spot_name, spot_id, discipline, load_score, completed_at. 2 test. |
-| ~~B117~~ | ~~Persistent completion log~~ | ~~M~~ | Done: `state.session_completion_log[]` append su `mark_done`/`mark_skipped`, remove su `mark_planned`. Feedback router attacca difficulty + exercise_count. 4 test. |
-| ~~B99~~ | ~~Test week crashata~~ | ~~L~~ | Done: test_week_mode eliminato, onboarding genera sempre macrociclo con estimate_missing_baselines() + inject_tests in Pass 3. |
-| ~~B100~~ | ~~Piano parte nel passato~~ | ~~M~~ | Done: this_monday() → next_monday() in onboarding. Piano parte sempre dal prossimo lunedì. |
-| ~~B101~~ | ~~Test week ignora gym~~ | ~~M~~ | Non era un bug: planner rispetta gym_id da availability. 5 test di conferma aggiunti. |
-| ~~B102~~ | ~~Finger mancante dalle zone infortuni~~ | ~~M~~ | Done: `finger → finger_sensitive` mapping, 11 esercizi marcati, 2 esercizi `prehab_finger` creati (finger_extensor_band, finger_tendon_glides). |
-| ~~B103~~ | ~~Gym equipment: nessun preset alla creazione~~ | ~~S~~ | Done: 3 quick-fill pill (Boulder/Lead/Fitness) sopra checkbox gym. Replace mode (non additive). Riordinati EQUIPMENT_GYM (20 item, raggruppati) e EQUIPMENT_HOME (loading_pin dopo hangboard). Applicato a settings + onboarding. |
-| ~~B104~~ | ~~Board mancanti + other equipment~~ | ~~S~~ | Done: `board_other` aggiunto a vocabulary, EQUIPMENT_GYM, 15 esercizi (equipment_required_any), SURFACE_PRIORITY. Fix bonus: board_moonboard mancava da SURFACE_PRIORITY. `equipment_other` free-text in gym + home (settings + onboarding), ignorato dal motore. |
-| ~~B105~~ | ~~Gym lookup disallineato (state.gyms vs state.equipment.gyms)~~ | ~~M~~ | Non riproducibile: audit completo conferma che tutti i reader e writer usano `state["equipment"]["gyms"]`. Nessun accesso a `state["gyms"]` trovato. Probabilmente risolto implicitamente con B88/B101. |
-| ~~B48~~ | ~~Edit single session (multi-session day)~~ | ~~M~~ | Done: `session_index` param in override — replaces only targeted session, others untouched. |
-| ~~B37~~ | ~~Add exercise to existing session~~ | ~~M~~ | Done: `POST /api/session/add-exercise` — appends exercise, recalculates load score. |
-| ~~B38~~ | ~~Injuries filter (contraindications)~~ | ~~M~~ | Done: 3-level severity system (monitor/active/severe) in resolver. |
-| ~~UI-9~~ | ~~Limitation filtering in resolver~~ | ~~M~~ | Done: integrated in B38. Frontend severity picker pending (phase 2). |
-| ~~B42~~ | ~~Sunday reminder — confirm next week availability~~ | ~~L~~ | Done: Weekly Check-in flow (Sunday + Monday morning grace period). Bottom sheet with 7-day editor: toggle available/rest, switch location (gym/home/outdoor), change gym. Override saved as `weekly_overrides` in user_state (temporary layer, never modifies settings). Planner merges override before planning. 3 new endpoints (GET/PUT/DELETE `/api/weekly-override/{week_start}`). Absorbs FR-4. 11 tests. |
-| ~~FR-4~~ | ~~Outdoor vs gym slot priority preference~~ | ~~—~~ | Archived — absorbed by B42 weekly check-in. User decides day-by-day in the check-in instead of needing a global preference rule. |
-| ~~B113~~ | ~~AddExerciseDialog: lista incompleta + nessuna descrizione~~ | ~~S~~ | Done: rimosso `slice(0,30)`, tutti i 155 esercizi visibili in lista scrollabile. Fix ricerca domain (array, non stringa). Aggiunta descrizione (troncata 1 riga) + category + equipment sotto ogni nome. Ricerca estesa a description e category. |
-| ~~B114~~ | ~~Regenerate Plan: past days protection + smart popup~~ | ~~M~~ | Done: `preserve_before` param in `GET /api/week`, `merge_prev_week_sessions` ora matcha per data (non weekday), giorni passati copiati wholesale, oggi con sessioni completate protetto. Frontend: `RegeneratePlanSheet` bottom sheet con 3 opzioni (Today/Tomorrow/Next Monday). |
-| ~~B118~~ | ~~P0: Equipment regen resetta macrociclo a week 1~~ | ~~S~~ | Done: `handleRegenSheetConfirm()` chiamava `generateMacrocycle()` senza `from_phase`, causando full regen (start_date=this_monday). Fix: passa `from_phase="current"` per tutti i path tranne Danger Zone restart. Audit: `plan/page.tsx` già corretto, `onboarding.py` correttamente full. 6 test + restore script. |
-| ~~B119~~ | ~~P0: start_date must always be a Monday~~ | ~~S~~ | Done: `ensure_monday()` in `deps.py` auto-corrects non-Monday dates to previous Monday. Applied at all setters: state PUT, macrocycle generate (full+incremental), start-week shift, engine `generate_macrocycle()`. 15 new tests, zero regressions. Invariant documented in vocabulary_v1.md §5.5.1. Production patched to 2026-02-23. |
-| ~~B121~~ | ~~Planner non riempie tutti gli slot disponibili~~ | ~~M~~ | Done: Pass 2.2 in planner_v2 — quando un giorno ha più slot (es. lunch+evening) e `target_days > sessions piazzate`, riempie gli slot extra con sessioni non-hard. `_find_best_slot` ora accetta `occupied_slots` per evitare conflitti. 8 nuovi test. |
-| ~~B122~~ | ~~P0: Weighted pullup bodyweight-only (baselines.pulling)~~ | ~~M~~ | Done: `baselines.pulling` schema (1rm_total, bodyweight, max_external, source, updated_at). Resolver fallback: working_loads → baselines.pulling → BW. Phase×intensity % table for weighted_pullup. External_load pulling (barbell_row, face_pull) uses max_external×scaling. Key mismatch fix (max_weighted_pullup_kg → weighted_pullup_1rm_total_kg). "pull" similarity group. Test feedback updates baselines.pulling. 20 test. |
-| ~~D121~~ | ~~Audit: Timer mancanti + Load tracking mancante~~ | ~~M~~ | Done: audit completo 162 esercizi — timer coverage 156/162, load_model distribution mappata. Prehab load tracking (A123 Part 4): 4 esercizi prehab (wrist_curl, reverse_wrist_curl, forearm_pronation_supination, elbow_eccentric_curl) promossi a `external_load` con fallback fissi in kg. |
-| ~~B124~~ | ~~Manual rep loop timer (technique drills, limit bouldering)~~ | ~~S~~ | Done: `hasManualRepLoop` in ExerciseTimer — manual work (`workSeconds=0`) con `reps > 1` e `restBetweenRepsSeconds > 0` cicla rep→rep_rest→rep. Tap "Done rep" avanza, countdown rest tra rep. |
-| ~~A123~~ | ~~Timer enlarge button + voice encouragement pool~~ | ~~M~~ | Done: (1) Expand button bordato con icona Maximize2 + testo "Expand", min 44x44px. Enlarged overlay fullscreen (`bg-[#0a0a0a]`, numeri 120px, phase label colorata, set/rep counter). Tap = play/pause, X o swipe down = chiudi. (2) Voice pool: 8 frasi (3 it-IT, 1 es-ES, 4 en-US), 30% chance su phase "work" al posto di "Go". Lang settato su SpeechSynthesisUtterance. (3) Prehab load tracking: 4 esercizi → `external_load`, fallback fissi (Tyler Twist 1.5kg, pronazione/supinazione 1.0kg, wrist curl 3.0kg, reverse wrist curl 2.0kg). |
-| ~~B125~~ | ~~Fix: Hold→Rest label, session elapsed time display~~ | ~~S~~ | Done: (1) "Hold between reps" → "Rest between reps" in guided-exercise-step.tsx + "Hold" → "Rest" in exercise-timer.tsx rep_rest phase. (2) Session elapsed time: `session_duration_seconds` saved in feedback_log + session_completion_log, attached to week plan sessions via `_attach_feedback()`, displayed as "Completed · XX min" in session card badge. Backward-compatible (old completions show just "Completed"). |
-| ~~B130v2~~ | ~~Repo coherence fix (D130 audit)~~ | ~~M~~ | Done: CLAUDE.md endpoint table +3 weekly_override (39→42), vocabulary +2 LP templates (23→25), planner_v2 docstring 2-pass→multi-pass, README.md full rewrite, beta_feedback +Christie (FB-6/7/8), D121 audit status PARTIALLY RESOLVED, audit_location_equipment.md → _archive, PROJECT_BRIEF.md dedup. |
-| ~~B131~~ | ~~Enhanced sync + pre-push hook~~ | ~~M~~ | Done: sync_status.py syncs PROJECT_BRIEF + README + CLAUDE.md counters, validates vocabulary template list + endpoint table row count. Pre-push hook (.githooks/pre-push) blocks push if counters stale. |
+All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
 ---
 
 ## Priority 1b — Beta feedback (Christie, 2026-03-07)
 
-| ID | Title | Effort | Notes |
-|----|-------|--------|-------|
-| ~~B106~~ | ~~Loading pin alias (v1)~~ | ~~M~~ | Done: alias `loading_pin→hangboard` nel resolver + vocabulary + UI. v2 (B109): gestione unilaterale, doppio tempo. |
-| ~~B107~~ | ~~"Other" per injuries~~ | ~~S~~ | Done: "Other" aggiunto come zona in onboarding + settings. Notes field cattura dettagli. Zero effetto motore. |
-| ~~B108~~ | ~~Outdoor tooltip in onboarding~~ | ~~S~~ | Done: CardDescription nella pagina availability: "Outdoor days can be added later in your weekly plan based on weather and season." |
+All P1b items completed (3 items). See archived history in `docs/ROADMAP_v2.md`.
 ---
 
 ## Priority 2 — Auth + Payments + DB (go-to-market blockers)
@@ -102,10 +67,6 @@ Items that affect first impression for paying users.
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Set up develop branch for staging, main for production deploys. |
-| ~~B109~~ | ~~Loading pin: esercizi one-arm~~ | ~~M~~ | Done (A120): 7 LP exercises, resolver finger_device soft filter, per-hand progression/feedback/baselines, conversions module, onboarding device selector, guided R/L UI, session badge, settings device-aware baselines. 20 backend tests. |
-| ~~B120~~ | ~~Fix critici Loading Pin~~ | ~~L~~ | Done: (1) Past session immutability PILLAR — _auto_resolve skips done/skipped, resolved data cached, 6 replanner guards. (2) LP test dual R/L input. (3) LP repeater test (lp_repeater_test exercise + test_lp_repeater session). (4) LP duration test (lp_duration_test exercise, replaces HB hang duration in LP template). 11 new tests. |
-| ~~B110~~ | ~~Fix sync_status.py endpoint count~~ | ~~S~~ | Done: risolto implicitamente con rimozione 2 endpoint test-week. Count 39 (38 router + 1 health) dopo B-115. |
-| ~~UI-26~~ | ~~Session card: ⋯ menu + Add Exercise~~ | ~~M~~ | Done: Phase A: ⋯ button → bottom sheet con Add Exercise, Move, Remove, Undo. Phase B: "Modify session" nel menu ⋯ (indoor, non finalized) → apre ReplanDialog con session_index. "Edit outdoor" già presente come bottone su outdoor card completata. |
 
 ---
 
@@ -142,16 +103,11 @@ Claude Sonnet as conversational layer over the deterministic engine.
 
 | ID | Title | Notes |
 |----|-------|-------|
-| ~~B37~~ | ~~Add exercise to existing session~~ | Done (P1). |
-| ~~B38~~ | ~~Injuries filter (contraindications)~~ | Done (P1). Frontend severity picker + settings UI pending. |
 | — | Override intensity cap warning | Warn when user overrides with session above current phase intensity cap. |
 | — | P1 ranking in resolver | Recency, intensity, and fatigue-based exercise prioritization. |
-| ~~ARCH-2~~ | ~~Unify load_model source of truth~~ | Done: removed 5 hardcoded exercise sets (LOAD_BASED, EXTERNAL_LOAD, HANGBOARD_TOTAL_LOAD, LOADING_PIN, GRADE_BASED). inject_targets + record_feedback now dispatch on `inst.load_model` + `inst.unilateral` from exercise JSON. Resolver passes both fields. Catalog fallback cache for legacy data. Fixed 6 exercises silently getting no load suggestion (bicep_curl, lateral_raise, lp_duration_test, lp_max_test_5s, lp_repeater_test, pinch_block_training). 3 safety-net tests iterate entire catalog. |
 | ARCH-3 | Generic timer behavior from prescription | Frontend timer derives behavior entirely from `work_seconds` + `reps` + `rest_*` fields. No hardcoded exercise lists or category checks. All exercises with `work_seconds > 0` get a countdown; manual mode otherwise. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
 | — | Test results → exercise calibration | Use ALL assessment test results (repeaters, max hang duration, L-sit, hip flexibility) to calibrate exercise difficulty and prescription — not just for radar profile. E.g.: repeater max sets → finger endurance set count; L-sit hold → core exercise progression tier; max hang duration → endurance hang prescriptions. Requires: mapping table test_result → affected exercises → calibration formula. |
-| ~~B105~~ | ~~Gym lookup disallineato~~ | Chiuso: nessun mismatch trovato (audit 2026-03-10). |
-| ~~B112~~ | ~~Equipment filter in Add Exercise~~ | Done: frontend-only equipment filtering in AddExerciseDialog. `expandEquipment()` replicates backend implicit equipment expansion (floor, weight subtypes, loading_pin→hangboard, gym→pullup_bar). `isExerciseCompatible()` applies AND/OR equipment checks matching resolver Stage 2. Toggle "Show all exercises" reveals hidden items with "Missing equipment" badge. Equipment context passed via props: page→DayCard→SessionCard→dialog. Backend unchanged. |
 
 ---
 

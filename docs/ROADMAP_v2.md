@@ -1,5 +1,4 @@
-> **ARCHIVED — DO NOT UPDATE**
-> Frozen as of 2026-03-07. This file is kept as historical reference only.
+> **ARCHIVED — append-only via `trim_roadmap.py`**
 > Active roadmap: `docs/ROADMAP_CURRENT.md`
 
 # ROADMAP v2 — climb-agent
