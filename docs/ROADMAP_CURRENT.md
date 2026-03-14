@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-13
+> Last updated: 2026-03-14
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -190,6 +190,31 @@ Il flusso outdoor attuale è un log passivo post-sessione. Manca una sessione li
 **Moduli impattati:** planner (slot blocking), guided session (nuovo mode), feedback/adaptation (load), reports (aderenza + load), UI (nuova pagina + flusso inline).
 
 **Priorità:** dopo B38, B48, B37.
+
+---
+
+## Future — Social Session (fun bouldering / lead con amici)
+
+> Origine: sessione reale 2026-03-14 (Blocschokolade, Trier)
+
+Sessione ricreativa con amici: struttura leggera, giochi climbing, load ridotto. L'obiettivo è divertirsi senza compromettere il piano di allenamento.
+
+**Principi:** intensità moderata (RPE 5-6), durata 1.5-2h, load_score ×0.5 rispetto a sessione standard. Nessun aggiornamento working_loads. Conta come "giorno fatto" per aderenza.
+
+| # | Area | Effort | Dettaglio |
+|---|------|--------|-----------|
+| 1 | Game catalog JSON | S | `games_v1.json`: ~10 giochi (Add-On, Elimination, Silent Feet, Stick Game, Boulder Golf, Speed Race, Twister, Traverse Marathon, Stoplight, No-Feet). Per ogni gioco: regole, training_value, intensità, durata, rischio injury, fase_ideale. |
+| 2 | Purpose selector UI | S | Pill buttons per scopo: Tecnica, Forza giocosa, Endurance, Creatività, Puro divertimento, Esplorazione. 1-3 selezionabili. Il sistema suggerisce 3-4 giochi dal catalogo in base a scopo + fase macrociclo. |
+| 3 | Game card UI | M | Card swipeable per ogni gioco suggerito: regole sintetiche, training value, timer opzionale. Swipe per cambiare gioco (1 tap). Regole visibili inline. |
+| 4 | Social session log | S | `POST /api/social-session`: durata, n° problemi, gradi, games_played[], fun_rating (1-5), participants[], notes. Load calcolato con social_modifier=0.5. |
+| 5 | Planner integration | S | Social session sostituisce sessione pianificata. Load ridotto → no recovery extra. Appare in weekly view con badge 🎉 e colore viola. |
+| 6 | Vocabulary update | XS | Aggiungere `session_mode` enum (training/social/competition) a vocabulary_v1.md §2.14. |
+
+**Prerequisiti:** Nessuna dipendenza P2. Implementabile prima di Supabase/Clerk.
+
+**Varianti future:** Social Lead (palestre con corde), Outdoor social, rating giochi per preferenze, multiplayer log.
+
+**Effort totale stimato:** M-L (catalogo S + backend S + frontend M + integration S)
 
 ---
 
