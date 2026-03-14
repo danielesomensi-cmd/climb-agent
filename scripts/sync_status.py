@@ -289,3 +289,8 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+    # Optional: trim completed roadmap items
+    # Uncomment to auto-trim on every sync:
+    # import subprocess
+    # subprocess.run([sys.executable, str(Path(__file__).parent / "trim_roadmap.py")], check=True)

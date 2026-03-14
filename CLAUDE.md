@@ -223,6 +223,12 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 - `docs/docs_literature_hangboard.md` — Hangboard science reference
 - `docs/beta_feedback.md` — Beta tester feedback log
 
+## Docs maintenance
+
+- After closing a B/A/UI item, run `python scripts/trim_roadmap.py --dry-run` to check roadmap bloat
+- When completed items exceed 20, run `python scripts/trim_roadmap.py` to archive them
+- Standing rule: `python scripts/sync_status.py` at end of every brief (already enforced)
+
 ## Workflow rules
 
 - Always respond in Italian.
