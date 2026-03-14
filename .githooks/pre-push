@@ -1,0 +1,21 @@
+#!/bin/bash
+# Pre-push hook: run sync_status.py and check for uncommitted changes
+
+echo "Running sync_status.py..."
+python scripts/sync_status.py
+
+# Check if sync modified any files
+if ! git diff --quiet; then
+    echo ""
+    echo "sync_status.py found stale counters and updated files."
+    echo "   Changed files:"
+    git diff --name-only
+    echo ""
+    echo "   Commit these changes before pushing:"
+    echo "   git add -A && git commit -m 'sync: update counters' && git push"
+    echo ""
+    exit 1  # Block the push
+fi
+
+echo "All counters in sync."
+exit 0

@@ -1,6 +1,6 @@
 # Beta Feedback — climb-agent
 
-> Ultimo aggiornamento: 2026-02-24
+> Ultimo aggiornamento: 2026-03-14
 
 ---
 
@@ -11,6 +11,7 @@
 | Alexis | 2026-02-23 | Climber, allena con coach mercoledì, fa padel il lunedì |
 | Davide Vato | 2026-02-23 | Feedback su edit profilo senza reset completo |
 | Luca | 2026-02-23 | Feedback su minimo sessioni/settimana |
+| Christie | 2026-03-07 | Main beta tester, usa loading pin (limitazione spalla) |
 
 ---
 
@@ -85,3 +86,32 @@
 - Il concetto goal + deadline è chiaro ✅
 - Pain point principale: disponibilità troppo rigida per chi ha vita sportiva mista
 - Feature più richiesta: gestione altri sport + blocco giorno
+
+---
+
+## Christie — 2026-03-07
+
+### FB-6 — Loading pin come dispositivo primario
+**Da:** Christie
+**Data:** 2026-03-07
+**Descrizione:** Non può usare hangboard per problemi alla spalla. Usa loading pin come dispositivo primario per finger training.
+**Soluzione:** B106 (alias v1) → A120 (full LP support: 7 esercizi, baselines per-hand, device selector, guided R/L UI) → B120 (LP test sessions, past immutability).
+**Status:** ✅ DONE (A120 + B120)
+
+---
+
+### FB-7 — "Other" per injuries
+**Da:** Christie
+**Data:** 2026-03-07
+**Descrizione:** Lista zone infortuni mancava opzione generica.
+**Soluzione:** B107 — "Other" aggiunto in onboarding + settings con notes field. Zero effetto motore.
+**Status:** ✅ DONE (B107)
+
+---
+
+### FB-8 — Outdoor tooltip in onboarding
+**Da:** Christie
+**Data:** 2026-03-07
+**Descrizione:** Non chiaro che i giorni outdoor si possono aggiungere dopo.
+**Soluzione:** B108 — CardDescription nella pagina availability.
+**Status:** ✅ DONE (B108)

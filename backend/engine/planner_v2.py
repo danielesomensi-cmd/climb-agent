@@ -405,10 +405,13 @@ def generate_phase_week(
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
-    Uses a 2-pass algorithm:
-      PASS 1: Place primary sessions (hard + climbing-related) with spacing constraints.
-      PASS 2: Fill remaining days with complementary sessions.
-    Both passes cycle through the pool (max 2 full cycles per pass).
+    Uses a multi-pass algorithm:
+      PASS 1:   Place primary sessions (hard + climbing-related) with spacing constraints.
+      PASS 1.5: Climbing fallback for gym days left empty by Pass 1.
+      PASS 2:   Fill remaining days with complementary sessions.
+      PASS 2.2: Fill extra slots on multi-slot days (B121).
+      PASS 2.5: Ensure PE phase has at least 1 finger maintenance session.
+      PASS 3:   (optional) Inject test sessions when inject_tests=True.
 
     Args:
         phase_id: Current macrocycle phase (base, strength_power, etc.).

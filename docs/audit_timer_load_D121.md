@@ -1,7 +1,16 @@
 # D121 — Audit: Timer mancanti + Load tracking mancante
 
 > Data: 2026-03-13
-> Status: **IN REVIEW** — attende decisione di Daniele per ogni riga
+> Status: **PARTIALLY RESOLVED** — alcuni item risolti da A123/B124, restanti in attesa
+
+---
+
+## Resolution log
+
+| Item | Resolved by | Date | Detail |
+|------|------------|------|--------|
+| Part 2A rows 1-4 (prehab load) | A123 Part 4 | 2026-03-13 | wrist_curl, reverse_wrist_curl, forearm_pronation_supination, elbow_eccentric_curl → `external_load` con fallback fissi |
+| Part 1A rows 2-13 (rep rest ignored) | B124 | 2026-03-13 | `hasManualRepLoop` in ExerciseTimer — manual work + countdown rest tra rep |
 
 ---
 
@@ -9,7 +18,7 @@
 
 | Metrica | Valore |
 |---------|--------|
-| Esercizi totali nel catalogo | 162 |
+| Esercizi totali nel catalogo | 167 (era 162 al momento dell'audit) |
 | Con `work_seconds` | 74 |
 | Con `rest_between_sets_seconds` | 129 |
 | Con `rest_between_reps_seconds` | 25 |

@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Sync real project counters into PROJECT_BRIEF.md.
+"""Sync real project counters into PROJECT_BRIEF.md, CLAUDE.md, and README.md.
 
 Usage:
     python scripts/sync_status.py
 
-Reads counts from the codebase and updates the status table between
-<!-- STATUS_TABLE_START --> and <!-- STATUS_TABLE_END --> markers in
-PROJECT_BRIEF.md.  Prints a diff summary to stdout.
+Reads counts from the codebase and updates:
+  - PROJECT_BRIEF.md  (status table between markers)
+  - README.md         (status table between markers)
+  - CLAUDE.md         (endpoint total + router count inline)
+
+Also runs validation checks and prints warnings for issues
+that cannot be auto-fixed (e.g., missing template IDs in vocabulary).
 
 No external dependencies — stdlib only (+ pytest subprocess).
 """
@@ -20,6 +24,9 @@ import sys
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 BRIEF_PATH = os.path.join(REPO_ROOT, "PROJECT_BRIEF.md")
+README_PATH = os.path.join(REPO_ROOT, "README.md")
+CLAUDE_PATH = os.path.join(REPO_ROOT, "CLAUDE.md")
+VOCAB_PATH = os.path.join(REPO_ROOT, "docs", "vocabulary_v1.md")
 
 START_MARKER = "<!-- STATUS_TABLE_START -->"
 END_MARKER = "<!-- STATUS_TABLE_END -->"
@@ -88,6 +95,13 @@ def count_api_endpoints() -> int:
     return count
 
 
+def count_routers() -> int:
+    """Count .py files in routers/ excluding __init__."""
+    router_dir = os.path.join(REPO_ROOT, "backend/api/routers")
+    return len([f for f in glob.glob(os.path.join(router_dir, "*.py"))
+                if "__init__" not in f and "__pycache__" not in f])
+
+
 def count_frontend_pages() -> int:
     pattern = os.path.join(REPO_ROOT, "frontend/src/app/**/page.tsx")
     return len(glob.glob(pattern, recursive=True))
@@ -124,7 +138,7 @@ def build_table(counts: list[tuple[str, int]]) -> str:
     return "\n".join(lines)
 
 
-# ── File update ─────────────────────────────────────────────────────
+# ── File updates ───────────────────────────────────────────────────
 
 def parse_old_counts(text: str) -> dict[str, int]:
     """Extract existing counts from the status table."""
@@ -136,45 +150,110 @@ def parse_old_counts(text: str) -> dict[str, int]:
     return old
 
 
-def update_brief(counts: list[tuple[str, int]]) -> bool:
-    if not os.path.exists(BRIEF_PATH):
-        print(f"WARNING: {BRIEF_PATH} not found — skipping update.")
+def update_marker_file(path: str, counts: list[tuple[str, int]], label: str) -> bool:
+    """Update a file that uses STATUS_TABLE_START/END markers."""
+    if not os.path.exists(path):
         return False
 
-    with open(BRIEF_PATH) as f:
+    with open(path) as f:
         content = f.read()
 
     if START_MARKER not in content or END_MARKER not in content:
-        print(f"WARNING: Markers not found in {BRIEF_PATH}.")
-        print(f"  Expected: {START_MARKER} ... {END_MARKER}")
-        print("  Add markers to PROJECT_BRIEF.md first.")
         return False
 
     old_counts = parse_old_counts(content)
     new_table = build_table(counts)
 
-    # Replace between markers (inclusive)
     pattern = re.escape(START_MARKER) + r".*?" + re.escape(END_MARKER)
     updated = re.sub(pattern, new_table, content, flags=re.DOTALL)
 
-    with open(BRIEF_PATH, "w") as f:
+    if updated == content:
+        print(f"  {label}: (no changes)")
+        return True
+
+    with open(path, "w") as f:
         f.write(updated)
 
-    # Print diff
-    changed = False
-    for label, value in counts:
-        old_val = old_counts.get(label)
+    for name, value in counts:
+        old_val = old_counts.get(name)
         if old_val is None:
-            print(f"  + {label}: {value} (new)")
-            changed = True
+            print(f"  {label}: + {name}: {value} (new)")
         elif old_val != value:
-            print(f"  ~ {label}: {old_val} -> {value}")
-            changed = True
-
-    if not changed:
-        print("  (no changes)")
+            print(f"  {label}: ~ {name}: {old_val} -> {value}")
 
     return True
+
+
+def update_claude(endpoints: int, routers: int) -> bool:
+    """Update inline counts in CLAUDE.md."""
+    if not os.path.exists(CLAUDE_PATH):
+        return False
+
+    with open(CLAUDE_PATH) as f:
+        content = f.read()
+
+    original = content
+
+    # Update endpoint total: "N endpoints total (M router + 1 app-level health check)"
+    content = re.sub(
+        r"\d+ endpoints total \(\d+ router \+ 1 app-level health check\)",
+        f"{endpoints} endpoints total ({endpoints - 1} router + 1 app-level health check)",
+        content,
+    )
+
+    # Update router count in repo structure: "# FastAPI REST API (N routers)"
+    content = re.sub(
+        r"# FastAPI REST API \(\d+ routers\)",
+        f"# FastAPI REST API ({routers} routers)",
+        content,
+    )
+
+    if content == original:
+        print("  CLAUDE.md: (no changes)")
+        return True
+
+    with open(CLAUDE_PATH, "w") as f:
+        f.write(content)
+
+    print("  CLAUDE.md: updated endpoint/router counts")
+    return True
+
+
+# ── Validation ─────────────────────────────────────────────────────
+
+def validate(endpoints: int) -> list[str]:
+    """Run validation checks and return warnings."""
+    warnings = []
+
+    # Check template list in vocabulary matches filesystem
+    template_files = sorted([
+        os.path.splitext(os.path.basename(f))[0]
+        for f in glob.glob(os.path.join(REPO_ROOT, "backend/catalog/templates/v1/*.json"))
+    ])
+    if os.path.exists(VOCAB_PATH):
+        with open(VOCAB_PATH) as f:
+            vocab_content = f.read()
+        for t in template_files:
+            if f"- `{t}`" not in vocab_content:
+                warnings.append(
+                    f"vocabulary_v1.md: template '{t}' exists on disk but not in canonical list"
+                )
+
+    # Check CLAUDE.md endpoint table row count matches declared total
+    if os.path.exists(CLAUDE_PATH):
+        with open(CLAUDE_PATH) as f:
+            claude = f.read()
+        table_rows = len(re.findall(
+            r"^\| (GET|POST|PUT|DELETE|PATCH) ", claude, re.MULTILINE
+        ))
+        declared = re.search(r"(\d+) endpoints? total", claude)
+        if declared and table_rows != int(declared.group(1)):
+            warnings.append(
+                f"CLAUDE.md: endpoint table has {table_rows} rows "
+                f"but header declares {declared.group(1)}"
+            )
+
+    return warnings
 
 
 # ── Main ────────────────────────────────────────────────────────────
@@ -182,19 +261,30 @@ def update_brief(counts: list[tuple[str, int]]) -> bool:
 def main() -> int:
     print("Collecting counts...")
     counts = collect_counts()
+    endpoints = dict(counts)["API endpoints"]
+    routers = count_routers()
 
     for label, value in counts:
         print(f"  {label}: {value}")
+    print(f"  Routers: {routers}")
 
     print()
-    print("Updating PROJECT_BRIEF.md...")
-    ok = update_brief(counts)
+    print("Syncing files...")
+    update_marker_file(BRIEF_PATH, counts, "PROJECT_BRIEF.md")
+    update_marker_file(README_PATH, counts, "README.md")
+    update_claude(endpoints, routers)
 
-    if ok:
-        print("Done.")
-        return 0
+    print()
+    warnings = validate(endpoints)
+    if warnings:
+        for w in warnings:
+            print(f"  \u26a0\ufe0f  {w}")
     else:
-        return 1
+        print("  \u2705 All validations passed.")
+
+    print()
+    print("Done.")
+    return 0
 
 
 if __name__ == "__main__":
