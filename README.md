@@ -1,48 +1,75 @@
 # climb-agent
 
-Deterministic climbing training planning engine. Generates personalised weekly plans based on assessment, goal, and availability. Resolves sessions into concrete exercises with loads. Adapts progression via closed-loop feedback. No LLM in the planning loop.
+Deterministic climbing training engine. Generates personalised weekly plans, resolves sessions into concrete exercises with sets/reps/load, and adapts through closed-loop feedback. No LLM at runtime — all logic is rule-based and testable.
 
-## Features
+Methodology: Hörst 4-3-2-1 adaptive periodization with DUP (Daily Undulating Periodization).
 
-- **Assessment** — 6-axis radar profile (finger strength, pulling, power endurance, technique, endurance, body composition)
-- **Macrocycle** — Hörst 4-3-2-1 periodization with DUP, 10-13 weeks, 5 phases
-- **Weekly planner** — phase-aware, 2-pass algorithm, gym/home/outdoor slot handling
-- **Session resolver** — selects concrete exercises with sets/reps/load, cross-session recency
-- **Closed-loop adaptation** — feedback drives multiplier-based load adjustments
-- **Outdoor logging** — spot management, route/attempt logging, stats (onsight%, grade histogram)
-- **Reports** — weekly adherence + highlights, monthly trends + suggestions
-- **Motivational quotes** — 200-quote catalog, contextual selection, 30-day rotation
+## Status
 
-## Quick start
+<!-- STATUS_TABLE_START -->
+| Metric | Count |
+|--------|-------|
+| Tests (passing) | 969 |
+| Exercises | 167 |
+| Sessions (active) | 31 |
+| Templates | 25 |
+| API endpoints | 42 |
+| Frontend pages | 25 |
+| Frontend components | 50 |
+<!-- STATUS_TABLE_END -->
 
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install -r backend/requirements.txt
-python -m pytest backend/tests -q   # ~360 tests
+## Architecture
+
+```
+Assessment (6 dimensions → radar profile 0-100)
+  → Goal (lead_grade or boulder_grade, target + deadline)
+  → Macrocycle (Hörst 4-3-2-1 + DUP, 10-13 weeks, 5 phases)
+  → Week (planner_v2: multi-pass, phase-aware, location-aware)
+  → Session (resolver: templates → concrete exercises with loads)
+  → Feedback (per-exercise, 5 levels) → Adaptation (closed-loop)
 ```
 
-## Running the API
+## Tech stack
 
-```bash
-uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8000
-```
+- **Backend:** Python / FastAPI on Railway
+- **Frontend:** Next.js 14 PWA (React + Tailwind + shadcn/ui) on Vercel
+- **Persistence:** JSON/JSONL on Railway volume (Supabase Postgres planned)
+- **Methodology:** Hörst 4-3-2-1 with DUP concurrent training
 
 ## Repository layout
 
 ```
 backend/
-  engine/            # Core: planner, resolver, replanner, progression, outdoor log, reports, quotes
-    adaptation/      # Closed-loop adaptation (multiplier-based)
-  api/               # FastAPI app (12 routers, 26 endpoints)
-  catalog/           # Exercises (103), sessions (33), templates (19), quotes (200)
-  data/              # user_state.json + JSON schemas
-  tests/             # ~360 pytest tests
-frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui) — 19 pages
-docs/                # ROADMAP_v2.md, DESIGN_GOAL_MACROCICLO_v1.1.md, vocabulary_v1.md
+  engine/       # Core: planner, resolver, replanner, progression, closed-loop
+  api/          # FastAPI REST API
+  catalog/      # JSON: exercises, sessions, templates
+  tests/        # pytest suite
+frontend/       # Next.js 14 PWA
+docs/           # Design docs, vocabulary, roadmap
+scripts/        # Automation (sync_status.py)
 ```
 
-## Stack
+## Development
 
-- **Backend**: Python 3.11, FastAPI, pure JSON persistence (no database)
-- **Frontend**: Next.js 14, React, Tailwind CSS, shadcn/ui, PWA
-- **Periodization**: Hörst 4-3-2-1 + Daily Undulating Periodization
+```bash
+# Run tests
+source .venv/bin/activate && python -m pytest backend/tests -q
+
+# Start backend (port 8000)
+uvicorn backend.api.main:app --reload --port 8000
+
+# Start frontend (port 3000)
+cd frontend && npm run dev
+
+# Sync project counters
+python scripts/sync_status.py
+```
+
+## Deployment
+
+Auto-deploy on push to main (~2-3 min).
+
+| Service | Platform | URL |
+|---------|----------|-----|
+| Backend | Railway | https://web-production-fb1e9.up.railway.app |
+| Frontend | Vercel | https://climb-agent.vercel.app |

@@ -1,6 +1,7 @@
 # climb-agent — Project Brief
 
 > Counters auto-updated by `python scripts/sync_status.py`
+> For full technical reference, see `CLAUDE.md`
 > Open items: `docs/ROADMAP_CURRENT.md`
 > Full history: `docs/ROADMAP_v2.md` (archived)
 
@@ -23,7 +24,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Templates | 25 |
 | API endpoints | 42 |
 | Frontend pages | 25 |
-| Frontend components | 49 |
+| Frontend components | 50 |
 <!-- STATUS_TABLE_END -->
 
 ---
@@ -69,56 +70,6 @@ compute_assessment_profile()    [assessment_v1]
 | Payments | Stripe (planned) |
 | App store | Capacitor wrapping PWA (planned) |
 | LLM Coach | Claude Sonnet conversational layer (planned, Phase 3.5) |
-
----
-
-## Repo structure
-
-```
-backend/
-  engine/              # Core: assessment, macrocycle, planner, resolver, replanner,
-                       # progression, closed-loop, adaptation, reports, outdoor, quotes
-  api/                 # FastAPI REST API (14 routers)
-    routers/           # state, catalog, onboarding, assessment, macrocycle, week,
-                       # session, replanner, feedback, outdoor, reports, quotes, user, admin
-  catalog/             # JSON data: exercises, sessions, templates (versioned under v1/)
-  data/                # user_state.json + JSON schemas for log validation
-  tests/               # pytest test suite with fixtures/
-frontend/              # Next.js 14 PWA (React, Tailwind, shadcn/ui)
-  src/app/             # Pages: main views + onboarding wizard + guided session
-  src/components/      # layout, onboarding, training, guided, settings, whats-next, ui
-  src/lib/             # api.ts, types.ts, hooks/
-docs/                  # Design docs, glossary, roadmap, literature reviews
-scripts/               # sync_status.py (auto-update counters)
-_archive/              # Legacy scripts, docs, config (do not modify)
-```
-
----
-
-## Deployment
-
-| Service | Platform | URL |
-|---------|----------|-----|
-| Backend | Railway | https://web-production-fb1e9.up.railway.app |
-| Frontend | Vercel | https://climb-agent.vercel.app |
-
-Both auto-deploy on push to main (~2-3 min).
-
-**Environment variables (Railway):**
-- `DATA_DIR` — Persistent volume path (`/data/climb-agent`)
-- `ADMIN_SECRET` — Key for admin endpoints (never commit)
-- `PORT` — Set by Railway (8080, do not override)
-
----
-
-## Non-negotiable principles
-
-1. **Total determinism**: same inputs → same outputs, zero random
-2. **user_state.json** is the user source of truth (no parallel files)
-3. **Append-only logs**, invalid entries quarantined, never deleted
-4. **Official maxes** updated only from explicit test sessions
-5. **Closed vocabulary** (`docs/vocabulary_v1.md`) — no new values without update
-6. **P0 hard filters** in the resolver are not changed without explicit request
 
 ---
 

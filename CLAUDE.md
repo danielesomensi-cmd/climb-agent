@@ -33,8 +33,11 @@ uvicorn backend.api.main:app --reload --reload-exclude "backend/data/*" --port 8
 # Start frontend dev server (port 3000)
 cd frontend && npm run dev
 
-# Sync project counters into PROJECT_BRIEF.md
+# Sync project counters into PROJECT_BRIEF.md, CLAUDE.md, README.md
 python scripts/sync_status.py
+
+# Activate pre-push hook (once per clone)
+git config core.hooksPath .githooks
 ```
 
 ## Execution model
@@ -87,9 +90,9 @@ from backend.engine.planner_v1 import generate_week_plan
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (14 routers)
+  api/               # FastAPI REST API (15 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -123,7 +126,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-39 endpoints total (38 router + 1 app-level health check).
+42 endpoints total (41 router + 1 app-level health check).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -164,6 +167,9 @@ user_state.assessment + user_state.goal
 | POST | `/api/user/import` | Import user_state (validates, overwrites) |
 | POST | `/api/user/recovery-code` | Get or create recovery code (CLIMB-XXXX) |
 | POST | `/api/user/recover` | Recover account from recovery code |
+| GET | `/api/weekly-override/{week_start}` | Get weekly availability override |
+| PUT | `/api/weekly-override/{week_start}` | Save weekly availability override |
+| DELETE | `/api/weekly-override/{week_start}` | Delete weekly availability override |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 
@@ -215,7 +221,6 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 - `docs/DESIGN_GOAL_MACROCICLO_v1.1.md` — Design doc (update when methodology changes)
 - `docs/literature_review_climbing_training.md` — Training science reference
 - `docs/docs_literature_hangboard.md` — Hangboard science reference
-- `docs/audit_location_equipment.md` — Equipment mapping reference
 - `docs/beta_feedback.md` — Beta tester feedback log
 
 ## Workflow rules
@@ -225,4 +230,5 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 - Run tests before committing. Run `python scripts/sync_status.py` after every dev session.
 - After closing any roadmap item: update `docs/ROADMAP_CURRENT.md` in the same commit.
 - Code and documentation must always be aligned. Never leave an implemented item marked as open.
+- Pre-push hook runs `sync_status.py` automatically. If counters are stale, the push is blocked — commit the sync changes first.
 - Push at end of session: `git add -A && git commit -m 'description' && git push`
