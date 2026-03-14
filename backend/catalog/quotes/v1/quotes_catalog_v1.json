@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "total": 200,
+  "total": 232,
   "contexts": [
     "hard_day",
     "deload",
@@ -21,7 +21,8 @@
     "yoga",
     "philosophy",
     "humor",
-    "popular"
+    "popular",
+    "community"
   ],
   "quotes": [
     {
@@ -2412,6 +2413,365 @@
       "verified": false,
       "contexts": [
         "outdoor",
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q201",
+      "text": "In climbing you are always faced with new problems in which you must perform using intuitive movements, and then later analyze them to figure out why they work, and then learn from them.",
+      "author": "Wolfgang Güllich",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "training",
+        "technique",
+        "general"
+      ]
+    },
+    {
+      "id": "q202",
+      "text": "The brain is the most important muscle for climbing.",
+      "author": "Wolfgang Güllich",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general",
+        "technique"
+      ]
+    },
+    {
+      "id": "q203",
+      "text": "The only good reason to climb is to improve yourself.",
+      "author": "Yvon Chouinard",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q204",
+      "text": "The best part of climbing is when it all clicks and gravity ceases to exist.",
+      "author": "Chris Sharma",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "pre_session",
+        "success"
+      ]
+    },
+    {
+      "id": "q205",
+      "text": "The summit is what drives us, but the climb itself is what matters.",
+      "author": "Conrad Anker",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "training"
+      ]
+    },
+    {
+      "id": "q206",
+      "text": "Climbing and soloing aren't worth dying for, but they are worth risking dying for.",
+      "author": "Todd Skinner",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q207",
+      "text": "I've done a lot of thinking about fear. For me the crucial question is not how to climb without fear — that's impossible — but how to deal with it when it creeps into your nerve endings.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q208",
+      "text": "Getting to the summit is optional, getting down is mandatory.",
+      "author": "Ed Viesturs",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q209",
+      "text": "It don't gotta be fun to be fun.",
+      "author": "Carl Tobin",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q210",
+      "text": "Never did I explore life as intensively in its beauty, as while hanging on two fingertips freely over the deep hollow.",
+      "author": "Wolfgang Güllich",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q211",
+      "text": "Stand at the base and look up at 3,000 feet of blankness. That's what you seek as a climber. You want to find something that looks absurd and figure out how to do it.",
+      "author": "Tommy Caldwell",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "technique"
+      ]
+    },
+    {
+      "id": "q212",
+      "text": "We should be less afraid to be afraid.",
+      "author": "Emily Harrington",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q213",
+      "text": "Every day I go out and climb, like a dancer works on his dance. It's the dance that counts.",
+      "author": "John Bachar",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q214",
+      "text": "Variety is the spice of life. Variety will give you good skills, stop you stagnating and keep you motivated.",
+      "author": "Ben Moon",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general"
+      ]
+    },
+    {
+      "id": "q215",
+      "text": "Climbing is, above all, a matter of integrity.",
+      "author": "Gaston Rebuffat",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general"
+      ]
+    },
+    {
+      "id": "q216",
+      "text": "You never climb the same mountain twice, not even in memory. Memory rebuilds the mountain, changes the weather, retells the jokes, remakes all the moves.",
+      "author": "Lito Tejada-Flores",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q217",
+      "text": "It isn't the mountains ahead to climb that wear you out; it's the pebble in your shoe.",
+      "author": "Muhammad Ali",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "general"
+      ]
+    },
+    {
+      "id": "q218",
+      "text": "Obstacles don't have to stop you. If you run into a wall, don't turn around and give up. Figure out how to climb it, go through it, or work around it.",
+      "author": "Michael Jordan",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "hard_day",
+        "failure",
+        "general"
+      ]
+    },
+    {
+      "id": "q219",
+      "text": "After climbing a great hill, one only finds that there are many more hills to climb.",
+      "author": "Nelson Mandela",
+      "source_type": "athlete",
+      "verified": true,
+      "contexts": [
+        "general",
+        "success"
+      ]
+    },
+    {
+      "id": "q220",
+      "text": "He who would learn to fly one day must first learn to stand and walk and run and climb and dance; one cannot fly into flying.",
+      "author": "Friedrich Nietzsche",
+      "source_type": "philosophy",
+      "verified": true,
+      "contexts": [
+        "training",
+        "general"
+      ]
+    },
+    {
+      "id": "q221",
+      "text": "The strongest climbers aren't always the happiest. This activity of rock climbing is merely one of many ways to exist, pass the time, and evolve and grow from one moment to the next.",
+      "author": "Chris Sharma",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "recovery",
+        "deload",
+        "general"
+      ]
+    },
+    {
+      "id": "q222",
+      "text": "Climb if you will, but remember that courage and strength are nought without prudence.",
+      "author": "Edward Whymper",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q223",
+      "text": "I've walked away from more climbs than I can count, just because I sensed that things were not quite right.",
+      "author": "Alex Honnold",
+      "source_type": "climber",
+      "verified": true,
+      "contexts": [
+        "general",
+        "outdoor"
+      ]
+    },
+    {
+      "id": "q224",
+      "text": "The person who says it cannot be done should not interrupt the person who is doing it.",
+      "author": "Chinese proverb",
+      "source_type": "popular",
+      "verified": true,
+      "contexts": [
+        "general",
+        "pre_session",
+        "hard_day"
+      ]
+    },
+    {
+      "id": "q225",
+      "text": "My safe word is 'take'.",
+      "author": "Unknown",
+      "source_type": "community",
+      "verified": false,
+      "contexts": [
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q226",
+      "text": "Climbing: the only sport where 'nice jugs' is a compliment about the wall.",
+      "author": "Unknown",
+      "source_type": "community",
+      "verified": false,
+      "contexts": [
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q227",
+      "text": "I've been projecting this route for six months. My therapist says I should also try projecting less onto my relationships.",
+      "author": "Greg Slipperton",
+      "source_type": "community",
+      "verified": false,
+      "contexts": [
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q228",
+      "text": "My training plan says 'active rest day'. I actively rested on the couch for nine hours.",
+      "author": "Dave Sendington",
+      "source_type": "community",
+      "verified": false,
+      "contexts": [
+        "deload",
+        "recovery"
+      ]
+    },
+    {
+      "id": "q229",
+      "text": "I flash 6a in my dreams. Then I wake up and campus off the alarm clock.",
+      "author": "Brenda Dynamo",
+      "source_type": "community",
+      "verified": false,
+      "contexts": [
+        "general",
+        "deload"
+      ]
+    },
+    {
+      "id": "q230",
+      "text": "Told my boss I can't work Fridays because of a recurring medical condition. It's called 'psych'.",
+      "author": "Tony Chalkhands",
+      "source_type": "community",
+      "verified": false,
+      "contexts": [
+        "general",
+        "deload",
+        "pre_session"
+      ]
+    },
+    {
+      "id": "q231",
+      "text": "My hangboard routine has three phases: denial, pain, and texting my physio.",
+      "author": "Dr. Patricia Pulley",
+      "source_type": "community",
+      "verified": false,
+      "contexts": [
+        "training",
+        "deload"
+      ]
+    },
+    {
+      "id": "q232",
+      "text": "I don't have a type. I just like them steep, juggy, and forgiving. We're still talking about walls, right?",
+      "author": "Chad Biceps III",
+      "source_type": "community",
+      "verified": false,
+      "contexts": [
         "general",
         "deload"
       ]

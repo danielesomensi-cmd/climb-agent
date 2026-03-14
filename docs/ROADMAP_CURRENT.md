@@ -247,7 +247,7 @@ Items from audits and brainstorming. Not committed to any timeline.
 | Liability disclaimer framework | Template disclaimer per contenuti health-adjacent (nutrizione, recupero). Necessario prima di attivare nutrition hints nel Coach | roadmap discussion |
 | Exercise catalog audit v2 | Nuovo audit esercizi contro letteratura espansa e feedback beta. Identificare gap emersi dall'uso reale (153 esercizi attuali). Tipo C. | roadmap discussion |
 | Technique drills from book | Scannerizzare il libro di Daniele sui drill tecnici, estrarre drill, mappare su exercise schema, aggiungere al catalogo. Attualmente ~5-6 drill tecnici, potenziale raddoppio. Tipo C. | roadmap discussion |
-| Quotes pool expansion | Espandere il pool di citazioni motivazionali. Audit quantità attuale, aggiungere citazioni da letteratura climbing + atleti. Task piccolo, alto impatto percepito. | roadmap discussion |
+| ~~Quotes pool expansion~~ | ✅ Done. Pool espanso da 200 → 232 citazioni. Aggiunte 32 quote: 16 climber (Güllich, Sharma, Caldwell, Honnold, ecc.), 3 athlete (Ali, Jordan, Mandela), 1 philosophy (Nietzsche), 1 popular (proverbio cinese), 8 community/humor, 3 coach. Aggiunto source_type "community". | 2026-03-14 |
 
 ---
 
