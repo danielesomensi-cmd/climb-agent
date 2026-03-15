@@ -141,6 +141,130 @@ class TestResolverDevicePreference:
         assert selected["id"] == "lp_max_test_5s"
 
 
+# ── B126: Stage 2c must not kill non-finger exercises ────────────────────────
+
+
+class TestStage2cNonFingerSurvival:
+    """B126: Stage 2c finger device preference must only filter among finger-device
+    exercises.  Non-finger exercises (climbing, bodyweight, campus) must be untouched."""
+
+    # ARC exercises known to have role=main, domain=aerobic_capacity, pattern=climbing_continuous
+    _ARC_IDS = {"gym_arc_easy_volume", "arc_training", "arc_easy_traverse",
+                "arc_training_progressive"}
+
+    def test_non_finger_exercises_survive_with_hangboard_device(self):
+        """ARC/climbing exercises must survive Stage 2c when finger_device=hangboard."""
+        selected, trace = pick_best_exercise_p0(
+            exercises=ALL_EXERCISES,
+            location="gym",
+            available_equipment=["gym_boulder", "spraywall", "hangboard", "pullup_bar"],
+            role_req=["main"],
+            domain_req=["aerobic_capacity"],
+            pattern_req=["climbing_continuous"],
+            finger_device="hangboard",
+        )
+        assert selected is not None, f"No exercise selected, trace: {trace}"
+        assert selected["id"] in self._ARC_IDS, (
+            f"Expected ARC exercise, got {selected['id']}"
+        )
+
+    def test_non_finger_exercises_survive_with_loading_pin_device(self):
+        """ARC/climbing exercises must survive Stage 2c when finger_device=loading_pin."""
+        selected, trace = pick_best_exercise_p0(
+            exercises=ALL_EXERCISES,
+            location="gym",
+            available_equipment=["gym_boulder", "spraywall", "loading_pin", "pullup_bar"],
+            role_req=["main"],
+            domain_req=["aerobic_capacity"],
+            pattern_req=["climbing_continuous"],
+            finger_device="loading_pin",
+        )
+        assert selected is not None, f"No exercise selected, trace: {trace}"
+        assert selected["id"] in self._ARC_IDS, (
+            f"Expected ARC exercise, got {selected['id']}"
+        )
+
+    def test_finger_preference_still_works_among_finger_exercises(self):
+        """Stage 2c must still prefer hangboard over loading_pin for finger exercises."""
+        selected, _ = pick_best_exercise_p0(
+            exercises=ALL_EXERCISES,
+            location="home",
+            available_equipment=["hangboard", "loading_pin", "pullup_bar"],
+            role_req=["main"],
+            domain_req=["finger_max_strength"],
+            finger_device="hangboard",
+        )
+        assert selected is not None
+        # Must be a hangboard exercise, not a loading_pin one
+        assert selected["id"] not in LP_EXERCISE_IDS
+
+    def test_no_finger_device_leaves_pool_unchanged(self):
+        """Without finger_device set, Stage 2c is skipped entirely."""
+        selected, trace = pick_best_exercise_p0(
+            exercises=ALL_EXERCISES,
+            location="gym",
+            available_equipment=["gym_boulder", "spraywall", "hangboard"],
+            role_req=["main"],
+            domain_req=["aerobic_capacity"],
+            pattern_req=["climbing_continuous"],
+            finger_device=None,
+        )
+        assert selected is not None
+        assert selected["id"] in self._ARC_IDS
+
+    def test_mixed_pool_non_finger_untouched_wrong_device_removed(self):
+        """In a mixed pool, non-finger exercises stay and wrong-device finger exercises go."""
+        selected, trace = pick_best_exercise_p0(
+            exercises=ALL_EXERCISES,
+            location="home",
+            available_equipment=["hangboard", "loading_pin", "pullup_bar"],
+            role_req=["main"],
+            domain_req=["finger_max_strength"],
+            finger_device="loading_pin",
+        )
+        assert selected is not None
+        # Should pick a loading_pin exercise (preferred device)
+        assert selected["id"] in LP_EXERCISE_IDS
+
+    def test_boulder_circuit_resolves_with_climbing(self):
+        """Full boulder_circuit_gym session must resolve with at least one climbing exercise."""
+        state = _base_state()
+        state["equipment"]["gyms"] = [{
+            "gym_id": "bkl",
+            "name": "BKL",
+            "equipment": ["gym_boulder", "spraywall", "board_moonboard",
+                          "hangboard", "pullup_bar", "dumbbell", "campus_board"],
+        }]
+        state["context"] = {"location": "gym", "gym_id": "bkl"}
+
+        session_path = "backend/catalog/sessions/v1/boulder_circuit_gym.json"
+        result = resolve_session(
+            repo_root=str(REPO_ROOT),
+            session_path=session_path,
+            templates_dir="backend/catalog/templates/v1",
+            exercises_path="backend/catalog/exercises/v1/exercises.json",
+            out_path="",
+            user_state_override=state,
+            write_output=False,
+        )
+        instances = result.get("resolved_session", {}).get("exercise_instances", [])
+        climbing_patterns = {"climbing_continuous", "climbing_limit_boulder"}
+        climbing_exercises = [
+            e for e in instances
+            if e.get("attributes", {}).get("pattern") in climbing_patterns
+               or any(p in climbing_patterns for p in
+                      (e.get("attributes", {}).get("patterns") or []))
+        ]
+        # Also check by category — ARC exercises have category "endurance" + pattern in catalog
+        ex_ids = {e["exercise_id"] for e in instances}
+        arc_ids = self._ARC_IDS | {"threshold_climbing", "threshold_long_intervals"}
+        has_climbing = bool(ex_ids & arc_ids) or bool(climbing_exercises)
+        assert has_climbing, (
+            f"Boulder Circuit Gym resolved with zero climbing exercises! "
+            f"Exercise IDs: {[e['exercise_id'] for e in instances]}"
+        )
+
+
 # ── LP load suggestions ─────────────────────────────────────────────────────
 
 

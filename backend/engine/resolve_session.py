@@ -1,10 +1,16 @@
 import json
+import logging
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.engine.cluster_utils import cluster_key_for_exercise, parse_date
 from backend.engine.progression_v1 import inject_targets
+
+logger = logging.getLogger(__name__)
+
+# B126: conditional resolver trace — set TRACE_RESOLVE=true on Railway to debug
+TRACE_RESOLVE = os.environ.get("TRACE_RESOLVE", "false").lower() == "true"
 
 
 # ---------------------------
@@ -380,12 +386,29 @@ def pick_best_exercise_p0(
             base2 = base2b
     trace["counts"]["after_equipment_pref"] = len(base2)
 
-    # Stage 2c: finger device preference (soft — prefers lp_* or hangboard exercises)
+    # Stage 2c: finger device preference (soft — prefers user's device among
+    # finger-device exercises only).  Non-finger exercises (climbing, bodyweight,
+    # campus, etc.) are left untouched.  B126: the old code replaced the ENTIRE
+    # pool with only hangboard/lp exercises, killing all climbing candidates.
+    _FINGER_DEVICE_EQ = {"hangboard", "loading_pin"}
     if finger_device and len(base2) > 1:
         preferred_eq = "loading_pin" if finger_device == "loading_pin" else "hangboard"
-        device_match = [e for e in base2 if preferred_eq in set(ex_equipment_required(e))]
-        if device_match:
-            base2 = device_match
+
+        finger_pool: List[Dict[str, Any]] = []
+        other_pool: List[Dict[str, Any]] = []
+        for e in base2:
+            if set(ex_equipment_required(e)) & _FINGER_DEVICE_EQ:
+                finger_pool.append(e)
+            else:
+                other_pool.append(e)
+
+        # Among finger-device exercises, prefer the user's chosen device
+        if finger_pool:
+            preferred = [e for e in finger_pool if preferred_eq in set(ex_equipment_required(e))]
+            if preferred:
+                finger_pool = preferred
+
+        base2 = other_pool + finger_pool
     trace["counts"]["after_finger_device"] = len(base2)
 
     # Stage 3: role (ANY match)
@@ -474,8 +497,24 @@ def pick_best_exercise_p0(
         ))
     else:
         base3.sort(key=lambda e: norm_str(get_ex_id(e)))
-    return (base3[0] if base3 else None), trace
 
+    selected = base3[0] if base3 else None
+
+    # B126: conditional trace logging for production debugging
+    if TRACE_RESOLVE:
+        sel_id = norm_str(get_ex_id(selected)) if selected else "NONE"
+        top5 = [norm_str(get_ex_id(e)) for e in base3[:5]]
+        logger.warning(
+            "P0_TRACE | loc=%s avail=%s | role=%s dom=%s pat=%s finger_dev=%s "
+            "| counts=%s dom_applied=%s pat_applied=%s "
+            "| top5=%s selected=%s",
+            loc, sorted(avail), sorted(role_set), sorted(dom_set),
+            sorted(pat_set), finger_device,
+            trace.get("counts"), trace.get("domain_filter_applied"),
+            trace.get("pattern_filter_applied"), top5, sel_id,
+        )
+
+    return selected, trace
 
 
 
@@ -576,8 +615,12 @@ def load_recent_exercise_ids(repo_root: str, days_window: int = 5) -> List[str]:
     """
     MVP: looks into data/logs/sessions_*.jsonl and extracts recently used exercise_ids.
     We keep it simple: we read all lines and take last N entries; in the future filter by date properly.
+
+    B126: uses DATA_DIR env var (same as deps.py) so production reads from the
+    persistent volume instead of the ephemeral repo directory.
     """
-    logs_dir = os.path.join(repo_root, "data", "logs")
+    data_dir = os.environ.get("DATA_DIR", os.path.join(repo_root, "backend", "data"))
+    logs_dir = os.path.join(data_dir, "logs")
     if not os.path.isdir(logs_dir):
         return []
 
@@ -826,6 +869,15 @@ def _resolve_inline_block(
     equipment_req = filters.get("equipment")
 
     _finger_dev = ((user_state or {}).get("preferences") or {}).get("finger_training_device")
+
+    if TRACE_RESOLVE:
+        logger.warning(
+            "INLINE_BLOCK_TRACE | block=%s role=%s dom=%s pat=%s equip=%s "
+            "| location=%s avail_eq=%s finger_dev=%s exclude_count=%d",
+            block_id, role_req, domain_req, pattern_req, equipment_req,
+            location, sorted(available_equipment), _finger_dev, len(recent_ex_ids),
+        )
+
     selected_ex, trace = pick_best_exercise_p0(
         exercises=exercises,
         location=location,

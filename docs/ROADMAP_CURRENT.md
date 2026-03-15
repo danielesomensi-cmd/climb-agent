@@ -11,6 +11,7 @@
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
 Recently closed (2026-03-15):
+- **D126/B126** — Resolver Stage 2c bug: finger device preference (`hangboard`/`loading_pin`) replaced the ENTIRE exercise pool, killing all climbing/bodyweight/campus exercises. Fix: Stage 2c now only filters among finger-device exercises; non-finger exercises are untouched. Also fixed `load_recent_exercise_ids` DATA_DIR path for production, added conditional trace logging (`TRACE_RESOLVE` env var).
 - **B127** — Assessment profile auto-refresh: `save_state()` now recomputes profile when inputs change (fingerprint guard)
 - **B126** — Weekly report audit: fixed 5 bugs (outdoor grade comparison, spontaneous outdoor in Day by Day, other_activity rendering, top_grade_attempted, duration tracking) + KPI enrichment (training_time, active_days, weekly summary card)
 - **B127 (duration)** — 3-level duration capture: guided timer → mark-done user input → template estimate. Manual session edit (name, difficulty, duration). FeedbackDialog with slot-based duration pre-fill
