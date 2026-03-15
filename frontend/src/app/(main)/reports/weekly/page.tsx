@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import {
   Mountain,
   Dumbbell,
   Calendar,
+  Clock,
+  Activity,
 } from "lucide-react";
 import { getWeeklyReport } from "@/lib/api";
 import type {
@@ -124,14 +126,8 @@ function WeeklyReportContent() {
     if (weekStart) fetchReport(weekStart);
   }, [weekStart, fetchReport]);
 
-  const handlePrev = () => {
-    const ws = shiftWeek(weekStart, -1);
-    setWeekStart(ws);
-  };
-  const handleNext = () => {
-    const ws = shiftWeek(weekStart, 1);
-    setWeekStart(ws);
-  };
+  const handlePrev = () => setWeekStart(shiftWeek(weekStart, -1));
+  const handleNext = () => setWeekStart(shiftWeek(weekStart, 1));
 
   const phaseLabel = report?.context.phase_id
     ? PHASE_LABELS[report.context.phase_id] ?? report.context.phase_id.replace(/_/g, " ")
@@ -180,15 +176,16 @@ function WeeklyReportContent() {
 
         {!loading && !error && report && (
           <>
-            {/* Adherence ring */}
+            {/* ── Weekly Summary (adherence + active days + load + time) ── */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">Adherence</CardTitle>
+                <CardTitle className="text-base">Weekly Summary</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Top row: adherence ring + stats */}
                 <div className="flex items-center gap-6">
                   <AdherenceRing pct={report.adherence.pct} />
-                  <div className="space-y-1 text-sm">
+                  <div className="space-y-1 text-sm flex-1">
                     <p>{report.adherence.completed} / {report.adherence.planned} sessions completed</p>
                     {report.adherence.skipped > 0 && (
                       <p className="text-muted-foreground">{report.adherence.skipped} skipped</p>
@@ -198,15 +195,45 @@ function WeeklyReportContent() {
                     )}
                   </div>
                 </div>
-              </CardContent>
-            </Card>
 
-            {/* Load bar */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Training Load</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+                {/* KPI grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  {/* Active Days */}
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Active Days</p>
+                    <p className="text-lg font-bold">{report.active_days?.count ?? 0}<span className="text-xs font-normal text-muted-foreground">/7</span></p>
+                    {report.active_days?.dots && (
+                      <div className="flex justify-center gap-1 mt-1">
+                        {report.active_days.dots.map((active, i) => (
+                          <div
+                            key={i}
+                            className={`size-2 rounded-full ${active ? "bg-green-500" : "bg-muted/40"}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Training Time */}
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Time Trained</p>
+                    <p className="text-lg font-bold">{report.training_time?.formatted ?? "—"}</p>
+                    {report.training_time?.has_estimates && (
+                      <p className="text-[10px] text-muted-foreground">incl. estimates</p>
+                    )}
+                  </div>
+
+                  {/* Training Load */}
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">Total Load</p>
+                    <p className="text-lg font-bold">{report.load.actual_total}</p>
+                    {report.load.outdoor_load > 0 && (
+                      <p className="text-[10px] text-muted-foreground">+{report.load.outdoor_load} outdoor</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Load bar */}
                 <LoadBar
                   planned={report.load.planned_total}
                   actual={report.load.actual_total}
@@ -214,32 +241,11 @@ function WeeklyReportContent() {
                 <div className="flex gap-4 text-xs text-muted-foreground">
                   <span>{report.load.hard_days} hard day{report.load.hard_days !== 1 ? "s" : ""}</span>
                   <span>{report.load.recovery_days} rest day{report.load.recovery_days !== 1 ? "s" : ""}</span>
-                  {report.load.indoor_minutes > 0 && (
-                    <span>{report.load.indoor_minutes} min indoor</span>
-                  )}
-                  {report.load.outdoor_minutes > 0 && (
-                    <span>{report.load.outdoor_minutes} min outdoor</span>
-                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Difficulty distribution */}
-            {Object.keys(report.difficulty.distribution).length > 0 && (
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">Difficulty</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <DifficultyBar distribution={report.difficulty.distribution} />
-                  <p className="text-xs text-muted-foreground">
-                    Average: {DIFFICULTY_LABELS[report.difficulty.avg_label] ?? report.difficulty.avg_label}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Highlights */}
+            {/* ── Highlights ── */}
             {report.highlights.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
@@ -262,7 +268,7 @@ function WeeklyReportContent() {
               </Card>
             )}
 
-            {/* Day-by-day timeline */}
+            {/* ── Day-by-day timeline ── */}
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base flex items-center gap-2">
@@ -299,6 +305,18 @@ function WeeklyReportContent() {
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">
                             <Mountain className="size-3" />
                             {day.outdoor.spot_name ?? "Outdoor"}
+                            {day.outdoor.route_count != null && (
+                              <span className="opacity-80">({day.outdoor.route_count})</span>
+                            )}
+                          </span>
+                        )}
+                        {day.other_activity && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-xs text-white">
+                            <Activity className="size-3" />
+                            {day.other_activity.name ?? "Other"}
+                            {day.other_activity.feedback && (
+                              <span className="opacity-80">· {day.other_activity.feedback}</span>
+                            )}
                           </span>
                         )}
                         {day.is_rest_day && (
@@ -311,7 +329,99 @@ function WeeklyReportContent() {
               </CardContent>
             </Card>
 
-            {/* Progression table */}
+            {/* ── Outdoor summary ── */}
+            {report.outdoor.sessions > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Mountain className="size-4" /> Outdoor
+                    </CardTitle>
+                    <button
+                      onClick={() => window.location.href = "/outdoor"}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      View all
+                    </button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-muted-foreground text-xs">Sessions</p>
+                      <p className="font-medium">{report.outdoor.sessions}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Routes</p>
+                      <p className="font-medium">
+                        {report.outdoor.routes_sent}/{report.outdoor.routes_attempted} sent
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-xs">Send Rate</p>
+                      <p className="font-medium">{report.outdoor.send_pct}%</p>
+                    </div>
+                    {report.outdoor.top_grade_attempted && (
+                      <div>
+                        <p className="text-muted-foreground text-xs">Top Attempt</p>
+                        <p className="font-medium">{report.outdoor.top_grade_attempted}</p>
+                      </div>
+                    )}
+                    {report.outdoor.top_grade_sent && (
+                      <div>
+                        <p className="text-muted-foreground text-xs">Top Send</p>
+                        <p className="font-medium">{report.outdoor.top_grade_sent}</p>
+                      </div>
+                    )}
+                    {report.outdoor.onsight_pct > 0 && (
+                      <div>
+                        <p className="text-muted-foreground text-xs">Onsight Rate</p>
+                        <p className="font-medium">{report.outdoor.onsight_pct}%</p>
+                      </div>
+                    )}
+                    {report.outdoor.spots.length > 0 && (
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground text-xs">Spots</p>
+                        <p className="font-medium">{report.outdoor.spots.join(", ")}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Stimulus balance grid ── */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Dumbbell className="size-4" /> Stimulus Balance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(report.stimulus_balance).map(([cat, data]) => (
+                    <div key={cat} className="rounded-md bg-muted/30 p-3">
+                      <p className="text-xs font-medium mb-1">
+                        {CATEGORY_LABELS[cat] ?? cat.replace(/_/g, " ")}
+                      </p>
+                      <p className="text-lg font-bold">
+                        {data.sessions_this_week}
+                        <span className="text-xs font-normal text-muted-foreground ml-1">
+                          session{data.sessions_this_week !== 1 ? "s" : ""}
+                        </span>
+                      </p>
+                      {data.days_since_last != null && (
+                        <p className={`text-xs ${data.days_since_last > 10 ? "text-amber-400" : "text-muted-foreground"}`}>
+                          {data.days_since_last}d since last
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* ── Progression table ── */}
             {report.progression.length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
@@ -351,89 +461,20 @@ function WeeklyReportContent() {
               </Card>
             )}
 
-            {/* Outdoor summary */}
-            {report.outdoor.sessions > 0 && (
+            {/* ── Difficulty distribution ── */}
+            {Object.keys(report.difficulty.distribution).length > 0 && (
               <Card>
                 <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Mountain className="size-4" /> Outdoor
-                    </CardTitle>
-                    <button
-                      onClick={() => window.location.href = "/outdoor"}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      View all
-                    </button>
-                  </div>
+                  <CardTitle className="text-base">Difficulty</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">Sessions</p>
-                      <p className="font-medium">{report.outdoor.sessions}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Routes</p>
-                      <p className="font-medium">{report.outdoor.total_routes}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Send Rate</p>
-                      <p className="font-medium">{report.outdoor.send_pct}%</p>
-                    </div>
-                    {report.outdoor.top_grade_sent && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Top Grade</p>
-                        <p className="font-medium">{report.outdoor.top_grade_sent}</p>
-                      </div>
-                    )}
-                    {report.outdoor.onsight_pct > 0 && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">Onsight Rate</p>
-                        <p className="font-medium">{report.outdoor.onsight_pct}%</p>
-                      </div>
-                    )}
-                    {report.outdoor.spots.length > 0 && (
-                      <div className="col-span-2">
-                        <p className="text-muted-foreground text-xs">Spots</p>
-                        <p className="font-medium">{report.outdoor.spots.join(", ")}</p>
-                      </div>
-                    )}
-                  </div>
+                <CardContent className="space-y-2">
+                  <DifficultyBar distribution={report.difficulty.distribution} />
+                  <p className="text-xs text-muted-foreground">
+                    Average: {DIFFICULTY_LABELS[report.difficulty.avg_label] ?? report.difficulty.avg_label}
+                  </p>
                 </CardContent>
               </Card>
             )}
-
-            {/* Stimulus balance grid */}
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Dumbbell className="size-4" /> Stimulus Balance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(report.stimulus_balance).map(([cat, data]) => (
-                    <div key={cat} className="rounded-md bg-muted/30 p-3">
-                      <p className="text-xs font-medium mb-1">
-                        {CATEGORY_LABELS[cat] ?? cat.replace(/_/g, " ")}
-                      </p>
-                      <p className="text-lg font-bold">
-                        {data.sessions_this_week}
-                        <span className="text-xs font-normal text-muted-foreground ml-1">
-                          session{data.sessions_this_week !== 1 ? "s" : ""}
-                        </span>
-                      </p>
-                      {data.days_since_last != null && (
-                        <p className={`text-xs ${data.days_since_last > 10 ? "text-amber-400" : "text-muted-foreground"}`}>
-                          {data.days_since_last}d since last
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Back to week */}
             <div className="flex justify-center pt-2">

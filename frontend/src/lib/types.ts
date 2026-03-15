@@ -341,12 +341,16 @@ export interface WeeklyReportProgression {
 
 export interface WeeklyReportOutdoor {
   sessions: number;
-  total_routes: number;
-  sends: number;
+  routes_attempted: number;
+  routes_sent: number;
   send_pct: number;
   top_grade_sent: string | null;
+  top_grade_attempted: string | null;
   onsight_pct: number;
   spots: string[];
+  // Backward compat aliases
+  total_routes: number;
+  sends: number;
 }
 
 export interface WeeklyReportSession {
@@ -362,9 +366,24 @@ export interface WeeklyReportDay {
   date: string;
   weekday: string;
   sessions: WeeklyReportSession[];
-  outdoor: { spot_name: string; discipline: string; status: string } | null;
-  other_activity: { name: string; status: string; feedback: string } | null;
+  outdoor: { spot_name: string; discipline: string; status: string; route_count?: number } | null;
+  other_activity: { name: string; status: string; feedback: string; load?: number } | null;
   is_rest_day: boolean;
+}
+
+export interface WeeklyReportTrainingTime {
+  total_minutes: number;
+  total_seconds: number;
+  estimated_minutes: number;
+  has_estimates: boolean;
+  formatted: string;
+  sources: Record<string, number>;
+}
+
+export interface WeeklyReportActiveDays {
+  count: number;
+  total: number;
+  dots: boolean[];
 }
 
 export interface WeeklyReportHighlight {
@@ -380,6 +399,8 @@ export interface WeeklyReport {
   context: WeeklyReportContext;
   adherence: WeeklyReportAdherence;
   load: WeeklyReportLoad;
+  training_time: WeeklyReportTrainingTime;
+  active_days: WeeklyReportActiveDays;
   difficulty: WeeklyReportDifficulty;
   stimulus_balance: Record<string, WeeklyReportStimulusEntry>;
   progression: WeeklyReportProgression[];

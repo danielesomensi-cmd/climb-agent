@@ -104,7 +104,7 @@ class TestWeeklyReportStructure:
         report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
         for key in ("context", "adherence", "load", "difficulty",
                      "stimulus_balance", "progression", "outdoor",
-                     "days", "highlights"):
+                     "days", "highlights", "training_time", "active_days"):
             assert key in report, f"Missing section: {key}"
 
 
@@ -838,3 +838,250 @@ class TestReportsAPI:
         assert r.status_code == 200
         data = r.json()
         assert data["report_type"] == "monthly"
+
+
+# ── B126: Outdoor top_grade_attempted vs top_grade_sent ──────────────
+
+
+class TestOutdoorGrades:
+    def test_top_grade_attempted_includes_falls(self, tmp_log_dir):
+        """Top grade attempted should include routes where climber fell."""
+        _write_outdoor_log(tmp_log_dir, [{
+            "log_version": "outdoor.v1",
+            "date": "2026-03-21",
+            "spot_name": "Berdorf",
+            "discipline": "lead",
+            "duration_minutes": 120,
+            "routes": [
+                {"name": "Easy", "grade": "6b+", "style": "onsight",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "Isatis", "grade": "7c+", "style": "project",
+                 "attempts": [{"result": "fell"}]},
+            ],
+        }])
+        state = _make_state()
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        out = report["outdoor"]
+        assert out["top_grade_sent"] == "6b+"
+        assert out["top_grade_attempted"] == "7c+"
+        assert out["routes_attempted"] == 2
+        assert out["routes_sent"] == 1
+
+    def test_top_grade_uses_grade_rank(self, tmp_log_dir):
+        """Grade comparison should use proper climbing-grade ordering."""
+        _write_outdoor_log(tmp_log_dir, [{
+            "log_version": "outdoor.v1",
+            "date": "2026-03-21",
+            "spot_name": "Spot",
+            "discipline": "boulder",
+            "duration_minutes": 60,
+            "routes": [
+                {"name": "P1", "grade": "7A", "style": "redpoint",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "P2", "grade": "6C+", "style": "redpoint",
+                 "attempts": [{"result": "sent"}]},
+            ],
+        }])
+        state = _make_state()
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        # 7A > 6C+ by rank, not alphabetically
+        assert report["outdoor"]["top_grade_sent"] == "7A"
+
+    def test_no_sends_still_shows_attempted(self, tmp_log_dir):
+        """If nothing sent, top_grade_sent is None but attempted shows."""
+        _write_outdoor_log(tmp_log_dir, [{
+            "log_version": "outdoor.v1",
+            "date": "2026-03-21",
+            "spot_name": "Spot",
+            "discipline": "lead",
+            "duration_minutes": 60,
+            "routes": [
+                {"name": "R1", "grade": "8a", "style": "project",
+                 "attempts": [{"result": "fell"}]},
+            ],
+        }])
+        state = _make_state()
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        assert report["outdoor"]["top_grade_sent"] is None
+        assert report["outdoor"]["top_grade_attempted"] == "8a"
+
+
+# ── B126: Day by Day — spontaneous outdoor + other_activity ──────────
+
+
+class TestDayByDayEnriched:
+    def test_spontaneous_outdoor_in_days(self, tmp_log_dir):
+        """Outdoor session from log (not planned) should appear in Day by Day."""
+        _write_outdoor_log(tmp_log_dir, [{
+            "log_version": "outdoor.v1",
+            "date": "2026-03-22",  # Sunday
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 180,
+            "routes": [
+                {"name": "R1", "grade": "6A", "style": "onsight",
+                 "attempts": [{"result": "sent"}]},
+                {"name": "R2", "grade": "7B", "style": "project",
+                 "attempts": [{"result": "fell"}]},
+            ],
+        }])
+        state = _make_state()
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        sun = report["days"][6]  # Sunday
+        assert sun["outdoor"] is not None
+        assert sun["outdoor"]["spot_name"] == "Berdorf"
+        assert sun["outdoor"]["status"] == "done"
+        assert sun["outdoor"]["route_count"] == 2
+        assert sun["is_rest_day"] is False
+
+    def test_other_activity_in_days(self, tmp_log_dir):
+        """Other activity (e.g. Yoga) should appear in Day by Day."""
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-21", [],
+                           other_activity=True,
+                           other_activity_name="Yoga",
+                           other_activity_status="completed",
+                           other_activity_feedback="ok",
+                           other_activity_load=15),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        sat = [d for d in report["days"] if d["date"] == "2026-03-21"][0]
+        assert sat["other_activity"] is not None
+        assert sat["other_activity"]["name"] == "Yoga"
+        assert sat["other_activity"]["status"] == "completed"
+        assert sat["other_activity"]["load"] == 15
+        assert sat["is_rest_day"] is False
+
+    def test_mixed_week_all_visible(self, tmp_log_dir):
+        """Engine sessions + manual + outdoor all visible in same week."""
+        _write_outdoor_log(tmp_log_dir, [{
+            "log_version": "outdoor.v1",
+            "date": "2026-03-22",
+            "spot_name": "Crag",
+            "discipline": "lead",
+            "duration_minutes": 120,
+            "routes": [{"name": "R1", "grade": "6a", "style": "onsight",
+                         "attempts": [{"result": "sent"}]}],
+        }])
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("strength_long", "done")]),
+            _make_plan_day("2026-03-18", [_make_session("technique_gym", "done")]),
+            _make_plan_day("2026-03-20", [],
+                           other_activity=True,
+                           other_activity_name="Circus",
+                           other_activity_status="completed"),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        # Mon: engine session
+        assert report["days"][0]["sessions"][0]["status"] == "done"
+        # Fri: manual
+        fri = [d for d in report["days"] if d["date"] == "2026-03-20"][0]
+        assert fri["other_activity"]["name"] == "Circus"
+        # Sun: outdoor
+        assert report["days"][6]["outdoor"]["spot_name"] == "Crag"
+
+
+# ── B126: Training time ─────────────────────────────────────────────
+
+
+class TestTrainingTime:
+    def test_from_completion_log(self, tmp_log_dir):
+        state = _make_state(session_completion_log=[
+            {"date": "2026-03-16", "session_id": "s1", "session_duration_seconds": 3600},
+            {"date": "2026-03-17", "session_id": "s2", "session_duration_seconds": 5400},
+        ])
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        tt = report["training_time"]
+        assert tt["total_seconds"] == 9000
+        assert tt["total_minutes"] == 150
+        assert tt["formatted"] == "2h 30m"
+
+    def test_outdoor_duration_included(self, tmp_log_dir):
+        _write_outdoor_log(tmp_log_dir, [{
+            "log_version": "outdoor.v1",
+            "date": "2026-03-21",
+            "spot_name": "Spot",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [],
+        }])
+        state = _make_state(session_completion_log=[
+            {"date": "2026-03-16", "session_id": "s1", "session_duration_seconds": 3600},
+        ])
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        tt = report["training_time"]
+        # 3600s (indoor) + 120*60 (outdoor) = 10800s = 180 min
+        assert tt["total_minutes"] == 180
+
+    def test_other_activity_estimated(self, tmp_log_dir):
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-16", [],
+                           other_activity=True,
+                           other_activity_name="Yoga",
+                           other_activity_status="completed"),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        tt = report["training_time"]
+        assert tt["total_minutes"] == 60
+        assert tt["has_estimates"] is True
+        assert tt["estimated_minutes"] == 60
+
+    def test_empty_week(self, tmp_log_dir):
+        state = _make_state(current_week_plan=None)
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        tt = report["training_time"]
+        assert tt["total_minutes"] == 0
+        assert tt["formatted"] == "0h 00m"
+
+    def test_entries_outside_week_ignored(self, tmp_log_dir):
+        state = _make_state(session_completion_log=[
+            {"date": "2026-03-10", "session_id": "old", "session_duration_seconds": 9999},
+            {"date": "2026-03-16", "session_id": "s1", "session_duration_seconds": 3600},
+        ])
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        assert report["training_time"]["total_seconds"] == 3600
+
+
+# ── B126: Active days ────────────────────────────────────────────────
+
+
+class TestActiveDays:
+    def test_counts_done_sessions(self, tmp_log_dir):
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "done")]),
+            _make_plan_day("2026-03-17", [_make_session("s2", "done")]),
+            _make_plan_day("2026-03-18", [_make_session("s3", "planned")]),
+            _make_plan_day("2026-03-19", []),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        ad = report["active_days"]
+        assert ad["count"] == 2
+        assert ad["total"] == 7
+        assert ad["dots"][0] is True  # Mon
+        assert ad["dots"][1] is True  # Tue
+        assert ad["dots"][2] is False  # Wed (planned, not done)
+
+    def test_outdoor_counts_as_active(self, tmp_log_dir):
+        _write_outdoor_log(tmp_log_dir, [{
+            "log_version": "outdoor.v1",
+            "date": "2026-03-22",
+            "spot_name": "Crag",
+            "discipline": "lead",
+            "duration_minutes": 120,
+            "routes": [{"name": "R1", "grade": "6a",
+                         "attempts": [{"result": "sent"}]}],
+        }])
+        state = _make_state(current_week_plan=None)
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        assert report["active_days"]["dots"][6] is True  # Sunday
+
+    def test_other_activity_counts_as_active(self, tmp_log_dir):
+        state = _make_state(current_week_plan=_make_week_plan([
+            _make_plan_day("2026-03-21", [],
+                           other_activity=True,
+                           other_activity_name="Yoga",
+                           other_activity_status="completed"),
+        ]))
+        report = generate_weekly_report(state, tmp_log_dir, WEEK_START)
+        sat = report["active_days"]["dots"][5]  # Saturday
+        assert sat is True

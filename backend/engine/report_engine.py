@@ -28,6 +28,42 @@ _SCORE_THRESHOLDS = [
 
 _WEEKDAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
+# ---------------------------------------------------------------------------
+# Grade comparison helper (sport + boulder)
+# ---------------------------------------------------------------------------
+
+# Sport grades (French, lowercase)
+_SPORT_GRADES = [
+    "5a", "5b", "5c",
+    "6a", "6a+", "6b", "6b+", "6c", "6c+",
+    "7a", "7a+", "7b", "7b+", "7c", "7c+",
+    "8a", "8a+", "8b", "8b+", "8c", "8c+",
+    "9a", "9a+",
+]
+# Boulder grades (Fontainebleau, uppercase)
+_BOULDER_GRADES = [
+    "5A", "5B", "5C",
+    "6A", "6A+", "6B", "6B+", "6C", "6C+",
+    "7A", "7A+", "7B", "7B+", "7C", "7C+",
+    "8A", "8A+", "8B", "8B+", "8C", "8C+",
+]
+_GRADE_RANK = {g: i for i, g in enumerate(_SPORT_GRADES)}
+_GRADE_RANK.update({g: i for i, g in enumerate(_BOULDER_GRADES)})
+
+
+def _grade_rank(grade: str) -> int:
+    """Return a numeric rank for a grade (sport or boulder). Unknown grades return -1."""
+    return _GRADE_RANK.get(grade, -1)
+
+
+def _higher_grade(a: Optional[str], b: Optional[str]) -> Optional[str]:
+    """Return the harder of two grades, or whichever is not None."""
+    if a is None:
+        return b
+    if b is None:
+        return a
+    return a if _grade_rank(a) >= _grade_rank(b) else b
+
 
 def _score_to_label(score: float) -> str:
     for threshold, label in _SCORE_THRESHOLDS:
@@ -245,6 +281,8 @@ def _build_load(
 
     load_ratio = round(actual_total / planned_total, 2) if planned_total else 0.0
 
+    # Duration: prefer session_completion_log (has timer/user-reported data),
+    # fall back to indoor JSONL duration_minutes
     indoor_minutes = sum(s.get("duration_minutes", 0) for s in indoor_sessions)
     outdoor_minutes = sum(s.get("duration_minutes", 0) for s in outdoor_sessions)
 
@@ -428,48 +466,61 @@ def _build_outdoor(outdoor_sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
     if not outdoor_sessions:
         return {
             "sessions": 0,
-            "total_routes": 0,
-            "sends": 0,
+            "routes_attempted": 0,
+            "routes_sent": 0,
             "send_pct": 0.0,
             "top_grade_sent": None,
+            "top_grade_attempted": None,
             "onsight_pct": 0.0,
             "spots": [],
+            # Backward compat aliases
+            "total_routes": 0,
+            "sends": 0,
         }
 
-    total_routes = 0
-    sends = 0
+    routes_attempted = 0
+    routes_sent = 0
     onsights = 0
     spots_set: set = set()
-    top_grade: Optional[str] = None
+    top_grade_sent: Optional[str] = None
+    top_grade_attempted: Optional[str] = None
 
     for sess in outdoor_sessions:
         spot = sess.get("spot_name")
         if spot:
             spots_set.add(spot)
         for route in sess.get("routes") or []:
-            total_routes += 1
+            routes_attempted += 1
+            grade = route.get("grade")
             attempts = route.get("attempts") or []
+
+            # Track highest grade attempted (any route with attempts)
+            if grade and attempts:
+                top_grade_attempted = _higher_grade(top_grade_attempted, grade)
+
             sent = any(a.get("result") == "sent" for a in attempts)
             if sent:
-                sends += 1
-                grade = route.get("grade")
+                routes_sent += 1
                 if grade:
-                    if top_grade is None or grade > top_grade:
-                        top_grade = grade
+                    top_grade_sent = _higher_grade(top_grade_sent, grade)
                 if route.get("style") == "onsight":
                     onsights += 1
 
-    send_pct = round(sends / total_routes * 100, 1) if total_routes else 0.0
-    onsight_pct = round(onsights / total_routes * 100, 1) if total_routes else 0.0
+    send_pct = round(routes_sent / routes_attempted * 100, 1) if routes_attempted else 0.0
+    onsight_pct = round(onsights / routes_attempted * 100, 1) if routes_attempted else 0.0
 
     return {
         "sessions": len(outdoor_sessions),
-        "total_routes": total_routes,
-        "sends": sends,
+        "routes_attempted": routes_attempted,
+        "routes_sent": routes_sent,
         "send_pct": send_pct,
-        "top_grade_sent": top_grade,
+        "top_grade_sent": top_grade_sent,
+        "top_grade_attempted": top_grade_attempted,
         "onsight_pct": onsight_pct,
         "spots": sorted(spots_set),
+        # Backward compat aliases
+        "total_routes": routes_attempted,
+        "sends": routes_sent,
     }
 
 
@@ -518,6 +569,7 @@ def _build_days(
                 "feedback_summary": s.get("feedback_summary"),
             })
 
+        # Outdoor: prefer planned info, but merge actual outdoor_log data
         outdoor_info = None
         if plan_day.get("outdoor_slot"):
             outdoor_info = {
@@ -525,6 +577,20 @@ def _build_days(
                 "discipline": plan_day.get("outdoor_discipline"),
                 "status": plan_day.get("outdoor_session_status", "planned"),
             }
+        # Merge actual outdoor sessions from log (handles spontaneous outdoor)
+        actual_outdoor = outdoor_by_date.get(d_str, [])
+        if actual_outdoor and not outdoor_info:
+            first = actual_outdoor[0]
+            route_count = sum(len(s.get("routes") or []) for s in actual_outdoor)
+            outdoor_info = {
+                "spot_name": first.get("spot_name"),
+                "discipline": first.get("discipline"),
+                "status": "done",
+                "route_count": route_count,
+            }
+        elif actual_outdoor and outdoor_info:
+            route_count = sum(len(s.get("routes") or []) for s in actual_outdoor)
+            outdoor_info["route_count"] = route_count
 
         other_activity = None
         if plan_day.get("other_activity"):
@@ -532,6 +598,7 @@ def _build_days(
                 "name": plan_day.get("other_activity_name"),
                 "status": plan_day.get("other_activity_status"),
                 "feedback": plan_day.get("other_activity_feedback"),
+                "load": plan_day.get("other_activity_load"),
             }
 
         is_rest_day = not sessions and not outdoor_info and not other_activity
@@ -650,14 +717,17 @@ def _build_highlights(
 
     # 7. Outdoor summary
     if outdoor.get("sessions", 0) > 0:
-        sends = outdoor.get("sends", 0)
-        total = outdoor.get("total_routes", 0)
-        top = outdoor.get("top_grade_sent")
+        sent = outdoor.get("routes_sent", 0)
+        attempted = outdoor.get("routes_attempted", 0)
+        top_sent = outdoor.get("top_grade_sent")
+        top_attempted = outdoor.get("top_grade_attempted")
         parts = [f"{outdoor['sessions']} outdoor session(s)"]
-        if total:
-            parts.append(f"{sends}/{total} sends")
-        if top:
-            parts.append(f"top grade {top}")
+        if attempted:
+            parts.append(f"{sent}/{attempted} sends")
+        if top_attempted and top_attempted != top_sent:
+            parts.append(f"top attempt {top_attempted}")
+        if top_sent:
+            parts.append(f"top send {top_sent}")
         highlights.append({
             "type": "positive",
             "key": "outdoor_summary",
@@ -665,6 +735,111 @@ def _build_highlights(
         })
 
     return highlights
+
+
+# ---------------------------------------------------------------------------
+# Training time section (B126)
+# ---------------------------------------------------------------------------
+
+
+def _build_training_time(
+    week_plan: Optional[Dict[str, Any]],
+    completion_log: List[Dict[str, Any]],
+    outdoor_sessions: List[Dict[str, Any]],
+    week_start: str,
+) -> Dict[str, Any]:
+    """Aggregate training duration from all sources."""
+    start = datetime.strptime(week_start, "%Y-%m-%d").date()
+    end = start + timedelta(days=6)
+    since = start.isoformat()
+    until = end.isoformat()
+
+    total_seconds = 0
+    estimated_seconds = 0
+    sources: Dict[str, int] = {}  # source_type → seconds
+
+    # 1. Session completion log (timer / user_reported durations)
+    for entry in completion_log:
+        d = entry.get("date", "")
+        if not (since <= d <= until):
+            continue
+        dur = entry.get("session_duration_seconds")
+        if dur is not None:
+            dur = int(dur)
+            total_seconds += dur
+            src = entry.get("duration_source", "timer")
+            sources[src] = sources.get(src, 0) + dur
+
+    # 2. Other activities from week plan (estimated from load)
+    if week_plan:
+        for week in week_plan.get("weeks") or []:
+            for day in week.get("days") or []:
+                d = day.get("date", "")
+                if not (since <= d <= until):
+                    continue
+                if day.get("other_activity") and day.get("other_activity_status") == "completed":
+                    # Estimate 60 min for other activities
+                    est = 60 * 60
+                    total_seconds += est
+                    estimated_seconds += est
+                    sources["estimated"] = sources.get("estimated", 0) + est
+
+    # 3. Outdoor sessions
+    for sess in outdoor_sessions:
+        d = sess.get("date", "")
+        if not (since <= d <= until):
+            continue
+        dur_min = sess.get("duration_minutes", 0)
+        if dur_min:
+            dur = int(dur_min) * 60
+            total_seconds += dur
+            sources["outdoor_log"] = sources.get("outdoor_log", 0) + dur
+
+    total_minutes = total_seconds // 60
+    estimated_minutes = estimated_seconds // 60
+    has_estimates = estimated_seconds > 0
+
+    return {
+        "total_minutes": total_minutes,
+        "total_seconds": total_seconds,
+        "estimated_minutes": estimated_minutes,
+        "has_estimates": has_estimates,
+        "formatted": f"{total_minutes // 60}h {total_minutes % 60:02d}m",
+        "sources": sources,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Active days section (B126)
+# ---------------------------------------------------------------------------
+
+
+def _build_active_days(
+    days: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Count days with at least one completed activity."""
+    active = []
+    for day in days:
+        has_activity = False
+        for s in day.get("sessions", []):
+            if s.get("status") == "done":
+                has_activity = True
+                break
+        if not has_activity and day.get("outdoor"):
+            outdoor = day["outdoor"]
+            if outdoor.get("status") == "done" or outdoor.get("route_count"):
+                has_activity = True
+        if not has_activity and day.get("other_activity"):
+            oa = day["other_activity"]
+            if oa.get("status") in ("completed", "done"):
+                has_activity = True
+        active.append(has_activity)
+
+    return {
+        "count": sum(active),
+        "total": 7,
+        "dots": active,  # [True, False, True, ...] for 7-dot visual
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -697,6 +872,7 @@ def generate_weekly_report(
     indoor = _load_indoor_sessions(log_dir, since, until)
     outdoor_raw = load_outdoor_sessions(log_dir, since_date=since)
     outdoor_filtered = [s for s in outdoor_raw if s.get("date", "") <= until]
+    completion_log = user_state.get("session_completion_log") or []
 
     week_plan = _find_week_plan(user_state, week_start)
 
@@ -717,6 +893,10 @@ def generate_weekly_report(
     )
     outdoor = _build_outdoor(outdoor_filtered)
     days = _build_days(week_plan, outdoor_filtered, week_start)
+    training_time = _build_training_time(
+        week_plan, completion_log, outdoor_filtered, week_start,
+    )
+    active_days = _build_active_days(days)
     highlights = _build_highlights(
         adherence, load, difficulty, stimulus_balance,
         progression, outdoor, context,
@@ -729,6 +909,8 @@ def generate_weekly_report(
         "context": context,
         "adherence": adherence,
         "load": load,
+        "training_time": training_time,
+        "active_days": active_days,
         "difficulty": difficulty,
         "stimulus_balance": stimulus_balance,
         "progression": progression,
