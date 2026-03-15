@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-14
+> Last updated: 2026-03-15
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -9,6 +9,10 @@
 ## Priority 1 — Stability and bug fixes
 
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
+
+Recently closed (2026-03-15):
+- **B127** — Assessment profile auto-refresh: `save_state()` now recomputes profile when inputs change (fingerprint guard)
+- **B126** — Weekly report audit: fixed 5 bugs (outdoor grade comparison, spontaneous outdoor in Day by Day, other_activity rendering, top_grade_attempted, duration tracking) + KPI enrichment (training_time, active_days, weekly summary card)
 
 ---
 
