@@ -114,6 +114,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | ARCH-3 | Generic timer behavior from prescription | Frontend timer derives behavior entirely from `work_seconds` + `reps` + `rest_*` fields. No hardcoded exercise lists or category checks. All exercises with `work_seconds > 0` get a countdown; manual mode otherwise. |
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
 | — | Test results → exercise calibration | Use ALL assessment test results (repeaters, max hang duration, L-sit, hip flexibility) to calibrate exercise difficulty and prescription — not just for radar profile. E.g.: repeater max sets → finger endurance set count; L-sit hold → core exercise progression tier; max hang duration → endurance hang prescriptions. Requires: mapping table test_result → affected exercises → calibration formula. |
+| B127 | Pre-test adjacency rule nel planner | Il planner non ha logica per evitare finger/hangboard exercises il giorno prima di finger test sessions. Serve un guard in planner_v2 che, quando il giorno N+1 ha una test session con domain finger_*, il giorno N escluda sessioni con finger work intenso (finger_maintenance, finger_max_strength templates). Scoperto in D126 audit. Risk: HIGH (planner). |
 
 ---
 
