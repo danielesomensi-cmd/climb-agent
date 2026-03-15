@@ -37,6 +37,7 @@ interface DayCardProps {
   onUndoOutdoor?: (date: string) => void;
   onRemoveOutdoor?: (date: string) => void;
   outdoorRoutes?: OutdoorRoute[];
+  outdoorDurationMinutes?: number;
   showActions?: boolean;
   weekPlan?: WeekPlan | null;
   onSessionUpdated?: () => void;
@@ -131,6 +132,7 @@ export function DayCard({
   onUndoOutdoor,
   onRemoveOutdoor,
   outdoorRoutes,
+  outdoorDurationMinutes,
   showActions = false,
   weekPlan,
   onSessionUpdated,
@@ -396,12 +398,17 @@ export function DayCard({
                 <div className="flex flex-wrap items-center gap-1.5">
                   {day.outdoor_session_status === "done" ? (
                     <>
-                      <Badge className="bg-green-600 text-white text-[10px]">Completed</Badge>
-                      {hasExpandableOutdoor && (
-                        <span className="text-[10px] text-muted-foreground">
-                          {outdoorRoutes!.length} {routeLabel}
-                        </span>
-                      )}
+                      <Badge className="bg-green-600 text-[10px]">
+                        <span className="text-white">Completed</span>
+                        {hasExpandableOutdoor && (
+                          <span className="text-white"> · {outdoorRoutes!.length} {routeLabel}</span>
+                        )}
+                        {outdoorDurationMinutes != null && outdoorDurationMinutes > 0 ? (
+                          <span className="text-white"> · {outdoorDurationMinutes} min</span>
+                        ) : (
+                          <span className="text-zinc-300"> · ~120 min</span>
+                        )}
+                      </Badge>
                       {onEditOutdoor && (
                         <Button
                           size="sm"

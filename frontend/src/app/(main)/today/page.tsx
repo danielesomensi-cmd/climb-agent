@@ -106,6 +106,7 @@ function TodayContent() {
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
+  const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -224,12 +225,15 @@ function TodayContent() {
     getOutdoorSessions(minDate)
       .then(({ sessions }) => {
         const map: Record<string, OutdoorRoute[]> = {};
+        const durMap: Record<string, number> = {};
         for (const s of sessions) {
           if (doneDates.includes(s.date)) {
             map[s.date] = [...(map[s.date] || []), ...s.routes];
+            if (s.duration_minutes) durMap[s.date] = (durMap[s.date] ?? 0) + s.duration_minutes;
           }
         }
         setOutdoorRoutesMap(map);
+        setOutdoorDurationMap(durMap);
       })
       .catch(() => {});
   }, [weekPlan]);
@@ -756,6 +760,7 @@ function TodayContent() {
             gyms={gyms}
             homeEquipment={homeEquipment}
             outdoorRoutes={outdoorRoutesMap[dayPlan.date]}
+            outdoorDurationMinutes={outdoorDurationMap[dayPlan.date]}
             weekPlan={weekPlan}
             onSessionUpdated={fetchData}
             onMarkDone={handleMarkDone}

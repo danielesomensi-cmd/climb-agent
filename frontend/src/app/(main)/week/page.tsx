@@ -69,6 +69,7 @@ export default function WeekPage() {
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
+  const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -138,12 +139,15 @@ export default function WeekPage() {
     getOutdoorSessions(minDate)
       .then(({ sessions }) => {
         const map: Record<string, OutdoorRoute[]> = {};
+        const durMap: Record<string, number> = {};
         for (const s of sessions) {
           if (doneDates.includes(s.date)) {
             map[s.date] = [...(map[s.date] || []), ...s.routes];
+            if (s.duration_minutes) durMap[s.date] = (durMap[s.date] ?? 0) + s.duration_minutes;
           }
         }
         setOutdoorRoutesMap(map);
+        setOutdoorDurationMap(durMap);
       })
       .catch(() => {});
   }, [weekPlan]);
@@ -703,6 +707,7 @@ export default function WeekPage() {
                   gyms={gyms}
                   homeEquipment={homeEquipment}
                   outdoorRoutes={outdoorRoutesMap[day.date]}
+                  outdoorDurationMinutes={outdoorDurationMap[day.date]}
                   weekPlan={weekPlan}
                   onSessionUpdated={() => fetchWeek(displayWeekNum)}
                   showActions
