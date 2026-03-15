@@ -124,11 +124,55 @@ def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
     return deepcopy(EMPTY_TEMPLATE)
 
 
+def _ensure_profile_fresh(state: Dict[str, Any]) -> None:
+    """Recompute assessment profile if assessment inputs changed since last computation.
+
+    B127: ensures profile always reflects current assessment.tests, grades,
+    self_eval, and body data — regardless of which endpoint modified them.
+    """
+    assessment = state.get("assessment") or {}
+    goal = state.get("goal") or {}
+
+    # Need minimum data to compute a profile
+    if not goal.get("target_grade"):
+        return
+    if not assessment.get("grades") and not assessment.get("tests"):
+        return
+
+    # Build a fingerprint of the inputs that affect the profile
+    import hashlib
+    inputs = json.dumps({
+        "body": assessment.get("body") or {},
+        "grades": assessment.get("grades") or {},
+        "tests": assessment.get("tests") or {},
+        "self_eval": assessment.get("self_eval") or {},
+        "experience": assessment.get("experience") or {},
+        "target_grade": goal.get("target_grade"),
+        "current_grade": goal.get("current_grade"),
+    }, sort_keys=True)
+    fingerprint = hashlib.md5(inputs.encode()).hexdigest()
+
+    # Skip recomputation if inputs haven't changed
+    if assessment.get("_profile_fingerprint") == fingerprint:
+        return
+
+    try:
+        from backend.engine.assessment_v1 import compute_assessment_profile
+        profile = compute_assessment_profile(assessment, goal)
+        assessment["profile"] = profile
+        assessment["_profile_fingerprint"] = fingerprint
+        state["assessment"] = assessment
+    except Exception:
+        pass  # Don't break save if recomputation fails
+
+
 def save_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
     """Write user state to disk.
 
     If user_id is provided, writes to the per-user directory.
+    Automatically recomputes assessment profile if inputs changed (B127).
     """
+    _ensure_profile_fresh(state)
     path = _user_state_path(user_id)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
