@@ -378,8 +378,8 @@ export default function WeekPage() {
     }
   }
 
-  /** Submit session feedback (B127: includes optional duration) */
-  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes?: number) {
+  /** Submit session feedback (B127: always includes duration) */
+  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes: number, durationSource: "user_reported" | "estimated") {
     if (!feedbackSessionId || !feedbackDate) return;
     try {
       const feedbackItems = Object.entries(feedback).map(
@@ -389,17 +389,14 @@ export default function WeekPage() {
           completed: true,
         })
       );
-      const logEntry: Record<string, unknown> = {
-        date: feedbackDate,
-        session_id: feedbackSessionId,
-        actual: { exercise_feedback_v1: feedbackItems },
-      };
-      if (durationMinutes != null) {
-        logEntry.session_duration_seconds = durationMinutes * 60;
-        logEntry.duration_source = "user_reported";
-      }
       await postFeedback({
-        log_entry: logEntry,
+        log_entry: {
+          date: feedbackDate,
+          session_id: feedbackSessionId,
+          session_duration_seconds: durationMinutes * 60,
+          duration_source: durationSource,
+          actual: { exercise_feedback_v1: feedbackItems },
+        },
         status: "done",
       });
       // Re-fetch week plan so feedback_summary badges appear

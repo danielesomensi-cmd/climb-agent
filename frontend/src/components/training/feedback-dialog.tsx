@@ -17,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 interface FeedbackDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (feedback: Record<string, string>, durationMinutes?: number) => void;
+  onSubmit: (feedback: Record<string, string>, durationMinutes: number, durationSource: "user_reported" | "estimated") => void;
   exercises: Array<{ exercise_id: string; name: string }>;
   /** Session slot — used to pre-fill duration estimate */
   slot?: string;
@@ -62,8 +62,10 @@ export function FeedbackDialog({
       complete[ex.exercise_id] = feedback[ex.exercise_id] ?? "ok";
     }
     const parsed = parseInt(durationStr, 10);
-    const dur = !isNaN(parsed) && parsed > 0 ? parsed : undefined;
-    onSubmit(complete, dur);
+    const userEntered = !isNaN(parsed) && parsed > 0;
+    const dur = userEntered ? parsed : estimatedMin;
+    const source = userEntered ? "user_reported" as const : "estimated" as const;
+    onSubmit(complete, dur, source);
     setFeedback({});
     setDurationStr(String(estimatedMin));
   }

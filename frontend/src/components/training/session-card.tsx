@@ -606,13 +606,20 @@ export function SessionCard({
                 Load: {session.estimated_load_score}
               </Badge>
             )}
-            {isDone && (
-              <Badge className="bg-green-600 text-white text-[10px]">
-                Completed{session.session_duration_seconds != null && session.session_duration_seconds > 0
-                  ? ` · ${Math.round(session.session_duration_seconds / 60)} min`
-                  : ""}
-              </Badge>
-            )}
+            {isDone && (() => {
+              const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
+              const slotEst: Record<string, number> = { lunch: 35, morning: 60, evening: 90 };
+              const estMin = slotEst[session.slot] ?? 60;
+              const durLabel = hasReal
+                ? ` · ${Math.round(session.session_duration_seconds! / 60)} min`
+                : ` · ~${estMin} min`;
+              return (
+                <Badge className="bg-green-600 text-[10px]">
+                  <span className="text-white">Completed</span>
+                  <span className={hasReal ? "text-white" : "text-zinc-300"}>{durLabel}</span>
+                </Badge>
+              );
+            })()}
             {isSkipped && (
               <Badge className="bg-yellow-500 text-white text-[10px]">
                 Skipped
@@ -789,7 +796,7 @@ export function SessionCard({
           <DrawerHeader>
             <DrawerTitle>{formatSessionName(session.session_id)}</DrawerTitle>
             <DrawerDescription>
-              {isDone ? `Completed${session.session_duration_seconds != null && session.session_duration_seconds > 0 ? ` · ${Math.round(session.session_duration_seconds / 60)} min` : ""}` : isSkipped ? "Skipped" : "Planned"} · {locationLabel} · {formatSlot(session.slot)}
+              {isDone ? `Completed · ${session.session_duration_seconds != null && session.session_duration_seconds > 0 ? `${Math.round(session.session_duration_seconds / 60)} min` : `~${({lunch:35,morning:60,evening:90} as Record<string,number>)[session.slot] ?? 60} min`}` : isSkipped ? "Skipped" : "Planned"} · {locationLabel} · {formatSlot(session.slot)}
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-6 space-y-1">

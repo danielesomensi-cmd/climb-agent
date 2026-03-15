@@ -200,10 +200,13 @@ export function DayCard({
             </div>
             {day.other_activity_status === "completed" ? (
               <div className="flex flex-wrap items-center gap-1.5">
-                <Badge className="bg-green-600 text-white text-[10px]">
-                  Completed{day.other_activity_duration_minutes != null
-                    ? ` · ${day.other_activity_duration_minutes} min`
-                    : ""}
+                <Badge className="bg-green-600 text-[10px]">
+                  <span className="text-white">Completed</span>
+                  {day.other_activity_duration_minutes != null ? (
+                    <span className="text-white"> · {day.other_activity_duration_minutes} min</span>
+                  ) : (
+                    <span className="text-zinc-300"> · ~60 min</span>
+                  )}
                 </Badge>
                 {day.other_activity_feedback && (
                   <Badge
