@@ -565,6 +565,7 @@ _DAY_LEVEL_FIELDS = (
     "outdoor_session_status", "other_activity", "other_activity_name",
     "other_activity_slot", "other_activity_status",
     "other_activity_feedback", "other_activity_load",
+    "other_activity_duration_minutes",
 )
 
 
@@ -796,13 +797,30 @@ def apply_events(
             day["other_activity_status"] = "completed"
             day["other_activity_feedback"] = feedback
             day["other_activity_load"] = load
+            # B127: optional duration from user input
+            if event.get("duration_minutes") is not None:
+                day["other_activity_duration_minutes"] = int(event["duration_minutes"])
             _recompute_day_status(day)
+
+        elif event_type == "edit_other_activity":
+            day = _find_day(updated, event["date"])
+            if not day.get("other_activity"):
+                raise ValueError(f"Date {event['date']} is not an other-activity day")
+            if event.get("activity_name") is not None:
+                day["other_activity_name"] = event["activity_name"]
+            if event.get("feedback") is not None:
+                feedback = event["feedback"]
+                day["other_activity_feedback"] = feedback
+                day["other_activity_load"] = COMPLEMENTARY_LOAD_MAP.get(feedback, COMPLEMENTARY_LOAD_OK)
+            if event.get("duration_minutes") is not None:
+                day["other_activity_duration_minutes"] = int(event["duration_minutes"])
 
         elif event_type == "undo_other_activity":
             day = _find_day(updated, event["date"])
             day.pop("other_activity_status", None)
             day.pop("other_activity_feedback", None)
             day.pop("other_activity_load", None)
+            day.pop("other_activity_duration_minutes", None)
             day.pop("status", None)
 
         elif event_type == "add_other_activity":
@@ -821,6 +839,7 @@ def apply_events(
             day.pop("other_activity_status", None)
             day.pop("other_activity_feedback", None)
             day.pop("other_activity_load", None)
+            day.pop("other_activity_duration_minutes", None)
 
         elif event_type == "add_outdoor":
             day = _find_day(updated, event["date"])

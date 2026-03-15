@@ -61,6 +61,7 @@ export interface DayPlan {
   other_activity_status?: "completed";
   other_activity_feedback?: "easy" | "ok" | "hard";
   other_activity_load?: number;
+  other_activity_duration_minutes?: number;
   prev_other_activity_reduce?: boolean;
 }
 

@@ -308,23 +308,37 @@ function TodayContent() {
     }
   }
 
-  /** Complete an other-activity (complementary sport) with feedback */
-  async function handleCompleteOtherActivity(date: string, feedback: string) {
+  /** Complete an other-activity (complementary sport) with feedback + optional duration */
+  async function handleCompleteOtherActivity(date: string, feedback: string, durationMinutes?: number) {
     if (!weekPlan) return;
     try {
+      const ev: Record<string, unknown> = {
+        event_type: "complete_other_activity",
+        date,
+        feedback,
+      };
+      if (durationMinutes != null) ev.duration_minutes = durationMinutes;
       const result = await applyEvents({
-        events: [
-          {
-            event_type: "complete_other_activity",
-            date,
-            feedback,
-          },
-        ],
+        events: [ev],
         week_plan: weekPlan,
       });
       setWeekPlan(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete activity");
+    }
+  }
+
+  /** Edit a completed other-activity (B127) */
+  async function handleEditOtherActivity(date: string, fields: { activity_name?: string; feedback?: string; duration_minutes?: number }) {
+    if (!weekPlan) return;
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "edit_other_activity", date, ...fields }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to edit activity");
     }
   }
 
@@ -617,8 +631,8 @@ function TodayContent() {
     await fetchData();
   }
 
-  /** Submit session feedback */
-  async function handleFeedbackSubmit(feedback: Record<string, string>) {
+  /** Submit session feedback (B127: includes optional duration) */
+  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes?: number) {
     if (!feedbackSessionId) return;
     try {
       const feedbackItems = Object.entries(feedback).map(
@@ -628,14 +642,20 @@ function TodayContent() {
           completed: true,
         })
       );
-      await postFeedback({
-        log_entry: {
-          date: targetDate,
-          session_id: feedbackSessionId,
-          actual: {
-            exercise_feedback_v1: feedbackItems,
-          },
+      const logEntry: Record<string, unknown> = {
+        date: targetDate,
+        session_id: feedbackSessionId,
+        actual: {
+          exercise_feedback_v1: feedbackItems,
         },
+      };
+      // B127: attach user-reported duration
+      if (durationMinutes != null) {
+        logEntry.session_duration_seconds = durationMinutes * 60;
+        logEntry.duration_source = "user_reported";
+      }
+      await postFeedback({
+        log_entry: logEntry,
         status: "done",
       });
       // Re-fetch week plan so feedback_summary badges appear immediately
@@ -648,15 +668,17 @@ function TodayContent() {
     }
   }
 
-  // Extract exercises from the resolved session for the feedback dialog
+  // Extract exercises + slot from the resolved session for the feedback dialog
+  const feedbackSession = feedbackSessionId && dayPlan
+    ? dayPlan.sessions.find((s) => s.session_id === feedbackSessionId)
+    : null;
+
+  const feedbackSlot = feedbackSession?.slot ?? "";
+
   const feedbackExercises: Array<{ exercise_id: string; name: string }> =
     (() => {
-      if (!feedbackSessionId || !dayPlan) return [];
-      const session = dayPlan.sessions.find(
-        (s) => s.session_id === feedbackSessionId
-      );
-      if (!session?.resolved) return [];
-      const resolved = session.resolved as Record<string, unknown>;
+      if (!feedbackSession?.resolved) return [];
+      const resolved = feedbackSession.resolved as Record<string, unknown>;
       const resolvedSession = resolved.resolved_session as
         | Record<string, unknown>
         | undefined;
@@ -752,6 +774,7 @@ function TodayContent() {
             onChangeGym={(date) => setChangeGymDate(date)}
             onCompleteOtherActivity={handleCompleteOtherActivity}
             onUndoOtherActivity={handleUndoOtherActivity}
+            onEditOtherActivity={handleEditOtherActivity}
             onRemoveOtherActivity={handleRemoveOtherActivity}
             onLogOutdoor={handleLogOutdoor}
             onEditOutdoor={handleEditOutdoor}
@@ -822,6 +845,7 @@ function TodayContent() {
         }}
         onSubmit={handleFeedbackSubmit}
         exercises={feedbackExercises}
+        slot={feedbackSlot}
       />
 
       {/* Replan dialog */}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye, MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +28,9 @@ interface DayCardProps {
   onMoveSession?: (date: string, slot: string, sessionId: string) => void;
   onRemoveSession?: (sessionId: string) => void;
   onChangeGym?: (date: string) => void;
-  onCompleteOtherActivity?: (date: string, feedback: string) => void;
+  onCompleteOtherActivity?: (date: string, feedback: string, durationMinutes?: number) => void;
   onUndoOtherActivity?: (date: string) => void;
+  onEditOtherActivity?: (date: string, fields: { activity_name?: string; feedback?: string; duration_minutes?: number }) => void;
   onRemoveOtherActivity?: (date: string) => void;
   onLogOutdoor?: (date: string) => void;
   onEditOutdoor?: (date: string) => void;
@@ -123,6 +124,7 @@ export function DayCard({
   onChangeGym,
   onCompleteOtherActivity,
   onUndoOtherActivity,
+  onEditOtherActivity,
   onRemoveOtherActivity,
   onLogOutdoor,
   onEditOutdoor,
@@ -134,6 +136,11 @@ export function DayCard({
   onSessionUpdated,
 }: DayCardProps) {
   const [feedbackPicking, setFeedbackPicking] = useState(false);
+  const [otherDurationStr, setOtherDurationStr] = useState("60");
+  const [editingOther, setEditingOther] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editFeedback, setEditFeedback] = useState("");
+  const [editDuration, setEditDuration] = useState("");
   const [outdoorExpanded, setOutdoorExpanded] = useState(false);
   const today = isToday(day.date);
   const weekdayLabel =
@@ -193,7 +200,11 @@ export function DayCard({
             </div>
             {day.other_activity_status === "completed" ? (
               <div className="flex flex-wrap items-center gap-1.5">
-                <Badge className="bg-green-600 text-white text-[10px]">Completed</Badge>
+                <Badge className="bg-green-600 text-white text-[10px]">
+                  Completed{day.other_activity_duration_minutes != null
+                    ? ` · ${day.other_activity_duration_minutes} min`
+                    : ""}
+                </Badge>
                 {day.other_activity_feedback && (
                   <Badge
                     variant="outline"
@@ -213,34 +224,136 @@ export function DayCard({
                     Load: {day.other_activity_load}
                   </Badge>
                 )}
-                {onUndoOtherActivity && (
+                {onEditOtherActivity && (
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-xs text-muted-foreground ml-auto"
+                    onClick={() => {
+                      setEditName(day.other_activity_name ?? "");
+                      setEditFeedback(day.other_activity_feedback ?? "ok");
+                      setEditDuration(String(day.other_activity_duration_minutes ?? "60"));
+                      setEditingOther(true);
+                    }}
+                  >
+                    <Pencil className="size-3.5 mr-1" />
+                    Edit
+                  </Button>
+                )}
+                {onUndoOtherActivity && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={`text-xs text-muted-foreground ${!onEditOtherActivity ? "ml-auto" : ""}`}
                     onClick={() => onUndoOtherActivity(day.date)}
                   >
                     <Undo2 className="size-3.5 mr-1" />
                     Undo
                   </Button>
                 )}
+                {/* B127: Edit other activity inline form */}
+                {editingOther && (
+                  <div className="w-full mt-2 space-y-2 rounded-lg border p-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">Name</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full rounded-md border bg-background px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">Difficulty</label>
+                      <div className="flex gap-1.5">
+                        {FEEDBACK_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+                              editFeedback === opt.value
+                                ? opt.color + " ring-1 ring-offset-1"
+                                : "border-muted text-muted-foreground"
+                            } hover:opacity-80`}
+                            onClick={() => setEditFeedback(opt.value)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground">Duration (min)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={600}
+                        value={editDuration}
+                        onChange={(e) => setEditDuration(e.target.value)}
+                        className="w-20 rounded-md border bg-background px-2 py-1 text-sm"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={() => setEditingOther(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          const dur = parseInt(editDuration, 10);
+                          onEditOtherActivity?.(day.date, {
+                            activity_name: editName || undefined,
+                            feedback: editFeedback || undefined,
+                            duration_minutes: !isNaN(dur) && dur > 0 ? dur : undefined,
+                          });
+                          setEditingOther(false);
+                        }}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : feedbackPicking ? (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground mr-1">How was it?</span>
-                {FEEDBACK_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${opt.color} hover:opacity-80`}
-                    onClick={() => {
-                      setFeedbackPicking(false);
-                      onCompleteOtherActivity?.(day.date, opt.value);
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground mr-1">How was it?</span>
+                  {FEEDBACK_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${opt.color} hover:opacity-80`}
+                      onClick={() => {
+                        const dur = parseInt(otherDurationStr, 10);
+                        setFeedbackPicking(false);
+                        onCompleteOtherActivity?.(day.date, opt.value, !isNaN(dur) && dur > 0 ? dur : undefined);
+                        setOtherDurationStr("60");
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="size-3 text-muted-foreground" />
+                  <input
+                    type="number"
+                    min={1}
+                    max={600}
+                    value={otherDurationStr}
+                    onChange={(e) => setOtherDurationStr(e.target.value)}
+                    className="w-16 rounded-md border bg-background px-2 py-1 text-xs"
+                    placeholder="60"
+                  />
+                  <span className="text-[10px] text-muted-foreground">min</span>
+                </div>
               </div>
             ) : onCompleteOtherActivity ? (
               <Button

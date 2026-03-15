@@ -758,19 +758,53 @@ def _build_training_time(
     estimated_seconds = 0
     sources: Dict[str, int] = {}  # source_type → seconds
 
-    # 1. Session completion log (timer / user_reported durations)
+    # Slot-based duration estimates (minutes)
+    _SLOT_ESTIMATE: Dict[str, int] = {"lunch": 35, "morning": 60, "evening": 90}
+
+    # Index completion log entries by (date, session_id) for quick lookup
+    cl_by_key: Dict[tuple, Dict[str, Any]] = {}
     for entry in completion_log:
         d = entry.get("date", "")
-        if not (since <= d <= until):
-            continue
+        if since <= d <= until:
+            key = (d, entry.get("session_id", ""))
+            cl_by_key[key] = entry
+
+    # 1. Engine sessions: real duration from completion_log, else template estimate
+    sessions_with_duration: set = set()
+    for key, entry in cl_by_key.items():
         dur = entry.get("session_duration_seconds")
         if dur is not None:
             dur = int(dur)
             total_seconds += dur
             src = entry.get("duration_source", "timer")
             sources[src] = sources.get(src, 0) + dur
+            sessions_with_duration.add(key)
 
-    # 2. Other activities from week plan (estimated from load)
+    # 1b. Fallback: "done" sessions without real duration → template estimate
+    if week_plan:
+        for week in week_plan.get("weeks") or []:
+            for day in week.get("days") or []:
+                d = day.get("date", "")
+                if not (since <= d <= until):
+                    continue
+                for session in day.get("sessions") or []:
+                    if session.get("status") != "done":
+                        continue
+                    key = (d, session.get("session_id", ""))
+                    if key in sessions_with_duration:
+                        continue  # already counted from real data
+                    # Check if completion_log has entry without duration
+                    if key in cl_by_key and cl_by_key[key].get("session_duration_seconds") is not None:
+                        continue
+                    # Template estimate based on slot
+                    slot = session.get("slot", "evening")
+                    est_min = _SLOT_ESTIMATE.get(slot, 60)
+                    est = est_min * 60
+                    total_seconds += est
+                    estimated_seconds += est
+                    sources["estimated"] = sources.get("estimated", 0) + est
+
+    # 2. Other activities: use stored duration or estimate 60 min
     if week_plan:
         for week in week_plan.get("weeks") or []:
             for day in week.get("days") or []:
@@ -778,11 +812,16 @@ def _build_training_time(
                 if not (since <= d <= until):
                     continue
                 if day.get("other_activity") and day.get("other_activity_status") == "completed":
-                    # Estimate 60 min for other activities
-                    est = 60 * 60
-                    total_seconds += est
-                    estimated_seconds += est
-                    sources["estimated"] = sources.get("estimated", 0) + est
+                    dur_min = day.get("other_activity_duration_minutes")
+                    if dur_min is not None:
+                        dur = int(dur_min) * 60
+                        total_seconds += dur
+                        sources["user_reported"] = sources.get("user_reported", 0) + dur
+                    else:
+                        est = 60 * 60
+                        total_seconds += est
+                        estimated_seconds += est
+                        sources["estimated"] = sources.get("estimated", 0) + est
 
     # 3. Outdoor sessions
     for sess in outdoor_sessions:

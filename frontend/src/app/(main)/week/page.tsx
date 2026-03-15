@@ -253,18 +253,35 @@ export default function WeekPage() {
     }
   }
 
-  /** Complete other activity with feedback */
-  async function handleCompleteOtherActivity(date: string, feedback: string) {
+  /** Complete other activity with feedback + optional duration (B127) */
+  async function handleCompleteOtherActivity(date: string, feedback: string, durationMinutes?: number) {
     if (!weekPlan) return;
     setError(null);
     try {
+      const ev: Record<string, unknown> = { event_type: "complete_other_activity", date, feedback };
+      if (durationMinutes != null) ev.duration_minutes = durationMinutes;
       const result = await applyEvents({
-        events: [{ event_type: "complete_other_activity", date, feedback }],
+        events: [ev],
         week_plan: weekPlan,
       });
       setWeekPlan(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete activity");
+    }
+  }
+
+  /** Edit a completed other-activity (B127) */
+  async function handleEditOtherActivity(date: string, fields: { activity_name?: string; feedback?: string; duration_minutes?: number }) {
+    if (!weekPlan) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [{ event_type: "edit_other_activity", date, ...fields }],
+        week_plan: weekPlan,
+      });
+      setWeekPlan(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to edit activity");
     }
   }
 
@@ -361,8 +378,8 @@ export default function WeekPage() {
     }
   }
 
-  /** Submit session feedback */
-  async function handleFeedbackSubmit(feedback: Record<string, string>) {
+  /** Submit session feedback (B127: includes optional duration) */
+  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes?: number) {
     if (!feedbackSessionId || !feedbackDate) return;
     try {
       const feedbackItems = Object.entries(feedback).map(
@@ -372,12 +389,17 @@ export default function WeekPage() {
           completed: true,
         })
       );
+      const logEntry: Record<string, unknown> = {
+        date: feedbackDate,
+        session_id: feedbackSessionId,
+        actual: { exercise_feedback_v1: feedbackItems },
+      };
+      if (durationMinutes != null) {
+        logEntry.session_duration_seconds = durationMinutes * 60;
+        logEntry.duration_source = "user_reported";
+      }
       await postFeedback({
-        log_entry: {
-          date: feedbackDate,
-          session_id: feedbackSessionId,
-          actual: { exercise_feedback_v1: feedbackItems },
-        },
+        log_entry: logEntry,
         status: "done",
       });
       // Re-fetch week plan so feedback_summary badges appear
@@ -547,17 +569,15 @@ export default function WeekPage() {
     ? PHASE_LABELS[phaseId] ?? phaseId.replace(/_/g, " ")
     : null;
 
-  // Extract exercises for the feedback dialog
+  // Extract exercises + slot for the feedback dialog
+  const feedbackDay = feedbackDate ? days.find((d) => d.date === feedbackDate) : null;
+  const feedbackSessionObj = feedbackDay?.sessions.find((s) => s.session_id === feedbackSessionId);
+  const feedbackSlot = feedbackSessionObj?.slot ?? "";
+
   const feedbackExercises: Array<{ exercise_id: string; name: string }> =
     (() => {
-      if (!feedbackSessionId || !feedbackDate) return [];
-      const day = days.find((d) => d.date === feedbackDate);
-      if (!day) return [];
-      const session = day.sessions.find(
-        (s) => s.session_id === feedbackSessionId
-      );
-      if (!session?.resolved) return [];
-      const resolved = session.resolved as Record<string, unknown>;
+      if (!feedbackSessionObj?.resolved) return [];
+      const resolved = feedbackSessionObj.resolved as Record<string, unknown>;
       const resolvedSession = resolved.resolved_session as
         | Record<string, unknown>
         | undefined;
@@ -701,6 +721,7 @@ export default function WeekPage() {
                   onChangeGym={(date) => setChangeGymDate(date)}
                   onCompleteOtherActivity={handleCompleteOtherActivity}
                   onUndoOtherActivity={handleUndoOtherActivity}
+                  onEditOtherActivity={handleEditOtherActivity}
                   onRemoveOtherActivity={handleRemoveOtherActivity}
                   onLogOutdoor={handleLogOutdoor}
                   onEditOutdoor={handleEditOutdoor}
@@ -766,6 +787,7 @@ export default function WeekPage() {
         }}
         onSubmit={handleFeedbackSubmit}
         exercises={feedbackExercises}
+        slot={feedbackSlot}
       />
 
       {/* Gym/location picker dialog */}
