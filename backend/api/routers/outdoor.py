@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.api.deps import DATA_DIR, USERS_DIR, get_user_id, load_state, save_state
+from backend.api.deps import get_user_id, load_state, save_state
 from backend.api.models import OutdoorSpotCreate, OutdoorSessionLog, ConvertSlotRequest
 from backend.engine.outdoor_log import (
     append_outdoor_session,
@@ -19,17 +19,6 @@ from backend.engine.outdoor_log import (
 )
 
 router = APIRouter(prefix="/api/outdoor", tags=["outdoor"])
-
-_FALLBACK_LOG_DIR = str(DATA_DIR / "logs")
-
-
-def _log_dir(user_id: Optional[str]) -> str:
-    """Return user-scoped log directory, or fallback for legacy/test."""
-    if user_id:
-        d = str(USERS_DIR / user_id / "logs")
-        os.makedirs(d, exist_ok=True)
-        return d
-    return _FALLBACK_LOG_DIR
 
 
 # ── Spots CRUD ──────────────────────────────────────────────────────────
@@ -91,19 +80,18 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
     entry = req.model_dump(exclude_none=True)
     entry["log_version"] = "outdoor.v1"
 
-    log_dir = _log_dir(user_id)
     try:
-        log_path = append_outdoor_session(entry, log_dir)
+        log_path = append_outdoor_session(entry, user_id)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except OSError as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to write outdoor log to {log_dir}: {e}",
+            detail=f"Failed to write outdoor log: {e}",
         )
 
-    # Verify write actually persisted
-    if not os.path.isfile(log_path):
+    # Verify write actually persisted (skip for non-file backends)
+    if not log_path.startswith("supabase://") and not os.path.isfile(log_path):
         raise HTTPException(
             status_code=500,
             detail=f"Outdoor log write succeeded but file not found at {log_path}",
@@ -115,7 +103,7 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
 @router.get("/log/{date}")
 def get_outdoor_log_by_date(date: str, user_id: Optional[str] = Depends(get_user_id)):
     """Return the outdoor session entry for a specific date."""
-    sessions = load_outdoor_sessions(_log_dir(user_id), since_date=date)
+    sessions = load_outdoor_sessions(user_id, since_date=date)
     matching = [s for s in sessions if s.get("date") == date]
     if not matching:
         raise HTTPException(status_code=404, detail=f"No outdoor session found for date {date}")
@@ -130,9 +118,8 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
     entry = req.model_dump(exclude_none=True)
     entry["log_version"] = "outdoor.v1"
 
-    log_dir = _log_dir(user_id)
     try:
-        update_outdoor_session(log_dir, req.date, entry)
+        update_outdoor_session(user_id, req.date, entry)
     except ValueError as e:
         detail = str(e)
         status = 404 if "No outdoor session found" in detail or "No outdoor log file" in detail else 422
@@ -157,7 +144,7 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
 @router.get("/sessions")
 def get_outdoor_sessions(since: Optional[str] = Query(None), user_id: Optional[str] = Depends(get_user_id)):
     """List outdoor sessions, optionally filtered by date."""
-    sessions = load_outdoor_sessions(_log_dir(user_id), since_date=since)
+    sessions = load_outdoor_sessions(user_id, since_date=since)
     # Enrich each session with its load score
     for s in sessions:
         s["load_score"] = compute_outdoor_load_score(s)
@@ -167,7 +154,7 @@ def get_outdoor_sessions(since: Optional[str] = Query(None), user_id: Optional[s
 @router.get("/stats")
 def get_outdoor_stats(since: Optional[str] = Query(None), user_id: Optional[str] = Depends(get_user_id)):
     """Get aggregated outdoor climbing statistics."""
-    sessions = load_outdoor_sessions(_log_dir(user_id), since_date=since)
+    sessions = load_outdoor_sessions(user_id, since_date=since)
     stats = compute_outdoor_stats(sessions)
     return stats
 

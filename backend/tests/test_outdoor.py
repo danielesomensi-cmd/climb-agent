@@ -26,10 +26,11 @@ from backend.engine.planner_v2 import generate_phase_week
 # ── Fixtures ────────────────────────────────────────────────────────────
 
 @pytest.fixture
-def tmp_log_dir():
-    d = tempfile.mkdtemp()
-    yield d
-    shutil.rmtree(d)
+def tmp_log_dir(tmp_path, monkeypatch):
+    from backend.engine import storage
+    log_dir = str(tmp_path / "logs")
+    monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
+    yield log_dir
 
 
 def _make_entry(**overrides) -> Dict[str, Any]:
@@ -92,10 +93,10 @@ class TestValidation:
 class TestAppendLoad:
     def test_append_and_load(self, tmp_log_dir):
         entry = _make_entry()
-        path = append_outdoor_session(entry, tmp_log_dir)
+        path = append_outdoor_session(entry, None)
         assert "outdoor_sessions_2026.jsonl" in path
 
-        loaded = load_outdoor_sessions(tmp_log_dir)
+        loaded = load_outdoor_sessions(None)
         assert len(loaded) == 1
         assert loaded[0]["spot_name"] == "Berdorf"
 
@@ -103,28 +104,28 @@ class TestAppendLoad:
         for i in range(3):
             append_outdoor_session(
                 _make_entry(date=f"2026-03-{15 + i:02d}"),
-                tmp_log_dir,
+                None,
             )
-        loaded = load_outdoor_sessions(tmp_log_dir)
+        loaded = load_outdoor_sessions(None)
         assert len(loaded) == 3
 
     def test_load_with_since_filter(self, tmp_log_dir):
-        append_outdoor_session(_make_entry(date="2026-03-10"), tmp_log_dir)
-        append_outdoor_session(_make_entry(date="2026-03-20"), tmp_log_dir)
+        append_outdoor_session(_make_entry(date="2026-03-10"), None)
+        append_outdoor_session(_make_entry(date="2026-03-20"), None)
 
-        loaded = load_outdoor_sessions(tmp_log_dir, since_date="2026-03-15")
+        loaded = load_outdoor_sessions(None, since_date="2026-03-15")
         assert len(loaded) == 1
         assert loaded[0]["date"] == "2026-03-20"
 
     def test_append_invalid_raises(self, tmp_log_dir):
         with pytest.raises(ValueError):
-            append_outdoor_session({"bad": "entry"}, tmp_log_dir)
+            append_outdoor_session({"bad": "entry"}, None)
 
     def test_load_empty_dir(self, tmp_log_dir):
-        assert load_outdoor_sessions(tmp_log_dir) == []
+        assert load_outdoor_sessions(None) == []
 
-    def test_load_nonexistent_dir(self):
-        assert load_outdoor_sessions("/nonexistent/dir") == []
+    def test_load_nonexistent_dir(self, tmp_log_dir):
+        assert load_outdoor_sessions(None) == []
 
     def test_duplicate_entries_returns_last_only(self, tmp_log_dir):
         """When JSONL has multiple entries for same date, only last one is returned."""
@@ -156,7 +157,7 @@ class TestAppendLoad:
             f.write(json.dumps(entry_v1) + "\n")
             f.write(json.dumps(entry_v2) + "\n")
 
-        sessions = load_outdoor_sessions(tmp_log_dir)
+        sessions = load_outdoor_sessions(None)
         assert len(sessions) == 1, f"Expected 1 session (deduped), got {len(sessions)}"
         assert len(sessions[0]["routes"]) == 3, "Should return the last (updated) entry"
 
@@ -474,17 +475,16 @@ class TestOutdoorAPI:
     def setup_api(self, tmp_path, monkeypatch):
         """Patch state and log paths for isolated tests."""
         from backend.api import deps
-        from backend.api.routers import outdoor as outdoor_router
+        from backend.engine import storage
 
         state_path = tmp_path / "user_state.json"
         state_path.write_text(json.dumps({
             "schema_version": "1.5",
             "outdoor_spots": [],
         }))
+        monkeypatch.setattr(storage, "STATE_PATH", state_path)
+        monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
         monkeypatch.setattr(deps, "STATE_PATH", state_path)
-
-        log_dir = str(tmp_path / "logs")
-        monkeypatch.setattr(outdoor_router, "_FALLBACK_LOG_DIR", log_dir)
 
         from fastapi.testclient import TestClient
         from backend.api.main import app
@@ -701,23 +701,21 @@ class TestOutdoorE2ECrossWeek:
     @pytest.fixture(autouse=True)
     def setup_e2e(self, tmp_path, monkeypatch):
         from backend.api import deps
-        from backend.api.routers import outdoor as outdoor_router
+        from backend.engine import storage
 
         # Isolated state from test fixture (has assessment + goal for macrocycle)
         state_path = tmp_path / "user_state.json"
         shutil.copy2(_FIXTURE_STATE, state_path)
+        monkeypatch.setattr(storage, "STATE_PATH", state_path)
+        monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
         monkeypatch.setattr(deps, "STATE_PATH", state_path)
-
-        # Isolated log directory (simulates per-user logs dir)
-        log_dir = tmp_path / "logs"
-        monkeypatch.setattr(outdoor_router, "_FALLBACK_LOG_DIR", str(log_dir))
 
         from fastapi.testclient import TestClient
         from backend.api.main import app
 
         self.client = TestClient(app)
         self.tmp_path = tmp_path
-        self.log_dir = log_dir
+        self.log_dir = tmp_path / "logs"
         self.state_path = state_path
 
     def _setup_macrocycle(self):
@@ -878,14 +876,13 @@ class TestOnboardingOutdoorSpots:
     @pytest.fixture(autouse=True)
     def setup_api(self, tmp_path, monkeypatch):
         from backend.api import deps
-        from backend.api.routers import outdoor as outdoor_router
+        from backend.engine import storage
 
         state_path = tmp_path / "user_state.json"
         state_path.write_text(json.dumps({"schema_version": "1.5"}))
+        monkeypatch.setattr(storage, "STATE_PATH", state_path)
+        monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
         monkeypatch.setattr(deps, "STATE_PATH", state_path)
-
-        log_dir = str(tmp_path / "logs")
-        monkeypatch.setattr(outdoor_router, "_FALLBACK_LOG_DIR", log_dir)
 
         from fastapi.testclient import TestClient
         from backend.api.main import app

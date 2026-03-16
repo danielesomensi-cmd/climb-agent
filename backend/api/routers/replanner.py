@@ -10,7 +10,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import DATA_DIR, REPO_ROOT, USERS_DIR, current_phase_and_week, get_user_id, load_state, save_state
+from backend.api.deps import REPO_ROOT, current_phase_and_week, get_user_id, load_state, save_state
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
@@ -65,7 +65,7 @@ def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
     save_state(state, user_id)
 
 
-def _auto_resolve(week_plan: dict, state: dict) -> None:
+def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -> None:
     """Resolve all sessions in a week plan inline (same logic as week router).
 
     B120: completed/skipped sessions with cached resolved data are never
@@ -102,6 +102,7 @@ def _auto_resolve(week_plan: dict, state: dict) -> None:
                         out_path="",
                         user_state_override=resolve_state,
                         write_output=False,
+                        user_id=user_id,
                     )
                     session_entry["resolved"] = resolved
                 except Exception:
@@ -145,7 +146,7 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     _persist_week_plan(updated, state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
-    _auto_resolve(updated, state)
+    _auto_resolve(updated, state, user_id)
 
     return {"week_plan": updated}
 
@@ -225,7 +226,7 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
 
     _persist_week_plan(updated, state, user_id)
 
-    _auto_resolve(updated, state)
+    _auto_resolve(updated, state, user_id)
 
     return {"week_plan": updated, "warnings": warnings}
 
@@ -247,10 +248,9 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     gyms = (state.get("equipment") or {}).get("gyms")
 
     # For complete_outdoor events, compute outdoor load score from JSONL log
-    log_dir = str(USERS_DIR / user_id / "logs") if user_id else str(DATA_DIR / "logs")
     for ev in req.events:
         if ev.get("event_type") == "complete_outdoor" and ev.get("date"):
-            outdoor_sessions = load_outdoor_sessions(log_dir, since_date=ev["date"])
+            outdoor_sessions = load_outdoor_sessions(user_id, since_date=ev["date"])
             matching = [s for s in outdoor_sessions if s.get("date") == ev["date"]]
             if matching:
                 ev["outdoor_load_score"] = compute_outdoor_load_score(matching[-1])
@@ -270,10 +270,9 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
 
     # Remove outdoor log entries for any undo_outdoor events so re-logging
     # doesn't produce duplicates.
-    log_dir = str(USERS_DIR / user_id / "logs") if user_id else str(DATA_DIR / "logs")
     for ev in req.events:
         if ev.get("event_type") == "undo_outdoor" and ev.get("date"):
-            remove_outdoor_session(log_dir, ev["date"])
+            remove_outdoor_session(user_id, ev["date"])
 
     # --- B116: Persistent outdoor log in user_state ---
     outdoor_log = state.setdefault("outdoor_log", [])
@@ -329,6 +328,6 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     _persist_week_plan(updated, state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
-    _auto_resolve(updated, state)
+    _auto_resolve(updated, state, user_id)
 
     return {"week_plan": updated}

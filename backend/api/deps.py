@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import uuid as _uuid
 from uuid import uuid4
 from copy import deepcopy
@@ -13,10 +12,14 @@ from typing import Any, Dict, Optional, Tuple
 
 from fastapi import HTTPException, Request
 
+from backend.engine import storage as _storage
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = Path(os.environ.get("DATA_DIR", str(REPO_ROOT / "backend" / "data")))
-STATE_PATH = DATA_DIR / "user_state.json"
-USERS_DIR = DATA_DIR / "users"
+
+# Re-export from storage for backwards compatibility with existing imports.
+DATA_DIR = _storage.DATA_DIR
+STATE_PATH = _storage.STATE_PATH
+USERS_DIR = _storage.USERS_DIR
 
 EMPTY_TEMPLATE: Dict[str, Any] = {
     "schema_version": "1.5",
@@ -82,9 +85,7 @@ def get_user_id(request: Request) -> Optional[str]:
 
 def _user_state_path(user_id: Optional[str]) -> Path:
     """Return the state file path for a given user_id, or the legacy path."""
-    if user_id:
-        return USERS_DIR / user_id / "user_state.json"
-    return STATE_PATH
+    return _storage._user_state_path(user_id)
 
 
 def _migrate_gym_ids(state: Dict[str, Any]) -> bool:
@@ -106,20 +107,15 @@ def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
     If user_id is provided, reads from the per-user directory.
     If the per-user file doesn't exist, copies the template and returns it.
     """
-    path = _user_state_path(user_id)
-    if path.exists():
-        state = json.loads(path.read_text(encoding="utf-8"))
+    state = _storage.read_state(user_id)
+    if state is not None:
         if _migrate_gym_ids(state):
             save_state(state, user_id)
         return state
     if user_id:
         # New user: bootstrap from template
         state = deepcopy(EMPTY_TEMPLATE)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        _storage.write_state(state, user_id)
         return state
     return deepcopy(EMPTY_TEMPLATE)
 
@@ -173,12 +169,7 @@ def save_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
     Automatically recomputes assessment profile if inputs changed (B127).
     """
     _ensure_profile_fresh(state)
-    path = _user_state_path(user_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    _storage.write_state(state, user_id)
 
 
 def ensure_monday(d: str) -> str:

@@ -118,6 +118,8 @@ class TestQuotesAPI:
             "schema_version": "1.5",
             "quote_history": [],
         }))
+        from backend.engine import storage
+        monkeypatch.setattr(storage, "STATE_PATH", state_path)
         monkeypatch.setattr(deps, "STATE_PATH", state_path)
 
         from fastapi.testclient import TestClient

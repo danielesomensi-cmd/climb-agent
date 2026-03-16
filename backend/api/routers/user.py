@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import random
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -12,31 +11,23 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
 from backend.api.deps import (
-    DATA_DIR,
-    USERS_DIR,
     get_user_id,
     load_state,
     save_state,
 )
+from backend.engine import storage
 
 # ── Recovery code helpers ───────────────────────────────────────────────
 
 _ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"  # no 0/O/1/I/L
-_CODES_PATH = DATA_DIR / "recovery_codes.json"
 
 
 def _load_codes() -> Dict[str, Any]:
-    if _CODES_PATH.exists():
-        return json.loads(_CODES_PATH.read_text(encoding="utf-8"))
-    return {}
+    return storage.load_recovery_codes()
 
 
 def _save_codes(codes: Dict[str, Any]) -> None:
-    _CODES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _CODES_PATH.write_text(
-        json.dumps(codes, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    storage.save_recovery_codes(codes)
 
 
 def _generate_code(codes: Dict[str, Any]) -> str:
@@ -75,26 +66,12 @@ def _validate_import(data: Any) -> None:
         )
 
 
-def _log_dir(user_id: Optional[str]) -> str:
-    if user_id:
-        d = str(USERS_DIR / user_id / "logs")
-        os.makedirs(d, exist_ok=True)
-        return d
-    from backend.api.deps import DATA_DIR
-    d = str(DATA_DIR / "logs")
-    os.makedirs(d, exist_ok=True)
-    return d
-
-
 def _append_import_event(user_id: Optional[str]) -> None:
     """Write an append-only event to the user's log directory."""
-    log_path = os.path.join(_log_dir(user_id), "events.jsonl")
-    entry = {
+    storage.append_event(user_id, {
         "event": "state_imported",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-    }
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    })
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────

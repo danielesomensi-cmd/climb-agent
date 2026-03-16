@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-import json
-import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+from backend.engine import storage
 from backend.engine.closed_loop_v1 import STIMULUS_CATEGORIES, _session_categories
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions
 
@@ -72,33 +71,9 @@ def _score_to_label(score: float) -> str:
     return "very_hard"
 
 
-def _load_indoor_sessions(log_dir: str, since: str, until: str) -> List[Dict[str, Any]]:
+def _load_indoor_sessions(user_id: Optional[str], since: str, until: str) -> List[Dict[str, Any]]:
     """Load indoor session log entries within a date range."""
-    sessions: List[Dict[str, Any]] = []
-    if not os.path.isdir(log_dir):
-        return sessions
-
-    for fn in sorted(os.listdir(log_dir)):
-        if not fn.startswith("sessions_") or not fn.endswith(".jsonl"):
-            continue
-        path = os.path.join(log_dir, fn)
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    try:
-                        entry = json.loads(line)
-                    except json.JSONDecodeError:
-                        continue
-                    entry_date = entry.get("date", "")
-                    if since <= entry_date <= until:
-                        sessions.append(entry)
-        except OSError:
-            continue
-
-    return sessions
+    return storage.read_session_logs(user_id, since=since, until=until)
 
 
 # ---------------------------------------------------------------------------
@@ -888,14 +863,14 @@ def _build_active_days(
 
 def generate_weekly_report(
     user_state: Dict[str, Any],
-    log_dir: str,
+    user_id: Optional[str],
     week_start: str,
 ) -> Dict[str, Any]:
     """Generate a comprehensive weekly training report.
 
     Args:
         user_state: Current user state.
-        log_dir: Directory containing session JSONL logs.
+        user_id: User identifier (None for legacy/test).
         week_start: YYYY-MM-DD Monday of the week.
 
     Returns:
@@ -908,8 +883,8 @@ def generate_weekly_report(
     until = end.isoformat()
 
     # Load raw data
-    indoor = _load_indoor_sessions(log_dir, since, until)
-    outdoor_raw = load_outdoor_sessions(log_dir, since_date=since)
+    indoor = _load_indoor_sessions(user_id, since, until)
+    outdoor_raw = load_outdoor_sessions(user_id, since_date=since)
     outdoor_filtered = [s for s in outdoor_raw if s.get("date", "") <= until]
     completion_log = user_state.get("session_completion_log") or []
 
@@ -966,14 +941,14 @@ def generate_weekly_report(
 
 def generate_monthly_report(
     user_state: Dict[str, Any],
-    log_dir: str,
+    user_id: Optional[str],
     month: str,
 ) -> Dict[str, Any]:
     """Generate a monthly training report.
 
     Args:
         user_state: Current user state.
-        log_dir: Directory containing session JSONL logs.
+        user_id: User identifier (None for legacy/test).
         month: YYYY-MM string.
 
     Returns:
@@ -990,8 +965,8 @@ def generate_monthly_report(
     since = start.isoformat()
     until = end.isoformat()
 
-    indoor = _load_indoor_sessions(log_dir, since, until)
-    outdoor = load_outdoor_sessions(log_dir, since_date=since)
+    indoor = _load_indoor_sessions(user_id, since, until)
+    outdoor = load_outdoor_sessions(user_id, since_date=since)
     outdoor = [s for s in outdoor if s.get("date", "") <= until]
 
     # Weekly aggregation

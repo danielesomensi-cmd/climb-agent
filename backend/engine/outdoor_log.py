@@ -1,13 +1,15 @@
-"""Outdoor session logging — append-only JSONL log for outdoor climbing sessions."""
+"""Outdoor session logging — validation, stats, and thin wrappers over storage.
+
+I/O is delegated to backend.engine.storage.
+"""
 
 from __future__ import annotations
 
-import json
-import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from backend.engine.assessment_v1 import GRADE_ORDER, grade_index
+from backend.engine import storage
 
 
 REQUIRED_FIELDS = {"log_version", "date", "spot_name", "discipline", "duration_minutes", "routes"}
@@ -101,13 +103,7 @@ def validate_outdoor_entry(entry: Dict[str, Any]) -> List[str]:
     return errors
 
 
-def _log_path_for_date(log_dir: str, date_str: str) -> str:
-    """Return the JSONL log path for a given date (yearly files)."""
-    year = date_str[:4]
-    return os.path.join(log_dir, f"outdoor_sessions_{year}.jsonl")
-
-
-def append_outdoor_session(entry: Dict[str, Any], log_dir: str) -> str:
+def append_outdoor_session(entry: Dict[str, Any], user_id: Optional[str] = None) -> str:
     """Validate and append an outdoor session entry to the yearly JSONL log.
 
     Returns the path of the log file written to.
@@ -117,77 +113,25 @@ def append_outdoor_session(entry: Dict[str, Any], log_dir: str) -> str:
     if errors:
         raise ValueError(f"Invalid outdoor session entry: {'; '.join(errors)}")
 
-    os.makedirs(log_dir, exist_ok=True)
-    log_path = _log_path_for_date(log_dir, entry["date"])
-
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-
-    return log_path
+    return storage.append_outdoor_log_line(user_id, entry)
 
 
-def remove_outdoor_session(log_dir: str, date: str) -> int:
-    """Remove all outdoor session entries for a given date from the JSONL log.
+def remove_outdoor_session(user_id: Optional[str], date: str) -> int:
+    """Remove all outdoor session entries for a given date.
 
-    Rewrites the log file excluding entries with matching date.
     Returns the number of entries removed.
     """
-    log_path = _log_path_for_date(log_dir, date)
-    if not os.path.isfile(log_path):
-        return 0
-
-    kept: list[str] = []
-    removed = 0
-    with open(log_path, "r", encoding="utf-8") as f:
-        for line in f:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                entry = json.loads(stripped)
-            except json.JSONDecodeError:
-                kept.append(stripped)
-                continue
-            if entry.get("date") == date:
-                removed += 1
-            else:
-                kept.append(stripped)
-
-    if removed > 0:
-        with open(log_path, "w", encoding="utf-8") as f:
-            for line in kept:
-                f.write(line + "\n")
-
-    return removed
+    return storage.remove_outdoor_log_by_date(user_id, date)
 
 
-def update_outdoor_session(log_dir: str, date: str, new_entry: Dict[str, Any]) -> str:
+def update_outdoor_session(user_id: Optional[str], date: str, new_entry: Dict[str, Any]) -> str:
     """Replace the outdoor session entry for a given date.
 
     Validates the new entry, removes the old one, and appends the replacement.
     Returns the JSONL log path.
     Raises ValueError if validation fails or no entry exists for that date.
     """
-    log_path = _log_path_for_date(log_dir, date)
-    if not os.path.isfile(log_path):
-        raise ValueError(f"No outdoor log file found for date {date}")
-
-    # Check that an entry for this date actually exists
-    found = False
-    with open(log_path, "r", encoding="utf-8") as f:
-        for line in f:
-            stripped = line.strip()
-            if not stripped:
-                continue
-            try:
-                entry = json.loads(stripped)
-            except json.JSONDecodeError:
-                continue
-            if entry.get("date") == date:
-                found = True
-                break
-
-    if not found:
+    if not storage.outdoor_log_date_exists(user_id, date):
         raise ValueError(f"No outdoor session found for date {date}")
 
     # Validate new entry before touching the file
@@ -196,46 +140,19 @@ def update_outdoor_session(log_dir: str, date: str, new_entry: Dict[str, Any]) -
         raise ValueError(f"Invalid outdoor session entry: {'; '.join(errors)}")
 
     # Remove old, append new
-    remove_outdoor_session(log_dir, date)
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(new_entry, ensure_ascii=False) + "\n")
-
-    return log_path
+    storage.remove_outdoor_log_by_date(user_id, date)
+    return storage.append_outdoor_log_line(user_id, new_entry)
 
 
 def load_outdoor_sessions(
-    log_dir: str,
+    user_id: Optional[str] = None,
     since_date: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """Load outdoor sessions from JSONL logs, optionally filtered by date.
 
-    When multiple entries exist for the same date (e.g. after an update that
-    appended a replacement), only the last entry per date is returned.
+    Deduplicates by date (last entry wins). Sorted by date ascending.
     """
-    by_date: Dict[str, Dict[str, Any]] = {}
-
-    if not os.path.isdir(log_dir):
-        return []
-
-    for fn in sorted(os.listdir(log_dir)):
-        if not fn.startswith("outdoor_sessions_") or not fn.endswith(".jsonl"):
-            continue
-        path = os.path.join(log_dir, fn)
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entry = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                date = entry.get("date", "")
-                if since_date and date < since_date:
-                    continue
-                by_date[date] = entry  # last entry wins
-
-    return [by_date[d] for d in sorted(by_date)]
+    return storage.read_outdoor_logs(user_id, since_date=since_date)
 
 
 def compute_outdoor_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:

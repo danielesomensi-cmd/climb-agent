@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import json
 from copy import deepcopy
-from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 
@@ -14,24 +12,6 @@ STIMULUS_CATEGORIES: Tuple[str, ...] = (
 )
 
 
-def _parse_json(path: Path) -> Dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _dump_json(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def canonical_sessions_log_path(user_state: Dict[str, Any]) -> Path:
-    history = user_state.get("history_index") or {}
-    candidates = history.get("session_log_paths") or []
-    for candidate in candidates:
-        if isinstance(candidate, str) and candidate.endswith("sessions_2026.jsonl"):
-            return Path(candidate)
-    if candidates and isinstance(candidates[0], str):
-        return Path(candidates[0])
-    return Path("data/logs/sessions_2026.jsonl")
 
 
 def ensure_planning_defaults(user_state: Dict[str, Any]) -> Dict[str, Any]:
@@ -76,13 +56,6 @@ def ensure_planning_defaults(user_state: Dict[str, Any]) -> Dict[str, Any]:
 
     return state
 
-
-def load_user_state(path: Path) -> Dict[str, Any]:
-    return _parse_json(path)
-
-
-def save_user_state(path: Path, user_state: Dict[str, Any]) -> None:
-    _dump_json(path, user_state)
 
 
 def _session_categories(session: Dict[str, Any]) -> List[str]:
@@ -168,7 +141,3 @@ def apply_day_result_to_user_state(user_state: Dict[str, Any], *, resolved_day: 
     return state
 
 
-def append_jsonl(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")

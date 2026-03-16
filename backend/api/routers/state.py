@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import glob
-import os
 from copy import deepcopy
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends
 
-from backend.api.deps import DATA_DIR, EMPTY_TEMPLATE, USERS_DIR, ensure_monday, get_user_id, load_state, save_state
+from backend.api.deps import EMPTY_TEMPLATE, ensure_monday, get_user_id, load_state, save_state
+from backend.engine import storage
 from backend.engine.state_checks import is_macrocycle_stale
 
 router = APIRouter(prefix="/api/state", tags=["state"])
@@ -53,15 +52,7 @@ def get_state_status(user_id: Optional[str] = Depends(get_user_id)):
 
 def _clear_outdoor_logs(user_id: Optional[str]) -> int:
     """Remove all outdoor JSONL log files for the user. Returns count removed."""
-    if user_id:
-        log_dir = str(USERS_DIR / user_id / "logs")
-    else:
-        log_dir = str(DATA_DIR / "logs")
-    removed = 0
-    for path in glob.glob(os.path.join(log_dir, "outdoor_sessions_*.jsonl")):
-        os.remove(path)
-        removed += 1
-    return removed
+    return storage.delete_all_outdoor_logs(user_id)
 
 
 @router.delete("")

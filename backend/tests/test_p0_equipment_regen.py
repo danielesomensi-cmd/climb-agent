@@ -33,6 +33,8 @@ def isolate_state(tmp_path, monkeypatch):
         shutil.copy2(REAL_STATE_PATH, tmp_state)
     else:
         tmp_state.write_text(json.dumps(deps.EMPTY_TEMPLATE, indent=2))
+    from backend.engine import storage
+    monkeypatch.setattr(storage, "STATE_PATH", tmp_state)
     monkeypatch.setattr(deps, "STATE_PATH", tmp_state)
 
 

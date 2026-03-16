@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import json
-import os
-import shutil
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
-from backend.api import deps as _deps
+from backend.engine import storage
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
+import os
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 
 
@@ -26,7 +23,7 @@ def _require_admin(request: Request) -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
-def _extract_last_access(state: Dict[str, Any], state_path: Path) -> Optional[str]:
+def _extract_last_access(state: Dict[str, Any], user_id: str) -> Optional[str]:
     """Best-effort last access date from feedback_log, macrocycle, or file mtime."""
     fl = state.get("feedback_log") or []
     if fl:
@@ -42,11 +39,10 @@ def _extract_last_access(state: Dict[str, Any], state_path: Path) -> Optional[st
         return assessed[:10]
 
     # Fallback: file modification time
-    try:
-        mtime = state_path.stat().st_mtime
+    mtime = storage.user_state_mtime(user_id)
+    if mtime is not None:
         return datetime.fromtimestamp(mtime, tz=timezone.utc).strftime("%Y-%m-%d")
-    except OSError:
-        return None
+    return None
 
 
 def _extract_grade(state: Dict[str, Any]) -> Optional[str]:
@@ -60,20 +56,10 @@ def _extract_grade(state: Dict[str, Any]) -> Optional[str]:
     return grades.get(f"{discipline}_max_rp") or grades.get("boulder_max_rp")
 
 
-def _count_sessions(state: Dict[str, Any], user_dir: Path) -> int:
+def _count_sessions(state: Dict[str, Any], user_id: str) -> int:
     """Count completed sessions from feedback_log + JSONL session logs."""
     count = len(state.get("feedback_log") or [])
-
-    logs_dir = user_dir / "logs"
-    if not logs_dir.is_dir():
-        return count
-
-    for f in logs_dir.iterdir():
-        if f.name.startswith("sessions_") and f.suffix == ".jsonl":
-            try:
-                count += sum(1 for line in f.read_text(encoding="utf-8").splitlines() if line.strip())
-            except OSError:
-                pass
+    count += storage.count_session_log_lines(user_id)
     return count
 
 
@@ -94,26 +80,17 @@ def _extract_onboarding_date(state: Dict[str, Any]) -> Optional[str]:
 def _scan_users() -> List[Dict[str, Any]]:
     """Scan USERS_DIR and extract summary for each user."""
     users: List[Dict[str, Any]] = []
-    users_dir = Path(_deps.USERS_DIR)
-    if not users_dir.is_dir():
-        return users
 
-    for entry in sorted(users_dir.iterdir()):
-        if not entry.is_dir():
-            continue
-        state_path = entry / "user_state.json"
-        if not state_path.exists():
-            continue
-        try:
-            state = json.loads(state_path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+    for user_id in storage.list_user_ids():
+        state = storage.read_state(user_id)
+        if state is None:
             continue
 
         users.append({
-            "uuid": entry.name,
-            "last_access": _extract_last_access(state, state_path),
+            "uuid": user_id,
+            "last_access": _extract_last_access(state, user_id),
             "grade": _extract_grade(state),
-            "sessions_completed": _count_sessions(state, entry),
+            "sessions_completed": _count_sessions(state, user_id),
             "onboarding_date": _extract_onboarding_date(state),
         })
 
@@ -132,8 +109,7 @@ def list_users(request: Request):
 def delete_user(uuid: str, request: Request):
     """Delete a user directory entirely. Requires X-Admin-Key header."""
     _require_admin(request)
-    user_dir = Path(_deps.USERS_DIR) / uuid
-    if not user_dir.is_dir():
+    if uuid not in storage.list_user_ids():
         raise HTTPException(status_code=404, detail=f"User {uuid} not found")
-    shutil.rmtree(user_dir)
+    storage.delete_user_data(uuid)
     return {"status": "deleted", "uuid": uuid}

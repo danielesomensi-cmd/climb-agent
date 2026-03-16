@@ -27,6 +27,8 @@ def isolate_state(tmp_path, monkeypatch):
         shutil.copy2(REAL_STATE_PATH, tmp_state)
     else:
         tmp_state.write_text(json.dumps(deps.EMPTY_TEMPLATE, indent=2))
+    from backend.engine import storage
+    monkeypatch.setattr(storage, "STATE_PATH", tmp_state)
     monkeypatch.setattr(deps, "STATE_PATH", tmp_state)
     yield tmp_state
 
@@ -77,12 +79,12 @@ class TestState:
 
     def test_delete_state_clears_outdoor_logs(self, tmp_path, monkeypatch):
         """DELETE /api/state must remove outdoor JSONL log files."""
-        from backend.api.routers import state as state_mod
+        from backend.engine import storage
         log_dir = tmp_path / "logs"
         log_dir.mkdir()
         (log_dir / "outdoor_sessions_2026.jsonl").write_text('{"test": true}\n')
         (log_dir / "outdoor_sessions_2025.jsonl").write_text('{"old": true}\n')
-        monkeypatch.setattr(state_mod, "DATA_DIR", tmp_path)
+        monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
         r = client.delete("/api/state")
         assert r.status_code == 200
         remaining = list(log_dir.glob("outdoor_sessions_*.jsonl"))

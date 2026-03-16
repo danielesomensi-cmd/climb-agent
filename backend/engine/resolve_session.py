@@ -611,43 +611,22 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
     return location, equipment
 
 
-def load_recent_exercise_ids(repo_root: str, days_window: int = 5) -> List[str]:
+def load_recent_exercise_ids(user_id: Optional[str] = None) -> List[str]:
+    """Read recently used exercise_ids from session logs via storage layer.
+
+    Uses per-user log directory (A128a fix: previously read from global path,
+    breaking multi-user exercise variety).
     """
-    MVP: looks into data/logs/sessions_*.jsonl and extracts recently used exercise_ids.
-    We keep it simple: we read all lines and take last N entries; in the future filter by date properly.
+    from backend.engine import storage
 
-    B126: uses DATA_DIR env var (same as deps.py) so production reads from the
-    persistent volume instead of the ephemeral repo directory.
-    """
-    data_dir = os.environ.get("DATA_DIR", os.path.join(repo_root, "backend", "data"))
-    logs_dir = os.path.join(data_dir, "logs")
-    if not os.path.isdir(logs_dir):
-        return []
-
-    paths = []
-    for fn in os.listdir(logs_dir):
-        if fn.startswith("sessions_") and fn.endswith(".jsonl"):
-            paths.append(os.path.join(logs_dir, fn))
-
+    entries = storage.read_recent_session_log_lines(user_id, max_lines=200)
     recent: List[str] = []
-    for p in sorted(paths):
-        try:
-            with open(p, "r", encoding="utf-8") as f:
-                lines = f.readlines()[-200:]  # small rolling tail
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
-                obj = json.loads(line)
-                # expected: obj["exercise_instances"] = [...]
-                eis = obj.get("exercise_instances") or obj.get("resolved_session", {}).get("exercise_instances") or []
-                for e in eis:
-                    ex_id = e.get("exercise_id")
-                    if ex_id:
-                        recent.append(norm_str(ex_id))
-        except Exception:
-            continue
-
+    for obj in entries:
+        eis = obj.get("exercise_instances") or obj.get("resolved_session", {}).get("exercise_instances") or []
+        for e in eis:
+            ex_id = e.get("exercise_id")
+            if ex_id:
+                recent.append(norm_str(ex_id))
     # last ones are most recent
     return recent[-100:]
 
@@ -1098,7 +1077,8 @@ def resolve_session(
     out_path: str,
     *,
     user_state_override: Optional[Dict[str, Any]] = None,
-    write_output: bool = True
+    write_output: bool = True,
+    user_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     user_state = user_state_override if user_state_override is not None else load_user_state(repo_root)
     limitation_map = normalize_limitations(user_state) if user_state else {}
@@ -1137,7 +1117,7 @@ def resolve_session(
 
 
     # recent history (MVP)
-    recent_ex_ids = load_recent_exercise_ids(repo_root)
+    recent_ex_ids = load_recent_exercise_ids(user_id)
 
     # preferences (baseline 20mm strong preference, overridable)
     prefs = {

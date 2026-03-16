@@ -19,6 +19,7 @@ out/
 output/
 tmp/
 data/logs/
+backend/data/logs/
 backend/data/users/
 
 # local backups

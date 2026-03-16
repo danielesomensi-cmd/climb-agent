@@ -21,6 +21,10 @@ SECRET = "test-admin-secret-42"
 @pytest.fixture(autouse=True)
 def isolate(tmp_path, monkeypatch):
     """Isolated data dir + admin secret for each test."""
+    from backend.engine import storage
+    monkeypatch.setattr(storage, "STATE_PATH", tmp_path / "user_state.json")
+    monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(storage, "USERS_DIR", tmp_path / "users")
     monkeypatch.setattr(deps, "STATE_PATH", tmp_path / "user_state.json")
     monkeypatch.setattr(deps, "DATA_DIR", tmp_path)
     monkeypatch.setattr(deps, "USERS_DIR", tmp_path / "users")

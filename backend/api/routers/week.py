@@ -34,7 +34,7 @@ TEMPLATES_DIR = "backend/catalog/templates/v1"
 EXERCISES_PATH = "backend/catalog/exercises/v1/exercises.json"
 
 
-def _auto_resolve(week_plan: dict, state: dict) -> None:
+def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -> None:
     """Resolve all sessions in a week plan inline.
 
     Preserves user-added exercises (source: "user_added") that were appended
@@ -84,6 +84,7 @@ def _auto_resolve(week_plan: dict, state: dict) -> None:
                         out_path="",
                         user_state_override=resolve_state,
                         write_output=False,
+                        user_id=user_id,
                     )
                     # Re-append user-added exercises
                     if user_added:
@@ -318,7 +319,7 @@ def get_week(
         save_state(state, user_id)
 
     # Auto-resolve each session so the frontend gets exercises inline
-    _auto_resolve(week_plan, state)
+    _auto_resolve(week_plan, state, user_id)
 
     # B120: persist resolved data for completed sessions so they survive cache
     # roundtrips and are never re-resolved with changed state (device switch)

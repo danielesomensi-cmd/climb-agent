@@ -9,7 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import DATA_DIR, REPO_ROOT, USERS_DIR, get_user_id, load_state, save_state
+from backend.api.deps import REPO_ROOT, get_user_id, load_state, save_state
 from backend.api.models import AddExerciseRequest, SessionResolveRequest
 from backend.engine.resolve_session import resolve_session
 
@@ -56,6 +56,7 @@ def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_use
             out_path="",  # not writing to disk
             user_state_override=state,
             write_output=False,
+            user_id=user_id,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Session resolution failed: {e}")
