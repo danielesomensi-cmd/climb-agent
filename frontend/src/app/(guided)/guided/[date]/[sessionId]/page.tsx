@@ -19,7 +19,7 @@ import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
 function getStorageKey(date: string, sessionId: string): string {
   let userId = "";
   if (typeof window !== "undefined") {
-    userId = localStorage.getItem("climb_user_id") ?? "";
+    userId = window.Clerk?.session ? "clerk" : "";
   }
   return `guided_session_${userId}_${date}_${sessionId}`;
 }

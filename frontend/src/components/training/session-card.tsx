@@ -738,7 +738,7 @@ export function SessionCard({
                       e.stopPropagation();
                       const guidedState = buildGuidedState(session, date);
                       if (!guidedState) return;
-                      const userId = localStorage.getItem("climb_user_id") ?? "";
+                      const userId = window.Clerk?.session ? "clerk" : "";
                       const key = `guided_session_${userId}_${date}_${session.session_id}`;
                       localStorage.setItem(key, JSON.stringify(guidedState));
                       router.push(`/guided/${date}/${session.session_id}`);

@@ -68,11 +68,26 @@ def invalidate_week_cache(state: Dict[str, Any]) -> None:
 
 
 def get_user_id(request: Request) -> Optional[str]:
-    """Extract and validate X-User-ID header.
+    """Extract user_id from request, trying Clerk JWT first, then X-User-ID.
 
-    Returns None if header is absent (legacy/test fallback).
-    Raises 400 if header is present but not a valid UUID v4.
+    Priority:
+    1. Authorization: Bearer <clerk_jwt> → verify → lookup/create user_id
+    2. X-User-ID header (dev/test fallback)
+    3. None (legacy local dev without header)
     """
+    # 1. Try Clerk JWT
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        from backend.api.auth import get_clerk_user_id, is_clerk_configured, lookup_or_create_user
+        if is_clerk_configured():
+            try:
+                token = auth_header.split(" ", 1)[1]
+                clerk_id = get_clerk_user_id(token)
+                return lookup_or_create_user(clerk_id)
+            except Exception as e:
+                raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+
+    # 2. Fallback: X-User-ID (dev/test)
     header = request.headers.get("X-User-ID")
     if header is None:
         return None

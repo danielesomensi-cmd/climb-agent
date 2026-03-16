@@ -128,7 +128,7 @@ function TodayContent() {
 
       // Retry pending guided session feedback + cleanup old sessions
       if (typeof window !== "undefined") {
-        const userId = localStorage.getItem("climb_user_id") ?? "";
+        const userId = window.Clerk?.session ? "clerk" : "";
         const prefix = `guided_session_${userId}_`;
         const now = Date.now();
         for (let i = 0; i < localStorage.length; i++) {

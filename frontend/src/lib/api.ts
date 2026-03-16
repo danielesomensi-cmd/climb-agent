@@ -18,22 +18,22 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-function getUserId(): string {
-  if (typeof window === "undefined") return "";
-  const key = "climb_user_id";
-  let id = localStorage.getItem(key);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(key, id);
+async function _getAuthHeaders(): Promise<Record<string, string>> {
+  if (typeof window === "undefined") return {};
+  try {
+    const token = await window.Clerk?.session?.getToken();
+    if (token) return { Authorization: `Bearer ${token}` };
+  } catch {
+    // Clerk not loaded yet or session expired — fall through
   }
-  return id;
+  return {};
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const userId = getUserId();
+  const authHeaders = await _getAuthHeaders();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...(userId ? { "X-User-ID": userId } : {}),
+    ...authHeaders,
     ...((options?.headers as Record<string, string>) || {}),
   };
   const res = await fetch(`${API_BASE}${path}`, {
@@ -257,11 +257,8 @@ export const convertOutdoorSlot = (data: {
 
 // User backup
 export async function exportUserState(): Promise<void> {
-  const userId = getUserId();
-  const headers: Record<string, string> = {
-    ...(userId ? { "X-User-ID": userId } : {}),
-  };
-  const res = await fetch(`${API_BASE}/api/user/export`, { headers });
+  const authHeaders = await _getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/user/export`, { headers: authHeaders });
   if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
   const blob = await res.blob();
   const cd = res.headers.get("content-disposition") || "";
@@ -283,14 +280,7 @@ export const importUserState = (state: Record<string, unknown>) =>
     body: JSON.stringify(state),
   });
 
-export const generateRecoveryCode = () =>
-  request<{ recovery_code: string }>("/api/user/recovery-code", { method: "POST" });
-
-export const recoverAccount = (recovery_code: string) =>
-  request<{ uuid: string }>("/api/user/recover", {
-    method: "POST",
-    body: JSON.stringify({ recovery_code }),
-  });
+// Recovery code functions removed — Clerk handles account recovery
 
 // Weekly Override (B42)
 export const getWeeklyOverride = (weekStart: string) =>
