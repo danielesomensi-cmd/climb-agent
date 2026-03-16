@@ -1,9 +1,15 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Use Clerk's default middleware — attaches auth context to all requests.
-// Route protection is handled by individual pages checking auth state,
-// not by blocking at the middleware level.
-export default clerkMiddleware();
+const isPublicRoute = createRouteMatcher([
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+]);
+
+export default clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
+    await auth.protect();
+  }
+});
 
 export const config = {
   matcher: [
