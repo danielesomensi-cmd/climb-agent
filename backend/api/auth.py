@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 import uuid
 from functools import lru_cache
 from typing import Optional
@@ -61,16 +62,28 @@ def get_clerk_user_id(token: str) -> str:
     return payload["sub"]
 
 
+_clerk_id_cache: dict[str, tuple[str, float]] = {}  # {clerk_id: (user_id, timestamp)}
+_CACHE_TTL = 300  # 5 minutes
+
+
 def lookup_or_create_user(clerk_id: str) -> str:
     """Find the internal user_id for a clerk_id, or create a new user.
 
-    Uses storage_supabase directly for clerk_id column access.
+    Results are cached in-memory for _CACHE_TTL seconds — the mapping
+    clerk_id → user_id is immutable after creation, so this is safe.
     """
+    now = time.time()
+    cached = _clerk_id_cache.get(clerk_id)
+    if cached and now - cached[1] < _CACHE_TTL:
+        return cached[0]
+
     from backend.engine.storage_supabase import _sb
 
     result = _sb().table("users").select("user_id").eq("clerk_id", clerk_id).execute()
     if result.data:
-        return result.data[0]["user_id"]
+        user_id = result.data[0]["user_id"]
+        _clerk_id_cache[clerk_id] = (user_id, now)
+        return user_id
 
     # New user — generate UUID + bootstrap empty state
     new_user_id = str(uuid.uuid4())
@@ -80,4 +93,5 @@ def lookup_or_create_user(clerk_id: str) -> str:
         "state": {},
     }).execute()
     logger.info("Created new user %s for clerk_id %s", new_user_id, clerk_id)
+    _clerk_id_cache[clerk_id] = (new_user_id, now)
     return new_user_id
