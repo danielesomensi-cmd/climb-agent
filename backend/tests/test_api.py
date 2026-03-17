@@ -242,7 +242,7 @@ class TestAssessment:
         r = client.post("/api/assessment/compute", json={})
         assert r.status_code == 200
         profile = r.json()["profile"]
-        assert all(k in profile for k in ["finger_strength", "pulling_strength", "power_endurance", "technique", "endurance", "body_composition"])
+        assert all(k in profile for k in ["finger_strength", "pulling_strength", "power_endurance", "technique", "endurance"])
 
     def test_compute_with_explicit_data(self):
         r = client.post("/api/assessment/compute", json={

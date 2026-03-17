@@ -337,6 +337,7 @@ def pick_best_exercise_p0(
     recent_ex_ids: Optional[List[str]] = None,
     limitation_map: Optional[Dict[str, str]] = None,
     finger_device: Optional[str] = None,
+    user_age: Optional[int] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -410,6 +411,11 @@ def pick_best_exercise_p0(
 
         base2 = other_pool + finger_pool
     trace["counts"]["after_finger_device"] = len(base2)
+
+    # Stage 2d: age gate (D80) — block exercises with age_minimum > user_age
+    if user_age is not None:
+        base2 = [e for e in base2 if user_age >= (e.get("age_minimum") or 0)]
+    trace["counts"]["after_age_gate"] = len(base2)
 
     # Stage 3: role (ANY match)
     base3 = base2
@@ -826,6 +832,7 @@ def _resolve_inline_block(
     exercise_instances: List[Dict[str, Any]],
     instance_counter: int,
     limitation_map: Optional[Dict[str, str]] = None,
+    user_age: Optional[int] = None,
 ) -> int:
     """Resolve an inline block (module with block_id + selection, no template_id).
 
@@ -869,6 +876,7 @@ def _resolve_inline_block(
         recent_ex_ids=recent_ex_ids,
         limitation_map=limitation_map,
         finger_device=_finger_dev,
+        user_age=user_age,
     )
     chosen_by = "p0_inline_block"
 
@@ -1083,6 +1091,14 @@ def resolve_session(
     user_state = user_state_override if user_state_override is not None else load_user_state(repo_root)
     limitation_map = normalize_limitations(user_state) if user_state else {}
 
+    # D80: extract user age for age gate filtering
+    _body = user_state.get("body") or {} if user_state else {}
+    user_age: Optional[int] = _body.get("age")
+    if user_age is None and user_state:
+        # Fallback: check profile.age in assessment body
+        _assess_body = (user_state.get("assessment") or {}).get("body") or {}
+        user_age = _assess_body.get("age")
+
     session = load_json(os.path.join(repo_root, session_path))
     session_ctx = session.get("context") if isinstance(session.get("context"), dict) else {}
     user_ctx = user_state.get("context") if isinstance(user_state.get("context"), dict) else {}
@@ -1167,6 +1183,7 @@ def resolve_session(
                 exercise_instances=exercise_instances,
                 instance_counter=instance_counter,
                 limitation_map=limitation_map,
+                user_age=user_age,
             )
             continue
 
@@ -1255,6 +1272,7 @@ def resolve_session(
                         recent_ex_ids=recent_ex_ids,
                         limitation_map=limitation_map,
                         finger_device=finger_device,
+                        user_age=user_age,
                     )
                     chosen_by = "p0_hard_filters"
 

@@ -6,7 +6,6 @@ import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -19,8 +18,6 @@ export default function ProfilePage() {
   const router = useRouter();
   const { data, update } = useOnboarding();
   const profile = data.profile;
-
-  const [knowsBf, setKnowsBf] = useState(profile.body_fat_pct != null);
 
   const set = (field: keyof typeof profile, value: string | number | undefined) => {
     update("profile", { ...profile, [field]: value });
@@ -104,36 +101,6 @@ export default function ProfilePage() {
             />
           </div>
 
-          {/* Body fat */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Switch
-                id="knows_bf"
-                checked={knowsBf}
-                onCheckedChange={(checked) => {
-                  setKnowsBf(checked);
-                  if (!checked) set("body_fat_pct", undefined);
-                }}
-              />
-              <Label htmlFor="knows_bf">I know my body fat percentage</Label>
-            </div>
-            {knowsBf && (
-              <div className="space-y-2">
-                <Label htmlFor="body_fat_pct">Body fat (%)</Label>
-                <Input
-                  id="body_fat_pct"
-                  type="number"
-                  min={1}
-                  max={50}
-                  step={0.1}
-                  value={profile.body_fat_pct ?? ""}
-                  onChange={(e) =>
-                    set("body_fat_pct", e.target.value ? Number(e.target.value) : undefined)
-                  }
-                />
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
 

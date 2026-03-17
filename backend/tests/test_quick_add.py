@@ -30,7 +30,7 @@ def _availability():
 def _v2_plan_snapshot(phase_id="base"):
     profile = {
         "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-        "technique": 50, "endurance": 40, "body_composition": 65,
+        "technique": 50, "endurance": 40,
     }
     base_weights = _BASE_WEIGHTS[phase_id]
     domain_weights = _adjust_domain_weights(base_weights, profile)

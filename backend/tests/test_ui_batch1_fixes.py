@@ -20,7 +20,7 @@ def _load_json(path: str):
 
 def _profile():
     return {"finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-            "technique": 50, "endurance": 40, "body_composition": 65}
+            "technique": 50, "endurance": 40}
 
 
 def _make_kwargs(phase_id="base", **overrides):

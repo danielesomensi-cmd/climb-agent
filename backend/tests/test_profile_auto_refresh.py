@@ -106,18 +106,6 @@ class TestEnsureProfileFresh(unittest.TestCase):
         _ensure_profile_fresh(state)
         assert state["assessment"].get("profile") is None
 
-    def test_body_composition_reflects_finger_score(self):
-        """B127: body_comp without BF% uses finger_score * 0.9, capped at 70."""
-        state = _base_state(with_tests=True)
-        _ensure_profile_fresh(state)
-        # finger=100 → body_comp = min(70, 100*0.9) = 70
-        assert state["assessment"]["profile"]["body_composition"] == 70
-
-        # Without test data: finger=66 → body_comp = min(70, 66*0.9) = 59
-        state2 = _base_state(with_tests=False)
-        _ensure_profile_fresh(state2)
-        assert state2["assessment"]["profile"]["body_composition"] == 59
-
 
 class TestSaveStateRecomputes(unittest.TestCase):
     """Integration tests: save_state triggers profile recomputation."""
@@ -224,7 +212,6 @@ class TestDanieleReproduction(unittest.TestCase):
         # Profile must now reflect both tests
         assert state["assessment"]["profile"]["finger_strength"] == 100
         assert state["assessment"]["profile"]["pulling_strength"] == 100
-        assert state["assessment"]["profile"]["body_composition"] == 70
 
     def test_daniele_exact_values(self):
         """Verify Daniele's exact profile with all his data."""
@@ -237,7 +224,6 @@ class TestDanieleReproduction(unittest.TestCase):
         assert profile["power_endurance"] == 38
         assert profile["technique"] == 30
         assert profile["endurance"] == 35
-        assert profile["body_composition"] == 70
 
 
 if __name__ == "__main__":

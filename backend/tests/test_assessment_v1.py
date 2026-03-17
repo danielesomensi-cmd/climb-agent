@@ -14,7 +14,6 @@ def _make_assessment(
     *,
     weight_kg=77.0,
     height_cm=182,
-    body_fat_pct=None,
     climbing_years=5,
     structured_training_years=1,
     boulder_max_rp="7A",
@@ -30,7 +29,6 @@ def _make_assessment(
         "body": {
             "weight_kg": weight_kg,
             "height_cm": height_cm,
-            "body_fat_pct": body_fat_pct,
         },
         "experience": {
             "climbing_years": climbing_years,
@@ -95,13 +93,12 @@ class TestAssessmentProfile(unittest.TestCase):
         assessment = _make_assessment(
             max_hang_total=100,
             weighted_pullup_total=112,
-            body_fat_pct=14,
         )
         goal = _make_goal("7c+", "7b")
         profile = compute_assessment_profile(assessment, goal)
         self.assertEqual(set(profile.keys()), {
             "finger_strength", "pulling_strength", "power_endurance",
-            "technique", "endurance", "body_composition",
+            "technique", "endurance",
         })
         for v in profile.values():
             self.assertGreaterEqual(v, 0)
@@ -158,7 +155,7 @@ class TestAssessmentProfile(unittest.TestCase):
 
     def test_score_clamped_0_100(self):
         # Very strong climber → scores should not exceed 100
-        assessment = _make_assessment(max_hang_total=200, weighted_pullup_total=200, body_fat_pct=8)
+        assessment = _make_assessment(max_hang_total=200, weighted_pullup_total=200)
         goal = _make_goal("7a", "6c+")
         profile = compute_assessment_profile(assessment, goal)
         for k, v in profile.items():
@@ -181,20 +178,11 @@ class TestAssessmentProfile(unittest.TestCase):
         self.assertLess(p2["power_endurance"], p1["power_endurance"])
 
     def test_deterministic(self):
-        assessment = _make_assessment(max_hang_total=90, weighted_pullup_total=100, body_fat_pct=15)
+        assessment = _make_assessment(max_hang_total=90, weighted_pullup_total=100)
         goal = _make_goal()
         p1 = compute_assessment_profile(assessment, goal)
         p2 = compute_assessment_profile(assessment, goal)
         self.assertEqual(p1, p2)
-
-    def test_body_composition_with_bf(self):
-        lean = _make_assessment(body_fat_pct=12)
-        heavy = _make_assessment(body_fat_pct=22)
-        goal = _make_goal()
-        p1 = compute_assessment_profile(lean, goal)
-        p2 = compute_assessment_profile(heavy, goal)
-        self.assertGreater(p1["body_composition"], p2["body_composition"])
-
 
 class TestPERepeaterIntegration(unittest.TestCase):
     """Tests for PE repeater test integration + no double counting (F5 fix)."""
@@ -304,43 +292,6 @@ class TestEnduranceHangDuration(unittest.TestCase):
         assessment2 = _make_assessment()
         assessment2["tests"]["max_hang_duration_20mm_seconds"] = None
         same = compute_assessment_profile(assessment2, goal)["endurance"]
-        self.assertEqual(base, same)
-
-
-class TestBodyCompLSit(unittest.TestCase):
-    """Tests for l_sit_hold_seconds modifier on body_composition axis."""
-
-    def test_body_comp_lsit_bonus(self):
-        """>=30s L-sit adds 5 points."""
-        assessment_base = _make_assessment(body_fat_pct=14)
-        goal = _make_goal()
-        base = compute_assessment_profile(assessment_base, goal)["body_composition"]
-
-        assessment_with = _make_assessment(body_fat_pct=14)
-        assessment_with["tests"]["l_sit_hold_seconds"] = 35
-        with_bonus = compute_assessment_profile(assessment_with, goal)["body_composition"]
-        self.assertEqual(with_bonus, min(100, base + 5))
-
-    def test_body_comp_lsit_penalty(self):
-        """<5s subtracts 5."""
-        assessment_base = _make_assessment(body_fat_pct=14)
-        goal = _make_goal()
-        base = compute_assessment_profile(assessment_base, goal)["body_composition"]
-
-        assessment_with = _make_assessment(body_fat_pct=14)
-        assessment_with["tests"]["l_sit_hold_seconds"] = 3
-        with_penalty = compute_assessment_profile(assessment_with, goal)["body_composition"]
-        self.assertEqual(with_penalty, max(0, base - 5))
-
-    def test_body_comp_no_lsit_unchanged(self):
-        """Missing L-sit = existing behavior."""
-        assessment = _make_assessment()
-        goal = _make_goal()
-        base = compute_assessment_profile(assessment, goal)["body_composition"]
-
-        assessment2 = _make_assessment()
-        assessment2["tests"]["l_sit_hold_seconds"] = None
-        same = compute_assessment_profile(assessment2, goal)["body_composition"]
         self.assertEqual(base, same)
 
 

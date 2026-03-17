@@ -131,7 +131,7 @@ def test_mark_skipped_hard_day_replaces_with_recovery():
 
 def _v2_plan_snapshot(phase_id="base"):
     profile = {"finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-               "technique": 50, "endurance": 40, "body_composition": 65}
+               "technique": 50, "endurance": 40}
     base_weights = _BASE_WEIGHTS[phase_id]
     domain_weights = _adjust_domain_weights(base_weights, profile)
     session_pool = _build_session_pool(phase_id)
@@ -771,7 +771,7 @@ def test_remove_session_last_on_day():
 def _gym_plan():
     """Plan with gym sessions for change_gym testing."""
     profile = {"finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-               "technique": 50, "endurance": 40, "body_composition": 65}
+               "technique": 50, "endurance": 40}
     base_weights = _BASE_WEIGHTS["base"]
     domain_weights = _adjust_domain_weights(base_weights, profile)
     session_pool = _build_session_pool("base")
@@ -1147,7 +1147,7 @@ def _make_v2_plan(gym_equipment=None):
     """Build a v2 plan with specific gym equipment for B96 tests."""
     profile = {
         "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-        "technique": 50, "endurance": 40, "body_composition": 65,
+        "technique": 50, "endurance": 40,
     }
     base_weights = _BASE_WEIGHTS["base"]
     domain_weights = _adjust_domain_weights(base_weights, profile)

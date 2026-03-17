@@ -17,7 +17,6 @@
     },
     "last_assessed": "2026-02-16",
     "profile": {
-      "body_composition": 50,
       "endurance": 46,
       "finger_strength": 100,
       "power_endurance": 51,
@@ -238,7 +237,6 @@
   },
   "macrocycle": {
     "assessment_snapshot": {
-      "body_composition": 50,
       "endurance": 46,
       "finger_strength": 100,
       "power_endurance": 51,

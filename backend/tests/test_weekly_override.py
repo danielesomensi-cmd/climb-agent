@@ -129,7 +129,7 @@ def test_planner_respects_override_gym():
 
     profile = {
         "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-        "technique": 50, "endurance": 40, "body_composition": 65,
+        "technique": 50, "endurance": 40,
     }
     base_weights = _BASE_WEIGHTS["base"]
     domain_weights = _adjust_domain_weights(base_weights, profile)
@@ -171,7 +171,7 @@ def test_planner_respects_override_unavailable():
 
     profile = {
         "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-        "technique": 50, "endurance": 40, "body_composition": 65,
+        "technique": 50, "endurance": 40,
     }
     base_weights = _BASE_WEIGHTS["base"]
     domain_weights = _adjust_domain_weights(base_weights, profile)
@@ -443,7 +443,7 @@ def test_bug_e_all_rest_produces_no_sessions():
 
     profile = {
         "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-        "technique": 50, "endurance": 40, "body_composition": 65,
+        "technique": 50, "endurance": 40,
     }
     base_weights = _BASE_WEIGHTS["base"]
     domain_weights = _adjust_domain_weights(base_weights, profile)

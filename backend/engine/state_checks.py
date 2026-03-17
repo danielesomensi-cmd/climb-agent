@@ -14,7 +14,6 @@ _PROFILE_AXES = (
     "power_endurance",
     "technique",
     "endurance",
-    "body_composition",
 )
 
 

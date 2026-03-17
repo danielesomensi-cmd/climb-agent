@@ -28,7 +28,6 @@ def _make_profile(**overrides):
         "power_endurance": 45,
         "technique": 50,
         "endurance": 40,
-        "body_composition": 65,
     }
     base.update(overrides)
     return base

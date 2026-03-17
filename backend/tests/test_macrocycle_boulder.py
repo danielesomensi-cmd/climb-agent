@@ -20,7 +20,6 @@ _PROFILE = {
     "power_endurance": 45,
     "technique": 60,
     "endurance": 40,
-    "body_composition": 50,
 }
 
 _BOULDER_GOAL = {

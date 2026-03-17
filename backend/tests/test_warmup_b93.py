@@ -23,7 +23,6 @@ def _user_state():
                 "power_endurance": 50,
                 "technique": 50,
                 "endurance": 50,
-                "body_composition": 50,
             }
         },
         "bodyweight_kg": 75,

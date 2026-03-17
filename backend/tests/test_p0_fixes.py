@@ -21,7 +21,7 @@ EXERCISES_PATH = REPO_ROOT / "backend" / "catalog" / "exercises" / "v1" / "exerc
 def _make_profile(**overrides):
     base = {
         "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-        "technique": 50, "endurance": 40, "body_composition": 65,
+        "technique": 50, "endurance": 40,
     }
     base.update(overrides)
     return base

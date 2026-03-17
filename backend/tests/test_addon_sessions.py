@@ -24,7 +24,7 @@ def _make_us(equipment_home=None):
             "profile": {
                 "finger_strength": 60, "pulling_strength": 60,
                 "power_endurance": 60, "technique": 60,
-                "endurance": 60, "body_composition": 60,
+                "endurance": 60,
             }
         },
         "equipment": {

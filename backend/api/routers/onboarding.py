@@ -128,6 +128,31 @@ def _ensure_gym_ids(equipment: Dict[str, Any]) -> Dict[str, Any]:
     return equipment
 
 
+def _recovery_multiplier_for_age(age: int | None) -> float:
+    """D83: compute default recovery multiplier from age."""
+    if age is None or age < 40:
+        return 1.0
+    if age < 50:
+        return 1.25
+    if age < 60:
+        return 1.5
+    return 1.75
+
+
+def _build_planning_prefs(
+    prefs: dict | None,
+    age: int | None,
+) -> Dict[str, Any]:
+    """Build planning_prefs with D83 recovery multiplier auto-set from age."""
+    result = dict(prefs) if prefs else {
+        "hard_day_cap_per_week": 3,
+        "target_training_days_per_week": 4,
+    }
+    if "recovery_multiplier" not in result:
+        result["recovery_multiplier"] = _recovery_multiplier_for_age(age)
+    return result
+
+
 def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
     """Convert onboarding form data into a valid user_state dict."""
     profile = data.profile
@@ -143,7 +168,7 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
         "body": {
             "weight_kg": profile.get("weight_kg"),
             "height_cm": profile.get("height_cm"),
-            "body_fat_pct": profile.get("body_fat_pct"),
+            "age": profile.get("age"),
         },
         "bodyweight_kg": profile.get("weight_kg"),
         "assessment": {
@@ -151,7 +176,7 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             "body": {
                 "weight_kg": profile.get("weight_kg"),
                 "height_cm": profile.get("height_cm"),
-                "body_fat_pct": profile.get("body_fat_pct"),
+                "age": profile.get("age"),
             },
             "experience": data.experience,
             "grades": data.grades,
@@ -160,10 +185,7 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             "profile": None,
         },
         "goal": data.goal,
-        "planning_prefs": data.planning_prefs or {
-            "hard_day_cap_per_week": 3,
-            "target_training_days_per_week": 4,
-        },
+        "planning_prefs": _build_planning_prefs(data.planning_prefs, profile.get("age")),
         "preferences": data.preferences or {
             "finger_training_device": "hangboard",
         },
@@ -175,6 +197,10 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
                 for lim in data.limitations
             ],
             "details": data.limitations,
+            "has_recent_injury": any(
+                lim.get("severity") in ("active", "severe")
+                for lim in data.limitations
+            ),
         },
         "trips": data.trips,
         "outdoor_spots": [

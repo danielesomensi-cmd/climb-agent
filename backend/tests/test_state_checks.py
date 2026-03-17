@@ -5,14 +5,13 @@ import unittest
 from backend.engine.state_checks import DIRTY_STATE_THRESHOLD, is_macrocycle_stale
 
 
-def _profile(fs=50, ps=50, pe=50, tech=50, end=50, bc=50):
+def _profile(fs=50, ps=50, pe=50, tech=50, end=50):
     return {
         "finger_strength": fs,
         "pulling_strength": ps,
         "power_endurance": pe,
         "technique": tech,
         "endurance": end,
-        "body_composition": bc,
     }
 
 
@@ -67,8 +66,8 @@ class TestIsMacrocycleStale(unittest.TestCase):
     def test_not_stale_all_axes_just_below(self):
         """Every axis differs by threshold-1 → still not stale."""
         d = DIRTY_STATE_THRESHOLD - 1
-        snap = _profile(50, 50, 50, 50, 50, 50)
-        prof = _profile(50 + d, 50 - d, 50 + d, 50 - d, 50 + d, 50 - d)
+        snap = _profile(50, 50, 50, 50, 50)
+        prof = _profile(50 + d, 50 - d, 50 + d, 50 - d, 50 + d)
         self.assertFalse(is_macrocycle_stale(_state(prof, snap)))
 
     # --- Edge cases (missing data) ---

@@ -13,6 +13,7 @@ Constraints:
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -402,6 +403,7 @@ def generate_phase_week(
     today: Optional[str] = None,
     inject_tests: bool = False,
     finger_device: Optional[str] = None,
+    user_age: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -461,6 +463,15 @@ def generate_phase_week(
 
     start = _parse_date(start_date)
     target_days = prefs.get("target_training_days_per_week", 4)
+
+    # D81: youth training cap — max 4 days/week for users under 18
+    if user_age is not None and user_age < 18:
+        target_days = min(target_days, 4)
+
+    # D83: recovery multiplier increases minimum gap between hard sessions
+    recovery_mult = float(prefs.get("recovery_multiplier", 1.0))
+    hard_gap_days = math.ceil(1 * recovery_mult)  # base gap = 1 day (48h)
+    finger_gap_days = math.ceil(1 * recovery_mult)
 
     # B95: resolve "today" for skipping past days
     today_date: Optional[date] = _parse_date(today) if today else None
@@ -639,16 +650,16 @@ def generate_phase_week(
             if not skip and meta["hard"] and hard_days >= effective_hard_cap:
                 skip = True
 
-            # No consecutive finger days (48h gap)
+            # No consecutive finger days (48h+ gap, extended by D83 recovery multiplier)
             if not skip and meta["finger"] and finger_day_offsets:
                 last_finger_offset = finger_day_offsets[-1]
-                if (offset - last_finger_offset) <= 1:
+                if (offset - last_finger_offset) <= finger_gap_days:
                     skip = True
 
-            # No consecutive hard/max-intensity days
+            # No consecutive hard/max-intensity days (extended by D83 recovery multiplier)
             if not skip and meta["hard"] and hard_day_offsets:
                 last_hard_offset = hard_day_offsets[-1]
-                if (offset - last_hard_offset) <= 1:
+                if (offset - last_hard_offset) <= hard_gap_days:
                     skip = True
 
             if skip:
@@ -749,7 +760,7 @@ def generate_phase_week(
                     continue
                 if fb_meta.get("hard") and hard_days >= effective_hard_cap:
                     continue
-                if fb_meta.get("finger") and finger_day_offsets and (offset - finger_day_offsets[-1]) <= 1:
+                if fb_meta.get("finger") and finger_day_offsets and (offset - finger_day_offsets[-1]) <= finger_gap_days:
                     continue
                 result = _find_best_slot(
                     day_avail, fb_meta, locations, prefer_evening=True,
@@ -875,9 +886,9 @@ def generate_phase_week(
                     if session_count.get(sid, 0) >= max_pw:
                         skip = True
 
-                # No consecutive finger days (48h gap)
+                # No consecutive finger days (gap extended by D83 recovery multiplier)
                 if not skip and meta["finger"] and finger_day_offsets:
-                    if any(abs(offset - fo) <= 1 for fo in finger_day_offsets):
+                    if any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
                         skip = True
 
                 if skip:
@@ -932,8 +943,8 @@ def generate_phase_week(
                     continue
                 if day_is_outdoor[offset]:
                     continue
-                # Respect 48h finger gap
-                if finger_day_offsets and any(abs(offset - fo) <= 1 for fo in finger_day_offsets):
+                # Respect finger gap (extended by D83 recovery multiplier)
+                if finger_day_offsets and any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
                     continue
                 # Try to place in an empty complementary slot first
                 if day_sessions[offset]:
@@ -1018,13 +1029,13 @@ def generate_phase_week(
                     _SESSION_META.get(e.get("session_id", ""), {}).get("hard")
                     for e in day_sessions[offset]
                 )
-                # Respect finger spacing — but swapping on a day that already has finger is OK
+                # Respect finger spacing (extended by D83 recovery multiplier)
                 if test_meta["finger"] and not day_has_finger and finger_day_offsets:
-                    if any(abs(offset - fo) <= 1 for fo in finger_day_offsets):
+                    if any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
                         continue
-                # Respect hard-day spacing — but swapping on a day that already has hard is OK
+                # Respect hard-day spacing (extended by D83 recovery multiplier)
                 if test_meta["hard"] and not day_has_hard and hard_day_offsets:
-                    if any(abs(offset - ho) <= 1 for ho in hard_day_offsets):
+                    if any(abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets):
                         continue
                 # Hard cap check
                 if test_meta["hard"] and hard_days >= effective_hard_cap:

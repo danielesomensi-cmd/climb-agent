@@ -90,6 +90,24 @@ def _benchmark_for(table: Dict[str, float], target_grade: str) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Utility: Brzycki 1RM estimation (D38)
+# ---------------------------------------------------------------------------
+
+def brzycki_1rm(weight: float, reps: int) -> float:
+    """Estimate 1RM from submaximal reps using Brzycki formula.
+
+    Most accurate for 1-10 reps. Returns the weight itself if reps <= 1.
+    """
+    if reps <= 0:
+        return 0.0
+    if reps == 1:
+        return float(weight)
+    if reps >= 37:
+        return float(weight)  # formula breaks at 37 reps
+    return weight * (36.0 / (37.0 - reps))
+
+
+# ---------------------------------------------------------------------------
 # Individual axis computations
 # ---------------------------------------------------------------------------
 
@@ -134,6 +152,15 @@ def _compute_pulling_strength(
     bw = body.get("weight_kg") or 70.0
     benchmark = _benchmark_for(_PULLING_BENCHMARK, target_grade)
     wp_1rm = tests.get("weighted_pullup_1rm_total_kg")
+
+    # D38: Brzycki estimation when direct 1RM is missing but submaximal data exists
+    if wp_1rm is None:
+        sub_reps = tests.get("pullup_submaximal_reps")
+        sub_load = tests.get("pullup_submaximal_load_kg")
+        if sub_reps is not None and sub_load is not None:
+            sub_reps = int(sub_reps)
+            sub_load = float(sub_load)
+            wp_1rm = round(brzycki_1rm(bw + sub_load, sub_reps), 1)
 
     if wp_1rm is not None:
         ratio = wp_1rm / bw

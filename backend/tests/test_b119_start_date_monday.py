@@ -57,7 +57,6 @@ class TestGenerateMacrocycleMonday(unittest.TestCase):
                     "power_endurance": 50,
                     "technique": 50,
                     "endurance": 50,
-                    "body_composition": 50,
                 }
             },
             "trips": [],
@@ -168,7 +167,6 @@ class TestEquipmentRegenPreservesMonday(unittest.TestCase):
                     "power_endurance": 50,
                     "technique": 50,
                     "endurance": 50,
-                    "body_composition": 50,
                 }
             },
             "trips": [],
@@ -209,7 +207,6 @@ class TestDangerZoneFullRestart(unittest.TestCase):
                     "power_endurance": 50,
                     "technique": 50,
                     "endurance": 50,
-                    "body_composition": 50,
                 }
             },
             "trips": [],

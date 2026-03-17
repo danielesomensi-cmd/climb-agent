@@ -118,7 +118,7 @@ user_state.assessment + user_state.goal
 ```
 
 **Key modules:**
-- `assessment_v1.py` — 6-axis profile (finger_strength, pulling_strength, power_endurance, technique, endurance, body_composition), 0-100 per axis
+- `assessment_v1.py` — 5-axis profile (finger_strength, pulling_strength, power_endurance, technique, endurance), 0-100 per axis
 - `macrocycle_v1.py` — 10-13 week periodized plan, 5 phases (base → strength_power → power_endurance → performance → deload), boulder/lead variants
 - `planner_v2.py` — Phase-aware weekly planner, 3-pass algorithm (primary → complementary → tests), location-aware, gym-priority scoring
 - `replanner_v1.py` — 13 indoor + 3 outdoor intents, ripple effects, equipment-aware overrides, quick-add
@@ -140,7 +140,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/onboarding/defaults` | Option lists for onboarding form |
 | POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle |
 | POST | `/api/onboarding/start-week` | Shift macrocycle start_date back N weeks |
-| POST | `/api/assessment/compute` | Recompute 6-axis profile |
+| POST | `/api/assessment/compute` | Recompute 5-axis profile |
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
 | GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
 | POST | `/api/week/test-reminder-response` | Handle periodic test reminder |

@@ -264,6 +264,8 @@ def get_week(
                 and not is_last
             )
             finger_device = (state.get("preferences") or {}).get("finger_training_device")
+            # D81: extract user age for youth training cap
+            _user_age = (state.get("body") or {}).get("age")
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
                 domain_weights=ctx["domain_weights"],
@@ -281,6 +283,7 @@ def get_week(
                 today=today_str,
                 inject_tests=want_tests,
                 finger_device=finger_device,
+                user_age=_user_age,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")

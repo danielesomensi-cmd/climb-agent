@@ -781,11 +781,10 @@ Past-week overrides are kept for history but are never read by the planner.
 
 ### 5.8 Assessment profile axes
 
-The 6 normalized axes (0-100) of the assessment radar:
+The 5 normalized axes (0-100) of the assessment radar:
 
 - `finger_strength`
 - `pulling_strength`
 - `power_endurance`
 - `technique`
 - `endurance`
-- `body_composition`

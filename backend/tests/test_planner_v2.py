@@ -21,7 +21,7 @@ def _base_availability():
 
 def _make_kwargs(phase_id="base", **overrides):
     profile = {"finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
-               "technique": 50, "endurance": 40, "body_composition": 65}
+               "technique": 50, "endurance": 40}
     base_weights = _BASE_WEIGHTS[phase_id]
     domain_weights = _adjust_domain_weights(base_weights, profile)
     session_pool = _build_session_pool(phase_id)

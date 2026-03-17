@@ -158,7 +158,6 @@ class TestPhaseWeekGymId:
             "power_endurance": 0.2,
             "technique": 0.15,
             "endurance": 0.1,
-            "body_composition": 0.05,
         }
 
     def _base_session_pool(self):
