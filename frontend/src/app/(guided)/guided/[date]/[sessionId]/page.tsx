@@ -174,17 +174,60 @@ export default function GuidedSessionPage() {
     (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number }) => {
       if (!state) return;
       const idx = state.currentIndex;
+      const exercise = state.exercises[idx];
 
-      updateExercise(idx, {
-        status: "done",
-        feedbackLabel,
-        usedLoadKg: usedLoad,
-        usedTotalLoadKg: usedTotalLoad,
-        usedGrade,
-        testMeasurement,
-        usedLoadKgRight: perHand?.right,
-        usedLoadKgLeft: perHand?.left,
-      });
+      // B128: detect unilateral test measurement (e.g. lp_duration_test — seconds per hand)
+      const isUnilateralMeasurement = exercise.unilateral && !!exercise.testField && !!exercise.testUnit && perHand;
+
+      if (isUnilateralMeasurement) {
+        updateExercise(idx, {
+          status: "done",
+          feedbackLabel,
+          testMeasurementRight: perHand?.right,
+          testMeasurementLeft: perHand?.left,
+        });
+      } else {
+        updateExercise(idx, {
+          status: "done",
+          feedbackLabel,
+          usedLoadKg: usedLoad,
+          usedTotalLoadKg: usedTotalLoad,
+          usedGrade,
+          testMeasurement,
+          usedLoadKgRight: perHand?.right,
+          usedLoadKgLeft: perHand?.left,
+        });
+      }
+
+      // B128: recalc suggestion for next exercise if user just completed a max test
+      // When lp_max_test_5s is done, update lp_duration_test suggestion with 60% of new max
+      if (exercise.exerciseId === "lp_max_test_5s" && perHand) {
+        const roundHalf = (v: number) => Math.round(v * 2) / 2;
+        setState((prev) => {
+          if (!prev) return prev;
+          const exercises = [...prev.exercises];
+          for (let i = idx + 1; i < exercises.length; i++) {
+            const next = exercises[i];
+            if (next.exerciseId === "lp_duration_test" && next.prescription.intensityPct) {
+              const pct = next.prescription.intensityPct;
+              exercises[i] = {
+                ...next,
+                suggested: {
+                  ...next.suggested,
+                  leftHand: perHand.left != null
+                    ? { externalLoadKg: roundHalf(perHand.left * pct) }
+                    : next.suggested.leftHand,
+                  rightHand: perHand.right != null
+                    ? { externalLoadKg: roundHalf(perHand.right * pct) }
+                    : next.suggested.rightHand,
+                },
+              };
+              break;
+            }
+          }
+          return { ...prev, exercises };
+        });
+      }
 
       // Advance to next exercise or show summary
       const nextIdx = idx + 1;
@@ -284,6 +327,25 @@ export default function GuidedSessionPage() {
       const exerciseFeedback: Record<string, unknown>[] = [];
       for (const ex of finalExercises) {
         if (ex.isInstructionOnly) continue;
+
+        // B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand)
+        if (ex.unilateral && ex.testField && (ex.testMeasurementRight != null || ex.testMeasurementLeft != null)) {
+          for (const hand of ["right", "left"] as const) {
+            const measurement = hand === "right" ? ex.testMeasurementRight : ex.testMeasurementLeft;
+            const suggestedLoad = hand === "right"
+              ? ex.suggested.rightHand?.externalLoadKg
+              : ex.suggested.leftHand?.externalLoadKg;
+            exerciseFeedback.push({
+              exercise_id: ex.exerciseId,
+              feedback_label: ex.feedbackLabel,
+              completed: ex.status === "done",
+              hand,
+              [ex.testField]: measurement,
+              used_external_load_kg: suggestedLoad,
+            });
+          }
+          continue;
+        }
 
         // Unilateral exercises: split into per-hand feedback entries
         if (ex.unilateral && (ex.usedLoadKgRight != null || ex.usedLoadKgLeft != null)) {

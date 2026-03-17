@@ -8,7 +8,6 @@ export interface AssessmentProfile {
   power_endurance: number;
   technique: number;
   endurance: number;
-  body_composition: number;
 }
 
 export interface Phase {
@@ -528,6 +527,8 @@ export interface GuidedExercise {
   testField?: string;   // e.g. "max_hang_duration_20mm_seconds"
   testUnit?: string;    // e.g. "seconds" or "cm"
   testMeasurement?: number;
+  testMeasurementRight?: number;  // per-hand measurement (e.g. seconds for lp_duration_test)
+  testMeasurementLeft?: number;
 }
 
 export interface GuidedSessionState {

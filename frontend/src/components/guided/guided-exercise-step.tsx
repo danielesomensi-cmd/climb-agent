@@ -98,11 +98,14 @@ export function GuidedExerciseStep({
   const isTestMeasurement = exercise.category === "test_measurement" && !!exercise.testField;
   const isUnilateral = exercise.unilateral === true;
 
+  // B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand)
+  const isUnilateralTestMeasurement = isTestSession && isUnilateral && !!exercise.testField && !!exercise.testUnit;
+
   // Repeater test: primary metric is sets completed, not load
   const isRepeaterTest = isTestSession && exercise.exerciseId === "repeater_hang_7_3";
 
   // B120: unilateral test exercises (LP max test) — dual R/L test result input
-  const isUnilateralTest = !isTestMeasurement && !isRepeaterTest && isTestSession && isUnilateral;
+  const isUnilateralTest = !isTestMeasurement && !isRepeaterTest && !isUnilateralTestMeasurement && isTestSession && isUnilateral;
 
   // Test session total_load exercises get two mandatory fields
   const isTestLoadExercise = !isTestMeasurement && !isRepeaterTest && !isUnilateralTest && isTestSession && exercise.loadModel === "total_load";
@@ -228,6 +231,13 @@ export function GuidedExerciseStep({
     if (isTestMeasurement) {
       const val = measurementInput ? parseFloat(measurementInput) : undefined;
       onDone("ok", undefined, undefined, undefined, val);
+      return;
+    }
+    // B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand)
+    if (isUnilateralTestMeasurement) {
+      const right = loadInputRight ? parseFloat(loadInputRight) : undefined;
+      const left = loadInputLeft ? parseFloat(loadInputLeft) : undefined;
+      onDone("ok", undefined, undefined, undefined, undefined, { right, left });
       return;
     }
     if (isRepeaterTest) {
@@ -379,6 +389,86 @@ export function GuidedExerciseStep({
               />
             </div>
           </div>
+        ) : isUnilateralTestMeasurement ? (
+          /* B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand) */
+          <div className="space-y-3">
+            {/* Suggested load per hand (the load to use during test) */}
+            {(exercise.suggested.rightHand?.externalLoadKg != null || exercise.suggested.leftHand?.externalLoadKg != null) && (
+              <div className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 p-3">
+                <Lightbulb className="size-4 text-primary mt-0.5 shrink-0" />
+                <div className="text-sm space-y-0.5 w-full">
+                  <div className="grid grid-cols-2 gap-3">
+                    <p>
+                      Left: <span className="font-semibold">+{exercise.suggested.leftHand?.externalLoadKg ?? 0} kg</span>
+                    </p>
+                    <p>
+                      Right: <span className="font-semibold">+{exercise.suggested.rightHand?.externalLoadKg ?? 0} kg</span>
+                    </p>
+                  </div>
+                  {exercise.suggested.loadSource === "estimated" && (
+                    <p className="text-xs text-muted-foreground">(estimated from hangboard baseline)</p>
+                  )}
+                </div>
+              </div>
+            )}
+            <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+              <p className="text-xs font-medium text-primary">Record your test result</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="test-left-meas" className="text-xs text-muted-foreground">
+                    Left hand ({exercise.testUnit}) *
+                  </Label>
+                  <Input
+                    id="test-left-meas"
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={loadInputLeft}
+                    onChange={(e) => setLoadInputLeft(e.target.value)}
+                    className="h-9"
+                    placeholder="e.g. 65"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="test-right-meas" className="text-xs text-muted-foreground">
+                    Right hand ({exercise.testUnit}) *
+                  </Label>
+                  <Input
+                    id="test-right-meas"
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={loadInputRight}
+                    onChange={(e) => setLoadInputRight(e.target.value)}
+                    className="h-9"
+                    placeholder="e.g. 65"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+            {/* Feedback selector */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">How did it feel?</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {FEEDBACK_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setFeedback(opt.value)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                      feedback === opt.value
+                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         ) : (
           <>
             {/* Suggested load/grade — unilateral (per-hand) */}
@@ -388,10 +478,10 @@ export function GuidedExerciseStep({
                 <div className="text-sm space-y-0.5 w-full">
                   <div className="grid grid-cols-2 gap-3">
                     <p>
-                      Right: <span className="font-semibold">+{exercise.suggested.rightHand?.externalLoadKg ?? 0} kg</span>
+                      Left: <span className="font-semibold">+{exercise.suggested.leftHand?.externalLoadKg ?? 0} kg</span>
                     </p>
                     <p>
-                      Left: <span className="font-semibold">+{exercise.suggested.leftHand?.externalLoadKg ?? 0} kg</span>
+                      Right: <span className="font-semibold">+{exercise.suggested.rightHand?.externalLoadKg ?? 0} kg</span>
                     </p>
                   </div>
                   {exercise.suggested.repScheme && (
@@ -519,22 +609,6 @@ export function GuidedExerciseStep({
                 <p className="text-xs font-medium text-primary">Record your test result</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="test-right" className="text-xs text-muted-foreground">
-                      Right hand (kg) *
-                    </Label>
-                    <Input
-                      id="test-right"
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      value={loadInputRight}
-                      onChange={(e) => setLoadInputRight(e.target.value)}
-                      className="h-9"
-                      placeholder="e.g. 47"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1">
                     <Label htmlFor="test-left" className="text-xs text-muted-foreground">
                       Left hand (kg) *
                     </Label>
@@ -547,6 +621,22 @@ export function GuidedExerciseStep({
                       onChange={(e) => setLoadInputLeft(e.target.value)}
                       className="h-9"
                       placeholder="e.g. 42"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="test-right" className="text-xs text-muted-foreground">
+                      Right hand (kg) *
+                    </Label>
+                    <Input
+                      id="test-right"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={loadInputRight}
+                      onChange={(e) => setLoadInputRight(e.target.value)}
+                      className="h-9"
+                      placeholder="e.g. 47"
                       required
                     />
                   </div>
@@ -617,18 +707,6 @@ export function GuidedExerciseStep({
                 </Label>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label htmlFor="load-right" className="text-[11px] text-muted-foreground">Right hand</Label>
-                    <Input
-                      id="load-right"
-                      type="number"
-                      step="0.5"
-                      value={loadInputRight}
-                      onChange={(e) => setLoadInputRight(e.target.value)}
-                      className="h-9"
-                      placeholder="kg"
-                    />
-                  </div>
-                  <div className="space-y-1">
                     <Label htmlFor="load-left" className="text-[11px] text-muted-foreground">Left hand</Label>
                     <Input
                       id="load-left"
@@ -636,6 +714,18 @@ export function GuidedExerciseStep({
                       step="0.5"
                       value={loadInputLeft}
                       onChange={(e) => setLoadInputLeft(e.target.value)}
+                      className="h-9"
+                      placeholder="kg"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="load-right" className="text-[11px] text-muted-foreground">Right hand</Label>
+                    <Input
+                      id="load-right"
+                      type="number"
+                      step="0.5"
+                      value={loadInputRight}
+                      onChange={(e) => setLoadInputRight(e.target.value)}
                       className="h-9"
                       placeholder="kg"
                     />

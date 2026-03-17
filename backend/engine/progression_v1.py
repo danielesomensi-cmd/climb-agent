@@ -1091,6 +1091,14 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "updated_at": date_str,
             }
 
+        # --- Loading pin duration test (seconds per hand) ---
+        elif exercise_id == "lp_duration_test":
+            value = item.get("lp_duration_test_seconds")
+            hand = str(item.get("hand") or "").lower()
+            if value is None or hand not in ("right", "left"):
+                continue
+            at[f"lp_duration_test_{hand}_seconds"] = float(value)
+
         # --- Loading pin max test 5s ---
         elif exercise_id == "lp_max_test_5s":
             hand = str(item.get("hand") or "").lower()

@@ -8269,7 +8269,9 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp",
-        "intensity_pct": 0.60
+        "intensity_pct": 0.60,
+        "test_field": "lp_duration_test_seconds",
+        "test_unit": "seconds"
       },
       "load_model": "external_load",
       "unilateral": true,
