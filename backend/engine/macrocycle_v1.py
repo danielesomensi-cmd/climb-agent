@@ -366,14 +366,14 @@ def _adjust_domain_weights(
     - Axes with score > 75 → -0.03
     Then renormalize to sum = 1.0.
     """
-    # Map profile axes to domain weight keys
+    # Map profile axes to domain weight keys (5 axes → 5 domains)
+    # core_prehab remains as a fixed domain weight per phase, no longer driven by an axis.
     axis_to_weight = {
         "finger_strength": "finger_strength",
         "pulling_strength": "pulling_strength",
         "power_endurance": "power_endurance",
         "technique": "technique",
         "endurance": "volume_climbing",  # endurance maps to climbing volume
-        "body_composition": "core_prehab",
     }
 
     adjusted = dict(base_weights)

@@ -280,58 +280,12 @@ def _compute_endurance(
     return _clamp(score)
 
 
-def _compute_body_composition(
-    body: Dict[str, Any],
-    finger_score: int,
-    tests: Optional[Dict[str, Any]] = None,
-) -> int:
-    bf = body.get("body_fat_pct")
-    if bf is not None:
-        if bf <= 10:
-            score = 95.0
-        elif bf <= 12:
-            score = 85.0
-        elif bf <= 14:
-            score = 78.0
-        elif bf <= 16:
-            score = 70.0
-        elif bf <= 18:
-            score = 60.0
-        elif bf <= 20:
-            score = 50.0
-        elif bf <= 25:
-            score = 35.0
-        else:
-            score = 20.0
-    else:
-        # Estimate from finger strength score — if strong for weight, good composition
-        score = min(70.0, finger_score * 0.9)
-
-    # L-sit hold modifier (9c test tier 2: core + hip flexors)
-    tests = tests or {}
-    l_sit = tests.get("l_sit_hold_seconds")
-    if l_sit is not None:
-        l_sit = float(l_sit)
-        if l_sit >= 30:
-            score += 5
-        elif l_sit >= 20:
-            score += 3
-        elif l_sit >= 10:
-            pass  # +0
-        elif l_sit >= 5:
-            score -= 3
-        else:
-            score -= 5
-
-    return _clamp(score)
-
-
 # ---------------------------------------------------------------------------
 # Main entry point
 # ---------------------------------------------------------------------------
 
 def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any]) -> Dict[str, int]:
-    """Compute the 6-axis assessment profile (each axis 0-100).
+    """Compute the 5-axis assessment profile (each axis 0-100).
 
     Args:
         assessment: The assessment dict from user_state (body, experience, grades, tests, self_eval).
@@ -339,7 +293,7 @@ def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any])
 
     Returns:
         Dict with keys: finger_strength, pulling_strength, power_endurance,
-        technique, endurance, body_composition — each an int 0-100.
+        technique, endurance — each an int 0-100.
     """
     body = assessment.get("body") or {}
     experience = assessment.get("experience") or {}
@@ -355,7 +309,6 @@ def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any])
     pe = _compute_power_endurance(grades, self_eval, tests, target_grade)
     technique = _compute_technique(grades, self_eval)
     endurance = _compute_endurance(pe, experience, self_eval, tests)
-    body_comp = _compute_body_composition(body, finger, tests)
 
     return {
         "finger_strength": finger,
@@ -363,5 +316,4 @@ def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any])
         "power_endurance": pe,
         "technique": technique,
         "endurance": endurance,
-        "body_composition": body_comp,
     }
