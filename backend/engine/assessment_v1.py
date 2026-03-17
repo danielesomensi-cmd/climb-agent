@@ -1,4 +1,4 @@
-"""Assessment engine v1 — compute 6-axis profile from raw assessment data."""
+"""Assessment engine v1 — compute 5-axis profile from raw assessment data."""
 
 from __future__ import annotations
 

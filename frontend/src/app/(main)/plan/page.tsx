@@ -34,7 +34,6 @@ const DOMAIN_LABELS: Record<string, string> = {
   power_endurance: "Power endurance",
   technique: "Technique",
   endurance: "Endurance",
-  body_composition: "Body composition",
   power: "Power",
   strength: "Strength",
   conditioning: "Conditioning",

@@ -8,7 +8,6 @@ const AXES: { key: keyof AssessmentProfile; label: string }[] = [
   { key: "power_endurance", label: "Power End." },
   { key: "technique", label: "Technique" },
   { key: "endurance", label: "Endurance" },
-  { key: "body_composition", label: "Body Comp." },
 ];
 
 interface RadarChartProps {
