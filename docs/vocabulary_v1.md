@@ -784,7 +784,32 @@ Past-week overrides are kept for history but are never read by the planner.
 
 ---
 
-### 5.8 Assessment profile axes
+### 5.8 Exercise sort category (A121)
+
+Derived at resolution time from `role`, `domain`, and `pattern` fields — NOT stored in exercise JSON.
+Used to reorder exercises within a resolved session based on macrocycle phase.
+
+14 values:
+- `warmup` — general/specific warm-up
+- `activation` — scapular, rotator cuff activation
+- `aerobic_pure` — ARC, continuous climbing, regeneration
+- `threshold` — threshold climbing, route volume
+- `strength_neural` — max hangs, contact strength, finger max strength
+- `power` — limit bouldering, explosive pulling
+- `pe_intervals` — 4×4, linked boulders, route intervals
+- `finger_endurance` — repeaters, density hangs, Lopez subhangs
+- `pulling_supplementary` — weighted pull-ups, rows, lock-offs
+- `technique` — drills (footwork, body position, constraints)
+- `core` — hollow hold, L-sit, front lever, handstand
+- `antagonist_prehab` — push exercises, prehab (elbow/finger/shoulder/wrist)
+- `cooldown` — stretching, flexibility, mobility
+- `main_unclassified` — fallback (priority 6), never discarded
+
+Sort order varies by phase. See `backend/engine/exercise_ordering.py:PHASE_SORT_ORDER`.
+
+---
+
+### 5.9 Assessment profile axes
 
 The 5 normalized axes (0-100) of the assessment radar:
 

@@ -1087,6 +1087,7 @@ def resolve_session(
     user_state_override: Optional[Dict[str, Any]] = None,
     write_output: bool = True,
     user_id: Optional[str] = None,
+    phase: Optional[str] = None,
 ) -> Dict[str, Any]:
     user_state = user_state_override if user_state_override is not None else load_user_state(repo_root)
     limitation_map = normalize_limitations(user_state) if user_state else {}
@@ -1434,6 +1435,39 @@ def resolve_session(
         enriched_ei = enriched["sessions"][0]["exercise_instances"]
         session_instance["resolved_session"]["exercise_instances"] = enriched_ei
         exercise_instances = enriched_ei
+
+    # ---------------------------
+    # A121: Phase-aware exercise ordering
+    # ---------------------------
+    _effective_phase = phase
+    if _effective_phase is None and user_state:
+        # Derive phase from macrocycle + today's date
+        macro = user_state.get("macrocycle") or {}
+        phases = macro.get("phases") or []
+        start_date_str = macro.get("start_date")
+        if phases and start_date_str:
+            from datetime import date as _date, timedelta as _td
+            try:
+                _today = _date.today()
+                _mc_start = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+                _cum = 0
+                for _p in phases:
+                    _dur = _p.get("duration_weeks", 1)
+                    _ps = _mc_start + _td(weeks=_cum)
+                    _pe = _ps + _td(weeks=_dur)
+                    if _today < _pe:
+                        _effective_phase = _p.get("phase_id") or _p.get("id")
+                        break
+                    _cum += _dur
+                else:
+                    _effective_phase = phases[-1].get("phase_id") or phases[-1].get("id")
+            except (ValueError, TypeError):
+                pass
+    if _effective_phase:
+        from backend.engine.exercise_ordering import sort_exercises_by_phase, enforce_ordering_constraints
+        exercise_instances = sort_exercises_by_phase(exercise_instances, _effective_phase)
+        exercise_instances = enforce_ordering_constraints(exercise_instances, _effective_phase)
+        session_instance["resolved_session"]["exercise_instances"] = exercise_instances
 
     # ---------------------------
     # P0 contract: resolution_status
