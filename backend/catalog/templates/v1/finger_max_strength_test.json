@@ -29,12 +29,12 @@
     {
       "block_id": "main",
       "type": "main_set",
-      "exercise_id": "max_hang_5s",
+      "exercise_id": "max_hang_7s",
       "prescription": {
         "sets": 5,
-        "work_seconds": 5,
+        "work_seconds": 7,
         "rest_between_sets_seconds": 180,
-        "notes": "Test protocol: find your 5s max hang total load on 20mm. Rest fully between sets."
+        "notes": "Test protocol: find your 7s max hang total load on 20mm (MVC-7). Rest fully between sets."
       },
       "role": ["main"],
       "domain": ["finger_strength"]

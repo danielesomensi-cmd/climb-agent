@@ -359,7 +359,7 @@ class TestFeedbackUpdatesPulling:
     """Test that weighted_pullup test feedback updates baselines.pulling."""
 
     def test_weighted_pullup_test_creates_pulling_baseline(self):
-        """Weighted pullup test feedback → baselines.pulling with source='test_session'."""
+        """Weighted pullup 2RM test feedback → baselines.pulling with source='test_session' (D84)."""
         state = _user_state_with_pullup_1rm(bodyweight=77.0, pullup_1rm_total=120.0)
 
         log_entry = {
@@ -379,14 +379,18 @@ class TestFeedbackUpdatesPulling:
         updated = apply_feedback(log_entry, state)
 
         pulling = updated["baselines"]["pulling"]
-        assert pulling["weighted_pullup_1rm_total_kg"] == 135.0
+        # D84: 2RM = 135.0 → estimated 1RM via Epley/Brzycki average
+        from backend.engine.progression_v1 import estimate_1rm_from_2rm
+        expected_1rm = estimate_1rm_from_2rm(135.0)
+        assert pulling["weighted_pullup_2rm_total_kg"] == 135.0
+        assert pulling["weighted_pullup_1rm_estimated_kg"] == expected_1rm
+        assert pulling["weighted_pullup_1rm_total_kg"] == expected_1rm  # legacy compat
         assert pulling["bodyweight_kg"] == 77.0
-        assert pulling["max_external_load_kg"] == 58.0
         assert pulling["source"] == "test_session"
         assert pulling["updated_at"] == "2026-02-01"
 
     def test_weighted_pullup_test_from_external_load(self):
-        """Feedback with used_external_load_kg (no total) → correct derivation."""
+        """Feedback with used_external_load_kg (no total) → correct 2RM derivation (D84)."""
         state = _user_state_with_pullup_1rm(bodyweight=77.0, pullup_1rm_total=120.0)
 
         log_entry = {
@@ -406,9 +410,11 @@ class TestFeedbackUpdatesPulling:
         updated = apply_feedback(log_entry, state)
 
         pulling = updated["baselines"]["pulling"]
-        # total = 77 + 58 = 135
-        assert pulling["weighted_pullup_1rm_total_kg"] == 135.0
-        assert pulling["max_external_load_kg"] == 58.0
+        # total 2RM = 77 + 58 = 135
+        from backend.engine.progression_v1 import estimate_1rm_from_2rm
+        expected_1rm = estimate_1rm_from_2rm(135.0)
+        assert pulling["weighted_pullup_2rm_total_kg"] == 135.0
+        assert pulling["weighted_pullup_1rm_total_kg"] == expected_1rm
 
 
 # ── Similarity group "pull" ──

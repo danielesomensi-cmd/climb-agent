@@ -81,27 +81,36 @@ class TestRepeaterWritesHistoryAndAssessment:
 
 class TestWeightedPullupWritesHistoryAndAssessment:
     def test_weighted_pullup_writes_history_and_assessment(self):
+        """D84: 2RM → estimated 1RM via Epley/Brzycki average."""
         state = _base_state(75.0)
         log = _test_log("2026-03-03", "test_max_weighted_pullup", [
             {"exercise_id": "weighted_pullup", "used_total_load_kg": 110.0, "feedback_label": "ok"},
         ])
         result = apply_feedback(log, state)
-        assert result["assessment"]["tests"]["weighted_pullup_1rm_total_kg"] == 110.0
+        from backend.engine.progression_v1 import estimate_1rm_from_2rm
+        expected_1rm = estimate_1rm_from_2rm(110.0)
+        assert result["assessment"]["tests"]["weighted_pullup_2rm_total_kg"] == 110.0
+        assert result["assessment"]["tests"]["weighted_pullup_1rm_estimated_kg"] == expected_1rm
+        assert result["assessment"]["tests"]["weighted_pullup_1rm_total_kg"] == expected_1rm
         history = result["tests"]["pulling_strength"]
         assert len(history) == 1
-        assert history[0]["total_load_kg"] == 110.0
+        assert history[0]["total_load_2rm_kg"] == 110.0
+        assert history[0]["test_id"] == "weighted_pullup_2rm"
 
     def test_pullup_external_to_total_derivation(self):
-        """When only used_external_load_kg is provided, total is derived from BW."""
+        """When only used_external_load_kg is provided, total 2RM is derived from BW (D84)."""
         state = _base_state(75.0)
         log = _test_log("2026-03-03", "test_max_weighted_pullup", [
             {"exercise_id": "weighted_pullup", "used_external_load_kg": 35.0, "feedback_label": "ok"},
         ])
         result = apply_feedback(log, state)
-        assert result["assessment"]["tests"]["weighted_pullup_1rm_total_kg"] == 110.0
+        from backend.engine.progression_v1 import estimate_1rm_from_2rm
+        expected_1rm = estimate_1rm_from_2rm(110.0)
+        assert result["assessment"]["tests"]["weighted_pullup_2rm_total_kg"] == 110.0
+        assert result["assessment"]["tests"]["weighted_pullup_1rm_total_kg"] == expected_1rm
         history = result["tests"]["pulling_strength"]
-        assert history[0]["total_load_kg"] == 110.0
-        assert history[0]["external_load_kg"] == 35.0
+        assert history[0]["total_load_2rm_kg"] == 110.0
+        assert history[0]["external_load_2rm_kg"] == 35.0
 
 
 # ---------------------------------------------------------------------------

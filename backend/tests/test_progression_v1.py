@@ -233,7 +233,7 @@ def test_two_hard_feedbacks_enqueue_retest_and_retest_updates_official_test():
     after_2 = apply_feedback(log_hard_2, after_1)
     queue = after_2.get("test_queue") or []
     assert len(queue) == 1
-    assert queue[0]["test_id"] == "max_hang_5s_total_load"
+    assert queue[0]["test_id"] == "max_hang_7s_total_load"
     assert queue[0]["recommended_by_date"] == "2026-01-13"
 
     test_log = {

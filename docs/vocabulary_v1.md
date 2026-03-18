@@ -70,7 +70,7 @@ Allowed `finger_training_device` values:
 
 When `loading_pin` is selected:
 - Resolver selects `lp_*` exercises instead of hangboard equivalents
-- Test scheduling uses `lp_max_test_5s` instead of `max_hang_5s_total_load`
+- Test scheduling uses `lp_max_test_5s` instead of `max_hang_7s_total_load` (D85: was max_hang_5s_total_load)
 - Repeater test uses `lp_repeater_test` (test_lp_repeater session) instead of `repeater_hang_7_3`
 - Duration test uses `lp_duration_test` instead of `test_max_hang_duration_20mm`
 - Baselines use `baselines.loading_pin` (per-hand)
@@ -603,8 +603,13 @@ When present, `user_state.test_queue[]` entries use canonical keys:
 - `reason`
 - `created_at` (`YYYY-MM-DD`, derived from feedback/log date; no wall-clock)
 
-Current canonical `test_id` introduced in v1:
-- `max_hang_5s_total_load`
+Current canonical `test_id` values:
+- `max_hang_7s_total_load` (D85: was `max_hang_5s_total_load`)
+- `weighted_pullup_2rm` (D84: was `weighted_pullup_1rm`)
+- `max_pullups_bw` (D84b: bodyweight pull-up gate test)
+- `repeater_7_3_max_sets_20mm`
+- `lp_max_lift_5s`
+- `lp_repeater_7_3`
 
 ### 3.1 Template structure
 

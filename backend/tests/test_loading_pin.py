@@ -490,7 +490,7 @@ class TestLPTestScheduling:
             }
             state = apply_feedback(log, state)
         queue = state.get("test_queue", [])
-        assert any(q["test_id"] == "max_hang_5s_total_load" for q in queue)
+        assert any(q["test_id"] == "max_hang_7s_total_load" for q in queue)
 
     def test_lp_user_enqueues_lp_test(self):
         state = _lp_state()

@@ -1,11 +1,11 @@
 {
-  "id": "test_max_hang_5s",
+  "id": "test_max_hang_7s",
   "name": "Test Session — Max Hang 7s Total Load (MVC-7)",
-  "version": "1.1",
+  "version": "1.0",
   "intent": {
     "primary_goal": "finger_max_strength",
     "secondary_goals": [],
-    "notes": "Deterministic v1 test session for max_hang_7s total load baseline refresh (D85). Session ID kept as test_max_hang_5s for backward compatibility with planner_v2."
+    "notes": "Deterministic v1 test session for max_hang_7s total load baseline refresh (D85)."
   },
   "required_equipment": ["hangboard"],
   "compatibility": {

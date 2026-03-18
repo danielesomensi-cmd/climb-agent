@@ -203,9 +203,10 @@ class TestTestSessionsResolveExactExercise(unittest.TestCase):
             if e.get("category") == "main_strength"
         ]
 
-    def test_max_hang_5s_resolves_exact_exercise(self):
+    def test_max_hang_7s_resolves_exact_exercise(self):
+        """D85: test_max_hang_5s session now resolves to max_hang_7s via updated template."""
         ids = self._main_exercise_ids("test_max_hang_5s")
-        self.assertEqual(ids, ["max_hang_5s"])
+        self.assertEqual(ids, ["max_hang_7s"])
 
     def test_repeater_7_3_resolves_exact_exercise(self):
         ids = self._main_exercise_ids("test_repeater_7_3")
@@ -215,8 +216,8 @@ class TestTestSessionsResolveExactExercise(unittest.TestCase):
         ids = self._main_exercise_ids("test_max_weighted_pullup")
         self.assertEqual(ids, ["weighted_pullup"])
 
-    def test_max_weighted_pullup_1rm_protocol(self):
-        """Weighted pullup test session must use 1RM protocol: reps==1 and rest>=180."""
+    def test_max_weighted_pullup_2rm_protocol(self):
+        """D84: Weighted pullup test session must use 2RM protocol: reps==2 and rest>=180."""
         us = _make_user_state(self.base_us, "gym", "blocx")
         result = _resolve("test_max_weighted_pullup", us)
         self.assertEqual(result["resolution_status"], "success")
@@ -226,10 +227,10 @@ class TestTestSessionsResolveExactExercise(unittest.TestCase):
         ]
         self.assertEqual(len(wp), 1)
         p = wp[0]["prescription"]
-        self.assertEqual(p["reps"], 1, "1RM test must have reps == 1")
+        self.assertEqual(p["reps"], 2, "2RM test must have reps == 2")
         self.assertGreaterEqual(
             p["rest_between_sets_seconds"], 180,
-            "1RM test must have rest >= 180s between sets",
+            "2RM test must have rest >= 180s between sets",
         )
 
 

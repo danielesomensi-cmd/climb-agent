@@ -306,7 +306,8 @@
       "category": "main_strength",
       "time_min": 20,
       "role": [
-        "main"
+        "main",
+        "test"
       ],
       "domain": [
         "finger_strength",
@@ -949,59 +950,6 @@
         "Stage 2: 60% MVC immediately",
         "Stage 3: 45% MVC immediately",
         "Record time to failure each stage"
-      ],
-      "video_url": null
-    },
-    {
-      "id": "med_test",
-      "name": "Maximum Effort Duration Test (MED)",
-      "category": "test",
-      "time_min": 10,
-      "role": [
-        "test"
-      ],
-      "domain": [
-        "finger_strength",
-        "endurance"
-      ],
-      "pattern": "isometric_hang",
-      "intensity_level": "high",
-      "fatigue_cost": 6,
-      "recency_group": "finger_test",
-      "equipment_required": [
-        "hangboard"
-      ],
-      "location_allowed": [
-        "home",
-        "gym"
-      ],
-      "contraindications": [],
-      "prescription_defaults": {
-        "sets": 1,
-        "reps": null,
-        "work_seconds": null,
-        "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": null,
-        "notes": "Hang at 45% bodyweight until failure. Record total seconds."
-      },
-      "attributes": {
-        "edge_mm": 20,
-        "grip": "half_crimp"
-      },
-      "load_model": "total_load",
-      "stress_tags": {
-        "elbow": "medium",
-        "fingers": "high",
-        "cns": "medium",
-        "skin": "medium"
-      },
-      "description": "Lattice Maximum Effort Duration test: single continuous hang at 45% MVC to failure to assess finger endurance capacity.",
-      "cues": [
-        "45% of MVC-7",
-        "Continuous hang to absolute failure",
-        "Record exact seconds",
-        "Use for tracking endurance progress",
-        "Typically 60-300s for trained climbers"
       ],
       "video_url": null
     },
@@ -7506,6 +7454,8 @@
         "test_unit": "seconds"
       },
       "description": "Maximum duration dead hang on 20mm edge at body weight only. Measures finger endurance baseline.",
+      "benchmarks": null,
+      "benchmark_note": "Nessun benchmark pubblicato per BW hang su 20mm. Test informativo: registra il tempo per tracking longitudinale. Se >90s il test perde potere discriminante. In v2 verrà sostituito dal PE test a 60% MVC-7 (D91).",
       "cues": [
         "Use 20mm edge, body weight only (no added weight)",
         "Half-crimp grip, shoulders engaged",
@@ -7554,6 +7504,15 @@
         "test_unit": "seconds"
       },
       "description": "Maximum duration L-sit hold with straight legs on parallettes, dip bars, or floor. Measures core and hip flexor strength.",
+      "benchmarks": {
+        "source": "Empirici (coaching community, non peer-reviewed)",
+        "scale": [
+          {"label": "Scarso", "range_s": [0, 10], "note": "Possibile limitazione di flessibilità, non solo core"},
+          {"label": "Intermedio", "range_s": [10, 20]},
+          {"label": "Avanzato", "range_s": [20, 35]},
+          {"label": "Elite", "range_s": [35, 999]}
+        ]
+      },
       "cues": [
         "Straight legs, toes pointed",
         "Lock elbows, depress shoulders",
@@ -7607,6 +7566,58 @@
         "Keep knees straight, toes pointing up",
         "Measure distance between inner heels in cm",
         "Warm up before testing — do not force"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "test_max_pullup_bw",
+      "name": "Max Reps Bodyweight Pull-Up Test",
+      "category": "test_measurement",
+      "time_min": 5,
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "pulling_test",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Max reps bodyweight pull-ups to form failure. No kipping, no pause at bottom."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "load_model": "bodyweight_only",
+      "attributes": {
+        "test_field": "max_pullups_bw",
+        "test_unit": "reps"
+      },
+      "description": "Test di forza-resistenza trazione. Presa pronata, larghezza spalle, full ROM (braccia quasi distese → mento sopra barra). No kipping, no pause a braccia tese. Contare reps fino a cedimento di forma.",
+      "cues": [
+        "Pronated grip, shoulder width",
+        "Full ROM: near-straight arms to chin over bar",
+        "No kipping, no pausing at dead hang",
+        "Count reps until form breaks",
+        "One attempt only, fully rested"
       ],
       "video_url": null
     },

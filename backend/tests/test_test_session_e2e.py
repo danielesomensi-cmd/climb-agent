@@ -208,20 +208,28 @@ class TestWeightedPullupUpdatesPullingStrength:
         )
         return apply_feedback(log, state)
 
-    def test_assessment_tests_weighted_pullup_total_kg(self):
+    def test_assessment_tests_weighted_pullup_2rm_and_1rm(self):
+        """D84: 2RM is stored directly, 1RM is estimated via Epley/Brzycki average."""
         result = self._run()
-        assert result["assessment"]["tests"]["weighted_pullup_1rm_total_kg"] == 105.0
+        from backend.engine.progression_v1 import estimate_1rm_from_2rm
+        expected_1rm = estimate_1rm_from_2rm(105.0)
+        assert result["assessment"]["tests"]["weighted_pullup_2rm_total_kg"] == 105.0
+        assert result["assessment"]["tests"]["weighted_pullup_1rm_estimated_kg"] == expected_1rm
+        # Legacy compat: 1rm field points to estimated value
+        assert result["assessment"]["tests"]["weighted_pullup_1rm_total_kg"] == expected_1rm
 
-    def test_pullup_history_entry_total_load(self):
+    def test_pullup_history_entry_2rm_load(self):
+        """D84: history entry stores 2RM values and estimated 1RM."""
         result = self._run()
         history = result["tests"]["pulling_strength"]
         assert len(history) == 1
-        assert history[0]["total_load_kg"] == 105.0
+        assert history[0]["total_load_2rm_kg"] == 105.0
+        assert history[0]["test_id"] == "weighted_pullup_2rm"
 
     def test_pullup_history_entry_external_load(self):
         result = self._run()
         history = result["tests"]["pulling_strength"]
-        assert history[0]["external_load_kg"] == 30.0
+        assert history[0]["external_load_2rm_kg"] == 30.0
 
 
 # ---------------------------------------------------------------------------
@@ -503,7 +511,9 @@ class TestSessionIdFallbackNoPlannedField:
             [{"exercise_id": "weighted_pullup", "used_total_load_kg": 105.0, "feedback_label": "ok"}],
         )
         result = apply_feedback(log, state)
-        assert result["assessment"]["tests"]["weighted_pullup_1rm_total_kg"] == 105.0
+        from backend.engine.progression_v1 import estimate_1rm_from_2rm
+        expected_1rm = estimate_1rm_from_2rm(105.0)
+        assert result["assessment"]["tests"]["weighted_pullup_1rm_total_kg"] == expected_1rm
 
     def test_non_test_session_id_still_blocked(self):
         """A non-test session_id (e.g. strength_long) must not write to assessment.tests."""

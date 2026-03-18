@@ -161,9 +161,9 @@ def test_test_queue_inserts_test_max_hang_session_with_constraints():
         default_gym_id="work_gym",
         test_queue=[
             {
-                "test_id": "max_hang_5s_total_load",
+                "test_id": "max_hang_7s_total_load",
                 "recommended_by_date": "2026-01-08",
-                "reason": "two_recent_hard_feedback_on_max_hang_5s",
+                "reason": "two_recent_hard_feedback_on_max_hang",
                 "created_at": "2026-01-06",
             }
         ],
@@ -174,13 +174,13 @@ def test_test_queue_inserts_test_max_hang_session_with_constraints():
         (day["date"], session)
         for day in days
         for session in day["sessions"]
-        if session["session_id"] == "test_max_hang_5s"
+        if session["session_id"] == "test_max_hang_7s"
     ]
     assert len(inserted) == 1
     test_date, test_session = inserted[0]
     assert test_session["slot"] == "morning"
     assert test_session["tags"]["test"] is True
-    assert test_session["test_id"] == "max_hang_5s_total_load"
+    assert test_session["test_id"] == "max_hang_7s_total_load"
 
     hard_days = [day for day in days if any(s["tags"]["hard"] for s in day["sessions"])]
     assert len(hard_days) <= 3

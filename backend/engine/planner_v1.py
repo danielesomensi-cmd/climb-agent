@@ -27,6 +27,7 @@ SESSION_LIBRARY: Dict[str, SessionSpec] = {
     "complementary_conditioning": SessionSpec("complementary_conditioning", "accessory", 4, ("home", "gym"), False, False),
     "deload_recovery": SessionSpec("deload_recovery", "recovery", 5, ("home", "gym", "outdoor"), False, False),
     "test_max_hang_5s": SessionSpec("test_max_hang_5s", "strength", 1, ("home", "gym"), True, True),
+    "test_max_hang_7s": SessionSpec("test_max_hang_7s", "strength", 1, ("home", "gym"), True, True),
 }
 
 GYM_CAPABILITY_REQUIREMENTS_ANY: Dict[str, Tuple[str, ...]] = {
@@ -236,7 +237,7 @@ def _test_candidates(test_queue: Optional[List[Dict[str, Any]]], start_date: str
     in_window = []
     for item in test_queue:
         test_id = str(item.get("test_id") or "")
-        if test_id != "max_hang_5s_total_load":
+        if test_id not in ("max_hang_5s_total_load", "max_hang_7s_total_load"):
             continue
         rec_by = item.get("recommended_by_date")
         if not isinstance(rec_by, str):
@@ -285,7 +286,7 @@ def generate_week_plan(
         if remaining_tests:
             slot_info = day_availability["morning"]
             if slot_info["available"]:
-                test_spec = SESSION_LIBRARY["test_max_hang_5s"]
+                test_spec = SESSION_LIBRARY.get("test_max_hang_7s") or SESSION_LIBRARY["test_max_hang_5s"]
                 if hard_days < hard_cap_per_week and not (last_finger_date and (current_date - last_finger_date).days <= 1):
                     test_location = _pick_location(test_spec, slot_info, locations)
                     if test_location:
@@ -310,7 +311,7 @@ def generate_week_plan(
                             )
                         )
                         sessions[-1]["tags"]["test"] = True
-                        sessions[-1]["test_id"] = "max_hang_5s_total_load"
+                        sessions[-1]["test_id"] = remaining_tests[0].get("test_id") or "max_hang_7s_total_load"
                         hard_days += 1
                         last_finger_date = current_date
                         remaining_tests.pop(0)

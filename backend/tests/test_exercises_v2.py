@@ -67,7 +67,7 @@ HANGBOARD_IDS = {
     "one_arm_hang_assisted", "pinch_block_training",
     # New hangboard exercises
     "max_hang_10s", "horst_7_53", "repeater_15_15",
-    "lopez_subhangs", "critical_force_test", "med_test",
+    "lopez_subhangs", "critical_force_test",
 }
 
 
@@ -103,7 +103,7 @@ def test_technique_have_focus(exercise_map):
 
 NEW_EXERCISE_IDS = {
     "max_hang_10s", "horst_7_53", "repeater_15_15", "lopez_subhangs",
-    "critical_force_test", "med_test",
+    "critical_force_test", "test_max_pullup_bw",
     "campus_touches", "campus_max_ladders", "campus_switches", "campus_sprint_endurance",
     "emom_bouldering", "otm_bouldering", "linked_boulders_circuit",
     "arc_training_progressive", "threshold_long_intervals", "regeneration_climbing",

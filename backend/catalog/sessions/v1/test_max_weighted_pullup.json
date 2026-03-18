@@ -1,11 +1,11 @@
 {
   "id": "test_max_weighted_pullup",
-  "name": "Test Session \u2014 Weighted Pullup 1RM",
-  "version": "1.0",
+  "name": "Test Session \u2014 Weighted Pullup 2RM",
+  "version": "1.1",
   "intent": {
     "primary_goal": "pulling_strength",
     "secondary_goals": [],
-    "notes": "Weighted pullup 1RM baseline refresh."
+    "notes": "Weighted pullup 2RM baseline refresh (D84). 1RM estimated via Epley/Brzycki average."
   },
   "required_equipment": ["pullup_bar"],
   "compatibility": {
@@ -39,5 +39,5 @@
   "tags": {
     "test": true
   },
-  "test_id": "weighted_pullup_1rm"
+  "test_id": "weighted_pullup_2rm"
 }

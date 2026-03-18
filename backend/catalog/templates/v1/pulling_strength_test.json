@@ -1,7 +1,7 @@
 {
   "id": "pulling_strength_test",
-  "name": "Pulling Strength (Test Protocol)",
-  "version": "1.0",
+  "name": "Pulling Strength (Test Protocol — 2RM)",
+  "version": "1.1",
   "category": "strength",
   "sport": "climbing",
 
@@ -14,17 +14,34 @@
 
   "blocks": [
     {
+      "block_id": "gate_bw_pullup",
+      "type": "test_measurement",
+      "exercise_id": "test_max_pullup_bw",
+      "prescription": {
+        "sets": 1,
+        "notes": "Max reps bodyweight pull-ups to form failure. If score < 15, skip weighted test below."
+      },
+      "role": ["test"],
+      "domain": ["strength_general"]
+    },
+    {
       "block_id": "main",
       "type": "main_set",
       "exercise_id": "weighted_pullup",
       "prescription": {
         "sets": 5,
-        "reps": 1,
-        "rest_between_sets_seconds": 240,
-        "notes": "1RM test protocol. Pyramid up: set 1 ~50% est. max, set 2 ~70%, set 3 ~85%, set 4 ~95%, set 5 max attempt. Full rest between sets. Stop if form breaks."
+        "reps": 2,
+        "rest_between_sets_seconds": 180,
+        "test_protocol": "2RM",
+        "notes": "2RM test protocol (D84). Pyramid up: set 1 ~50% est. max, set 2 ~70%, set 3 ~85%, set 4 ~95%, set 5 max attempt. 2 reps per set. Full rest between sets. Stop if form breaks."
       },
       "role": ["main"],
-      "domain": ["strength_general"]
+      "domain": ["strength_general"],
+      "gate": {
+        "exercise_id": "test_max_pullup_bw",
+        "field": "max_pullups_bw",
+        "min_value": 15
+      }
     },
     {
       "block_id": "test_l_sit",

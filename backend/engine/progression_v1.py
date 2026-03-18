@@ -135,7 +135,6 @@ HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
     "max_hang_10s": 0.85,
     "max_hang_7s": 0.88,
     "max_hang_ladder": 0.80,
-    "med_test": 0.70,
     "one_arm_hang_assisted": 0.85,
     "repeater_15_15": 0.65,
     "repeater_hang_7_3": 0.70,
@@ -158,6 +157,13 @@ DEFAULT_ADJUSTMENT_POLICY = {
     "hard": {"pct_range": [-0.05, 0.00]},
     "very_hard": {"pct_range": [-0.15, -0.05]},
 }
+
+
+def estimate_1rm_from_2rm(total_load_kg: float) -> float:
+    """Estimate 1RM from 2RM using average of Epley and Brzycki formulas (D84)."""
+    epley = total_load_kg * (1 + 2 / 30)
+    brzycki = total_load_kg * (36 / (37 - 2))
+    return round((epley + brzycki) / 2, 1)
 
 
 def canonical_feedback_label(item: Dict[str, Any]) -> str:
@@ -226,7 +232,7 @@ def _is_fresh(updated_at: str | None, target_date: str | None, freshness_days: i
 
 
 def _relevant_setup(exercise_id: str, source: Dict[str, Any]) -> Dict[str, Any]:
-    if exercise_id == "max_hang_5s":
+    if exercise_id in ("max_hang_5s", "max_hang_7s"):
         return {
             "edge_mm": source.get("edge_mm"),
             "grip": source.get("grip"),
@@ -243,7 +249,7 @@ def _progression_setup_and_key(exercise_id: str, source: Dict[str, Any]) -> Tupl
 
 
 def _setup_key(exercise_id: str, setup: Dict[str, Any]) -> str:
-    if exercise_id == "max_hang_5s":
+    if exercise_id in ("max_hang_5s", "max_hang_7s"):
         pairs = [
             ("edge_mm", setup.get("edge_mm")),
             ("grip", setup.get("grip")),
@@ -640,9 +646,11 @@ def _estimate_hangboard_baseline(user_state: Dict[str, Any]) -> None:
         source = "estimated_from_grade"
     else:
         # Priority 2: estimate from max weighted pullup test (B121 key fix)
+        tests_data = ((user_state.get("assessment") or {}).get("tests") or {})
+        # D84: prefer estimated 1RM from 2RM, fall back to legacy direct 1RM
         pullup_1rm_total = (
-            ((user_state.get("assessment") or {}).get("tests") or {})
-            .get("weighted_pullup_1rm_total_kg")
+            tests_data.get("weighted_pullup_1rm_estimated_kg")
+            or tests_data.get("weighted_pullup_1rm_total_kg")
         )
         if pullup_1rm_total is not None:
             estimated = float(pullup_1rm_total) * 0.85
@@ -685,9 +693,11 @@ def _estimate_pulling_baseline(user_state: Dict[str, Any]) -> None:
     if bodyweight <= 0:
         return
 
+    tests_data = ((user_state.get("assessment") or {}).get("tests") or {})
+    # D84: prefer estimated 1RM from 2RM, fall back to legacy direct 1RM
     pullup_1rm_total = (
-        ((user_state.get("assessment") or {}).get("tests") or {})
-        .get("weighted_pullup_1rm_total_kg")
+        tests_data.get("weighted_pullup_1rm_estimated_kg")
+        or tests_data.get("weighted_pullup_1rm_total_kg")
     )
     if pullup_1rm_total is None:
         return
@@ -729,7 +739,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             is_unilateral = inst.get("unilateral") if "unilateral" in inst else (_load_catalog_cache().get(ex_id, {}).get("unilateral", False))
 
             # --- total_load: special-case exercises with unique logic ---
-            if ex_id == "max_hang_5s":
+            if ex_id in ("max_hang_5s", "max_hang_7s"):
                 suggested.update(_max_hang_suggested(user_state, prescription, exercise_attrs=inst.get("attributes")))
                 inject_source = dict(prescription)
                 inject_source.update(inst.get("suggested") or {})
@@ -855,7 +865,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 })
 
             # Hangboard total_load exercises (repeaters, density hangs, etc.) — data-driven (ARCH-2)
-            if load_model == "total_load" and ex_id not in ("max_hang_5s", "weighted_pullup"):
+            if load_model == "total_load" and ex_id not in ("max_hang_5s", "max_hang_7s", "weighted_pullup"):
                 hb_suggested = _hangboard_suggested(user_state, ex_id, prescription, exercise_attrs=inst.get("attributes"))
                 suggested.update(hb_suggested)
                 entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
@@ -873,7 +883,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 # Warn if counterweight is required (external load is negative)
                 if (suggested.get("suggested_external_load_kg") or 0) < 0:
                     suggested["load_warning"] = (
-                        "counterweight_required — consider re-running max_hang_5s test"
+                        "counterweight_required — consider re-running max_hang_7s test"
                     )
 
             # Loading pin exercises (unilateral, external_load) — data-driven (ARCH-2)
@@ -984,8 +994,39 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
     for item in feedback_items:
         exercise_id = str(item.get("exercise_id") or "")
 
-        # --- Max hang 5s ---
-        if exercise_id == "max_hang_5s":
+        # --- Max hang 7s (D85 — primary test) ---
+        if exercise_id == "max_hang_7s":
+            used_total = item.get("used_total_load_kg")
+            if used_total is None:
+                continue
+            total = _round_half_step(float(used_total))
+            external = _round_half_step(total - bodyweight)
+            tests = updated.setdefault("tests", {})
+            max_strength = tests.setdefault("max_strength", [])
+            entry = {
+                "test_id": "max_hang_7s_total_load",
+                "date": date_str,
+                "exercise_id": "max_hang_7s",
+                "bodyweight_kg": bodyweight,
+                "total_load_kg": total,
+                "external_load_kg": external,
+                "setup": {"hang_seconds": 7},
+                "freshness_policy": {"stale_after_days": 90},
+                "confidence": "high",
+            }
+            max_strength.append(entry)
+            max_strength.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
+            baselines = updated.setdefault("baselines", {}).setdefault("hangboard", [{"max_total_load_kg": total}])
+            if baselines:
+                baselines[0]["max_total_load_kg"] = total
+                baselines[0]["source"] = "test"
+                baselines[0]["updated_at"] = date_str
+                baselines[0]["hang_seconds"] = 7
+            # Write scalar to assessment.tests
+            at["max_hang_20mm_7s_total_kg"] = total
+
+        # --- Max hang 5s (legacy — still accepted for backward compat) ---
+        elif exercise_id == "max_hang_5s":
             used_total = item.get("used_total_load_kg")
             if used_total is None:
                 continue
@@ -1011,7 +1052,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 baselines[0]["max_total_load_kg"] = total
                 baselines[0]["source"] = "test"
                 baselines[0]["updated_at"] = date_str
-            # Write scalar to assessment.tests
+            # Write scalar to assessment.tests (legacy key)
             at["max_hang_20mm_5s_total_kg"] = total
 
         # --- Repeater 7/3 ---
@@ -1056,7 +1097,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 continue
             at["hip_flexibility_cm"] = float(value)
 
-        # --- Weighted pull-up ---
+        # --- Weighted pull-up (D84: now 2RM protocol, derive 1RM) ---
         elif exercise_id == "weighted_pullup":
             used_total = item.get("used_total_load_kg")
             used_external = item.get("used_external_load_kg")
@@ -1064,32 +1105,51 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 used_total = float(used_external) + bodyweight
             if used_total is None:
                 continue
-            total = _round_half_step(float(used_total))
-            external = _round_half_step(total - bodyweight)
+            total_2rm = _round_half_step(float(used_total))
+            external_2rm = _round_half_step(total_2rm - bodyweight)
+            estimated_1rm = estimate_1rm_from_2rm(total_2rm)
+            pulling_ratio = round((total_2rm / bodyweight) * 100, 1) if bodyweight > 0 else 0.0
             tests = updated.setdefault("tests", {})
             pull_history = tests.setdefault("pulling_strength", [])
             pull_history.append({
-                "test_id": "weighted_pullup_1rm",
+                "test_id": "weighted_pullup_2rm",
                 "date": date_str,
                 "exercise_id": "weighted_pullup",
                 "bodyweight_kg": bodyweight,
-                "total_load_kg": total,
-                "external_load_kg": external,
+                "total_load_2rm_kg": total_2rm,
+                "external_load_2rm_kg": external_2rm,
+                "estimated_1rm_kg": estimated_1rm,
+                "pulling_ratio_pct": pulling_ratio,
                 "freshness_policy": {"stale_after_days": 90},
                 "confidence": "high",
             })
             pull_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
-            # Write scalar to assessment.tests
-            at["weighted_pullup_1rm_total_kg"] = total
+            # Write scalars to assessment.tests
+            at["weighted_pullup_2rm_total_kg"] = total_2rm
+            at["weighted_pullup_1rm_estimated_kg"] = estimated_1rm
+            at["pulling_ratio_pct"] = pulling_ratio
+            # Legacy compat: keep 1rm field pointing to estimated value
+            at["weighted_pullup_1rm_total_kg"] = estimated_1rm
             # B121: update baselines.pulling from test
             pulling_baselines = updated.setdefault("baselines", {})
             pulling_baselines["pulling"] = {
-                "weighted_pullup_1rm_total_kg": total,
+                "weighted_pullup_2rm_total_kg": total_2rm,
+                "weighted_pullup_1rm_estimated_kg": estimated_1rm,
+                "weighted_pullup_1rm_total_kg": estimated_1rm,  # legacy compat
                 "bodyweight_kg": bodyweight,
-                "max_external_load_kg": external,
+                "bodyweight_at_test_kg": bodyweight,
+                "max_external_load_kg": _round_half_step(estimated_1rm - bodyweight),
+                "pulling_ratio_pct": pulling_ratio,
                 "source": "test_session",
                 "updated_at": date_str,
             }
+
+        # --- Bodyweight pull-up max reps test (D84b) ---
+        elif exercise_id == "test_max_pullup_bw":
+            value = item.get("max_pullups_bw")
+            if value is None:
+                continue
+            at["max_pullups_bw"] = int(value)
 
         # --- Loading pin duration test (seconds per hand) ---
         elif exercise_id == "lp_duration_test":
@@ -1190,7 +1250,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 }
             )
 
-            if exercise_id == "max_hang_5s":
+            if exercise_id in ("max_hang_5s", "max_hang_7s"):
                 if feedback_label in {"hard", "very_hard"}:
                     max_hang_hard += 1
                     max_hang_easy = 0
@@ -1287,7 +1347,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
 
     # Determine which test to enqueue based on finger device preference
     finger_device = ((updated.get("preferences") or {}).get("finger_training_device"))
-    test_id_for_retest = "lp_max_test_5s" if finger_device == "loading_pin" else "max_hang_5s_total_load"
+    test_id_for_retest = "lp_max_test_5s" if finger_device == "loading_pin" else "max_hang_7s_total_load"
 
     if max_hang_hard >= 2:
         _enqueue_test(
@@ -1295,7 +1355,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             test_id=test_id_for_retest,
             date_value=date_value,
             offset_days=7,
-            reason="two_recent_hard_feedback_on_max_hang_5s",
+            reason="two_recent_hard_feedback_on_max_hang",
         )
     elif max_hang_easy >= 2:
         _enqueue_test(
@@ -1303,7 +1363,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             test_id=test_id_for_retest,
             date_value=date_value,
             offset_days=14,
-            reason="two_recent_easy_feedback_on_max_hang_5s",
+            reason="two_recent_easy_feedback_on_max_hang",
         )
 
     _update_test_from_log(log_entry, updated, bodyweight)

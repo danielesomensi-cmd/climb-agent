@@ -51,13 +51,12 @@ Assessment (6 dimensions → radar profile 0-100)
 - `generate_phase_week()` — planner_v2
 - `resolve_session()` — session resolver
 
-### Current Assessment: 6 Axes
-1. `finger_strength` — Max hang 20mm 5s (kg/BW)
+### Current Assessment: 5 Axes (D01: body_composition removed)
+1. `finger_strength` — Max hang 20mm 7s / MVC-7 (kg/BW) [D85]
 2. `finger_endurance` — Repeaters 7:3 x6 on 20mm, or Critical Force
-3. `pulling_strength` — Weighted pullup 1RM (kg/BW)
+3. `pulling_strength` — Weighted pullup 2RM (kg/BW), 1RM stimato via media Epley/Brzycki [D84]
 4. `power_endurance` — 4×4 bouldering or continuous route time
 5. `technique` — Onsight vs redpoint gap + self-report
-6. `body_composition` — BW, body fat %, force/weight ratio ← **TO BE REMOVED (D01)**
 
 ### Current Phases (Hörst 4-3-2-1)
 1. Endurance Base (3-4 wk)
@@ -124,29 +123,29 @@ Session RPE tracked. Session completion tracked.
 
 ---
 
-### D38: Add Brzycki 1RM estimation for pulling strength
+### D38: Brzycki/Epley 1RM estimation for pulling strength
 
-**What:** Implement Brzycki formula to estimate 1RM from submaximal test data.
+**What:** Estimate 1RM from submaximal test data. Primary use case: 2RM → 1RM (D84).
 
-**Formula:** `1RM = weight × (36 / (37 - reps))`
+**Formulas:**
+- Brzycki: `1RM = weight × (36 / (37 - reps))`
+- Epley: `1RM = weight × (1 + reps / 30)`
+- Used: average of both for 2RM → 1RM derivation
 
-**Use case:** When user can't do a true 1RM weighted pull-up (injury risk), they can do submaximal reps:
-- Example: 5 reps at +20kg → 1RM ≈ (BW+20) × 36/32
+**Primary use case (D84):** Test protocol is 2RM weighted pull-up. 1RM derived via `estimate_1rm_from_2rm()`.
+**Fallback:** If user does more than 2 reps (can't handle heavy load), Brzycki alone works for 1-10 reps.
 
-**Implementation:**
-- Add to onboarding: option to enter either true 1RM OR submaximal reps + load
-- If submaximal: compute estimated 1RM via Brzycki
-- Store both raw input and estimated 1RM
-- Use estimated 1RM for all pulling_strength axis calculations
-- Add accuracy note: Brzycki is most accurate for 1-10 reps, less accurate beyond 10
+**Implementation:** [DONE]
+- `estimate_1rm_from_2rm()` in `progression_v1.py` — averages Epley and Brzycki
+- `brzycki_1rm()` in `assessment_v1.py` — standalone Brzycki for general use
+- Store both 2RM raw and estimated 1RM in baselines.pulling and assessment.tests
 
-**Source:** Brzycki M (1993), standard in strength training. Used by Consuegra Ch.8.
+**Source:** Brzycki M (1993), Epley (1985). Used by Consuegra Ch.8, Lattice Training.
 
 **Acceptance criteria:**
-- [ ] Onboarding offers 1RM OR submaximal input option
-- [ ] Brzycki formula correctly computes 1RM
-- [ ] Estimated 1RM flows into pulling_strength axis
-- [ ] Validation: reject >10 reps with warning about accuracy
+- [x] Brzycki formula correctly computes 1RM
+- [x] Estimated 1RM flows into pulling_strength axis
+- [x] 2RM → 1RM estimation via Epley/Brzycki average (D84)
 
 ---
 
@@ -1511,6 +1510,29 @@ These rules apply ACROSS all sessions and must never be violated:
 
 ---
 
-*End of Claude Code Mega-Brief — 57 v1 decisions across 10 implementation sessions.*
+---
+
+## SESSION 1b: TEST PROTOCOL REVISION (D84-D91)
+
+**Decisions:** D84, D84b, D85, D86, D87, D88, D89, D90, D91
+**Estimated effort:** High (touches assessment, baselines, test_queue, progression)
+**Dependencies:** Session 1 (must be complete)
+**Status:** v1 items implemented 2026-03-18. v2 items (D87b, D89, D91) deferred.
+
+### Implemented in v1:
+- D85: Finger strength test 5s → 7s (MVC-7) — `max_hang_7s` is now primary test
+- D84: Pulling test 1RM → 2RM + 1RM estimation via `estimate_1rm_from_2rm()` + gate
+- D84b: New exercise `test_max_pullup_bw` — BW pull-up gate (score < 15 → skip weighted)
+- D86: Benchmark note for `test_max_hang_duration_20mm` (informational, no numeric ranges)
+- D88: Benchmarks for `test_l_sit_hold` (4-level scale: Scarso/Intermedio/Avanzato/Elite)
+- D90: Removed `med_test` from catalog and LOAD_MODEL_INTENSITY
+
+### Deferred to v2:
+- D87 Modalità B: PE diagnostic test (repeaters 60% to failure)
+- D89: Critical Force test (simplified, 2-point) — `critical_force_test` remains orphan in catalog
+- D91: New exercise `test_pe_repeaters_60` + `baselines.power_endurance`
+
+---
+
+*End of Claude Code Mega-Brief — 57 v1 decisions across 10 implementation sessions + Session 1b.*
 *Total references: ~260 across knowledge base.*
-*Ready for sequential implementation.*
