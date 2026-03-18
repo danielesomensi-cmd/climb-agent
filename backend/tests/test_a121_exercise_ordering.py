@@ -169,7 +169,7 @@ class TestAntiLoss:
             {"exercise_id": "a", "role": "main", "domain": "core"},
             {"exercise_id": "b", "role": "warmup", "domain": "mobility"},
         ]
-        result = sort_exercises_by_phase(exercises, "endurance_base")
+        result = sort_exercises_by_phase(exercises, "base")
         assert len(result) == 3
 
 
@@ -188,8 +188,8 @@ class TestPhaseOrdering:
             {"exercise_id": "core_plank", "role": "accessory", "domain": "core"},
             {"exercise_id": "pushup", "role": "accessory", "domain": "strength_general", "pattern": "push"},
         ]
-        result = sort_exercises_by_phase(exercises, "endurance_base")
-        result = enforce_ordering_constraints(result, "endurance_base")
+        result = sort_exercises_by_phase(exercises, "base")
+        result = enforce_ordering_constraints(result, "base")
         ids = [ex["exercise_id"] for ex in result]
 
         assert ids[0] == "warmup"
@@ -267,7 +267,7 @@ class TestConstraints:
             {"exercise_id": "arc", "role": "main", "domain": "aerobic_capacity"},
             {"exercise_id": "warmup", "role": "warmup", "domain": "mobility"},
         ]
-        result = enforce_ordering_constraints(exercises, "endurance_base")
+        result = enforce_ordering_constraints(exercises, "base")
         assert result[0]["exercise_id"] == "warmup"
 
     def test_cooldown_always_last(self):
@@ -276,7 +276,7 @@ class TestConstraints:
             {"exercise_id": "stretch", "role": "cooldown", "domain": "flexibility"},
             {"exercise_id": "core", "role": "accessory", "domain": "core"},
         ]
-        result = enforce_ordering_constraints(exercises, "endurance_base")
+        result = enforce_ordering_constraints(exercises, "base")
         assert result[-1]["exercise_id"] == "stretch"
 
     def test_arc_before_threshold(self):
@@ -285,7 +285,7 @@ class TestConstraints:
             {"exercise_id": "threshold", "role": "main", "domain": "endurance"},
             {"exercise_id": "arc", "role": "main", "domain": "aerobic_capacity"},
         ]
-        result = enforce_ordering_constraints(exercises, "endurance_base")
+        result = enforce_ordering_constraints(exercises, "base")
         ids = [ex["exercise_id"] for ex in result]
         assert ids.index("arc") < ids.index("threshold")
 
@@ -304,7 +304,7 @@ class TestConstraints:
             {"exercise_id": "core", "role": "accessory", "domain": "core"},
             {"exercise_id": "arc", "role": "main", "domain": "aerobic_capacity"},
         ]
-        result = enforce_ordering_constraints(exercises, "endurance_base")
+        result = enforce_ordering_constraints(exercises, "base")
         ids = [ex["exercise_id"] for ex in result]
         assert ids.index("arc") < ids.index("core")
 
@@ -329,12 +329,12 @@ class TestConstraints:
 class TestEdgeCases:
 
     def test_empty_list(self):
-        assert sort_exercises_by_phase([], "endurance_base") == []
-        assert enforce_ordering_constraints([], "endurance_base") == []
+        assert sort_exercises_by_phase([], "base") == []
+        assert enforce_ordering_constraints([], "base") == []
 
     def test_single_exercise(self):
         ex = [{"exercise_id": "arc", "role": "main", "domain": "aerobic_capacity"}]
-        result = sort_exercises_by_phase(ex, "endurance_base")
+        result = sort_exercises_by_phase(ex, "base")
         assert len(result) == 1 and result[0]["exercise_id"] == "arc"
 
     def test_unknown_phase_returns_unsorted(self):

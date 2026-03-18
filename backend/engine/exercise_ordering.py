@@ -163,7 +163,7 @@ def infer_sort_category(exercise: dict) -> str:
 # Phase sort order maps
 # ---------------------------------------------------------------------------
 PHASE_SORT_ORDER: Dict[str, Dict[str, int]] = {
-    "endurance_base": {
+    "base": {
         "warmup": 0,
         "activation": 1,
         "aerobic_pure": 2,
