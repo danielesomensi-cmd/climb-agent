@@ -1465,8 +1465,14 @@ def resolve_session(
                 pass
     if _effective_phase:
         from backend.engine.exercise_ordering import sort_exercises_by_phase, enforce_ordering_constraints
-        exercise_instances = sort_exercises_by_phase(exercise_instances, _effective_phase)
-        exercise_instances = enforce_ordering_constraints(exercise_instances, _effective_phase)
+        # Build catalog lookup: {exercise_id → {role, domain, pattern, ...}}
+        _catalog_lookup = {}
+        for _ex in exercises:
+            _eid = _ex.get("id") or _ex.get("exercise_id") or ""
+            if _eid:
+                _catalog_lookup[_eid] = _ex
+        exercise_instances = sort_exercises_by_phase(exercise_instances, _effective_phase, _catalog_lookup)
+        exercise_instances = enforce_ordering_constraints(exercise_instances, _effective_phase, _catalog_lookup)
         session_instance["resolved_session"]["exercise_instances"] = exercise_instances
 
     # ---------------------------

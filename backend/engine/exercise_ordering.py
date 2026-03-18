@@ -9,7 +9,7 @@ returns the original unsorted list as safe fallback.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -61,14 +61,29 @@ def _first_pattern(exercise: dict) -> str:
     return _norm(pattern)
 
 
-def infer_sort_category(exercise: dict) -> str:
+def infer_sort_category(
+    exercise: dict,
+    catalog_lookup: Optional[Dict[str, dict]] = None,
+) -> str:
     """
     Derive sort category from existing exercise fields (role, domain, pattern).
+
+    If the exercise instance doesn't have role/domain/pattern (e.g. resolved
+    instances), falls back to catalog_lookup[exercise_id] for those fields.
+
     Returns one of SORT_CATEGORIES. NEVER returns None.
     """
-    roles = _roles(exercise)
-    domain = _first_domain(exercise)
-    pattern = _first_pattern(exercise)
+    # Merge with catalog data if instance lacks role/domain/pattern
+    effective = exercise
+    if not exercise.get("role") and not exercise.get("domain") and catalog_lookup:
+        ex_id = exercise.get("exercise_id") or exercise.get("id") or ""
+        catalog_entry = catalog_lookup.get(ex_id)
+        if catalog_entry:
+            effective = {**catalog_entry, **exercise}
+
+    roles = _roles(effective)
+    domain = _first_domain(effective)
+    pattern = _first_pattern(effective)
 
     # --- Priority 0: prehab role (before domain check!) ---
     # Fix for active_finger_curls: role=prehab must win over domain=finger_strength
@@ -249,12 +264,20 @@ PHASE_SORT_ORDER: Dict[str, Dict[str, int]] = {
 # ---------------------------------------------------------------------------
 # Sort function
 # ---------------------------------------------------------------------------
-def sort_exercises_by_phase(exercises: list, phase: str) -> list:
+def sort_exercises_by_phase(
+    exercises: list,
+    phase: str,
+    catalog_lookup: Optional[Dict[str, dict]] = None,
+) -> list:
     """
     Sort exercises by phase-aware physiological priority.
 
     PURE REORDER — never filters, never drops exercises.
     Same exercises in, same exercises out, guaranteed.
+
+    catalog_lookup: {exercise_id → {role, domain, pattern, ...}} from the
+    exercise catalog. Needed when sorting resolved instances that lack
+    role/domain/pattern fields.
     """
     if not exercises:
         return exercises
@@ -267,7 +290,7 @@ def sort_exercises_by_phase(exercises: list, phase: str) -> list:
         return exercises
 
     def sort_key(ex):
-        category = infer_sort_category(ex)
+        category = infer_sort_category(ex, catalog_lookup)
         priority = sort_order.get(category, 6)
         return (priority, ex.get("exercise_id", ""))
 
@@ -289,7 +312,11 @@ def sort_exercises_by_phase(exercises: list, phase: str) -> list:
 # ---------------------------------------------------------------------------
 # Hard constraint enforcement
 # ---------------------------------------------------------------------------
-def enforce_ordering_constraints(exercises: list, phase: str) -> list:
+def enforce_ordering_constraints(
+    exercises: list,
+    phase: str,
+    catalog_lookup: Optional[Dict[str, dict]] = None,
+) -> list:
     """
     Validate and fix hard ordering constraints AFTER sort.
 
@@ -303,7 +330,7 @@ def enforce_ordering_constraints(exercises: list, phase: str) -> list:
     result = list(exercises)
 
     def _cat(ex):
-        return infer_sort_category(ex)
+        return infer_sort_category(ex, catalog_lookup)
 
     # --- Constraint 1: Warmup always first ---
     warmup_indices = [i for i, ex in enumerate(result) if _cat(ex) == "warmup"]

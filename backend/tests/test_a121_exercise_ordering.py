@@ -349,3 +349,20 @@ class TestEdgeCases:
         for ex in [{}, {"exercise_id": "x"}, {"role": "main"}]:
             cat = infer_sort_category(ex)
             assert cat in SORT_CATEGORIES
+
+
+# =====================================================================
+# 3.7 — Guard test: phase keys must match macrocycle
+# =====================================================================
+
+def test_phase_sort_order_keys_match_macrocycle_phases():
+    """Le chiavi di PHASE_SORT_ORDER devono corrispondere ESATTAMENTE
+    ai phase_id usati dal macrociclo. Se qualcuno aggiunge/rinomina una fase
+    in macrocycle_v1 senza aggiornare exercise_ordering, questo test rompe."""
+    from backend.engine.macrocycle_v1 import PHASE_ORDER
+
+    assert set(PHASE_SORT_ORDER.keys()) == set(PHASE_ORDER), (
+        f"Mismatch! "
+        f"In macrocycle ma non in sort order: {set(PHASE_ORDER) - set(PHASE_SORT_ORDER.keys())}. "
+        f"In sort order ma non in macrocycle: {set(PHASE_SORT_ORDER.keys()) - set(PHASE_ORDER)}."
+    )
