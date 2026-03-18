@@ -1463,11 +1463,13 @@ def resolve_session(
                     _effective_phase = phases[-1].get("phase_id") or phases[-1].get("id")
             except (ValueError, TypeError):
                 pass
+    logger.warning("A121 DEBUG: _effective_phase=%s, exercise count=%d", _effective_phase, len(exercise_instances))
     if _effective_phase:
         from backend.engine.exercise_ordering import sort_exercises_by_phase, enforce_ordering_constraints
         exercise_instances = sort_exercises_by_phase(exercise_instances, _effective_phase)
         exercise_instances = enforce_ordering_constraints(exercise_instances, _effective_phase)
         session_instance["resolved_session"]["exercise_instances"] = exercise_instances
+    logger.warning("A121 DEBUG: post-sort order=%s", [ex.get("exercise_id", "?") for ex in exercise_instances])
 
     # ---------------------------
     # P0 contract: resolution_status
