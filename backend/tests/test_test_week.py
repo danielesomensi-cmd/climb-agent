@@ -56,7 +56,8 @@ class TestGenerateTestWeekBasic:
                     test_sessions.append((day["date"], s["session_id"]))
         assert len(test_sessions) == 3
         session_ids = {s[1] for s in test_sessions}
-        assert session_ids == {"test_max_hang_5s", "test_max_weighted_pullup", "test_repeater_7_3"}
+        # B128: without pulling_baseline, pulling test defaults to BW-only
+        assert session_ids == {"test_max_hang_5s", "test_pullup_bw", "test_repeater_7_3"}
 
 
 class TestFingerSpacing:

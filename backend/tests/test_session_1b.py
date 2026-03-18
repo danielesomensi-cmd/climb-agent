@@ -107,15 +107,17 @@ class TestD84_2RM:
         assert main_block["prescription"]["rest_between_sets_seconds"] == 180
         assert main_block["prescription"]["test_protocol"] == "2RM"
 
-    def test_pulling_template_has_gate_block(self, templates):
+    def test_pulling_template_no_gate_block(self, templates):
+        """B128: gate_bw_pullup removed — BW test is now a separate session."""
         t = templates["pulling_strength_test"]
-        gate_block = next(b for b in t["blocks"] if b["block_id"] == "gate_bw_pullup")
-        assert gate_block["exercise_id"] == "test_max_pullup_bw"
+        block_ids = [b["block_id"] for b in t["blocks"]]
+        assert "gate_bw_pullup" not in block_ids
 
-    def test_pulling_template_main_has_gate(self, templates):
+    def test_pulling_template_main_no_gate(self, templates):
+        """B128: main block no longer has gate — routing is handled by planner."""
         t = templates["pulling_strength_test"]
         main_block = next(b for b in t["blocks"] if b["block_id"] == "main")
-        assert main_block["gate"]["min_value"] == 15
+        assert "gate" not in main_block
 
     def test_session_test_id_is_2rm(self, sessions):
         s = sessions["test_max_weighted_pullup"]
@@ -205,3 +207,52 @@ class TestD90_MedTestRemoved:
 
     def test_critical_force_test_still_exists(self, exercises):
         assert "critical_force_test" in exercises
+
+
+# ---------------------------------------------------------------------------
+# B128: Pull-up gate separation
+# ---------------------------------------------------------------------------
+
+
+class TestB128_PullupGateSeparation:
+    """BW pull-up test and weighted 2RM are NEVER in the same session."""
+
+    def test_bw_session_exists(self, sessions):
+        s = sessions["test_pullup_bw"]
+        assert s["test_id"] == "max_pullups_bw"
+
+    def test_bw_template_exists(self, templates):
+        t = templates["pulling_strength_test_bw"]
+        main = next(b for b in t["blocks"] if b["block_id"] == "main")
+        assert main["exercise_id"] == "test_max_pullup_bw"
+
+    def test_weighted_session_has_no_bw_block(self, templates):
+        """The weighted template must NOT contain max reps BW as a block."""
+        t = templates["pulling_strength_test"]
+        ex_ids = [b.get("exercise_id") for b in t["blocks"]]
+        assert "test_max_pullup_bw" not in ex_ids
+
+    def test_routing_with_pulling_baseline(self):
+        from backend.engine.planner_v2 import _pick_pulling_test_session
+        result = _pick_pulling_test_session({"max_total_load_kg": 100}, None)
+        assert result == "test_max_weighted_pullup"
+
+    def test_routing_no_baseline_no_bw(self):
+        from backend.engine.planner_v2 import _pick_pulling_test_session
+        result = _pick_pulling_test_session(None, None)
+        assert result == "test_pullup_bw"
+
+    def test_routing_no_baseline_bw_above_15(self):
+        from backend.engine.planner_v2 import _pick_pulling_test_session
+        result = _pick_pulling_test_session(None, 20)
+        assert result == "test_max_weighted_pullup"
+
+    def test_routing_no_baseline_bw_below_15(self):
+        from backend.engine.planner_v2 import _pick_pulling_test_session
+        result = _pick_pulling_test_session(None, 10)
+        assert result == "test_pullup_bw"
+
+    def test_routing_no_baseline_bw_exactly_15(self):
+        from backend.engine.planner_v2 import _pick_pulling_test_session
+        result = _pick_pulling_test_session(None, 15)
+        assert result == "test_max_weighted_pullup"

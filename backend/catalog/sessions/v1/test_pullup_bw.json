@@ -1,0 +1,43 @@
+{
+  "id": "test_pullup_bw",
+  "name": "Pull-Up Assessment (Bodyweight)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "pulling_strength",
+    "secondary_goals": [],
+    "notes": "BW-only pull-up assessment (B128). If result >= 15, next pulling test will be weighted 2RM."
+  },
+  "required_equipment": ["pullup_bar"],
+  "compatibility": {
+    "slot": ["short", "long"],
+    "sports": ["climbing"]
+  },
+  "time_budget": {
+    "target_duration_min": 30,
+    "hard_cap_min": 45
+  },
+  "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "template_id": "pulling_strength_test_bw",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ],
+  "tags": {
+    "test": true
+  },
+  "test_id": "max_pullups_bw"
+}

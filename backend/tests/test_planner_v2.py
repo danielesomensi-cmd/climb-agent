@@ -619,7 +619,8 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
 
     def test_pullup_test_at_gym_when_home_lacks_pullup_bar(self):
         """test_max_weighted_pullup requires pullup_bar.
-        Home has NO pullup_bar → planner must place it at gym."""
+        Home has NO pullup_bar → planner must place it at gym.
+        B128: pass pulling_baseline to route to weighted test."""
         from backend.engine.planner_v2 import generate_test_week
         plan = generate_test_week(
             start_date="2026-03-02",
@@ -628,6 +629,7 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
             gyms=self._full_gym(),
             default_gym_id="test_gym",
             home_equipment=["hangboard", "band", "dumbbell"],  # NO pullup_bar
+            pulling_baseline={"max_total_load_kg": 100},
         )
         for day in plan["weeks"][0]["days"]:
             for s in day["sessions"]:
@@ -639,7 +641,8 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
 
     def test_pullup_test_at_home_when_home_has_pullup_bar(self):
         """test_max_weighted_pullup requires pullup_bar.
-        Home HAS pullup_bar + preference is home → planner places it at home."""
+        Home HAS pullup_bar + preference is home → planner places it at home.
+        B128: pass pulling_baseline to route to weighted test."""
         from backend.engine.planner_v2 import generate_test_week
         plan = generate_test_week(
             start_date="2026-03-02",
@@ -647,6 +650,7 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
             allowed_locations=["gym", "home"],
             gyms=self._full_gym(),
             default_gym_id="test_gym",
+            pulling_baseline={"max_total_load_kg": 100},
             home_equipment=["hangboard", "band", "dumbbell", "pullup_bar"],  # HAS pullup_bar
         )
         for day in plan["weeks"][0]["days"]:

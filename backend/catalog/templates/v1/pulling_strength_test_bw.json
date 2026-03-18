@@ -1,0 +1,28 @@
+{
+  "id": "pulling_strength_test_bw",
+  "name": "Pull-Up Assessment (Bodyweight Only)",
+  "version": "1.0",
+  "category": "strength",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "none",
+    "cns": "medium",
+    "elbows": "medium",
+    "skin": "none"
+  },
+
+  "blocks": [
+    {
+      "block_id": "main",
+      "type": "test_measurement",
+      "exercise_id": "test_max_pullup_bw",
+      "prescription": {
+        "sets": 1,
+        "notes": "Max reps bodyweight pull-ups to form failure. If result >= 15, next pulling test session will be weighted 2RM."
+      },
+      "role": ["test"],
+      "domain": ["strength_general"]
+    }
+  ]
+}

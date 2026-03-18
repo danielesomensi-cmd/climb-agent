@@ -256,7 +256,7 @@ export function ProfileAssessmentEditor({
                 <div className="space-y-3">
                   {fingerDevice === "loading_pin" ? (
                     <div className="space-y-1.5">
-                      <Label>Loading Pin Max Lift 5s — external kg (per hand)</Label>
+                      <Label>Loading Pin Max Lift 7s — external kg (per hand)</Label>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1">
                           <Label htmlFor="pa-lp-right" className="text-xs text-muted-foreground">Right</Label>
@@ -284,7 +284,7 @@ export function ProfileAssessmentEditor({
                     </div>
                   ) : (
                     <div className="space-y-1.5">
-                      <Label htmlFor="pa-maxhang">Max hang 20mm / 5s — total kg</Label>
+                      <Label htmlFor="pa-maxhang">Max hang 20mm / 7s (MVC-7) — total kg</Label>
                       <Input
                         id="pa-maxhang"
                         type="number"
@@ -296,7 +296,7 @@ export function ProfileAssessmentEditor({
                     </div>
                   )}
                   <div className="space-y-1.5">
-                    <Label htmlFor="pa-pullup">Weighted pullup 1RM — total kg</Label>
+                    <Label htmlFor="pa-pullup">Weighted pullup 2RM — total kg</Label>
                     <Input
                       id="pa-pullup"
                       type="number"

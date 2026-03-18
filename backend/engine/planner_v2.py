@@ -50,6 +50,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
     "test_lp_repeater": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
     "test_max_weighted_pullup": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["pullup_bar"]},
+    "test_pullup_bw": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["pullup_bar"]},
     "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "finger_maintenance_gym": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["hangboard"]},
     "route_endurance_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"]},
@@ -384,6 +385,24 @@ def _make_session_entry(
     }
 
 
+def _pick_pulling_test_session(
+    pulling_baseline: Optional[Dict[str, Any]],
+    max_pullups_bw: Optional[int],
+) -> str:
+    """B128: Choose pulling test session based on user state.
+
+    - Has pulling baseline (from onboarding) → weighted 2RM directly
+    - No baseline, no BW result → BW-only test
+    - No baseline, BW >= 15 → weighted 2RM
+    - No baseline, BW < 15 → BW-only re-test
+    """
+    if pulling_baseline:
+        return "test_max_weighted_pullup"
+    if max_pullups_bw is not None and max_pullups_bw >= 15:
+        return "test_max_weighted_pullup"
+    return "test_pullup_bw"
+
+
 def generate_phase_week(
     *,
     phase_id: str,
@@ -404,6 +423,8 @@ def generate_phase_week(
     inject_tests: bool = False,
     finger_device: Optional[str] = None,
     user_age: Optional[int] = None,
+    pulling_baseline: Optional[Dict[str, Any]] = None,
+    max_pullups_bw: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -1002,10 +1023,12 @@ def generate_phase_week(
         # Finger test depends on device preference (A120)
         _finger_test_sid = "test_lp_max_5s" if finger_device == "loading_pin" else "test_max_hang_5s"
         _repeater_test_sid = "test_lp_repeater" if finger_device == "loading_pin" else "test_repeater_7_3"
+        # B128: pulling test routing — skip BW gate for users with pulling baseline
+        _pulling_test_sid = _pick_pulling_test_session(pulling_baseline, max_pullups_bw)
         _test_schedule = [
             (_finger_test_sid, True),
             (_repeater_test_sid, True),
-            ("test_max_weighted_pullup", False),
+            (_pulling_test_sid, False),
         ]
         test_placed_offsets: set = set()
         for test_sid, _required in _test_schedule:
@@ -1167,10 +1190,11 @@ def generate_phase_week(
 # ---------------------------------------------------------------------------
 
 # Test schedule: (session_id, is_finger).  Finger tests need 48h spacing.
-_TEST_SESSIONS = [
-    ("test_max_hang_5s", True),          # finger test — day 1
-    ("test_max_weighted_pullup", False),  # non-finger — day 2 (can be consecutive)
-    ("test_repeater_7_3", True),          # finger test — day 3 (48h gap from max_hang)
+# B128: pulling test session is resolved dynamically via _pick_pulling_test_session()
+_TEST_SESSIONS_TEMPLATE = [
+    ("test_max_hang_5s", True),   # finger test — day 1
+    (None, False),                # pulling test — day 2 (resolved at runtime)
+    ("test_repeater_7_3", True),  # finger test — day 3 (48h gap from max_hang)
 ]
 
 _FILLER_SESSIONS = ["prehab_maintenance", "flexibility_full"]
@@ -1183,11 +1207,14 @@ def generate_test_week(
     gyms: Optional[Sequence[Dict[str, Any]]] = None,
     default_gym_id: Optional[str] = None,
     home_equipment: Optional[List[str]] = None,
+    pulling_baseline: Optional[Dict[str, Any]] = None,
+    max_pullups_bw: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Create a 1-week assessment plan with 3 test sessions on non-consecutive days.
 
     Places test_max_hang_5s and test_repeater_7_3 (both finger) with at least a
-    48-hour gap.  test_max_weighted_pullup is placed between them (not a finger test).
+    48-hour gap.  The pulling test is placed between them (not a finger test).
+    B128: pulling test is routed based on user state (BW-only vs weighted 2RM).
     Remaining available days get prehab/flexibility filler sessions.
     """
     locations = list(allowed_locations or ["gym", "home"])
@@ -1211,6 +1238,9 @@ def generate_test_week(
         if has_slot:
             available_offsets.append(offset)
 
+    # B128: resolve pulling test session dynamically
+    _pulling_sid = _pick_pulling_test_session(pulling_baseline, max_pullups_bw)
+
     # Place 3 test sessions on non-consecutive available days
     # Strategy: pick first available for max_hang, then next non-finger for pullup,
     # then next available ≥2 days after max_hang for repeater
@@ -1223,13 +1253,13 @@ def generate_test_week(
         placed[off] = "test_max_hang_5s"
         break
 
-    # Place weighted_pullup (non-finger) on next available day after hang
+    # Place pulling test (non-finger) on next available day after hang
     pullup_offset = None
     if hang_offset is not None:
         for off in available_offsets:
             if off > hang_offset and off not in placed:
                 pullup_offset = off
-                placed[off] = "test_max_weighted_pullup"
+                placed[off] = _pulling_sid
                 break
 
     # Place repeater (finger) at least 2 days after max_hang

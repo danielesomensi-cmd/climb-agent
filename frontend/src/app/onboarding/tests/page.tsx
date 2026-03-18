@@ -37,9 +37,9 @@ function buildTestSections(device: "hangboard" | "loading_pin"): TestSection[] {
   if (device === "hangboard") {
     sections.push({
       key: "max_hang",
-      title: "Max Hang 20mm/5s",
+      title: "Max Hang 20mm/7s (MVC-7)",
       description:
-        "Hang on a 20mm edge for 5 seconds with the maximum possible weight (half crimp). Include your body weight in the total.",
+        "Hang on a 20mm edge for 7 seconds with the maximum possible weight (half crimp). Include your body weight in the total.",
       fieldKey: "max_hang_20mm_5s_total_kg",
       fieldLabel: "Total load (kg)",
       example: "E.g.: weigh 77kg + 48kg added = 125kg total",
@@ -49,9 +49,9 @@ function buildTestSections(device: "hangboard" | "loading_pin"): TestSection[] {
   } else {
     sections.push({
       key: "lp_max_lift",
-      title: "Loading Pin Max Lift (5s)",
+      title: "Loading Pin Max Lift (7s)",
       description:
-        "Find the heaviest load you can hold for 5 seconds on a 20mm edge block with half crimp. Test each hand separately — external load only (do not add bodyweight).",
+        "Find the heaviest load you can hold for 7 seconds on a 20mm edge block with half crimp. Test each hand separately — external load only (do not add bodyweight).",
       fieldKey: "lp_max_lift_5s_right_kg",
       fieldLabel: "Max lift (kg)",
       example: "E.g.: 45 kg right, 42 kg left",
@@ -66,9 +66,9 @@ function buildTestSections(device: "hangboard" | "loading_pin"): TestSection[] {
   sections.push(
     {
       key: "weighted_pullup",
-      title: "Weighted Pull-up 1RM",
+      title: "Weighted Pull-up 2RM",
       description:
-        "The maximum weight you can complete one full pull-up with.",
+        "The maximum weight you can complete two full pull-ups with (strict form).",
       fieldKey: "weighted_pullup_1rm_total_kg",
       fieldLabel: "Total load (kg)",
       example: "E.g.: weigh 77kg + 45kg = 122kg total",

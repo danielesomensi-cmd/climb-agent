@@ -14,17 +14,6 @@
 
   "blocks": [
     {
-      "block_id": "gate_bw_pullup",
-      "type": "test_measurement",
-      "exercise_id": "test_max_pullup_bw",
-      "prescription": {
-        "sets": 1,
-        "notes": "Max reps bodyweight pull-ups to form failure. If score < 15, skip weighted test below."
-      },
-      "role": ["test"],
-      "domain": ["strength_general"]
-    },
-    {
       "block_id": "main",
       "type": "main_set",
       "exercise_id": "weighted_pullup",
@@ -36,12 +25,7 @@
         "notes": "2RM test protocol (D84). Pyramid up: set 1 ~50% est. max, set 2 ~70%, set 3 ~85%, set 4 ~95%, set 5 max attempt. 2 reps per set. Full rest between sets. Stop if form breaks."
       },
       "role": ["main"],
-      "domain": ["strength_general"],
-      "gate": {
-        "exercise_id": "test_max_pullup_bw",
-        "field": "max_pullups_bw",
-        "min_value": 15
-      }
+      "domain": ["strength_general"]
     },
     {
       "block_id": "test_l_sit",
