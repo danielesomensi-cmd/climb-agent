@@ -64,20 +64,13 @@ These must be done before paid launch.
 
 ## Priority 2.5 — Catalog audit
 
-### B129 — Verificare domain di threshold_climbing nel catalogo
+### ~~B129 — Verificare domain di threshold_climbing nel catalogo~~ ✅
 
 **Priority:** P2.5 (catalog audit)
-**Status:** Open
+**Status:** Closed (2026-03-19)
 **Discovered:** 2026-03-18 durante A121
 
-**Problema:** `threshold_climbing` ha `domain: ["aerobic_capacity"]` nel catalogo, quindi la derivazione A121 lo classifica come `aerobic_pure` — stessa categoria di ARC Training. Attualmente l'ordine è corretto per caso (stable sort), ma non è garantito dalla logica di ordinamento.
-
-**Da verificare nella knowledge base:**
-- Il Threshold Climbing (sub-onsight, "moderate pump acceptable") è fisiologicamente aerobic_capacity o è un dominio diverso (endurance? anaerobic_capacity?)?
-- Se il domain è sbagliato, va corretto nel catalogo
-- Se il domain è corretto, serve un override nella derivazione sort o un sub-sorting dentro la stessa categoria
-
-**Non implementare** — solo roadmap. La verifica fisiologica va fatta nel progetto "climb-agent knowledge base".
+**Fix:** domain cambiato da `aerobic_capacity` → `power_endurance` in `exercises.json`. Filtro sessione `route_endurance_gym.json` aggiornato di conseguenza. Sort category ora correttamente derivata come `pe_intervals` (priority 6 in Base) anziché `aerobic_pure` (priority 2). Commit: `5ab1100`.
 
 ### C130 — Audit sistematico domain/intensity/pattern di tutti gli esercizi
 
