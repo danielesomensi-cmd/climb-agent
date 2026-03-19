@@ -2571,7 +2571,7 @@
         "main"
       ],
       "domain": [
-        "aerobic_capacity"
+        "power_endurance"
       ],
       "pattern": "climbing_continuous",
       "intensity_level": "medium",

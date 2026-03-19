@@ -5,6 +5,18 @@
 > **Source:** Knowledge base Topics 01-10 + Consuegra synthesis + decision consolidation D01-D83
 > **How to use:** Execute sessions 1-10 in order. Each session is self-contained with: context, decisions, specifications, acceptance criteria, and files to modify.
 
+## PROGRESS TRACKER
+- [x] Session 1: Assessment & Onboarding (D01, D38, D68, D80, D81, D83) — completata 2026-03-17
+- [ ] Session 2: Exercise Database — Strength & Hangboard
+- [ ] Session 3: Exercise Database — Conditioning, Injury Prevention & Drills
+- [ ] Session 4: Session Planner — Warm-Up
+- [ ] Session 5: Session Planner — Intensity System (EL)
+- [ ] Session 6: Session Planner — Hangboard Logic
+- [ ] Session 7: Session Planner — Endurance & Intervals
+- [ ] Session 8: Session Planner — Conditioning, Technique & Ratio
+- [ ] Session 9: Periodization & Load Management
+- [ ] Session 10: Coaching Cues, Safety & UX
+
 ---
 
 ## TABLE OF CONTENTS
@@ -43,7 +55,7 @@ Assessment (6 dimensions → radar profile 0-100)
 - Runtime logic: Pure Python, deterministic, no LLM
 - Persistence: JSON/JSONL (Railway) → Supabase Postgres (planned)
 - Frontend: Next.js 14 + React + Tailwind + shadcn/ui (PWA)
-- Current counts: 981 tests, 167 exercises, 31 sessions, 25 templates, 42 API endpoints
+- Current counts: 1033 tests, 167 exercises, 31 sessions, 25 templates, 42 API endpoints
 
 ### Key Code Functions
 - `compute_assessment_profile()` — assessment_v1
@@ -271,6 +283,12 @@ Session RPE tracked. Session completion tracked.
 - [ ] Multiplier applied to hard session spacing
 - [ ] User can override in settings
 - [ ] <40 users unaffected (1.0× default)
+
+### Session 1 — Note implementazione (2026-03-17)
+
+- **D68 implementata parzialmente:** `has_recent_injury` derivato dal sistema `limitations` esistente (~95% copertura). Deferred post-launch: domande esplicite onboarding, data model `injury_history`, warning pain level ≥3.
+- **D84 (pulling strength 2RM):** decisione in fase di revisione separata (revisione completa protocolli massimali). NON inclusa in questo mega brief — sarà integrata quando finalizzata.
+- **Test:** 1033 passing, 0 failed. File nuovi: test_age_gates.py, test_youth_cap.py, test_brzycki.py.
 
 ---
 

@@ -36,7 +36,7 @@
         "primary": {
           "filters": {
             "role": ["main"],
-            "domain": ["aerobic_capacity"],
+            "domain": ["power_endurance"],
             "pattern": ["climbing_continuous"],
             "equipment": ["gym_routes"]
           }
