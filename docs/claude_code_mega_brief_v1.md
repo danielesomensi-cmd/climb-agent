@@ -55,7 +55,7 @@ Assessment (6 dimensions → radar profile 0-100)
 - Runtime logic: Pure Python, deterministic, no LLM
 - Persistence: JSON/JSONL (Railway) → Supabase Postgres (planned)
 - Frontend: Next.js 14 + React + Tailwind + shadcn/ui (PWA)
-- Current counts: 1033 tests, 167 exercises, 31 sessions, 25 templates, 42 API endpoints
+- Current counts: 1120 tests, 168 exercises, 33 sessions, 26 templates, 42 API endpoints
 
 ### Key Code Functions
 - `compute_assessment_profile()` — assessment_v1
@@ -288,7 +288,7 @@ Session RPE tracked. Session completion tracked.
 
 - **D68 implementata parzialmente:** `has_recent_injury` derivato dal sistema `limitations` esistente (~95% copertura). Deferred post-launch: domande esplicite onboarding, data model `injury_history`, warning pain level ≥3.
 - **D84 (pulling strength 2RM):** decisione in fase di revisione separata (revisione completa protocolli massimali). NON inclusa in questo mega brief — sarà integrata quando finalizzata.
-- **Test:** 1033 passing, 0 failed. File nuovi: test_age_gates.py, test_youth_cap.py, test_brzycki.py.
+- **Test:** 1120 passing, 0 failed. File nuovi: test_age_gates.py, test_youth_cap.py, test_brzycki.py, test_b133_repeater_protocol.py.
 
 ---
 
