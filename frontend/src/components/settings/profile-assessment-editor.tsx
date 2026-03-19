@@ -73,6 +73,7 @@ export function ProfileAssessmentEditor({
   const [lpRight, setLpRight] = useState<string>("");
   const [lpLeft, setLpLeft] = useState<string>("");
   const [weightedPullup, setWeightedPullup] = useState<string>("");
+  const [bwPullups, setBwPullups] = useState<string>("");
   const [repeater, setRepeater] = useState<string>("");
   const [hangDuration, setHangDuration] = useState<string>("");
   const [lSit, setLSit] = useState<string>("");
@@ -91,6 +92,7 @@ export function ProfileAssessmentEditor({
       setLpRight(tests.lp_max_lift_5s_right_kg != null ? String(tests.lp_max_lift_5s_right_kg) : "");
       setLpLeft(tests.lp_max_lift_5s_left_kg != null ? String(tests.lp_max_lift_5s_left_kg) : "");
       setWeightedPullup(tests.weighted_pullup_1rm_total_kg != null ? String(tests.weighted_pullup_1rm_total_kg) : "");
+      setBwPullups(tests.max_pullups_bw != null ? String(tests.max_pullups_bw) : "");
       setRepeater(tests.repeater_7_3_max_sets_20mm != null ? String(tests.repeater_7_3_max_sets_20mm) : "");
       setHangDuration(tests.max_hang_duration_20mm_seconds != null ? String(tests.max_hang_duration_20mm_seconds) : "");
       setLSit(tests.l_sit_hold_seconds != null ? String(tests.l_sit_hold_seconds) : "");
@@ -125,6 +127,7 @@ export function ProfileAssessmentEditor({
       if (maxHang !== "") testsPatch.max_hang_20mm_5s_total_kg = parseFloat(maxHang);
     }
     if (weightedPullup !== "") testsPatch.weighted_pullup_1rm_total_kg = parseFloat(weightedPullup);
+    if (bwPullups !== "") testsPatch.max_pullups_bw = parseInt(bwPullups, 10);
     if (repeater !== "") testsPatch.repeater_7_3_max_sets_20mm = parseFloat(repeater);
     if (hangDuration !== "") testsPatch.max_hang_duration_20mm_seconds = parseFloat(hangDuration);
     if (lSit !== "") testsPatch.l_sit_hold_seconds = parseFloat(lSit);
@@ -147,7 +150,7 @@ export function ProfileAssessmentEditor({
         {step === "form" ? (
           <>
             <DialogHeader>
-              <DialogTitle>Edit profile & assessment</DialogTitle>
+              <DialogTitle>Edit profile &amp; maxes</DialogTitle>
               <DialogDescription>
                 Update your body metrics, grades, and test results
               </DialogDescription>
@@ -307,13 +310,13 @@ export function ProfileAssessmentEditor({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="pa-repeater">Repeater 7/3 max sets (20mm)</Label>
+                    <Label htmlFor="pa-repeater">Repeater 7/3 reps to failure (20mm, 60% max)</Label>
                     <Input
                       id="pa-repeater"
                       type="number"
                       step="1"
                       min="0"
-                      placeholder="e.g. 6"
+                      placeholder="e.g. 15"
                       value={repeater}
                       onChange={(e) => setRepeater(e.target.value)}
                     />

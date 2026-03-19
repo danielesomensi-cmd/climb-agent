@@ -301,7 +301,7 @@ export default function SettingsPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Profile</CardTitle>
+                  <CardTitle className="text-base">Profile &amp; Maxes</CardTitle>
                   <Button
                     variant="outline"
                     size="sm"
