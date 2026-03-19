@@ -1,6 +1,6 @@
 {
   "id": "test_max_hang_5s",
-  "name": "Test Session — Max Hang 7s Total Load (MVC-7)",
+  "name": "Test Max Hang 7s",
   "version": "1.1",
   "intent": {
     "primary_goal": "finger_max_strength",

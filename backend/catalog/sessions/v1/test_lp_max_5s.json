@@ -1,6 +1,6 @@
 {
   "id": "test_lp_max_5s",
-  "name": "Test Session — Loading Pin Max Lift 7s",
+  "name": "Test LP Max 7s",
   "version": "1.0",
   "intent": {
     "primary_goal": "finger_max_strength",
