@@ -32,6 +32,7 @@
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
 Recently closed (2026-03-19):
+- **B133** — Repeater test protocol fix (Lattice 2025). New exercise `test_repeater_7_3_to_failure` (1 set to failure @60% MVC-7, reps=40 ceiling). LP repeater reps null→40. Template swapped. Frontend: reps per hand form for LP, HB label fix. Beta tester thanks in What's Next.
 - **Session 1 (D01, D38, D68, D80, D81, D83)** — Assessment & Onboarding mega brief decisions (2026-03-17). body_composition axis removed (5 axes), Brzycki 1RM estimation, injury detection via limitations, age gate <16, youth 4 days/week cap, recovery multiplier 40+.
 - **Session 1b (D84-D91)** — Test protocol revision (2026-03-18). D85: finger test 5s→7s (MVC-7). D84: pulling test 1RM→2RM + Brzycki/Epley estimation + BW gate. D86: duration test benchmarks removed (wrong edge size). D88: L-sit benchmarks added. D90: med_test removed from catalog. Deferred to v2: D87b, D89, D91.
 - **~~B131~~** — LP test session UX fixes (2026-03-17). Duration field input, suggestion recalc after LP max test, hand layout icons. Commit: `b063cc0`.
@@ -246,6 +247,7 @@ Claude Sonnet as conversational layer over the deterministic engine.
 | — | Advanced adaptivity | Readiness score, overreach detection, plateau detection (DESIGN_DOC §4.4 spec). |
 | — | Test results → exercise calibration | Use ALL assessment test results (repeaters, max hang duration, L-sit, hip flexibility) to calibrate exercise difficulty and prescription — not just for radar profile. E.g.: repeater max sets → finger endurance set count; L-sit hold → core exercise progression tier; max hang duration → endurance hang prescriptions. Requires: mapping table test_result → affected exercises → calibration formula. |
 | B127 | Pre-test adjacency rule nel planner | Il planner non ha logica per evitare finger/hangboard exercises il giorno prima di finger test sessions. Serve un guard in planner_v2 che, quando il giorno N+1 ha una test session con domain finger_*, il giorno N escluda sessioni con finger work intenso (finger_maintenance, finger_max_strength templates). Scoperto in D126 audit. Risk: HIGH (planner). |
+| B133c | Multiple other_sport same day | Data model supporta solo 1 other_activity per giorno (campo booleano). Per loggare 2 sport diversi nello stesso giorno serve `other_activities: []` array. Deferred post-launch. Discovered: B133 audit. |
 
 ---
 
