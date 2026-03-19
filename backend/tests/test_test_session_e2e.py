@@ -158,8 +158,8 @@ class TestRepeaterUpdatesPEScalar:
         history = state["tests"]["repeater_strength_endurance"]
 
         assert len(history) == 2
-        assert history[0]["completed_sets"] == 8
-        assert history[1]["completed_sets"] == 10
+        assert history[0]["completed_reps"] == 8
+        assert history[1]["completed_reps"] == 10
 
     def test_scalar_latest_wins(self):
         """The scalar in assessment.tests is overwritten by the most recent result."""

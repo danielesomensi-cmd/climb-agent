@@ -209,8 +209,16 @@ class TestTestSessionsResolveExactExercise(unittest.TestCase):
         self.assertEqual(ids, ["max_hang_7s"])
 
     def test_repeater_7_3_resolves_exact_exercise(self):
-        ids = self._main_exercise_ids("test_repeater_7_3")
-        self.assertEqual(ids, ["repeater_hang_7_3"])
+        """B133: test session now resolves to test_repeater_7_3_to_failure (category=test)."""
+        us = _make_user_state(self.base_us, "gym", "blocx")
+        result = _resolve("test_repeater_7_3", us)
+        self.assertEqual(result["resolution_status"], "success")
+        ids = [
+            e["exercise_id"]
+            for e in result["resolved_session"]["exercise_instances"]
+            if e.get("category") == "test"
+        ]
+        self.assertEqual(ids, ["test_repeater_7_3_to_failure"])
 
     def test_max_weighted_pullup_resolves_exact_exercise(self):
         ids = self._main_exercise_ids("test_max_weighted_pullup")

@@ -93,6 +93,8 @@ export function GuidedExerciseStep({
   const [gradeInput, setGradeInput] = useState("");
   const [measurementInput, setMeasurementInput] = useState("");
   const [setsInput, setSetsInput] = useState("");
+  const [repsInputRight, setRepsInputRight] = useState("");
+  const [repsInputLeft, setRepsInputLeft] = useState("");
 
   // Test measurement exercises: just a number input, no feedback
   const isTestMeasurement = exercise.category === "test_measurement" && !!exercise.testField;
@@ -101,14 +103,20 @@ export function GuidedExerciseStep({
   // B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand)
   const isUnilateralTestMeasurement = isTestSession && isUnilateral && !!exercise.testField && !!exercise.testUnit;
 
-  // Repeater test: primary metric is sets completed, not load
-  const isRepeaterTest = isTestSession && exercise.exerciseId === "repeater_hang_7_3";
+  // B133: Repeater test (HB bilateral) — reps to failure
+  const isRepeaterTest = isTestSession && (
+    exercise.exerciseId === "repeater_hang_7_3" ||
+    exercise.exerciseId === "test_repeater_7_3_to_failure"
+  );
+
+  // B133: LP repeater test (unilateral) — reps per hand to failure
+  const isLpRepeaterTest = isTestSession && exercise.exerciseId === "lp_repeater_test";
 
   // B120: unilateral test exercises (LP max test) — dual R/L test result input
-  const isUnilateralTest = !isTestMeasurement && !isRepeaterTest && !isUnilateralTestMeasurement && isTestSession && isUnilateral;
+  const isUnilateralTest = !isTestMeasurement && !isRepeaterTest && !isLpRepeaterTest && !isUnilateralTestMeasurement && isTestSession && isUnilateral;
 
   // Test session total_load exercises get two mandatory fields
-  const isTestLoadExercise = !isTestMeasurement && !isRepeaterTest && !isUnilateralTest && isTestSession && exercise.loadModel === "total_load";
+  const isTestLoadExercise = !isTestMeasurement && !isRepeaterTest && !isLpRepeaterTest && !isUnilateralTest && isTestSession && exercise.loadModel === "total_load";
 
   // Determine which kind of editable field to show
   const hasLoadField =
@@ -246,6 +254,17 @@ export function GuidedExerciseStep({
         ? bodyweightKg + usedExternal
         : undefined;
       onDone(feedback, usedExternal, undefined, usedTotal);
+      return;
+    }
+    // B133: LP repeater test — reps per hand + load per hand
+    if (isLpRepeaterTest) {
+      const right = loadInputRight ? parseFloat(loadInputRight) : undefined;
+      const left = loadInputLeft ? parseFloat(loadInputLeft) : undefined;
+      onDone(feedback, undefined, undefined, undefined, undefined, {
+        right, left,
+        right_reps: repsInputRight ? parseInt(repsInputRight, 10) : undefined,
+        left_reps: repsInputLeft ? parseInt(repsInputLeft, 10) : undefined,
+      });
       return;
     }
     // B120: unilateral test (LP max test) — pass per-hand loads
@@ -548,13 +567,13 @@ export function GuidedExerciseStep({
               />
             )}
 
-            {/* Repeater test: sets completed + optional load */}
+            {/* Repeater test: reps completed to failure + optional load */}
             {isRepeaterTest && (
               <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
                 <p className="text-xs font-medium text-primary">Record your test result</p>
                 <div className="space-y-1.5">
                   <Label htmlFor="sets-input" className="text-xs text-muted-foreground">
-                    Sets completed *
+                    Reps completed (full 7s hangs) *
                   </Label>
                   <Input
                     id="sets-input"
@@ -570,7 +589,7 @@ export function GuidedExerciseStep({
                       }
                     }}
                     className="w-40 h-9"
-                    placeholder="e.g. 8"
+                    placeholder="e.g. 12"
                     required
                   />
                 </div>
@@ -600,6 +619,88 @@ export function GuidedExerciseStep({
                     </span>
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* B133: LP repeater test — reps per hand + load per hand */}
+            {isLpRepeaterTest && (
+              <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <p className="text-xs font-medium text-primary">Record your test result</p>
+                {/* Suggested load per hand */}
+                {(exercise.suggested.rightHand?.externalLoadKg != null || exercise.suggested.leftHand?.externalLoadKg != null) && (
+                  <div className="flex items-start gap-2 rounded-md bg-primary/10 border border-primary/20 p-2">
+                    <Lightbulb className="size-3.5 text-primary mt-0.5 shrink-0" />
+                    <p className="text-xs text-muted-foreground">
+                      Suggested load: L {exercise.suggested.leftHand?.externalLoadKg ?? 0} kg / R {exercise.suggested.rightHand?.externalLoadKg ?? 0} kg (60% of max)
+                    </p>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="lp-rep-reps-right" className="text-xs text-muted-foreground">
+                      Right hand reps *
+                    </Label>
+                    <Input
+                      id="lp-rep-reps-right"
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={repsInputRight}
+                      onChange={(e) => setRepsInputRight(e.target.value)}
+                      className="h-9"
+                      placeholder="e.g. 14"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="lp-rep-reps-left" className="text-xs text-muted-foreground">
+                      Left hand reps *
+                    </Label>
+                    <Input
+                      id="lp-rep-reps-left"
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={repsInputLeft}
+                      onChange={(e) => setRepsInputLeft(e.target.value)}
+                      className="h-9"
+                      placeholder="e.g. 12"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="lp-rep-load-right" className="text-xs text-muted-foreground">
+                      Right hand load (kg)
+                    </Label>
+                    <Input
+                      id="lp-rep-load-right"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={loadInputRight}
+                      onChange={(e) => setLoadInputRight(e.target.value)}
+                      className="h-9"
+                      placeholder="kg"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="lp-rep-load-left" className="text-xs text-muted-foreground">
+                      Left hand load (kg)
+                    </Label>
+                    <Input
+                      id="lp-rep-load-left"
+                      type="number"
+                      step="0.5"
+                      min="0"
+                      value={loadInputLeft}
+                      onChange={(e) => setLoadInputLeft(e.target.value)}
+                      className="h-9"
+                      placeholder="kg"
+                    />
+                  </div>
+                </div>
               </div>
             )}
 

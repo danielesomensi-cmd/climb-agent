@@ -29,16 +29,15 @@
     {
       "block_id": "main",
       "type": "main_set",
-      "exercise_id": "repeater_hang_7_3",
+      "exercise_id": "test_repeater_7_3_to_failure",
       "prescription": {
-        "sets": 3,
-        "reps": 6,
+        "sets": 1,
+        "reps": 40,
         "work_seconds": 7,
         "rest_between_reps_seconds": 3,
-        "rest_between_sets_seconds": 180,
-        "notes": "Test protocol: find max sets at ~60-75% max hang load. 7s on / 3s off. Stop when form breaks."
+        "notes": "Test protocol: hang at 60% MVC-7. 7s on / 3s off until failure. Count completed reps."
       },
-      "role": ["main"],
+      "role": ["test"],
       "domain": ["finger_strength_endurance"]
     },
     {

@@ -1055,26 +1055,27 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             # Write scalar to assessment.tests (legacy key)
             at["max_hang_20mm_5s_total_kg"] = total
 
-        # --- Repeater 7/3 ---
-        elif exercise_id == "repeater_hang_7_3":
-            completed_sets = item.get("completed_sets")
-            if completed_sets is None:
+        # --- Repeater 7/3 (legacy: sets-based, new: reps to failure) ---
+        elif exercise_id in ("repeater_hang_7_3", "test_repeater_7_3_to_failure"):
+            # B133: new test exercise reports completed_reps; legacy reports completed_sets
+            completed = item.get("completed_reps") or item.get("completed_sets")
+            if completed is None:
                 continue
-            completed_sets = int(completed_sets)
+            completed = int(completed)
             tests = updated.setdefault("tests", {})
             rep_history = tests.setdefault("repeater_strength_endurance", [])
             rep_history.append({
-                "test_id": "repeater_7_3_max_sets",
+                "test_id": "repeater_7_3_max_reps",
                 "date": date_str,
-                "exercise_id": "repeater_hang_7_3",
+                "exercise_id": exercise_id,
                 "bodyweight_kg": bodyweight,
-                "completed_sets": completed_sets,
+                "completed_reps": completed,
                 "freshness_policy": {"stale_after_days": 90},
                 "confidence": "high",
             })
             rep_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
-            # Write scalar to assessment.tests
-            at["repeater_7_3_max_sets_20mm"] = completed_sets
+            # Write scalar to assessment.tests (same key for backward compat)
+            at["repeater_7_3_max_sets_20mm"] = completed
 
         # --- Max hang duration (BW, 20mm) ---
         elif exercise_id == "test_max_hang_duration_20mm":

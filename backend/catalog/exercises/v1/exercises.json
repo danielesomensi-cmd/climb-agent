@@ -8230,11 +8230,11 @@
       "unilateral": true,
       "prescription_defaults": {
         "sets": 1,
-        "reps": null,
+        "reps": 40,
         "work_seconds": 7,
         "rest_between_reps_seconds": 3,
         "rest_between_sets_seconds": null,
-        "notes": "Lift at 60% of your max per hand. 7s on / 3s off until failure. Count completed reps. Test right hand first, then left."
+        "notes": "Lift at 60% of your max per hand. 7s on / 3s off until failure. Count completed reps. Test right hand first, rest 5 min, then left hand."
       },
       "stress_tags": {
         "fingers": "high",
@@ -8242,13 +8242,72 @@
         "cns": "medium",
         "skin": "medium"
       },
-      "description": "Finger endurance test with loading pin. Lift at 60% of your max per hand with 7s on / 3s off rhythm until failure. Count completed reps per hand.",
+      "description": "Finger endurance test with loading pin (Lattice 2025 protocol). Lift at 60% of your max per hand with 7s on / 3s off rhythm until failure. Count completed reps per hand.",
       "cues": [
-        "Calculate load: 60% of your max lift per hand",
+        "Load: 60% of your max lift per hand (shown as suggested load)",
         "Lift for exactly 7 seconds, rest exactly 3 seconds",
-        "Continue until you cannot hold for the full 7 seconds",
-        "Record total reps completed per hand",
+        "DO NOT change grip position during test",
+        "STOP when you cannot complete a full 7-second lift",
+        "A partial lift (<7s) does NOT count as a rep",
+        "Record total completed reps per hand when done",
         "Test right hand first, rest 5 minutes, then left hand"
+      ],
+      "video_url": null
+    },
+    {
+      "id": "test_repeater_7_3_to_failure",
+      "name": "Repeater Test 7/3 (To Failure)",
+      "category": "test",
+      "time_min": 15,
+      "role": [
+        "test"
+      ],
+      "domain": [
+        "finger_strength_endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "finger_repeaters",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp",
+        "intensity_pct": 0.60
+      },
+      "load_model": "total_load",
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 40,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": 3,
+        "rest_between_sets_seconds": null,
+        "notes": "Test protocol: hang at 60% of your max hang load. 7s on / 3s off, repeat until failure. Count only complete 7s hangs. Stop if grip position changes."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "Finger strength-endurance test (Lattice 2025 protocol). Hang at 60% MVC-7 on 20mm edge, 7s on / 3s off, single continuous set to failure. Result = total completed reps (full 7s hangs only). Stop when you cannot complete a full 7s hang or grip position changes.",
+      "cues": [
+        "Load: 60% of your max hang (shown as suggested load)",
+        "Hang exactly 7 seconds, rest exactly 3 seconds",
+        "Shoulders active, half-crimp grip throughout",
+        "DO NOT change grip position during test",
+        "STOP when you cannot complete a full 7-second hang",
+        "A partial hang (<7s) does NOT count as a rep",
+        "Record total completed reps when done"
       ],
       "video_url": null
     },

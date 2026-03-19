@@ -71,7 +71,7 @@ class TestRepeaterWritesHistoryAndAssessment:
         # history list
         history = result["tests"]["repeater_strength_endurance"]
         assert len(history) == 1
-        assert history[0]["completed_sets"] == 22
+        assert history[0]["completed_reps"] == 22
         assert history[0]["date"] == "2026-03-02"
 
 

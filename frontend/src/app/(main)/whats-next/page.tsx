@@ -14,6 +14,9 @@ export default function WhatsNextPage() {
         <RoadmapSection />
         <Separator />
         <FeedbackSection />
+        <p className="text-center text-xs text-muted-foreground pt-4">
+          Thanks to our beta testers: Christie, Vato &amp; Alexis
+        </p>
       </main>
     </>
   );

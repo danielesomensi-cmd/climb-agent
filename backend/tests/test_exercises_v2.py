@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 167
+    assert len(exercise_list) == 168
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
@@ -103,7 +103,7 @@ def test_technique_have_focus(exercise_map):
 
 NEW_EXERCISE_IDS = {
     "max_hang_10s", "horst_7_53", "repeater_15_15", "lopez_subhangs",
-    "critical_force_test", "test_max_pullup_bw",
+    "critical_force_test", "test_max_pullup_bw", "test_repeater_7_3_to_failure",
     "campus_touches", "campus_max_ladders", "campus_switches", "campus_sprint_endurance",
     "emom_bouldering", "otm_bouldering", "linked_boulders_circuit",
     "arc_training_progressive", "threshold_long_intervals", "regeneration_climbing",
