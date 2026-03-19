@@ -525,7 +525,7 @@ Currently used by: loading pin exercises (`lp_*`).
 
 Templates are reusable modules. A template MUST be self-contained (i.e., it can produce a full session_instance by itself).
 
-### Canonical template_ids (25)
+### Canonical template_ids (26)
 
 - `antagonist_prehab`
 - `cooldown_stretch`
@@ -549,6 +549,7 @@ Templates are reusable modules. A template MUST be self-contained (i.e., it can 
 - `pulling_strength`
 - `pulling_strength_compound`
 - `pulling_strength_test`
+- `pulling_strength_test_bw`
 - `warmup_climbing`
 - `warmup_recovery`
 - `warmup_strength`
