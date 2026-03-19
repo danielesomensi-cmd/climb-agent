@@ -171,7 +171,7 @@ export default function GuidedSessionPage() {
   );
 
   const handleDone = useCallback(
-    (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number }) => {
+    (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }) => {
       if (!state) return;
       const idx = state.currentIndex;
       const exercise = state.exercises[idx];
@@ -196,6 +196,8 @@ export default function GuidedSessionPage() {
           testMeasurement,
           usedLoadKgRight: perHand?.right,
           usedLoadKgLeft: perHand?.left,
+          completedRepsRight: perHand?.right_reps,
+          completedRepsLeft: perHand?.left_reps,
         });
       }
 
@@ -351,13 +353,18 @@ export default function GuidedSessionPage() {
         if (ex.unilateral && (ex.usedLoadKgRight != null || ex.usedLoadKgLeft != null)) {
           for (const hand of ["right", "left"] as const) {
             const load = hand === "right" ? ex.usedLoadKgRight : ex.usedLoadKgLeft;
-            exerciseFeedback.push({
+            const reps = hand === "right" ? ex.completedRepsRight : ex.completedRepsLeft;
+            const entry: Record<string, unknown> = {
               exercise_id: ex.exerciseId,
               feedback_label: ex.feedbackLabel,
               completed: ex.status === "done",
               hand,
               used_external_load_kg: load,
-            });
+            };
+            if (reps != null) {
+              entry.completed_reps = reps;
+            }
+            exerciseFeedback.push(entry);
           }
           continue;
         }
@@ -386,6 +393,8 @@ export default function GuidedSessionPage() {
         }
         if (ex.completedSets != null) {
           item.completed_sets = ex.completedSets;
+          // B133: new repeater test expects completed_reps
+          item.completed_reps = ex.completedSets;
         }
         // Test measurement exercises: send the value as the field name directly
         if (ex.testField && ex.testMeasurement != null) {

@@ -14,7 +14,7 @@ interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
   isTestSession?: boolean;
   bodyweightKg?: number;
-  onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number }) => void;
+  onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }) => void;
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
 }
@@ -249,6 +249,11 @@ export function GuidedExerciseStep({
       return;
     }
     if (isRepeaterTest) {
+      // B133-fix: ensure completedSets (= reps to failure) is set before Done
+      const repsVal = setsInput ? parseInt(setsInput, 10) : undefined;
+      if (repsVal != null && !isNaN(repsVal) && onSetChange) {
+        onSetChange(repsVal);
+      }
       const usedExternal = loadInput ? parseFloat(loadInput) : undefined;
       const usedTotal = usedExternal != null && bodyweightKg != null
         ? bodyweightKg + usedExternal
@@ -541,7 +546,7 @@ export function GuidedExerciseStep({
                   )}
                   {exercise.suggested.loadWarning && (
                     <p className="text-xs text-orange-500 mt-1">
-                      ⚠ Baseline outdated — run a max hang test for accurate suggestions.
+                      ⚠ Suggested load requires counterweight — consider re-testing your max hang.
                     </p>
                   )}
                 </div>

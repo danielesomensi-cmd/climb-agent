@@ -519,6 +519,8 @@ export interface GuidedExercise {
   usedLoadKg?: number;
   usedLoadKgRight?: number;
   usedLoadKgLeft?: number;
+  completedRepsRight?: number;  // B134: per-hand reps (e.g. LP repeater test to failure)
+  completedRepsLeft?: number;
   usedTotalLoadKg?: number;
   usedGrade?: string;
   completedSets?: number;  // sets completed within this exercise (for timer resume)
