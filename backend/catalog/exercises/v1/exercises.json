@@ -588,7 +588,7 @@
         "finger_strength_endurance"
       ],
       "pattern": "isometric_hang",
-      "intensity_level": "medium",
+      "intensity_level": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_density_hangs",
       "equipment_required": [
@@ -615,14 +615,13 @@
         "cns": "low",
         "skin": "low"
       },
-      "description": "Tyler Nelson’s Density Hangs protocol (C4HP): 3 sets of 3 reps across different grip positions. Each hang is 20-40s near failure. Targets tendon hypertrophy, stress-shielding, and forearm muscle density.",
+      "description": "Tyler Nelson's Density Hangs: 30-45 second continuous hangs at ~75% MVC on open-hand grip. Targets tendon stiffness and structural adaptation through sustained mechanical load. NOT a max strength exercise — focus on sustained moderate tension.",
       "cues": [
-        "3 different grip positions per set (e.g. open-hand, half-crimp, 3-finger drag)",
-        "Each hang: 20-40s at ~RPE 9 (near failure)",
-        "Change grip position on every rep within the set",
-        "90s rest between individual hangs",
-        "3 min rest between sets of 3",
-        "Choose an edge where you can hold 20-45s at bodyweight"
+        "Choose load/edge where 30-45s is near-failure (RPE 9-9.5)",
+        "Open-hand grip preferred — protects pulleys and is more tendon-specific",
+        "Hang continuously — do not use intermittent rest within a set",
+        "If completing more than 3 reps comfortably, increase load or duration",
+        "Rest 2-3 minutes between sets for full tendon recovery"
       ],
       "video_url": "https://www.youtube.com/watch?v=YDMdP6juY4w",
       "load_model": "total_load",
@@ -3596,7 +3595,6 @@
     },
     {
       "id": "wrist_curl",
-
       "name": "Wrist Curl (Flexion)",
       "category": "prehab",
       "time_min": 5,
@@ -7507,10 +7505,35 @@
       "benchmarks": {
         "source": "Empirici (coaching community, non peer-reviewed)",
         "scale": [
-          {"label": "Scarso", "range_s": [0, 10], "note": "Possibile limitazione di flessibilità, non solo core"},
-          {"label": "Intermedio", "range_s": [10, 20]},
-          {"label": "Avanzato", "range_s": [20, 35]},
-          {"label": "Elite", "range_s": [35, 999]}
+          {
+            "label": "Scarso",
+            "range_s": [
+              0,
+              10
+            ],
+            "note": "Possibile limitazione di flessibilità, non solo core"
+          },
+          {
+            "label": "Intermedio",
+            "range_s": [
+              10,
+              20
+            ]
+          },
+          {
+            "label": "Avanzato",
+            "range_s": [
+              20,
+              35
+            ]
+          },
+          {
+            "label": "Elite",
+            "range_s": [
+              35,
+              999
+            ]
+          }
         ]
       },
       "cues": [
@@ -7891,7 +7914,7 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp",
-        "intensity_pct": 0.90
+        "intensity_pct": 0.9
       },
       "load_model": "external_load",
       "unilateral": true,
@@ -8224,7 +8247,7 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp",
-        "intensity_pct": 0.60
+        "intensity_pct": 0.6
       },
       "load_model": "external_load",
       "unilateral": true,
@@ -8282,7 +8305,7 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp",
-        "intensity_pct": 0.60
+        "intensity_pct": 0.6
       },
       "load_model": "total_load",
       "prescription_defaults": {
@@ -8339,7 +8362,7 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp",
-        "intensity_pct": 0.60,
+        "intensity_pct": 0.6,
         "test_field": "lp_duration_test_seconds",
         "test_unit": "seconds"
       },
@@ -8513,6 +8536,479 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only"
+    },
+    {
+      "id": "warmup_repeaters_large",
+      "name": "Warm-Up Repeaters (Large Edge)",
+      "category": "warmup_specific",
+      "time_min": 8,
+      "role": [
+        "warmup"
+      ],
+      "domain": [
+        "finger_strength"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "very_low",
+      "fatigue_cost": 1,
+      "recency_group": "warmup_hang_rampup",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": 6,
+        "work_seconds": 7,
+        "rest_between_reps_seconds": 3,
+        "rest_between_sets_seconds": 120
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "low"
+      },
+      "description": "Sub-maximal repeaters on large edge (25-35mm) as finger-specific warm-up before main hangboard work. NOT a training set — keep it easy.",
+      "cues": [
+        "Use a large edge (25-35mm) — this is warm-up, not training",
+        "Open-hand grip only, bodyweight only",
+        "Should feel very easy — if you feel any effort, the edge is too small",
+        "Always do this BEFORE max hangs or repeater training",
+        "Focus on shoulder engagement: active hang, scapulae pulled down"
+      ],
+      "load_model": "bodyweight_only",
+      "video_url": null
+    },
+    {
+      "id": "eccentric_pullup",
+      "name": "Eccentric Pull-Up (Negative)",
+      "category": "main_strength",
+      "time_min": 12,
+      "role": [
+        "main",
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "pull_vertical",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "pulling_vertical",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": 6,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Jump or step to top position, lower yourself as slowly as possible (5-8 seconds). Builds pulling strength more effectively than band-assisted pull-ups for beginners. Also beneficial for tendon strengthening.",
+      "cues": [
+        "Jump or step up to chin-over-bar position",
+        "Lower yourself as slowly as possible — aim for 5-8 seconds",
+        "Keep core tight and shoulders engaged throughout the descent",
+        "If you can do full pull-ups, this exercise is not for you — use weighted pull-ups instead",
+        "Stop if you feel sharp shoulder pain"
+      ],
+      "load_model": "bodyweight_only",
+      "video_url": null
+    },
+    {
+      "id": "campus_laddering_down",
+      "name": "Campus Laddering Down",
+      "category": "main_strength",
+      "time_min": 18,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength"
+      ],
+      "pattern": "campus_ladder",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "campus_ladders",
+      "equipment_required": [
+        "campus_board"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive",
+        "shoulder_sensitive"
+      ],
+      "age_minimum": 16,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Eccentric descent rung by rung. Control the catch. Stop if form breaks."
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "high",
+        "cns": "high",
+        "skin": "medium"
+      },
+      "description": "Controlled descent rung by rung on campus board. Eccentric power training — builds strength through deceleration. Prerequisite: can do campus laddering up smoothly.",
+      "cues": [
+        "Start at the top, lower one hand at a time rung by rung",
+        "Control the catch — the eccentric is where the training happens",
+        "Prerequisite: can do campus laddering up smoothly",
+        "Keep shoulders engaged throughout",
+        "Stop immediately if any finger pain"
+      ],
+      "load_model": "bodyweight_only",
+      "video_url": null
+    },
+    {
+      "id": "nordic_curl",
+      "name": "Nordic Hamstring Curl",
+      "category": "conditioning",
+      "time_min": 10,
+      "role": [
+        "accessory",
+        "prehab"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "lower_body_posterior",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": 4,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Kneel with ankles anchored, lower torso forward as slowly as possible resisting with hamstrings. The most evidence-backed exercise for lower body injury prevention (51% lower injury rate, Van Dyk 2019).",
+      "cues": [
+        "Anchor your ankles under something heavy or have a partner hold them",
+        "Lower yourself forward as slowly as possible — aim for 3-5 seconds",
+        "Use your hands to catch yourself at the bottom, then push back up",
+        "Keep your hips extended throughout — don't bend at the waist",
+        "If too hard, reduce range of motion — even partial reps are effective"
+      ],
+      "load_model": "bodyweight_only",
+      "video_url": null
+    },
+    {
+      "id": "single_leg_calf_raise",
+      "name": "Single Leg Calf Raise",
+      "category": "conditioning",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "lower_body_calf",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 15,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Single-leg calf raise on a step for ankle stability. Essential for heel hooks, slab climbing, and general foot strength.",
+      "cues": [
+        "Stand on one foot on a step edge, heel hanging off",
+        "Rise up as high as possible, pause 1 second at top",
+        "Lower slowly below step level for full range of motion",
+        "Hold a wall or rail for balance if needed",
+        "Equal reps each leg"
+      ],
+      "load_model": "bodyweight_only",
+      "video_url": null
+    },
+    {
+      "id": "step_ups",
+      "name": "Step-Ups (Weighted)",
+      "category": "conditioning",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "lower_body_quad",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Step onto elevated surface with control. Functional unilateral strength directly transferable to high steps on rock.",
+      "cues": [
+        "Use a bench or box at knee height or slightly below",
+        "Step up driving through the heel of the working leg",
+        "Do not push off with the trailing leg — all work from the top leg",
+        "Control the descent — don't just drop down",
+        "Hold dumbbells for added resistance"
+      ],
+      "load_model": "external_load",
+      "video_url": null
+    },
+    {
+      "id": "hip_flexor_strengthening",
+      "name": "Hip Flexor Strengthening",
+      "category": "conditioning",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "compression",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "core_hip_flexor",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Seated or hanging knee raises targeting hip flexor strength. Essential for high steps, heel hooks, and maintaining foot placements on steep terrain.",
+      "cues": [
+        "Seated on edge of bench: lift one knee as high as possible",
+        "Hold 2 seconds at the top, lower slowly",
+        "Keep back straight — do not lean back to lift higher",
+        "For progression: hanging knee raises from pull-up bar",
+        "Equal reps each leg"
+      ],
+      "load_model": "bodyweight_only",
+      "video_url": null
+    },
+    {
+      "id": "freeze_drill",
+      "name": "Freeze",
+      "category": "technique",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 4,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Climb with a 2-3 second pause after each move. No dynamic movements allowed. Develops core stability, lock-off strength, and movement awareness.",
+      "cues": [
+        "After each hand move, freeze completely for 2-3 seconds",
+        "No dynamic movements — every move must be static and controlled",
+        "Pay attention to your body position during each freeze",
+        "If you can't hold the freeze, the grade is too hard",
+        "Great drill for learning where your center of gravity should be"
+      ],
+      "load_model": "grade_relative",
+      "video_url": null
+    },
+    {
+      "id": "twist_lock_drill",
+      "name": "Twist-Lock Drill",
+      "category": "technique",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 4,
+        "work_seconds": 300,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Practice twist-lock and drop-knee technique on moderate routes. Focus on rotating hips into the wall to extend reach and save energy.",
+      "cues": [
+        "On every move, consciously rotate your hips toward the wall",
+        "Practice drop-knee: inside leg bends, outside leg drops behind",
+        "Notice how twist-lock extends your effective reach",
+        "Exaggerate the rotation — you'll naturally dial it back later",
+        "Works best on vertical to slightly overhanging terrain"
+      ],
+      "load_model": "grade_relative",
+      "video_url": null
+    },
+    {
+      "id": "timed_route_preview",
+      "name": "Timed Route Preview",
+      "category": "technique",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_lead"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "very_low",
+      "fatigue_cost": 1,
+      "recency_group": "technique_route_reading",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 3,
+        "work_seconds": 120,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "grade_ref": "lead_max_os",
+        "grade_offset": -1
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "2-minute route preview: identify rest positions, locate crux, plan clipping sequence, then climb and compare your preview to reality.",
+      "cues": [
+        "Stand at the base, set a 2-minute timer",
+        "Identify ALL rest positions (good holds, stances)",
+        "Locate the crux section — plan your body position",
+        "Visualize the full sequence move by move",
+        "After climbing: what did you miss? What surprised you?"
+      ],
+      "load_model": "grade_relative",
+      "video_url": null
     }
   ]
 }

@@ -15,8 +15,8 @@
 |---------|-----------|--------|-------|
 | 1: Assessment & Onboarding | D01, D38, D68, D80, D81, D83 | ✅ Done (2026-03-17) | D68: via limitations, non domande esplicite |
 | 1b: Test Protocol Revision | D84, D84b, D85, D86, D88, D90 | ✅ Done (2026-03-18) | D87b, D89, D91 → v2 |
-| 2: Exercise DB — Strength | D10, D11, D12, D39, D50, D72 | 🟡 Partial | density_hangs esiste. Mancano: overcoming_iso, eccentric_pullup, 3 repeater protocols, grip_type, warmup repeaters |
-| 3: Exercise DB — Conditioning | D37, D43, D55, D56, D57, D60, D76 | 🟡 Partial | lower body (4/10), wrist prehab, technique (16 drills), campus. Mancano: core Matros, nordic, blacklist |
+| 2: Exercise DB — Strength | D10, D11, D12, D39, D50, D72 | 🟡 Partial | D11 ✅ D12 ✅ D39 ✅. Deferred: D10 (equipment), D50 (selector logic), D72 (grip field) |
+| 3: Exercise DB — Conditioning | D37, D43, D55, D56, D57, D60, D76 | 🟡 Partial | D43 ✅ D55 ✅ D56 ✅ D57 ✅ D76 ✅. Deferred: D37 (core drills Matros). D60 already done. |
 | 4: Warm-Up | D33, D36, D74 | 🟡 Partial | Warmup via template (non funzione dedicata). Nessun PAP. silent_feet esiste ma non in warmup |
 | 5: Intensity System (EL) | D34, D52, D14 | 🔲 Not started | Zero codice EL/intensity/load monitoring |
 | 6: Hangboard Logic | D35, D49 | 🔲 Not started | Zero experience gates / method restriction |
@@ -344,6 +344,10 @@ Items from audits and brainstorming. Not committed to any timeline.
 | Exercise catalog audit v2 | Nuovo audit esercizi contro letteratura espansa e feedback beta. Identificare gap emersi dall'uso reale (153 esercizi attuali). Tipo C. | roadmap discussion |
 | Technique drills from book | Scannerizzare il libro di Daniele sui drill tecnici, estrarre drill, mappare su exercise schema, aggiungere al catalogo. Attualmente ~5-6 drill tecnici, potenziale raddoppio. Tipo C. | roadmap discussion |
 | ~~Quotes pool expansion~~ | ✅ Done. Pool espanso da 200 → 232 citazioni. Aggiunte 32 quote: 16 climber (Güllich, Sharma, Caldwell, Honnold, ecc.), 3 athlete (Ali, Jordan, Mandela), 1 philosophy (Nietzsche), 1 popular (proverbio cinese), 8 community/humor, 3 coach. Aggiunto source_type "community". | 2026-03-14 |
+| Mega brief deferred — D10 | Overcoming isometric pull exercise. Requires pin/strap equipment not in vocabulary. | mega brief Session 2 |
+| Mega brief deferred — D37 | Core activation drills from Matros (8 exercises: tic tac toe, diagonal, freeze wall, etc.). Post-launch catalog enrichment. | mega brief Session 3 |
+| Mega brief deferred — D50 | Three named repeater protocols (López/Anderson/Hörst) with level-based selection logic in resolver. | mega brief Session 2 |
+| Mega brief deferred — D72 | grip_type field on all hangboard exercises + open-hand default + full_crimp validation block. Structural change. | mega brief Session 2 |
 
 ---
 

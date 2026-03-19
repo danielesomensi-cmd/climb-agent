@@ -53,7 +53,7 @@ export default function SessionPage() {
     fetchSession();
   }, [fetchSession]);
 
-  const displayName = resolved?.session_name ?? formatSessionName(sessionId);
+  const displayName = (resolved as unknown as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(sessionId);
 
   return (
     <>

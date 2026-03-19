@@ -1147,6 +1147,7 @@ def resolve_session(
 
     # identity
     session_id = session.get("session_id") or session.get("id") or os.path.splitext(os.path.basename(session_path))[0]
+    session_name = session.get("name") or ""
     session_version = session.get("version") or session.get("session_version") or "v1"
 
     modules = session.get("modules") or session.get("templates") or session.get("components") or []
@@ -1405,6 +1406,7 @@ def resolve_session(
         },
         "session": {
             "session_id": session_id,
+            "session_name": session_name,
             "session_version": session_version,
             "source_path": session_path
         },

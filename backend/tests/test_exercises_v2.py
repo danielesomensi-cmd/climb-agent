@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 168
+    assert len(exercise_list) == 178
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
@@ -217,6 +217,9 @@ def test_timed_rep_exercises_have_correct_volume(exercise_list):
         reps = pd.get("reps")
         work_s = pd.get("work_seconds")
         if reps is not None and isinstance(reps, int) and reps > 1 and work_s and work_s > 0:
+            # Technique drills use work_seconds as total drill time, not interval duration
+            if e.get("category") == "technique":
+                continue
             timed_rep_exercises.append(e)
 
     # At least density_hangs, repeater_hang_7_3, repeater_15_15 must be in this set

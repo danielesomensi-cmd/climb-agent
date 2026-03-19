@@ -228,7 +228,8 @@ function buildGuidedState(
     }
   }
 
-  const sessionName = (resolvedSession?.session_name as string) ??
+  const sessionMeta = resolved?.session as Record<string, unknown> | undefined;
+  const sessionName = (sessionMeta?.session_name as string) ||
     session.session_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   return {
@@ -558,7 +559,7 @@ export function SessionCard({
         >
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-sm">
-              {formatSessionName(session.session_id)}
+              {(session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id)}
             </CardTitle>
             <div className="flex items-center gap-1.5">
               {/* Edit actions button */}
@@ -794,7 +795,7 @@ export function SessionCard({
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>{formatSessionName(session.session_id)}</DrawerTitle>
+            <DrawerTitle>{(session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id)}</DrawerTitle>
             <DrawerDescription>
               {isDone ? `Completed · ${session.session_duration_seconds != null && session.session_duration_seconds > 0 ? `${Math.round(session.session_duration_seconds / 60)} min` : `~${({lunch:35,morning:60,evening:90} as Record<string,number>)[session.slot] ?? 60} min`}` : isSkipped ? "Skipped" : "Planned"} · {locationLabel} · {formatSlot(session.slot)}
             </DrawerDescription>
