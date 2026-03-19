@@ -1,8 +1,29 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-15
+> Last updated: 2026-03-19
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
+
+---
+
+## Mega Brief v1 — Implementation Status
+
+> Source: `docs/claude_code_mega_brief_v1.md` (57 v1 decisions, 10 sessions)
+> Rule: ogni sessione completata o deferita aggiorna questa tabella E la sezione roadmap appropriata.
+
+| Session | Decisions | Status | Notes |
+|---------|-----------|--------|-------|
+| 1: Assessment & Onboarding | D01, D38, D68, D80, D81, D83 | ✅ Done (2026-03-17) | D68: via limitations, non domande esplicite |
+| 1b: Test Protocol Revision | D84, D84b, D85, D86, D88, D90 | ✅ Done (2026-03-18) | D87b, D89, D91 → v2 |
+| 2: Exercise DB — Strength | D10, D11, D12, D39, D50, D72 | 🟡 Partial | density_hangs esiste. Mancano: overcoming_iso, eccentric_pullup, 3 repeater protocols, grip_type, warmup repeaters |
+| 3: Exercise DB — Conditioning | D37, D43, D55, D56, D57, D60, D76 | 🟡 Partial | lower body (4/10), wrist prehab, technique (16 drills), campus. Mancano: core Matros, nordic, blacklist |
+| 4: Warm-Up | D33, D36, D74 | 🟡 Partial | Warmup via template (non funzione dedicata). Nessun PAP. silent_feet esiste ma non in warmup |
+| 5: Intensity System (EL) | D34, D52, D14 | 🔲 Not started | Zero codice EL/intensity/load monitoring |
+| 6: Hangboard Logic | D35, D49 | 🔲 Not started | Zero experience gates / method restriction |
+| 7: Endurance & Intervals | D47, D48, D53 | 🟡 Partial | 4x4 esiste. Mancano: varied-intensity, active recovery, g-tox |
+| 8: Conditioning & Ratio | D51, D54, D58, D59, D73, D78 | 🟡 Partial | face_pull + band_pull_apart + planks. Mancano: ratio, technique allocation, process cues |
+| 9: Periodization & Load | D19-D21, D44, D45, D69-D71 | 🟡 Partial | min_weeks esiste. Mancano: beginner linear, overreach, ACWR, OTS, volume cap |
+| 10: Coaching & UX | D17, D29, D30, D41, D64-D67, D75, D77, D79 | 🔲 Not started | Zero coaching cues, safety drills, UX educativo |
 
 ---
 
@@ -10,7 +31,12 @@
 
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
-Recently closed (2026-03-18):
+Recently closed (2026-03-19):
+- **Session 1 (D01, D38, D68, D80, D81, D83)** — Assessment & Onboarding mega brief decisions (2026-03-17). body_composition axis removed (5 axes), Brzycki 1RM estimation, injury detection via limitations, age gate <16, youth 4 days/week cap, recovery multiplier 40+.
+- **Session 1b (D84-D91)** — Test protocol revision (2026-03-18). D85: finger test 5s→7s (MVC-7). D84: pulling test 1RM→2RM + Brzycki/Epley estimation + BW gate. D86: duration test benchmarks removed (wrong edge size). D88: L-sit benchmarks added. D90: med_test removed from catalog. Deferred to v2: D87b, D89, D91.
+- **~~B131~~** — LP test session UX fixes (2026-03-17). Duration field input, suggestion recalc after LP max test, hand layout icons. Commit: `b063cc0`.
+
+Previously closed (2026-03-18):
 - **A121** — Phase-aware intra-session exercise ordering. Exercises are now sorted by physiological priority based on macrocycle phase (e.g., ARC before threshold in Base, max hangs before pulling in S&P). 13 derived sort categories, 5 phase maps, 5 hard constraints. Pure reorder — zero exercise loss guaranteed. 41 new tests.
 
 Previously closed (2026-03-15):
