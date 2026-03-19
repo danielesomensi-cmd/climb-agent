@@ -310,6 +310,18 @@ export function ProfileAssessmentEditor({
                     />
                   </div>
                   <div className="space-y-1.5">
+                    <Label htmlFor="pa-bwpullups">Max bodyweight pull-ups (reps)</Label>
+                    <Input
+                      id="pa-bwpullups"
+                      type="number"
+                      step="1"
+                      min="0"
+                      placeholder="e.g. 12"
+                      value={bwPullups}
+                      onChange={(e) => setBwPullups(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
                     <Label htmlFor="pa-repeater">Repeater 7/3 reps to failure (20mm, 60% max)</Label>
                     <Input
                       id="pa-repeater"
