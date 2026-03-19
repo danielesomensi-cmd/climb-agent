@@ -79,6 +79,75 @@ These must be done before paid launch.
 
 **Non implementare** — solo roadmap. La verifica fisiologica va fatta nel progetto "climb-agent knowledge base".
 
+### C130 — Audit sistematico domain/intensity/pattern di tutti gli esercizi
+
+**Priority:** P2.5
+**Status:** Open
+**Discovered:** 2026-03-18 (durante A121 + knowledge base review)
+**Type:** C (catalog)
+
+**Origine:** Il bug di `threshold_climbing` (domain `aerobic_capacity` invece di `power_endurance`) ha rivelato che il catalogo potrebbe avere altre incoerenze domain-esercizio. La knowledge base ha prodotto un framework di audit completo.
+
+**Cosa verificare per OGNI esercizio (167 attuali):**
+
+Per ogni exercise entry, cross-check la coerenza tra 4 campi:
+1. `domain` — è il domain corretto per l'adattamento primario?
+2. `intensity_level` — è coerente col domain?
+3. `pattern` — riflette il tipo di movimento/protocollo reale?
+4. `grade_offset` (se grade_relative) — coerente col domain?
+
+**Tabella di riferimento per cross-check (dalla knowledge base):**
+
+| Domain | Intensità attesa | Grade offset tipico | Pattern tipici |
+|--------|-----------------|-------------------|----------------|
+| `finger_max_strength` | `max` / `high` | N/A (hangboard) | `isometric_hang` |
+| `finger_strength_endurance` | `medium` / `high` | N/A (hangboard) | `repeater_hang` |
+| `finger_aerobic_endurance` | `low` / `medium` | N/A (hangboard) | `repeater_hang` |
+| `power` | `max` / `high` | 0 (limit) | `climbing_limit_boulder`, `campus_ladder` |
+| `contact_strength` | `max` / `high` | N/A | `campus_ladder` |
+| `power_endurance` | `medium` / `high` | -1 a -2 | `climbing_intervals`, `climbing_continuous` |
+| `aerobic_capacity` | `low` / `very_low` | -4 a -5 | `climbing_continuous` |
+| `anaerobic_capacity` | `high` | -1 a -2 | `climbing_intervals` |
+| `regeneration` | `very_low` | -5 o più facile | `climbing_continuous` |
+| `strength_general` | varia | N/A | `push`, `pull_*`, `hinge`, `squat` |
+| `core` | `low` a `high` | N/A | `anti_extension`, `anti_rotation`, `compression` |
+
+**Red flags da cercare:**
+
+1. **Domain/intensity mismatch** — es. domain=`aerobic_capacity` + intensity=`high`
+2. **Domain/grade mismatch** — es. domain=`aerobic_capacity` + grade_offset=-1
+3. **Domain/cue mismatch** — il testo del cue descrive sforzo incompatibile col domain
+4. **Domain/phase mismatch** — esercizio assegnato a fasi che non corrispondono al domain
+5. **Pattern/domain mismatch** — es. pattern=`climbing_limit_boulder` + domain=`aerobic_capacity`
+
+**Formato output atteso per ogni anomalia:**
+```
+ANOMALIA: [exercise_id]
+  Campo: [quale campo è incoerente]
+  Valore attuale: [valore]
+  Valore suggerito: [valore corretto]
+  Motivo: [1 frase]
+```
+
+**Impatto downstream:**
+- Il sistema A121 (exercise ordering) dipende dalla correttezza dei domain per la derivazione sort category
+- Domain sbagliati = esercizi piazzati nell'ordine sbagliato in sessione
+- Caso concreto: threshold_climbing con domain aerobic_capacity veniva classificato come ARC → stesso slot di ARC invece che dopo
+
+**Riferimenti knowledge base (progetto "climb-agent knowledge base"):**
+- Analisi completa threshold_climbing: domain aerobic_capacity → power_endurance (review fisiologica ARC vs threshold, tabella comparativa intensità/pump/sistema energetico)
+- Framework audit con regole di coerenza domain/intensity/grade/pattern
+- Tabella cross-check validata contro letteratura (Hörst, López-Rivera, Consuegra Ch.8)
+
+**Dipendenze:**
+- Prerequisito: threshold_climbing fix (già fatto, commit 2026-03-18)
+- Input: catalogo esercizi (`backend/catalog/exercises/v1/`), vocabulary_v1.md, mappatura A121 sort categories
+- Output: lista anomalie + fix proposti → da implementare come brief C separato
+
+**Rischio:** BASSO — audit read-only, i fix sono patch isolate al catalogo JSON. Non tocca engine logic.
+
+**Effort stimato:** M (1 sessione Claude Code per audit + 1 per fix)
+
 ---
 
 ## Priority 2b — Test results → full exercise calibration
