@@ -767,7 +767,7 @@
         "sets": 3,
         "reps": 6,
         "work_seconds": 7,
-        "rest_between_reps_seconds": null,
+        "rest_between_reps_seconds": 3,
         "rest_between_sets_seconds": 180,
         "notes": "Loadable pinch block. Progress via added weight. Full thumb wrap."
       },
@@ -6660,7 +6660,7 @@
         "sets": 5,
         "reps": 4,
         "work_seconds": 7,
-        "rest_between_reps_seconds": null,
+        "rest_between_reps_seconds": 3,
         "rest_between_sets_seconds": 180,
         "notes": "Transition mid-hang from half-crimp to open-hand."
       },
@@ -8614,7 +8614,7 @@
         "sets": 3,
         "reps": 4,
         "work_seconds": 6,
-        "rest_between_reps_seconds": null,
+        "rest_between_reps_seconds": 15,
         "rest_between_sets_seconds": 180
       },
       "stress_tags": {
@@ -8711,7 +8711,7 @@
         "sets": 3,
         "reps": 5,
         "work_seconds": 4,
-        "rest_between_reps_seconds": null,
+        "rest_between_reps_seconds": 10,
         "rest_between_sets_seconds": 90
       },
       "stress_tags": {
@@ -8891,8 +8891,8 @@
       "prescription_defaults": {
         "sets": 1,
         "reps": 4,
-        "work_seconds": 300,
-        "rest_between_reps_seconds": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 60,
         "rest_between_sets_seconds": null,
         "grade_ref": "boulder_max_os",
         "grade_offset": -2
@@ -8939,8 +8939,8 @@
       "prescription_defaults": {
         "sets": 1,
         "reps": 4,
-        "work_seconds": 300,
-        "rest_between_reps_seconds": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 60,
         "rest_between_sets_seconds": null,
         "grade_ref": "boulder_max_os",
         "grade_offset": -2
@@ -8988,7 +8988,7 @@
         "sets": 1,
         "reps": 3,
         "work_seconds": 120,
-        "rest_between_reps_seconds": null,
+        "rest_between_reps_seconds": 300,
         "rest_between_sets_seconds": null,
         "grade_ref": "lead_max_os",
         "grade_offset": -1
