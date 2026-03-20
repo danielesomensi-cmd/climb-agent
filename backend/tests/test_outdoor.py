@@ -1082,3 +1082,125 @@ class TestRemoveOutdoorSession:
         assert len(sessions) == 1
         assert len(sessions[0]["routes"]) == 2
         assert sessions[0]["routes"][0]["name"] == "R2"
+
+
+# ── D134: Supabase auth guard ─────────────────────────────────────────
+
+
+class TestSupabaseAuthGuard:
+    """D134: _require_user_id must reject None and '__legacy__' in Supabase backend."""
+
+    def test_require_user_id_none_raises(self):
+        from backend.engine.storage_supabase import _require_user_id
+        with pytest.raises(ValueError, match="authenticated user_id"):
+            _require_user_id(None)
+
+    def test_require_user_id_legacy_raises(self):
+        from backend.engine.storage_supabase import _require_user_id
+        with pytest.raises(ValueError, match="authenticated user_id"):
+            _require_user_id("__legacy__")
+
+    def test_require_user_id_valid_passes(self):
+        from backend.engine.storage_supabase import _require_user_id
+        assert _require_user_id("abc-123") == "abc-123"
+
+    def test_require_user_id_uuid_passes(self):
+        from backend.engine.storage_supabase import _require_user_id
+        uid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        assert _require_user_id(uid) == uid
+
+
+class TestOutdoorAuthGuardAPI:
+    """D134: POST/PUT outdoor log without auth must return 401, not silently save under __legacy__."""
+
+    @pytest.fixture(autouse=True)
+    def setup_api(self, tmp_path, monkeypatch):
+        from backend.api import deps
+        from backend.engine import storage
+
+        state_path = tmp_path / "user_state.json"
+        state_path.write_text(json.dumps({"schema_version": "1.5", "outdoor_spots": []}))
+        monkeypatch.setattr(storage, "STATE_PATH", state_path)
+        monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
+        monkeypatch.setattr(deps, "STATE_PATH", state_path)
+
+        from fastapi.testclient import TestClient
+        from backend.api.main import app
+        self.client = TestClient(app)
+
+    def test_post_outdoor_log_auth_error_returns_401(self, monkeypatch):
+        """When storage raises ValueError for missing user_id, router returns 401."""
+        from backend.api.routers import outdoor as outdoor_router
+
+        def _auth_fail(*args, **kwargs):
+            raise ValueError(
+                "Cannot write to Supabase without authenticated user_id. Received: None"
+            )
+
+        monkeypatch.setattr(outdoor_router, "append_outdoor_session", _auth_fail)
+
+        r = self.client.post("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [{"name": "R1", "grade": "6a", "attempts": [{"result": "sent"}]}],
+        })
+        assert r.status_code == 401
+        assert "Authentication required" in r.json()["detail"]
+
+    def test_post_outdoor_log_validation_error_still_422(self, monkeypatch):
+        """Normal validation errors (e.g. invalid discipline) still return 422."""
+        from backend.api.routers import outdoor as outdoor_router
+
+        def _validation_fail(*args, **kwargs):
+            raise ValueError("Invalid outdoor session entry: Invalid discipline: trad")
+
+        monkeypatch.setattr(outdoor_router, "append_outdoor_session", _validation_fail)
+
+        r = self.client.post("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [{"name": "R1", "grade": "6a", "attempts": [{"result": "sent"}]}],
+        })
+        assert r.status_code == 422
+
+    def test_post_outdoor_log_oserror_returns_500(self, monkeypatch):
+        """D134 Fix A: OSError from read-after-write failure returns 500."""
+        from backend.api.routers import outdoor as outdoor_router
+
+        def _write_fail(*args, **kwargs):
+            raise OSError("Supabase outdoor_log read-after-write failed")
+
+        monkeypatch.setattr(outdoor_router, "append_outdoor_session", _write_fail)
+
+        r = self.client.post("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [{"name": "R1", "grade": "6a", "attempts": [{"result": "sent"}]}],
+        })
+        assert r.status_code == 500
+        assert "Failed to write" in r.json()["detail"]
+
+    def test_post_outdoor_log_roundtrip_with_auth(self):
+        """With valid user (file backend), POST → GET roundtrip works."""
+        r = self.client.post("/api/outdoor/log", json={
+            "date": "2026-03-15",
+            "spot_name": "Berdorf",
+            "discipline": "boulder",
+            "duration_minutes": 120,
+            "routes": [{"name": "R1", "grade": "6a", "style": "onsight",
+                         "attempts": [{"result": "sent"}]}],
+        })
+        assert r.status_code == 200
+
+        r2 = self.client.get("/api/outdoor/log/2026-03-15")
+        assert r2.status_code == 200
+        session = r2.json()["session"]
+        assert session["spot_name"] == "Berdorf"
+        assert session["date"] == "2026-03-15"
+        assert len(session["routes"]) == 1

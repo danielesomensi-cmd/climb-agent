@@ -53,6 +53,22 @@ def _effective_uid(user_id: Optional[str]) -> str:
     return user_id or "__legacy__"
 
 
+def _require_user_id(user_id: Optional[str]) -> str:
+    """Validate user_id for write operations — prevent data landing under '__legacy__'.
+
+    In the Supabase backend (production), every write MUST have a real user_id
+    from Clerk auth.  If user_id is None or '__legacy__', the Clerk token was
+    missing/expired at request time and the write would go to the wrong bucket,
+    causing data loss on subsequent reads under the real user_id.
+    """
+    if user_id is None or user_id == "__legacy__":
+        raise ValueError(
+            "Cannot write to Supabase without authenticated user_id. "
+            f"Received: {user_id!r}"
+        )
+    return user_id
+
+
 # ---------------------------------------------------------------------------
 # User state
 # ---------------------------------------------------------------------------
@@ -68,7 +84,7 @@ def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
 
 def write_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
     """Upsert user state into Supabase."""
-    uid = _effective_uid(user_id)
+    uid = _require_user_id(user_id)
     _sb().table("users").upsert({"user_id": uid, "state": state}).execute()
 
 
@@ -141,16 +157,43 @@ def count_session_log_lines(user_id: Optional[str]) -> int:
 # ---------------------------------------------------------------------------
 
 def append_outdoor_log_line(user_id: Optional[str], entry: Dict[str, Any]) -> str:
-    """Insert an outdoor session. Returns a synthetic path for compat."""
-    uid = _effective_uid(user_id)
+    """Insert an outdoor session. Returns a synthetic path for compat.
+
+    Raises ValueError if user_id is missing (D134 auth guard).
+    Raises OSError if the Supabase upsert returns empty data or read-after-write fails.
+    """
+    uid = _require_user_id(user_id)
     session_date = entry.get("date", "")
-    _sb().table("outdoor_logs").upsert({
+
+    result = _sb().table("outdoor_logs").upsert({
         "user_id": uid,
         "session_date": session_date,
         "entry": entry,
     }).execute()
-    # Return a synthetic path so callers that check os.path.isfile don't crash.
-    # The outdoor router verifies file existence — we return a token that passes.
+
+    # D134 Fix A: verify upsert returned data
+    if not result.data:
+        raise OSError(
+            f"Supabase outdoor_log upsert returned empty data "
+            f"for user={uid}, date={session_date}"
+        )
+
+    # D134 Fix A: read-after-write verification
+    verify = (
+        _sb()
+        .table("outdoor_logs")
+        .select("session_date")
+        .eq("user_id", uid)
+        .eq("session_date", session_date)
+        .limit(1)
+        .execute()
+    )
+    if not verify.data:
+        raise OSError(
+            f"Supabase outdoor_log read-after-write failed: "
+            f"data not found after upsert for user={uid}, date={session_date}"
+        )
+
     return f"supabase://outdoor_logs/{uid}/{session_date}"
 
 
@@ -185,7 +228,7 @@ def outdoor_log_date_exists(user_id: Optional[str], date: str) -> bool:
 
 def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
     """Delete outdoor entries for a given date. Returns count removed."""
-    uid = _effective_uid(user_id)
+    uid = _require_user_id(user_id)
     r = (
         _sb()
         .table("outdoor_logs")
@@ -199,7 +242,7 @@ def remove_outdoor_log_by_date(user_id: Optional[str], date: str) -> int:
 
 def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
     """Delete all outdoor logs for a user. Returns count removed."""
-    uid = _effective_uid(user_id)
+    uid = _require_user_id(user_id)
     r = _sb().table("outdoor_logs").delete().eq("user_id", uid).execute()
     return len(r.data)
 
@@ -210,7 +253,7 @@ def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
 
 def append_event(user_id: Optional[str], entry: Dict[str, Any]) -> None:
     """Append an event entry."""
-    uid = _effective_uid(user_id)
+    uid = _require_user_id(user_id)
     _sb().table("event_logs").insert({"user_id": uid, "entry": entry}).execute()
 
 
@@ -260,7 +303,7 @@ def list_user_ids() -> List[str]:
 
 def delete_user_data(user_id: str) -> None:
     """Remove all data for a user across all tables."""
-    uid = _effective_uid(user_id)
+    uid = _require_user_id(user_id)
     _sb().table("session_logs").delete().eq("user_id", uid).execute()
     _sb().table("outdoor_logs").delete().eq("user_id", uid).execute()
     _sb().table("event_logs").delete().eq("user_id", uid).execute()

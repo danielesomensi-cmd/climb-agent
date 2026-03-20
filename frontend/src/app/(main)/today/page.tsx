@@ -573,10 +573,17 @@ function TodayContent() {
     getOutdoorSpots().then((data) => setOutdoorSpots(data.spots)).catch(() => {});
   }
 
-  /** After outdoor routes are logged, mark outdoor as complete */
+  /** After outdoor routes are logged, verify data persisted, then mark complete (D134) */
   async function handleOutdoorLogSuccess() {
     if (!weekPlan || !outdoorLogDate) return;
     try {
+      // D134: read-after-write — verify outdoor log was persisted before marking complete
+      try {
+        await getOutdoorLogByDate(outdoorLogDate);
+      } catch {
+        setError("Outdoor session data was not saved. Please try again.");
+        return;
+      }
       const result = await applyEvents({
         events: [{ event_type: "complete_outdoor", date: outdoorLogDate }],
         week_plan: weekPlan,

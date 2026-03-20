@@ -83,6 +83,12 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
     try:
         log_path = append_outdoor_session(entry, user_id)
     except ValueError as e:
+        # D134: distinguish auth errors (missing user_id) from validation errors
+        if "authenticated user_id" in str(e):
+            raise HTTPException(
+                status_code=401,
+                detail="Authentication required to save outdoor session",
+            )
         raise HTTPException(status_code=422, detail=str(e))
     except OSError as e:
         raise HTTPException(
@@ -90,7 +96,7 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
             detail=f"Failed to write outdoor log: {e}",
         )
 
-    # Verify write actually persisted (skip for non-file backends)
+    # Verify write persisted (file backend only — Supabase has read-after-write in storage layer)
     if not log_path.startswith("supabase://") and not os.path.isfile(log_path):
         raise HTTPException(
             status_code=500,
@@ -122,6 +128,8 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
         update_outdoor_session(user_id, req.date, entry)
     except ValueError as e:
         detail = str(e)
+        if "authenticated user_id" in detail:
+            raise HTTPException(status_code=401, detail="Authentication required to update outdoor session")
         status = 404 if "No outdoor session found" in detail or "No outdoor log file" in detail else 422
         raise HTTPException(status_code=status, detail=detail)
     except OSError as e:
