@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-03-14
+Last updated: 2026-03-20
 
 ---
 
@@ -819,3 +819,84 @@ The 5 normalized axes (0-100) of the assessment radar:
 - `power_endurance`
 - `technique`
 - `endurance`
+
+---
+
+## 6) Free Climbing Session vocabulary (A136)
+
+### 6.1 Free session context
+
+`context` describes the relationship of the free session to the planned training day.
+
+Allowed values:
+- `standalone` — rest day or no planned session
+- `add_on` — after a completed planned session
+- `replacement` — replaces a planned session (marks it as skipped)
+
+### 6.2 Free session mode
+
+`session_mode` describes whether the user follows a template or climbs freely.
+
+Allowed values:
+- `template` — user selected a preset (grade target, rest, climb count)
+- `free` — no structure, only phase tip
+
+### 6.3 Climb status (boulder)
+
+`climb_status` describes the outcome of a single boulder problem.
+
+Allowed values:
+- `flash` — sent first try (attempts must be 1)
+- `sent` — sent after multiple tries (attempts must be >= 2)
+- `attempted` — not sent (attempts must be >= 1)
+
+### 6.4 Climb style (lead only)
+
+`climb_style` describes the style of a route attempt. Only used when `surface == "gym_routes"`.
+
+Allowed values:
+- `onsight` — first attempt, no beta
+- `flash` — first attempt, with beta
+- `redpoint` — sent after previous attempts
+- `project` — working a route, not yet sent
+
+### 6.5 Free session surfaces
+
+Allowed `surface` values for free climbing sessions:
+
+- `gym_boulder` — gym boulder area
+- `board_kilter` — Kilter Board
+- `board_moonboard` — MoonBoard
+- `board_other` — other training board (Tension, Grasshopper, custom)
+- `gym_routes` — lead / top-rope routes
+
+Note: all surfaces are always available (no equipment filter).
+
+### 6.6 Overall feel
+
+`overall_feel` describes the user's subjective feeling after the session.
+
+Allowed values:
+- `easy`
+- `good`
+- `hard`
+
+### 6.7 Free session preset IDs
+
+Boulder presets:
+- `free_volume` — high volume, moderate grade
+- `free_projecting` — few climbs at limit grade
+- `free_endurance` — many easy boulders, short rest
+- `free_technique` — easy problems, focus on footwork
+
+Lead presets:
+- `free_lead_volume` — many routes at moderate grade
+- `free_lead_projecting` — 1-2 routes at limit
+- `free_lead_endurance` — long easy routes, short rest
+
+### 6.8 Phase compatibility
+
+Preset phase compatibility values:
+- `recommended` — good match for current phase
+- `caution` — can do, but be mindful
+- `not_recommended` — avoid in this phase

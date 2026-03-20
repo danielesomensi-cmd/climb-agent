@@ -170,6 +170,12 @@ user_state.assessment + user_state.goal
 | GET | `/api/weekly-override/{week_start}` | Get weekly availability override |
 | PUT | `/api/weekly-override/{week_start}` | Save weekly availability override |
 | DELETE | `/api/weekly-override/{week_start}` | Delete weekly availability override |
+| GET | `/api/free-session/surfaces` | Available surfaces + user gyms |
+| GET | `/api/free-session/presets` | Presets for surface (personalized grades, phase tips) |
+| POST | `/api/free-session/start` | Start a free climbing session |
+| POST | `/api/free-session/{id}/log-climb` | Log a climb to active session |
+| POST | `/api/free-session/{id}/finish` | Finish session (summary + load) |
+| GET | `/api/free-session/history` | Free sessions for a date |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 

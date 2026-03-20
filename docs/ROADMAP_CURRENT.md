@@ -32,6 +32,7 @@
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
 Recently closed (2026-03-20):
+- **A136** — Free climbing session backend. Data model (`free_sessions[]` in user_state), 6 API endpoints (surfaces, presets, start, log-climb, finish, history), preset catalog (4 boulder + 3 lead), phase tips (template + free mode × 5 phases), load calculation (v1 formula: relative difficulty × status weight × attempt modifier), grade utilities (Fontainebleau 4A-8C+), context-aware replacement (marks planned session as skipped). 72 new tests. Vocabulary §6 updated.
 - **A135** — Tabata timer tab. New `/tabata` page with fully configurable interval timer (7 parameters: prepare, work, rest, cycles, sets, set rest, cool down). Setup screen with +/- buttons + tap-to-edit numeric input. Running timer with wall-clock engine (iOS Safari PWA safe), animated SVG progress ring, phase-colored backgrounds (teal work, blue rest, grey prepare/cooldown), 3-2-1 countdown beeps, voice encouragement (30% random phrases from A123 pool). Expand mode (fullscreen 120px font). Completion screen with stats grid + restart. Bottom nav restructured: Today | Week | Tabata | Free | More (drawer with Plan, What's next, Settings, Outdoor, Reports). Free Session placeholder page added.
 
 Recently closed (2026-03-19):
