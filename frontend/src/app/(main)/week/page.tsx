@@ -10,6 +10,7 @@ import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
 import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate } from "@/lib/api";
@@ -679,12 +680,12 @@ export default function WeekPage() {
           const firstDay = weekPlan.weeks[0]?.days[0]?.date;
           return firstDay ? (
             <div className="flex justify-center">
-              <a href={`/reports/weekly?week_start=${firstDay}`}>
+              <Link href={`/reports/weekly?week_start=${firstDay}`}>
                 <Button variant="outline" size="sm" className="gap-2">
                   <BarChart3 className="size-4" />
                   Weekly Report
                 </Button>
-              </a>
+              </Link>
             </div>
           ) : null;
         })()}
