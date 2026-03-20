@@ -90,7 +90,7 @@ from backend.engine.planner_v1 import generate_week_plan
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (15 routers)
+  api/               # FastAPI REST API (16 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week,
                      # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
@@ -126,7 +126,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-42 endpoints total (41 router + 1 app-level health check).
+48 endpoints total (47 router + 1 app-level health check).
 
 | Method | Path | Description |
 |--------|------|-------------|
