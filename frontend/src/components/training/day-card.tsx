@@ -596,13 +596,22 @@ export function DayCard({
                         </Button>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {total} {climbType}
-                      {sentCount > 0 && ` · ${sentCount} sent`}
-                      {triedCount > 0 && ` · ${triedCount} tried`}
-                      {maxSent && ` · max ${maxSent}`}
-                      {showTriedGrade && ` · tried ${maxAttempted}`}
-                      {fs.duration_minutes != null && ` · ${fs.duration_minutes} min`}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                      <span className="text-xs text-muted-foreground">
+                        {total} {climbType}
+                        {sentCount > 0 && ` · ${sentCount} sent`}
+                        {triedCount > 0 && ` · ${triedCount} tried`}
+                        {maxSent && ` · max ${maxSent}`}
+                        {showTriedGrade && ` · tried ${maxAttempted}`}
+                        {fs.duration_minutes != null && fs.duration_minutes > 0
+                          ? ` · ${fs.duration_minutes} min`
+                          : fs.duration_minutes === 0 ? " · < 1 min" : ""}
+                      </span>
+                      {fs.load_score != null && fs.load_score > 0 && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Load: {fs.load_score}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
