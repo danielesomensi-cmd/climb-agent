@@ -300,6 +300,89 @@ export const deleteWeeklyOverride = (weekStart: string) =>
     method: "DELETE",
   });
 
+// Free Session (A136)
+export const getFreeSessionSurfaces = () =>
+  request<{
+    surfaces: Array<{ id: string; name: string }>;
+    gyms: Array<{ gym_id: string; name: string }>;
+  }>("/api/free-session/surfaces");
+
+export const getFreeSessionPresets = (surface: string) =>
+  request<{
+    presets: Array<{
+      id: string;
+      name: string;
+      description: string;
+      icon: string;
+      target_grade: string | null;
+      rest_seconds: number;
+      target_climbs: string;
+      duration: string;
+      phase_compatibility: string;
+      phase_tip: string;
+    }>;
+    free_mode_tip: string;
+    phase_id: string;
+  }>(`/api/free-session/presets?surface=${surface}`);
+
+export const startFreeSession = (data: {
+  date: string;
+  surface: string;
+  gym_name?: string;
+  session_mode: string;
+  preset_id?: string;
+  context: string;
+}) =>
+  request<{
+    session_id: string;
+    phase_at_time: string;
+    tip: string | null;
+    target_grade: string | null;
+    rest_seconds: number | null;
+  }>("/api/free-session/start", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const logFreeClimb = (sessionId: string, data: {
+  grade: string;
+  status: string;
+  attempts: number;
+  style?: string;
+  topped?: boolean;
+  notes?: string;
+}) =>
+  request<{ index: number; logged_at: string }>(
+    `/api/free-session/${sessionId}/log-climb`,
+    { method: "POST", body: JSON.stringify(data) }
+  );
+
+export const finishFreeSession = (sessionId: string, data: {
+  overall_feel?: string;
+  notes?: string;
+}) =>
+  request<{
+    summary: {
+      total_climbs: number;
+      flashed: number;
+      sent: number;
+      attempted: number;
+      max_grade_sent: string | null;
+      max_grade_attempted: string | null;
+      send_rate: number;
+    };
+    duration_minutes: number | null;
+    load_score: number | null;
+  }>(`/api/free-session/${sessionId}/finish`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const getFreeSessionHistory = (date: string) =>
+  request<{ sessions: Array<Record<string, unknown>> }>(
+    `/api/free-session/history?date=${date}`
+  );
+
 // Reports
 export const getWeeklyReport = (weekStart: string) =>
   request<WeeklyReport>(`/api/reports/weekly?week_start=${weekStart}`);

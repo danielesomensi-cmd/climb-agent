@@ -112,11 +112,18 @@ function currentMonday(): string {
 
 function WeeklyReportContent() {
   const searchParams = useSearchParams();
-  const initialStart = searchParams.get("week_start") || currentMonday();
-  const [weekStart, setWeekStart] = useState(initialStart);
+  const paramStart = searchParams.get("week_start");
+  const [weekStart, setWeekStart] = useState(paramStart || currentMonday());
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Sync state when searchParams change (e.g. Suspense hydration, SPA navigation)
+  useEffect(() => {
+    if (paramStart && paramStart !== weekStart) {
+      setWeekStart(paramStart);
+    }
+  }, [paramStart]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchReport = useCallback(async (ws: string) => {
     if (!ws) return;
