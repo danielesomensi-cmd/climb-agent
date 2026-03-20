@@ -378,6 +378,11 @@ export const finishFreeSession = (sessionId: string, data: {
     body: JSON.stringify(data),
   });
 
+export const deleteFreeSession = (sessionId: string) =>
+  request<{ status: string }>(`/api/free-session/${sessionId}`, {
+    method: "DELETE",
+  });
+
 export const getFreeSessionHistory = (date: string) =>
   request<{ sessions: Array<Record<string, unknown>> }>(
     `/api/free-session/history?date=${date}`

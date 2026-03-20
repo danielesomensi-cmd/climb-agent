@@ -24,6 +24,7 @@ import type {
   WeeklyReport,
   WeeklyReportHighlight,
   WeeklyReportDay,
+  WeeklyReportFreeSession,
 } from "@/lib/types";
 
 const PHASE_LABELS: Record<string, string> = {
@@ -247,6 +248,9 @@ function WeeklyReportContent() {
                     {report.load.outdoor_load > 0 && (
                       <p className="text-[10px] text-muted-foreground">+{report.load.outdoor_load} outdoor</p>
                     )}
+                    {report.load.free_session_load > 0 && (
+                      <p className="text-[10px] text-muted-foreground">+{report.load.free_session_load} free</p>
+                    )}
                   </div>
                 </div>
 
@@ -336,6 +340,14 @@ function WeeklyReportContent() {
                             )}
                           </span>
                         )}
+                        {day.free_sessions?.map((fs: WeeklyReportFreeSession) => (
+                          <span key={fs.id} className="inline-flex items-center gap-1 rounded-full bg-purple-600 px-2 py-0.5 text-xs text-white">
+                            {fs.context === "add_on" ? "+" : ""}Free: {fs.surface} {fs.preset_name}
+                            <span className="opacity-80">
+                              ({fs.total_climbs} {fs.climb_type}{fs.max_grade_sent ? `, max ${fs.max_grade_sent}` : ""}{fs.duration_minutes ? `, ${fs.duration_minutes}m` : ""})
+                            </span>
+                          </span>
+                        ))}
                         {day.is_rest_day && (
                           <span className="text-xs text-muted-foreground italic">Rest</span>
                         )}

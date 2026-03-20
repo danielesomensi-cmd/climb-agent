@@ -312,6 +312,7 @@ export interface WeeklyReportLoad {
   planned_total: number;
   actual_total: number;
   outdoor_load: number;
+  free_session_load: number;
   load_ratio: number;
   hard_days: number;
   recovery_days: number;
@@ -362,12 +363,26 @@ export interface WeeklyReportSession {
   feedback_summary: string | null;
 }
 
+export interface WeeklyReportFreeSession {
+  id: string;
+  surface: string;
+  preset_name: string;
+  context: string;
+  total_climbs: number;
+  max_grade_sent: string | null;
+  send_rate: number;
+  duration_minutes: number | null;
+  load_score: number;
+  climb_type: string;
+}
+
 export interface WeeklyReportDay {
   date: string;
   weekday: string;
   sessions: WeeklyReportSession[];
   outdoor: { spot_name: string; discipline: string; status: string; route_count?: number } | null;
   other_activity: { name: string; status: string; feedback: string; load?: number } | null;
+  free_sessions?: WeeklyReportFreeSession[];
   is_rest_day: boolean;
 }
 

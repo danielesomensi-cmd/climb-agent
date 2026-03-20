@@ -45,11 +45,12 @@ interface DayCardProps {
     preset_id?: string;
     session_mode?: string;
     duration_minutes?: number;
-    summary?: { total_climbs: number; max_grade_sent?: string; send_rate?: number };
+    summary?: { total_climbs: number; flashed?: number; sent?: number; attempted?: number; max_grade_sent?: string | null; max_grade_attempted?: string | null; send_rate?: number };
     overall_feel?: string;
     finished_at?: string;
     load_score?: number;
   }>;
+  onDeleteFreeSession?: (sessionId: string) => void;
   showActions?: boolean;
   weekPlan?: WeekPlan | null;
   onSessionUpdated?: () => void;
@@ -146,6 +147,7 @@ export function DayCard({
   outdoorRoutes,
   outdoorDurationMinutes,
   freeSessions,
+  onDeleteFreeSession,
   showActions = false,
   weekPlan,
   onSessionUpdated,
@@ -564,19 +566,42 @@ export function DayCard({
                 ? fs.preset_id.replace("free_", "").replace("lead_", "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
                 : "Free";
               const climbType = fs.surface === "gym_routes" ? "routes" : "boulders";
+              const total = fs.summary?.total_climbs ?? 0;
+              const sentCount = (fs.summary?.flashed ?? 0) + (fs.summary?.sent ?? 0);
+              const triedCount = fs.summary?.attempted ?? 0;
+              const maxSent = fs.summary?.max_grade_sent;
+              const maxAttempted = fs.summary?.max_grade_attempted;
+              const showTriedGrade = maxAttempted && maxAttempted !== maxSent;
               return (
                 <div key={fs.id} className="flex items-center gap-2 rounded-lg border border-dashed border-purple-500/40 p-3 text-sm">
-                  <Grip className="size-4 text-purple-400" />
+                  <Grip className="size-4 text-purple-400 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium truncate">Free: {surfaceName} {presetLabel}</span>
                       <Badge className="bg-green-600 text-[10px] shrink-0">
                         <span className="text-white">Done</span>
                       </Badge>
+                      {onDeleteFreeSession && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="ml-auto size-6 text-muted-foreground hover:text-red-400 shrink-0"
+                          onClick={() => {
+                            if (confirm("Delete this free session?")) {
+                              onDeleteFreeSession(fs.id);
+                            }
+                          }}
+                        >
+                          <X className="size-3.5" />
+                        </Button>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      {fs.summary?.total_climbs ?? 0} {climbType}
-                      {fs.summary?.max_grade_sent && ` · max ${fs.summary.max_grade_sent}`}
+                      {total} {climbType}
+                      {sentCount > 0 && ` · ${sentCount} sent`}
+                      {triedCount > 0 && ` · ${triedCount} tried`}
+                      {maxSent && ` · max ${maxSent}`}
+                      {showTriedGrade && ` · tried ${maxAttempted}`}
                       {fs.duration_minutes != null && ` · ${fs.duration_minutes} min`}
                     </div>
                   </div>

@@ -126,7 +126,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-48 endpoints total (47 router + 1 app-level health check).
+49 endpoints total (48 router + 1 app-level health check).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -176,6 +176,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/free-session/{id}/log-climb` | Log a climb to active session |
 | POST | `/api/free-session/{id}/finish` | Finish session (summary + load) |
 | GET | `/api/free-session/history` | Free sessions for a date |
+| DELETE | `/api/free-session/{id}` | Delete a free session |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 

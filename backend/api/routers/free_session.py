@@ -333,6 +333,24 @@ def get_history(
     return {"sessions": result}
 
 
+@router.delete("/{session_id}")
+def delete_session(
+    session_id: str,
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Delete a free session by ID."""
+    state = load_state(user_id)
+    free_sessions = state.get("free_sessions", [])
+    new_sessions = [s for s in free_sessions if s.get("id") != session_id]
+
+    if len(new_sessions) == len(free_sessions):
+        raise HTTPException(status_code=404, detail=f"Free session '{session_id}' not found")
+
+    state["free_sessions"] = new_sessions
+    save_state(state, user_id)
+    return {"status": "ok"}
+
+
 # ── Helpers ──────────────────────────────────────────────────────────────
 
 def _find_session(state: Dict[str, Any], session_id: str) -> Dict[str, Any]:

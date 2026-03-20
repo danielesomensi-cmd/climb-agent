@@ -11,7 +11,7 @@ import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
-import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory } from "@/lib/api";
+import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -799,6 +799,12 @@ function TodayContent() {
             onUndoOutdoor={handleUndoOutdoor}
             onRemoveOutdoor={handleRemoveOutdoor}
             freeSessions={freeSessions as never}
+            onDeleteFreeSession={async (sessionId: string) => {
+              try {
+                await deleteFreeSession(sessionId);
+                setFreeSessions((prev) => prev.filter((s) => s.id !== sessionId));
+              } catch { /* ignore */ }
+            }}
           />
         )}
 

@@ -14,7 +14,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
 import { useRouter } from "next/navigation";
-import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory } from "@/lib/api";
+import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -757,6 +757,19 @@ export default function WeekPage() {
                   onUndoOutdoor={handleUndoOutdoor}
                   onRemoveOutdoor={handleRemoveOutdoor}
                   freeSessions={freeSessionsByDate[day.date] as never}
+                  onDeleteFreeSession={async (sessionId: string) => {
+                    try {
+                      await deleteFreeSession(sessionId);
+                      setFreeSessionsByDate((prev) => {
+                        const copy = { ...prev };
+                        for (const d in copy) {
+                          copy[d] = copy[d].filter((s) => s.id !== sessionId);
+                          if (copy[d].length === 0) delete copy[d];
+                        }
+                        return copy;
+                      });
+                    } catch { /* ignore */ }
+                  }}
                 />
               </div>
             ))}
