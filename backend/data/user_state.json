@@ -3836,7 +3836,7 @@
     ]
   },
   "assessment": {
-    "_profile_fingerprint": "c455dfaf79f1a79b053141919fe2d07f",
+    "_profile_fingerprint": "dd88e931de0a84c29b2b86ddf40367f0",
     "body": {
       "body_fat_pct": null,
       "height_cm": 182,
@@ -3847,19 +3847,18 @@
       "structured_training_years": 7
     },
     "grades": {
-      "boulder_max_os": "7A+",
-      "boulder_max_rp": "7C",
-      "lead_max_os": "7a+",
-      "lead_max_rp": "8a+"
+      "boulder_max_os": "6C",
+      "boulder_max_rp": "7A",
+      "lead_max_os": "6c+",
+      "lead_max_rp": "7a+"
     },
     "last_assessed": "2026-02-23",
     "profile": {
-      "body_composition": 59,
-      "endurance": 30,
+      "endurance": 58,
       "finger_strength": 66,
-      "power_endurance": 37,
+      "power_endurance": 72,
       "pulling_strength": 61,
-      "technique": 35
+      "technique": 75
     },
     "self_eval": {
       "primary_weakness": "pump_too_early",
@@ -3919,26 +3918,13 @@
       {
         "equipment": [
           "gym_boulder",
-          "board_moonboard",
-          "spraywall",
-          "gym_routes",
-          "board_kilter",
-          "campus_board",
-          "hangboard",
-          "barbell",
-          "dumbbell",
-          "bench",
-          "leg_press",
-          "cable_machine"
+          "board_kilter"
         ],
-        "gym_id": "97de15e6",
-        "name": "Gym 1"
+        "gym_id": "bkl",
+        "name": "BKL"
       }
     ],
-    "home": [
-      "hangboard"
-    ],
-    "home_enabled": true
+    "home": []
   },
   "fatigue_proxy": {},
   "goal": {
@@ -3960,165 +3946,17 @@
     "details": []
   },
   "macrocycle": {
-    "assessment_snapshot": {
-      "body_composition": 59,
-      "endurance": 30,
-      "finger_strength": 66,
-      "power_endurance": 37,
-      "pulling_strength": 61,
-      "technique": 35
-    },
-    "end_date": "2026-05-31",
-    "generated_at": "2026-03-13T10:43:17",
-    "goal_snapshot": {
-      "current_grade": "8a+",
-      "deadline": "2026-08-22",
-      "discipline": "lead",
-      "goal_type": "lead_grade",
-      "target_grade": "8b"
-    },
-    "macrocycle_version": "macrocycle.v1",
     "phases": [
       {
-        "domain_weights": {
-          "core_prehab": 0.043,
-          "finger_strength": 0.174,
-          "power_endurance": 0.174,
-          "pulling_strength": 0.13,
-          "technique": 0.217,
-          "volume_climbing": 0.261
-        },
-        "duration_weeks": 5,
-        "end_week": 5,
-        "energy_system": "aerobic",
-        "intensity_cap": "medium",
-        "notes": "Build aerobic base. High volume, low intensity. Focus technique and movement quality.",
-        "phase_id": "base",
-        "phase_name": "Endurance Base",
-        "session_pool": [
-          "boulder_circuit_gym",
-          "endurance_aerobic_gym",
-          "finger_maintenance_home",
-          "prehab_maintenance",
-          "technique_focus_gym",
-          "complementary_conditioning",
-          "flexibility_full",
-          "handstand_practice",
-          "route_endurance_gym"
-        ],
-        "start_week": 1
+        "duration_weeks": 4,
+        "phase_id": "base"
       },
       {
-        "domain_weights": {
-          "core_prehab": 0.087,
-          "finger_strength": 0.304,
-          "power_endurance": 0.13,
-          "pulling_strength": 0.217,
-          "technique": 0.13,
-          "volume_climbing": 0.13
-        },
-        "duration_weeks": 2,
-        "end_week": 7,
-        "energy_system": "anaerobic_alactic",
-        "intensity_cap": "max",
-        "notes": "Max strength development. Max hangs, limit bouldering, general strength. High quality, full rest.",
-        "phase_id": "strength_power",
-        "phase_name": "Strength & Power",
-        "session_pool": [
-          "finger_strength_home",
-          "power_contact_gym",
-          "prehab_maintenance",
-          "strength_long",
-          "complementary_conditioning",
-          "flexibility_full",
-          "handstand_practice",
-          "technique_focus_gym"
-        ],
-        "start_week": 6
-      },
-      {
-        "domain_weights": {
-          "core_prehab": 0.087,
-          "finger_strength": 0.13,
-          "power_endurance": 0.348,
-          "pulling_strength": 0.087,
-          "technique": 0.174,
-          "volume_climbing": 0.174
-        },
-        "duration_weeks": 2,
-        "end_week": 9,
-        "energy_system": "anaerobic_lactic",
-        "intensity_cap": "high",
-        "notes": "Anaerobic capacity. 4x4, intervals, threshold climbing. Tolerate pump, push volume.",
-        "phase_id": "power_endurance",
-        "phase_name": "Power Endurance",
-        "session_pool": [
-          "power_endurance_gym",
-          "prehab_maintenance",
-          "endurance_aerobic_gym",
-          "finger_strength_home",
-          "flexibility_full",
-          "handstand_practice",
-          "route_endurance_gym",
-          "technique_focus_gym"
-        ],
-        "start_week": 8
-      },
-      {
-        "domain_weights": {
-          "core_prehab": 0.13,
-          "finger_strength": 0.087,
-          "power_endurance": 0.217,
-          "pulling_strength": 0.043,
-          "technique": 0.261,
-          "volume_climbing": 0.261
-        },
-        "duration_weeks": 2,
-        "end_week": 11,
-        "energy_system": "specific",
-        "intensity_cap": "max",
-        "notes": "Peak performance. Limit climbing, projecting, outdoor. Reduce volume, maximize quality.",
-        "phase_id": "performance",
-        "phase_name": "Performance",
-        "session_pool": [
-          "prehab_maintenance",
-          "technique_focus_gym",
-          "finger_strength_home",
-          "flexibility_full",
-          "handstand_practice",
-          "power_contact_gym",
-          "power_endurance_gym"
-        ],
-        "start_week": 10
-      },
-      {
-        "domain_weights": {
-          "core_prehab": 0.182,
-          "finger_strength": 0.091,
-          "power_endurance": 0.182,
-          "pulling_strength": 0.091,
-          "technique": 0.182,
-          "volume_climbing": 0.273
-        },
-        "duration_weeks": 1,
-        "end_week": 12,
-        "energy_system": "recovery",
-        "intensity_cap": "low",
-        "notes": "Recovery. Volume -50%. No max/high intensity. Mobility, prehab, easy climbing only.",
-        "phase_id": "deload",
-        "phase_name": "Deload",
-        "session_pool": [
-          "flexibility_full",
-          "prehab_maintenance",
-          "regeneration_easy",
-          "yoga_recovery",
-          "easy_climbing_deload"
-        ],
-        "start_week": 12
+        "duration_weeks": 3,
+        "phase_id": "strength_power"
       }
     ],
-    "start_date": "2026-03-09",
-    "total_weeks": 12
+    "start_date": "2026-03-02"
   },
   "outdoor_log": [],
   "performance": {

@@ -52,11 +52,11 @@ def index_to_font(index: int) -> Optional[str]:
 
 
 def offset_grade(base_grade: str, offset: int) -> Optional[str]:
-    """Apply an integer offset to a grade. Returns None if out of range."""
+    """Apply an integer offset to a grade. Clamps to valid range."""
     idx = font_to_index(base_grade)
     if idx is None:
         return None
-    new_idx = idx + offset
+    new_idx = max(0, min(len(FONT_GRADES) - 1, idx + offset))
     return index_to_font(new_idx)
 
 
