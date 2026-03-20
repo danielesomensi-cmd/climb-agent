@@ -157,9 +157,15 @@ def _attempt_modifier(attempts: int) -> float:
 def compute_free_session_load(climbs: List[Dict[str, Any]], user_max_grade: str) -> float:
     """Compute load score for a free session.
 
-    Simple v1 formula per design doc §3.9:
-    For each climb: relative_difficulty * status_weight * attempt_modifier
+    Formula v1: sum(relative_difficulty * status_weight * attempt_modifier) * SCALE_FACTOR
+
+    SCALE_FACTOR aligns the free session scale (~1-10 raw) with the engine
+    estimated_load_score scale (20-85). Calibrated so that a typical volume
+    session (20 moderate boulders) ≈ 40 (engine "medium" intensity).
     """
+    # Aligns raw per-climb accumulation to engine load scale (low=20..max=85)
+    _SCALE_FACTOR = 4.0
+
     max_idx = font_to_index(user_max_grade)
     if max_idx is None or max_idx == 0:
         return 0.0
@@ -178,7 +184,7 @@ def compute_free_session_load(climbs: List[Dict[str, Any]], user_max_grade: str)
 
         total += relative * weight * mod
 
-    return round(total, 1)
+    return round(total * _SCALE_FACTOR, 1)
 
 
 # ── Phase lookup ─────────────────────────────────────────────────────────

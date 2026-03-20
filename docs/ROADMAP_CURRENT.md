@@ -244,6 +244,22 @@ Claude Sonnet as conversational layer over the deterministic engine.
 
 ---
 
+### Free session load v2 — non-linear scaling near max grade
+
+**Priority:** Post-launch (v2)
+**Status:** Open
+
+Il SCALE_FACTOR = 4.0 lineare funziona per v1 ma sottostima il load quando si scala vicino o sopra il proprio max. Fisiologicamente, un boulder a +1 dal max non è il 5% più duro — è esponenzialmente più faticoso (pump, recovery, rischio infortunio).
+
+Proposta v2: curva esponenziale sopra il 90% del max dell'utente. Esempio:
+- relative < 0.9 → fattore lineare (come ora)
+- relative 0.9-1.0 → fattore ×1.3
+- relative > 1.0 → fattore ×1.8
+
+Da calibrare con dati reali dai beta tester.
+
+---
+
 ## Future — Engine improvements
 
 | ID | Title | Notes |

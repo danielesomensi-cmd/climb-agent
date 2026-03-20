@@ -200,15 +200,15 @@ class TestComputeLoad:
     def test_single_flash_at_max(self):
         climbs = [{"grade": "7A", "status": "flash", "attempts": 1}]
         load = compute_free_session_load(climbs, "7A")
-        # relative = 1.0, status = 0.8, mod = 1.0 → 0.8
-        assert load == 0.8
+        # relative = 1.0, status = 0.8, mod = 1.0 → 0.8 × SCALE(4.0) = 3.2
+        assert load == 3.2
 
     def test_single_sent_below_max(self):
         climbs = [{"grade": "6A", "status": "sent", "attempts": 2}]
         load = compute_free_session_load(climbs, "7A")
         # 7A index = 15, 6A index = 9
-        # relative = 9/15 = 0.6, status = 1.0, mod = 1.1 → 0.66 → round = 0.7
-        assert load == 0.7
+        # relative = 9/15 = 0.6, status = 1.0, mod = 1.1 → 0.66 × 4.0 = 2.64 → round = 2.6
+        assert load == 2.6
 
     def test_multiple_climbs(self):
         climbs = [
@@ -227,8 +227,8 @@ class TestComputeLoad:
     def test_attempt_modifier_3plus(self):
         climbs = [{"grade": "7A", "status": "attempted", "attempts": 5}]
         load = compute_free_session_load(climbs, "7A")
-        # relative = 1.0, status = 0.6, mod = 1.3 → 0.78
-        assert load == 0.8  # rounded
+        # relative = 1.0, status = 0.6, mod = 1.3 → 0.78 × 4.0 = 3.12
+        assert load == 3.1
 
 
 # ── Phase lookup ─────────────────────────────────────────────────────────
