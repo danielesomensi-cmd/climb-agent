@@ -100,9 +100,19 @@ export default function WeeklyReportPage() {
   );
 }
 
+/** Return the Monday of the current ISO week as YYYY-MM-DD. */
+function currentMonday(): string {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun … 6=Sat
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  const mon = new Date(d);
+  mon.setDate(diff);
+  return mon.toISOString().slice(0, 10);
+}
+
 function WeeklyReportContent() {
   const searchParams = useSearchParams();
-  const initialStart = searchParams.get("week_start") ?? "";
+  const initialStart = searchParams.get("week_start") || currentMonday();
   const [weekStart, setWeekStart] = useState(initialStart);
   const [report, setReport] = useState<WeeklyReport | null>(null);
   const [loading, setLoading] = useState(true);

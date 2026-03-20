@@ -16,11 +16,10 @@ export default function FreeSessionPage() {
               stroke="currentColor"
               strokeWidth={1.5}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M8 3l4 8 5-5 5 15H2L8 3z"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 11V6a2 2 0 00-2-2 2 2 0 00-2 2" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14 10V4a2 2 0 00-2-2 2 2 0 00-2 2v2" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 10.5V6a2 2 0 00-2-2 2 2 0 00-2 2v8" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M18 8a2 2 0 012 2v7c0 3-2.5 5-5 5h-4c-2 0-4-1-5.5-2.5L2 16" />
             </svg>
           </div>
           <h2 className="text-xl font-semibold">Coming soon</h2>

@@ -35,9 +35,12 @@ const tabs = [
   {
     href: "/free-session",
     label: "Free",
-    // Mountain icon
+    // Hand grip / climbing hold icon
     paths: [
-      { d: "M8 3l4 8 5-5 5 15H2L8 3z" },
+      { d: "M18 11V6a2 2 0 00-2-2 2 2 0 00-2 2" },
+      { d: "M14 10V4a2 2 0 00-2-2 2 2 0 00-2 2v2" },
+      { d: "M10 10.5V6a2 2 0 00-2-2 2 2 0 00-2 2v8" },
+      { d: "M18 8a2 2 0 012 2v7c0 3-2.5 5-5 5h-4c-2 0-4-1-5.5-2.5L2 16" },
     ],
   },
 ];

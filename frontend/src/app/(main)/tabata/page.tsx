@@ -729,8 +729,32 @@ export default function TabataPage() {
   // -------------------------------------------------------------------------
 
   const phaseDuration = totalForPhase(phase);
-  const progress = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
-  const dashOffset = RING_CIRCUMFERENCE - progress * RING_CIRCUMFERENCE;
+
+  // ---- Smooth progress ring via requestAnimationFrame ----
+  const [smoothProgress, setSmoothProgress] = useState(0);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    // When idle/done or paused, snap to discrete progress
+    if (phase === "idle" || phase === "done" || paused) {
+      cancelAnimationFrame(rafRef.current);
+      const p = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
+      setSmoothProgress(p);
+      return;
+    }
+
+    function tick() {
+      const remainingMs = phaseEndTimeRef.current - Date.now();
+      const dur = phaseDuration * 1000;
+      const p = dur > 0 ? 1 - Math.max(0, remainingMs) / dur : 0;
+      setSmoothProgress(Math.min(1, Math.max(0, p)));
+      rafRef.current = requestAnimationFrame(tick);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [phase, paused, phaseDuration, secondsLeft]);
+
+  const dashOffset = RING_CIRCUMFERENCE - smoothProgress * RING_CIRCUMFERENCE;
 
   // Remaining total
   const totalRemaining = (() => {
@@ -775,7 +799,7 @@ export default function TabataPage() {
     return (
       <>
         <TopBar title="Tabata" />
-        <main className="mx-auto flex max-w-2xl flex-col items-center justify-center px-4 py-12">
+        <main className="mx-auto flex max-w-2xl flex-col items-center justify-center px-4 py-12 pb-24">
           <div className="flex flex-col items-center gap-6 text-center">
             {/* Checkmark circle */}
             <div className="flex h-24 w-24 items-center justify-center rounded-full bg-green-500/20">
@@ -918,16 +942,11 @@ export default function TabataPage() {
           "fixed inset-0 flex flex-col transition-colors duration-500",
           PHASE_BG[phase]
         )}>
-          {/* Top bar area — phase + counters */}
-          <div className="flex items-center justify-between px-4 pt-3 pb-2">
-            <div>
-              <span className={cn("text-xs font-bold uppercase tracking-[0.15em]", PHASE_TEXT_COLOR[phase])}>
-                {PHASE_LABEL[phase]}
-              </span>
-            </div>
-            <div className="text-xs text-muted-foreground tabular-nums">
-              Cycle {currentCycle}/{cycles} &middot; Set {currentSet}/{sets}
-            </div>
+          {/* Top bar area — phase label */}
+          <div className="flex items-center justify-center px-4 pt-4 pb-1">
+            <span className={cn("text-sm font-bold uppercase tracking-[0.2em]", PHASE_TEXT_COLOR[phase])}>
+              {PHASE_LABEL[phase]}
+            </span>
           </div>
 
           {/* Center: progress ring + countdown */}
@@ -945,7 +964,7 @@ export default function TabataPage() {
                   strokeWidth={10}
                   className="stroke-white/10"
                 />
-                {/* Progress */}
+                {/* Progress — no CSS transition, driven by rAF */}
                 <circle
                   cx="130" cy="130" r={RING_RADIUS}
                   fill="none"
@@ -953,10 +972,7 @@ export default function TabataPage() {
                   strokeLinecap="round"
                   strokeDasharray={RING_CIRCUMFERENCE}
                   strokeDashoffset={dashOffset}
-                  className={cn(
-                    PHASE_RING_COLOR[phase],
-                    "transition-[stroke-dashoffset] duration-200 ease-linear"
-                  )}
+                  className={PHASE_RING_COLOR[phase]}
                 />
               </svg>
 
@@ -971,6 +987,23 @@ export default function TabataPage() {
               </div>
             </div>
 
+            {/* Cycle / Set counter — large, below ring */}
+            <div className="mt-4 flex items-center gap-3 tabular-nums">
+              <div className="flex flex-col items-center">
+                <span className="text-3xl font-bold">{currentCycle}<span className="text-muted-foreground">/{cycles}</span></span>
+                <span className="text-xs uppercase tracking-wider text-muted-foreground mt-0.5">Cycle</span>
+              </div>
+              {sets > 1 && (
+                <>
+                  <span className="text-2xl text-muted-foreground/40 font-light">&middot;</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-3xl font-bold">{currentSet}<span className="text-muted-foreground">/{sets}</span></span>
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground mt-0.5">Set</span>
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Pause overlay */}
             {paused && (
               <div className="mt-4 rounded-xl bg-white/10 px-8 py-3 backdrop-blur-sm">
@@ -980,7 +1013,7 @@ export default function TabataPage() {
           </div>
 
           {/* Bottom: elapsed/remaining + controls */}
-          <div className="pb-6 px-4">
+          <div className="pb-28 px-4">
             {/* Elapsed / Remaining */}
             <div className="flex justify-center gap-8 mb-5 text-sm text-muted-foreground tabular-nums">
               <div className="flex flex-col items-center">
