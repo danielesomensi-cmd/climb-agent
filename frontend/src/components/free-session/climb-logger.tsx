@@ -40,6 +40,7 @@ interface ClimbLoggerProps {
   tip?: string;
   targetClimbs?: string;
   onFinish: () => void;
+  onCancel?: () => void;
   onClimbLogged?: (climb: LoggedClimb) => void;
 }
 
@@ -56,6 +57,7 @@ export function ClimbLogger({
   tip,
   targetClimbs,
   onFinish,
+  onCancel,
   onClimbLogged,
 }: ClimbLoggerProps) {
   // Form state
@@ -73,16 +75,20 @@ export function ClimbLogger({
   const [restKey, setRestKey] = useState(0);
   const [showRest, setShowRest] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const startedAt = useRef(Date.now());
-  const [elapsed, setElapsed] = useState(0);
+  const [elapsedSecs, setElapsedSecs] = useState(0);
 
-  // Elapsed timer
+  // Elapsed timer — update every second, wall-clock based
   useEffect(() => {
     const id = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - startedAt.current) / 60000));
-    }, 10000);
+      setElapsedSecs(Math.floor((Date.now() - startedAt.current) / 1000));
+    }, 1000);
     return () => clearInterval(id);
   }, []);
+
+  const elapsedMin = Math.floor(elapsedSecs / 60);
+  const elapsedSec = elapsedSecs % 60;
 
   // Auto-set attempts based on status
   useEffect(() => {
@@ -355,34 +361,65 @@ export function ClimbLogger({
       )}
 
       {/* Footer stats */}
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
+      <div className="flex items-center justify-between rounded-xl border bg-card px-4 py-3">
+        <span className="text-sm font-medium">
           {isLead(surface) ? "Routes" : "Boulders"}: {climbs.length}
-          {targetMax > 0 && `/${targetMax}`}
+          {targetMax > 0 && <span className="text-muted-foreground">/{targetMax}</span>}
         </span>
-        <span>{elapsed} min</span>
+        <span className="text-lg font-bold tabular-nums">
+          {elapsedMin}:{String(elapsedSec).padStart(2, "0")}
+        </span>
       </div>
 
-      {/* Finish button */}
-      {!showConfirm ? (
-        <Button
-          variant="outline"
-          onClick={() => setShowConfirm(true)}
-          className="w-full"
-        >
-          Finish Session
-        </Button>
-      ) : (
+      {/* Finish / Cancel buttons */}
+      {!showConfirm && !showCancelConfirm && (
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => setShowCancelConfirm(true)}
+            className="text-muted-foreground"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowConfirm(true)}
+            className="flex-1"
+          >
+            Finish Session
+          </Button>
+        </div>
+      )}
+
+      {/* Finish confirmation */}
+      {showConfirm && (
         <div className="rounded-xl border bg-card p-4">
           <p className="mb-3 text-center text-sm">
             Finish session? You logged {climbs.length} {isLead(surface) ? "routes" : "boulders"}.
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowConfirm(false)} className="flex-1">
-              Cancel
+              Keep climbing
             </Button>
             <Button onClick={onFinish} className="flex-1">
               Finish
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel confirmation */}
+      {showCancelConfirm && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+          <p className="mb-3 text-center text-sm">
+            Cancel this session?{climbs.length > 0 && ` All ${climbs.length} logged ${isLead(surface) ? "routes" : "boulders"} will be lost.`}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowCancelConfirm(false)} className="flex-1">
+              Keep climbing
+            </Button>
+            <Button variant="destructive" onClick={onCancel} className="flex-1">
+              Cancel session
             </Button>
           </div>
         </div>

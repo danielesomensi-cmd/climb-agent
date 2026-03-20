@@ -1,56 +1,56 @@
 {
   "template_tips": {
     "base": {
-      "free_volume": "Ottima scelta! Gradi moderati, rest \u22652min. Focus qualit\u00e0 di movimento.",
-      "free_projecting": "In Base \u00e8 meglio il volume. Se vuoi provare, max 3-4 tentativi al limite.",
-      "free_endurance": "Perfetto per la Base. Mantieni la pompa bassa.",
-      "free_technique": "Ideale. Ogni boulder \u00e8 un\u2019occasione per migliorare i piedi.",
-      "free_lead_volume": "Ottima scelta! Vie moderate, rest lungo. Costruisci la base aerobica.",
-      "free_lead_projecting": "In Base \u00e8 meglio il volume sulle vie. Se vuoi provare il progetto, max 2-3 tentativi.",
-      "free_lead_endurance": "Perfetto. Vie lunghe e facili, costruisci resistenza."
+      "free_volume": "Great choice! Moderate grades, rest \u22652min. Focus on movement quality.",
+      "free_projecting": "In Base, volume is better. If you want to try hard, max 3-4 attempts at your limit.",
+      "free_endurance": "Perfect for Base. Keep the pump low.",
+      "free_technique": "Ideal. Every boulder is a chance to improve your footwork.",
+      "free_lead_volume": "Great choice! Moderate routes, long rest. Build your aerobic base.",
+      "free_lead_projecting": "In Base, route volume is better. If you want to project, max 2-3 attempts.",
+      "free_lead_endurance": "Perfect. Long easy routes, build endurance."
     },
     "strength_power": {
-      "free_volume": "OK, ma non esagerare col volume \u2014 le dita servono per i max hang.",
-      "free_projecting": "Fase ideale! Riposa a lungo (5-8min), qualit\u00e0 massima.",
-      "free_endurance": "Meglio dopo S&P work, non prima. Tieni leggero.",
-      "free_technique": "Sempre utile, ma non stancarti prima del lavoro di forza.",
-      "free_lead_volume": "OK, ma non esagerare \u2014 tieni energia per il lavoro di forza.",
-      "free_lead_projecting": "Fase ideale per i progetti! Riposa a lungo tra i tentativi.",
-      "free_lead_endurance": "Meglio come recovery day. Non prima del lavoro di forza."
+      "free_volume": "OK, but don't overdo the volume \u2014 save your fingers for max hangs.",
+      "free_projecting": "Ideal phase! Rest long (5-8min), maximum quality.",
+      "free_endurance": "Better after S&P work, not before. Keep it light.",
+      "free_technique": "Always useful, but don't tire yourself before strength work.",
+      "free_lead_volume": "OK, but don't overdo it \u2014 save energy for strength work.",
+      "free_lead_projecting": "Ideal phase for projects! Rest long between attempts.",
+      "free_lead_endurance": "Better as a recovery day. Not before strength work."
     },
     "power_endurance": {
-      "free_volume": "Buona scelta, complementare al PE. Gradi moderati, ritmo costante.",
-      "free_projecting": "OK se hai recuperato dal PE work. Altrimenti volume.",
-      "free_endurance": "Perfetto, \u00e8 il tuo pane in questa fase.",
-      "free_technique": "OK come riscaldamento o cooldown.",
-      "free_lead_volume": "Buona scelta! Complementare al lavoro PE.",
-      "free_lead_projecting": "OK se sei fresco. Altrimenti vie moderate.",
-      "free_lead_endurance": "Perfetto per questa fase. Ritmo costante."
+      "free_volume": "Good choice, complements PE work. Moderate grades, steady pace.",
+      "free_projecting": "OK if you've recovered from PE work. Otherwise go for volume.",
+      "free_endurance": "Perfect, this is your bread and butter in this phase.",
+      "free_technique": "OK as warm-up or cooldown.",
+      "free_lead_volume": "Good choice! Complements PE work.",
+      "free_lead_projecting": "OK if you're fresh. Otherwise moderate routes.",
+      "free_lead_endurance": "Perfect for this phase. Steady pace."
     },
     "performance": {
-      "free_volume": "Riduci volume del 30%. Il corpo si sta affilando.",
-      "free_projecting": "S\u00ec! Ma solo 100% fresco. Pochi tentativi, massima qualit\u00e0.",
-      "free_endurance": "Leggero. Non stancare i sistemi prima della performance.",
-      "free_technique": "Perfetto come prep mentale.",
-      "free_lead_volume": "Riduci il volume. Il corpo si sta affilando.",
-      "free_lead_projecting": "S\u00ec! \u00c8 il momento. Fresco e concentrato.",
-      "free_lead_endurance": "Leggero. Non stancarti prima della performance."
+      "free_volume": "Reduce volume by 30%. Your body is sharpening.",
+      "free_projecting": "Yes! But only when 100% fresh. Few attempts, maximum quality.",
+      "free_endurance": "Keep it light. Don't fatigue the systems before performance.",
+      "free_technique": "Perfect as mental prep.",
+      "free_lead_volume": "Reduce volume. Your body is sharpening.",
+      "free_lead_projecting": "Yes! This is your moment. Fresh and focused.",
+      "free_lead_endurance": "Keep it light. Don't tire yourself before performance."
     },
     "deload": {
-      "free_volume": "Max 10-12 boulder, gradi bassi. Muoviti con piacere, zero sforzo.",
-      "free_projecting": "No projecting in deload. Volume leggero o technique.",
-      "free_endurance": "Leggero OK. Se senti pump, fermati.",
-      "free_technique": "Ideale per il deload. Divertiti.",
-      "free_lead_volume": "Max 4-5 vie, gradi bassi. Muoviti con piacere.",
-      "free_lead_projecting": "No projecting in deload. Vie facili e divertenti.",
-      "free_lead_endurance": "Leggero OK. Fermati se senti fatica."
+      "free_volume": "Max 10-12 boulders, easy grades. Move with pleasure, zero effort.",
+      "free_projecting": "No projecting in deload. Light volume or technique instead.",
+      "free_endurance": "Light is OK. If you feel pump, stop.",
+      "free_technique": "Ideal for deload. Have fun.",
+      "free_lead_volume": "Max 4-5 routes, easy grades. Move with pleasure.",
+      "free_lead_projecting": "No projecting in deload. Easy, fun routes only.",
+      "free_lead_endurance": "Light is OK. Stop if you feel fatigue."
     }
   },
   "free_mode_tips": {
-    "base": "Fase Base: scala tanto, scala facile. Gradi a -2/-3 dal max. Riposa \u22652min. Se ti pompi, stai andando troppo forte.",
-    "strength_power": "Fase Strength & Power: prova il tuo limite, ma riposa a lungo (5-8 min) e non insistere oltre 3-4 tentativi per boulder.",
-    "power_endurance": "Fase Power Endurance: volume con ritmo. Boulder moderati, rest corto (1-2 min), cerca il pump controllato.",
-    "performance": "Fase Performance: scala come ti senti. Il corpo \u00e8 pronto. Ascoltalo.",
-    "deload": "Deload: scala per piacere. Gradi facili, zero sforzo, goditi il movimento."
+    "base": "Base phase: climb a lot, climb easy. Grades at -2/-3 from your max. Rest \u22652min. If you're getting pumped, you're going too hard.",
+    "strength_power": "Strength & Power phase: try your limit, but rest long (5-8 min) and don't push beyond 3-4 attempts per boulder.",
+    "power_endurance": "Power Endurance phase: volume with rhythm. Moderate boulders, short rest (1-2 min), seek controlled pump.",
+    "performance": "Performance phase: climb how you feel. Your body is ready. Listen to it.",
+    "deload": "Deload: climb for pleasure. Easy grades, zero effort, enjoy the movement."
   }
 }

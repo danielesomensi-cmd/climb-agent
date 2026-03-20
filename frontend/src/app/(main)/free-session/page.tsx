@@ -258,6 +258,25 @@ export default function FreeSessionPage() {
     }
   }, [selectedSurface, selectedGym, customGym]);
 
+  const handleCancel = useCallback(async () => {
+    if (!activeSession) return;
+    // Remove the unfinished session from state
+    try {
+      const { getState, putState } = await import("@/lib/api");
+      const state = await getState();
+      const sessions = (state as Record<string, unknown>).free_sessions as Array<Record<string, unknown>> || [];
+      const filtered = sessions.filter((s) => s.id !== activeSession.sessionId);
+      await putState({ free_sessions: filtered });
+    } catch {
+      // Non-critical — session will remain as unfinished
+    }
+    // Reset state and go back to surface selection
+    setActiveSession(null);
+    setSessionClimbs([]);
+    setStep("surface");
+    setError(null);
+  }, [activeSession]);
+
   const handleFinish = useCallback(() => {
     // Don't call finish API yet — go to summary first so user can add feel + notes
     setStep("summary");
@@ -327,7 +346,7 @@ export default function FreeSessionPage() {
         {/* STEP: Surface selection */}
         {step === "surface" && !loading && (
           <div className="flex flex-col gap-3 px-4">
-            <h2 className="mb-2 text-center text-lg font-semibold">Where are you climbing?</h2>
+            <h2 className="mb-2 text-center text-lg font-semibold">Choose your activity</h2>
             {ALL_SURFACES.map((s) => (
               <button
                 key={s.id}
@@ -337,14 +356,7 @@ export default function FreeSessionPage() {
                 <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 ${SURFACE_ICON_COLORS[s.id]}`}>
                   {SURFACE_ICONS[s.id]}
                 </div>
-                <div>
-                  <div className="font-semibold">{s.name}</div>
-                  {gyms.length > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      {gyms.map((g) => g.name).join(", ")}
-                    </div>
-                  )}
-                </div>
+                <div className="font-semibold">{s.name}</div>
               </button>
             ))}
           </div>
@@ -472,6 +484,7 @@ export default function FreeSessionPage() {
             tip={activeSession.tip}
             targetClimbs={activeSession.targetClimbs}
             onFinish={handleFinish}
+            onCancel={handleCancel}
             onClimbLogged={(climb) => setSessionClimbs((prev) => [...prev, climb])}
           />
         )}
