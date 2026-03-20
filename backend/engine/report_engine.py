@@ -215,6 +215,7 @@ def _build_load(
     week_plan: Optional[Dict[str, Any]],
     indoor_sessions: List[Dict[str, Any]],
     outdoor_sessions: List[Dict[str, Any]],
+    free_sessions: List[Dict[str, Any]],
     week_start: str,
 ) -> Dict[str, Any]:
     """Build load section from planned/actual load scores and durations."""
@@ -254,6 +255,14 @@ def _build_load(
     outdoor_load = sum(compute_outdoor_load_score(s) for s in outdoor_sessions)
     actual_total += outdoor_load
 
+    # Add free session load to actual total (A138)
+    free_session_load = sum(
+        fs.get("load_score", 0)
+        for fs in free_sessions
+        if fs.get("finished_at") and since <= fs.get("date", "") <= until
+    )
+    actual_total += free_session_load
+
     load_ratio = round(actual_total / planned_total, 2) if planned_total else 0.0
 
     # Duration: prefer session_completion_log (has timer/user-reported data),
@@ -265,6 +274,7 @@ def _build_load(
         "planned_total": planned_total,
         "actual_total": actual_total,
         "outdoor_load": outdoor_load,
+        "free_session_load": free_session_load,
         "load_ratio": load_ratio,
         "hard_days": hard_days,
         "recovery_days": recovery_days,
@@ -507,6 +517,7 @@ def _build_outdoor(outdoor_sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
 def _build_days(
     week_plan: Optional[Dict[str, Any]],
     outdoor_sessions: List[Dict[str, Any]],
+    free_sessions: List[Dict[str, Any]],
     week_start: str,
 ) -> List[Dict[str, Any]]:
     """Build 7-day timeline with session details."""
@@ -517,6 +528,13 @@ def _build_days(
     for sess in outdoor_sessions:
         d = sess.get("date", "")
         outdoor_by_date.setdefault(d, []).append(sess)
+
+    # Index free sessions by date (A138)
+    free_by_date: Dict[str, List[Dict[str, Any]]] = {}
+    for fs in free_sessions:
+        if fs.get("finished_at"):  # only finished sessions
+            d = fs.get("date", "")
+            free_by_date.setdefault(d, []).append(fs)
 
     # Index plan days by date
     plan_days: Dict[str, Dict[str, Any]] = {}
@@ -576,7 +594,30 @@ def _build_days(
                 "load": plan_day.get("other_activity_load"),
             }
 
-        is_rest_day = not sessions and not outdoor_info and not other_activity
+        # Free sessions (A138)
+        day_free = []
+        for fs in free_by_date.get(d_str, []):
+            summary = fs.get("summary") or {}
+            surface = fs.get("surface", "")
+            surface_label = {
+                "gym_boulder": "Gym Boulder", "board_kilter": "Kilter",
+                "board_moonboard": "Moon", "board_other": "Board",
+                "gym_routes": "Lead",
+            }.get(surface, surface)
+            day_free.append({
+                "id": fs.get("id"),
+                "surface": surface_label,
+                "preset_name": fs.get("preset_id", "").replace("free_", "").replace("lead_", "").replace("_", " ").title() if fs.get("preset_id") else "Free",
+                "context": fs.get("context", "standalone"),
+                "total_climbs": summary.get("total_climbs", 0),
+                "max_grade_sent": summary.get("max_grade_sent"),
+                "send_rate": summary.get("send_rate", 0),
+                "duration_minutes": fs.get("duration_minutes"),
+                "load_score": fs.get("load_score", 0),
+                "climb_type": "routes" if surface == "gym_routes" else "boulders",
+            })
+
+        is_rest_day = not sessions and not outdoor_info and not other_activity and not day_free
 
         result.append({
             "date": d_str,
@@ -584,6 +625,7 @@ def _build_days(
             "sessions": sessions,
             "outdoor": outdoor_info,
             "other_activity": other_activity,
+            "free_sessions": day_free,
             "is_rest_day": is_rest_day,
         })
 
@@ -721,6 +763,7 @@ def _build_training_time(
     week_plan: Optional[Dict[str, Any]],
     completion_log: List[Dict[str, Any]],
     outdoor_sessions: List[Dict[str, Any]],
+    free_sessions: List[Dict[str, Any]],
     week_start: str,
 ) -> Dict[str, Any]:
     """Aggregate training duration from all sources."""
@@ -809,6 +852,19 @@ def _build_training_time(
             total_seconds += dur
             sources["outdoor_log"] = sources.get("outdoor_log", 0) + dur
 
+    # 4. Free climbing sessions (A138)
+    for fs in free_sessions:
+        d = fs.get("date", "")
+        if not (since <= d <= until):
+            continue
+        if not fs.get("finished_at"):
+            continue
+        dur_min = fs.get("duration_minutes", 0)
+        if dur_min:
+            dur = int(dur_min) * 60
+            total_seconds += dur
+            sources["free_session"] = sources.get("free_session", 0) + dur
+
     total_minutes = total_seconds // 60
     estimated_minutes = estimated_seconds // 60
     has_estimates = estimated_seconds > 0
@@ -847,6 +903,12 @@ def _build_active_days(
             oa = day["other_activity"]
             if oa.get("status") in ("completed", "done"):
                 has_activity = True
+        # Free sessions with at least 1 climb (A138)
+        if not has_activity:
+            for fs in day.get("free_sessions", []):
+                if fs.get("total_climbs", 0) > 0:
+                    has_activity = True
+                    break
         active.append(has_activity)
 
     return {
@@ -887,13 +949,17 @@ def generate_weekly_report(
     outdoor_raw = load_outdoor_sessions(user_id, since_date=since)
     outdoor_filtered = [s for s in outdoor_raw if s.get("date", "") <= until]
     completion_log = user_state.get("session_completion_log") or []
+    free_sessions = [
+        fs for fs in (user_state.get("free_sessions") or [])
+        if since <= fs.get("date", "") <= until
+    ]
 
     week_plan = _find_week_plan(user_state, week_start)
 
     # Build each section
     context = _build_context(user_state, week_start)
     adherence = _build_adherence(week_plan, week_start)
-    load = _build_load(week_plan, indoor, outdoor_filtered, week_start)
+    load = _build_load(week_plan, indoor, outdoor_filtered, free_sessions, week_start)
     difficulty = _build_difficulty(
         user_state.get("feedback_log") or [], week_start
     )
@@ -906,9 +972,9 @@ def generate_weekly_report(
         user_state.get("working_loads") or {}, week_start
     )
     outdoor = _build_outdoor(outdoor_filtered)
-    days = _build_days(week_plan, outdoor_filtered, week_start)
+    days = _build_days(week_plan, outdoor_filtered, free_sessions, week_start)
     training_time = _build_training_time(
-        week_plan, completion_log, outdoor_filtered, week_start,
+        week_plan, completion_log, outdoor_filtered, free_sessions, week_start,
     )
     active_days = _build_active_days(days)
     highlights = _build_highlights(

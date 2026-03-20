@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Mountain, ArrowLeft, Dumbbell } from "lucide-react";
+import { Mountain, ArrowLeft, Dumbbell, Grip } from "lucide-react";
 import { getSuggestedSessions, getSessions, getOutdoorSpots, addOutdoorSpot } from "@/lib/api";
 import type { SessionMeta, OutdoorSpot } from "@/lib/types";
 
@@ -41,6 +41,7 @@ interface QuickAddDialogProps {
     activity_name: string;
     slot: string;
   }) => void;
+  onApplyFreeClimbing?: () => void;
 }
 
 const SLOT_OPTIONS = [
@@ -77,6 +78,7 @@ export function QuickAddDialog({
   onApply,
   onApplyOutdoor,
   onApplyOtherSport,
+  onApplyFreeClimbing,
 }: QuickAddDialogProps) {
   // Indoor state
   const [slot, setSlot] = useState("evening");
@@ -263,6 +265,19 @@ export function QuickAddDialog({
                     <Mountain className="size-4 text-green-500" />
                     <span className="font-medium">Outdoor session</span>
                     <span className="text-xs text-muted-foreground ml-auto">Crag / outdoor</span>
+                  </div>
+                </button>
+              )}
+              {onApplyFreeClimbing && (
+                <button
+                  type="button"
+                  className="w-full rounded-lg border border-dashed border-purple-500/40 p-3 text-left text-sm transition-colors hover:bg-purple-500/5"
+                  onClick={() => { onClose(); onApplyFreeClimbing(); }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Grip className="size-4 text-purple-400" />
+                    <span className="font-medium">Free climbing session</span>
+                    <span className="text-xs text-muted-foreground ml-auto">Boulder, board, lead</span>
                   </div>
                 </button>
               )}

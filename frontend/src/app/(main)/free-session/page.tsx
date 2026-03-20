@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useCallback, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Layers, Target, Repeat, Eye, ArrowLeft,
   Smartphone, Moon, Box, Route,
@@ -119,8 +119,11 @@ const PHASE_BADGE: Record<string, { label: string; color: string }> = {
 
 // ── Page component ─────────────────────────────────────────────────────
 
-export default function FreeSessionPage() {
+function FreeSessionContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const paramContext = searchParams.get("context") || "standalone";
+  const paramDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
   const [step, setStep] = useState<Step>("surface");
   const [gyms, setGyms] = useState<Gym[]>([]);
   const [loading, setLoading] = useState(false);
@@ -197,14 +200,13 @@ export default function FreeSessionPage() {
     setLoading(true);
     setError(null);
     try {
-      const today = new Date().toISOString().split("T")[0];
       const gymName = selectedGym || customGym || undefined;
       const result = await startFreeSession({
-        date: today,
+        date: paramDate,
         surface: selectedSurface,
         gym_name: gymName,
         session_mode: "free",
-        context: "standalone",
+        context: paramContext,
       });
 
       setActiveSession({
@@ -227,15 +229,14 @@ export default function FreeSessionPage() {
     setLoading(true);
     setError(null);
     try {
-      const today = new Date().toISOString().split("T")[0];
       const gymName = selectedGym || customGym || undefined;
       const result = await startFreeSession({
-        date: today,
+        date: paramDate,
         surface: selectedSurface,
         gym_name: gymName,
         session_mode: "template",
         preset_id: preset.id,
-        context: "standalone",
+        context: paramContext,
       });
 
       setActiveSession({
@@ -505,5 +506,13 @@ export default function FreeSessionPage() {
         )}
       </main>
     </>
+  );
+}
+
+export default function FreeSessionPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center py-20"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>}>
+      <FreeSessionContent />
+    </Suspense>
   );
 }

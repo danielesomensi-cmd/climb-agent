@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { Eye, MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp, Clock, Grip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +38,18 @@ interface DayCardProps {
   onRemoveOutdoor?: (date: string) => void;
   outdoorRoutes?: OutdoorRoute[];
   outdoorDurationMinutes?: number;
+  freeSessions?: Array<{
+    id: string;
+    surface: string;
+    gym_name?: string;
+    preset_id?: string;
+    session_mode?: string;
+    duration_minutes?: number;
+    summary?: { total_climbs: number; max_grade_sent?: string; send_rate?: number };
+    overall_feel?: string;
+    finished_at?: string;
+    load_score?: number;
+  }>;
   showActions?: boolean;
   weekPlan?: WeekPlan | null;
   onSessionUpdated?: () => void;
@@ -133,6 +145,7 @@ export function DayCard({
   onRemoveOutdoor,
   outdoorRoutes,
   outdoorDurationMinutes,
+  freeSessions,
   showActions = false,
   weekPlan,
   onSessionUpdated,
@@ -540,8 +553,50 @@ export function DayCard({
                 />
               ))}
 
+            {/* Free climbing sessions (A138) */}
+            {freeSessions && freeSessions.length > 0 && freeSessions.map((fs) => {
+              const surfaceName = fs.surface === "gym_boulder" ? "Gym Boulder" :
+                fs.surface === "board_kilter" ? "Kilter" :
+                fs.surface === "board_moonboard" ? "Moon" :
+                fs.surface === "board_other" ? "Board" :
+                fs.surface === "gym_routes" ? "Lead" : fs.surface;
+              const presetLabel = fs.preset_id
+                ? fs.preset_id.replace("free_", "").replace("lead_", "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
+                : "Free";
+              const climbType = fs.surface === "gym_routes" ? "routes" : "boulders";
+              return (
+                <div key={fs.id} className="flex items-center gap-2 rounded-lg border border-dashed border-purple-500/40 p-3 text-sm">
+                  <Grip className="size-4 text-purple-400" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-medium truncate">Free: {surfaceName} {presetLabel}</span>
+                      <Badge className="bg-green-600 text-[10px] shrink-0">
+                        <span className="text-white">Done</span>
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {fs.summary?.total_climbs ?? 0} {climbType}
+                      {fs.summary?.max_grade_sent && ` · max ${fs.summary.max_grade_sent}`}
+                      {fs.duration_minutes != null && ` · ${fs.duration_minutes} min`}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Add-on button: show after all sessions if any engine session is done */}
+            {day.sessions.some((s) => s.status === "done") && (
+              <Link
+                href={`/free-session?context=add_on&date=${day.date}`}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Plus className="size-3" />
+                Log extra climbing
+              </Link>
+            )}
+
             {/* Rest — only when nothing else */}
-            {!day.other_activity && !day.outdoor_spot_name && !day.outdoor_slot && day.sessions.length === 0 && (
+            {!day.other_activity && !day.outdoor_spot_name && !day.outdoor_slot && day.sessions.length === 0 && (!freeSessions || freeSessions.length === 0) && (
               <p className="text-xs text-muted-foreground italic">
                 Rest
               </p>

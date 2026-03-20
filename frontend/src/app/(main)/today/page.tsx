@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
@@ -11,7 +11,7 @@ import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
-import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate } from "@/lib/api";
+import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -73,6 +73,7 @@ function formatDateSubtitle(dateStr: string): string {
 }
 
 function TodayContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const dateParam = searchParams.get("date");
   const targetDate = dateParam || todayISO();
@@ -107,6 +108,7 @@ function TodayContent() {
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
+  const [freeSessions, setFreeSessions] = useState<Array<Record<string, unknown>>>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -237,6 +239,14 @@ function TodayContent() {
       })
       .catch(() => {});
   }, [weekPlan]);
+
+  // Fetch free sessions for target date (A138)
+  useEffect(() => {
+    if (!targetDate) return;
+    getFreeSessionHistory(targetDate)
+      .then((data) => setFreeSessions(data.sessions))
+      .catch(() => setFreeSessions([]));
+  }, [targetDate, weekPlan]); // re-fetch when weekPlan changes (after save)
 
   /** Find target day in the weekly plan */
   const dayPlan: DayPlan | undefined = weekPlan?.weeks
@@ -788,6 +798,7 @@ function TodayContent() {
             onEditOutdoor={handleEditOutdoor}
             onUndoOutdoor={handleUndoOutdoor}
             onRemoveOutdoor={handleRemoveOutdoor}
+            freeSessions={freeSessions as never}
           />
         )}
 
@@ -875,6 +886,10 @@ function TodayContent() {
         onApply={handleQuickAddApply}
         onApplyOutdoor={handleApplyOutdoor}
         onApplyOtherSport={handleApplyOtherSport}
+        onApplyFreeClimbing={() => {
+          setQuickAddDate(null);
+          router.push(`/free-session?context=standalone&date=${quickAddDate || targetDate}`);
+        }}
       />
 
       {/* Move session dialog */}

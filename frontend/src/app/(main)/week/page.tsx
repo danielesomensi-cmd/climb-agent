@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
-import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate } from "@/lib/api";
+import { useRouter } from "next/navigation";
+import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -71,6 +72,8 @@ export default function WeekPage() {
   const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
+  const [freeSessionsByDate, setFreeSessionsByDate] = useState<Record<string, Array<Record<string, unknown>>>>({});
+  const weekRouter = useRouter();
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const handleDayClick = useCallback((date: string) => {
@@ -151,6 +154,22 @@ export default function WeekPage() {
         setOutdoorDurationMap(durMap);
       })
       .catch(() => {});
+  }, [weekPlan]);
+
+  // Fetch free sessions for all days in the week (A138)
+  useEffect(() => {
+    if (!weekPlan) return;
+    const allDays = weekPlan.weeks.flatMap(w => w.days);
+    const dates = allDays.map(d => d.date);
+    if (dates.length === 0) return;
+    Promise.all(dates.map(d => getFreeSessionHistory(d).then(r => ({ date: d, sessions: r.sessions })).catch(() => ({ date: d, sessions: [] }))))
+      .then((results) => {
+        const map: Record<string, Array<Record<string, unknown>>> = {};
+        for (const r of results) {
+          if (r.sessions.length > 0) map[r.date] = r.sessions;
+        }
+        setFreeSessionsByDate(map);
+      });
   }, [weekPlan]);
 
   const totalWeeks = macrocycle?.total_weeks ?? 0;
@@ -737,6 +756,7 @@ export default function WeekPage() {
                   onEditOutdoor={handleEditOutdoor}
                   onUndoOutdoor={handleUndoOutdoor}
                   onRemoveOutdoor={handleRemoveOutdoor}
+                  freeSessions={freeSessionsByDate[day.date] as never}
                 />
               </div>
             ))}
@@ -772,6 +792,11 @@ export default function WeekPage() {
         onApply={handleQuickAddApply}
         onApplyOutdoor={handleApplyOutdoor}
         onApplyOtherSport={handleApplyOtherSport}
+        onApplyFreeClimbing={() => {
+          const date = quickAddDate || "";
+          setQuickAddDate(null);
+          weekRouter.push(`/free-session?context=standalone&date=${date}`);
+        }}
       />
 
       {/* Move session dialog */}
