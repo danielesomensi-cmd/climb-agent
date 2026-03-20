@@ -551,6 +551,21 @@ export default function TabataPage() {
     }
   }, [secondsLeft]);
 
+  // Half-time tick — subtle beep at the halfway point of work/rest phases
+  const halfTimeRef = useRef(false);
+  useEffect(() => {
+    const dur = totalForPhase(phaseRef.current);
+    if (dur >= 10 && !pausedRef.current && phaseRef.current !== "idle" && phaseRef.current !== "done") {
+      const halfPoint = Math.ceil(dur / 2);
+      if (secondsLeft === halfPoint && !halfTimeRef.current) {
+        halfTimeRef.current = true;
+        beep(550, 0.06, 0.15); // soft, low tick
+      } else if (secondsLeft !== halfPoint) {
+        halfTimeRef.current = false;
+      }
+    }
+  }, [secondsLeft, totalForPhase]);
+
   // -------------------------------------------------------------------------
   // Main tick loop (wall-clock)
   // -------------------------------------------------------------------------
@@ -898,16 +913,31 @@ export default function TabataPage() {
 
               {/* Big countdown */}
               <span className={cn(
-                "text-[120px] leading-none font-bold tabular-nums",
-                secondsLeft <= 3 && secondsLeft > 0 && "animate-pulse"
+                "text-[120px] leading-none font-bold tabular-nums transition-transform duration-150",
+                secondsLeft <= 3 && secondsLeft > 0 && "scale-110"
               )}>
                 {formatTime(secondsLeft)}
               </span>
 
-              {/* Cycle/set */}
-              <span className="text-lg text-muted-foreground tabular-nums">
-                Cycle {currentCycle}/{cycles} &middot; Set {currentSet}/{sets}
-              </span>
+              {/* Cycle/set — large in expand too */}
+              <div className="flex items-center gap-6 tabular-nums mt-2">
+                <div className="flex flex-col items-center">
+                  <div className="leading-none">
+                    <span className="text-4xl font-bold">{currentCycle}</span>
+                    <span className="text-2xl font-bold text-muted-foreground/50">/{cycles}</span>
+                  </div>
+                  <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground mt-1">Cycle</span>
+                </div>
+                {sets > 1 && (
+                  <div className="flex flex-col items-center">
+                    <div className="leading-none">
+                      <span className="text-4xl font-bold">{currentSet}</span>
+                      <span className="text-2xl font-bold text-muted-foreground/50">/{sets}</span>
+                    </div>
+                    <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground mt-1">Set</span>
+                  </div>
+                )}
+              </div>
 
               {paused && (
                 <div className="mt-2 rounded-lg bg-white/10 px-6 py-2 text-lg font-bold text-white/70">
@@ -942,10 +972,13 @@ export default function TabataPage() {
           "fixed inset-0 flex flex-col transition-colors duration-500",
           PHASE_BG[phase]
         )}>
-          {/* Top bar area — phase label */}
-          <div className="flex items-center justify-center px-4 pt-4 pb-1">
+          {/* Top bar — phase label left, compact counter right */}
+          <div className="flex items-center justify-between px-4 pt-4 pb-1">
             <span className={cn("text-sm font-bold uppercase tracking-[0.2em]", PHASE_TEXT_COLOR[phase])}>
               {PHASE_LABEL[phase]}
+            </span>
+            <span className="text-sm text-muted-foreground tabular-nums">
+              Cycle {currentCycle}/{cycles}{sets > 1 && <> &middot; Set {currentSet}/{sets}</>}
             </span>
           </div>
 
@@ -964,6 +997,14 @@ export default function TabataPage() {
                   strokeWidth={10}
                   className="stroke-white/10"
                 />
+                {/* Half-time marker — small tick at 50% */}
+                <line
+                  x1="130" y1={130 - RING_RADIUS + 14}
+                  x2="130" y2={130 - RING_RADIUS - 2}
+                  className="stroke-white/20"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                />
                 {/* Progress — no CSS transition, driven by rAF */}
                 <circle
                   cx="130" cy="130" r={RING_RADIUS}
@@ -979,28 +1020,31 @@ export default function TabataPage() {
               {/* Center content */}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span className={cn(
-                  "text-7xl font-bold tabular-nums leading-none",
-                  secondsLeft <= 3 && secondsLeft > 0 && "animate-pulse"
+                  "text-7xl font-bold tabular-nums leading-none transition-transform duration-150",
+                  secondsLeft <= 3 && secondsLeft > 0 && "scale-110"
                 )}>
                   {formatTime(secondsLeft)}
                 </span>
               </div>
             </div>
 
-            {/* Cycle / Set counter — large, below ring */}
-            <div className="mt-4 flex items-center gap-3 tabular-nums">
+            {/* Cycle / Set counter — extra large, below ring */}
+            <div className="mt-5 flex items-center gap-8 tabular-nums">
               <div className="flex flex-col items-center">
-                <span className="text-3xl font-bold">{currentCycle}<span className="text-muted-foreground">/{cycles}</span></span>
-                <span className="text-xs uppercase tracking-wider text-muted-foreground mt-0.5">Cycle</span>
+                <div className="leading-none">
+                  <span className="text-5xl font-bold">{currentCycle}</span>
+                  <span className="text-3xl font-bold text-muted-foreground/50">/{cycles}</span>
+                </div>
+                <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground mt-1">Cycle</span>
               </div>
               {sets > 1 && (
-                <>
-                  <span className="text-2xl text-muted-foreground/40 font-light">&middot;</span>
-                  <div className="flex flex-col items-center">
-                    <span className="text-3xl font-bold">{currentSet}<span className="text-muted-foreground">/{sets}</span></span>
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground mt-0.5">Set</span>
+                <div className="flex flex-col items-center">
+                  <div className="leading-none">
+                    <span className="text-5xl font-bold">{currentSet}</span>
+                    <span className="text-3xl font-bold text-muted-foreground/50">/{sets}</span>
                   </div>
-                </>
+                  <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground mt-1">Set</span>
+                </div>
               )}
             </div>
 
@@ -1012,18 +1056,30 @@ export default function TabataPage() {
             )}
           </div>
 
-          {/* Bottom: elapsed/remaining + controls */}
+          {/* Bottom: elapsed/remaining + next up + controls */}
           <div className="pb-28 px-4">
-            {/* Elapsed / Remaining */}
-            <div className="flex justify-center gap-8 mb-5 text-sm text-muted-foreground tabular-nums">
-              <div className="flex flex-col items-center">
-                <span className="text-xs uppercase tracking-wider mb-0.5">Elapsed</span>
-                <span className="font-semibold text-foreground">{formatTime(elapsed)}</span>
+            {/* Elapsed / Remaining + Next up */}
+            <div className="flex flex-col items-center gap-2 mb-5">
+              <div className="flex justify-center gap-8 text-sm text-muted-foreground tabular-nums">
+                <div className="flex flex-col items-center">
+                  <span className="text-xs uppercase tracking-wider mb-0.5">Elapsed</span>
+                  <span className="font-semibold text-foreground">{formatTime(elapsed)}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="text-xs uppercase tracking-wider mb-0.5">Remaining</span>
+                  <span className="font-semibold text-foreground">{formatTime(totalRemaining)}</span>
+                </div>
               </div>
-              <div className="flex flex-col items-center">
-                <span className="text-xs uppercase tracking-wider mb-0.5">Remaining</span>
-                <span className="font-semibold text-foreground">{formatTime(totalRemaining)}</span>
-              </div>
+              {/* Next up preview */}
+              {phase !== "done" && (() => {
+                const next = advancePhase(phase, currentCycle, currentSet);
+                if (next.phase === "done") return <span className="text-xs text-muted-foreground/60">Last interval</span>;
+                return (
+                  <span className="text-xs text-muted-foreground/60 tabular-nums">
+                    Next: {PHASE_LABEL[next.phase]} {next.duration > 0 && formatTime(next.duration)}
+                  </span>
+                );
+              })()}
             </div>
 
             {/* Controls */}
