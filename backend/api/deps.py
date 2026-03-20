@@ -44,6 +44,7 @@ EMPTY_TEMPLATE: Dict[str, Any] = {
     "current_week_plan": None,
     "week_plans": {},
     "outdoor_spots": [],
+    "free_sessions": [],
     "quote_history": [],
     "history_index": {"outdoor_log_paths": []},
 }

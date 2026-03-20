@@ -1,0 +1,142 @@
+{
+  "boulder": [
+    {
+      "id": "free_volume",
+      "name": "Volume",
+      "description": "High volume, moderate grade. Build endurance and movement quality.",
+      "icon": "layers",
+      "grade_offset": -3,
+      "rest_seconds": 180,
+      "target_climbs_min": 15,
+      "target_climbs_max": 25,
+      "duration_min": 60,
+      "duration_max": 90,
+      "phase_compatibility": {
+        "base": "recommended",
+        "strength_power": "caution",
+        "power_endurance": "recommended",
+        "performance": "caution",
+        "deload": "not_recommended"
+      }
+    },
+    {
+      "id": "free_projecting",
+      "name": "Projecting",
+      "description": "Few boulders at your limit. Maximum quality, long rest.",
+      "icon": "target",
+      "grade_offset": 0,
+      "rest_seconds": 360,
+      "target_climbs_min": 5,
+      "target_climbs_max": 10,
+      "duration_min": 60,
+      "duration_max": 90,
+      "phase_compatibility": {
+        "base": "caution",
+        "strength_power": "recommended",
+        "power_endurance": "caution",
+        "performance": "recommended",
+        "deload": "not_recommended"
+      }
+    },
+    {
+      "id": "free_endurance",
+      "name": "Endurance",
+      "description": "Many easy boulders, short rest. Build pump tolerance.",
+      "icon": "repeat",
+      "grade_offset": -4,
+      "rest_seconds": 90,
+      "target_climbs_min": 20,
+      "target_climbs_max": 30,
+      "duration_min": 45,
+      "duration_max": 75,
+      "phase_compatibility": {
+        "base": "recommended",
+        "strength_power": "caution",
+        "power_endurance": "recommended",
+        "performance": "caution",
+        "deload": "recommended"
+      }
+    },
+    {
+      "id": "free_technique",
+      "name": "Technique",
+      "description": "Easy problems, focus on footwork and body positioning.",
+      "icon": "eye",
+      "grade_offset": -4,
+      "rest_seconds": 120,
+      "target_climbs_min": 15,
+      "target_climbs_max": 20,
+      "duration_min": 45,
+      "duration_max": 60,
+      "phase_compatibility": {
+        "base": "recommended",
+        "strength_power": "recommended",
+        "power_endurance": "recommended",
+        "performance": "recommended",
+        "deload": "recommended"
+      }
+    }
+  ],
+  "lead": [
+    {
+      "id": "free_lead_volume",
+      "name": "Volume",
+      "description": "Many routes at moderate grade. Build route fitness.",
+      "icon": "layers",
+      "grade_offset": -2,
+      "grade_base": "lead_max_rp",
+      "rest_seconds": 420,
+      "target_climbs_min": 6,
+      "target_climbs_max": 10,
+      "duration_min": 60,
+      "duration_max": 90,
+      "phase_compatibility": {
+        "base": "recommended",
+        "strength_power": "caution",
+        "power_endurance": "recommended",
+        "performance": "caution",
+        "deload": "not_recommended"
+      }
+    },
+    {
+      "id": "free_lead_projecting",
+      "name": "Projecting",
+      "description": "Work 1-2 routes at your limit. Long rest, full recovery.",
+      "icon": "target",
+      "grade_offset": 0,
+      "grade_base": "lead_max_rp",
+      "rest_seconds": 720,
+      "target_climbs_min": 2,
+      "target_climbs_max": 4,
+      "duration_min": 60,
+      "duration_max": 90,
+      "phase_compatibility": {
+        "base": "caution",
+        "strength_power": "recommended",
+        "power_endurance": "caution",
+        "performance": "recommended",
+        "deload": "not_recommended"
+      }
+    },
+    {
+      "id": "free_lead_endurance",
+      "name": "Endurance",
+      "description": "Long easy routes, short rest. Aerobic base building.",
+      "icon": "repeat",
+      "grade_offset": -3,
+      "grade_base": "lead_max_os",
+      "rest_seconds": 240,
+      "target_climbs_min": 8,
+      "target_climbs_max": 12,
+      "duration_min": 60,
+      "duration_max": 90,
+      "phase_compatibility": {
+        "base": "recommended",
+        "strength_power": "caution",
+        "power_endurance": "recommended",
+        "performance": "caution",
+        "deload": "recommended"
+      }
+    }
+  ]
+}

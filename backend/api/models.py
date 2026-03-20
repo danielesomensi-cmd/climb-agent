@@ -194,3 +194,33 @@ class WeeklyReportRequest(BaseModel):
 class MonthlyReportRequest(BaseModel):
     """Query params for GET /api/reports/monthly."""
     month: str  # YYYY-MM
+
+
+# --------------------------------------------------------------------------- #
+# Free Session
+# --------------------------------------------------------------------------- #
+
+class FreeSessionStartRequest(BaseModel):
+    """Body for POST /api/free-session/start."""
+    date: str
+    surface: str  # gym_boulder | board_kilter | board_moonboard | board_other | gym_routes
+    gym_name: Optional[str] = None
+    session_mode: str  # template | free
+    preset_id: Optional[str] = None
+    context: str  # standalone | add_on | replacement
+
+
+class FreeSessionLogClimbRequest(BaseModel):
+    """Body for POST /api/free-session/{session_id}/log-climb."""
+    grade: str
+    status: str  # flash | sent | attempted
+    attempts: int = 1
+    style: Optional[str] = None  # lead only: onsight | flash | redpoint | project
+    topped: Optional[bool] = None  # lead only
+    notes: Optional[str] = None
+
+
+class FreeSessionFinishRequest(BaseModel):
+    """Body for POST /api/free-session/{session_id}/finish."""
+    overall_feel: Optional[str] = None  # easy | good | hard
+    notes: Optional[str] = None

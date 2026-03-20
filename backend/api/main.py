@@ -14,6 +14,7 @@ from backend.api.routers import (
     assessment,
     catalog,
     feedback,
+    free_session,
     macrocycle,
     onboarding,
     outdoor,
@@ -103,6 +104,7 @@ app.include_router(session.router)
 app.include_router(replanner.router)
 app.include_router(feedback.router)
 app.include_router(outdoor.router)
+app.include_router(free_session.router)
 app.include_router(reports.router)
 app.include_router(quotes.router)
 app.include_router(user.router)
