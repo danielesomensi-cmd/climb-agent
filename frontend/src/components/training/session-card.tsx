@@ -635,6 +635,34 @@ export function SessionCard({
               </Badge>
             )}
           </div>
+
+          {/* B136: Test results summary in header (visible without expanding) */}
+          {isDone && session.actual_exercises && session.actual_exercises.length > 0 && (() => {
+            const results: { label: string; value: string }[] = [];
+            for (const ae of session.actual_exercises) {
+              if (ae.used_total_load_kg != null && ae.exercise_id?.includes("max_hang")) {
+                results.push({ label: "Max Hang", value: `${ae.used_total_load_kg} kg` });
+              } else if (ae.completed_reps != null && ae.exercise_id?.includes("repeater")) {
+                results.push({ label: "Repeater", value: `${ae.completed_reps} reps` });
+              } else if ((ae as Record<string, unknown>).max_hang_duration_20mm_seconds != null) {
+                results.push({ label: "Duration", value: `${(ae as Record<string, unknown>).max_hang_duration_20mm_seconds}s` });
+              } else if ((ae as Record<string, unknown>).hip_flexibility_cm != null) {
+                results.push({ label: "Hip Flex", value: `${(ae as Record<string, unknown>).hip_flexibility_cm} cm` });
+              } else if ((ae as Record<string, unknown>).l_sit_hold_seconds != null) {
+                results.push({ label: "L-sit", value: `${(ae as Record<string, unknown>).l_sit_hold_seconds}s` });
+              }
+            }
+            if (results.length === 0) return null;
+            return (
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5">
+                {results.map((r) => (
+                  <p key={r.label} className="text-[11px] text-amber-400 font-medium">
+                    {r.label}: {r.value}
+                  </p>
+                ))}
+              </div>
+            );
+          })()}
         </CardHeader>
 
         {/* Expanded content */}
