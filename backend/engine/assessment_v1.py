@@ -120,7 +120,7 @@ def _compute_finger_strength(
 ) -> int:
     bw = body.get("weight_kg") or 70.0
     benchmark = _benchmark_for(_FINGER_BENCHMARK, target_grade)
-    max_hang = tests.get("max_hang_20mm_5s_total_kg")
+    max_hang = tests.get("max_hang_20mm_7s_total_kg") or tests.get("max_hang_20mm_5s_total_kg")
 
     if max_hang is not None:
         ratio = max_hang / bw

@@ -40,7 +40,7 @@ function buildTestSections(device: "hangboard" | "loading_pin"): TestSection[] {
       title: "Max Hang 20mm/7s (MVC-7)",
       description:
         "Hang on a 20mm edge for 7 seconds with the maximum possible weight (half crimp). Include your body weight in the total.",
-      fieldKey: "max_hang_20mm_5s_total_kg",
+      fieldKey: "max_hang_20mm_7s_total_kg",
       fieldLabel: "Total load (kg)",
       example: "E.g.: weigh 77kg + 48kg added = 125kg total",
       unit: "kg",
@@ -169,6 +169,7 @@ export default function TestsPage() {
     // Clear device-specific test data when switching
     const cleared = { ...tests };
     if (dev === "loading_pin") {
+      cleared.max_hang_20mm_7s_total_kg = undefined;
       cleared.max_hang_20mm_5s_total_kg = undefined;
     } else {
       cleared.lp_max_lift_5s_right_kg = undefined;

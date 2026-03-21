@@ -80,9 +80,9 @@ EQUIPMENT_GYM = [
 ]
 
 TEST_DESCRIPTIONS = {
-    "max_hang_20mm_5s": {
-        "label": "Max Hang 20mm — 5 seconds",
-        "description": "Hang on a 20mm edge for 5 seconds with the maximum possible weight (half crimp). Include your body weight in the total.",
+    "max_hang_20mm_7s": {
+        "label": "Max Hang 20mm — 7 seconds (MVC-7)",
+        "description": "Hang on a 20mm edge for 7 seconds with the maximum possible weight (half crimp). Include your body weight in the total.",
         "unit": "kg (total weight = body + added)",
         "example": "E.g.: weigh 77kg + 48kg added = 125kg total",
     },
@@ -139,6 +139,16 @@ def _recovery_multiplier_for_age(age: int | None) -> float:
     return 1.75
 
 
+def _normalize_test_keys(tests: dict) -> dict:
+    """Ensure both 7s and legacy 5s keys exist for max hang (D85 compat)."""
+    result = dict(tests)
+    val = result.get("max_hang_20mm_7s_total_kg") or result.get("max_hang_20mm_5s_total_kg")
+    if val is not None:
+        result["max_hang_20mm_7s_total_kg"] = val
+        result["max_hang_20mm_5s_total_kg"] = val
+    return result
+
+
 def _build_planning_prefs(
     prefs: dict | None,
     age: int | None,
@@ -180,7 +190,7 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             },
             "experience": data.experience,
             "grades": data.grades,
-            "tests": data.tests,
+            "tests": _normalize_test_keys(data.tests),
             "self_eval": data.self_eval,
             "profile": None,
         },

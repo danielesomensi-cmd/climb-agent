@@ -88,7 +88,7 @@ export function ProfileAssessmentEditor({
       setLeadMaxOs(grades.lead_max_os ?? "");
       setBoulderMaxRp(grades.boulder_max_rp ?? "");
       setBoulderMaxOs(grades.boulder_max_os ?? "");
-      setMaxHang(tests.max_hang_20mm_5s_total_kg != null ? String(tests.max_hang_20mm_5s_total_kg) : "");
+      setMaxHang((tests.max_hang_20mm_7s_total_kg ?? tests.max_hang_20mm_5s_total_kg) != null ? String(tests.max_hang_20mm_7s_total_kg ?? tests.max_hang_20mm_5s_total_kg) : "");
       setLpRight(tests.lp_max_lift_5s_right_kg != null ? String(tests.lp_max_lift_5s_right_kg) : "");
       setLpLeft(tests.lp_max_lift_5s_left_kg != null ? String(tests.lp_max_lift_5s_left_kg) : "");
       setWeightedPullup(tests.weighted_pullup_1rm_total_kg != null ? String(tests.weighted_pullup_1rm_total_kg) : "");
@@ -124,7 +124,10 @@ export function ProfileAssessmentEditor({
       if (lpRight !== "") testsPatch.lp_max_lift_5s_right_kg = parseFloat(lpRight);
       if (lpLeft !== "") testsPatch.lp_max_lift_5s_left_kg = parseFloat(lpLeft);
     } else {
-      if (maxHang !== "") testsPatch.max_hang_20mm_5s_total_kg = parseFloat(maxHang);
+      if (maxHang !== "") {
+        testsPatch.max_hang_20mm_7s_total_kg = parseFloat(maxHang);
+        testsPatch.max_hang_20mm_5s_total_kg = parseFloat(maxHang);  // legacy compat
+      }
     }
     if (weightedPullup !== "") testsPatch.weighted_pullup_1rm_total_kg = parseFloat(weightedPullup);
     if (bwPullups !== "") testsPatch.max_pullups_bw = parseInt(bwPullups, 10);

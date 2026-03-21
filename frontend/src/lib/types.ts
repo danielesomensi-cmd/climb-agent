@@ -199,7 +199,8 @@ export interface OnboardingData {
     secondary_weakness: string;
   };
   tests: {
-    max_hang_20mm_5s_total_kg?: number;
+    max_hang_20mm_7s_total_kg?: number;
+    max_hang_20mm_5s_total_kg?: number;  // legacy compat
     weighted_pullup_1rm_total_kg?: number;
     repeater_7_3_max_sets_20mm?: number;
     max_hang_duration_20mm_seconds?: number;

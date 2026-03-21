@@ -79,7 +79,7 @@ export default function ReviewPage() {
   // Count tests entered
   const testCount = useMemo(() => {
     let count = 0;
-    if (data.tests.max_hang_20mm_5s_total_kg != null) count++;
+    if ((data.tests.max_hang_20mm_7s_total_kg ?? data.tests.max_hang_20mm_5s_total_kg) != null) count++;
     if (data.tests.weighted_pullup_1rm_total_kg != null) count++;
     if (data.tests.repeater_7_3_max_sets_20mm != null) count++;
     if (data.tests.max_hang_duration_20mm_seconds != null) count++;
@@ -158,8 +158,9 @@ export default function ReviewPage() {
   // Test values summary
   const testValues = useMemo(() => {
     const parts: string[] = [];
-    if (data.tests.max_hang_20mm_5s_total_kg != null)
-      parts.push(`Max Hang: ${data.tests.max_hang_20mm_5s_total_kg}kg`);
+    const maxHangVal = data.tests.max_hang_20mm_7s_total_kg ?? data.tests.max_hang_20mm_5s_total_kg;
+    if (maxHangVal != null)
+      parts.push(`Max Hang: ${maxHangVal}kg`);
     if (data.tests.weighted_pullup_1rm_total_kg != null)
       parts.push(`Pull-up: ${data.tests.weighted_pullup_1rm_total_kg}kg`);
     if (data.tests.repeater_7_3_max_sets_20mm != null)

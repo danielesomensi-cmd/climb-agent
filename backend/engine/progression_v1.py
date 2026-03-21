@@ -1022,8 +1022,9 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 baselines[0]["source"] = "test"
                 baselines[0]["updated_at"] = date_str
                 baselines[0]["hang_seconds"] = 7
-            # Write scalar to assessment.tests
+            # Write scalar to assessment.tests (both keys for compat)
             at["max_hang_20mm_7s_total_kg"] = total
+            at["max_hang_20mm_5s_total_kg"] = total  # legacy compat: assessment_v1 reads this key
 
         # --- Max hang 5s (legacy — still accepted for backward compat) ---
         elif exercise_id == "max_hang_5s":
