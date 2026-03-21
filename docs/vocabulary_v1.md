@@ -47,6 +47,7 @@ Allowed `equipment` values:
 - `board_kilter`
 - `board_moonboard`
 - `board_other` *(any training board not specifically Kilter or MoonBoard — Tension, Grasshopper, custom, etc.)*
+- `homewall` *(home climbing wall — any size or board type; implies `gym_boulder` capability at home)*
 - `gym_boulder` *(gym has a boulder area with set problems; not board, not spraywall)*
 - `gym_routes` *(gym has route walls / rope climbing terrain)*
 - `cable_machine` *(cable pulley machine for antagonist and general strength work)*

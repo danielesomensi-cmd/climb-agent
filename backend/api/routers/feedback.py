@@ -53,6 +53,7 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
     if _fb_items:
         _target_date = req.log_entry.get("date")
         _target_sid = req.log_entry.get("session_id")
+        # Write to current_week_plan
         _wp = state.get("current_week_plan") or {}
         for _week_block in _wp.get("weeks", []):
             for _day_entry in _week_block.get("days", []):
@@ -62,6 +63,19 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
                     if _sess.get("session_id") == _target_sid:
                         _sess["actual_exercises"] = _fb_items
                         break
+        # B136b: Also sync to week_plans cache so GET /api/week/0 sees it
+        _wp_start = _wp.get("start_date", "")
+        if _wp_start:
+            _cached = (state.get("week_plans") or {}).get(_wp_start)
+            if _cached and _cached.get("weeks"):
+                for _week_block_c in _cached["weeks"]:
+                    for _day_c in _week_block_c.get("days", []):
+                        if _day_c.get("date") != _target_date:
+                            continue
+                        for _sess_c in _day_c.get("sessions", []):
+                            if _sess_c.get("session_id") == _target_sid:
+                                _sess_c["actual_exercises"] = _fb_items
+                                break
 
     # 4. Check adaptive replanning (B25)
     plan = state.get("current_week_plan")

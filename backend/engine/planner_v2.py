@@ -124,7 +124,11 @@ def _equipment_for_location(
     elif location == "home":
         if home_equipment is None:
             return None  # no home info → assume everything available
-        return list(home_equipment)
+        equip = list(home_equipment)
+        # B137: homewall implies gym_boulder capability at home
+        if "homewall" in equip and "gym_boulder" not in equip:
+            equip.append("gym_boulder")
+        return equip
     return None
 
 
@@ -1020,9 +1024,9 @@ def generate_phase_week(
     # Triggers on: last week of base/strength_power, OR explicitly via inject_tests
     _run_pass3 = inject_tests or (is_last_week_of_phase and phase_id in ("base", "strength_power"))
     if _run_pass3:
-        # B128: freshness check — skip tests completed within TEST_FRESHNESS_DAYS
-        # Mapping: test_sid → key in recent_test_dates dict
-        TEST_FRESHNESS_DAYS = 14
+        # B128/B138: freshness check — skip tests completed within TEST_FRESHNESS_DAYS
+        # 42 days = 6 weeks minimum between retests (Hörst, Lattice, Eva López)
+        TEST_FRESHNESS_DAYS = 42
         _test_type_map = {
             "test_max_hang_5s": "finger", "test_lp_max_5s": "finger",
             "test_repeater_7_3": "repeater", "test_lp_repeater": "repeater",

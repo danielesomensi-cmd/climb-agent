@@ -950,13 +950,23 @@ def apply_events(
                 # Check location compatibility
                 location_ok = new_location in meta.get("location", ("gym", "home"))
 
-                # Check equipment compatibility
+                # Check equipment compatibility (gym and home)
                 equipment_ok = True
-                if location_ok and new_location == "gym":
+                if location_ok:
                     req_eq = set(_get_required_equipment(sid))
-                    if req_eq and not req_eq.issubset(gym_equipment):
-                        equipment_ok = False
-                        missing = req_eq - gym_equipment
+                    if req_eq:
+                        if new_location == "gym":
+                            if not req_eq.issubset(gym_equipment):
+                                equipment_ok = False
+                                missing = req_eq - gym_equipment
+                        elif new_location == "home":
+                            home_eq = set(event.get("home_equipment") or [])
+                            # B137: homewall implies gym_boulder at home
+                            if "homewall" in home_eq and "gym_boulder" not in home_eq:
+                                home_eq.add("gym_boulder")
+                            if home_eq and not req_eq.issubset(home_eq):
+                                equipment_ok = False
+                                missing = req_eq - home_eq
 
                 if not location_ok or not equipment_ok:
                     # Need replacement

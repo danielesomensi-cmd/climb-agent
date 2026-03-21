@@ -562,20 +562,22 @@ class TestPlannerV2TestFreshness(unittest.TestCase):
         self.assertEqual(test_sids, set(),
                          f"Tests completed 7 days ago in 2-week phase — should be skipped, got {test_sids}")
 
-    def test_stale_at_exactly_14_days(self):
-        """Test completed exactly 14 days before week start → stale, should be rescheduled."""
-        recent = {"finger": "2026-02-16", "repeater": "2026-02-16", "pulling": "2026-02-16"}
+    def test_stale_at_exactly_42_days(self):
+        """B138: Test completed exactly 42 days before week start → stale, should be rescheduled."""
+        # 2026-03-02 minus 42 days = 2026-01-19
+        recent = {"finger": "2026-01-19", "repeater": "2026-01-19", "pulling": "2026-01-19"}
         plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
             recent_test_dates=recent))
         sids = self._session_ids(plan)
         self.assertIn("test_max_hang_5s", sids,
-                       "Exactly 14 days old — should be rescheduled")
+                       "Exactly 42 days old — should be rescheduled")
         self.assertIn("test_repeater_7_3", sids,
-                       "Exactly 14 days old — should be rescheduled")
+                       "Exactly 42 days old — should be rescheduled")
 
-    def test_fresh_at_13_days(self):
-        """Test completed 13 days before week start → still fresh, should be skipped."""
-        recent = {"finger": "2026-02-17", "repeater": "2026-02-17", "pulling": "2026-02-17"}
+    def test_fresh_at_41_days(self):
+        """B138: Test completed 41 days before week start → still fresh, should be skipped."""
+        # 2026-03-02 minus 41 days = 2026-01-20
+        recent = {"finger": "2026-01-20", "repeater": "2026-01-20", "pulling": "2026-01-20"}
         plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
             start_date="2026-03-02", recent_test_dates=recent))
         sids = self._session_ids(plan)
