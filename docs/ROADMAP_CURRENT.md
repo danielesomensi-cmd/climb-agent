@@ -339,6 +339,33 @@ Sessione ricreativa con amici: struttura leggera, giochi climbing, load ridotto.
 
 ---
 
+## Future — Injury-Specific Rehab/Prehab
+
+> Origin: Christie feedback 2026-03-21
+
+Currently, when a user flags an injury in their limitations, the system shows a generic warning ("be careful, you have an injury") during sessions that stress the affected area. Christie requested that the app suggest **specific rehab/prehab exercises** tailored to the injury type and body zone.
+
+**Example:** User flags "finger pain" → instead of just warning, the app suggests finger tendon gliding exercises, eccentric wrist curls, rice bucket work, etc. User flags "shoulder pain" → suggests band pull-aparts, external rotations, scapular stabilization drills.
+
+| # | Component | Effort | Detail |
+|---|-----------|--------|--------|
+| 1 | Rehab exercise catalog | M | New exercises in `exercises.json` with `category: "rehab"`, tagged by `injury_zone` (finger, shoulder, elbow, wrist, knee, back) and `injury_type` (tendon, muscle, joint). Evidence-based protocols from literature (Hörst, Hooper's Beta, physiotherapy sources). |
+| 2 | Injury → exercise mapping | S | Mapping logic: user's `limitations[]` entries → matched rehab exercises. Must handle multiple concurrent injuries. |
+| 3 | Rehab session integration | M | Options: (a) prepend rehab block to existing sessions, (b) separate "Rehab Session" type, (c) both. Rehab exercises should NOT count toward training load. |
+| 4 | Progression logic | M | Rehab exercises need their own progression model — lighter, more conservative than training progression. Possibly: pain-based gating (if pain increases → regress, if pain decreases → progress). |
+| 5 | Medical disclaimer | S | Mandatory disclaimer: "This is not medical advice. Consult a physiotherapist for diagnosis and treatment." Must be shown on every rehab suggestion. Required before launch of this feature. |
+| 6 | LLM Coach integration | M | Strong candidate for Phase 3.5 LLM Coach: Coach suggests rehab exercises from literature dynamically, avoiding need to hardcode every injury→exercise combination. Coach can also ask follow-up questions about pain type/severity. |
+
+**Risks:**
+- **Medical/legal liability**: prescribing rehab exercises for injuries is sensitive territory. Wrong exercise on a real injury can cause harm. Disclaimer is necessary but not sufficient — exercises must be evidence-based and conservative.
+- **Catalog complexity**: rehab is essentially a sub-system with its own progression, its own exercise pool, and its own safety constraints.
+
+**Recommendation:** Do NOT implement before soft launch. Best approach is Phase 3.5 (LLM Coach) where the Coach can suggest from literature without hardcoding. Quick win for now: add links to external resources (e.g. Hooper's Beta rehab videos) in the injury warning message.
+
+**Dependencies:** None for roadmap entry. Implementation depends on LLM Coach (Phase 3.5) or standalone rehab catalog (Phase 4+).
+
+---
+
 ## Future — Evolution (Phase 4+)
 
 - **UI-25 — Test Maxes & Loads panel (Plan tab)**: Collapsible card: test history timeline, benchmark comparison, exercise loads list
@@ -371,6 +398,7 @@ Items from audits and brainstorming. Not committed to any timeline.
 | Mega brief deferred — D37 | Core activation drills from Matros (8 exercises: tic tac toe, diagonal, freeze wall, etc.). Post-launch catalog enrichment. | mega brief Session 3 |
 | Mega brief deferred — D50 | Three named repeater protocols (López/Anderson/Hörst) with level-based selection logic in resolver. | mega brief Session 2 |
 | Mega brief deferred — D72 | grip_type field on all hangboard exercises + open-hand default + full_crimp validation block. Structural change. | mega brief Session 2 |
+| Injury-specific rehab/prehab | Rehab exercise catalog + injury→exercise mapping + progression. Generic warning → targeted exercises. Medical disclaimer required. Best candidate for LLM Coach layer. | Christie feedback 2026-03-21 |
 
 ---
 

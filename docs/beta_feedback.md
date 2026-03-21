@@ -115,3 +115,14 @@
 **Descrizione:** Non chiaro che i giorni outdoor si possono aggiungere dopo.
 **Soluzione:** B108 — CardDescription nella pagina availability.
 **Status:** ✅ DONE (B108)
+
+---
+
+### FB-9 — Injury-specific rehab exercises
+**Da:** Christie
+**Data:** 2026-03-21
+**Descrizione:** When flagging an injury (e.g. finger pain, shoulder pain), the app should suggest targeted rehab/prehab exercises instead of just showing a generic warning.
+**Comportamento attuale:** Generic warning message during sessions that stress the injured area.
+**Comportamento desiderato:** Specific rehab exercises matched to injury type and body zone.
+**Status:** Added to roadmap as Future feature. Candidate for LLM Coach (Phase 3.5).
+**Roadmap ref:** "Future — Injury-Specific Rehab/Prehab" section in ROADMAP_CURRENT.md
