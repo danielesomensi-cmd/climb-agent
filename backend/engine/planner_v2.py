@@ -77,6 +77,29 @@ _INTENSITY_TO_LOAD: Dict[str, int] = {"low": 20, "medium": 40, "high": 65, "max"
 _CLIMBING_FALLBACKS: Tuple[str, ...] = ("technique_focus_gym", "easy_climbing_deload")
 
 
+def _expand_session_locations(
+    session_locations: Tuple[str, ...],
+    required_equipment: Optional[List[str]],
+    home_equipment: Optional[List[str]],
+) -> Tuple[str, ...]:
+    """B137: Expand session locations when home equipment satisfies gym requirements.
+
+    If a session is gym-only but requires only gym_boulder, and the user has a homewall,
+    the session becomes assignable at home too.
+    """
+    if "home" in session_locations:
+        return session_locations  # already home-compatible
+    if not home_equipment or not required_equipment:
+        return session_locations
+    # Check if home equipment (with homewall→gym_boulder expansion) satisfies requirements
+    home_eq = set(home_equipment)
+    if "homewall" in home_eq:
+        home_eq.add("gym_boulder")
+    if all(eq in home_eq for eq in required_equipment):
+        return tuple(session_locations) + ("home",)
+    return session_locations
+
+
 def _parse_date(value: str) -> date:
     return datetime.strptime(value, "%Y-%m-%d").date()
 
@@ -327,6 +350,8 @@ def _find_best_slot(
 
     _occupied = occupied_slots or set()
     req_equip = meta.get("required_equipment")
+    # B137: expand locations when homewall satisfies gym_boulder requirement
+    effective_locations = _expand_session_locations(meta["location"], req_equip, home_equipment)
     for slot in slot_order:
         if slot in _occupied:
             continue
@@ -334,7 +359,7 @@ def _find_best_slot(
         if not slot_info["available"]:
             continue
         location = _pick_location(
-            meta["location"], slot_info, locations,
+            effective_locations, slot_info, locations,
             required_equipment=req_equip,
             home_equipment=home_equipment,
             gyms=gyms,
@@ -360,8 +385,10 @@ def _make_session_entry(
 ) -> Dict[str, Any]:
     """Build a session entry dict for the week plan."""
     req_equip = meta.get("required_equipment")
+    # B137: expand locations when homewall satisfies gym_boulder requirement
+    effective_locations = _expand_session_locations(meta["location"], req_equip, home_equipment)
     location = _pick_location(
-        meta["location"], slot_info, locations,
+        effective_locations, slot_info, locations,
         required_equipment=req_equip,
         home_equipment=home_equipment,
         gyms=gyms,

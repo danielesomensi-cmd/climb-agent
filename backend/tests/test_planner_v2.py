@@ -821,6 +821,91 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
         self.assertGreater(total_sessions, 0, "Should generate sessions even without equipment info")
 
 
+class TestPlannerV2HomewallExpansion(unittest.TestCase):
+    """B137: Users with homewall should get climbing sessions assigned on home days."""
+
+    _WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+    def _home_only_avail(self):
+        """All days prefer home."""
+        avail = {}
+        for wd in self._WEEKDAYS:
+            avail[wd] = {"evening": {"available": True, "preferred_location": "home"}}
+        return avail
+
+    def test_homewall_gets_climbing_sessions_at_home(self):
+        """User with homewall should get boulder climbing sessions on home days."""
+        from backend.engine.planner_v2 import _SESSION_META
+        plan = generate_phase_week(**_make_kwargs(
+            "base",
+            availability=self._home_only_avail(),
+            home_equipment=["hangboard", "pullup_bar", "homewall"],
+            gyms=[],
+            default_gym_id=None,
+        ))
+        all_sids = [
+            s["session_id"]
+            for d in plan["weeks"][0]["days"]
+            for s in d["sessions"]
+        ]
+        climbing_sids = [
+            sid for sid in all_sids
+            if _SESSION_META.get(sid, {}).get("climbing")
+            and "gym_boulder" in _SESSION_META.get(sid, {}).get("required_equipment", [])
+        ]
+        self.assertGreater(len(climbing_sids), 0,
+                           f"Homewall user should get gym_boulder sessions at home. Got: {all_sids}")
+        # All sessions should be location=home
+        for d in plan["weeks"][0]["days"]:
+            for s in d["sessions"]:
+                self.assertEqual(s["location"], "home",
+                                 f"All sessions should be at home, got {s['location']} for {s['session_id']}")
+
+    def test_no_homewall_no_climbing_at_home(self):
+        """User WITHOUT homewall should NOT get climbing sessions at home."""
+        from backend.engine.planner_v2 import _SESSION_META
+        plan = generate_phase_week(**_make_kwargs(
+            "base",
+            availability=self._home_only_avail(),
+            home_equipment=["hangboard", "pullup_bar"],
+            gyms=[],
+            default_gym_id=None,
+        ))
+        all_sids = [
+            s["session_id"]
+            for d in plan["weeks"][0]["days"]
+            for s in d["sessions"]
+        ]
+        climbing_boulder_sids = [
+            sid for sid in all_sids
+            if "gym_boulder" in _SESSION_META.get(sid, {}).get("required_equipment", [])
+        ]
+        self.assertEqual(len(climbing_boulder_sids), 0,
+                         f"Without homewall, no gym_boulder sessions at home. Got: {climbing_boulder_sids}")
+
+    def test_route_sessions_not_at_home_with_homewall(self):
+        """Even with homewall, gym_routes sessions should NOT appear at home."""
+        from backend.engine.planner_v2 import _SESSION_META
+        plan = generate_phase_week(**_make_kwargs(
+            "base",
+            availability=self._home_only_avail(),
+            home_equipment=["hangboard", "pullup_bar", "homewall"],
+            gyms=[],
+            default_gym_id=None,
+        ))
+        all_sids = [
+            s["session_id"]
+            for d in plan["weeks"][0]["days"]
+            for s in d["sessions"]
+        ]
+        route_sids = [
+            sid for sid in all_sids
+            if "gym_routes" in _SESSION_META.get(sid, {}).get("required_equipment", [])
+        ]
+        self.assertEqual(len(route_sids), 0,
+                         f"Route sessions should never appear at home. Got: {route_sids}")
+
+
 class TestPlannerV2B84GymSelection(unittest.TestCase):
     """B84 — Bug A: gym selection iterates all gyms by priority until one has equipment."""
 
