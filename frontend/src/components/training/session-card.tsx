@@ -704,6 +704,9 @@ export function SessionCard({
                     const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
                     const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
                     const exerciseId = (ex.exercise_id as string) ?? "";
+                    const actualMatch = session.actual_exercises?.find(
+                      (a) => a.exercise_id === exerciseId && !a.hand,
+                    );
                     return (
                       <ExerciseCard
                         key={`${exerciseId}-${i}`}
@@ -719,8 +722,11 @@ export function SessionCard({
                           suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
                           suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
                           load_source: suggested.load_source as string | undefined,
+                          category: (ex.category as string) ?? undefined,
+                          testField: (ex.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
                         }}
                         feedbackLevel={session.exercise_feedback?.[exerciseId]}
+                        actual={actualMatch}
                       />
                     );
                   })}

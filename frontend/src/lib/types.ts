@@ -28,6 +28,22 @@ export interface Macrocycle {
   profile_snapshot: Record<string, unknown>;
 }
 
+/** A139: Raw actual exercise data persisted after feedback submission. */
+export interface ActualExercise {
+  exercise_id: string;
+  feedback_label?: string;
+  completed?: boolean;
+  used_external_load_kg?: number;
+  used_total_load_kg?: number;
+  used_grade?: string;
+  completed_sets?: number;
+  completed_reps?: number;
+  hand?: string;
+  surface_selected?: string;
+  notes?: string;
+  [key: string]: unknown;
+}
+
 export interface SessionSlot {
   session_id: string;
   location: string;
@@ -41,6 +57,7 @@ export interface SessionSlot {
   feedback_summary?: string;
   exercise_feedback?: Record<string, string>;
   session_duration_seconds?: number;
+  actual_exercises?: ActualExercise[];
 }
 
 export interface DayPlan {

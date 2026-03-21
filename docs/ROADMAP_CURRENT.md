@@ -32,6 +32,7 @@
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
 Recently closed (2026-03-21):
+- **A139** — Session review: show actual logged data for completed sessions. Backend: persist raw `actual_exercises[]` (exercise_feedback_v1) in session slot inside week plan on POST /api/feedback. Data survives week rotation via week_plans{} cache. Frontend: enriched exercise-card with feedback label badges (colored pill instead of dot), load delta (prescribed vs used with green/orange color), test result display (star icon + value), used grade, completed sets count, user notes. Graceful fallback for label-only feedback (FeedbackDialog flow) and old sessions without actual_exercises. 6 new backend tests (1220 total).
 - **B139** — Root URL 404 + OG meta tags. Root `/` was blocked by Clerk middleware (`auth.protect()`) causing 404 for unauthenticated users and social crawlers. Fix: added `/` to public routes in middleware. Added Open Graph + Twitter Card meta tags to layout for social link previews (WhatsApp, Telegram, iMessage).
 
 Recently closed (2026-03-20):

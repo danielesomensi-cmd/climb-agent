@@ -48,6 +48,21 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
     exercises_by_id = load_exercises_by_id()
     append_feedback_log(state, req.log_entry, req.resolved_day, exercises_by_id)
 
+    # 3b. A139: Persist raw actual exercise data in session slot
+    _fb_items = (req.log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
+    if _fb_items:
+        _target_date = req.log_entry.get("date")
+        _target_sid = req.log_entry.get("session_id")
+        _wp = state.get("current_week_plan") or {}
+        for _week_block in _wp.get("weeks", []):
+            for _day_entry in _week_block.get("days", []):
+                if _day_entry.get("date") != _target_date:
+                    continue
+                for _sess in _day_entry.get("sessions", []):
+                    if _sess.get("session_id") == _target_sid:
+                        _sess["actual_exercises"] = _fb_items
+                        break
+
     # 4. Check adaptive replanning (B25)
     plan = state.get("current_week_plan")
     if plan and plan.get("weeks"):
