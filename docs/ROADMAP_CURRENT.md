@@ -31,6 +31,9 @@
 
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
+Recently closed (2026-03-21):
+- **B139** — Root URL 404 + OG meta tags. Root `/` was blocked by Clerk middleware (`auth.protect()`) causing 404 for unauthenticated users and social crawlers. Fix: added `/` to public routes in middleware. Added Open Graph + Twitter Card meta tags to layout for social link previews (WhatsApp, Telegram, iMessage).
+
 Recently closed (2026-03-20):
 - **A138** — Free session integration. Add-on entry point ("+ Log extra climbing" after completed engine sessions), quick-add entry ("Free climbing session" in QuickAddDialog with purple Grip icon), Today/Week view display (free session cards with surface/preset/climbs/grade/duration), query params support (`?context=add_on&date=`). Report engine: free session load in weekly actual total, free sessions in day-by-day timeline, active days count, training time aggregation with `free_session` source.
 - **D134** — Outdoor session persistence audit & fix. Root cause: dual-storage architecture (outdoor_logs table + state.outdoor_log[] summary) with no auth guard on Supabase writes — Clerk token expiry could route data to `__legacy__` bucket, causing 404 on subsequent reads. Fix: auth guard on all Supabase write functions (`_require_user_id`), read-after-write verification for outdoor_logs, frontend read-after-write before `complete_outdoor` event. Recovery script for orphaned `__legacy__` data. 8 new tests (1205 total).

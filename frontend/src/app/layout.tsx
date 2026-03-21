@@ -9,9 +9,23 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Climb Agent",
-  description: "AI-powered climbing training planner",
+  title: "climb-agent",
+  description:
+    "AI-powered climbing training planner. 80+ research papers, one personalized plan.",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "climb-agent",
+    description:
+      "AI-powered climbing training planner. 80+ research papers, one personalized plan.",
+    url: "https://climb-agent.vercel.app",
+    siteName: "climb-agent",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "climb-agent",
+    description: "AI-powered climbing training planner.",
+  },
 };
 
 export const viewport: Viewport = {
