@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-19
+> Last updated: 2026-03-21
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -84,6 +84,56 @@ These must be done before paid launch.
   - Railway persistent volume → deprecated after migration
 - **Stripe subscriptions** — pricing model TBD
   - Free tier vs paid features to be defined
+
+---
+
+## Priority 2.25 — Code Quality & Hardening
+
+> Origin: Full codebase audit con Agent Teams (2026-03-21)
+> Scope: backend engine + frontend React — safety, error handling, refactoring
+
+### R140 — Backend Error Handling Hardening
+
+**Priority:** P2.25 (high — safety first)
+**Status:** Open
+**Discovered:** 2026-03-21 (codebase audit)
+**Type:** R (refactor)
+
+- Sostituire tutti i `except Exception` silenziosi in `closed_loop_v1.py` con logging esplicito
+- Aggiungere validazione su `perceived_difficulty` (range 1-5) in `closed_loop_v1.py:180-195`
+- Aggiungere validazione input (formato date, struttura user_state, validità phase) sulle funzioni pubbliche di: `planner_v2.py`, `resolve_session.py`, `macrocycle_v1.py`, `replanner_v1.py`
+- Sostituire i global mutable state (`_CATALOG_CACHE`, `_cached_quotes`) con `@lru_cache`
+
+**Moduli impattati:** closed_loop_v1, planner_v2, resolve_session, macrocycle_v1, replanner_v1, progression_v1, quotes_engine
+**Rischio:** MEDIO — tocca moduli core ma i cambiamenti sono difensivi (aggiungono validazione, non cambiano logica)
+
+### R141 — Frontend Error Handling Hardening
+
+**Priority:** P2.25 (high — safety first)
+**Status:** Open
+**Discovered:** 2026-03-21 (codebase audit)
+**Type:** R (refactor)
+
+- Sostituire tutti i `.catch(() => {})` silenziosi (15+ istanze) con error toast per l'utente
+- Aggiungere validazione Zod su `JSON.parse` del localStorage nella guided session
+- Aggiungere `AbortController` sulla navigazione week per evitare race condition con click rapidi
+- Aggiungere stati loading/error consistenti su `today/`, `plan/`, `outdoor/` pages
+
+**Moduli impattati:** today/page.tsx, week/page.tsx, guided/page.tsx, plan/page.tsx, outdoor/page.tsx, lib/api.ts
+**Rischio:** BASSO — cambiamenti UX difensivi, non toccano logica engine
+
+### R142 — Magic Numbers Extraction
+
+**Priority:** P2.25 (high)
+**Status:** Open
+**Discovered:** 2026-03-21 (codebase audit)
+**Type:** R (refactor)
+
+- Estrarre tutti i magic numbers da `progression_v1.py` (0.05, 0.85, 1.15, 3, 0.7) in named constants o file di configurazione
+- Spostare le tabelle grade-to-score e axis weights da `assessment_v1.py:45-90` in un file JSON catalog
+
+**Moduli impattati:** progression_v1, assessment_v1
+**Rischio:** BASSO — estrazione costanti, nessun cambio logica
 
 ---
 
@@ -196,6 +246,81 @@ Feeds into: Phase 3.5 LLM Coach (coach explains "why" using tier context).
 
 ---
 
+## Priority 2.75 — Refactoring (prossimo ciclo)
+
+> Origin: Full codebase audit con Agent Teams (2026-03-21)
+
+### R143 — Refactor replanner_v1.py
+
+**Priority:** P2.75
+**Status:** Open
+**Discovered:** 2026-03-21 (codebase audit)
+**Type:** R (refactor)
+
+- Spezzare `replanner_v1.py` (1042 righe) in package `replanner/` con handler separati per categoria intent (rest, swap, equipment, outdoor)
+- Risolvere dipendenza circolare con `planner_v2.py` estraendo `_INTENSITY_TO_LOAD` e `_SESSION_META` in `session_catalog.py` condiviso
+
+**Moduli impattati:** replanner_v1, planner_v2
+**Rischio:** ALTO — tocca replanner e planner, mandatory analysis phase
+
+### R144 — Frontend API Layer Refactor
+
+**Priority:** P2.75
+**Status:** Open
+**Discovered:** 2026-03-21 (codebase audit)
+**Type:** R (refactor)
+
+- Adottare TanStack Query per caching, deduplicazione request, e gestione loading/error standardizzata
+- Refactorare `api.ts` (590 righe) con client tipizzato e interceptor centralizzato
+
+**Moduli impattati:** lib/api.ts, tutte le pagine che fetchano dati
+**Rischio:** MEDIO — cambia pattern data fetching su tutto il frontend
+
+### R145 — Spezzare pagine componente grandi
+
+**Priority:** P2.75
+**Status:** Open
+**Discovered:** 2026-03-21 (codebase audit)
+**Type:** R (refactor)
+
+- `today/page.tsx` (971 righe) → custom hook `useToday` + sotto-componenti
+- `week/page.tsx` (889 righe) → custom hook `useWeekPlan` + sotto-componenti
+- `settings/page.tsx` (1018 righe) → pannelli separati
+- `guided/[date]/[sessionId]/page.tsx` (600+ righe) → separare timer logic, UI, state
+
+**Moduli impattati:** 4 pagine principali + nuovi hook/componenti
+**Rischio:** MEDIO — refactor strutturale, nessun cambio logica
+
+### R146 — Estrarre logica duplicata
+
+**Priority:** P2.75
+**Status:** Open
+**Discovered:** 2026-03-21 (codebase audit)
+**Type:** R (refactor)
+
+- **Backend:** load score computation condivisa tra `resolve_session.py` e `planner_v2.py` → utility module
+- **Frontend:** handler duplicati (`handleMarkDone`, `handleMarkSkipped`, `handleUndo`) tra `today/` e `week/` → hook condiviso `useSessionHandlers`
+- **Frontend:** componenti condivisi `<LoadingState>`, `<EmptyState>`, `<ErrorState>`
+
+**Moduli impattati:** resolve_session, planner_v2, today/page, week/page
+**Rischio:** MEDIO — tocca resolve_session e planner_v2
+
+### R147 — Resolve Session Refactor
+
+**Priority:** P2.75
+**Status:** Open
+**Discovered:** 2026-03-21 (codebase audit)
+**Type:** R (refactor)
+
+- Spezzare `resolve_session()` (10+ parametri, 170+ righe) in `_resolve_session_context()`, `_resolve_module()`, `_load_session_templates()`
+- Refactorare filtri P0 da nesting 5+ livelli a pipeline pattern
+- Eliminare codice morto (`resolve_session.py:1145-1146`)
+
+**Moduli impattati:** resolve_session
+**Rischio:** ALTO — tocca resolve_session, mandatory analysis phase
+
+---
+
 ## Priority 3 — UI polish (parallel with P2)
 
 Items that affect first impression for paying users.
@@ -262,6 +387,8 @@ Da calibrare con dati reali dai beta tester.
 | — | Test results → exercise calibration | Use ALL assessment test results (repeaters, max hang duration, L-sit, hip flexibility) to calibrate exercise difficulty and prescription — not just for radar profile. E.g.: repeater max sets → finger endurance set count; L-sit hold → core exercise progression tier; max hang duration → endurance hang prescriptions. Requires: mapping table test_result → affected exercises → calibration formula. |
 | B127 | Pre-test adjacency rule nel planner | Il planner non ha logica per evitare finger/hangboard exercises il giorno prima di finger test sessions. Serve un guard in planner_v2 che, quando il giorno N+1 ha una test session con domain finger_*, il giorno N escluda sessioni con finger work intenso (finger_maintenance, finger_max_strength templates). Scoperto in D126 audit. Risk: HIGH (planner). |
 | B133c | Multiple other_sport same day | Data model supporta solo 1 other_activity per giorno (campo booleano). Per loggare 2 sport diversi nello stesso giorno serve `other_activities: []` array. Deferred post-launch. Discovered: B133 audit. |
+| R148 | Performance: JSON catalog caching | Aggiungere `@lru_cache` su `json_loader.py` (ogni request ri-legge da disco). Ottimizzare `pick_best_exercise_p0()` da 6 passate a singola passata. Aggiungere bounds checking su adaptation engine multipliers. Origin: codebase audit 2026-03-21. |
+| R149 | Frontend performance | Code splitting con `next/dynamic` per radar charts, guided session, onboarding. `React.memo` su `SessionCard` (919 righe) e componenti hot-path. Origin: codebase audit 2026-03-21. |
 
 ---
 
@@ -376,6 +503,9 @@ Items from audits and brainstorming. Not committed to any timeline.
 
 | Theme | Detail | Origin |
 |-------|--------|--------|
+| R150 — Integration test full-pipeline | Test end-to-end: assessment → macrocycle → planner → resolver → feedback → closed-loop. Edge case tests per replanner e resolve_session P0 filters. Test compound multiplier scenarios per adaptation_engine. | codebase audit 2026-03-21 |
+| R151 — Code quality polish | Type hints completi (sostituire `dict` generico con `TypedDict`/`dataclass`) in replanner_v1 e closed_loop_v1. Eliminare ~15 istanze di `any` nel frontend. Consolidare date handling usando `utils/date_utils.py` ovunque. Docstrings sulle funzioni pubbliche core. | codebase audit 2026-03-21 |
+| R152 — Full codebase audit con Agent Teams | Audit periodico con team di 3+ agenti specializzati (backend logic, frontend UX, test coverage). Output: report dettagliato con file e righe esatti, classificato per severità. Frequenza suggerita: una volta per sprint/ciclo di sviluppo. | codebase audit 2026-03-21 |
 | Additional test assessments | Objective tests for technique (route-reading score) and endurance (continuous climbing time) to reduce proxy/self-eval dependency | audit_post_fix |
 | Additional assessment dimensions | Mobility/flexibility, mental game, contact strength as separate axes | audit_post_fix |
 | Deload vs literature | Compare deload structure with Hörst, Lattice, Eva López — may be too light | audit_post_fix |
