@@ -272,6 +272,17 @@ def get_week(
             _max_pullups_bw = (state.get("assessment", {}).get("tests") or {}).get("max_pullups_bw")
             if _max_pullups_bw is not None:
                 _max_pullups_bw = int(_max_pullups_bw)
+            # B128: extract recent test completion dates for freshness check
+            _recent_test_dates: dict[str, str] = {}
+            _hb_baselines = (state.get("baselines") or {}).get("hangboard") or []
+            if _hb_baselines and _hb_baselines[0].get("updated_at"):
+                _recent_test_dates["finger"] = _hb_baselines[0]["updated_at"]
+            _rep_history = (state.get("tests") or {}).get("repeater_strength_endurance") or []
+            if _rep_history:
+                _recent_test_dates["repeater"] = _rep_history[-1].get("date", "")
+            _pulling_bl = (state.get("baselines") or {}).get("pulling") or {}
+            if _pulling_bl.get("updated_at"):
+                _recent_test_dates["pulling"] = _pulling_bl["updated_at"]
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
                 domain_weights=ctx["domain_weights"],
@@ -292,6 +303,7 @@ def get_week(
                 user_age=_user_age,
                 pulling_baseline=_pulling_baseline,
                 max_pullups_bw=_max_pullups_bw,
+                recent_test_dates=_recent_test_dates if _recent_test_dates else None,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")

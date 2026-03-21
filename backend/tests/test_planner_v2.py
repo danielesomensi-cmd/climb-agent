@@ -481,6 +481,122 @@ class TestPlannerV2TestSessions(unittest.TestCase):
                                  f"Non-test session {s['session_id']} should not have tags.test")
 
 
+class TestPlannerV2TestFreshness(unittest.TestCase):
+    """B128: skip recently completed tests on macrocycle regeneration."""
+
+    _full_avail = {wd: {"evening": {"available": True, "locations": ["gym", "home"]}}
+                   for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+    _test_kwargs = dict(
+        is_last_week_of_phase=True,
+        hard_cap_per_week=5,
+        availability=_full_avail,
+        planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 5},
+    )
+
+    def _session_ids(self, plan):
+        return {s["session_id"] for d in plan["weeks"][0]["days"] for s in d["sessions"]}
+
+    def test_all_tests_skipped_when_all_fresh(self):
+        """All 3 tests completed 5 days ago → none scheduled."""
+        recent = {"finger": "2026-02-25", "repeater": "2026-02-25", "pulling": "2026-02-25"}
+        plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
+            recent_test_dates=recent))
+        sids = self._session_ids(plan)
+        test_sids = {s for s in sids if s.startswith("test_")}
+        self.assertEqual(test_sids, set(),
+                         f"All tests are fresh — none should be scheduled, got {test_sids}")
+
+    def test_partial_skip_only_fresh_tests(self):
+        """Finger fresh, repeater stale → finger skipped, repeater scheduled."""
+        recent = {"finger": "2026-02-25", "repeater": "2026-01-01"}
+        plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
+            recent_test_dates=recent))
+        sids = self._session_ids(plan)
+        self.assertNotIn("test_max_hang_5s", sids,
+                         "Finger test is fresh — should be skipped")
+        self.assertIn("test_repeater_7_3", sids,
+                       "Repeater test is stale — should be scheduled")
+
+    def test_no_recent_dates_all_tests_scheduled(self):
+        """No recent_test_dates (None) → all tests scheduled normally."""
+        plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
+            recent_test_dates=None))
+        sids = self._session_ids(plan)
+        self.assertIn("test_max_hang_5s", sids)
+        self.assertIn("test_repeater_7_3", sids)
+
+    def test_empty_recent_dates_all_tests_scheduled(self):
+        """Empty dict → all tests scheduled (no completion data = never done)."""
+        plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
+            recent_test_dates={}))
+        sids = self._session_ids(plan)
+        self.assertIn("test_max_hang_5s", sids)
+        self.assertIn("test_repeater_7_3", sids)
+
+    def test_scheduled_but_not_completed_reschedules(self):
+        """Test was scheduled but NOT completed — no date in baselines/tests.
+        Only pulling has a date, finger and repeater have no entry → must be rescheduled."""
+        recent = {"pulling": "2026-02-25"}  # finger and repeater: no entry
+        plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
+            recent_test_dates=recent))
+        sids = self._session_ids(plan)
+        self.assertIn("test_max_hang_5s", sids,
+                       "Finger test has no completion date — must be rescheduled")
+        self.assertIn("test_repeater_7_3", sids,
+                       "Repeater test has no completion date — must be rescheduled")
+
+    def test_short_phase_edge_case_2_weeks(self):
+        """Short phase (2 weeks): test completed day 1 (Mon), last week starts day 8.
+        Delta = 7 days < 14 → tests should be skipped."""
+        # Phase starts 2026-02-24 (Mon), test done that day.
+        # Last week starts 2026-03-03 (Mon), 7 days later.
+        recent = {
+            "finger": "2026-02-24",
+            "repeater": "2026-02-24",
+            "pulling": "2026-02-24",
+        }
+        plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
+            start_date="2026-03-03", recent_test_dates=recent))
+        sids = self._session_ids(plan)
+        test_sids = {s for s in sids if s.startswith("test_")}
+        self.assertEqual(test_sids, set(),
+                         f"Tests completed 7 days ago in 2-week phase — should be skipped, got {test_sids}")
+
+    def test_stale_at_exactly_14_days(self):
+        """Test completed exactly 14 days before week start → stale, should be rescheduled."""
+        recent = {"finger": "2026-02-16", "repeater": "2026-02-16", "pulling": "2026-02-16"}
+        plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
+            recent_test_dates=recent))
+        sids = self._session_ids(plan)
+        self.assertIn("test_max_hang_5s", sids,
+                       "Exactly 14 days old — should be rescheduled")
+        self.assertIn("test_repeater_7_3", sids,
+                       "Exactly 14 days old — should be rescheduled")
+
+    def test_fresh_at_13_days(self):
+        """Test completed 13 days before week start → still fresh, should be skipped."""
+        recent = {"finger": "2026-02-17", "repeater": "2026-02-17", "pulling": "2026-02-17"}
+        plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
+            start_date="2026-03-02", recent_test_dates=recent))
+        sids = self._session_ids(plan)
+        test_sids = {s for s in sids if s.startswith("test_")}
+        self.assertEqual(test_sids, set(),
+                         f"Tests completed 13 days ago — should be skipped, got {test_sids}")
+
+    def test_inject_tests_explicit_also_respects_freshness(self):
+        """inject_tests=True (initial tests) should also respect freshness."""
+        recent = {"finger": "2026-02-25", "repeater": "2026-02-25", "pulling": "2026-02-25"}
+        plan = generate_phase_week(**_make_kwargs("base",
+            is_last_week_of_phase=False, inject_tests=True,
+            hard_cap_per_week=5, availability=self._full_avail,
+            planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 5},
+            recent_test_dates=recent))
+        sids = self._session_ids(plan)
+        test_sids = {s for s in sids if s.startswith("test_")}
+        self.assertEqual(test_sids, set(),
+                         f"inject_tests=True but all fresh — should skip, got {test_sids}")
+
+
 class TestPlannerV2LoadScore(unittest.TestCase):
     """Tests for B4 — load score and weekly load summary."""
 

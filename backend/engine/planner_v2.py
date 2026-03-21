@@ -425,6 +425,7 @@ def generate_phase_week(
     user_age: Optional[int] = None,
     pulling_baseline: Optional[Dict[str, Any]] = None,
     max_pullups_bw: Optional[int] = None,
+    recent_test_dates: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -1019,19 +1020,45 @@ def generate_phase_week(
     # Triggers on: last week of base/strength_power, OR explicitly via inject_tests
     _run_pass3 = inject_tests or (is_last_week_of_phase and phase_id in ("base", "strength_power"))
     if _run_pass3:
+        # B128: freshness check — skip tests completed within TEST_FRESHNESS_DAYS
+        # Mapping: test_sid → key in recent_test_dates dict
+        TEST_FRESHNESS_DAYS = 14
+        _test_type_map = {
+            "test_max_hang_5s": "finger", "test_lp_max_5s": "finger",
+            "test_repeater_7_3": "repeater", "test_lp_repeater": "repeater",
+            "test_max_weighted_pullup": "pulling", "test_pullup_bw": "pulling",
+        }
+        _recent = recent_test_dates or {}
+        _week_start = _parse_date(start_date)
+
         # Required tests first, then optional
         # Finger test depends on device preference (A120)
         _finger_test_sid = "test_lp_max_5s" if finger_device == "loading_pin" else "test_max_hang_5s"
         _repeater_test_sid = "test_lp_repeater" if finger_device == "loading_pin" else "test_repeater_7_3"
-        # B128: pulling test routing — skip BW gate for users with pulling baseline
+        # Pulling test routing — skip BW gate for users with pulling baseline
         _pulling_test_sid = _pick_pulling_test_session(pulling_baseline, max_pullups_bw)
         _test_schedule = [
             (_finger_test_sid, True),
             (_repeater_test_sid, True),
             (_pulling_test_sid, False),
         ]
-        test_placed_offsets: set = set()
+
+        # B128: filter out recently completed tests
+        _filtered_schedule = []
         for test_sid, _required in _test_schedule:
+            test_type = _test_type_map.get(test_sid)
+            last_date_str = _recent.get(test_type) if test_type else None
+            if last_date_str:
+                try:
+                    days_ago = (_week_start - _parse_date(last_date_str)).days
+                    if 0 <= days_ago < TEST_FRESHNESS_DAYS:
+                        continue  # Skip — test completed recently
+                except (ValueError, TypeError):
+                    pass  # Invalid date — schedule normally
+            _filtered_schedule.append((test_sid, _required))
+
+        test_placed_offsets: set = set()
+        for test_sid, _required in _filtered_schedule:
             test_meta = _SESSION_META.get(test_sid)
             if test_meta is None:
                 continue

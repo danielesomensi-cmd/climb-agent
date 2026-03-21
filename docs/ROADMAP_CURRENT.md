@@ -62,25 +62,12 @@ Previously closed (2026-03-15):
 
 All P1b items completed (3 items). See archived history in `docs/ROADMAP_v2.md`.
 
-### B128 — Test duplicati dopo rigenerazione macrociclo
+### ~~B128 — Test duplicati dopo rigenerazione macrociclo~~ ✅
 
-**Priority:** P1b — non blocca il lancio ma brutta UX
-**Status:** Open
-**Discovered:** 2026-03-18
+**Priority:** P1b
+**Status:** Closed (2026-03-21)
 
-**Problema:** Quando l'utente rigenera il macrociclo ("Rigenera da oggi"), il planner schedula test iniziali (Max Hang 5s, Repeater 7/3, ecc.) anche se gli stessi test sono stati completati 1-2 giorni prima. I risultati sono già freschi nello user_state (baselines, assessment) — rischedulare è inutile e confonde l'utente.
-
-**Caso concreto:** Utente completa Test Max Hang 5s martedì 17 Mar. Mercoledì 18 rigenera macrociclo → il planner mette di nuovo Test Max Hang 5s il mercoledì stesso.
-
-**Fix proposta:** Prima di schedulare un test, il planner deve verificare:
-1. Cercare in `user_state.completed_sessions` (o feedback log) se quel tipo di test è stato completato negli ultimi N giorni (proposta: 14 giorni)
-2. Se completato recentemente → skip, usa i risultati esistenti
-3. Se non completato o risultati vecchi → schedula normalmente
-
-**Moduli coinvolti:** `planner_v2.py` (test scheduling logic, pass 3)
-**Rischio:** MEDIO — tocca planner ma logica isolata (solo check pre-scheduling)
-
-**Non fare ora** — solo documentare in roadmap.
+**Fix:** Pass 3 in planner_v2 now checks `recent_test_dates` (finger, repeater, pulling) before scheduling each test. Tests completed within 14 days of week start are skipped. Granular per-test: if finger is fresh but repeater is stale, only repeater is scheduled. New parameter `recent_test_dates: Dict[str, str]` on `generate_phase_week()`. Call site (week.py) extracts dates from `baselines.hangboard[0].updated_at`, `tests.repeater_strength_endurance[-1].date`, `baselines.pulling.updated_at`. Inline freshness check in planner — zero coupling with progression_v1. 9 new tests (1214 total).
 
 ---
 
