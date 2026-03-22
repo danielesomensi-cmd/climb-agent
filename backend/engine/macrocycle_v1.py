@@ -68,12 +68,15 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "endurance_aerobic_gym": "primary",
         "technique_focus_gym": "primary",
         "finger_maintenance_home": "primary",
+        "finger_maintenance_gym": "primary",
         "boulder_circuit_gym": "primary",
         "prehab_maintenance": "primary",
         "flexibility_full": "available",
         "handstand_practice": "available",
         "complementary_conditioning": "available",
         "route_endurance_gym": "available",
+        "finger_endurance_short": "available",
+        "finger_aerobic_base": "available",
     },
     "strength_power": {
         "power_contact_gym": "primary",
@@ -84,6 +87,8 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "flexibility_full": "available",
         "handstand_practice": "available",
         "complementary_conditioning": "available",
+        "finger_maintenance_gym": "available",
+        "finger_endurance_short": "available",
     },
     "power_endurance": {
         "power_endurance_gym": "primary",
@@ -110,6 +115,8 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "yoga_recovery": "primary",
         "prehab_maintenance": "primary",
         "easy_climbing_deload": "available",
+        "deload_recovery": "available",
+        "finger_aerobic_base": "available",
     },
 }
 
@@ -185,6 +192,8 @@ _SESSION_POOL_BOULDER: Dict[str, Dict[str, str]] = {
         "yoga_recovery": "primary",
         "prehab_maintenance": "primary",
         "easy_climbing_deload": "available",
+        "deload_recovery": "available",
+        "finger_aerobic_base": "available",
     },
 }
 

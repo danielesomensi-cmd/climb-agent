@@ -914,7 +914,7 @@
         "endurance"
       ],
       "pattern": "isometric_hang",
-      "intensity_level": "high",
+      "intensity_level": "medium",
       "fatigue_cost": 8,
       "recency_group": "finger_test",
       "equipment_required": [
@@ -2052,7 +2052,7 @@
         "contact_strength"
       ],
       "pattern": "campus_ladder",
-      "intensity_level": "medium",
+      "intensity_level": "high",
       "fatigue_cost": 5,
       "recency_group": "campus_ladders",
       "equipment_required": [
@@ -6395,7 +6395,7 @@
         "aerobic_capacity"
       ],
       "pattern": "climbing_intervals",
-      "intensity_level": "medium",
+      "intensity_level": "low",
       "fatigue_cost": 6,
       "recency_group": "gym_threshold",
       "equipment_required": [],
@@ -7062,7 +7062,7 @@
         "aerobic_capacity"
       ],
       "pattern": "climbing_intervals",
-      "intensity_level": "medium",
+      "intensity_level": "low",
       "fatigue_cost": 5,
       "recency_group": "gym_threshold",
       "equipment_required": [],
@@ -7115,7 +7115,7 @@
         "aerobic_capacity"
       ],
       "pattern": "climbing_intervals",
-      "intensity_level": "medium",
+      "intensity_level": "low",
       "fatigue_cost": 5,
       "recency_group": "gym_threshold",
       "equipment_required": [],

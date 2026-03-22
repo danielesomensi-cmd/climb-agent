@@ -63,7 +63,7 @@
           "filters": {
             "role": ["accessory"],
             "domain": ["core"],
-            "pattern": ["anti_rotation", "lateral_flexion"]
+            "pattern": ["anti_rotation", "anti_lateral_flexion"]
           }
         }
       }

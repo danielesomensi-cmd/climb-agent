@@ -8,7 +8,6 @@
   "modules": [
     {
       "template_id": "deload_recovery",
-      "version": "v1",
       "required": true
     }
   ]

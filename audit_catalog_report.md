@@ -1,0 +1,225 @@
+# Catalog Coherence & Completeness Audit Report
+
+> **Date:** 2026-03-22
+> **Auditor:** Claude Code
+> **Catalog:** 178 exercises, 33 sessions, 26 templates
+
+---
+
+## PART 1: Internal Coherence
+
+### Summary
+
+- **Exercises checked:** 178
+- **Sessions checked:** 33
+- **Templates checked:** 26
+- ✅ **Coherent:** 134 exercises, 29 sessions, 26 templates
+- ⚠️ **Minor issues:** 44 exercise anomalies, 4 session filter issues
+- ❌ **Missing fields / duplicates:** 0
+
+---
+
+### 1A. Exercise Anomalies (44 total)
+
+**No missing required fields. No duplicate IDs.** All 178 exercises structurally valid.
+
+#### Clear Coherence Failures (5 exercises — fix recommended)
+
+| Exercise ID | Field | Current | Suggested | Reason |
+|-------------|-------|---------|-----------|--------|
+| `aerobic_pyramid_intervals` | intensity_level | medium | low | aerobic_capacity expects low/very_low |
+| `aerobic_pyramid_intervals` | pattern | climbing_intervals | climbing_continuous | aerobic domain = continuous, not intervals |
+| `campus_laddering_feet_on` | intensity_level | medium | high | contact_strength expects max/high |
+| `critical_force_test` | intensity_level | high | medium | endurance test, not max effort |
+| `one_on_one_off_intervals` | pattern | climbing_intervals | climbing_continuous | aerobic_capacity = continuous |
+| `threshold_long_intervals` | pattern | climbing_intervals | climbing_continuous | aerobic_capacity = continuous |
+
+#### Intensity Boundary Cases (6 exercises — review)
+
+| Exercise ID | Field | Current | Issue |
+|-------------|-------|---------|-------|
+| `thirty_thirty_intervals` | intensity_level | very_high | power_endurance caps at high; very_high may be intentional for peak sets |
+| `limit_bouldering` | intensity_level | max | Secondary domain technique_boulder expects low/medium, but primary (power) justifies max |
+| `hangboard_moving_hangs` | intensity_level | low | finger_strength_endurance expects medium/high |
+| `test_l_sit_hold` | intensity_level | max | Core test; high may be more appropriate |
+| `timed_route_preview` | intensity_level | very_low | technique_lead expects low/medium for active drilling |
+
+#### Pattern/Domain Mismatches (33 exercises)
+
+Most are **multi-domain exercises** where the pattern aligns with the primary domain but conflicts with a secondary one, or exercises using patterns not in the expected vocabulary list for their domain.
+
+Notable categories:
+- **Carry/locomotion patterns** (3): `farmers_carry`, `bear_crawl`, `jump_rope` — legitimate movements, vocabulary reference table may be incomplete
+- **Isolation patterns** (3): `bicep_curl` (elbow_flexion), `lateral_raise` (shoulder_isolation) — valid patterns, not in strength_general expected list
+- **Hangboard protocol mismatches** (4): `density_hangs`, `lopez_subhangs`, `lp_density_lifts`, `lp_repeater_lifts` — use `isometric_hang` pattern but are repeater protocols
+- **Recovery/flexibility** (3): `foam_rolling_general` (self_massage), `cooldown_forearm_wrist_stretch` — patterns valid but not in expected domain lists
+- **Multi-domain hybrid** (5): `l_sit_pullup`, `turkish_getup`, `handstand_shoulder_taps`, `wall_handstand_hold`, `handstand_pushup_wall`
+
+---
+
+### 1B. Session Anomalies (4 filter issues)
+
+| Session | Block | Field | Current | Issue |
+|---------|-------|-------|---------|-------|
+| `boulder_circuit_gym` | boulder_circuit_main | domain filter | `["aerobic_capacity", "volume_climbing"]` | `volume_climbing` doesn't exist as exercise domain |
+| `upper_body_weights` | push_main | pattern filter | `["push_horizontal"]` | `push_horizontal` doesn't exist; exercises use `push` |
+| `upper_body_weights` | push_secondary | pattern filter | `["push_vertical", "push_horizontal"]` | Neither exists; use `push` |
+| `core_training` | rotation_lateral | pattern filter | `["anti_rotation", "lateral_flexion"]` | `lateral_flexion` doesn't exist; use `anti_lateral_flexion` |
+
+**Impact:** Session resolution may fail to find matching exercises for these blocks. Resolver falls back gracefully, but filtered pools will be empty for these specific patterns.
+
+---
+
+### 1C. Template Anomalies
+
+**All 26 templates are structurally sound.** No vocabulary violations in template block filters.
+
+**Minor schema note:** 4 sessions (`finger_aerobic_base`, `finger_endurance_short`, `deload_recovery`, `easy_climbing_deload`) use deprecated `"version": "v1"` field on modules. Ignored by planner but indicates schema drift.
+
+---
+
+### 1D. Cross-Reference Issues
+
+#### 9 Orphan Sessions (not in any macrocycle phase pool)
+
+These sessions exist in `backend/catalog/sessions/v1/` but are NOT assigned to any phase in `macrocycle_v1.py`:
+
+1. `deload_recovery`
+2. `finger_aerobic_base`
+3. `finger_endurance_short`
+4. `finger_maintenance_gym`
+5. `heavy_conditioning_gym`
+6. `legs_strength`
+7. `lower_body_gym`
+8. `pulling_strength_gym`
+9. `upper_body_weights`
+
+**Impact:** These sessions are never generated by the planner. They may be used by replanner (intent overrides) or quick-add, but are invisible to normal plan generation.
+
+#### Test Sessions (7) — Correctly Not In Pool
+
+Test sessions are injected by `planner_v2.py` at phase boundaries, not assigned to the pool. This is by design.
+
+#### No Orphan Exercises Found
+
+All exercises are reachable via template block filters (checked via domain/role/pattern matching). Some exercises are only reachable via fallback paths, which is expected for catalog diversity.
+
+#### No Circular References
+
+All session → template → exercise references are acyclic.
+
+---
+
+## PART 2: Soft Launch Completeness
+
+### 2A. Phase Coverage Matrix
+
+| Phase | Sessions | Finger | Climbing | Conditioning | Test | Variety |
+|-------|----------|--------|----------|-------------|------|---------|
+| **base** | 9 | ✅ finger_maintenance_home | ✅ 4 climbing sessions | ✅ 2 conditioning | ✅ injected | ✅ 9 unique |
+| **strength_power** | 8 | ✅ 2 finger sessions | ✅ 2 climbing | ✅ 2 conditioning | ✅ injected | ✅ 8 unique |
+| **power_endurance** | 8 | ✅ finger_strength_home | ✅ 4 climbing | ✅ 1 prehab | ✅ injected | ✅ 8 unique |
+| **performance** | 7 | ✅ finger_strength_home | ✅ 3 climbing | ✅ 1 prehab | ✅ injected | ✅ 7 unique |
+| **deload** | 5 | ⚠️ **NONE** | ✅ 2 easy climbing | ✅ 1 prehab | N/A | ✅ 5 unique |
+
+**All phases have ≥3 unique sessions for variety.** ✅
+
+**Gap:** Deload phase has **zero hangboard sessions**. Users with home-only setups lose finger maintenance during deload. Consider adding `finger_maintenance_home` or `finger_aerobic_base` to deload pool.
+
+---
+
+### 2B. Equipment Scenario Coverage
+
+| Scenario | base | S&P | PE | perf | deload | Verdict |
+|----------|------|-----|-----|------|--------|---------|
+| Gym only (no hangboard) | ✅ | ✅ | ✅ | ✅ | ✅ | **PASS** |
+| Gym + hangboard | ✅ | ✅ | ✅ | ✅ | ✅ | **PASS** |
+| Gym + hangboard + campus | ✅ | ✅ | ✅ | ✅ | ✅ | **PASS** |
+| Home + hangboard | ✅ | ✅ | ✅ | ✅ | ✅ | **PASS** |
+| Home + hangboard + loading_pin | ✅ | ✅ | ✅ | ✅ | ✅ | **PASS** |
+| Home only (no equipment) | ✅ | ✅ | ✅ | ✅ | ✅ | **PASS** (lean: 3-4 sessions/phase) |
+| Homewall + hangboard | ✅ | ✅ | ✅ | ✅ | ✅ | **PASS** |
+
+**All 7 scenarios pass all 5 phases.** No dead ends where planner produces an empty plan.
+
+**Note:** "Home only" is viable but tight (prehab, flexibility, handstand, yoga, complementary_conditioning). Sufficient for deload/base, potentially sparse for strength_power phase.
+
+---
+
+### 2C. Grade Range Coverage
+
+**27 grade-relative exercises** cover all levels via `grade_offset` system:
+
+| Level | Exercises Available | grade_offset range |
+|-------|--------------------|--------------------|
+| Beginner (5a-6a) | ARC, easy route laps, technique drills | -3 to -5 |
+| Intermediate (6a-7a) | Threshold, continuity, 4x4 | -1 to -2 |
+| Advanced (7a-7c+) | Limit bouldering, route intervals | 0 to -1 |
+| Elite (8a+) | Power contacts, projecting | 0 |
+
+**Resolver dynamically prescribes grades per user level.** ✅ No grade dead zones.
+
+---
+
+### 2D. Duration Issues
+
+**No session exceeds 2.5 hours.** ✅
+**No abnormal durations detected.**
+
+Sessions under 30 min (all intentional):
+- `prehab_maintenance` (18 min) — standalone prehab filler
+- `core_training` (25 min) — lightweight module
+- `handstand_practice` (25 min) — skill work
+- `yoga_recovery` (25 min) — deload supplement
+
+Test sessions: 30-45 min range. ✅
+
+---
+
+### 2E. Missing Must-Have Exercises
+
+| Exercise Category | Present? | Examples |
+|-------------------|----------|---------|
+| Max hangs (20mm, 7s MVC-7) | ✅ | `max_hang_7s`, `max_hang_5s` |
+| Repeaters (7/3 protocol) | ✅ | `repeater_hang_7_3`, `repeater_15_15` |
+| Pull-ups (weighted + BW) | ✅ | `weighted_pullup`, `pullup`, `power_pullups_explosive` |
+| Campus board | ✅ | `campus_laddering_feet_off/on`, `campus_bumps`, `campus_double_dyno` |
+| ARC training | ✅ | `arc_training`, `gym_arc_easy_volume` |
+| 4x4s | ✅ | `four_by_four_bouldering` |
+| Route climbing | ✅ | `route_intervals`, `threshold_climbing`, `easy_route_laps` |
+| Core | ✅ | `core_l_sit`, `plank`, `l_sit_pullup` |
+| Antagonist | ✅ | `pushup`, `pike_pushup`, `ring_pushup`, `face_pull`, `band_pull_apart` |
+| Shoulder prehab | ✅ | `band_external_rotation`, scapular exercises |
+| Test: finger (MVC-7) | ✅ | `test_max_hang_7s`, `test_max_hang_5s` |
+| Test: pulling (2RM) | ✅ | `test_max_weighted_pullup`, `test_pullup_bw` |
+| Test: repeater | ✅ | `test_repeater_7_3` |
+
+**All 13 must-have categories present.** ✅
+
+---
+
+## Priority-ordered Findings
+
+### :red_circle: Soft Launch Blockers
+
+**None.** The catalog is production-ready for soft launch. All equipment scenarios work, all phases are covered, all must-have exercises exist.
+
+### :yellow_circle: Important (fix within first week)
+
+1. **4 session filter references use non-existent values.** `volume_climbing`, `push_horizontal`, `push_vertical`, `lateral_flexion` don't exist. Resolver falls back gracefully but these blocks will have suboptimal exercise selection. Fix: update to valid vocabulary values.
+
+2. **9 orphan sessions not in any phase pool.** `heavy_conditioning_gym`, `pulling_strength_gym`, `lower_body_gym`, `legs_strength`, etc. Either assign to phases or mark as deferred/replanner-only. Wasted catalog content.
+
+3. **5 exercise intensity mismatches.** `aerobic_pyramid_intervals` (medium → low), `campus_laddering_feet_on` (medium → high), `critical_force_test` (high → medium), etc. May affect exercise selection quality in edge cases.
+
+4. **Deload phase has zero hangboard sessions.** Users with home-only setups lose finger maintenance during deload week. Consider adding `finger_maintenance_home` to deload pool.
+
+### :green_circle: Nice-to-have (post-launch enrichment)
+
+5. **33 pattern/domain borderline cases.** Most are multi-domain exercises where the mismatch is with a secondary domain. Review and document intent rather than fix.
+
+6. **4 sessions with deprecated `version` field** on modules. Cosmetic cleanup.
+
+7. **Vocabulary reference table (§2.4) incomplete.** Patterns like `carry`, `locomotion`, `self_massage`, `shoulder_isolation`, `elbow_flexion` are used in exercises but not in expected pattern lists per domain. Expand vocabulary or clarify these are cross-domain patterns.
+
+8. **Home-only users have sparse variety** (3-4 sessions per phase). Consider adding bodyweight-only climbing simulation or more conditioning variety for users without gym access.

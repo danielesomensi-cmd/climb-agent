@@ -6,13 +6,16 @@
   "location": "gym",
   "duration_minutes": 60,
   "intensity": "low",
-  "phase_tags": ["deload"],
-  "required_equipment": ["gym_boulder"],
+  "phase_tags": [
+    "deload"
+  ],
+  "required_equipment": [
+    "gym_boulder"
+  ],
   "description": "Light climbing session for deload weeks. Focus on movement quality and enjoyment at easy grades. No projecting or limit moves.",
   "modules": [
     {
-      "template_id": "warmup_climbing",
-      "version": "v1"
+      "template_id": "warmup_climbing"
     },
     {
       "block_id": "slow_climbing_deload",
@@ -20,9 +23,16 @@
       "selection": {
         "primary": {
           "filters": {
-            "role": ["technique"],
-            "domain": ["technique_footwork", "technique_boulder"],
-            "pattern": ["technique_drill"]
+            "role": [
+              "technique"
+            ],
+            "domain": [
+              "technique_footwork",
+              "technique_boulder"
+            ],
+            "pattern": [
+              "technique_drill"
+            ]
           }
         }
       },
@@ -34,8 +44,7 @@
       }
     },
     {
-      "template_id": "cooldown_stretch",
-      "version": "v1"
+      "template_id": "cooldown_stretch"
     }
   ]
 }

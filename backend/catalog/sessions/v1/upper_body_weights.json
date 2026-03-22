@@ -37,7 +37,7 @@
           "filters": {
             "role": ["accessory"],
             "domain": ["strength_general"],
-            "pattern": ["push_horizontal"]
+            "pattern": ["push"]
           }
         }
       }
@@ -53,7 +53,7 @@
           "filters": {
             "role": ["accessory"],
             "domain": ["strength_general"],
-            "pattern": ["push_vertical", "push_horizontal"]
+            "pattern": ["push"]
           }
         }
       }

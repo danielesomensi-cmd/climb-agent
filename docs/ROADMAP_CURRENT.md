@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-21
+> Last updated: 2026-03-22
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -161,9 +161,22 @@ These must be done before paid launch.
 ### C130 — Audit sistematico domain/intensity/pattern di tutti gli esercizi
 
 **Priority:** P2.5
-**Status:** Open
+**Status:** Partially closed (2026-03-22, D-CAT + D-ORPHAN)
 **Discovered:** 2026-03-18 (durante A121 + knowledge base review)
 **Type:** C (catalog)
+
+**Completato (D-CAT audit, 2026-03-22):**
+- Audit esaustivo di tutti i 178 esercizi: domain, intensity, pattern, grade_offset
+- 5 intensity mismatch corretti: `aerobic_pyramid_intervals` (medium→low), `campus_laddering_feet_on` (medium→high), `critical_force_test` (high→medium), `one_on_one_off_intervals` (medium→low), `threshold_long_intervals` (medium→low)
+- 4 session filter corretti: `boulder_circuit_gym` (volume_climbing→power_endurance), `upper_body_weights` (push_horizontal→push ×2), `core_training` (lateral_flexion→anti_lateral_flexion)
+- 9 sessioni orfane triagate: 4 integrate nel planner, 5 classificate come supplementary
+- Schema drift rimosso (version: v1) da 4 sessioni
+- Deload pool: aggiunto `finger_aerobic_base` + `deload_recovery` (colma gap hangboard)
+- Report completo: `audit_catalog_report.md`
+
+**Ancora aperto:**
+- ~33 pattern/domain borderline cases (multi-domain exercises, vocabulary gaps) — richiedono decisione design, non fix meccanici
+- Vocabulary §2.4 reference table incompleta per patterns come carry, locomotion, self_massage
 
 **Origine:** Il bug di `threshold_climbing` (domain `aerobic_capacity` invece di `power_endurance`) ha rivelato che il catalogo potrebbe avere altre incoerenze domain-esercizio. La knowledge base ha prodotto un framework di audit completo.
 
@@ -254,6 +267,48 @@ test_result → tier OR scaling_factor
 
 Depends on: B122 pattern established, Supabase migration (for proper schema).
 Feeds into: Phase 3.5 LLM Coach (coach explains "why" using tier context).
+
+### B-SUPP — Supplementary training via quick-add
+
+**Priority:** P2.5 (post-audit, pre-launch nice-to-have)
+**Status:** Open — design complete, implementation pending
+**Origin:** D-CAT audit (9 orphan sessions) + B83 (supplementary work request) + B74 (rest day activities)
+**Discovered:** 2026-03-22 (D-ORPHAN triage)
+**Type:** B (feature)
+
+**Context:** Users want to add non-climbing supplementary work (legs, upper body, core, conditioning) after climbing sessions or on rest days. 5 orphan sessions exist for this purpose but are invisible to users because they're not in any phase pool and `suggest-sessions` only returns phase-compatible climbing sessions.
+
+**Triage result (D-ORPHAN Phase 0):**
+- INTEGRATE into planner (4): `deload_recovery`, `finger_aerobic_base`, `finger_endurance_short`, `finger_maintenance_gym` — ✅ Done (2026-03-22)
+- KEEP as supplementary (5): `heavy_conditioning_gym`, `legs_strength`, `lower_body_gym`, `pulling_strength_gym`, `upper_body_weights`
+
+**Scope:**
+1. **Backend:** Expand `GET /api/replanner/suggest-sessions` response with `supplementary` section
+   - Returns two sections: `climbing` (existing) + `supplementary` (new)
+   - Supplementary sessions: phase-agnostic, filtered by user equipment/location only
+   - Tag: `supplementary: true` field on session JSON
+   - Load modifier: `supplementary_modifier = 0.5` (50% impact on weekly load)
+2. **Frontend:** Expand QuickAddDialog with supplementary category
+   - Section "💪 Supplementary Training" between climbing suggestions and free climbing entry
+   - Shows: Upper Body, Core, Legs (Home), Legs (Gym), Heavy Conditioning, Pulling
+3. **Load scoring:** Supplementary sessions count at 0.5× for weekly load, count as "active day" for adherence, appear in weekly report under separate section
+4. **No adaptation trigger:** Supplementary sessions do NOT trigger replanning or macrocycle adaptation
+
+**5 supplementary sessions (all already exist as JSON):**
+- `upper_body_weights` — Push antagonist work (home, no equipment needed)
+- `legs_strength` — Squat/hinge/unilateral (home, weight)
+- `lower_body_gym` — Legs in gym (gym, weight)
+- `heavy_conditioning_gym` — Full-body conditioning (gym, weight+bench)
+- `pulling_strength_gym` — Dedicated pulling (gym, pullup_bar+weight)
+
+**Stretching:** Not needed — `flexibility_full` and `yoga_recovery` already in planner pool. Users find them in climbing suggestions.
+
+**Not in scope (separate features):**
+- B37 (add single exercise to session)
+- Supplementary sessions in auto-planner (these are user-initiated only via quick-add)
+- Guided session for supplementary (uses same guided flow)
+
+**Rischio:** BASSO — backend: aggiunge campo + sezione API response. Frontend: espande UI dialog. Zero impatto su planner/resolver/macrocycle.
 
 ---
 
