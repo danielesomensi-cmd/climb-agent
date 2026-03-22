@@ -34,16 +34,17 @@ programmi completamente diversi:
 Il profilo debolezze guida TUTTO: distribuzione delle sessioni,
 pesi per fase, priorità degli esercizi.
 
-### 2.2 Le 6 dimensioni da valutare
+### 2.2 Le 5 dimensioni da valutare
+
+> Nota: body_composition rimosso in Phase 3.2 (D01). Il peso corporeo resta come input numerico per i rapporti forza/peso, ma non è un asse del radar.
 
 | Dimensione | Come si misura | Benchmark (per 7c+ lead) |
 |-----------|---------------|-------------------------|
-| **Forza dita max** | Max hang 20mm 5s (kg totali / BW) | ≥ 1.3x BW |
-| **Resistenza dita** | Repeaters 7:3 x6 su 20mm, o Critical Force | CF/BW ≥ 0.55 |
-| **Forza trazione** | Weighted pullup 1RM (kg totali / BW) | ≥ 1.5x BW |
-| **Power endurance** | 4x4 bouldering (n° problemi completati), o tempo su via continua | Soggettivo + grado |
-| **Tecnica/Tattica** | Grado onsight vs grado progetto (gap) | Gap ≤ 2 gradi |
-| **Composizione corporea** | BW, body fat %, rapporto forza/peso | Individuale |
+| **Forza dita max** (`finger_strength`) | Max hang 20mm 7s MVC-7 (kg totali / BW) [D85] | ≥ 1.3x BW |
+| **Resistenza dita** (`endurance`) | Repeaters 7:3 x6 su 20mm, o Critical Force | CF/BW ≥ 0.55 |
+| **Forza trazione** (`pulling_strength`) | Weighted pullup 2RM (kg totali / BW) [D84] | ≥ 1.5x BW |
+| **Power endurance** (`power_endurance`) | 4x4 bouldering (n° problemi completati), o tempo su via continua | Soggettivo + grado |
+| **Tecnica/Tattica** (`technique`) | Grado onsight vs grado progetto (gap) | Gap ≤ 2 gradi |
 
 ### 2.3 Come funziona nel sistema
 
@@ -68,26 +69,25 @@ Il sistema fa domande mirate per costruire il profilo iniziale:
 **Assessment periodico (ogni 6 settimane):**
 
 Mini-test integrati nelle sessioni normali, non giornate dedicate:
-- Sessione test max hang (già presente: `test_max_hang_5s`)
+- Sessione test max hang (già presente: `test_max_hang_7s` — MVC-7, D85)
 - Sessione test PE (già presente: `test_repeater_7_3`)
 - Sessione test pulling (già presente: `test_max_weighted_pullup`)
 - Review dei gradi scalati (indoor + outdoor) dal log
 
 ### 2.4 Profilo debolezze → Pesi del macrociclo
 
-L'assessment produce un **profilo a radar** con 6 assi normalizzati
-(0-100) rispetto al livello target. Da questo si derivano i pesi
-per il macrociclo:
+L'assessment produce un **profilo a radar** con 5 assi normalizzati
+(0-100) rispetto al livello target (D01: body_composition rimosso).
+Da questo si derivano i pesi per il macrociclo:
 
 ```
 Esempio: goal 8b lead, attuale 7c
 
-Forza dita:    82/100  → punto forte  → mantenimento
-Trazione:      78/100  → punto forte  → mantenimento
-PE:            45/100  → punto debole → priorità alta
-Tecnica:       50/100  → punto debole → priorità alta
-Endurance:     55/100  → medio        → sviluppo moderato
-Composizione:  70/100  → ok           → monitoraggio
+finger_strength:   82/100  → punto forte  → mantenimento
+pulling_strength:  78/100  → punto forte  → mantenimento
+power_endurance:   45/100  → punto debole → priorità alta
+technique:         50/100  → punto debole → priorità alta
+endurance:         55/100  → medio        → sviluppo moderato
 ```
 
 Questi pesi influenzano la distribuzione delle sessioni in ogni fase.

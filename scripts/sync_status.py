@@ -184,8 +184,8 @@ def update_marker_file(path: str, counts: list[tuple[str, int]], label: str) -> 
     return True
 
 
-def update_claude(endpoints: int, routers: int) -> bool:
-    """Update inline counts in CLAUDE.md."""
+def update_claude(endpoints: int, routers: int, pages: int) -> bool:
+    """Update inline counts in CLAUDE.md (endpoints, routers, pages)."""
     if not os.path.exists(CLAUDE_PATH):
         return False
 
@@ -208,6 +208,13 @@ def update_claude(endpoints: int, routers: int) -> bool:
         content,
     )
 
+    # Update page count: "**Pages (N):**"
+    content = re.sub(
+        r"\*\*Pages \(\d+\):\*\*",
+        f"**Pages ({pages}):**",
+        content,
+    )
+
     if content == original:
         print("  CLAUDE.md: (no changes)")
         return True
@@ -215,7 +222,7 @@ def update_claude(endpoints: int, routers: int) -> bool:
     with open(CLAUDE_PATH, "w") as f:
         f.write(content)
 
-    print("  CLAUDE.md: updated endpoint/router counts")
+    print("  CLAUDE.md: updated endpoint/router/page counts")
     return True
 
 
@@ -225,7 +232,7 @@ def validate(endpoints: int) -> list[str]:
     """Run validation checks and return warnings."""
     warnings = []
 
-    # Check template list in vocabulary matches filesystem
+    # Check module template list in vocabulary matches filesystem
     template_files = sorted([
         os.path.splitext(os.path.basename(f))[0]
         for f in glob.glob(os.path.join(REPO_ROOT, "backend/catalog/templates/v1/*.json"))
@@ -236,7 +243,19 @@ def validate(endpoints: int) -> list[str]:
         for t in template_files:
             if f"- `{t}`" not in vocab_content:
                 warnings.append(
-                    f"vocabulary_v1.md: template '{t}' exists on disk but not in canonical list"
+                    f"vocabulary_v1.md: module template '{t}' exists on disk but not in canonical list"
+                )
+
+    # Check session template list in vocabulary matches filesystem
+    session_files = sorted([
+        os.path.splitext(os.path.basename(f))[0]
+        for f in glob.glob(os.path.join(REPO_ROOT, "backend/catalog/sessions/v1/*.json"))
+    ])
+    if os.path.exists(VOCAB_PATH):
+        for s in session_files:
+            if f"- `{s}`" not in vocab_content:
+                warnings.append(
+                    f"vocabulary_v1.md: session template '{s}' exists on disk but not in canonical list"
                 )
 
     # Check CLAUDE.md endpoint table row count matches declared total
@@ -270,9 +289,10 @@ def main() -> int:
 
     print()
     print("Syncing files...")
+    pages = dict(counts)["Frontend pages"]
     update_marker_file(BRIEF_PATH, counts, "PROJECT_BRIEF.md")
     update_marker_file(README_PATH, counts, "README.md")
-    update_claude(endpoints, routers)
+    update_claude(endpoints, routers, pages)
 
     print()
     warnings = validate(endpoints)

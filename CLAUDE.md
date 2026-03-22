@@ -92,7 +92,7 @@ backend/
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
   api/               # FastAPI REST API (16 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -173,10 +173,10 @@ user_state.assessment + user_state.goal
 | GET | `/api/free-session/surfaces` | Available surfaces + user gyms |
 | GET | `/api/free-session/presets` | Presets for surface (personalized grades, phase tips) |
 | POST | `/api/free-session/start` | Start a free climbing session |
-| POST | `/api/free-session/{id}/log-climb` | Log a climb to active session |
-| POST | `/api/free-session/{id}/finish` | Finish session (summary + load) |
+| POST | `/api/free-session/{session_id}/log-climb` | Log a climb to active session |
+| POST | `/api/free-session/{session_id}/finish` | Finish session (summary + load) |
 | GET | `/api/free-session/history` | Free sessions for a date |
-| DELETE | `/api/free-session/{id}` | Delete a free session |
+| DELETE | `/api/free-session/{session_id}` | Delete a free session |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 
@@ -184,7 +184,7 @@ user_state.assessment + user_state.goal
 
 Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (25):** 9 main views + 14 onboarding steps + 1 root + 1 onboarding index.
+**Pages (29):** 9 main views + 15 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata.
 
 - `/today` — Today's sessions, mark done/skipped, post-session feedback
 - `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation

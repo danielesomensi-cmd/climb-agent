@@ -42,7 +42,7 @@
 ### Current Architecture
 
 ```
-Assessment (6 dimensions → radar profile 0-100)
+Assessment (5 dimensions → radar profile 0-100)
   → Goal (lead_grade or boulder_grade, target + deadline)
   → Macrocycle (Hörst 4-3-2-1 + DUP, 10-13 weeks, 5 phases)
   → Week (planner_v2 phase-aware, domain weights + session pool)
@@ -55,7 +55,7 @@ Assessment (6 dimensions → radar profile 0-100)
 - Runtime logic: Pure Python, deterministic, no LLM
 - Persistence: JSON/JSONL (Railway) → Supabase Postgres (planned)
 - Frontend: Next.js 14 + React + Tailwind + shadcn/ui (PWA)
-- Current counts: 1120 tests, 168 exercises, 33 sessions, 26 templates, 42 API endpoints
+- Current counts: 1250 tests, 178 exercises, 33 sessions, 26 templates, 49 API endpoints
 
 ### Key Code Functions
 - `compute_assessment_profile()` — assessment_v1
@@ -65,7 +65,7 @@ Assessment (6 dimensions → radar profile 0-100)
 
 ### Current Assessment: 5 Axes (D01: body_composition removed)
 1. `finger_strength` — Max hang 20mm 7s / MVC-7 (kg/BW) [D85]
-2. `finger_endurance` — Repeaters 7:3 x6 on 20mm, or Critical Force
+2. `endurance` — Repeaters 7:3 x6 on 20mm, or Critical Force
 3. `pulling_strength` — Weighted pullup 2RM (kg/BW), 1RM stimato via media Epley/Brzycki [D84]
 4. `power_endurance` — 4×4 bouldering or continuous route time
 5. `technique` — Onsight vs redpoint gap + self-report

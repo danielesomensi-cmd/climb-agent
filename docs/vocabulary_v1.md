@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-03-20
+Last updated: 2026-03-22
 
 ---
 
@@ -97,6 +97,7 @@ Allowed `role` values:
 - `technique`
 - `conditioning`
 - `test` *(assessment / benchmark exercises — e.g., critical force test, MED test)*
+- `recovery` *(active recovery exercises — regeneration climbing, light mobility)*
 
 Notes:
 - `role` can be an array if an exercise is legitimately reusable across roles (e.g., scapular control).
@@ -137,6 +138,8 @@ Allowed `domain` values (v1.1, backwards-compatible):
 - `technique_relaxation` *(breathing awareness, tension management)*
 - `endurance` *(general endurance capacity — used in test protocols)*
 - `climbing_routes` *(route climbing — lead routes, redpoint attempts)*
+- `lock_off_endurance` *(lock-off hold capacity — typewriter, one-arm lock-off)*
+- `strength_pulling` *(general pulling strength — rows, pull-up variations)*
 
 Guidelines:
 - Use `domain` for the *primary adaptation* (capacity/skill), not for individual muscles.
@@ -185,9 +188,8 @@ Allowed `pattern` values:
 - `wrist_flexion`
 - `forearm_pronation`
 - `forearm_supination`
-- `mobility_spine`
 - `mobility_shoulders`
-- `mobility_hips`
+- `mobility_flow` *(dynamic mobility sequences)*
 - `technique_drill`
 - `campus_ladder` *(campus board movement patterns)*
 - `handstand` *(inversions, overhead push)*
@@ -197,6 +199,14 @@ Allowed `pattern` values:
 - `locomotion` *(cardio/locomotion patterns: jump rope, bear crawl, running)*
 - `elbow_flexion` *(bicep curl / elbow flexion isolation)*
 - `shoulder_isolation` *(lateral raise / medial deltoid isolation)*
+
+- `finger_extension` *(finger extensor isolation)*
+- `isometric_hold` *(static hold — hollow, plank, L-sit)*
+- `isometric_lift` *(static lift — loading pin)*
+- `repeater_lift` *(repeater protocol on loading pin)*
+- `self_massage` *(foam rolling, lacrosse ball)*
+- `static_stretch` *(passive static stretching)*
+- `tendon_glide` *(finger tendon glide exercises)*
 
 - `climbing_limit_boulder`
 - `climbing_intervals`
@@ -216,6 +226,7 @@ Allowed values:
 - `low`
 - `medium`
 - `high`
+- `very_high`
 - `max`
 
 Guidelines:
@@ -279,13 +290,16 @@ Rules:
 
 `contraindications`: array of canonical values:
 - `elbow_sensitive`
+- `elbow_injury` *(acute elbow injury — stricter than sensitive)*
 - `finger_sensitive`
+- `finger_injury` *(acute finger injury — stricter than sensitive)*
 - `shoulder_sensitive`
 - `wrist_sensitive`
+- `knee_injury` *(knee injury — excludes impact/jump exercises)*
 
-Zone-to-contraindication mapping: `elbow` -> `elbow_sensitive`, `finger` -> `finger_sensitive`, `shoulder` -> `shoulder_sensitive`, `wrist` -> `wrist_sensitive`.
+Zone-to-contraindication mapping: `elbow` -> `elbow_sensitive`, `finger` -> `finger_sensitive`, `shoulder` -> `shoulder_sensitive`, `wrist` -> `wrist_sensitive`. Injury variants (`*_injury`) map from `severity: severe` limitations.
 
-Note: `knee`, `back`, and `other` are valid limitation zones (tracked in user state) but have no contraindication mapping — they are informational only.
+Note: `knee`, `back`, and `other` are valid limitation zones (tracked in user state). `knee` maps to `knee_injury` when severe; `back` and `other` have no contraindication mapping — they are informational only.
 
 #### 2.9.2 Limitation severity levels
 
@@ -499,6 +513,7 @@ Allowed values:
 - `conditioning`
 - `complementary`
 - `test`
+- `test_measurement` *(specific measurement/benchmark exercises within test sessions)*
 
 ---
 
@@ -528,9 +543,51 @@ Currently used by: loading pin exercises (`lp_*`).
 
 ## 3) Templates schema (panoramic, v1)
 
-Templates are reusable modules. A template MUST be self-contained (i.e., it can produce a full session_instance by itself).
+Session templates define complete training sessions. Module templates define reusable blocks within sessions.
 
-### Canonical template_ids (26)
+Verify with: `python scripts/audit_templates.py`
+
+### 3.0 Canonical session template_ids (33)
+
+Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved session.
+
+- `boulder_circuit_gym` *(volume_climbing, gym)*
+- `complementary_conditioning` *(strength_general, home)*
+- `core_training` *(core, home)*
+- `deload_recovery` *(home)*
+- `easy_climbing_deload` *(gym — light climbing for deload weeks)*
+- `endurance_aerobic_gym` *(aerobic_capacity, gym)*
+- `finger_aerobic_base` *(home)*
+- `finger_endurance_short` *(home)*
+- `finger_maintenance_gym` *(finger_strength_endurance, gym)*
+- `finger_maintenance_home` *(finger_strength_endurance, home)*
+- `finger_strength_home` *(finger_max_strength, home)*
+- `flexibility_full` *(flexibility, home)*
+- `handstand_practice` *(handstand_skill, home)*
+- `heavy_conditioning_gym` *(strength_general, gym)*
+- `legs_strength` *(strength_general, home)*
+- `lower_body_gym` *(strength_general, gym)*
+- `power_contact_gym` *(contact_strength, gym)*
+- `power_endurance_gym` *(power_endurance, gym)*
+- `prehab_maintenance` *(prehab_shoulder, home)*
+- `pulling_strength_gym` *(pulling_strength, gym)*
+- `regeneration_easy` *(regeneration, gym)*
+- `route_endurance_gym` *(aerobic_capacity, gym)*
+- `strength_long` *(finger_max_strength, gym)*
+- `technique_focus_gym` *(technique_footwork, gym)*
+- `test_lp_max_5s` *(finger_max_strength, test)*
+- `test_lp_repeater` *(finger_strength_endurance, test)*
+- `test_max_hang_5s` *(finger_max_strength, test — legacy 5s)*
+- `test_max_hang_7s` *(finger_max_strength, test — MVC-7, D85)*
+- `test_max_weighted_pullup` *(pulling_strength, test)*
+- `test_pullup_bw` *(pulling_strength, test)*
+- `test_repeater_7_3` *(finger_strength_endurance, test)*
+- `upper_body_weights` *(strength_general, home)*
+- `yoga_recovery` *(flexibility, home)*
+
+### Canonical module template_ids (26)
+
+Module templates live in `backend/catalog/templates/v1/`. These are reusable blocks composed into session templates.
 
 - `antagonist_prehab`
 - `cooldown_stretch`
@@ -864,6 +921,7 @@ Allowed values:
 - `flash` — first attempt, with beta
 - `redpoint` — sent after previous attempts
 - `project` — working a route, not yet sent
+- `repeat` — re-climbing a previously sent route
 
 ### 6.5 Free session surfaces
 

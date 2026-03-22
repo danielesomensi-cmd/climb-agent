@@ -21,7 +21,7 @@ Methodology: Hörst 4-3-2-1 adaptive periodization with DUP (Daily Undulating Pe
 ## Architecture
 
 ```
-Assessment (6 dimensions → radar profile 0-100)
+Assessment (5 dimensions → radar profile 0-100)
   → Goal (lead_grade or boulder_grade, target + deadline)
   → Macrocycle (Hörst 4-3-2-1 + DUP, 10-13 weeks, 5 phases)
   → Week (planner_v2: multi-pass, phase-aware, location-aware)

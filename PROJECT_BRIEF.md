@@ -32,7 +32,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 ## Architecture: the full flow
 
 ```
-Assessment (6 dimensions → radar profile 0-100)
+Assessment (5 dimensions → radar profile 0-100)
   → Goal (lead_grade or boulder_grade, target + deadline)
   → Macrocycle (Hörst 4-3-2-1 + DUP, 10-13 weeks, 5 phases)
   → Week (planner_v2 phase-aware, domain weights + session pool)
@@ -61,7 +61,7 @@ compute_assessment_profile()    [assessment_v1]
 | Persistence (production) | Supabase Postgres (planned) |
 | Frontend | Next.js 14 + React + Tailwind CSS + shadcn/ui (PWA mobile-first) |
 | Periodization | Hörst 4-3-2-1 with DUP concurrent training |
-| Assessment | 6-axis profile, benchmarks by target grade, periodic retesting |
+| Assessment | 5-axis profile, benchmarks by target grade, periodic retesting |
 | Deload | Mixed: programmed + adaptive + pre-trip |
 | Feedback | Granular per exercise (5 levels: very_easy → very_hard) |
 | Equipment | `equipment_required` for essential gear only, optional in notes |
