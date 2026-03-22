@@ -174,7 +174,7 @@ export interface OnboardingData {
     age: number;
     weight_kg: number;
     height_cm: number;
-    body_fat_pct?: number;
+    // D64: body_fat_pct removed — RED-S guardrail, never display body composition metrics
   };
   experience: {
     climbing_years: number;

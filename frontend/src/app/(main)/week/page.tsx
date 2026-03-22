@@ -11,7 +11,7 @@ import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, BarChart3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide-react";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
 import { useRouter } from "next/navigation";
 import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
@@ -22,7 +22,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute, OutdoorSession, Phase } from "@/lib/types";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 /** English labels for phase names */
 const PHASE_LABELS: Record<string, string> = {
@@ -173,6 +179,28 @@ export default function WeekPage() {
   }, [weekPlan]);
 
   const totalWeeks = macrocycle?.total_weeks ?? 0;
+
+  /** Build array mapping week number (1-based) to phase info */
+  const weekPhaseMap: Array<{ weekNum: number; phase: Phase }> = (() => {
+    if (!macrocycle) return [];
+    const result: Array<{ weekNum: number; phase: Phase }> = [];
+    let w = 1;
+    for (const phase of macrocycle.phases) {
+      for (let i = 0; i < phase.duration_weeks; i++) {
+        result.push({ weekNum: w, phase });
+        w++;
+      }
+    }
+    return result;
+  })();
+
+  /** Navigate directly to a specific week */
+  const handleGoToWeek = (wn: number) => {
+    setWeekPickerOpen(false);
+    if (wn === displayWeekNum) return;
+    setWeekNum(wn);
+    fetchWeek(wn);
+  };
 
   const handlePrevWeek = () => {
     if (displayWeekNum <= 1) return;
@@ -572,6 +600,7 @@ export default function WeekPage() {
   }
 
   /** Edit outdoor session — fetch entry, open form in edit mode */
+  const [weekPickerOpen, setWeekPickerOpen] = useState(false);
   const [outdoorEditData, setOutdoorEditData] = useState<OutdoorSession | null>(null);
   async function handleEditOutdoor(date: string) {
     try {
@@ -639,9 +668,14 @@ export default function WeekPage() {
               Previous
             </Button>
             <div className="flex items-center gap-2 flex-wrap justify-center">
-              <span className="text-sm font-medium">
+              <button
+                type="button"
+                onClick={() => totalWeeks > 0 && setWeekPickerOpen(true)}
+                className="flex items-center gap-1 text-sm font-medium hover:text-primary transition-colors rounded-md px-2 py-1 -mx-2 -my-1 active:bg-muted"
+              >
                 Week {displayWeekNum}{totalWeeks > 0 ? ` / ${totalWeeks}` : ""}
-              </span>
+                {totalWeeks > 0 && <ChevronDown className="size-3.5 opacity-60" />}
+              </button>
               {phaseLabel && (
                 <Badge variant="secondary">{phaseLabel}</Badge>
               )}
@@ -884,6 +918,56 @@ export default function WeekPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Week picker drawer (B139) */}
+      <Drawer open={weekPickerOpen} onOpenChange={setWeekPickerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Go to week</DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-1">
+              {weekPhaseMap.map(({ weekNum: wn, phase }) => {
+                const isCurrent = wn === displayWeekNum;
+                const isPast = wn < displayWeekNum;
+                const label = PHASE_LABELS[phase.phase_id] ?? phase.phase_name.replace(/_/g, " ");
+                return (
+                  <button
+                    key={wn}
+                    type="button"
+                    onClick={() => handleGoToWeek(wn)}
+                    className={`w-full flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                      isCurrent
+                        ? "bg-primary/15 text-primary font-medium"
+                        : "hover:bg-muted active:bg-muted"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={isPast && !isCurrent ? "text-muted-foreground" : ""}>
+                        Week {wn}
+                      </span>
+                      <span className="text-muted-foreground">&mdash;</span>
+                      <span className={isPast && !isCurrent ? "text-muted-foreground" : ""}>
+                        {label}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      {isPast && !isCurrent && (
+                        <Check className="size-3.5 text-muted-foreground" />
+                      )}
+                      {isCurrent && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          current
+                        </Badge>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

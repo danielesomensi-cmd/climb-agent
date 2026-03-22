@@ -73,7 +73,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
             age: Number(u.age || (state.body as Record<string, unknown>)?.age || 0),
             weight_kg: Number((state.body as Record<string, unknown>)?.weight_kg || 0),
             height_cm: Number((state.body as Record<string, unknown>)?.height_cm || 0),
-            body_fat_pct: (state.body as Record<string, unknown>)?.body_fat_pct ? Number((state.body as Record<string, unknown>).body_fat_pct) : undefined,
+            // D64: body_fat_pct removed — RED-S guardrail
           };
         }
         if (state.assessment?.experience) {
