@@ -7,7 +7,10 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends
 
-from backend.api.deps import EMPTY_TEMPLATE, ensure_monday, get_user_id, load_state, save_state
+from backend.api.deps import (
+    EMPTY_TEMPLATE, ensure_monday, get_user_id,
+    invalidate_future_week_cache, load_state, save_state,
+)
 from backend.engine import storage
 from backend.engine.state_checks import is_macrocycle_stale
 
@@ -39,6 +42,11 @@ def put_state(patch: Dict[str, Any], user_id: Optional[str] = Depends(get_user_i
         mc_patch["start_date"] = ensure_monday(mc_patch["start_date"])
     state = load_state(user_id)
     _deep_merge(state, patch)
+    # B151: availability change → invalidate future week cache so they
+    # regenerate with the new slots.  Current week is handled by the
+    # frontend via GET /api/week/0?force=true.
+    if "availability" in patch:
+        invalidate_future_week_cache(state)
     save_state(state, user_id)
     return state
 

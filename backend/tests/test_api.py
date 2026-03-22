@@ -90,6 +90,45 @@ class TestState:
         remaining = list(log_dir.glob("outdoor_sessions_*.jsonl"))
         assert remaining == [], f"Outdoor logs should be cleared after reset: {remaining}"
 
+    def test_put_availability_invalidates_future_week_cache(self):
+        """B151: PUT /api/state with availability must clear future cached weeks."""
+        from backend.api.deps import this_monday
+        current = this_monday()
+
+        # Seed week_plans with past, current, and future entries
+        past_key = "2020-01-06"
+        future_key = "2099-01-04"
+        fake_plans = {
+            past_key: {"start_date": past_key, "weeks": [{"days": []}]},
+            current: {"start_date": current, "weeks": [{"days": []}]},
+            future_key: {"start_date": future_key, "weeks": [{"days": []}]},
+        }
+        client.put("/api/state", json={"week_plans": fake_plans})
+
+        # Patch availability — should invalidate future weeks only
+        client.put("/api/state", json={
+            "availability": {"mon": {"evening": {"available": True, "preferred_location": "gym"}}},
+        })
+
+        state = client.get("/api/state").json()
+        plans = state.get("week_plans", {})
+        assert past_key in plans, "Past weeks must be preserved"
+        assert current in plans, "Current week must be preserved"
+        assert future_key not in plans, "Future weeks must be invalidated"
+
+    def test_put_without_availability_keeps_week_cache(self):
+        """PUT /api/state without availability key must NOT touch week cache."""
+        future_key = "2099-01-04"
+        fake_plans = {future_key: {"start_date": future_key, "weeks": [{"days": []}]}}
+        client.put("/api/state", json={"week_plans": fake_plans})
+
+        # Patch something else (not availability)
+        client.put("/api/state", json={"user": {"preferred_name": "NoInvalidate"}})
+
+        state = client.get("/api/state").json()
+        plans = state.get("week_plans", {})
+        assert future_key in plans, "Week cache should not be touched without availability change"
+
 
 # -----------------------------------------------------------------------
 # Catalog

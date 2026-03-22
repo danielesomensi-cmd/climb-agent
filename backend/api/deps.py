@@ -68,6 +68,20 @@ def invalidate_week_cache(state: Dict[str, Any]) -> None:
     }
 
 
+def invalidate_future_week_cache(state: Dict[str, Any]) -> None:
+    """Clear cached week plans for future weeks only (start_date > this Monday).
+
+    The current week is left intact — the frontend handles its
+    regeneration via ``GET /api/week/0?force=true``.
+    Past weeks are always preserved (completed session data).
+    """
+    current_monday = this_monday()
+    old_plans = state.get("week_plans") or {}
+    state["week_plans"] = {
+        k: v for k, v in old_plans.items() if k <= current_monday
+    }
+
+
 def get_user_id(request: Request) -> Optional[str]:
     """Extract user_id from request, trying Clerk JWT first, then X-User-ID.
 
