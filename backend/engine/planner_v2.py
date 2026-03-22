@@ -240,32 +240,68 @@ def _normalize_availability(
 ) -> Dict[str, Dict[str, Dict[str, Any]]]:
     normalized: Dict[str, Dict[str, Dict[str, Any]]] = {}
     raw = availability or {}
+    locs = sorted(set(allowed_locations))
+
+    def _unavailable() -> Dict[str, Any]:
+        return {"available": False, "locations": locs,
+                "preferred_location": None, "gym_id": None}
+
     for wd in WEEKDAYS:
-        # Day completely absent from availability → rest day (all slots unavailable)
+        # Case 1: Key absent → rest day (all slots unavailable)
         if wd not in raw:
+            normalized[wd] = {s: _unavailable() for s in SLOTS}
+            continue
+
+        day = raw[wd]
+
+        # Cases 9-12 (D150): Non-dict values — defensive handling
+        if not isinstance(day, dict):
+            # Bare True → available with home fallback (explicit intent)
+            if day is True:
+                normalized[wd] = {
+                    s: {"available": True, "locations": ["home"],
+                        "preferred_location": "home", "gym_id": None}
+                    for s in SLOTS
+                }
+            else:
+                # None, False, 0, "", [], "string" → rest
+                normalized[wd] = {s: _unavailable() for s in SLOTS}
+            continue
+
+        # Case 4: Explicit {"available": False} → rest
+        if day.get("available") is False:
+            normalized[wd] = {s: _unavailable() for s in SLOTS}
+            continue
+
+        has_explicit_slots = any(s in day for s in SLOTS)
+
+        # Cases 2,3,8,13 (D150): Dict with no slot keys and no explicit
+        # available=True → rest.  Catches empty dicts {}, None-coerced {},
+        # and legacy _day_meta-only entries.
+        if not has_explicit_slots and day.get("available") is not True:
+            normalized[wd] = {s: _unavailable() for s in SLOTS}
+            continue
+
+        # Case 5: {"available": True} without slot keys → available, all
+        # allowed locations, no preference (user said "available" but gave
+        # no slot/location detail).
+        if not has_explicit_slots and day.get("available") is True:
             normalized[wd] = {
-                s: {"available": False, "locations": sorted(set(allowed_locations)),
+                s: {"available": True, "locations": locs,
                     "preferred_location": None, "gym_id": None}
                 for s in SLOTS
             }
             continue
-        day = raw[wd] or {}
-        # Detect whether this day dict has any explicit slot keys
-        has_explicit_slots = isinstance(day, dict) and any(
-            s in day for s in SLOTS
-        )
+
+        # Cases 6,7: Has explicit slot keys → process per-slot
         day_slots: Dict[str, Dict[str, Any]] = {}
         for slot in SLOTS:
-            default = {"available": True, "locations": sorted(set(allowed_locations)),
+            default: Dict[str, Any] = {"available": True, "locations": locs,
                         "preferred_location": None, "gym_id": None}
-            if isinstance(day, dict) and day.get("available") is False:
-                default["available"] = False
-                day_slots[slot] = default
-                continue
             slot_value = day.get(slot)
             if slot_value is None:
-                if has_explicit_slots:
-                    default["available"] = False
+                # has_explicit_slots is True here: unmentioned slots → unavailable
+                default["available"] = False
                 day_slots[slot] = default
                 continue
             if isinstance(slot_value, bool):

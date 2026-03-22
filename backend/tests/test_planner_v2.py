@@ -1305,5 +1305,149 @@ class TestPlannerV2MultiSlotDay(unittest.TestCase):
                                  f"Duplicate slots on same day: {slots}")
 
 
+# ---------------------------------------------------------------------------
+# D150: Availability compliance tests
+# ---------------------------------------------------------------------------
+
+class TestD150AvailabilityCompliance(unittest.TestCase):
+    """D150: Planner must respect availability grid as hard constraint."""
+
+    def _make_kwargs(self, phase_id="base", **overrides):
+        profile = {"finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
+                    "technique": 50, "endurance": 40}
+        base_weights = _BASE_WEIGHTS[phase_id]
+        domain_weights = _adjust_domain_weights(base_weights, profile)
+        session_pool = _build_session_pool(phase_id)
+        defaults = dict(
+            phase_id=phase_id,
+            domain_weights=domain_weights,
+            session_pool=session_pool,
+            start_date="2026-03-30",
+            allowed_locations=["home", "gym"],
+            hard_cap_per_week=3,
+            default_gym_id="gym1",
+            gyms=[{"gym_id": "gym1", "equipment": ["hangboard", "gym_boulder", "gym_routes", "pullup_bar"]}],
+        )
+        defaults.update(overrides)
+        return defaults
+
+    def test_unavailable_days_are_always_rest(self):
+        """Days with no availability slot must always be Rest."""
+        avail = {
+            "mon": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "tue": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "thu": {"evening": {"available": True, "preferred_location": "home"}},
+            "fri": {"evening": {"available": True, "preferred_location": "home"}},
+            # sat and sun: absent → rest
+        }
+        plan = generate_phase_week(
+            **self._make_kwargs(
+                availability=avail,
+                planning_prefs={"target_training_days_per_week": 5, "hard_day_cap_per_week": 3},
+            )
+        )
+        days = plan["weeks"][0]["days"]
+        sat = days[5]
+        sun = days[6]
+        self.assertEqual(sat["weekday"], "sat")
+        self.assertEqual(sun["weekday"], "sun")
+        self.assertEqual(len(sat["sessions"]), 0, "Saturday (no availability) must have no sessions")
+        self.assertEqual(len(sun["sessions"]), 0, "Sunday (no availability) must have no sessions")
+
+    def test_available_days_receive_sessions(self):
+        """Days with availability should be eligible for session assignment."""
+        avail = {
+            "mon": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "tue": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "thu": {"evening": {"available": True, "preferred_location": "home"}},
+            "fri": {"evening": {"available": True, "preferred_location": "home"}},
+        }
+        plan = generate_phase_week(
+            **self._make_kwargs(
+                availability=avail,
+                planning_prefs={"target_training_days_per_week": 5, "hard_day_cap_per_week": 3},
+                home_equipment=["hangboard"],
+            )
+        )
+        days = plan["weeks"][0]["days"]
+        days_with_sessions = [d for d in days[:5] if d["sessions"]]
+        self.assertGreaterEqual(len(days_with_sessions), 3,
+                                "At least 3 of the 5 available days should have sessions")
+
+    def test_sessions_dont_overflow_to_unavailable_days(self):
+        """If more sessions than available days, cap at available days."""
+        avail = {
+            "mon": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "tue": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            # Only 2 available days, phase wants more sessions
+        }
+        plan = generate_phase_week(
+            **self._make_kwargs(
+                availability=avail,
+                planning_prefs={"target_training_days_per_week": 5, "hard_day_cap_per_week": 3},
+            )
+        )
+        days = plan["weeks"][0]["days"]
+        for d in days:
+            if d["weekday"] not in ("mon", "tue"):
+                self.assertEqual(len(d["sessions"]), 0,
+                                 f"{d['weekday']} has no availability but got sessions: "
+                                 f"{[s['session_id'] for s in d['sessions']]}")
+
+    def test_session_location_matches_availability(self):
+        """Gym sessions only on gym-available days, home sessions on home days."""
+        avail = {
+            "mon": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "thu": {"evening": {"available": True, "preferred_location": "home"}},
+        }
+        plan = generate_phase_week(
+            **self._make_kwargs(
+                availability=avail,
+                planning_prefs={"target_training_days_per_week": 2, "hard_day_cap_per_week": 2},
+                home_equipment=["hangboard"],
+            )
+        )
+        days = plan["weeks"][0]["days"]
+        thu = days[3]
+        for s in thu["sessions"]:
+            self.assertIn(s.get("location"), ("home", None),
+                          f"Thursday is home-only but got location={s.get('location')}")
+
+    def test_empty_dict_days_dont_steal_from_real_days(self):
+        """D150-T9: Integration — empty dict days must not receive sessions
+        while real available days are dropped by capping."""
+        avail = {
+            "mon": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "tue": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "gym1"}},
+            "thu": {"evening": {"available": True, "preferred_location": "home"}},
+            "fri": {"evening": {"available": True, "preferred_location": "home"}},
+            "sat": {},   # empty dict — frontend bug artifact
+            "sun": {},   # empty dict — frontend bug artifact
+        }
+        plan = generate_phase_week(
+            **self._make_kwargs(
+                availability=avail,
+                planning_prefs={"target_training_days_per_week": 5, "hard_day_cap_per_week": 3},
+                home_equipment=["hangboard"],
+            )
+        )
+        days = plan["weeks"][0]["days"]
+        sat = days[5]
+        sun = days[6]
+        self.assertEqual(len(sat["sessions"]), 0,
+                         f"Saturday (empty dict) must be rest, got: {[s['session_id'] for s in sat['sessions']]}")
+        self.assertEqual(len(sun["sessions"]), 0,
+                         f"Sunday (empty dict) must be rest, got: {[s['session_id'] for s in sun['sessions']]}")
+        # Thu and Fri should NOT be dropped
+        thu = days[3]
+        fri = days[4]
+        thu_fri_sessions = len(thu["sessions"]) + len(fri["sessions"])
+        self.assertGreaterEqual(thu_fri_sessions, 1,
+                                "Thu/Fri (real availability) should not be dropped in favor of empty-dict days")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -129,10 +129,19 @@ export function AvailabilityEditor({
   };
 
   const handleSave = () => {
-    // Save availability as-is — other_sport slots are stored directly
+    // D150: Only include days that have at least one configured slot.
+    // Empty day dicts {} would be misinterpreted by the planner as
+    // "fully available" — omitting them ensures they become rest days.
     const enriched: Record<string, Record<string, unknown>> = {};
     for (const day of WEEKDAYS) {
-      enriched[day.key] = { ...(availability[day.key] ?? {}) };
+      const dayData = availability[day.key] ?? {};
+      const hasActiveSlot = SLOTS.some((s) => {
+        const slot = dayData[s.key];
+        return slot && (slot.available || slot.preferred_location === "other_sport");
+      });
+      if (hasActiveSlot) {
+        enriched[day.key] = { ...dayData };
+      }
     }
     onSave(enriched, planningPrefs);
   };

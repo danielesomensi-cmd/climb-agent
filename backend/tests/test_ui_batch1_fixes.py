@@ -132,13 +132,13 @@ class TestBug1PlannerSlotAndLocation(unittest.TestCase):
         self.assertFalse(normalized["mon"]["lunch"]["available"])
         self.assertFalse(normalized["mon"]["evening"]["available"])
 
-    def test_normalize_no_explicit_slots_default_true(self):
-        """When a day has no explicit slot keys (empty dict), all default to True."""
+    def test_normalize_no_explicit_slots_empty_dict_is_rest(self):
+        """D150: Empty day dict {} → all slots unavailable (rest day)."""
         avail = {"mon": {}}
         normalized = _normalize_availability(avail, ["home", "gym"])
         for slot in SLOTS:
-            self.assertTrue(normalized["mon"][slot]["available"],
-                            f"Expected {slot} available=True for empty day dict")
+            self.assertFalse(normalized["mon"][slot]["available"],
+                             f"Expected {slot} unavailable for empty day dict")
 
     def test_normalize_day_available_false(self):
         """Day with available=False should make all slots unavailable."""
@@ -155,6 +155,63 @@ class TestBug1PlannerSlotAndLocation(unittest.TestCase):
         for slot in SLOTS:
             self.assertFalse(normalized["sun"][slot]["available"],
                              f"Expected {slot} unavailable for absent day 'sun'")
+
+    # ── D150: Normalizer edge cases ──
+
+    def test_normalize_none_value_is_rest(self):
+        """D150-T2: Day with None value → all slots unavailable."""
+        avail = {"mon": None}
+        normalized = _normalize_availability(avail, ["home", "gym"])
+        for slot in SLOTS:
+            self.assertFalse(normalized["mon"][slot]["available"])
+
+    def test_normalize_available_true_without_slots(self):
+        """D150-T3: {"available": True} without slot keys → all slots available."""
+        avail = {"mon": {"available": True}}
+        normalized = _normalize_availability(avail, ["home", "gym"])
+        for slot in SLOTS:
+            self.assertTrue(normalized["mon"][slot]["available"],
+                            f"Expected {slot} available for explicit available=True")
+            # Should have all allowed locations (no preference specified)
+            self.assertIn("home", normalized["mon"][slot]["locations"])
+
+    def test_normalize_day_meta_only_is_rest(self):
+        """D150-T5: Day with only _day_meta (no slot keys) → rest."""
+        avail = {"mon": {"_day_meta": {"other_activity": True, "other_activity_name": "Running"}}}
+        normalized = _normalize_availability(avail, ["home", "gym"])
+        for slot in SLOTS:
+            self.assertFalse(normalized["mon"][slot]["available"],
+                             f"Expected {slot} unavailable for _day_meta-only day")
+
+    def test_normalize_bool_true_is_available_home(self):
+        """D150-T6: Bare True → available with home fallback, no crash."""
+        avail = {"mon": True}
+        normalized = _normalize_availability(avail, ["home", "gym"])
+        for slot in SLOTS:
+            self.assertTrue(normalized["mon"][slot]["available"])
+            self.assertEqual(normalized["mon"][slot]["preferred_location"], "home")
+            self.assertEqual(normalized["mon"][slot]["locations"], ["home"])
+
+    def test_normalize_bool_false_is_rest(self):
+        """D150-T7: Bare False → rest, no crash."""
+        avail = {"mon": False}
+        normalized = _normalize_availability(avail, ["home", "gym"])
+        for slot in SLOTS:
+            self.assertFalse(normalized["mon"][slot]["available"])
+
+    def test_normalize_string_value_is_rest(self):
+        """D150-T8a: String value → rest, no crash."""
+        avail = {"mon": "invalid"}
+        normalized = _normalize_availability(avail, ["home", "gym"])
+        for slot in SLOTS:
+            self.assertFalse(normalized["mon"][slot]["available"])
+
+    def test_normalize_list_value_is_rest(self):
+        """D150-T8b: List value → rest, no crash."""
+        avail = {"mon": ["morning"]}
+        normalized = _normalize_availability(avail, ["home", "gym"])
+        for slot in SLOTS:
+            self.assertFalse(normalized["mon"][slot]["available"])
 
 
 # ---------------------------------------------------------------------------
