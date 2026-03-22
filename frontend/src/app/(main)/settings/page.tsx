@@ -132,7 +132,14 @@ export default function SettingsPage() {
   ) {
     setActionError(null);
     try {
-      await putState({ availability: newAvailability, planning_prefs: newPrefs });
+      // B151: include all 7 days so deep-merge overwrites removed days.
+      // null (not {}) is needed because deep-merge recurses into {} without
+      // clearing existing keys. Backend normalizer treats null as rest (D150).
+      const fullAvailability: Record<string, unknown> = {};
+      for (const day of WEEKDAYS) {
+        fullAvailability[day] = newAvailability[day] ?? null;
+      }
+      await putState({ availability: fullAvailability, planning_prefs: newPrefs });
       await getWeek(0, true);
       await refresh();
       setEditingAvailability(false);
