@@ -584,7 +584,9 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
         eq = user_state.get("equipment") or {}
         if location == "home":
             equipment = norm_list_str(eq.get("home"))
-             
+            # B137b: homewall implies gym_boulder capability at home
+            if "homewall" in equipment and "gym_boulder" not in equipment:
+                equipment.append("gym_boulder")
         elif location == "gym":
             # gym_id drives gym equipment (NOT location)
             gym_id = None

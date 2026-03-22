@@ -31,6 +31,10 @@
 
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
+Recently closed (2026-03-22):
+- **B137b** — Resolver homewall equipment equivalence. B137 fixed planner but resolver's `get_location_equipment()` didn't apply homewall→gym_boulder. Boulder Circuit at home resolved with zero climbing exercises. Fix: 2-line addition mirroring planner logic. 5 new tests.
+- **B139** — Week navigation picker. "Week X/Y" text tappable → Drawer (bottom sheet) listing all weeks with phase name, past/current/future indicators. Direct navigation to any week in one tap.
+
 Recently closed (2026-03-21):
 - **B137** — Homewall users get climbing sessions at home. `_expand_session_locations()` dynamically adds "home" to gym-only boulder sessions when user has homewall (homewall→gym_boulder equivalence). Route sessions correctly excluded. 3 new tests (1223 total).
 - **B138** — Test interval 14→42 days (6 weeks). Per Hörst/Lattice/Eva López, neuromuscular adaptations need 4-6 weeks to manifest. `TEST_FRESHNESS_DAYS` updated. Subsumes B128 logic.

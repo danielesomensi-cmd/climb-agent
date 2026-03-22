@@ -332,5 +332,75 @@ class TestResolverInlineBlocks(unittest.TestCase):
             self.assertIn("counts", ft)
 
 
+class TestResolverHomewallEquipment(unittest.TestCase):
+    """B137b: homewall implies gym_boulder in resolver equipment."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.base_user_state = load_json(os.path.join(REPO_ROOT, "backend", "tests", "fixtures", "test_user_state.json"))
+
+    def _resolve(self, session_id: str, location: str, home_equipment: list[str] | None = None, gym_id: str | None = None):
+        us = make_user_state(self.base_user_state, location=location, gym_id=gym_id, home_equipment=home_equipment)
+        return resolve_session(
+            repo_root=REPO_ROOT,
+            session_path=f"backend/catalog/sessions/v1/{session_id}.json",
+            templates_dir="backend/catalog/templates",
+            exercises_path="backend/catalog/exercises/v1/exercises.json",
+            out_path="output/__test_homewall_out.json",
+            user_state_override=us,
+            write_output=False,
+        )
+
+    def test_homewall_boulder_circuit_has_climbing_exercises(self):
+        """Boulder Circuit at home WITH homewall should include climbing exercises requiring gym_boulder."""
+        out = self._resolve("boulder_circuit_gym", location="home",
+                            home_equipment=["hangboard", "pullup_bar", "homewall"])
+        self.assertEqual(out["resolution_status"], "success")
+        exercises = out["resolved_session"]["exercise_instances"]
+        exercise_ids = [e["exercise_id"] for e in exercises]
+        # arc_easy_traverse requires gym_boulder — should be present via homewall equivalence
+        gym_boulder_exercises = {"arc_easy_traverse", "linked_boulders", "flag_practice",
+                                 "freeze_drill", "twist_lock_drill"}
+        found = [eid for eid in exercise_ids if eid in gym_boulder_exercises]
+        self.assertGreater(len(found), 0,
+                           f"Boulder Circuit at home with homewall should include exercises needing "
+                           f"gym_boulder, got: {exercise_ids}")
+
+    def test_no_homewall_boulder_circuit_no_climbing(self):
+        """Boulder Circuit at home WITHOUT homewall should have no gym_boulder exercises."""
+        out = self._resolve("boulder_circuit_gym", location="home",
+                            home_equipment=["hangboard", "pullup_bar"])
+        exercises = out["resolved_session"]["exercise_instances"]
+        for e in exercises:
+            eq_req = e.get("equipment_required", [])
+            self.assertNotIn("gym_boulder", eq_req,
+                             f"Exercise {e['exercise_id']} requires gym_boulder but user has no homewall")
+
+    def test_gym_sessions_unchanged(self):
+        """Gym resolution should not be affected by homewall logic."""
+        out = self._resolve("boulder_circuit_gym", location="gym", gym_id="blocx")
+        self.assertEqual(out["resolution_status"], "success")
+        exercises = out["resolved_session"]["exercise_instances"]
+        self.assertGreater(len(exercises), 0)
+
+    def test_technique_focus_at_home_still_works(self):
+        """Technique Focus at home should work regardless (regression)."""
+        out = self._resolve("technique_focus_gym", location="home",
+                            home_equipment=["hangboard", "pullup_bar", "homewall"])
+        self.assertEqual(out["resolution_status"], "success")
+        exercises = out["resolved_session"]["exercise_instances"]
+        self.assertGreater(len(exercises), 0)
+
+    def test_homewall_does_not_add_gym_routes(self):
+        """Homewall should NOT imply gym_routes — no rope at home."""
+        from backend.engine.resolve_session import get_location_equipment
+        us = make_user_state(self.base_user_state, location="home",
+                             home_equipment=["hangboard", "pullup_bar", "homewall"])
+        session = {"context": {"location": "home"}}
+        _loc, equipment = get_location_equipment(us, session)
+        self.assertIn("gym_boulder", equipment)
+        self.assertNotIn("gym_routes", equipment)
+
+
 if __name__ == "__main__":
     unittest.main()
