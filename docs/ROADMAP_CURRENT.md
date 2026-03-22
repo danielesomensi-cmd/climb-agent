@@ -70,9 +70,9 @@ All P1b items completed (3 items). See archived history in `docs/ROADMAP_v2.md`.
 ### ~~B128 — Test duplicati dopo rigenerazione macrociclo~~ ✅
 
 **Priority:** P1b
-**Status:** Closed (2026-03-21)
+**Status:** Closed (2026-03-21). Updated by B138 (2026-03-21): interval 14→42 days.
 
-**Fix:** Pass 3 in planner_v2 now checks `recent_test_dates` (finger, repeater, pulling) before scheduling each test. Tests completed within 14 days of week start are skipped. Granular per-test: if finger is fresh but repeater is stale, only repeater is scheduled. New parameter `recent_test_dates: Dict[str, str]` on `generate_phase_week()`. Call site (week.py) extracts dates from `baselines.hangboard[0].updated_at`, `tests.repeater_strength_endurance[-1].date`, `baselines.pulling.updated_at`. Inline freshness check in planner — zero coupling with progression_v1. 9 new tests (1214 total).
+**Fix:** Pass 3 in planner_v2 now checks `recent_test_dates` (finger, repeater, pulling) before scheduling each test. Tests completed within `TEST_FRESHNESS_DAYS` (42 days = 6 weeks, per Hörst/Lattice/Eva López) of week start are skipped. Granular per-test: if finger is fresh but repeater is stale, only repeater is scheduled. New parameter `recent_test_dates: Dict[str, str]` on `generate_phase_week()`. Call site (week.py) extracts dates from `baselines.hangboard[0].updated_at`, `tests.repeater_strength_endurance[-1].date`, `baselines.pulling.updated_at`. Inline freshness check in planner — zero coupling with progression_v1.
 
 ---
 
