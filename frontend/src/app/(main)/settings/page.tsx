@@ -6,7 +6,7 @@ import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
 import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState } from "@/lib/api";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useAuth } from "@clerk/nextjs";
 import {
   RegeneratePlanSheet,
   optionToPreserveBefore,
@@ -33,9 +33,19 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { isVoiceCuesEnabled, setVoiceCuesEnabled } from "@/lib/voice-cues";
 
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+
 export default function SettingsPage() {
   const { state, loading, error, refresh } = useUserState();
+  const { isLoaded: authReady } = useAuth();
   const router = useRouter();
+
+  // B151: re-fetch once Clerk auth is ready — first fetch may hit empty template
+  useEffect(() => {
+    if (authReady && state && !state.user?.name) {
+      refresh();
+    }
+  }, [authReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [regeneratingMacro, setRegeneratingMacro] = useState(false);
   const [restartMacroDialogOpen, setRestartMacroDialogOpen] = useState(false);
@@ -269,15 +279,15 @@ export default function SettingsPage() {
       <TopBar title="Settings" />
 
       <main className="mx-auto max-w-2xl space-y-6 p-4">
-        {/* Loading */}
-        {loading && (
+        {/* Loading — also show spinner while Clerk auth initializes (B151) */}
+        {(loading || !authReady) && (
           <div className="flex items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         )}
 
         {/* Loading error */}
-        {error && !loading && (
+        {error && !loading && authReady && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
             <p className="text-sm text-destructive">{error}</p>
             <button
@@ -296,7 +306,7 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {!loading && !error && state && (
+        {!loading && authReady && !error && state && (
           <>
             {/* ----- Profile ----- */}
             <Card>
@@ -541,7 +551,8 @@ export default function SettingsPage() {
                 <CardContent>
                   {Object.keys(availability).length > 0 ? (
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                      {Object.entries(availability).map(([day, slots]) => {
+                      {WEEKDAYS.map((day) => {
+                        const slots = availability[day];
                         const slotEntries = slots ? Object.entries(slots) : [];
                         const availableSlots = slotEntries
                           .filter(([, s]) => s?.available)
