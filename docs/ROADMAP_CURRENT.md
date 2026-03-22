@@ -19,11 +19,11 @@
 | 3: Exercise DB — Conditioning | D37, D43, D55, D56, D57, D60, D76 | 🟡 Partial | D43 ✅ D55 ✅ D56 ✅ D57 ✅ D76 ✅. Deferred: D37 (core drills Matros). D60 already done. |
 | 4: Warm-Up | D33, D36, D74 | 🟡 Partial | Warmup via template (non funzione dedicata). Nessun PAP. silent_feet esiste ma non in warmup |
 | 5: Intensity System (EL) | D34, D52, D14 | 🔲 Not started | Zero codice EL/intensity/load monitoring |
-| 6: Hangboard Logic | D35, D49 | 🔲 Not started | Zero experience gates / method restriction |
+| 6: Hangboard Logic | D35, D49 | 🟡 Partial | D35 ✅ experience gate (<2yr blocks MaxHangs/MED). Deferred: D49 (method restriction) |
 | 7: Endurance & Intervals | D47, D48, D53 | 🟡 Partial | 4x4 esiste. Mancano: varied-intensity, active recovery, g-tox |
 | 8: Conditioning & Ratio | D51, D54, D58, D59, D73, D78 | 🟡 Partial | face_pull + band_pull_apart + planks. Mancano: ratio, technique allocation, process cues |
 | 9: Periodization & Load | D19-D21, D44, D45, D69-D71 | 🟡 Partial | min_weeks esiste. Mancano: beginner linear, overreach, ACWR, OTS, volume cap |
-| 10: Coaching & UX | D17, D29, D30, D41, D64-D67, D75, D77, D79 | 🔲 Not started | Zero coaching cues, safety drills, UX educativo |
+| 10: Coaching & UX | D17, D29, D30, D41, D64-D67, D75, D77, D79 | 🟡 Partial | D64 ✅ RED-S guardrails (audit + permanent test). Remaining: coaching cues, safety drills, UX educativo |
 
 ---
 
@@ -32,6 +32,8 @@
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
 Recently closed (2026-03-22):
+- **D35** — Hangboard experience gates. Users with `climbing_years < 2` blocked from MaxHangs, MED, one-arm hang in resolver (Stage 2e in P0 pipeline). Repeaters, density hangs, warmup always open. Test sessions never blocked. `finger_sensitive` contraindication added to `min_edge_hang` + `one_arm_hang_assisted`. 7 new tests.
+- **D64** — RED-S guardrails. Audit: zero weight-loss language in codebase. Removed `body_fat_pct` from frontend (types, onboarding review, context). 5-axis assessment confirmed (no body_composition). Permanent test scans all source files for banned phrases. 3 new tests.
 - **B137b** — Resolver homewall equipment equivalence. B137 fixed planner but resolver's `get_location_equipment()` didn't apply homewall→gym_boulder. Boulder Circuit at home resolved with zero climbing exercises. Fix: 2-line addition mirroring planner logic. 5 new tests.
 - **B139** — Week navigation picker. "Week X/Y" text tappable → Drawer (bottom sheet) listing all weeks with phase name, past/current/future indicators. Direct navigation to any week in one tap.
 

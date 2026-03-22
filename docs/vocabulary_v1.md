@@ -293,6 +293,10 @@ Note: `knee`, `back`, and `other` are valid limitation zones (tracked in user st
 - `active` -- substitute with non-contraindicated variant if available, else reduce load (-20% multiplier) + prehab
 - `severe` -- exclude all contraindicated exercises, replace with zone-specific prehab; if 2+ zones are `severe` simultaneously, flag force-deload
 
+#### 2.9.3 Hangboard experience gate (D35)
+
+Users with `assessment.experience.climbing_years < 2` are blocked from advanced hangboard training exercises: `max_hang_5s`, `max_hang_7s`, `max_hang_10s`, `max_hang_ladder`, `min_edge_hang`, `one_arm_hang_assisted`. The resolver automatically substitutes with lower-level protocols (repeaters, density hangs). Test sessions (`test_max_hang_*`) are NEVER blocked — tests are single measurements, not training load. Gate implemented as Stage 2e in P0 pipeline (`resolve_session.py`).
+
 Severity migration from legacy values: `mild` / `lieve` -> `monitor`, `moderate` / `moderato` -> `active`, `severe` -> `severe`.
 
 #### 2.9.3 Limitation schema (user_state.limitations)

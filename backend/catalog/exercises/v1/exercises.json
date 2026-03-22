@@ -706,7 +706,8 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "elbow_sensitive",
+        "finger_sensitive"
       ],
       "attributes": {
         "edge_mm": null,
@@ -816,7 +817,8 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "elbow_sensitive",
+        "finger_sensitive"
       ],
       "prescription_defaults": {
         "sets": 3,

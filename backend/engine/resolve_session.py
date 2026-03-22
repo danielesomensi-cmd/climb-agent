@@ -338,6 +338,7 @@ def pick_best_exercise_p0(
     limitation_map: Optional[Dict[str, str]] = None,
     finger_device: Optional[str] = None,
     user_age: Optional[int] = None,
+    experience_years: Optional[float] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -416,6 +417,21 @@ def pick_best_exercise_p0(
     if user_age is not None:
         base2 = [e for e in base2 if user_age >= (e.get("age_minimum") or 0)]
     trace["counts"]["after_age_gate"] = len(base2)
+
+    # Stage 2e: D35 — hangboard experience gate
+    # Block advanced hangboard training for users with < 2 years climbing experience.
+    # Test exercises (role=["test"]) are NEVER blocked — tests are single measurements.
+    _ADVANCED_HANGBOARD_IDS = {
+        "max_hang_5s", "max_hang_7s", "max_hang_10s",
+        "max_hang_ladder", "min_edge_hang", "one_arm_hang_assisted",
+    }
+    if experience_years is not None and experience_years < 2:
+        base2 = [
+            e for e in base2
+            if norm_str(e.get("id", "")) not in _ADVANCED_HANGBOARD_IDS
+            or "test" in [norm_str(r) for r in (e.get("role") or [])]
+        ]
+    trace["counts"]["after_experience_gate"] = len(base2)
 
     # Stage 3: role (ANY match)
     base3 = base2
@@ -835,6 +851,7 @@ def _resolve_inline_block(
     instance_counter: int,
     limitation_map: Optional[Dict[str, str]] = None,
     user_age: Optional[int] = None,
+    experience_years: Optional[float] = None,
 ) -> int:
     """Resolve an inline block (module with block_id + selection, no template_id).
 
@@ -879,6 +896,7 @@ def _resolve_inline_block(
         limitation_map=limitation_map,
         finger_device=_finger_dev,
         user_age=user_age,
+        experience_years=experience_years,
     )
     chosen_by = "p0_inline_block"
 
@@ -1102,6 +1120,10 @@ def resolve_session(
         _assess_body = (user_state.get("assessment") or {}).get("body") or {}
         user_age = _assess_body.get("age")
 
+    # D35: extract experience years for hangboard gate
+    _experience = ((user_state.get("assessment") or {}).get("experience") or {}) if user_state else {}
+    experience_years: Optional[float] = _experience.get("climbing_years")
+
     session = load_json(os.path.join(repo_root, session_path))
     session_ctx = session.get("context") if isinstance(session.get("context"), dict) else {}
     user_ctx = user_state.get("context") if isinstance(user_state.get("context"), dict) else {}
@@ -1188,6 +1210,7 @@ def resolve_session(
                 instance_counter=instance_counter,
                 limitation_map=limitation_map,
                 user_age=user_age,
+                experience_years=experience_years,
             )
             continue
 
@@ -1277,6 +1300,7 @@ def resolve_session(
                         limitation_map=limitation_map,
                         finger_device=finger_device,
                         user_age=user_age,
+                        experience_years=experience_years,
                     )
                     chosen_by = "p0_hard_filters"
 
