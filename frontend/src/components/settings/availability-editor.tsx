@@ -67,6 +67,7 @@ export function AvailabilityEditor({
       const parsed = JSON.parse(JSON.stringify(initialAvailability));
       const result: Record<string, Record<string, SlotData>> = {};
       for (const [day, dayData] of Object.entries(parsed)) {
+        if (!dayData || typeof dayData !== "object") continue; // B151: skip null/removed days
         result[day] = {};
         const dd = dayData as Record<string, unknown>;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
