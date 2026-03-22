@@ -36,16 +36,10 @@ import { isVoiceCuesEnabled, setVoiceCuesEnabled } from "@/lib/voice-cues";
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 export default function SettingsPage() {
-  const { state, loading, error, refresh } = useUserState();
   const { isLoaded: authReady } = useAuth();
+  // B151: delay fetch until Clerk auth is ready — prevents empty-template flash
+  const { state, loading, error, refresh } = useUserState(authReady);
   const router = useRouter();
-
-  // B151: re-fetch once Clerk auth is ready — first fetch may hit empty template
-  useEffect(() => {
-    if (authReady && state && !state.user?.name) {
-      refresh();
-    }
-  }, [authReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [regeneratingMacro, setRegeneratingMacro] = useState(false);
   const [restartMacroDialogOpen, setRestartMacroDialogOpen] = useState(false);

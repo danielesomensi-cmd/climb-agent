@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getState } from "@/lib/api";
 import type { UserState } from "@/lib/types";
 
-export function useUserState() {
+export function useUserState(enabled = true) {
   const [state, setState] = useState<UserState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +23,8 @@ export function useUserState() {
   }, []);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (enabled) refresh();
+  }, [refresh, enabled]);
 
   return { state, loading, error, refresh };
 }
