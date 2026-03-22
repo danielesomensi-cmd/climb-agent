@@ -13,6 +13,14 @@ export const metadata: Metadata = {
   description:
     "AI-powered climbing training planner. 80+ research papers, one personalized plan.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "climb-agent",
+  },
+  icons: {
+    apple: "/icons/icon-192.png",
+  },
   openGraph: {
     title: "climb-agent",
     description:
@@ -45,6 +53,11 @@ export default function RootLayout({
       <html lang="en" className="dark" suppressHydrationWarning>
         <body className={`${inter.variable} font-sans antialiased`}>
           <div className="mx-auto min-h-screen max-w-3xl">{children}</div>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"))`,
+            }}
+          />
         </body>
       </html>
     </ClerkProvider>

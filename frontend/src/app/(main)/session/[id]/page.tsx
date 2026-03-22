@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { ExerciseCard } from "@/components/training/exercise-card";
 import { resolveSession } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { ResolvedSession } from "@/lib/types";
 
@@ -29,7 +30,10 @@ function formatRest(seconds: number): string {
 
 export default function SessionPage() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const sessionId = typeof params.id === "string" ? params.id : "";
+  const date = searchParams.get("date") || new Date().toISOString().slice(0, 10);
 
   const [resolved, setResolved] = useState<ResolvedSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -169,6 +173,19 @@ export default function SessionPage() {
             <p className="text-muted-foreground">
               Session not found
             </p>
+          </div>
+        )}
+
+        {/* Start guided session CTA */}
+        {!loading && !error && resolved && (
+          <div className="sticky bottom-20 pb-2">
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => router.push(`/guided/${date}/${sessionId}`)}
+            >
+              Start Guided Session
+            </Button>
           </div>
         )}
       </main>

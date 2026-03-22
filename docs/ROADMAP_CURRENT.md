@@ -125,7 +125,7 @@ These must be done before paid launch.
 **Discovered:** 2026-03-21 (codebase audit)
 **Type:** R (refactor)
 
-- Sostituire tutti i `.catch(() => {})` silenziosi (15+ istanze) con error toast per l'utente
+- Sostituire tutti i `.catch(() => {})` silenziosi (~20 istanze) con error toast per l'utente
 - Aggiungere validazione Zod su `JSON.parse` del localStorage nella guided session
 - Aggiungere `AbortController` sulla navigazione week per evitare race condition con click rapidi
 - Aggiungere stati loading/error consistenti su `today/`, `plan/`, `outdoor/` pages
@@ -378,7 +378,7 @@ Feeds into: Phase 3.5 LLM Coach (coach explains "why" using tier context).
 **Discovered:** 2026-03-21 (codebase audit)
 **Type:** R (refactor)
 
-- Spezzare `resolve_session()` (10+ parametri, 170+ righe) in `_resolve_session_context()`, `_resolve_module()`, `_load_session_templates()`
+- Spezzare `resolve_session()` (7 parametri, 170+ righe) in `_resolve_session_context()`, `_resolve_module()`, `_load_session_templates()`
 - Refactorare filtri P0 da nesting 5+ livelli a pipeline pattern
 - Eliminare codice morto (`resolve_session.py:1145-1146`)
 

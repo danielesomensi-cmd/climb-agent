@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
 import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState } from "@/lib/api";
@@ -828,6 +829,15 @@ export default function SettingsPage() {
                   </Button>
                 </CardContent>
               </Card>
+
+              <div className="pt-2 text-center">
+                <Link
+                  href="/legal"
+                  className="text-xs text-muted-foreground underline"
+                >
+                  Terms of Service & Privacy Policy
+                </Link>
+              </div>
             </div>
           </>
         )}

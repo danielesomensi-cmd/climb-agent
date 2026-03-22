@@ -765,6 +765,22 @@ function TodayContent() {
         )}
 
 
+        {/* No macrocycle — prompt to start onboarding */}
+        {!loading && !error && !weekPlan && (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="text-lg font-medium">Welcome to climb-agent!</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Complete your onboarding to get your first training plan.
+            </p>
+            <Link
+              href="/onboarding/welcome"
+              className="mt-4 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Start Onboarding
+            </Link>
+          </div>
+        )}
+
         {/* Weekly check-in card (Sunday / Monday morning grace) */}
         {!loading && !error && isViewingToday && (
           <WeeklyCheckinCard onPlanUpdated={fetchData} />
