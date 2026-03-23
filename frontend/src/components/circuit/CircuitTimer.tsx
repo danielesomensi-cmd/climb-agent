@@ -116,6 +116,7 @@ export function CircuitTimer({
   const [transitionId, setTransitionId] = useState(0);
   const completedRef = useRef(0);
   const performedRef = useRef<string[]>([]);
+  const skippedRef = useRef<Set<number>>(new Set()); // indices of skipped exercises
 
   // Wall-clock refs
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -127,9 +128,12 @@ export function CircuitTimer({
   const pausedRef = useRef(false);
   const pendingVoiceCueRef = useRef<string | null>("get_ready");
 
+  const currentIndexRef = useRef(0);
+
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
+  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
 
   // ── Timer management ─────────────────────────────────────────────
 
@@ -160,8 +164,10 @@ export function CircuitTimer({
   const buildResult = useCallback((): CircuitResult => {
     const dur = elapsedAtPauseRef.current +
       (startTimeRef.current > 0 ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0);
+    // Completed = naturally finished exercises (not skipped)
+    const completed = completedRef.current - skippedRef.current.size;
     return {
-      completedExercises: completedRef.current,
+      completedExercises: Math.max(0, completed),
       targetExercises: totalExercises,
       exercisesPerformed: [...performedRef.current],
       workSeconds,
@@ -221,9 +227,10 @@ export function CircuitTimer({
         }
 
         if (curPhase === "work") {
-          // Work done — mark exercise completed
+          // Work done — mark exercise completed (not skipped)
           completedRef.current++;
-          const nextIdx = completedRef.current;
+          const curIdx = currentIndexRef.current;
+          const nextIdx = curIdx + 1;
 
           if (nextIdx >= totalExercises) {
             // All done
@@ -249,7 +256,7 @@ export function CircuitTimer({
 
         if (curPhase === "rest") {
           // Rest done — start next exercise work
-          const idx = completedRef.current;
+          const idx = currentIndexRef.current;
           if (idx < sequence.length) {
             performedRef.current.push(sequence[idx].id);
           }
@@ -305,6 +312,54 @@ export function CircuitTimer({
     }
     setElapsed(elapsedAtPauseRef.current);
     onStop(buildResult());
+  }
+
+  function handleNext() {
+    if (phase === "done" || phase === "prepare") return;
+
+    // Mark current exercise as skipped (doesn't count as completed)
+    const curIdx = currentIndex;
+    skippedRef.current.add(curIdx);
+
+    const nextIdx = curIdx + 1;
+    if (nextIdx >= totalExercises) {
+      // Last exercise — go to completion
+      setPhase("done");
+      setSecondsLeft(0);
+      pendingVoiceCueRef.current = "complete";
+      setTransitionId((id) => id + 1);
+      if (startTimeRef.current > 0) {
+        elapsedAtPauseRef.current += Math.floor((Date.now() - startTimeRef.current) / 1000);
+        startTimeRef.current = 0;
+      }
+      return;
+    }
+
+    // Advance to next exercise, start work
+    setCurrentIndex(nextIdx);
+    performedRef.current.push(sequence[nextIdx].id);
+    setPhase("work");
+    startCountdown(workSeconds);
+    pendingVoiceCueRef.current = "work";
+    setTransitionId((id) => id + 1);
+  }
+
+  function handleBack() {
+    if (phase === "done" || phase === "prepare") return;
+    if (currentIndex <= 0) return; // first exercise — no-op
+
+    const prevIdx = currentIndex - 1;
+    // Un-skip previous if it was skipped
+    skippedRef.current.delete(prevIdx);
+
+    setCurrentIndex(prevIdx);
+    // Remove last entry from performed if it was the current exercise
+    // and re-add the previous one
+    performedRef.current.push(sequence[prevIdx].id);
+    setPhase("work");
+    startCountdown(workSeconds);
+    pendingVoiceCueRef.current = "work";
+    setTransitionId((id) => id + 1);
   }
 
   // Auto-call onComplete when done
@@ -404,15 +459,42 @@ export function CircuitTimer({
           </div>
         </div>
 
-        {/* Exercise card */}
+        {/* Exercise card with back/next arrows */}
         {phase !== "prepare" && (
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-5 backdrop-blur-sm">
-            <h3 className="text-2xl font-bold text-center mb-2">
-              {displayExercise.name}
-            </h3>
-            <p className="text-sm text-center text-white/70 leading-relaxed">
-              {displayExercise.description}
-            </p>
+          <div className="w-full max-w-sm flex items-center gap-2">
+            {/* Back arrow */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleBack(); }}
+              disabled={currentIndex <= 0 || phase === "rest"}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/50 transition-colors hover:text-white/80 disabled:opacity-20 disabled:cursor-default"
+              aria-label="Previous exercise"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+
+            {/* Exercise info */}
+            <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-5 backdrop-blur-sm">
+              <h3 className="text-2xl font-bold text-center mb-2">
+                {displayExercise.name}
+              </h3>
+              <p className="text-sm text-center text-white/70 leading-relaxed">
+                {displayExercise.description}
+              </p>
+            </div>
+
+            {/* Next arrow */}
+            <button
+              onClick={(e) => { e.stopPropagation(); handleNext(); }}
+              disabled={phase === "rest"}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/50 transition-colors hover:text-white/80 disabled:opacity-20 disabled:cursor-default"
+              aria-label="Skip exercise"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
           </div>
         )}
 

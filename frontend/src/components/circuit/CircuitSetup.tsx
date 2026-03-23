@@ -17,7 +17,7 @@ interface ParamConfig {
 
 const PARAMS: ParamConfig[] = [
   { key: "duration", label: "Duration", default: 10, min: 5, max: 20, step: 1, unit: "min" },
-  { key: "work", label: "Work", default: 50, min: 20, max: 60, step: 5, unit: "s" },
+  { key: "work", label: "Work", default: 50, min: 20, max: 180, step: 5, unit: "s" },
   { key: "rest", label: "Rest", default: 10, min: 5, max: 30, step: 5, unit: "s" },
 ];
 
