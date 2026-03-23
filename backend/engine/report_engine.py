@@ -238,7 +238,7 @@ def _build_load(
                 sessions = day.get("sessions") or []
                 day_load_planned = sum(s.get("estimated_load_score", 0) for s in sessions)
                 day_load_actual = sum(
-                    s.get("estimated_load_score", 0)
+                    s.get("session_load_score") or s.get("estimated_load_score", 0)
                     for s in sessions
                     if s.get("status") == "done"
                 )
@@ -602,7 +602,7 @@ def _build_days(
             surface_label = {
                 "gym_boulder": "Gym Boulder", "board_kilter": "Kilter",
                 "board_moonboard": "Moon", "board_other": "Board",
-                "gym_routes": "Lead",
+                "gym_routes": "Lead", "circuit_core": "Core Circuit",
             }.get(surface, surface)
             day_free.append({
                 "id": fs.get("id"),
@@ -903,10 +903,10 @@ def _build_active_days(
             oa = day["other_activity"]
             if oa.get("status") in ("completed", "done"):
                 has_activity = True
-        # Free sessions with at least 1 climb (A138)
+        # Free sessions with at least 1 climb or circuit session (A138/A140)
         if not has_activity:
             for fs in day.get("free_sessions", []):
-                if fs.get("total_climbs", 0) > 0:
+                if fs.get("total_climbs", 0) > 0 or fs.get("load_score", 0) > 0:
                     has_activity = True
                     break
         active.append(has_activity)

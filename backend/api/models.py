@@ -224,3 +224,4 @@ class FreeSessionFinishRequest(BaseModel):
     """Body for POST /api/free-session/{session_id}/finish."""
     overall_feel: Optional[str] = None  # easy | good | hard
     notes: Optional[str] = None
+    circuit: Optional[Dict[str, Any]] = None  # circuit session data

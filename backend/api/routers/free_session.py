@@ -141,6 +141,8 @@ def start_session(
         raise HTTPException(status_code=400, detail=f"Invalid session_mode: {req.session_mode}")
     if req.session_mode == "template" and not req.preset_id:
         raise HTTPException(status_code=400, detail="preset_id required for template mode")
+    if req.session_mode == "circuit" and req.surface != "circuit_core":
+        raise HTTPException(status_code=400, detail="circuit mode requires circuit_core surface")
 
     state = load_state(user_id)
     free_sessions = state.setdefault("free_sessions", [])
@@ -159,7 +161,10 @@ def start_session(
     target_grade = None
     rest_seconds = None
 
-    if req.session_mode == "template" and req.preset_id:
+    if req.session_mode == "circuit":
+        # Circuit sessions don't need presets, grades, or rest
+        pass
+    elif req.session_mode == "template" and req.preset_id:
         template_tips = tips.get("template_tips", {}).get(phase_id, {})
         tip = template_tips.get(req.preset_id, "")
 
@@ -279,19 +284,31 @@ def finish_session(
     except (ValueError, TypeError):
         session["duration_minutes"] = None
 
-    # Summary
-    climbs = session.get("climbs", [])
-    session["summary"] = compute_summary(climbs)
-
-    # Load
-    user_max = get_user_max_grade(state, session["surface"])
-    if user_max and climbs:
-        session["load_score"] = compute_free_session_load(climbs, user_max)
-    else:
-        session["load_score"] = 0.0
-
     session["overall_feel"] = req.overall_feel
     session["notes"] = req.notes
+
+    # Circuit sessions: simple load formula
+    if session.get("session_mode") == "circuit":
+        circuit = req.circuit
+        if circuit:
+            session["circuit"] = circuit
+            completed = circuit.get("completed_exercises", 0)
+            load = round(completed * 0.5, 1)
+        else:
+            load = 0.0
+        session["load_score"] = load
+        session["summary"] = compute_summary([])
+    else:
+        # Summary
+        climbs = session.get("climbs", [])
+        session["summary"] = compute_summary(climbs)
+
+        # Load
+        user_max = get_user_max_grade(state, session["surface"])
+        if user_max and climbs:
+            session["load_score"] = compute_free_session_load(climbs, user_max)
+        else:
+            session["load_score"] = 0.0
 
     save_state(state, user_id)
 

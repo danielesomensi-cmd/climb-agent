@@ -49,6 +49,7 @@ interface DayCardProps {
     overall_feel?: string;
     finished_at?: string;
     load_score?: number;
+    circuit?: { work_seconds: number; rest_seconds: number; target_exercises: number; completed_exercises: number; exercises_performed: string[] };
   }>;
   onDeleteFreeSession?: (sessionId: string) => void;
   showActions?: boolean;
@@ -561,10 +562,14 @@ export function DayCard({
                 fs.surface === "board_kilter" ? "Kilter" :
                 fs.surface === "board_moonboard" ? "Moon" :
                 fs.surface === "board_other" ? "Board" :
-                fs.surface === "gym_routes" ? "Lead" : fs.surface;
-              const presetLabel = fs.preset_id
-                ? fs.preset_id.replace("free_", "").replace("lead_", "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
-                : "Free";
+                fs.surface === "gym_routes" ? "Lead" :
+                fs.surface === "circuit_core" ? "Core Circuit" : fs.surface;
+              const isCircuit = typeof fs.surface === "string" && fs.surface.startsWith("circuit_");
+              const presetLabel = isCircuit
+                ? ""
+                : fs.preset_id
+                  ? fs.preset_id.replace("free_", "").replace("lead_", "").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())
+                  : "Free";
               const climbType = fs.surface === "gym_routes" ? "routes" : "boulders";
               const total = fs.summary?.total_climbs ?? 0;
               const sentCount = (fs.summary?.flashed ?? 0) + (fs.summary?.sent ?? 0);
@@ -598,14 +603,26 @@ export function DayCard({
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                       <span className="text-xs text-muted-foreground">
-                        {total} {climbType}
-                        {sentCount > 0 && ` · ${sentCount} sent`}
-                        {triedCount > 0 && ` · ${triedCount} tried`}
-                        {maxSent && ` · max ${maxSent}`}
-                        {showTriedGrade && ` · tried ${maxAttempted}`}
-                        {fs.duration_minutes != null && fs.duration_minutes > 0
-                          ? ` · ${fs.duration_minutes} min`
-                          : fs.duration_minutes === 0 ? " · < 1 min" : ""}
+                        {isCircuit ? (
+                          <>
+                            {fs.circuit?.completed_exercises ?? 0} exercises
+                            {fs.duration_minutes != null && fs.duration_minutes > 0
+                              ? ` · ${fs.duration_minutes} min`
+                              : fs.duration_minutes === 0 ? " · < 1 min" : ""}
+                            {fs.overall_feel && ` · ${fs.overall_feel.charAt(0).toUpperCase() + fs.overall_feel.slice(1)}`}
+                          </>
+                        ) : (
+                          <>
+                            {total} {climbType}
+                            {sentCount > 0 && ` · ${sentCount} sent`}
+                            {triedCount > 0 && ` · ${triedCount} tried`}
+                            {maxSent && ` · max ${maxSent}`}
+                            {showTriedGrade && ` · tried ${maxAttempted}`}
+                            {fs.duration_minutes != null && fs.duration_minutes > 0
+                              ? ` · ${fs.duration_minutes} min`
+                              : fs.duration_minutes === 0 ? " · < 1 min" : ""}
+                          </>
+                        )}
                       </span>
                       {fs.load_score != null && fs.load_score > 0 && (
                         <Badge variant="outline" className="text-[10px]">

@@ -25,6 +25,7 @@ SURFACES = [
     {"id": "board_moonboard", "name": "MoonBoard"},
     {"id": "board_other", "name": "Other Board"},
     {"id": "gym_routes", "name": "Lead / Top-rope"},
+    {"id": "circuit_core", "name": "Core Circuit"},
 ]
 
 SURFACE_IDS = {s["id"] for s in SURFACES}
@@ -32,7 +33,7 @@ SURFACE_IDS = {s["id"] for s in SURFACES}
 LEAD_SURFACES = {"gym_routes"}
 
 VALID_CONTEXTS = {"standalone", "add_on", "replacement"}
-VALID_SESSION_MODES = {"template", "free"}
+VALID_SESSION_MODES = {"template", "free", "circuit"}
 VALID_CLIMB_STATUSES = {"flash", "sent", "attempted"}
 VALID_CLIMB_STYLES = {"onsight", "flash", "redpoint", "project"}
 VALID_FEELS = {"easy", "good", "hard"}

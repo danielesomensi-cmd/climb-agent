@@ -31,6 +31,10 @@
 
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
+Recently closed (2026-03-23):
+- **A140** — Core Circuit feature. Circuit session mode (`session_mode: "circuit"`), `circuit_core` surface, timer-guided bodyweight core circuit. Vocabulary §6.9 (circuit surfaces) and §6.10 (session mode updated with `circuit` value).
+- **D151** — Load coherence audit & fix. Phase 0 audit found 5 incoherences across 4 session types (engine, free, outdoor, other_activity). Fix 1: `_build_load()` in report_engine now reads `session_load_score` (granular per-exercise fatigue sum) with fallback to `estimated_load_score` (4 fixed buckets). Fix 2: `compute_outdoor_load_score()` rewritten with normalized formula `avg(grade_weight × style_mod) × volume_factor(log5, cap 2.0) × duration_factor`, hard cap at 85 — old formula produced 141 for 8 hard routes. Fix 3: `session_load_score` rescaled ×1.5 (range 12-48 → 18-72) to align with 20-85 AU target. Session router add-exercise aligned. Other_activity load deferred to Load v2. 20 new tests (1307 total).
+
 Recently closed (2026-03-22):
 - **B151** — Settings page: loading flash + availability day order + availability save + future week cache invalidation. Four bugs: (A) first load showed "—" — Clerk auth not ready, gate on `useAuth().isLoaded` + `useUserState(enabled)`. (B) Availability days alphabetical → `WEEKDAYS` constant Mon→Sun. (C) Removing days didn't persist — deep-merge `{}` no-op → send `null`. (D) Future weeks kept stale availability — `PUT /api/state` with `availability` key now calls `invalidate_future_week_cache()` to clear cached weeks > current Monday. Current week handled by frontend `getWeek(0, true)`. Past weeks preserved (immutability invariant). 2 new tests (1287 total).
 - **D150** — Planner availability compliance audit & fix. Root cause: two bugs combined — (1) Settings `handleSave()` created empty `{}` entries for all 7 weekdays, including untouched days, (2) `_normalize_availability()` treated empty dicts as "all 3 slots fully available in gym+home" (300+ scoring), causing capping to prefer phantom days over real single-slot days. Fix: backend normalizer now treats empty dicts, None, non-dict values, and `_day_meta`-only entries as unavailable; `{"available": True}` without slots → available with home fallback; bare `True` → available home; non-dict types (bool/string/list) → defensive handling, no crash. Frontend `handleSave()` now filters out days with no active slots. 14 new tests (1250 total).
@@ -427,19 +431,24 @@ Claude Sonnet as conversational layer over the deterministic engine.
 
 ---
 
-### Free session load v2 — non-linear scaling near max grade
+### Load calculation v2 — proper normalization
 
 **Priority:** Post-launch (v2)
 **Status:** Open
+**Origin:** D151 load coherence audit (2026-03-23)
 
-Il SCALE_FACTOR = 4.0 lineare funziona per v1 ma sottostima il load quando si scala vicino o sopra il proprio max. Fisiologicamente, un boulder a +1 dal max non è il 5% più duro — è esponenzialmente più faticoso (pump, recovery, rischio infortunio).
+I fix v1 (D151) usano approssimazioni pragmatiche: ×1.5 rescale per engine, hard cap per outdoor, zero contribution per other_activities. Un v2 proper dovrebbe:
 
-Proposta v2: curva esponenziale sopra il 90% del max dell'utente. Esempio:
-- relative < 0.9 → fattore lineare (come ora)
-- relative 0.9-1.0 → fattore ×1.3
-- relative > 1.0 → fattore ×1.8
+| # | Area | Dettaglio |
+|---|------|-----------|
+| 1 | Outdoor user-relative scaling | Attualmente usa gradi French assoluti (6a pesa uguale per un 6a climber e un 7c climber). Dovrebbe usare `grade / user_max` come free sessions. Richiede decidere grade_ref (boulder_max_rp? lead_max_rp? dipende dal tipo via). |
+| 2 | Other activities load map | `activity_load_map` con valori AU fissi per tipo: `{"running": 30, "yoga": 10, "cycling": 20, "swimming": 25, ...}`. Necessario per ACWR (D69). |
+| 3 | Engine load normalization | Sostituire ×1.5 magic number con formula proper: `(sum_fatigue / max_possible_fatigue) × 85` basata su exercise count e intensity della sessione. |
+| 4 | Free session non-linear scaling | Climb vicini o sopra il max dovrebbero pesare esponenzialmente di più (il SCALE_FACTOR = 4.0 lineare sottostima). Proposta: curva esponenziale sopra 90% del max (×1.3 al 90-100%, ×1.8 sopra 100%). Da calibrare con dati reali beta tester. |
+| 5 | Unified AU scale validation | Dopo normalizzazione di tutte le sorgenti, validare con dati reali beta tester che i pesi relativi siano corretti. |
 
-Da calibrare con dati reali dai beta tester.
+**Depends on:** D69 (ACWR) design, beta tester data.
+**Priority:** Post-launch, pre-ACWR.
 
 ---
 

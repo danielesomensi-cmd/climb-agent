@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-03-22
+Last updated: 2026-03-23
 
 ---
 
@@ -902,6 +902,7 @@ Allowed values:
 Allowed values:
 - `template` — user selected a preset (grade target, rest, climb count)
 - `free` — no structure, only phase tip
+- `circuit` — timer-guided exercise circuit
 
 ### 6.3 Climb status (boulder)
 
@@ -963,3 +964,21 @@ Preset phase compatibility values:
 - `recommended` — good match for current phase
 - `caution` — can do, but be mindful
 - `not_recommended` — avoid in this phase
+
+### 6.9 Circuit surfaces
+
+Allowed `surface` values for circuit sessions:
+
+- `circuit_core` — bodyweight core circuit
+
+Future (not in v1):
+- `circuit_warmup` — dynamic warmup circuit
+- `circuit_stretching` — post-session stretching circuit
+- `circuit_cardio` — bodyweight cardio circuit
+
+### 6.10 Session mode (updated)
+
+Allowed `session_mode` values:
+- `template` — user selected a preset
+- `free` — no structure, only phase tip
+- `circuit` — timer-guided exercise circuit

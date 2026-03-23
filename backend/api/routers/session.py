@@ -116,12 +116,13 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     exercise_instances.append(new_instance)
     resolved_session["exercise_instances"] = exercise_instances
 
-    # Recalculate session_load_score
+    # Recalculate session_load_score (D151: rescaled ×1.5, cap 85)
     fatigue_map = {e_id: catalog[e_id].get("fatigue_cost", 0) for e_id in catalog}
-    resolved["session_load_score"] = sum(
+    raw_fatigue = sum(
         fatigue_map.get(inst.get("exercise_id"), 0)
         for inst in exercise_instances
     )
+    resolved["session_load_score"] = round(min(85, raw_fatigue * 1.5))
 
     _persist_week_plan(week_plan, state, user_id)
 

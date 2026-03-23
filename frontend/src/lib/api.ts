@@ -364,6 +364,13 @@ export const logFreeClimb = (sessionId: string, data: {
 export const finishFreeSession = (sessionId: string, data: {
   overall_feel?: string;
   notes?: string;
+  circuit?: {
+    work_seconds: number;
+    rest_seconds: number;
+    target_exercises: number;
+    completed_exercises: number;
+    exercises_performed: string[];
+  };
 }) =>
   request<{
     summary: {

@@ -1511,12 +1511,13 @@ def resolve_session(
         b.get("status") == "failed" for b in blocks
     ) else "success"
 
-    # B4: session load score from exercise fatigue_cost
+    # B4: session load score from exercise fatigue_cost (D151: rescaled ×1.5, cap 85)
     ex_fatigue = {e.get("id"): e.get("fatigue_cost", 0) for e in exercises}
-    session_instance["session_load_score"] = sum(
+    raw_fatigue = sum(
         ex_fatigue.get(inst.get("exercise_id"), 0)
         for inst in exercise_instances
     )
+    session_instance["session_load_score"] = round(min(85, raw_fatigue * 1.5))
 
     # B38: force deload if 2+ zones are severe
     if limitation_map:

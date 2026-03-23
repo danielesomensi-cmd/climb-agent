@@ -353,7 +353,7 @@ class TestSurfacesEndpoint:
         r = client.get("/api/free-session/surfaces")
         assert r.status_code == 200
         data = r.json()
-        assert len(data["surfaces"]) == 5
+        assert len(data["surfaces"]) == 6
         ids = {s["id"] for s in data["surfaces"]}
         assert ids == SURFACE_IDS
 
@@ -641,3 +641,124 @@ class TestHistoryEndpoint:
         r = client.get("/api/free-session/history?date=2099-01-01")
         assert r.status_code == 200
         assert len(r.json()["sessions"]) == 0
+
+
+# ── Circuit session tests ───────────────────────────────────────────────
+
+
+class TestCircuitSurface:
+    def test_circuit_core_in_surfaces(self, client, _seed_state):
+        r = client.get("/api/free-session/surfaces")
+        assert r.status_code == 200
+        ids = {s["id"] for s in r.json()["surfaces"]}
+        assert "circuit_core" in ids
+
+
+class TestCircuitStart:
+    def test_start_circuit_session(self, client, _seed_state):
+        r = client.post("/api/free-session/start", json={
+            "date": "2026-03-21",
+            "surface": "circuit_core",
+            "session_mode": "circuit",
+            "context": "standalone",
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert data["session_id"] == "free_20260321_1"
+        assert data["target_grade"] is None
+        assert data["rest_seconds"] is None
+
+    def test_circuit_mode_requires_circuit_surface(self, client, _seed_state):
+        r = client.post("/api/free-session/start", json={
+            "date": "2026-03-21",
+            "surface": "gym_boulder",
+            "session_mode": "circuit",
+            "context": "standalone",
+        })
+        assert r.status_code == 400
+
+
+class TestCircuitFinish:
+    def _start_circuit(self, client):
+        r = client.post("/api/free-session/start", json={
+            "date": "2026-03-21",
+            "surface": "circuit_core",
+            "session_mode": "circuit",
+            "context": "standalone",
+        })
+        return r.json()["session_id"]
+
+    def test_finish_circuit_load_score(self, client, _seed_state):
+        """load_score = completed_exercises × 0.5"""
+        sid = self._start_circuit(client)
+        circuit_data = {
+            "completed_exercises": 6,
+            "exercises": [
+                {"name": "Plank", "duration": 30},
+                {"name": "Hollow body", "duration": 30},
+                {"name": "Side plank L", "duration": 30},
+                {"name": "Side plank R", "duration": 30},
+                {"name": "Leg raises", "duration": 30},
+                {"name": "Dead bug", "duration": 30},
+            ],
+        }
+        r = client.post(f"/api/free-session/{sid}/finish", json={
+            "overall_feel": "good",
+            "circuit": circuit_data,
+        })
+        assert r.status_code == 200
+        data = r.json()
+        assert data["load_score"] == 3.0  # 6 × 0.5
+
+    def test_finish_circuit_stores_circuit_object(self, client, _seed_state):
+        from backend.api.deps import load_state
+
+        sid = self._start_circuit(client)
+        circuit_data = {
+            "completed_exercises": 4,
+            "exercises": [
+                {"name": "Plank", "duration": 30},
+                {"name": "Hollow body", "duration": 30},
+                {"name": "Side plank L", "duration": 30},
+                {"name": "Side plank R", "duration": 30},
+            ],
+        }
+        r = client.post(f"/api/free-session/{sid}/finish", json={
+            "circuit": circuit_data,
+        })
+        assert r.status_code == 200
+        # Verify circuit is stored on the session in state
+        state = load_state(None)
+        stored = next(s for s in state["free_sessions"] if s["id"] == sid)
+        assert stored["circuit"]["completed_exercises"] == 4
+        assert len(stored["circuit"]["exercises"]) == 4
+
+    def test_finish_circuit_no_data_zero_load(self, client, _seed_state):
+        sid = self._start_circuit(client)
+        r = client.post(f"/api/free-session/{sid}/finish", json={})
+        assert r.status_code == 200
+        assert r.json()["load_score"] == 0.0
+
+
+class TestCircuitHistory:
+    def test_circuit_session_in_history(self, client, _seed_state):
+        # Start and finish a circuit session
+        r = client.post("/api/free-session/start", json={
+            "date": "2026-03-22",
+            "surface": "circuit_core",
+            "session_mode": "circuit",
+            "context": "standalone",
+        })
+        sid = r.json()["session_id"]
+        client.post(f"/api/free-session/{sid}/finish", json={
+            "overall_feel": "easy",
+            "circuit": {"completed_exercises": 3, "exercises": []},
+        })
+
+        r2 = client.get("/api/free-session/history?date=2026-03-22")
+        assert r2.status_code == 200
+        sessions = r2.json()["sessions"]
+        assert len(sessions) == 1
+        assert sessions[0]["surface"] == "circuit_core"
+        assert sessions[0]["session_mode"] == "circuit"
+        assert sessions[0]["load_score"] == 1.5  # 3 × 0.5

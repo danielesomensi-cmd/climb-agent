@@ -4,7 +4,7 @@ import { Suspense, useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Layers, Target, Repeat, Eye, ArrowLeft,
-  Smartphone, Moon, Box, Route,
+  Smartphone, Moon, Box, Route, Flame,
 } from "lucide-react";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,9 @@ import {
   startFreeSession,
   finishFreeSession,
 } from "@/lib/api";
+import { CircuitSetup, type CircuitConfig } from "@/components/circuit/CircuitSetup";
+import { CircuitTimer, type CircuitResult } from "@/components/circuit/CircuitTimer";
+import { CircuitCompletion } from "@/components/circuit/CircuitCompletion";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -68,7 +71,8 @@ interface FinishedData {
   loadScore: number | null;
 }
 
-type Step = "surface" | "gym" | "mode" | "preset" | "active" | "summary";
+type Step = "surface" | "gym" | "mode" | "preset" | "active" | "summary"
+  | "circuit_setup" | "circuit_running" | "circuit_complete";
 
 // ── All surfaces (always shown) ────────────────────────────────────────
 
@@ -143,6 +147,11 @@ function FreeSessionContent() {
   const [sessionClimbs, setSessionClimbs] = useState<LoggedClimb[]>([]);
   const [sessionStartedAt, setSessionStartedAt] = useState<number>(Date.now());
 
+  // Circuit state
+  const [circuitConfig, setCircuitConfig] = useState<CircuitConfig | null>(null);
+  const [circuitResult, setCircuitResult] = useState<CircuitResult | null>(null);
+  const [circuitSessionId, setCircuitSessionId] = useState<string | null>(null);
+
   // Load gyms on mount
   useEffect(() => {
     getFreeSessionSurfaces()
@@ -153,6 +162,14 @@ function FreeSessionContent() {
   // ── Handlers ───────────────────────────────────────────────────────
 
   const handleSurfaceSelect = useCallback(async (surfaceId: string) => {
+    // Circuit surfaces route to circuit flow
+    if (surfaceId.startsWith("circuit_")) {
+      setSelectedSurface(surfaceId);
+      setError(null);
+      setStep("circuit_setup");
+      return;
+    }
+
     setSelectedSurface(surfaceId);
     setError(null);
 
@@ -301,17 +318,80 @@ function FreeSessionContent() {
     router.push("/today");
   }, [activeSession, router]);
 
+  // ── Circuit handlers ──────────────────────────────────────────────
+
+  const handleCircuitStart = useCallback(async (config: CircuitConfig) => {
+    setCircuitConfig(config);
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await startFreeSession({
+        date: paramDate,
+        surface: "circuit_core",
+        session_mode: "circuit",
+        context: paramContext,
+      });
+      setCircuitSessionId(result.session_id);
+      setStep("circuit_running");
+    } catch {
+      setError("Failed to start circuit session");
+    } finally {
+      setLoading(false);
+    }
+  }, [paramDate, paramContext]);
+
+  const handleCircuitComplete = useCallback((result: CircuitResult) => {
+    setCircuitResult(result);
+    setStep("circuit_complete");
+  }, []);
+
+  const handleCircuitStop = useCallback((result: CircuitResult) => {
+    setCircuitResult(result);
+    setStep("circuit_complete");
+  }, []);
+
+  const handleCircuitSave = useCallback(async (feel?: string, notes?: string) => {
+    if (!circuitSessionId || !circuitResult) return;
+    try {
+      await finishFreeSession(circuitSessionId, {
+        overall_feel: feel,
+        notes,
+        circuit: {
+          work_seconds: circuitResult.workSeconds,
+          rest_seconds: circuitResult.restSeconds,
+          target_exercises: circuitResult.targetExercises,
+          completed_exercises: circuitResult.completedExercises,
+          exercises_performed: circuitResult.exercisesPerformed,
+        },
+      });
+    } catch {
+      // Non-critical
+    }
+    router.push("/today");
+  }, [circuitSessionId, circuitResult, router]);
+
+  const handleCircuitRestart = useCallback(() => {
+    // Keep same config, go back to running with new session
+    if (circuitConfig) {
+      handleCircuitStart(circuitConfig);
+    }
+  }, [circuitConfig, handleCircuitStart]);
+
   const goBack = useCallback(() => {
     if (step === "gym") setStep("surface");
     else if (step === "mode") setStep(gyms.length > 1 ? "gym" : "surface");
     else if (step === "preset") setStep("mode");
+    else if (step === "circuit_setup") setStep("surface");
   }, [step, gyms.length]);
 
   // ── Render ─────────────────────────────────────────────────────────
 
-  const showBack = step !== "surface" && step !== "active" && step !== "summary";
+  const showBack = step !== "surface" && step !== "active" && step !== "summary"
+    && step !== "circuit_running" && step !== "circuit_complete";
   const title = step === "active" ? "Free Session" :
-    step === "summary" ? "Summary" : "Free Session";
+    step === "summary" ? "Summary" :
+    step === "circuit_setup" ? "Core Circuit" :
+    step === "circuit_complete" ? "Circuit Complete" : "Free Session";
 
   return (
     <>
@@ -360,6 +440,27 @@ function FreeSessionContent() {
                 <div className="font-semibold">{s.name}</div>
               </button>
             ))}
+
+            {/* Add-ons divider */}
+            <div className="flex items-center gap-3 pt-2">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Add-ons</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            {/* Core Circuit */}
+            <button
+              onClick={() => handleSurfaceSelect("circuit_core")}
+              className="flex items-center gap-4 rounded-xl border bg-gradient-to-r from-emerald-500/20 to-emerald-600/5 border-emerald-500/30 p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 text-emerald-400">
+                <Flame className="size-6" />
+              </div>
+              <div>
+                <div className="font-semibold">Core Circuit</div>
+                <div className="text-xs text-muted-foreground">Guided bodyweight core workout with timer</div>
+              </div>
+            </button>
           </div>
         )}
 
@@ -504,7 +605,40 @@ function FreeSessionContent() {
             onSave={handleSaveSummary}
           />
         )}
+
+        {/* STEP: Circuit setup */}
+        {step === "circuit_setup" && !loading && (
+          <CircuitSetup
+            onStart={handleCircuitStart}
+            onCancel={() => setStep("surface")}
+          />
+        )}
+
+        {/* STEP: Circuit complete */}
+        {step === "circuit_complete" && circuitResult && (
+          <CircuitCompletion
+            completedExercises={circuitResult.completedExercises}
+            targetExercises={circuitResult.targetExercises}
+            workSeconds={circuitResult.workSeconds}
+            restSeconds={circuitResult.restSeconds}
+            durationSeconds={circuitResult.durationSeconds}
+            onSave={handleCircuitSave}
+            onRestart={handleCircuitRestart}
+            onBack={() => setStep("surface")}
+          />
+        )}
       </main>
+
+      {/* Circuit timer — rendered outside main as fullscreen overlay */}
+      {step === "circuit_running" && circuitConfig && (
+        <CircuitTimer
+          workSeconds={circuitConfig.workSeconds}
+          restSeconds={circuitConfig.restSeconds}
+          totalExercises={circuitConfig.totalExercises}
+          onComplete={handleCircuitComplete}
+          onStop={handleCircuitStop}
+        />
+      )}
     </>
   );
 }

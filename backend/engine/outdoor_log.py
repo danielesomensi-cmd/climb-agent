@@ -5,6 +5,7 @@ I/O is delegated to backend.engine.storage.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -29,33 +30,45 @@ _STYLE_MODIFIER: Dict[str, float] = {
     "repeat": 0.5,
 }
 
+_LOAD_CAP = 85
+
 
 def _duration_factor(duration_minutes: int) -> float:
     """Baseline 120 min, clamped [0.5, 1.5]."""
     return max(0.5, min(1.5, duration_minutes / 120))
 
 
+def _volume_factor(num_routes: int) -> float:
+    """Log-scaled volume factor: 1 route=1.0, 5=2.0, capped at 2.0."""
+    if num_routes <= 1:
+        return 1.0
+    return min(2.0, 1.0 + math.log(num_routes, 5))
+
+
 def compute_outdoor_load_score(entry: Dict[str, Any]) -> int:
     """Compute a deterministic load score for an outdoor session.
 
-    Formula: sum(grade_weight × style_modifier per route) × duration_factor.
-    Returns an int in the ~20-85 range, comparable to indoor estimated_load_score.
+    D151 formula: avg(grade_weight × style_modifier) × volume_factor × duration_factor.
+    Returns an int capped at 85, comparable to indoor session_load_score.
     """
     routes = entry.get("routes") or []
     if not routes:
         return 0
 
-    route_sum = 0.0
+    route_scores = []
     for route in routes:
         grade = route.get("grade", "")
         weight = _GRADE_WEIGHT.get(grade, _UNKNOWN_GRADE_WEIGHT)
         style = route.get("style")
         modifier = _STYLE_MODIFIER.get(style, 1.0) if style else 1.0
-        route_sum += weight * modifier
+        route_scores.append(weight * modifier)
 
+    avg_score = sum(route_scores) / len(route_scores)
+    vol = _volume_factor(len(route_scores))
     duration = entry.get("duration_minutes", 120)
-    factor = _duration_factor(duration)
-    return round(route_sum * factor)
+    dur = _duration_factor(duration)
+
+    return round(min(_LOAD_CAP, avg_score * vol * dur))
 VALID_DISCIPLINES = {"lead", "boulder", "both"}
 
 

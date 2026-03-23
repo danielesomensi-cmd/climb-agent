@@ -9,13 +9,13 @@ Methodology: Hörst 4-3-2-1 adaptive periodization with DUP (Daily Undulating Pe
 <!-- STATUS_TABLE_START -->
 | Metric | Count |
 |--------|-------|
-| Tests (passing) | 1287 |
+| Tests (passing) | 1314 |
 | Exercises | 178 |
 | Sessions (active) | 33 |
 | Templates | 26 |
 | API endpoints | 49 |
 | Frontend pages | 30 |
-| Frontend components | 54 |
+| Frontend components | 57 |
 <!-- STATUS_TABLE_END -->
 
 ## Architecture
