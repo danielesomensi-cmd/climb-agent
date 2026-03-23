@@ -29,6 +29,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "isometric",
     advanced: false,
+    image: "01_hollow_body.png.jpg",
   },
   {
     id: "ce_dead_bug",
@@ -37,6 +38,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "dynamic",
     advanced: false,
+    image: "02_dead_bug.png.jpg",
   },
   {
     id: "ce_plank_shoulder_taps",
@@ -63,6 +65,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "dynamic",
     advanced: false,
+    image: "05_body_saw.png",
   },
 
   // 3.2 Anti-Rotation (resist twisting — key for barn-door prevention)
@@ -73,6 +76,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_rotation",
     type: "dynamic",
     advanced: false,
+    image: "06_bird_dog.png.jpg",
   },
   {
     id: "ce_plank_hip_dips",
@@ -89,6 +93,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_rotation",
     type: "dynamic",
     advanced: false,
+    image: "08_thread_the_needle.png",
   },
   {
     id: "ce_dead_bug_cross",
