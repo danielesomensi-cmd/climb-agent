@@ -476,6 +476,13 @@ export function CircuitTimer({
 
             {/* Exercise info */}
             <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-5 backdrop-blur-sm">
+              {displayExercise.image && (
+                <img
+                  src={`/exercises/core/${displayExercise.image}`}
+                  alt={displayExercise.name}
+                  className="mx-auto mb-3 max-w-[300px] w-full rounded-xl"
+                />
+              )}
               <h3 className="text-2xl font-bold text-center mb-2">
                 {displayExercise.name}
               </h3>
@@ -502,6 +509,13 @@ export function CircuitTimer({
         {phase === "prepare" && (
           <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-5 backdrop-blur-sm">
             <p className="text-xs text-center text-white/50 uppercase tracking-wider mb-2">First up</p>
+            {sequence[0].image && (
+              <img
+                src={`/exercises/core/${sequence[0].image}`}
+                alt={sequence[0].name}
+                className="mx-auto mb-3 max-w-[300px] w-full rounded-xl"
+              />
+            )}
             <h3 className="text-2xl font-bold text-center mb-2">
               {sequence[0].name}
             </h3>

@@ -17,6 +17,7 @@ export interface CircuitExercise {
   pattern: MovementPattern;
   type: ExerciseType;
   advanced: boolean;
+  image?: string; // filename in /exercises/core/
 }
 
 export const CORE_EXERCISES: CircuitExercise[] = [
@@ -44,6 +45,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "dynamic",
     advanced: false,
+    image: "03_plank_shoulder_taps.png.jpg",
   },
   {
     id: "ce_bear_crawl_hold",
@@ -52,6 +54,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "isometric",
     advanced: false,
+    image: "04_bear_crawl_hold.png.jpg",
   },
   {
     id: "ce_body_saw",
