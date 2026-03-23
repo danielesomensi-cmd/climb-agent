@@ -87,6 +87,9 @@ export function QuickAddDialog({
   const [suggestions, setSuggestions] = useState<
     Array<{ session_id: string; session_name?: string; intensity: string; estimated_load_score: number; reason: string; required_equipment?: string[] }>
   >([]);
+  const [supplementary, setSupplementary] = useState<
+    Array<{ session_id: string; session_name: string; required_equipment: string[]; time_budget: string }>
+  >([]);
   const [allSessions, setAllSessions] = useState<SessionMeta[] | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
@@ -111,6 +114,7 @@ export function QuickAddDialog({
       setLocation("gym");
       setSelectedSession(null);
       setSuggestions([]);
+      setSupplementary([]);
       setAllSessions(null);
       setShowAll(false);
       setWarning(null);
@@ -130,9 +134,10 @@ export function QuickAddDialog({
     getSuggestedSessions(date, resolvedLocation)
       .then((data) => {
         setSuggestions(data.suggestions);
+        setSupplementary(data.supplementary ?? []);
         setSelectedSession(null);
       })
-      .catch(() => setSuggestions([]))
+      .catch(() => { setSuggestions([]); setSupplementary([]); })
       .finally(() => setLoading(false));
   }, [open, date, location, mode]);
 
@@ -216,6 +221,19 @@ export function QuickAddDialog({
       const req = s.required_equipment;
       if (!req || req.length === 0) return true;
       return req.every((eq) => gymEquip.includes(eq));
+    });
+  })();
+
+  // Filter supplementary sessions by equipment compatibility (same logic)
+  const filteredSupplementary = (() => {
+    if (location === "home" || location === "gym") return supplementary;
+    const gym = gyms.find((g) => g.name === location);
+    if (!gym?.equipment) return supplementary;
+    const gymEquip = [...gym.equipment];
+    if (!gymEquip.includes("pullup_bar")) gymEquip.push("pullup_bar");
+    return supplementary.filter((s) => {
+      if (!s.required_equipment || s.required_equipment.length === 0) return true;
+      return s.required_equipment.every((eq) => gymEquip.includes(eq));
     });
   })();
 
@@ -569,6 +587,39 @@ export function QuickAddDialog({
                   </p>
                 )}
               </div>
+
+              {/* Supplementary training */}
+              {filteredSupplementary.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Dumbbell className="size-3.5 text-blue-400" />
+                    Supplementary training
+                  </Label>
+                  <div className="space-y-1.5">
+                    {filteredSupplementary.map((s) => (
+                      <button
+                        key={s.session_id}
+                        type="button"
+                        className={`w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                          selectedSession === s.session_id
+                            ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                            : "border-muted text-muted-foreground hover:border-blue-500/40"
+                        }`}
+                        onClick={() => setSelectedSession(s.session_id)}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">{s.session_name}</span>
+                          {s.required_equipment.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {s.required_equipment.join(", ")}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Browse all */}
               <button

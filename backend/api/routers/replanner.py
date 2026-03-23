@@ -38,6 +38,34 @@ def _session_display_name(session_id: str) -> str:
     return session_id.replace("_", " ").title()
 
 
+def _get_supplementary_sessions(location: str) -> list:
+    """Scan session catalog for supplementary sessions compatible with *location*."""
+    results = []
+    sessions_dir = REPO_ROOT / SESSIONS_DIR
+    if not sessions_dir.is_dir():
+        return results
+    for path in sorted(sessions_dir.glob("*.json")):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if not data.get("supplementary"):
+            continue
+        # Filter by location compatibility
+        ctx_location = (data.get("context") or {}).get("location", "")
+        if location == "home" and ctx_location not in ("home", "both", "any"):
+            continue
+        if location == "gym" and ctx_location not in ("gym", "both", "any"):
+            continue
+        results.append({
+            "session_id": data.get("id", path.stem),
+            "session_name": data.get("name", path.stem.replace("_", " ").title()),
+            "required_equipment": data.get("required_equipment", []),
+            "time_budget": data.get("time_budget", ""),
+        })
+    return results
+
+
 def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
     """Save modified plan to per-week cache and (if current) to legacy cache."""
     start_key = updated.get("start_date", "")
@@ -194,7 +222,10 @@ def get_suggestions(target_date: str, location: str = "gym", user_id: Optional[s
         else:
             s["required_equipment"] = []
 
-    return {"suggestions": suggestions}
+    # Build supplementary sessions list (phase-agnostic, filtered by location/equipment)
+    supplementary = _get_supplementary_sessions(location)
+
+    return {"suggestions": suggestions, "supplementary": supplementary}
 
 
 @router.post("/quick-add")

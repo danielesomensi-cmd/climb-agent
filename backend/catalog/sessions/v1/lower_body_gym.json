@@ -2,6 +2,7 @@
   "id": "lower_body_gym",
   "name": "Lower Body Strength (Gym)",
   "version": "1.0",
+  "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": ["mobility", "core"],

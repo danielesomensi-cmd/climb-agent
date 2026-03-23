@@ -176,6 +176,12 @@ export const getSuggestedSessions = (targetDate: string, location: string) =>
       reason: string;
       required_equipment?: string[];
     }>;
+    supplementary: Array<{
+      session_id: string;
+      session_name: string;
+      required_equipment: string[];
+      time_budget: string;
+    }>;
   }>(`/api/replanner/suggest-sessions?target_date=${targetDate}&location=${location}`);
 
 export const quickAddSession = (data: {

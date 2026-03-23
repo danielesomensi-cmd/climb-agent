@@ -190,7 +190,8 @@ def suggest_sessions(
     candidates = session_pool if session_pool is not None else _build_session_pool(phase_id)
 
     # Always include complementary add-on mini-sessions regardless of phase
-    _ALWAYS_SUGGESTIBLE = {"upper_body_weights", "legs_strength", "core_training"}
+    # Note: upper_body_weights and legs_strength moved to supplementary section (B-SUPP)
+    _ALWAYS_SUGGESTIBLE = {"core_training"}
     for sid in _ALWAYS_SUGGESTIBLE:
         if sid not in candidates:
             candidates.append(sid)

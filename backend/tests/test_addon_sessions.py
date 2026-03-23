@@ -105,14 +105,14 @@ class TestAddonSuggestSessions(unittest.TestCase):
             ]}],
         }
 
-    def test_addon_sessions_appear_in_suggestions(self):
-        """Add-on sessions should appear in suggest_sessions results."""
+    def test_core_training_appears_in_suggestions(self):
+        """core_training should appear in suggest_sessions (always-suggestible).
+        upper_body_weights and legs_strength moved to supplementary section (B-SUPP)."""
         plan = self._make_plan()
         suggestions = suggest_sessions(plan, "2026-03-09", "home", max_suggestions=20)
         suggested_ids = {s["session_id"] for s in suggestions}
-        for sid in _ADDON_IDS:
-            self.assertIn(sid, suggested_ids,
-                          f"{sid} should be suggestible regardless of phase")
+        self.assertIn("core_training", suggested_ids,
+                      "core_training should be suggestible regardless of phase")
 
 
 if __name__ == "__main__":

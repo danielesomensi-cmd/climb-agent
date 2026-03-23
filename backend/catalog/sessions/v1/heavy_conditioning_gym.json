@@ -2,6 +2,7 @@
   "id": "heavy_conditioning_gym",
   "name": "Heavy Conditioning Gym",
   "version": "1.0",
+  "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": ["core", "push", "joint_health"],

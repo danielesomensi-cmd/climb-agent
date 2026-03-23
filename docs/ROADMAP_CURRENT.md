@@ -32,6 +32,7 @@
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
 Recently closed (2026-03-23):
+- **B-SUPP** — Supplementary training via quick-add. `supplementary: true` flag on 5 session JSONs (upper_body_weights, legs_strength, lower_body_gym, heavy_conditioning_gym, pulling_strength_gym). Backend: `_get_supplementary_sessions()` scans catalog, filters by location, returns in `GET /api/replanner/suggest-sessions` response as separate `supplementary` array. Frontend: dedicated "Supplementary training" section in QuickAddDialog with blue accent, equipment-filtered. Removed upper_body_weights/legs_strength from `_ALWAYS_SUGGESTIBLE` (now in dedicated section). 7 new tests (1321 total).
 - **A140** — Core Circuit feature. Circuit session mode (`session_mode: "circuit"`), `circuit_core` surface, timer-guided bodyweight core circuit. Vocabulary §6.9 (circuit surfaces) and §6.10 (session mode updated with `circuit` value).
 - **D151** — Load coherence audit & fix. Phase 0 audit found 5 incoherences across 4 session types (engine, free, outdoor, other_activity). Fix 1: `_build_load()` in report_engine now reads `session_load_score` (granular per-exercise fatigue sum) with fallback to `estimated_load_score` (4 fixed buckets). Fix 2: `compute_outdoor_load_score()` rewritten with normalized formula `avg(grade_weight × style_mod) × volume_factor(log5, cap 2.0) × duration_factor`, hard cap at 85 — old formula produced 141 for 8 hard routes. Fix 3: `session_load_score` rescaled ×1.5 (range 12-48 → 18-72) to align with 20-85 AU target. Session router add-exercise aligned. Other_activity load deferred to Load v2. 20 new tests (1307 total).
 
@@ -273,10 +274,10 @@ test_result → tier OR scaling_factor
 Depends on: B122 pattern established, Supabase migration (for proper schema).
 Feeds into: Phase 3.5 LLM Coach (coach explains "why" using tier context).
 
-### B-SUPP — Supplementary training via quick-add
+### ~~B-SUPP — Supplementary training via quick-add~~ ✅
 
 **Priority:** P2.5 (post-audit, pre-launch nice-to-have)
-**Status:** Open — design complete, implementation pending
+**Status:** Closed (2026-03-23)
 **Origin:** D-CAT audit (9 orphan sessions) + B83 (supplementary work request) + B74 (rest day activities)
 **Discovered:** 2026-03-22 (D-ORPHAN triage)
 **Type:** B (feature)

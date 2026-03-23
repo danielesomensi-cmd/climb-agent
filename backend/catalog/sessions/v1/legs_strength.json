@@ -2,6 +2,7 @@
   "id": "legs_strength",
   "name": "Legs Strength (Unilateral Focus)",
   "version": "1.0",
+  "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": ["joint_health"],

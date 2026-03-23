@@ -2,6 +2,7 @@
   "id": "pulling_strength_gym",
   "name": "Pulling Strength (Gym)",
   "version": "1.0",
+  "supplementary": true,
   "intent": {
     "primary_goal": "pulling_strength",
     "secondary_goals": [
