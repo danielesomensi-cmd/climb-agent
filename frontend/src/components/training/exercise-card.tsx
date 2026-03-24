@@ -1,7 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronRight } from "lucide-react";
 import type { ActualExercise } from "@/lib/types";
+import { ExerciseDetailSheet } from "@/components/training/exercise-detail-sheet";
 
 const FEEDBACK_COLORS: Record<string, string> = {
   very_easy: "bg-emerald-500",
@@ -45,6 +48,8 @@ interface ExerciseCardProps {
   };
   feedbackLevel?: string;
   actual?: ActualExercise;
+  /** Raw resolved exercise instance — opens detail sheet on tap when provided */
+  rawExercise?: Record<string, unknown>;
 }
 
 /** Format rest as mm:ss (e.g. 120 → "2:00", 90 → "1:30") */
@@ -59,7 +64,8 @@ function formatLoad(kg: number): string {
   return kg >= 0 ? `+${kg} kg` : `${kg} kg`;
 }
 
-export function ExerciseCard({ exercise, feedbackLevel, actual }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise }: ExerciseCardProps) {
+  const [sheetOpen, setSheetOpen] = useState(false);
   // Use actual feedback label if available, fall back to exercise_feedback dot
   const effectiveFeedback = actual?.feedback_label ?? feedbackLevel;
 
@@ -102,12 +108,19 @@ export function ExerciseCard({ exercise, feedbackLevel, actual }: ExerciseCardPr
   const testRepsResult = isTest && actual?.completed_reps != null ? actual.completed_reps : undefined;
 
   return (
-    <Card className="gap-0 py-0">
+    <>
+    <Card
+      className={`gap-0 py-0${rawExercise ? " cursor-pointer active:bg-muted/50 transition-colors" : ""}`}
+      onClick={rawExercise ? (e) => { e.stopPropagation(); setSheetOpen(true); } : undefined}
+    >
       <CardHeader className="py-2.5">
         <div className="min-w-0">
           {/* Exercise name + feedback badge */}
           <div className="flex items-center gap-1.5">
-            <CardTitle className="text-sm">{exercise.name}</CardTitle>
+            <CardTitle className="text-sm flex-1">{exercise.name}</CardTitle>
+            {rawExercise && (
+              <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/50" />
+            )}
             {effectiveFeedback && FEEDBACK_COLORS[effectiveFeedback] ? (
               actual ? (
                 <span
@@ -224,5 +237,13 @@ export function ExerciseCard({ exercise, feedbackLevel, actual }: ExerciseCardPr
         </div>
       </CardHeader>
     </Card>
+    {rawExercise && (
+      <ExerciseDetailSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        exercise={rawExercise}
+      />
+    )}
+    </>
   );
 }

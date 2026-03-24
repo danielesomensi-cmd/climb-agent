@@ -31,6 +31,9 @@
 
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
+Recently closed (2026-03-24):
+- **A141** — Exercise Detail Preview Sheet. New `ExerciseDetailSheet` component (bottom sheet via vaul Drawer). Tapping any exercise card in Today/Week/Session views opens a read-only sheet showing full prescription (sets/reps/load/rest/tempo), suggested load/grade (bilateral + unilateral), technique cues, notes, equipment, video link, limitation warnings. `rawExercise` optional prop added to `ExerciseCard` — existing rendering unchanged, raw data only feeds the sheet. Wired in `SessionCard` (Today/Week) and `/session/[id]` page. 1 new component (58 total).
+
 Recently closed (2026-03-23):
 - **B-SUPP** — Supplementary training via quick-add. `supplementary: true` flag on 5 session JSONs (upper_body_weights, legs_strength, lower_body_gym, heavy_conditioning_gym, pulling_strength_gym). Backend: `_get_supplementary_sessions()` scans catalog, filters by location, returns in `GET /api/replanner/suggest-sessions` response as separate `supplementary` array. Frontend: dedicated "Supplementary training" section in QuickAddDialog with blue accent, equipment-filtered. Removed upper_body_weights/legs_strength from `_ALWAYS_SUGGESTIBLE` (now in dedicated section). 7 new tests (1321 total).
 - **A140** — Core Circuit feature. Circuit session mode (`session_mode: "circuit"`), `circuit_core` surface, timer-guided bodyweight core circuit. Vocabulary §6.9 (circuit surfaces) and §6.10 (session mode updated with `circuit` value).

@@ -36,6 +36,7 @@ export default function SessionPage() {
   const date = searchParams.get("date") || new Date().toISOString().slice(0, 10);
 
   const [resolved, setResolved] = useState<ResolvedSession | null>(null);
+  const [rawInstances, setRawInstances] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +47,10 @@ export default function SessionPage() {
     try {
       const data = await resolveSession(sessionId);
       setResolved(data.resolved);
+      // Keep raw exercise instances for detail sheet
+      const raw = data as unknown as Record<string, unknown>;
+      const rs = (raw.resolved as Record<string, unknown> | undefined)?.resolved_session as Record<string, unknown> | undefined;
+      setRawInstances((rs?.exercise_instances ?? []) as Record<string, unknown>[]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
@@ -105,9 +110,18 @@ export default function SessionPage() {
 
                 {/* Exercises in block */}
                 <div className="space-y-2 pl-2 border-l-2 border-border">
-                  {block.exercises.map((exercise, exIdx) => (
-                    <ExerciseCard key={`${blockIdx}-${exIdx}`} exercise={exercise} />
-                  ))}
+                  {block.exercises.map((exercise, exIdx) => {
+                    const rawMatch = rawInstances.find(
+                      (r) => (r.exercise_id as string) === exercise.exercise_id,
+                    );
+                    return (
+                      <ExerciseCard
+                        key={`${blockIdx}-${exIdx}`}
+                        exercise={exercise}
+                        rawExercise={rawMatch}
+                      />
+                    );
+                  })}
                 </div>
 
                 {/* Separator between blocks (except last) */}

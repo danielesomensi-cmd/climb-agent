@@ -24,7 +24,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Templates | 26 |
 | API endpoints | 49 |
 | Frontend pages | 30 |
-| Frontend components | 57 |
+| Frontend components | 58 |
 <!-- STATUS_TABLE_END -->
 
 ---
