@@ -233,9 +233,7 @@ function buildGuidedState(
     session.session_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
   // A141: process cue from API response
-  const processCue = (session as Record<string, unknown>).process_cue as
-    | { id: string; text: string }
-    | undefined;
+  const processCue = session.process_cue ?? undefined;
 
   return {
     version: 1,
@@ -761,6 +759,7 @@ export function SessionCard({
                         }}
                         feedbackLevel={session.exercise_feedback?.[exerciseId]}
                         actual={actualMatch}
+                        rawExercise={ex}
                       />
                     );
                   })}

@@ -58,6 +58,7 @@ export interface SessionSlot {
   exercise_feedback?: Record<string, string>;
   session_duration_seconds?: number;
   actual_exercises?: ActualExercise[];
+  process_cue?: { id: string; text: string } | null;
 }
 
 export interface DayPlan {
