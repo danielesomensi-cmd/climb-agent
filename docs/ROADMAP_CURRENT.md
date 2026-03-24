@@ -37,7 +37,7 @@ Recently closed (2026-03-24):
 
 Recently closed (2026-03-23):
 - **B-SUPP** — Supplementary training via quick-add. `supplementary: true` flag on 5 session JSONs (upper_body_weights, legs_strength, lower_body_gym, heavy_conditioning_gym, pulling_strength_gym). Backend: `_get_supplementary_sessions()` scans catalog, filters by location, returns in `GET /api/replanner/suggest-sessions` response as separate `supplementary` array. Frontend: dedicated "Supplementary training" section in QuickAddDialog with blue accent, equipment-filtered. Removed upper_body_weights/legs_strength from `_ALWAYS_SUGGESTIBLE` (now in dedicated section). 7 new tests (1321 total).
-- **A140** — Core Circuit feature. Circuit session mode (`session_mode: "circuit"`), `circuit_core` surface, timer-guided bodyweight core circuit. Vocabulary §6.9 (circuit surfaces) and §6.10 (session mode updated with `circuit` value).
+- **A140** — Core Circuit add-on. New activity type in Free Session: guided bodyweight core workout with configurable timer (work/rest/duration). 30 core exercises in frontend catalog organized by movement pattern (anti-extension, anti-rotation, anti-lateral flexion, compression, extension) with mix of dynamic and isometric. Fisher-Yates randomized sequence with no-consecutive-repeat guard. Timer reuses Tabata wall-clock engine (iOS Safari PWA safe). Back/Next buttons to skip/revisit exercises. Work max increased to 180s. Circuit sessions logged in `free_sessions[]` with `surface: "circuit_core"`, `session_mode: "circuit"`. Load score: `completed_exercises × 0.5`. New "Add-ons" divider in Free Session surface list. Backend: `circuit_core` in SURFACES, `circuit` in VALID_SESSION_MODES, circuit-aware finish endpoint, report engine label. Frontend: 4 new components (CircuitSetup, CircuitTimer, CircuitCompletion, circuit-exercises catalog), circuit card with emerald gradient, day-card circuit rendering. Vocabulary §6.9 (circuit surfaces) and §6.10 (session_mode: circuit) added. Exercise images: Gemini AI generation in progress (semi-realistic illustration style, stored in `frontend/public/exercises/core/`). 9 new backend tests.
 - **D151** — Load coherence audit & fix. Phase 0 audit found 5 incoherences across 4 session types (engine, free, outdoor, other_activity). Fix 1: `_build_load()` in report_engine now reads `session_load_score` (granular per-exercise fatigue sum) with fallback to `estimated_load_score` (4 fixed buckets). Fix 2: `compute_outdoor_load_score()` rewritten with normalized formula `avg(grade_weight × style_mod) × volume_factor(log5, cap 2.0) × duration_factor`, hard cap at 85 — old formula produced 141 for 8 hard routes. Fix 3: `session_load_score` rescaled ×1.5 (range 12-48 → 18-72) to align with 20-85 AU target. Session router add-exercise aligned. Other_activity load deferred to Load v2. 20 new tests (1307 total).
 
 Recently closed (2026-03-24):
@@ -256,6 +256,34 @@ ANOMALIA: [exercise_id]
 
 **Effort stimato:** M (1 sessione Claude Code per audit + 1 per fix)
 
+### Free Session UI grouping — collapse climbing surfaces
+
+**Priority:** P2.5 (post-launch polish)
+**Status:** Open — design decided
+**Type:** A (frontend only)
+
+**Context:** Free Session page currently shows 5 climbing surface cards + Add-ons divider + circuit cards = a lot of scrolling. Climbing surfaces should be grouped under a single expandable "Climbing" card.
+
+**Design:**
+- Single "Climbing" card with tap-to-expand behavior
+- Expands to show: Gym Boulder, Kilter Board, MoonBoard, Other Board, Lead/Top-rope
+- Add-ons section stays below, always visible
+- Collapsed state shows just the Climbing card + Add-ons
+
+**Effort:** S (frontend only, no backend changes)
+
+### Core Circuit exercise images — Gemini AI generation
+
+**Priority:** P2.5 (ongoing, non-blocking)
+**Status:** In progress — 4/30 done
+**Type:** C (content)
+
+**Context:** Semi-realistic fitness illustrations generated via Google Gemini AI. Two positions (A/B) per exercise, consistent style (fit woman, red/coral sports bra, gray leggings, white background). Stored in `frontend/public/exercises/core/`. Frontend shows images in CircuitTimer when available, graceful fallback to text-only when not.
+
+**Process:** Reference image from Google Images + Gemini prompt. Guide document prepared with all 30 prompts.
+
+**Remaining:** 26 of 30 exercises need images. Non-blocking — circuit works fine with text descriptions only.
+
 ---
 
 ## Priority 2b — Test results → full exercise calibration
@@ -411,6 +439,28 @@ Items that affect first impression for paying users.
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Set up develop branch for staging, main for production deploys. |
 
+### Stretching Circuit add-on
+
+**Priority:** P3 (post-launch)
+**Status:** Open — design pending
+**Type:** A (feature)
+
+**Context:** Same architecture as Core Circuit but for post-session static stretching. Timer with longer holds (30-60s hold / 5s transition). Pool of ~20 stretching exercises. Position: post-session.
+
+**Dependencies:** A140 (Core Circuit — done, provides the architecture pattern)
+**Effort:** M (exercise catalog + minor timer config changes)
+
+### Warmup Circuit add-on
+
+**Priority:** P3 (post-launch)
+**Status:** Open — design pending
+**Type:** A (feature)
+
+**Context:** Same architecture as Core Circuit but for pre-session dynamic warmup. Mobility, activation, pulse raiser exercises. Shorter work times (30s work / 10s transition). Position: pre-session.
+
+**Dependencies:** A140 (Core Circuit — done)
+**Effort:** M (exercise catalog + minor timer config changes)
+
 ---
 
 ## Priority 4 — Go-to-market
@@ -418,6 +468,22 @@ Items that affect first impression for paying users.
 - Landing page / marketing site
 - Pricing model definition
 - App Store prep (Capacitor wrapping PWA — Phase 4d, zero code rewrite)
+
+### Board-specific features (Kilter first)
+
+**Priority:** P4 (long-term)
+**Status:** Open — no design yet
+**Type:** A (feature)
+
+**Context:** Currently all board surfaces (Kilter, MoonBoard, Other) share the same generic free climbing flow. Each board has unique features that could be integrated:
+- **Kilter Board:** API integration for problem lookup, difficulty ratings, lighting
+- **Tension Board:** Similar API capabilities
+- **MoonBoard:** Problem database, benchmarks
+
+**Approach:** Start with Kilter (most mature API, Daniele uses it). Research API capabilities, then design integration. Other boards follow same pattern later.
+
+**Dependencies:** Free Session system (done)
+**Effort:** L (API research + integration per board)
 
 ---
 
