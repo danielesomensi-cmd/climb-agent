@@ -584,7 +584,7 @@ function SortableExerciseItem({ id, children, canEdit, onRemove }: SortableExerc
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-start gap-1 rounded-md ${isDragging ? "opacity-80 shadow-lg shadow-primary/20 ring-1 ring-primary/30 bg-card" : ""}`}
+      className={`flex items-start gap-1.5 rounded-md ${isDragging ? "opacity-80 shadow-lg shadow-primary/20 ring-1 ring-primary/30 bg-card" : ""}`}
     >
       {canEdit && (
         <button
@@ -595,15 +595,18 @@ function SortableExerciseItem({ id, children, canEdit, onRemove }: SortableExerc
           <GripVertical className="size-5" />
         </button>
       )}
-      <div className="flex-1 min-w-0">{children}</div>
-      {canEdit && onRemove && (
-        <button
-          className="flex items-center justify-center w-11 h-11 mt-0.5 text-muted-foreground/40 hover:text-red-500 transition-colors shrink-0"
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-        >
-          <Trash2 className="size-4" />
-        </button>
-      )}
+      <div className="relative flex-1 min-w-0">
+        {children}
+        {/* B153b: Trash icon inside card, top-right */}
+        {canEdit && onRemove && (
+          <button
+            className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/30 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

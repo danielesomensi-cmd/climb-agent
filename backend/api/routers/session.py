@@ -145,6 +145,8 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     )
     resolved["session_load_score"] = round(min(85, raw_fatigue * 1.5))
 
+    # B153b: mark session so _auto_resolve skips re-resolution
+    session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
     return {"week_plan": week_plan}
@@ -212,6 +214,8 @@ def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends
 
     exercise_instances.pop(req.exercise_index)
     _recalc_load_score(resolved, exercise_instances)
+    # B153b: mark session so _auto_resolve skips re-resolution
+    session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
     return {"week_plan": week_plan}
@@ -245,6 +249,8 @@ def reorder_exercises(req: ReorderExercisesRequest, user_id: Optional[str] = Dep
 
     reordered = [exercise_instances[i] for i in new_order]
     resolved["resolved_session"]["exercise_instances"] = reordered
+    # B153b: mark session so _auto_resolve skips re-resolution
+    session["_user_edited"] = True
     _persist_week_plan(week_plan, state, user_id)
 
     return {"week_plan": week_plan}

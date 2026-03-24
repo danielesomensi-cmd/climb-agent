@@ -49,8 +49,12 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
         for day_entry in week_block.get("days", []):
             for session_entry in day_entry.get("sessions", []):
                 # B120: never re-resolve completed sessions with cached data
+                # B153b: never re-resolve sessions the user explicitly edited
                 if (
                     session_entry.get("status") in ("done", "skipped")
+                    and session_entry.get("resolved")
+                ) or (
+                    session_entry.get("_user_edited")
                     and session_entry.get("resolved")
                 ):
                     continue

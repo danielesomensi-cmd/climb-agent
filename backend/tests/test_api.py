@@ -1422,3 +1422,35 @@ class TestReorderExercises:
         instances = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0] \
             ["resolved"]["resolved_session"]["exercise_instances"]
         assert [i["exercise_id"] for i in instances] == ["ex_a", "ex_b", "ex_c", "ex_d"]
+
+    def test_reorder_sets_user_edited_flag(self):
+        """B153b: Reorder marks session as _user_edited to survive re-resolution."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/reorder-exercises", json={
+            "date": "2026-01-05", "session_index": 0,
+            "new_order": [3, 0, 1, 2], "week_plan": wp,
+        })
+        assert r.status_code == 200
+        session = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0]
+        assert session.get("_user_edited") is True
+
+    def test_remove_exercise_sets_user_edited_flag(self):
+        """B153b: Remove marks session as _user_edited to survive re-resolution."""
+        wp = TestRemoveExercise._mock_week_plan()
+        r = client.post("/api/session/remove-exercise", json={
+            "date": "2026-01-05", "session_index": 0, "exercise_index": 1, "week_plan": wp,
+        })
+        assert r.status_code == 200
+        session = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0]
+        assert session.get("_user_edited") is True
+
+    def test_add_exercise_sets_user_edited_flag(self):
+        """B153b: Add exercise marks session as _user_edited to survive re-resolution."""
+        wp = TestAddExercise._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05", "session_index": 0,
+            "exercise_id": "dead_hang_easy", "week_plan": wp,
+        })
+        assert r.status_code == 200
+        session = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0]
+        assert session.get("_user_edited") is True
