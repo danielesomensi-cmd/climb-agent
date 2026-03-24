@@ -60,6 +60,7 @@ Recently closed (2026-03-21):
 - **B139** — Root URL 404 + OG meta tags. Root `/` was blocked by Clerk middleware (`auth.protect()`) causing 404 for unauthenticated users and social crawlers. Fix: added `/` to public routes in middleware. Added Open Graph + Twitter Card meta tags to layout for social link previews (WhatsApp, Telegram, iMessage).
 
 Recently closed (2026-03-24):
+- **B153** — Reorder exercises: drag didn't save + drag handle UX unclear. Root cause: `handleDragEnd` used raw instanceIdx as array positions (wrong when block matching reorders), and no optimistic state update caused visual snap-back. Fix: `localOrder` state for optimistic reorder (permutation of server indices), `arrayMove` from @dnd-kit for correct position computation, `reorderPending` flag to block concurrent drags, flat list rendering when user has reordered. Drag handle: 44×44px touch target (Apple HIG), `size-5` icon, elevation + ring during drag. Trash icon: 44×44px target.
 - **A153** — Remove + Reorder exercises in resolved sessions. Two new endpoints: `POST /api/session/remove-exercise` (with min-1 guard) and `POST /api/session/reorder-exercises` (valid permutation check). Shared `_assert_session_mutable()` guard (retrofitted on add-exercise too). Frontend: drag-and-drop reorder with @dnd-kit (grip handle + touch/pointer sensors), trash icon per exercise with confirm dialog, reorder safety warning banner. Immutability invariant enforced on all 3 exercise mutation endpoints (409 on done/skipped). 14 new tests.
 
 Recently closed (2026-03-20):
