@@ -1,0 +1,454 @@
+# climb-agent — User Guide
+
+> Your personal climbing training engine. No guesswork, no bro-science — just a structured, evidence-based plan that adapts to you.
+
+---
+
+## Table of Contents
+
+1. [How the Plan Works](#1-how-the-plan-works)
+2. [The Macrocycle: What to Expect in Each Phase](#2-the-macrocycle-what-to-expect-in-each-phase)
+3. [Your Weekly Routine](#3-your-weekly-routine)
+4. [The Guided Session](#4-the-guided-session)
+5. [Giving Feedback](#5-giving-feedback)
+6. [Test Sessions](#6-test-sessions)
+7. [Regenerating Your Plan](#7-regenerating-your-plan)
+8. [Modifying a Session](#8-modifying-a-session)
+9. [Adding Extra Sessions (Quick-Add & Supplementary)](#9-adding-extra-sessions)
+10. [Replanning Your Week](#10-replanning-your-week)
+11. [Free Climbing Sessions](#11-free-climbing-sessions)
+12. [Confirming Next Week's Availability](#12-confirming-next-weeks-availability)
+13. [Locations & Equipment](#13-locations--equipment)
+14. [Outdoor Sessions](#14-outdoor-sessions)
+15. [Weekly Report](#15-weekly-report)
+16. [Tabata Timer](#16-tabata-timer)
+17. [Don't Overtrain — Trust the Process](#17-dont-overtrain--trust-the-process)
+18. [Backup & Recovery](#18-backup--recovery)
+19. [Need Help?](#19-need-help)
+
+---
+
+## 1. How the Plan Works
+
+climb-agent builds your training plan through a pipeline:
+
+**Assessment → Goal → Macrocycle → Weekly Plan → Session → Exercises**
+
+1. **Assessment**: During onboarding, you provide your climbing experience, grades, test results, and self-reported weaknesses. This generates a 5-axis profile (finger strength, pulling strength, power endurance, technique, endurance) scored 0–100.
+
+2. **Goal**: You set a target grade (Fontainebleau) and a deadline. The engine calculates how many weeks you have and what needs to improve.
+
+3. **Macrocycle**: A 10–13 week periodized plan is generated, divided into phases. Each phase has a specific physiological purpose. The plan is tailored to your weaknesses — if your finger strength is low relative to your goal, the plan allocates more time and intensity to finger training.
+
+4. **Weekly Plan**: Each week, the planner selects sessions based on your current phase, available days, locations, and equipment. It runs a 3-pass algorithm: primary sessions first, then complementary work, then tests when due.
+
+5. **Session Resolution**: Each session is resolved into concrete exercises with sets, reps, load, rest times, and tempo — all calculated from your current working loads and progression state.
+
+6. **Feedback Loop**: After each session, your feedback drives the closed-loop adaptation system. Loads adjust up or down based on how the session felt. Every ~6 weeks, test sessions re-assess your profile and the plan recalibrates.
+
+**This is fully deterministic.** Same inputs always produce the same outputs. No randomness, no AI guessing — just rules, catalogs, and your data.
+
+---
+
+## 2. The Macrocycle: What to Expect in Each Phase
+
+Your macrocycle follows the Hörst 4-3-2-1 periodization model. Each phase builds on the previous one. **Trust the progression** — it's designed this way for a reason.
+
+### Base / Endurance (3–4 weeks)
+
+**What you'll do**: ARC (Aerobic Restoration and Capillarity) training, easy sustained climbing, repeaters, technique drills, general conditioning.
+
+**What it feels like**: Easy. You'll think "this is too easy, I should be projecting." That's normal. This phase builds the aerobic base that everything else depends on. Capillary growth in your forearms takes a minimum of 6 weeks of sustained low-intensity work.
+
+**Don't**: Push hard, add extra bouldering at your limit, or skip sessions because they feel easy.
+
+### Strength & Power (2–3 weeks)
+
+**What you'll do**: Max hangs, weighted pull-ups, limit bouldering, campus work (if qualified), power exercises.
+
+**What it feels like**: Hard. Low reps, long rests, high intensity. Sessions are shorter but more demanding neurally. You should feel strong on the wall but not pumped.
+
+**Don't**: Add volume. Long rest periods are not wasted time — your nervous system needs them.
+
+### Power Endurance (2–3 weeks)
+
+**What you'll do**: 4×4 intervals, linked boulders, route intervals, PE circuits. The pump is back.
+
+**What it feels like**: The hardest phase. High intensity AND high volume. You'll feel tired. That's the point — this phase teaches your body to perform while fatigued.
+
+**Don't**: Skip rest days. Recovery between sessions is critical in this phase.
+
+### Performance (1–2 weeks)
+
+**What you'll do**: Reduced volume, maintained intensity. Projecting, route practice, quality climbing.
+
+**What it feels like**: You're tapering. Volume drops 40–60%, but intensity stays high. Your body is consolidating all the gains from previous phases. This is where you send.
+
+**Don't**: Panic about the reduced volume. Less is more in this phase.
+
+### Deload (1 week)
+
+**What you'll do**: Easy climbing, stretching, light movement. Active recovery.
+
+**What it feels like**: A break. Enjoy it. Your body is recovering and supercompensating.
+
+**Don't**: "Just do a quick session" at full intensity. Deload means deload.
+
+---
+
+## 3. Your Weekly Routine
+
+Every week runs **Monday to Sunday**. The planner assigns sessions to the days you're available, respecting your locations and equipment.
+
+**The Today page** shows what's planned for today. **The Week page** shows the full 7-day grid with all sessions.
+
+Your daily workflow:
+
+1. Open the app → **Today** shows your session(s)
+2. Tap a session to see the full exercise list with loads
+3. Start the **Guided Session** for step-by-step coaching, or train independently
+4. When done, tap **Mark Done** and give feedback
+5. If you can't train, tap **Mark Skipped** — the system adapts
+
+**Mark Done** and **Mark Skipped** are always reversible with **Undo** — don't worry about misclicks.
+
+---
+
+## 4. The Guided Session
+
+The guided session is your in-gym companion. It walks you through every exercise step by step.
+
+**How it works:**
+
+- Each exercise is displayed one at a time with its full prescription: sets, reps, load, rest, grip type, tempo
+- **Timers** count down rest periods, hang times, and work intervals automatically
+- **Beeps** alert you at 3-2-1 before each work phase starts
+- **Voice cues** provide encouragement and phase transitions
+- Process cues remind you what to focus on (e.g., "Focus on keeping your hips close to the wall")
+- Phase rationale explains *why* you're doing this exercise today
+
+**iOS Safari note**: The timer uses a wall-clock engine specifically designed to survive Safari background suspension. If you switch apps briefly, the timer stays accurate. Audio cues require one initial tap to activate (iOS requirement).
+
+**You can always**:
+- Skip an exercise within the guided session
+- Adjust the weight/load if the prescribed load isn't available
+- Exit the guided session and mark the session manually
+
+---
+
+## 5. Giving Feedback
+
+After completing a session, you're asked for feedback on each exercise:
+
+- **Very Easy** — Could do much more
+- **Easy** — Comfortable, could add load
+- **OK** — Appropriate challenge
+- **Hard** — Struggled but completed
+- **Very Hard** — Barely completed or had to reduce
+
+**This feedback directly drives your progression.** The closed-loop system uses it to adjust loads for next time:
+
+- "Very Easy" or "Easy" → loads increase next session
+- "OK" → loads stay the same
+- "Hard" → loads stay or decrease slightly
+- "Very Hard" → loads decrease
+
+**Be honest.** The system only works if your feedback is accurate. There's no benefit to saying "OK" when it was "Very Hard" — you'll just get a harder session next time that's too much.
+
+Post-session, you'll also see a **mental reflection question** (optional) — one rotating prompt to help you think about your climbing beyond just the physical.
+
+---
+
+## 6. Test Sessions
+
+Every **~6 weeks**, the system schedules test sessions. These are critical — they re-measure your baseline numbers and update your 5-axis profile.
+
+**The tests:**
+
+- **Max Hang (7s)**: Maximum weight you can hang for 7 seconds on a 20mm edge. Measures finger max strength.
+- **Repeater (7:3 to failure)**: How many reps you can sustain at 60% of your max hang. Measures finger endurance.
+- **Weighted Pull-Up (2RM)**: Maximum added weight for 2 reps. The system estimates your 1RM from this. Measures pulling strength.
+- **Bodyweight Pull-Up Gate**: If you've never done the weighted test, the system first checks if you can do 15+ bodyweight pull-ups. If yes, you progress to the weighted test.
+- **Hip Flexibility**: Straddle measurement in cm. Informs mobility prescription.
+
+**Why they matter**: Without fresh test data, the system keeps using your old baselines. Your loads won't progress accurately, and your plan won't adapt to your real improvements. Tests are not optional extras — they're the system recalibrating itself.
+
+**After a test session**: Your profile radar updates, working loads recalculate, and the remaining macrocycle adjusts its emphasis based on your new strengths and weaknesses.
+
+---
+
+## 7. Regenerating Your Plan
+
+You can regenerate your plan from **Settings**:
+
+- **Regenerate Assessment**: Recomputes your 5-axis profile from current baselines and test results. Do this after significant changes.
+- **Regenerate Macrocycle**: Creates a new macrocycle from scratch. Do this when you set a new goal or when the current macrocycle ends.
+
+**When to regenerate:**
+
+- After completing all tests and the plan feels misaligned
+- After a long break (2+ weeks off)
+- When changing your primary goal (new target grade or new deadline)
+- When you make significant equipment or location changes
+
+**When NOT to regenerate:**
+
+- After a bad week — the closed-loop adapts automatically
+- Mid-phase because you're impatient — give the phase time to work
+- Because one session was too easy or too hard — feedback handles this
+
+**Important**: Regenerating creates a new plan. Past sessions are **never modified** — they're immutable history. Only future weeks are affected.
+
+---
+
+## 8. Modifying a Session
+
+You can modify a resolved session in several ways:
+
+### Adding an Exercise
+
+From the session detail view, you can add exercises to a resolved session. The system shows compatible exercises filtered by your equipment and the session's focus. The added exercise gets a prescription calculated from your current working loads.
+
+### Removing or Skipping an Exercise
+
+Within the guided session, you can skip any exercise. If you consistently skip an exercise, your feedback will signal the system to adjust.
+
+### Changing Load
+
+If the prescribed load isn't available (e.g., you don't have the exact weight plate), adjust within the guided session. The system will adapt based on your feedback at the end.
+
+### Session-Level Changes
+
+For bigger changes (wrong session type, wrong day), use the **Replan** feature instead of modifying the session — see [Section 10](#10-replanning-your-week).
+
+---
+
+## 9. Adding Extra Sessions
+
+### Quick-Add (Climbing Sessions)
+
+From the **Today** or **Week** view, tap the **+** button to open the Quick-Add dialog. The system suggests sessions compatible with your current phase and today's location/equipment.
+
+These are full engine sessions — they get resolved with exercises, loads, and prescriptions just like planned sessions. Their load counts toward your weekly total.
+
+### Supplementary Training
+
+The Quick-Add dialog also offers supplementary sessions — non-climbing work you can add any time:
+
+- **Upper Body** — Push/antagonist work (home)
+- **Core Training** — Full core session (home)
+- **Legs (Home)** — Squat/hinge/unilateral
+- **Legs (Gym)** — Full leg session with equipment
+- **Heavy Conditioning** — Full-body conditioning (gym)
+- **Pulling** — Dedicated pulling session (gym)
+
+Supplementary sessions count at **50% load** for weekly total and count as an active training day for adherence. They do not trigger replanning or macrocycle adaptation.
+
+### Free Climbing Session
+
+You can also add a free climbing session from Quick-Add. See [Section 11](#11-free-climbing-sessions).
+
+---
+
+## 10. Replanning Your Week
+
+The **Replan Dialog** lets you make changes to your weekly plan without regenerating everything. Access it from the **Week** view by tapping a day.
+
+**What you can do:**
+
+- **Swap session**: Replace today's session with a different one (the system suggests alternatives compatible with your equipment and phase)
+- **Move to another day**: Shift a session to a different day this week
+- **Change intent**: Override what kind of session you want on a specific day (e.g., "I want to do strength instead of endurance today")
+- **Convert to rest**: Turn a training day into a rest day
+- **Convert outdoor slot**: Change an outdoor day to gym or home
+
+The replanner handles **ripple effects** — if you move a high-intensity session, it adjusts surrounding days to maintain proper recovery spacing. It uses 13 indoor intents and 3 outdoor intents to handle all scenarios.
+
+**Skipping a session** is always OK. The system is designed for real life. Skipping doesn't break anything — the plan adapts. Don't add make-up sessions to "compensate" — that leads to overtraining.
+
+---
+
+## 11. Free Climbing Sessions
+
+Free Climbing Sessions let you log unstructured climbing — bouldering, board sessions, or route climbing outside the planned training.
+
+### Surfaces
+
+Five surfaces available: Gym Boulder, Kilter Board, MoonBoard, Other Board, Gym Routes (Lead/Top-rope). All surfaces are always shown.
+
+### Two Modes
+
+**Template Mode**: Choose a preset and get structure.
+- **Volume** — Many problems at moderate grade, moderate rest
+- **Projecting** — Few attempts at your limit, long rest
+- **Endurance** — Many easy problems, short rest
+- **Technique** — Easy problems, focus on movement quality
+
+Each preset shows a **phase compatibility badge** (recommended / caution / not recommended) so you know what fits your current phase. The system computes a target grade based on your max.
+
+**Free Mode**: Just climb and log. You get a phase-appropriate tip and nothing else.
+
+### Logging Climbs
+
+For each climb, you log: grade (Fontainebleau), status (Flash / Sent / Attempted), and number of attempts. For lead routes, additionally: style (Onsight / Flash / Redpoint / Project) and whether you topped out.
+
+### Context
+
+When you start a Free Climbing Session, the system is context-aware:
+- **Planned session not done yet**: It asks if you want to replace it (planned session becomes skipped) or add the free session on top
+- **Planned session already done**: Automatically tagged as add-on
+- **Rest day / no session**: Standalone
+
+### Load
+
+Free climbing sessions generate a load score based on number of climbs, difficulty relative to your max, and send rate. This load feeds into your weekly total — the planner considers it when planning subsequent days.
+
+---
+
+## 12. Confirming Next Week's Availability
+
+Your default availability (days, locations, time slots) is set in **Settings**. But real life changes week to week.
+
+**Weekly Override**: From the **Week** view, you can override availability for any upcoming week. Tap the availability section to:
+
+- Toggle days on/off
+- Change location for specific days (gym, home, outdoor)
+- Select which gym for each day
+
+Overrides are temporary — they only apply to that specific week. Your default settings remain unchanged. The planner merges the override into your availability before generating that week's plan.
+
+**Tip**: Set your overrides for next week before Monday. The planner generates the new week plan on Monday morning based on your availability at that point.
+
+---
+
+## 13. Locations & Equipment
+
+The plan is built around **what equipment you have**, not where you are. Each location (gym, home) has a set of equipment, and each session requires specific equipment. The planner only assigns sessions you can actually do.
+
+### Setting Up
+
+In **Settings → Locations**, configure:
+
+- Your gym(s): name + available equipment (hangboard, campus board, pull-up bar, weights, kettlebell, bench, etc.)
+- Your home setup: what equipment you have at home (hangboard, pull-up bar, weights, etc.)
+- Homewall: if you have a homewall at home, boulder sessions become available for home days
+
+### How It Works
+
+When the planner builds your week, it checks each day's location and available equipment, then selects only sessions whose `required_equipment` is a subset of what you have. If your home gym only has a hangboard and pull-up bar, you won't get sessions that require a campus board or weight bench at home.
+
+### Non-Standard Equipment
+
+If you have equipment that's not in the standard list (e.g., a specific training board, a crack machine, custom setup), contact us at **[your email]** and we'll evaluate adding it to the catalog so the engine can prescribe exercises for it.
+
+---
+
+## 14. Outdoor Sessions
+
+Outdoor climbing is tracked separately from indoor training.
+
+### Setting Up Spots
+
+In **Settings → Outdoor Spots**, add your regular crags with:
+- Name
+- Discipline (lead, boulder, or both)
+- Typical days you visit
+
+### Logging
+
+From the **Outdoor** page:
+- Select the spot
+- Log date, discipline, grades climbed
+- Record conditions (humidity, rock condition, wind)
+- Add notes
+
+Outdoor sessions appear in your weekly timeline. The planner knows about your outdoor days (if you've set them in availability) and plans around them — no indoor sessions are scheduled on outdoor days.
+
+### Stats
+
+The Outdoor page shows: per-spot breakdown, grade histogram, session history, and conditions trends.
+
+---
+
+## 15. Weekly Report
+
+The **Weekly Report** (Reports tab) gives you a snapshot of your training week:
+
+- **Adherence**: How many planned sessions you completed vs. skipped
+- **Load**: Total training load for the week (engine sessions + free sessions + supplementary at 0.5×)
+- **Difficulty Distribution**: How exercises felt across the week (histogram of feedback)
+- **Progression Table**: Which exercises progressed, regressed, or stayed flat
+- **Free Climbing Summary**: If you had free sessions — number of climbs, max grade, send rate, duration
+
+**How to read it**:
+- Adherence > 80% is great. Below 60% consistently means the plan might not match your real schedule — adjust your availability.
+- Load should trend gradually upward within a phase, with drops during deload. Spikes > 10% week-over-week are a yellow flag.
+- If most feedback is "Hard" or "Very Hard", loads will auto-decrease. If most is "Easy", they'll increase. A healthy distribution clusters around "OK".
+
+---
+
+## 16. Tabata Timer
+
+The **Tabata** tab is a standalone configurable interval timer — use it for any timed protocol, not just Tabata.
+
+**Parameters** (all editable):
+- Prepare time (default 10s)
+- Work time (default 40s)
+- Rest time (default 10s)
+- Cycles per set (default 8)
+- Sets (default 1)
+- Rest between sets (default 60s)
+- Cool down (default 0s)
+
+The timer shows total time and intervals computed in real-time. During execution: animated progress ring, phase-colored backgrounds (teal for work, blue for rest), 3-2-1 countdown beeps, and voice encouragement. Expand mode gives you a fullscreen display with large font.
+
+---
+
+## 17. Don't Overtrain — Trust the Process
+
+The biggest risk for motivated climbers isn't under-training — it's doing too much.
+
+**Key principles:**
+
+- **Rest days are training days.** Adaptation happens during recovery, not during the session. The plan includes rest days for a reason.
+- **Don't add sessions to "make up" for missed days.** The system already adapts. Adding volume on top of that creates load spikes — the primary injury risk factor.
+- **Deload is not optional.** Your body needs a full deload week to consolidate gains. Skipping deload leads to plateau or injury.
+- **Follow the phase.** If you're in Base phase and the climbing feels easy, that's correct. Adding limit bouldering because you're bored defeats the purpose of the phase.
+- **Weekly volume increases should stay under 10%.** The system enforces this, but if you're adding free sessions and supplementary work on top, you can exceed safe thresholds.
+- **If you feel consistently beaten up**, check your feedback — are you being honest? Honest "Very Hard" feedback will trigger the system to reduce loads.
+
+**Signs you might be overreaching:**
+- Performance declining over 2+ weeks
+- Sessions feeling consistently harder than expected
+- Completing fewer sessions than usual
+- General fatigue that doesn't resolve with a rest day
+
+If this happens, the system will detect patterns and suggest reducing volume. Listen to it.
+
+---
+
+## 18. Backup & Recovery
+
+### Recovery Code
+
+Your account has a recovery code (format: `CLIMB-XXXX`). Find it in **Settings**. **Save it somewhere safe** — if you lose access to the app (e.g., iOS PWA reinstall clears data), this code is how you get your data back.
+
+To recover: open the app → on the onboarding screen, tap "Recover existing account" → enter your code.
+
+### Export / Import
+
+In **Settings**, you can:
+- **Export**: Download your full training state as a JSON file. Use this as a backup.
+- **Import**: Upload a previously exported state to restore your data.
+
+---
+
+## 19. Need Help?
+
+- **Equipment requests**: If you have non-standard equipment you'd like integrated into your plan, email **[your email]** with details.
+- **Bug reports**: Use the **What's Next** page to submit feedback, or email directly.
+- **Feature requests**: Vote and comment on the **What's Next** page — your input shapes what gets built next.
+
+---
+
+*climb-agent is built on peer-reviewed climbing training science: Hörst, Lattice Training, Eva López, Tyler Nelson, and more. No bro-science. No guessing. Train better, not more.*
