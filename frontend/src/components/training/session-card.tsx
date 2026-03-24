@@ -232,6 +232,11 @@ function buildGuidedState(
   const sessionName = (sessionMeta?.session_name as string) ||
     session.session_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
+  // A141: process cue from API response
+  const processCue = (session as Record<string, unknown>).process_cue as
+    | { id: string; text: string }
+    | undefined;
+
   return {
     version: 1,
     date,
@@ -242,6 +247,7 @@ function buildGuidedState(
     exercises,
     isTestSession: session.tags?.test === true,
     bodyweightKg,
+    processCue,
   };
 }
 

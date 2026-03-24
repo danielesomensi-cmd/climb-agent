@@ -20,6 +20,7 @@ from backend.api.deps import (
 )
 from backend.api.models import TestReminderResponse
 from backend.engine.macrocycle_v1 import compute_pretrip_dates
+from backend.engine.cues import get_session_cue
 from backend.engine.planner_v2 import generate_phase_week, should_show_test_reminder
 from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
@@ -156,6 +157,34 @@ def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
                         session_entry["exercise_feedback"] = fb["exercise_feedback"]
                     if fb.get("session_duration_seconds") is not None:
                         session_entry["session_duration_seconds"] = fb["session_duration_seconds"]
+
+
+def _attach_process_cues(week_plan: dict, user_id: str) -> None:
+    """A141: attach a deterministic process cue to each session entry."""
+    repo_root = str(REPO_ROOT)
+    all_days: list[dict] = []
+    for week_block in week_plan.get("weeks", []):
+        all_days.extend(week_block.get("days", []))
+
+    for i, day_entry in enumerate(all_days):
+        day_date = day_entry.get("date", "")
+        # Check if next day is a rest day (no sessions)
+        next_is_rest = False
+        if i + 1 < len(all_days):
+            next_sessions = all_days[i + 1].get("sessions", [])
+            next_is_rest = len(next_sessions) == 0
+
+        for session_entry in day_entry.get("sessions", []):
+            session_id = session_entry.get("session_id", "")
+            cue = get_session_cue(
+                session_template_id=session_id,
+                date_str=day_date,
+                user_id=user_id,
+                repo_root=repo_root,
+                next_day_is_rest=next_is_rest,
+            )
+            if cue:
+                session_entry["process_cue"] = cue
 
 
 def _current_week_num(macrocycle: dict) -> int:
@@ -351,6 +380,9 @@ def get_week(
 
     # Attach feedback summaries from feedback_log (B32)
     _attach_feedback(week_plan, state.get("feedback_log", []))
+
+    # A141: attach process cues to each session
+    _attach_process_cues(week_plan, user_id or "default")
 
     # Check for periodic test reminder
     test_reminder = should_show_test_reminder(state, ctx["week_num"])

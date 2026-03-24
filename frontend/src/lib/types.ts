@@ -577,6 +577,7 @@ export interface GuidedSessionState {
   isTestSession?: boolean;
   bodyweightKg?: number;
   submitStatus?: "in_progress" | "feedback_pending" | "completed";
+  processCue?: { id: string; text: string };
 }
 
 // -----------------------------------------------------------------------

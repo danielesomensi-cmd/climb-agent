@@ -1,0 +1,152 @@
+[
+  {
+    "id": "cue_001",
+    "text": "Read each problem fully before starting. Where's the crux? Where will you rest?",
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "power_endurance_gym"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_002",
+    "text": "Place every foot so silently that no sound is audible. If your foot makes noise, retry the placement.",
+    "session_types": ["boulder_circuit_gym", "technique_focus_gym", "route_endurance_gym", "regeneration_easy"],
+    "source": "D74/D78"
+  },
+  {
+    "id": "cue_003",
+    "text": "Focus on shoulder engagement \u2014 active hang, not passive. Depress and retract your scapulae before every rep.",
+    "session_types": ["finger_strength_home", "strength_long", "finger_maintenance_gym", "finger_maintenance_home", "finger_aerobic_base", "finger_endurance_short"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_004",
+    "text": "Quality over quantity \u2014 stop the set when form breaks down. A sloppy rep teaches bad patterns.",
+    "session_types": ["complementary_conditioning", "core_training", "heavy_conditioning_gym", "pulling_strength_gym", "upper_body_weights", "legs_strength", "lower_body_gym"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_005",
+    "text": "Count your breaths at every rest position. Breathing rhythm is the foundation of route climbing endurance.",
+    "session_types": ["route_endurance_gym", "endurance_aerobic_gym"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_006",
+    "text": "G-Tox: while resting on the wall, alternate your arms \u2014 overhead for 5s, then down at your side for 5s. Gravity helps clear metabolites faster.",
+    "session_types": ["route_endurance_gym", "endurance_aerobic_gym", "power_endurance_gym"],
+    "source": "D17"
+  },
+  {
+    "id": "cue_007",
+    "text": "Between hard attempts, do 2-3 minutes of easy traversing instead of sitting. Active recovery promotes faster reperfusion than passive rest.",
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "strength_long"],
+    "source": "D48 (Valenzuela 2015)"
+  },
+  {
+    "id": "cue_008",
+    "text": "Before each climb, scan the route bottom to top for 30 seconds. Identify rest spots, the crux, and your clipping positions.",
+    "session_types": ["route_endurance_gym", "technique_focus_gym"],
+    "source": "D75 (Seifert 2017)"
+  },
+  {
+    "id": "cue_009",
+    "text": "Today's focus: hip rotation. On every move, think about turning your hips toward the wall before reaching.",
+    "session_types": ["technique_focus_gym", "boulder_circuit_gym"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_010",
+    "text": "Hover your hand 2cm above the target hold for a full second before grabbing. This prevents lunging and builds precision.",
+    "session_types": ["technique_focus_gym", "boulder_circuit_gym", "regeneration_easy"],
+    "source": "D76 (hover_hands drill)"
+  },
+  {
+    "id": "cue_011",
+    "text": "Downclimb every warm-up problem back to the start. It builds eccentric strength and route-reading in reverse.",
+    "session_types": ["boulder_circuit_gym", "technique_focus_gym", "regeneration_easy"],
+    "source": "D76"
+  },
+  {
+    "id": "cue_012",
+    "text": "If you feel ANY pump during ARC, you're going too hard. Drop the grade. The goal is blood flow, not effort.",
+    "session_types": ["endurance_aerobic_gym", "finger_aerobic_base"],
+    "source": "D45"
+  },
+  {
+    "id": "cue_013",
+    "text": "Rest day tomorrow is part of the plan, not a break from it. Adaptation happens during recovery, not during training.",
+    "session_types": ["_any_last_session_before_rest"],
+    "source": "D79"
+  },
+  {
+    "id": "cue_014",
+    "text": "Squeeze every rep with maximal intent. On hangboard, the difference between 90% effort and 100% effort is the difference between maintenance and adaptation.",
+    "session_types": ["finger_strength_home", "strength_long"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_015",
+    "text": "Try flagging on every move today, even where it's not strictly necessary. Building the habit makes it automatic when you need it.",
+    "session_types": ["technique_focus_gym", "boulder_circuit_gym"],
+    "source": "D76 (flagging_practice)"
+  },
+  {
+    "id": "cue_016",
+    "text": "Pause 2-3 seconds after each move. No dynamic movements. Feel your body position before reaching for the next hold.",
+    "session_types": ["technique_focus_gym", "regeneration_easy"],
+    "source": "D76 (freeze drill, Matros)"
+  },
+  {
+    "id": "cue_017",
+    "text": "Warm up your fingers progressively \u2014 never go from cold to max. Your pulleys need time to reach full physiological slack.",
+    "session_types": ["finger_strength_home", "strength_long", "finger_maintenance_gym", "finger_maintenance_home"],
+    "source": "D33 (Fradkin 2010)"
+  },
+  {
+    "id": "cue_018",
+    "text": "On conditioning exercises, focus on full range of motion. Half reps build half strength.",
+    "session_types": ["complementary_conditioning", "heavy_conditioning_gym", "pulling_strength_gym", "upper_body_weights"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_019",
+    "text": "Use open-hand grip whenever possible on the hangboard. Save your crimp for the wall where you actually need it.",
+    "session_types": ["finger_strength_home", "strength_long", "finger_maintenance_gym", "finger_maintenance_home", "finger_aerobic_base", "finger_endurance_short"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_020",
+    "text": "Shake out each arm for 10 seconds between sets. Blood flow is your friend \u2014 help it do its job.",
+    "session_types": ["boulder_circuit_gym", "power_endurance_gym", "route_endurance_gym"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_021",
+    "text": "Today is deload \u2014 resist the temptation to go hard. Your body is consolidating gains from the last phase. Trust the process.",
+    "session_types": ["deload_recovery", "easy_climbing_deload"],
+    "source": "D79"
+  },
+  {
+    "id": "cue_022",
+    "text": "Engage your core before every dynamic move. A split second of tension through your midsection transfers power from feet to hands.",
+    "session_types": ["boulder_circuit_gym", "power_contact_gym"],
+    "source": "D78"
+  },
+  {
+    "id": "cue_023",
+    "text": "Eccentric control wins. On every pull-up, lower yourself in 3-4 seconds. The descent builds more strength than the ascent.",
+    "session_types": ["pulling_strength_gym", "complementary_conditioning", "heavy_conditioning_gym"],
+    "source": "D39 (Earp 2016)"
+  },
+  {
+    "id": "cue_024",
+    "text": "Stare at the foothold for 2 seconds after placing your foot. This builds precision and trust in your placements.",
+    "session_types": ["technique_focus_gym", "boulder_circuit_gym", "regeneration_easy"],
+    "source": "D76 (target_practice)"
+  },
+  {
+    "id": "cue_025",
+    "text": "Breathe. Exhale on the hardest part of each move. Holding your breath increases blood pressure and wastes energy.",
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "route_endurance_gym", "power_endurance_gym"],
+    "source": "D78"
+  }
+]

@@ -20,10 +20,10 @@
 | 4: Warm-Up | D33, D36, D74 | 🟡 Partial | Warmup via template (non funzione dedicata). Nessun PAP. silent_feet esiste ma non in warmup |
 | 5: Intensity System (EL) | D34, D52, D14 | 🔲 Not started | Zero codice EL/intensity/load monitoring |
 | 6: Hangboard Logic | D35, D49 | 🟡 Partial | D35 ✅ experience gate (<2yr blocks MaxHangs/MED). Deferred: D49 (method restriction) |
-| 7: Endurance & Intervals | D47, D48, D53 | 🟡 Partial | 4x4 esiste. Mancano: varied-intensity, active recovery, g-tox |
-| 8: Conditioning & Ratio | D51, D54, D58, D59, D73, D78 | 🟡 Partial | face_pull + band_pull_apart + planks. Mancano: ratio, technique allocation, process cues |
+| 7: Endurance & Intervals | D47, D48, D53 | 🟡 Partial | 4x4 esiste. D48 absorbed into process cues (A141). Mancano: varied-intensity |
+| 8: Conditioning & Ratio | D51, D54, D58, D59, D73, D78 | 🟡 Partial | face_pull + band_pull_apart + planks. D78 ✅ process cues (A141). Mancano: ratio, technique allocation |
 | 9: Periodization & Load | D19-D21, D44, D45, D69-D71 | 🟡 Partial | min_weeks esiste. Mancano: beginner linear, overreach, ACWR, OTS, volume cap |
-| 10: Coaching & UX | D17, D29, D30, D41, D64-D67, D75, D77, D79 | 🟡 Partial | D64 ✅ RED-S guardrails (audit + permanent test). Remaining: coaching cues, safety drills, UX educativo |
+| 10: Coaching & UX | D17, D29, D30, D41, D64-D67, D75, D77, D79 | 🟡 Partial | D64 ✅ RED-S guardrails. D17 ✅ G-Tox cue (A141). D30 ✅ fall practice drill (A141). Remaining: D29, D41, D65-D67, D75, D77, D79 |
 
 ---
 

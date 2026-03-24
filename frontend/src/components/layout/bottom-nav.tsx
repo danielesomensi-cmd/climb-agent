@@ -21,16 +21,9 @@ const tabs = [
     icon: "M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z",
   },
   {
-    href: "/tabata",
-    label: "Tabata",
-    // Timer/stopwatch icon
-    icon: "M12 6v6l4 2m-4-8a8 8 0 110 16 8 8 0 010-16zm0-4v2m0-2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1z",
-    paths: [
-      { d: "M12 22c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9 4.97 9 9 9z" },
-      { d: "M12 6v6l4 2" },
-      { d: "M10 2h4" },
-      { d: "M12 2v2" },
-    ],
+    href: "/plan",
+    label: "Plan",
+    icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
   },
   {
     href: "/free-session",
@@ -47,9 +40,9 @@ const tabs = [
 
 const moreItems = [
   {
-    href: "/plan",
-    label: "Plan",
-    icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z",
+    href: "/tabata",
+    label: "Tabata",
+    icon: "M12 6v6l4 2m-4-8a8 8 0 110 16 8 8 0 010-16zm0-4v2m0-2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1z",
   },
   {
     href: "/whats-next",

@@ -9011,6 +9011,57 @@
       ],
       "load_model": "grade_relative",
       "video_url": null
+    },
+    {
+      "id": "fall_practice",
+      "name": "Intentional Fall Practice",
+      "category": "technique",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_lead"
+      ],
+      "pattern": "technique_drill",
+      "technique_subcategory": "relaxation",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_lead_specific",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "lead_wall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "phase_affinity": ["strength_power", "power_endurance", "performance"],
+      "experience_minimum_years": 0,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Progressive: start with short falls (30cm above clip), increase to 1m, then 2m. Always with a trusted belayer. Focus on posture: push away from wall, feet facing wall, knees slightly bent. NEVER on terrain with ledge-fall risk."
+      },
+      "stress_tags": {
+        "elbow": "none",
+        "fingers": "none",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Practice taking intentional falls on lead to build confidence and reduce fear response. Progressive: start with short falls, increase distance over sessions. Source: Garrido-Palomino (2023) RCT — intentional fall practice significantly reduces fear of falling.",
+      "cues": [
+        "Step 1: Fall from 30cm above last clip (rope tight)",
+        "Step 2: Fall from 1m above clip",
+        "Step 3: Fall from 2m above (normal lead fall)",
+        "Step 4: Partner calls 'fall' from unexpected positions",
+        "Do 3-5 falls per step — push away from wall, feet facing wall, knees slightly bent"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     }
   ]
 }

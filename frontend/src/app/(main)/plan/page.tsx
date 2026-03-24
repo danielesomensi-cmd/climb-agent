@@ -16,6 +16,7 @@ import {
   optionToPreserveBefore,
   type RegenerateStartOption,
 } from "@/components/training/regenerate-plan-sheet";
+import { PERIODIZATION_RATIONALE, PHASE_RATIONALES } from "@/lib/phase-rationales";
 import type { Phase } from "@/lib/types";
 
 /** Phase labels */
@@ -53,6 +54,8 @@ function computeCurrentWeek(startDate: string): number {
 export default function PlanPage() {
   const { state, loading, error, refresh } = useUserState();
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
+  const [expandedRationale, setExpandedRationale] = useState<string | null>(null);
+  const [aboutPlanOpen, setAboutPlanOpen] = useState(false);
   const [isStale, setIsStale] = useState(false);
   const [staleDismissed, setStaleDismissed] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -233,6 +236,30 @@ export default function PlanPage() {
               </div>
             )}
 
+            {/* About your plan — expandable */}
+            <button
+              type="button"
+              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setAboutPlanOpen((prev) => !prev)}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{aboutPlanOpen ? "Hide" : "About your plan"}</span>
+              <svg className={`h-3.5 w-3.5 transition-transform ${aboutPlanOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            {aboutPlanOpen && (
+              <Card>
+                <CardContent className="pt-4">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {PERIODIZATION_RATIONALE.text}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Phase details */}
             <div className="space-y-3">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -311,6 +338,47 @@ export default function PlanPage() {
                                 </Badge>
                               ))}
                             </div>
+                          </div>
+                        )}
+
+                        {/* About this phase — rationale */}
+                        {PHASE_RATIONALES[phase.energy_system] && (
+                          <div>
+                            <button
+                              type="button"
+                              className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-300 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setExpandedRationale((prev) =>
+                                  prev === phase.phase_id ? null : phase.phase_id
+                                );
+                              }}
+                            >
+                              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span>About this phase</span>
+                              <svg className={`h-3.5 w-3.5 transition-transform ${expandedRationale === phase.phase_id ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            {expandedRationale === phase.phase_id && (() => {
+                              const r = PHASE_RATIONALES[phase.energy_system];
+                              return (
+                                <div className="mt-2 text-xs text-zinc-400 space-y-2 pl-5">
+                                  <p className="leading-relaxed">{r.text}</p>
+                                  {r.duration_note && (
+                                    <p className="text-amber-400/80">{r.duration_note}</p>
+                                  )}
+                                  {r.common_mistake && (
+                                    <p className="text-red-400/70">Common mistake: {r.common_mistake}</p>
+                                  )}
+                                  {r.what_to_expect && (
+                                    <p className="text-emerald-400/70">{r.what_to_expect}</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </CardContent>

@@ -60,7 +60,7 @@ class TestClimbingEquipment(unittest.TestCase):
         """Check if an exercise declares any climbing surface requirement."""
         eq = e.get("equipment_required", [])
         eq_any = e.get("equipment_required_any", [])
-        wall_tags = {"gym_boulder", "gym_routes", "spraywall", "board_kilter"}
+        wall_tags = {"gym_boulder", "gym_routes", "spraywall", "board_kilter", "lead_wall"}
         return bool(set(eq) & wall_tags) or bool(set(eq_any) & wall_tags)
 
     def test_gym_climbing_exercises_have_wall_requirement(self):
