@@ -262,9 +262,12 @@ export default function PlanPage() {
 
             {/* Phase details */}
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-                Phase details
-              </h2>
+              <div>
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                  Phase details
+                </h2>
+                <p className="text-xs text-zinc-500 mt-1">Tap a phase and open &quot;About this phase&quot; for the science behind each training block.</p>
+              </div>
 
               {macrocycle.phases.map((phase: Phase) => {
                 const isExpanded = expandedPhase === phase.phase_id;
