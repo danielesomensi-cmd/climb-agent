@@ -2,7 +2,22 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw } from "lucide-react";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +49,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
-import { getExercises, addExerciseToSession } from "@/lib/api";
+import { getExercises, addExerciseToSession, removeExerciseFromSession, reorderSessionExercises } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 
@@ -539,6 +554,55 @@ function AddExerciseDialog({
   );
 }
 
+// ─── Sortable Exercise Item (A153) ──────────────────────────────────
+
+interface SortableExerciseItemProps {
+  id: string;
+  children: React.ReactNode;
+  canEdit: boolean;
+  onRemove?: () => void;
+}
+
+function SortableExerciseItem({ id, children, canEdit, onRemove }: SortableExerciseItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled: !canEdit });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-start gap-1">
+      {canEdit && (
+        <button
+          className="mt-3 touch-none text-muted-foreground/50 hover:text-muted-foreground cursor-grab active:cursor-grabbing shrink-0"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" />
+        </button>
+      )}
+      <div className="flex-1 min-w-0">{children}</div>
+      {canEdit && onRemove && (
+        <button
+          className="mt-3 text-muted-foreground/40 hover:text-red-500 transition-colors shrink-0"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Session Card ────────────────────────────────────────────────────
 
 export function SessionCard({
@@ -560,7 +624,58 @@ export function SessionCard({
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
+  const [exerciseToRemove, setExerciseToRemove] = useState<{ index: number; name: string } | null>(null);
+  const [reorderWarningShown, setReorderWarningShown] = useState(false);
   const router = useRouter();
+
+  // DnD sensors — require 8px drag distance to avoid accidental drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+  );
+
+  const handleRemoveExercise = useCallback(async (exerciseIndex: number) => {
+    if (!weekPlan) return;
+    try {
+      await removeExerciseFromSession({
+        date,
+        session_index: sessionIndex,
+        exercise_index: exerciseIndex,
+        week_plan: weekPlan,
+      });
+      onSessionUpdated?.();
+    } catch {
+      // Silently fail — user sees no change
+    }
+  }, [weekPlan, date, sessionIndex, onSessionUpdated]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent, instanceCount: number) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !weekPlan) return;
+
+    // IDs are "exercise-{instanceIdx}"
+    const oldIndex = Number((active.id as string).replace("exercise-", ""));
+    const overIndex = Number((over.id as string).replace("exercise-", ""));
+
+    // Build new order: swap the two items
+    const order = Array.from({ length: instanceCount }, (_, i) => i);
+    const [removed] = order.splice(oldIndex, 1);
+    order.splice(overIndex, 0, removed);
+
+    if (!reorderWarningShown) setReorderWarningShown(true);
+
+    try {
+      await reorderSessionExercises({
+        date,
+        session_index: sessionIndex,
+        new_order: order,
+        week_plan: weekPlan,
+      });
+      onSessionUpdated?.();
+    } catch {
+      // Silently fail
+    }
+  }, [weekPlan, date, sessionIndex, onSessionUpdated, reorderWarningShown]);
 
   // Compute available equipment for this session (expanded with implicit items)
   const availableEquipment = useMemo<Set<string> | null>(() => {
@@ -729,7 +844,7 @@ export function SessionCard({
                 );
               }
 
-              const items: Array<{ type: "instruction"; block: Record<string, unknown> } | { type: "exercise"; inst: Record<string, unknown> }> = [];
+              const items: Array<{ type: "instruction"; block: Record<string, unknown>; instanceIdx?: undefined } | { type: "exercise"; inst: Record<string, unknown>; instanceIdx: number }> = [];
               const usedIdx = new Set<number>();
 
               for (const block of allBlocks) {
@@ -741,70 +856,100 @@ export function SessionCard({
                 } else {
                   for (let i = 0; i < allInstances.length; i++) {
                     if (!usedIdx.has(i) && (allInstances[i].block_uid as string) === blockUid) {
-                      items.push({ type: "exercise", inst: allInstances[i] });
+                      items.push({ type: "exercise", inst: allInstances[i], instanceIdx: i });
                       usedIdx.add(i);
                     }
                   }
                 }
               }
               for (let i = 0; i < allInstances.length; i++) {
-                if (!usedIdx.has(i)) items.push({ type: "exercise", inst: allInstances[i] });
+                if (!usedIdx.has(i)) items.push({ type: "exercise", inst: allInstances[i], instanceIdx: i });
               }
 
+              const canEditExercises = !isFinalized && !!weekPlan;
+              const exerciseSortableIds = items
+                .filter((it) => it.type === "exercise")
+                .map((it) => `exercise-${it.instanceIdx}`);
+
+              const renderExerciseCard = (ex: Record<string, unknown>, i: number) => {
+                const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
+                const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
+                const exerciseId = (ex.exercise_id as string) ?? "";
+                const actualMatch = session.actual_exercises?.find(
+                  (a) => a.exercise_id === exerciseId && !a.hand,
+                );
+                return (
+                  <ExerciseCard
+                    key={`${exerciseId}-${i}`}
+                    exercise={{
+                      exercise_id: exerciseId,
+                      name: (ex.name as string) ?? exerciseId.replace(/_/g, " ") ?? "",
+                      sets: prescription.sets as number | undefined,
+                      reps: prescription.reps != null ? String(prescription.reps) : undefined,
+                      load_kg: prescription.load_kg as number | undefined,
+                      rest_s: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
+                      tempo: prescription.tempo as string | undefined,
+                      notes: prescription.notes as string | undefined,
+                      suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
+                      suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
+                      load_source: suggested.load_source as string | undefined,
+                      category: (ex.category as string) ?? undefined,
+                      testField: (ex.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
+                    }}
+                    feedbackLevel={session.exercise_feedback?.[exerciseId]}
+                    actual={actualMatch}
+                    rawExercise={ex}
+                  />
+                );
+              };
+
               return (
-                <div className="space-y-1.5">
-                  {items.map((item, i) => {
-                    if (item.type === "instruction") {
-                      const instr = (item.block.instructions ?? {}) as Record<string, unknown>;
-                      const notes = (instr.notes ?? []) as string[];
-                      const dur = instr.duration_min_range as [number, number] | undefined;
-                      const blockId = (item.block.block_id as string) ?? "";
-                      return (
-                        <div key={`instr-${i}`} className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                          <span className="text-primary mt-0.5 text-xs font-medium shrink-0">
-                            {dur ? `${dur[0]}–${dur[1]} min` : ""}
-                          </span>
-                          <div className="text-xs text-muted-foreground">
-                            <span className="font-medium text-foreground">
-                              {blockId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                            </span>
-                            {notes[0] && <span className="ml-1">— {notes[0]}</span>}
-                          </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, allInstances.length)}>
+                  <SortableContext items={exerciseSortableIds} strategy={verticalListSortingStrategy}>
+                    <div className="space-y-1.5">
+                      {/* Reorder warning banner (shown once per session on first reorder) */}
+                      {reorderWarningShown && (
+                        <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-400">
+                          <span>L&apos;ordine è stato ottimizzato per sicurezza e prestazioni. Puoi comunque personalizzarlo.</span>
+                          <button className="shrink-0 underline" onClick={() => setReorderWarningShown(false)}>OK</button>
                         </div>
-                      );
-                    }
-                    const ex = item.inst;
-                    const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
-                    const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
-                    const exerciseId = (ex.exercise_id as string) ?? "";
-                    const actualMatch = session.actual_exercises?.find(
-                      (a) => a.exercise_id === exerciseId && !a.hand,
-                    );
-                    return (
-                      <ExerciseCard
-                        key={`${exerciseId}-${i}`}
-                        exercise={{
-                          exercise_id: exerciseId,
-                          name: (ex.name as string) ?? exerciseId.replace(/_/g, " ") ?? "",
-                          sets: prescription.sets as number | undefined,
-                          reps: prescription.reps != null ? String(prescription.reps) : undefined,
-                          load_kg: prescription.load_kg as number | undefined,
-                          rest_s: (prescription.rest_between_sets_seconds ?? prescription.rest_s) as number | undefined,
-                          tempo: prescription.tempo as string | undefined,
-                          notes: prescription.notes as string | undefined,
-                          suggested_external_load_kg: suggested.suggested_external_load_kg as number | undefined,
-                          suggested_total_load_kg: suggested.suggested_total_load_kg as number | undefined,
-                          load_source: suggested.load_source as string | undefined,
-                          category: (ex.category as string) ?? undefined,
-                          testField: (ex.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
-                        }}
-                        feedbackLevel={session.exercise_feedback?.[exerciseId]}
-                        actual={actualMatch}
-                        rawExercise={ex}
-                      />
-                    );
-                  })}
-                </div>
+                      )}
+                      {items.map((item, i) => {
+                        if (item.type === "instruction") {
+                          const instr = (item.block.instructions ?? {}) as Record<string, unknown>;
+                          const notes = (instr.notes ?? []) as string[];
+                          const dur = instr.duration_min_range as [number, number] | undefined;
+                          const blockId = (item.block.block_id as string) ?? "";
+                          return (
+                            <div key={`instr-${i}`} className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                              <span className="text-primary mt-0.5 text-xs font-medium shrink-0">
+                                {dur ? `${dur[0]}–${dur[1]} min` : ""}
+                              </span>
+                              <div className="text-xs text-muted-foreground">
+                                <span className="font-medium text-foreground">
+                                  {blockId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                                </span>
+                                {notes[0] && <span className="ml-1">— {notes[0]}</span>}
+                              </div>
+                            </div>
+                          );
+                        }
+                        const sortableId = `exercise-${item.instanceIdx}`;
+                        const exName = (item.inst.name as string) ?? (item.inst.exercise_id as string) ?? "";
+                        return (
+                          <SortableExerciseItem
+                            key={sortableId}
+                            id={sortableId}
+                            canEdit={canEditExercises}
+                            onRemove={canEditExercises && allInstances.length > 1 ? () => setExerciseToRemove({ index: item.instanceIdx, name: exName }) : undefined}
+                          >
+                            {renderExerciseCard(item.inst, i)}
+                          </SortableExerciseItem>
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
               );
             })()}
 
@@ -969,6 +1114,30 @@ export function SessionCard({
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => onRemove?.()}
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Remove Exercise confirmation (A153) */}
+      <AlertDialog open={!!exerciseToRemove} onOpenChange={(open) => { if (!open) setExerciseToRemove(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove exercise?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove &ldquo;{exerciseToRemove?.name}&rdquo; from this session?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (exerciseToRemove) handleRemoveExercise(exerciseToRemove.index);
+                setExerciseToRemove(null);
+              }}
             >
               Remove
             </AlertDialogAction>

@@ -1198,3 +1198,227 @@ class TestAddExercise:
         assert added["attributes"]["test_unit"] == "seconds"
         assert added["load_model"] == "bodyweight_only"
         assert added["unilateral"] is False
+
+    def test_add_exercise_rejected_on_completed_session(self):
+        """A153: Cannot add exercise to done session (immutability invariant)."""
+        wp = self._mock_week_plan()
+        wp["weeks"][0]["days"][0]["sessions"][0]["status"] = "done"
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "dead_hang_easy",
+            "week_plan": wp,
+        })
+        assert r.status_code == 409
+
+    def test_add_exercise_rejected_on_skipped_session(self):
+        """A153: Cannot add exercise to skipped session (immutability invariant)."""
+        wp = self._mock_week_plan()
+        wp["weeks"][0]["days"][0]["sessions"][0]["status"] = "skipped"
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "dead_hang_easy",
+            "week_plan": wp,
+        })
+        assert r.status_code == 409
+
+
+class TestRemoveExercise:
+    """Tests for POST /api/session/remove-exercise (A153)."""
+
+    @staticmethod
+    def _mock_week_plan():
+        """Resolved session with 3 exercises."""
+        return {
+            "start_date": "2026-01-05",
+            "weeks": [{
+                "days": [
+                    {
+                        "date": "2026-01-05",
+                        "weekday": "monday",
+                        "sessions": [{
+                            "slot": "evening",
+                            "session_id": "finger_strength_gym",
+                            "location": "gym",
+                            "resolved": {
+                                "session_load_score": 20,
+                                "resolved_session": {
+                                    "exercise_instances": [
+                                        {"exercise_id": "max_hang_20mm", "exercise_name": "Max Hang 20mm",
+                                         "prescription": {"sets": 5}, "source": "resolver"},
+                                        {"exercise_id": "dead_hang_easy", "exercise_name": "Dead Hang Easy",
+                                         "prescription": {"sets": 3}, "source": "resolver"},
+                                        {"exercise_id": "pull_up_weighted", "exercise_name": "Pull Up Weighted",
+                                         "prescription": {"sets": 4}, "source": "user_added"},
+                                    ],
+                                },
+                            },
+                        }],
+                    },
+                ],
+            }],
+        }
+
+    def test_remove_exercise_from_planned_session(self):
+        """A153: Remove middle exercise, verify remaining exercises."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/remove-exercise", json={
+            "date": "2026-01-05", "session_index": 0, "exercise_index": 1, "week_plan": wp,
+        })
+        assert r.status_code == 200
+        instances = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0] \
+            ["resolved"]["resolved_session"]["exercise_instances"]
+        assert len(instances) == 2
+        assert instances[0]["exercise_id"] == "max_hang_20mm"
+        assert instances[1]["exercise_id"] == "pull_up_weighted"
+
+    def test_remove_exercise_updates_load_score(self):
+        """A153: Load score recalculates after removal."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/remove-exercise", json={
+            "date": "2026-01-05", "session_index": 0, "exercise_index": 0, "week_plan": wp,
+        })
+        assert r.status_code == 200
+        score = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0] \
+            ["resolved"]["session_load_score"]
+        assert isinstance(score, (int, float))
+
+    def test_remove_exercise_from_completed_session_rejected(self):
+        """A153: Cannot remove exercise from done session."""
+        wp = self._mock_week_plan()
+        wp["weeks"][0]["days"][0]["sessions"][0]["status"] = "done"
+        r = client.post("/api/session/remove-exercise", json={
+            "date": "2026-01-05", "session_index": 0, "exercise_index": 0, "week_plan": wp,
+        })
+        assert r.status_code == 409
+
+    def test_remove_exercise_from_skipped_session_rejected(self):
+        """A153: Cannot remove exercise from skipped session."""
+        wp = self._mock_week_plan()
+        wp["weeks"][0]["days"][0]["sessions"][0]["status"] = "skipped"
+        r = client.post("/api/session/remove-exercise", json={
+            "date": "2026-01-05", "session_index": 0, "exercise_index": 0, "week_plan": wp,
+        })
+        assert r.status_code == 409
+
+    def test_remove_last_exercise_blocked(self):
+        """A153: Cannot remove the only exercise in a session."""
+        wp = self._mock_week_plan()
+        # Keep only 1 exercise
+        wp["weeks"][0]["days"][0]["sessions"][0]["resolved"]["resolved_session"]["exercise_instances"] = [
+            {"exercise_id": "max_hang_20mm", "exercise_name": "Max Hang", "prescription": {"sets": 5}, "source": "resolver"},
+        ]
+        r = client.post("/api/session/remove-exercise", json={
+            "date": "2026-01-05", "session_index": 0, "exercise_index": 0, "week_plan": wp,
+        })
+        assert r.status_code == 422
+        assert "last exercise" in r.json()["detail"].lower()
+
+    def test_remove_exercise_index_out_of_range(self):
+        """A153: Out-of-range exercise_index returns 422."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/remove-exercise", json={
+            "date": "2026-01-05", "session_index": 0, "exercise_index": 99, "week_plan": wp,
+        })
+        assert r.status_code == 422
+
+
+class TestReorderExercises:
+    """Tests for POST /api/session/reorder-exercises (A153)."""
+
+    @staticmethod
+    def _mock_week_plan():
+        """Resolved session with 4 exercises."""
+        return {
+            "start_date": "2026-01-05",
+            "weeks": [{
+                "days": [
+                    {
+                        "date": "2026-01-05",
+                        "weekday": "monday",
+                        "sessions": [{
+                            "slot": "evening",
+                            "session_id": "finger_strength_gym",
+                            "location": "gym",
+                            "resolved": {
+                                "session_load_score": 30,
+                                "resolved_session": {
+                                    "exercise_instances": [
+                                        {"exercise_id": "ex_a", "exercise_name": "A"},
+                                        {"exercise_id": "ex_b", "exercise_name": "B"},
+                                        {"exercise_id": "ex_c", "exercise_name": "C"},
+                                        {"exercise_id": "ex_d", "exercise_name": "D"},
+                                    ],
+                                },
+                            },
+                        }],
+                    },
+                ],
+            }],
+        }
+
+    def test_reorder_valid_permutation(self):
+        """A153: Reorder exercises with valid permutation."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/reorder-exercises", json={
+            "date": "2026-01-05", "session_index": 0,
+            "new_order": [3, 0, 1, 2], "week_plan": wp,
+        })
+        assert r.status_code == 200
+        instances = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0] \
+            ["resolved"]["resolved_session"]["exercise_instances"]
+        assert [i["exercise_id"] for i in instances] == ["ex_d", "ex_a", "ex_b", "ex_c"]
+
+    def test_reorder_preserves_all_instances(self):
+        """A153: No exercise lost after reorder — set equality."""
+        wp = self._mock_week_plan()
+        original_ids = {"ex_a", "ex_b", "ex_c", "ex_d"}
+        r = client.post("/api/session/reorder-exercises", json={
+            "date": "2026-01-05", "session_index": 0,
+            "new_order": [2, 3, 0, 1], "week_plan": wp,
+        })
+        assert r.status_code == 200
+        instances = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0] \
+            ["resolved"]["resolved_session"]["exercise_instances"]
+        assert {i["exercise_id"] for i in instances} == original_ids
+
+    def test_reorder_invalid_permutation_wrong_length(self):
+        """A153: Wrong-length new_order rejected."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/reorder-exercises", json={
+            "date": "2026-01-05", "session_index": 0,
+            "new_order": [0, 1], "week_plan": wp,
+        })
+        assert r.status_code == 422
+
+    def test_reorder_invalid_permutation_duplicate_index(self):
+        """A153: Duplicate indices in new_order rejected."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/reorder-exercises", json={
+            "date": "2026-01-05", "session_index": 0,
+            "new_order": [0, 0, 1, 2], "week_plan": wp,
+        })
+        assert r.status_code == 422
+
+    def test_reorder_immutable_session_rejected(self):
+        """A153: Cannot reorder exercises in done session."""
+        wp = self._mock_week_plan()
+        wp["weeks"][0]["days"][0]["sessions"][0]["status"] = "done"
+        r = client.post("/api/session/reorder-exercises", json={
+            "date": "2026-01-05", "session_index": 0,
+            "new_order": [3, 2, 1, 0], "week_plan": wp,
+        })
+        assert r.status_code == 409
+
+    def test_reorder_identity_permutation(self):
+        """A153: Identity permutation is a valid no-op."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/reorder-exercises", json={
+            "date": "2026-01-05", "session_index": 0,
+            "new_order": [0, 1, 2, 3], "week_plan": wp,
+        })
+        assert r.status_code == 200
+        instances = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0] \
+            ["resolved"]["resolved_session"]["exercise_instances"]
+        assert [i["exercise_id"] for i in instances] == ["ex_a", "ex_b", "ex_c", "ex_d"]

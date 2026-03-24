@@ -10,7 +10,12 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import REPO_ROOT, get_user_id, load_state, save_state
-from backend.api.models import AddExerciseRequest, SessionResolveRequest
+from backend.api.models import (
+    AddExerciseRequest,
+    RemoveExerciseRequest,
+    ReorderExercisesRequest,
+    SessionResolveRequest,
+)
 from backend.engine.resolve_session import resolve_session
 
 router = APIRouter(prefix="/api/session", tags=["session"])
@@ -18,6 +23,16 @@ router = APIRouter(prefix="/api/session", tags=["session"])
 SESSIONS_DIR = "backend/catalog/sessions/v1"
 TEMPLATES_DIR = "backend/catalog/templates/v1"
 EXERCISES_PATH = "backend/catalog/exercises/v1/exercises.json"
+
+
+def _assert_session_mutable(session: dict, date: str) -> None:
+    """Raise 409 if session is completed/skipped (immutability invariant B120)."""
+    status = session.get("status")
+    if status in ("done", "skipped"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot modify session with status '{status}' on {date}",
+        )
 
 
 def _load_exercises_catalog() -> dict:
@@ -89,6 +104,8 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
         )
 
     session = sessions[req.session_index]
+    _assert_session_mutable(session, req.date)
+
     resolved = session.get("resolved")
     if not resolved:
         raise HTTPException(status_code=422, detail="Session not yet resolved")
@@ -128,6 +145,106 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     )
     resolved["session_load_score"] = round(min(85, raw_fatigue * 1.5))
 
+    _persist_week_plan(week_plan, state, user_id)
+
+    return {"week_plan": week_plan}
+
+
+def _find_session(week_plan: dict, date: str, session_index: int):
+    """Locate day, session, resolved data in week_plan. Returns (day, session, resolved, exercise_instances)."""
+    target_day = None
+    for day in week_plan.get("weeks", [{}])[0].get("days", []):
+        if day.get("date") == date:
+            target_day = day
+            break
+    if target_day is None:
+        raise HTTPException(status_code=404, detail=f"Date not found in plan: {date}")
+
+    sessions = target_day.get("sessions", [])
+    if session_index < 0 or session_index >= len(sessions):
+        raise HTTPException(
+            status_code=422,
+            detail=f"session_index {session_index} out of range (day has {len(sessions)} sessions)",
+        )
+
+    session = sessions[session_index]
+    resolved = session.get("resolved")
+    if not resolved:
+        raise HTTPException(status_code=422, detail="Session not yet resolved")
+
+    exercise_instances = resolved.get("resolved_session", {}).get("exercise_instances", [])
+    return target_day, session, resolved, exercise_instances
+
+
+def _recalc_load_score(resolved: dict, exercise_instances: list) -> None:
+    """Recalculate session_load_score after exercise list changes."""
+    catalog = _load_exercises_catalog()
+    fatigue_map = {e_id: catalog[e_id].get("fatigue_cost", 0) for e_id in catalog}
+    raw_fatigue = sum(
+        fatigue_map.get(inst.get("exercise_id"), 0)
+        for inst in exercise_instances
+    )
+    resolved["session_load_score"] = round(min(85, raw_fatigue * 1.5))
+
+
+@router.post("/remove-exercise")
+def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends(get_user_id)):
+    """Remove an exercise from a resolved session."""
+    state = load_state(user_id)
+    week_plan = req.week_plan
+    if not week_plan:
+        raise HTTPException(status_code=422, detail="week_plan is required")
+
+    _, session, resolved, exercise_instances = _find_session(week_plan, req.date, req.session_index)
+    _assert_session_mutable(session, req.date)
+
+    if req.exercise_index < 0 or req.exercise_index >= len(exercise_instances):
+        raise HTTPException(
+            status_code=422,
+            detail=f"exercise_index {req.exercise_index} out of range (session has {len(exercise_instances)} exercises)",
+        )
+
+    if len(exercise_instances) <= 1:
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot remove the last exercise — session must have at least one exercise",
+        )
+
+    exercise_instances.pop(req.exercise_index)
+    _recalc_load_score(resolved, exercise_instances)
+    _persist_week_plan(week_plan, state, user_id)
+
+    return {"week_plan": week_plan}
+
+
+@router.post("/reorder-exercises")
+def reorder_exercises(req: ReorderExercisesRequest, user_id: Optional[str] = Depends(get_user_id)):
+    """Reorder exercises in a resolved session."""
+    state = load_state(user_id)
+    week_plan = req.week_plan
+    if not week_plan:
+        raise HTTPException(status_code=422, detail="week_plan is required")
+
+    _, session, resolved, exercise_instances = _find_session(week_plan, req.date, req.session_index)
+    _assert_session_mutable(session, req.date)
+
+    n = len(exercise_instances)
+    new_order = req.new_order
+
+    # Validate: must be a valid permutation
+    if len(new_order) != n:
+        raise HTTPException(
+            status_code=422,
+            detail=f"new_order length {len(new_order)} != exercise count {n}",
+        )
+    if sorted(new_order) != list(range(n)):
+        raise HTTPException(
+            status_code=422,
+            detail="new_order must be a valid permutation (each index 0..N-1 exactly once)",
+        )
+
+    reordered = [exercise_instances[i] for i in new_order]
+    resolved["resolved_session"]["exercise_instances"] = reordered
     _persist_week_plan(week_plan, state, user_id)
 
     return {"week_plan": week_plan}

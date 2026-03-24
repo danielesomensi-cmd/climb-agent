@@ -216,7 +216,15 @@ You can modify a resolved session in several ways:
 
 From the **Today** or **Week** page, tap a session card's menu to add exercises. The system shows compatible exercises filtered by your equipment and the session's focus. The added exercise gets a prescription calculated from your current working loads.
 
-### Removing or Skipping an Exercise
+### Removing an Exercise
+
+Expand a planned session card and tap the trash icon (🗑) next to any exercise to remove it. A confirmation dialog will appear. You cannot remove the last exercise — a session must always have at least one. Completed or skipped sessions cannot be modified.
+
+### Reordering Exercises
+
+Exercises are ordered by the engine for safety and performance (e.g., warmup → main → cooldown). If you want a different order, grab the drag handle (≡) on the left of any exercise and drag it to the desired position. A one-time warning reminds you that the default order is optimized.
+
+### Skipping an Exercise
 
 Within the guided session, you can skip any exercise. If you consistently skip an exercise, your feedback will signal the system to adjust.
 

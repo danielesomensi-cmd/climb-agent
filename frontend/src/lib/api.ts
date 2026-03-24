@@ -140,6 +140,28 @@ export const addExerciseToSession = (data: {
     body: JSON.stringify(data),
   });
 
+export const removeExerciseFromSession = (data: {
+  date: string;
+  session_index: number;
+  exercise_index: number;
+  week_plan: WeekPlan;
+}) =>
+  request<{ week_plan: WeekPlan }>("/api/session/remove-exercise", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const reorderSessionExercises = (data: {
+  date: string;
+  session_index: number;
+  new_order: number[];
+  week_plan: WeekPlan;
+}) =>
+  request<{ week_plan: WeekPlan }>("/api/session/reorder-exercises", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
 // Replanner
 export const applyOverride = (data: {
   intent: string;
