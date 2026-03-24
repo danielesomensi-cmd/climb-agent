@@ -342,7 +342,7 @@ export default function PlanPage() {
                         )}
 
                         {/* About this phase — rationale */}
-                        {PHASE_RATIONALES[phase.energy_system] && (
+                        {PHASE_RATIONALES[phase.phase_id] && (
                           <div>
                             <button
                               type="button"
@@ -363,7 +363,7 @@ export default function PlanPage() {
                               </svg>
                             </button>
                             {expandedRationale === phase.phase_id && (() => {
-                              const r = PHASE_RATIONALES[phase.energy_system];
+                              const r = PHASE_RATIONALES[phase.phase_id];
                               return (
                                 <div className="mt-2 text-xs text-zinc-400 space-y-2 pl-5">
                                   <p className="leading-relaxed">{r.text}</p>
