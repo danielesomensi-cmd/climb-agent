@@ -674,8 +674,8 @@ export function SessionCard({
         week_plan: weekPlan,
       });
       onSessionUpdated?.();
-    } catch {
-      // Silently fail — user sees no change
+    } catch (err) {
+      console.error("[B153c] remove exercise FAILED:", err);
     }
   }, [weekPlan, date, sessionIndex, onSessionUpdated]);
 
@@ -699,14 +699,17 @@ export function SessionCard({
     if (!reorderWarningShown) setReorderWarningShown(true);
 
     try {
-      await reorderSessionExercises({
+      console.log("[B153c] reorder API call:", { date, session_index: sessionIndex, new_order: newOrder, has_week_plan: !!weekPlan, start_date: (weekPlan as unknown as Record<string, unknown>)?.start_date });
+      const result = await reorderSessionExercises({
         date,
         session_index: sessionIndex,
         new_order: newOrder,
         week_plan: weekPlan,
       });
+      console.log("[B153c] reorder API success");
       onSessionUpdated?.();
-    } catch {
+    } catch (err) {
+      console.error("[B153c] reorder API FAILED:", err);
       // Revert optimistic update on failure
       setLocalOrder(null);
       setReorderPending(false);

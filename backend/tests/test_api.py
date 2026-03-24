@@ -1454,3 +1454,92 @@ class TestReorderExercises:
         assert r.status_code == 200
         session = r.json()["week_plan"]["weeks"][0]["days"][0]["sessions"][0]
         assert session.get("_user_edited") is True
+
+
+class TestReorderPersistsE2E:
+    """B153c: End-to-end test — reorder must survive GET /api/week reload."""
+
+    ONBOARDING_PAYLOAD = {
+        "profile": {"name": "E2E", "age": 30, "weight_kg": 75, "height_cm": 178},
+        "experience": {"climbing_years": 5, "structured_training_years": 2},
+        "grades": {"lead_max_rp": "7b+", "lead_max_os": "7a"},
+        "goal": {
+            "goal_type": "lead_grade", "discipline": "lead",
+            "target_grade": "7c+", "target_style": "redpoint",
+            "current_grade": "7b+", "deadline": "2026-09-30",
+        },
+        "self_eval": {"primary_weakness": "pump_too_early", "secondary_weakness": "fingers_give_out"},
+        "tests": {}, "limitations": [],
+        "equipment": {
+            "home_enabled": True, "home": ["hangboard", "pullup_bar"],
+            "gyms": [{"name": "Gym", "equipment": ["gym_boulder", "hangboard", "campus_board"]}],
+        },
+        "availability": {
+            "mon": {"evening": {"available": True, "preferred_location": "home"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym"}},
+            "fri": {"evening": {"available": True, "preferred_location": "home"}},
+            "sat": {"morning": {"available": True, "preferred_location": "gym"}},
+        },
+        "planning_prefs": {"hard_day_cap_per_week": 3, "target_training_days_per_week": 4},
+        "trips": [],
+    }
+
+    def _setup_and_get_session(self):
+        """Onboard, get week, find first planned session with 2+ exercises."""
+        r = client.post("/api/onboarding/complete", json=self.ONBOARDING_PAYLOAD)
+        assert r.status_code == 200, r.text
+
+        r = client.get("/api/week/0")
+        assert r.status_code == 200, r.text
+        week_plan = r.json()["week_plan"]
+
+        for day in week_plan["weeks"][0]["days"]:
+            for si, sess in enumerate(day.get("sessions", [])):
+                if sess.get("status") in ("done", "skipped"):
+                    continue
+                resolved = sess.get("resolved")
+                if not resolved:
+                    continue
+                instances = resolved.get("resolved_session", {}).get("exercise_instances", [])
+                if len(instances) >= 2:
+                    return week_plan, day["date"], si, [inst["exercise_id"] for inst in instances]
+
+        pytest.skip("No planned session with 2+ exercises found")
+
+    def test_reorder_persists_across_week_reload(self):
+        """B153c: Reorder exercises, then GET /api/week/0 — order must match."""
+        week_plan, date, session_index, original_ids = self._setup_and_get_session()
+        n = len(original_ids)
+
+        # Reverse the exercise order
+        new_order = list(range(n - 1, -1, -1))
+        expected_ids = [original_ids[i] for i in new_order]
+
+        # Reorder via API
+        r = client.post("/api/session/reorder-exercises", json={
+            "date": date, "session_index": session_index,
+            "new_order": new_order, "week_plan": week_plan,
+        })
+        assert r.status_code == 200, r.text
+
+        # Verify reorder response has new order
+        resp_plan = r.json()["week_plan"]
+        resp_day = next(d for d in resp_plan["weeks"][0]["days"] if d["date"] == date)
+        resp_instances = resp_day["sessions"][session_index]["resolved"]["resolved_session"]["exercise_instances"]
+        resp_ids = [inst["exercise_id"] for inst in resp_instances]
+        assert resp_ids == expected_ids, f"Reorder response wrong: {resp_ids} != {expected_ids}"
+
+        # THE CRITICAL TEST: reload via GET /api/week/0
+        r2 = client.get("/api/week/0")
+        assert r2.status_code == 200, r2.text
+        reloaded_plan = r2.json()["week_plan"]
+        reloaded_day = next(d for d in reloaded_plan["weeks"][0]["days"] if d["date"] == date)
+        reloaded_instances = reloaded_day["sessions"][session_index]["resolved"]["resolved_session"]["exercise_instances"]
+        reloaded_ids = [inst["exercise_id"] for inst in reloaded_instances]
+
+        assert reloaded_ids == expected_ids, (
+            f"REORDER DID NOT PERSIST! After GET /api/week/0:\n"
+            f"  Expected: {expected_ids}\n"
+            f"  Got:      {reloaded_ids}\n"
+            f"  Original: {original_ids}"
+        )
