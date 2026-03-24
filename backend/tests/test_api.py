@@ -1142,3 +1142,59 @@ class TestAddExercise:
         assert added["prescription"]["sets"] == 5
         assert added["prescription"]["reps"] == 3
         assert added["prescription"]["load_kg"] == 20
+
+    def test_add_exercise_applies_catalog_defaults(self):
+        """D152: prescription_defaults from catalog are applied when no override."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "test_l_sit_hold",
+            "week_plan": wp,
+        })
+        assert r.status_code == 200
+        updated = r.json()["week_plan"]
+        day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-05")
+        added = day["sessions"][0]["resolved"]["resolved_session"]["exercise_instances"][-1]
+        # Catalog defaults: sets=1, reps=null, work_seconds=null
+        assert added["prescription"]["sets"] == 1
+        assert added["prescription"].get("reps") is None
+        assert added["prescription"].get("work_seconds") is None
+        assert "notes" in added["prescription"]
+
+    def test_add_exercise_override_merges_with_catalog_defaults(self):
+        """D152: Override merges on top of catalog defaults, not empty dict."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "test_l_sit_hold",
+            "prescription_override": {"sets": 2},
+            "week_plan": wp,
+        })
+        assert r.status_code == 200
+        updated = r.json()["week_plan"]
+        day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-05")
+        added = day["sessions"][0]["resolved"]["resolved_session"]["exercise_instances"][-1]
+        # Override sets, keep catalog notes
+        assert added["prescription"]["sets"] == 2
+        assert "notes" in added["prescription"]
+
+    def test_add_exercise_propagates_category_and_attributes(self):
+        """D152: test_measurement exercises get category, attributes, load_model, unilateral."""
+        wp = self._mock_week_plan()
+        r = client.post("/api/session/add-exercise", json={
+            "date": "2026-01-05",
+            "session_index": 0,
+            "exercise_id": "test_l_sit_hold",
+            "week_plan": wp,
+        })
+        assert r.status_code == 200
+        updated = r.json()["week_plan"]
+        day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-05")
+        added = day["sessions"][0]["resolved"]["resolved_session"]["exercise_instances"][-1]
+        assert added["category"] == "test_measurement"
+        assert added["attributes"]["test_field"] == "l_sit_hold_seconds"
+        assert added["attributes"]["test_unit"] == "seconds"
+        assert added["load_model"] == "bodyweight_only"
+        assert added["unilateral"] is False

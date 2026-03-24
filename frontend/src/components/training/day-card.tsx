@@ -556,7 +556,7 @@ export function DayCard({
                 />
               ))}
 
-            {/* Free climbing sessions (A138) */}
+            {/* Free sessions (A138) */}
             {freeSessions && freeSessions.length > 0 && freeSessions.map((fs) => {
               const surfaceName = fs.surface === "gym_boulder" ? "Gym Boulder" :
                 fs.surface === "board_kilter" ? "Kilter" :
@@ -642,7 +642,7 @@ export function DayCard({
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
               >
                 <Plus className="size-3" />
-                Log extra climbing
+                Log extra session
               </Link>
             )}
 

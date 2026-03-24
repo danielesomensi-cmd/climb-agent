@@ -23,7 +23,7 @@ Last verified: 2026-03-24 at 1335 tests.
 8. [Modifying a Session](#8-modifying-a-session)
 9. [Adding Extra Sessions (Quick-Add & Supplementary)](#9-adding-extra-sessions)
 10. [Replanning Your Week](#10-replanning-your-week)
-11. [Free Climbing Sessions](#11-free-climbing-sessions)
+11. [Free Sessions](#11-free-sessions)
 12. [Confirming Next Week's Availability](#12-confirming-next-weeks-availability)
 13. [Locations & Equipment](#13-locations--equipment)
 14. [Outdoor Sessions](#14-outdoor-sessions)
@@ -250,9 +250,9 @@ The Quick-Add dialog also offers supplementary sessions — non-climbing work yo
 
 Supplementary sessions count as an active training day for adherence and their load counts toward your weekly total. They do not trigger replanning or macrocycle adaptation.
 
-### Free Climbing Session
+### Free Session
 
-You can also add a free climbing session from Quick-Add. See [Section 11](#11-free-climbing-sessions).
+You can also add a free session from Quick-Add. See [Section 11](#11-free-sessions).
 
 ---
 
@@ -273,9 +273,9 @@ The replanner handles **ripple effects** — when you change a day's intent, it 
 
 ---
 
-## 11. Free Climbing Sessions
+## 11. Free Sessions
 
-Free Climbing Sessions let you log unstructured climbing — bouldering, board sessions, or route climbing outside the planned training.
+Free Sessions let you log unstructured climbing — bouldering, board sessions, or route climbing outside the planned training.
 
 ### Surfaces
 
@@ -299,14 +299,14 @@ For each climb, you log: grade (Fontainebleau), status (Flash / Sent / Attempted
 
 ### Context
 
-When you start a Free Climbing Session, the system is context-aware:
+When you start a Free Session, the system is context-aware:
 - **Planned session not done yet**: It asks if you want to replace it (planned session becomes skipped) or add the free session on top
 - **Planned session already done**: Automatically tagged as add-on
 - **Rest day / no session**: Standalone
 
 ### Load
 
-Free climbing sessions generate a load score based on number of climbs, difficulty relative to your max, and send rate. This load feeds into your weekly total — the planner considers it when planning subsequent days.
+Free sessions generate a load score based on number of climbs, difficulty relative to your max, and send rate. This load feeds into your weekly total — the planner considers it when planning subsequent days.
 
 ---
 

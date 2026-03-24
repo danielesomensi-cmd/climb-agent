@@ -103,7 +103,7 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
         raise HTTPException(status_code=404, detail=f"Exercise not found: {req.exercise_id}")
 
     # Build exercise instance with defaults from catalog or override
-    default_prescription = exercise.get("default_prescription", {})
+    default_prescription = exercise.get("prescription_defaults", {})
     prescription = {**default_prescription, **(req.prescription_override or {})}
 
     new_instance = {
@@ -111,6 +111,10 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
         "exercise_name": exercise.get("name", req.exercise_id),
         "prescription": prescription,
         "source": "user_added",
+        "category": exercise.get("category", ""),
+        "attributes": exercise.get("attributes") or {},
+        "load_model": exercise.get("load_model"),
+        "unilateral": bool(exercise.get("unilateral")),
     }
 
     exercise_instances.append(new_instance)

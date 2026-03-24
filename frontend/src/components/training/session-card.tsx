@@ -276,10 +276,13 @@ function AddExerciseDialog({
   const [selected, setSelected] = useState<Exercise | null>(null);
   const [sets, setSets] = useState(3);
   const [reps, setReps] = useState(10);
+  const [workSeconds, setWorkSeconds] = useState<number | null>(null);
   const [loadKg, setLoadKg] = useState<number | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [isTestMeasurement, setIsTestMeasurement] = useState(false);
+  const [isDurationBased, setIsDurationBased] = useState(false);
 
   useEffect(() => {
     if (open && catalog.length === 0) {
@@ -342,8 +345,14 @@ function AddExerciseDialog({
   const selectExercise = useCallback((ex: Exercise) => {
     setSelected(ex);
     const defaults = ex.prescription_defaults ?? {};
-    setSets((defaults.sets as number) ?? 3);
-    setReps((defaults.reps as number) ?? 10);
+    const testMeas = ex.category === "test_measurement";
+    const ws = (defaults.work_seconds as number | null) ?? null;
+    const durationBased = !testMeas && ws != null && ws > 0;
+    setIsTestMeasurement(testMeas);
+    setIsDurationBased(durationBased);
+    setSets((defaults.sets as number) ?? (testMeas ? 1 : 3));
+    setReps((defaults.reps as number) ?? (testMeas ? 0 : 10));
+    setWorkSeconds(ws);
     setLoadKg((defaults.load_kg as number | undefined) ?? 0);
     setError(null);
   }, []);
@@ -353,8 +362,18 @@ function AddExerciseDialog({
     setSubmitting(true);
     setError(null);
     try {
-      const overrides: Record<string, unknown> = { sets, reps };
-      if (loadKg != null) overrides.load_kg = loadKg;
+      const overrides: Record<string, unknown> = { sets };
+      if (isTestMeasurement) {
+        // test_measurement: no reps, no load, no work_seconds — user reports result in guided mode
+        overrides.reps = null;
+        overrides.work_seconds = null;
+      } else if (isDurationBased) {
+        overrides.work_seconds = workSeconds;
+        if (reps) overrides.reps = reps;
+      } else {
+        overrides.reps = reps;
+      }
+      if (loadKg != null && !isTestMeasurement) overrides.load_kg = loadKg;
       const payload = {
         date,
         session_index: sessionIndex,
@@ -447,39 +466,61 @@ function AddExerciseDialog({
               <div className="text-xs text-muted-foreground mt-0.5">{Array.isArray(selected.domain) ? selected.domain.join(", ") : selected.domain}</div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-xs">Sets</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={20}
-                  value={sets}
-                  onChange={(e) => setSets(Number(e.target.value))}
-                />
+            {isTestMeasurement ? (
+              <div className="rounded-md border border-primary/30 bg-primary/5 p-3">
+                <p className="text-sm font-medium">1 × max attempt</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  You&apos;ll record the result during the guided session.
+                </p>
               </div>
-              <div>
-                <Label className="text-xs">Reps</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={reps}
-                  onChange={(e) => setReps(Number(e.target.value))}
-                />
+            ) : (
+              <div className={`grid ${isDurationBased ? "grid-cols-3" : "grid-cols-3"} gap-3`}>
+                <div>
+                  <Label className="text-xs">Sets</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={sets}
+                    onChange={(e) => setSets(Number(e.target.value))}
+                  />
+                </div>
+                {isDurationBased ? (
+                  <div>
+                    <Label className="text-xs">Duration (s)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={600}
+                      value={workSeconds ?? 0}
+                      onChange={(e) => setWorkSeconds(Number(e.target.value))}
+                    />
+                  </div>
+                ) : (
+                  <div>
+                    <Label className="text-xs">Reps</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={reps}
+                      onChange={(e) => setReps(Number(e.target.value))}
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label className="text-xs">Additional weight (kg)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={loadKg ?? 0}
+                    onChange={(e) => setLoadKg(e.target.value ? Number(e.target.value) : 0)}
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-1">Added to bodyweight. Enter 0 for BW only.</p>
+                </div>
               </div>
-              <div>
-                <Label className="text-xs">Additional weight (kg)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  value={loadKg ?? 0}
-                  onChange={(e) => setLoadKg(e.target.value ? Number(e.target.value) : 0)}
-                />
-                <p className="text-[10px] text-muted-foreground mt-1">Added to bodyweight. Enter 0 for BW only.</p>
-              </div>
-            </div>
+            )}
 
             {error && <p className="text-xs text-red-500">{error}</p>}
 

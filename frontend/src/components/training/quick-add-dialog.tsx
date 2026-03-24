@@ -294,8 +294,8 @@ export function QuickAddDialog({
                 >
                   <div className="flex items-center gap-2">
                     <Grip className="size-4 text-purple-400" />
-                    <span className="font-medium">Free climbing session</span>
-                    <span className="text-xs text-muted-foreground ml-auto">Boulder, board, lead</span>
+                    <span className="font-medium">Free session</span>
+                    <span className="text-xs text-muted-foreground ml-auto">Boulder, board, lead, core</span>
                   </div>
                 </button>
               )}

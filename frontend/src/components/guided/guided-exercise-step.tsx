@@ -56,6 +56,8 @@ function formatPrescription(ex: GuidedExercise): string[] {
     } else {
       lines.push(`${p.workSeconds}s`);
     }
+  } else if (p.sets && !p.reps && !p.workSeconds) {
+    lines.push(`${p.sets} × max`);
   }
 
   // Rest info

@@ -257,7 +257,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "adding-extra-sessions",
     title: "Adding Extra Sessions",
     searchText:
-      "quick-add supplementary training upper body legs gym heavy conditioning pulling free climbing session extra",
+      "quick-add supplementary training upper body legs gym heavy conditioning pulling free session extra",
     body: (
       <>
         <H3>Quick-Add (Climbing Sessions)</H3>
@@ -273,8 +273,8 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           <Li><B>Pulling</B> &mdash; Dedicated pulling session (gym)</Li>
         </Ul>
         <P>Supplementary sessions count as an active training day and their load counts toward your weekly total. They do not trigger replanning or macrocycle adaptation.</P>
-        <H3>Free Climbing Session</H3>
-        <P>You can also add a free climbing session from Quick-Add.</P>
+        <H3>Free Session</H3>
+        <P>You can also add a free session from Quick-Add.</P>
       </>
     ),
   },
@@ -301,12 +301,12 @@ export const GUIDE_SECTIONS: GuideSection[] = [
   },
   {
     id: "free-climbing-sessions",
-    title: "Free Climbing Sessions",
+    title: "Free Sessions",
     searchText:
-      "free climbing session surfaces gym boulder kilter moonboard board routes core circuit template mode volume projecting endurance technique flash sent attempted onsight redpoint context standalone add-on replacement load score phase compatibility",
+      "free session surfaces gym boulder kilter moonboard board routes core circuit template mode volume projecting endurance technique flash sent attempted onsight redpoint context standalone add-on replacement load score phase compatibility",
     body: (
       <>
-        <P>Free Climbing Sessions let you log unstructured climbing &mdash; bouldering, board sessions, or route climbing outside the planned training.</P>
+        <P>Free Sessions let you log unstructured climbing &mdash; bouldering, board sessions, or route climbing outside the planned training.</P>
         {/* IMAGE: free_session_surfaces — screenshot of free session surface picker */}
         <H3>Surfaces</H3>
         <P>Six surfaces available: Gym Boulder, Kilter Board, MoonBoard, Other Board, Gym Routes (Lead/Top-rope), and Core Circuit.</P>
@@ -329,7 +329,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           <Li><B>Rest day / no session</B>: Standalone</Li>
         </Ul>
         <H3>Load</H3>
-        <P>Free climbing sessions generate a load score based on climbs, difficulty relative to your max, and send rate. This feeds into your weekly total.</P>
+        <P>Free sessions generate a load score based on climbs, difficulty relative to your max, and send rate. This feeds into your weekly total.</P>
       </>
     ),
   },
@@ -394,7 +394,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "weekly-report",
     title: "Weekly Report",
     searchText:
-      "weekly report adherence load difficulty distribution progression table free climbing summary feedback hard easy ok",
+      "weekly report adherence load difficulty distribution progression table free session summary feedback hard easy ok",
     body: (
       <>
         <P>The <B>Weekly Report</B> (Reports tab) gives you a snapshot of your training week:</P>
@@ -404,7 +404,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           <Li><B>Load</B>: Total training load (engine sessions + free sessions + supplementary)</Li>
           <Li><B>Difficulty Distribution</B>: How exercises felt across the week</Li>
           <Li><B>Progression Table</B>: Which exercises progressed, regressed, or stayed flat</Li>
-          <Li><B>Free Climbing Summary</B>: Climbs, max grade, send rate, duration</Li>
+          <Li><B>Free Session Summary</B>: Climbs, max grade, send rate, duration</Li>
         </Ul>
         <H3>How to read it</H3>
         <Ul>
