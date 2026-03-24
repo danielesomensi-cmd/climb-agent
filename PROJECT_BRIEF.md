@@ -23,7 +23,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Sessions (active) | 33 |
 | Templates | 26 |
 | API endpoints | 49 |
-| Frontend pages | 30 |
+| Frontend pages | 31 |
 | Frontend components | 58 |
 <!-- STATUS_TABLE_END -->
 
