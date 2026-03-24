@@ -242,6 +242,7 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 - Analyze before implementing — wait for explicit OK on non-trivial changes.
 - Run tests before committing. Run `python scripts/sync_status.py` after every dev session.
 - After closing any roadmap item: update `docs/ROADMAP_CURRENT.md` in the same commit.
+- After any A (feature) or B (bugfix) brief that changes user-facing behavior: check if `docs/user_guide_v1.md` needs updating. If yes, update in the same commit.
 - Code and documentation must always be aligned. Never leave an implemented item marked as open.
 - Pre-push hook runs `sync_status.py` automatically. If counters are stale, the push is blocked — commit the sync changes first.
 - Push at end of session: `git add -A && git commit -m 'description' && git push`
