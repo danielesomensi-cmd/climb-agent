@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, GripVertical } from "lucide-react";
 import {
@@ -692,11 +693,13 @@ export function SessionCard({
     const currentOrder = localOrder ?? Array.from({ length: serverInstances.length }, (_, i) => i);
     const newOrder = arrayMove(currentOrder, activePos, overPos);
 
-    // Optimistic update — UI reflects new order immediately
-    setLocalOrder(newOrder);
-    setReorderPending(true);
-
-    if (!reorderWarningShown) setReorderWarningShown(true);
+    // B155b: flushSync forces DOM update before @dnd-kit clears transforms,
+    // preventing the visual snap-back to original position
+    flushSync(() => {
+      setLocalOrder(newOrder);
+      setReorderPending(true);
+      if (!reorderWarningShown) setReorderWarningShown(true);
+    });
 
     try {
       const result = await reorderSessionExercises({
