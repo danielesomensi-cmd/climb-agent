@@ -99,10 +99,22 @@ def _parse_date(value: str):
 
 
 def _find_day(plan: Dict[str, Any], target_date: str) -> Dict[str, Any]:
-    for day in plan["weeks"][0]["days"]:
-        if day.get("date") == target_date:
-            return day
-    raise ValueError(f"Date not present in plan: {target_date}")
+    # B157: search all weeks in the plan, not just weeks[0]
+    for week_block in plan.get("weeks", []):
+        for day in week_block.get("days", []):
+            if day.get("date") == target_date:
+                return day
+    # Build helpful error with available date range
+    all_dates = [
+        d.get("date", "?")
+        for wb in plan.get("weeks", [])
+        for d in wb.get("days", [])
+    ]
+    date_range = f"{all_dates[0]}..{all_dates[-1]}" if all_dates else "empty"
+    raise ValueError(
+        f"Date not present in plan: {target_date} (plan covers {date_range}). "
+        f"Go back to the week view and retry."
+    )
 
 
 def _default_gym_id_from_plan(plan: Dict[str, Any]) -> Optional[str]:

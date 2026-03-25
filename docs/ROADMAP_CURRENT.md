@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-22
+> Last updated: 2026-03-25
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -32,6 +32,7 @@
 All P1 items completed (30 items). See archived history in `docs/ROADMAP_v2.md`.
 
 Recently closed (2026-03-25):
+- **B157** — Three bugs from live session. Fix 1: `campus_bumps` prescription simplified — removed `rest_between_hands_seconds` (unsupported by timer), changed to alternating-hand sets (6×4, 150s rest), removed `unilateral: true` (not needed for alternating pattern), cues rewritten for R/L/R/L sequence. Fix 2: R/L weight input no longer shown for `bodyweight_only` unilateral exercises — added `loadModel !== "bodyweight_only"` guard in guided-exercise-step.tsx. Fix 3: guided session completion no longer fails with "Date not present in plan" for future-week sessions — frontend now calculates correct `week_num` from session date vs macrocycle start_date instead of always fetching week 0. Backend safety net: `_find_day()` in replanner_v1.py now searches all weeks (not just `weeks[0]`) with descriptive error message showing plan date range. Same fix applied to `session.py` add/remove/reorder endpoints.
 - **B156** — Session UX Fixes (6 items). Fix 1 [P1 BUG]: test_measurement exercises added via Add Exercise to non-test sessions now persist results — `_update_test_from_log` guard relaxed to check feedback items with `test_` prefix exercise IDs. Fix 2 [P1 UX]: countup stopwatch for timed test exercises (L-sit hold, max hang duration) — wall-clock based (iOS Safari safe), 5-min cap, auto-fills result field. Fix 3 [P2]: new `warmup_easy_boulders` exercise + inserted in `warmup_climbing` template after upper_activation — progressive climbing activation before hard work. Fix 4 [P2 CATALOG]: `campus_bumps` rewritten — `unilateral: true` flag, `rest_between_hands_seconds: 120`, explicit R/L cue sequence, sets 5→3. Fix 5 [P3 CATALOG]: `active_hip_mobility` added to `warmup_climbing` template after dynamic_mobility_flow — CARs/leg swings/90-90 for drop-knee/flag prep. Fix 6 [P2.5 FEATURE]: per-exercise `notes` field in guided session feedback — collapsible textarea (500 char max), persisted in feedback log, backend truncation validation, ignored by progression engine (informational only). 1 new exercise (180 total). 7 new tests (1363 total).
 
 Recently closed (2026-03-24):
@@ -81,6 +82,7 @@ Recently closed (2026-03-20):
 - **A135** — Tabata timer tab. New `/tabata` page with fully configurable interval timer (7 parameters: prepare, work, rest, cycles, sets, set rest, cool down). Setup screen with +/- buttons + tap-to-edit numeric input. Running timer with wall-clock engine (iOS Safari PWA safe), animated SVG progress ring, phase-colored backgrounds (teal work, blue rest, grey prepare/cooldown), 3-2-1 countdown beeps, voice encouragement (30% random phrases from A123 pool). Expand mode (fullscreen 120px font). Completion screen with stats grid + restart. Bottom nav restructured: Today | Week | Tabata | Free | More (drawer with Plan, What's next, Settings, Outdoor, Reports). Free Session placeholder page added.
 
 Recently closed (2026-03-25):
+- **B158** — Planner Pass 1 uses budget fix. Root cause: temporary day-specific skips (hard_gap, finger_gap, pretrip_deload, intensity_reduced) burned `primary_uses` budget, exhausting it before later days were reached. With 6 gym days in S&P phase, `strength_long` was never placed because budget ran out at Fri (5 skips) before Sat (valid gap). Fix: `permanent_skip` flag — only `max_per_week` and `hard_cap` violations burn uses. Temporary spacing skips advance the rotation pointer but preserve budget for later days. Result: Daniele's S&P plan now gets 3 hard sessions (limit_boulder_gym + power_contact_gym + strength_long) instead of 2. 4 new tests (1381 total).
 - **D154 Phase 1** — Fix S&P climbing distribution. `finger_strength_home` metadata corrected (`climbing: False`). New `limit_boulder_gym` session (dedicated limit projecting, distinct from `power_contact_gym`). Added to S&P primary pool (lead + boulder). SESSION_META entry added. Process cues updated. 13 new tests (1376 total, 34 sessions).
 
 Recently closed (2026-03-19):

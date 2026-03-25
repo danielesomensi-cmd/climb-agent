@@ -722,31 +722,34 @@ def generate_phase_week(
             meta = _SESSION_META[sid]
 
             skip = False
+            permanent_skip = False  # B157: only permanent skips burn the uses budget
 
-            # Anti-repetition: max N times per week (default 1)
+            # Anti-repetition: max N times per week (default 1) — PERMANENT
             max_pw = meta.get("max_per_week", 1)
             if session_count.get(sid, 0) >= max_pw:
                 skip = True
+                permanent_skip = True
 
-            # Other-activity intensity reduction: no hard sessions on reduced day
+            # Other-activity intensity reduction: no hard sessions on reduced day — TEMPORARY
             if not skip and day_intensity_reduced[offset] and meta["hard"]:
                 skip = True
 
-            # Pre-trip deload: no hard/max sessions on pretrip dates
+            # Pre-trip deload: no hard/max sessions on pretrip dates — TEMPORARY
             if not skip and day_dates[offset] in pretrip_set and (meta["hard"] or meta["intensity"] == "max"):
                 skip = True
 
-            # Hard day cap
+            # Hard day cap — PERMANENT
             if not skip and meta["hard"] and hard_days >= effective_hard_cap:
                 skip = True
+                permanent_skip = True
 
-            # No consecutive finger days (48h+ gap, extended by D83 recovery multiplier)
+            # No consecutive finger days (48h+ gap, extended by D83 recovery multiplier) — TEMPORARY
             if not skip and meta["finger"] and finger_day_offsets:
                 last_finger_offset = finger_day_offsets[-1]
                 if (offset - last_finger_offset) <= finger_gap_days:
                     skip = True
 
-            # No consecutive hard/max-intensity days (extended by D83 recovery multiplier)
+            # No consecutive hard/max-intensity days (extended by D83 recovery multiplier) — TEMPORARY
             if not skip and meta["hard"] and hard_day_offsets:
                 last_hard_offset = hard_day_offsets[-1]
                 if (offset - last_hard_offset) <= hard_gap_days:
@@ -754,7 +757,8 @@ def generate_phase_week(
 
             if skip:
                 primary_idx += 1
-                primary_uses += 1
+                if permanent_skip:
+                    primary_uses += 1
                 attempts += 1
                 continue
 

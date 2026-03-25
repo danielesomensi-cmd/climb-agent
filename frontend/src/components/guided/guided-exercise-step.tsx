@@ -907,8 +907,8 @@ export function GuidedExerciseStep({
               </div>
             )}
 
-            {/* Editable load fields — unilateral (per-hand), not shown for unilateral tests */}
-            {isUnilateral && !isTestMeasurement && !isUnilateralTest && (
+            {/* Editable load fields — unilateral (per-hand), not shown for unilateral tests or bodyweight exercises */}
+            {isUnilateral && !isTestMeasurement && !isUnilateralTest && exercise.loadModel !== "bodyweight_only" && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">
                   Actual load used (kg)

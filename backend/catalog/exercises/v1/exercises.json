@@ -2092,7 +2092,6 @@
       "name": "Campus Bumps (Touch-and-Go)",
       "category": "main_strength",
       "time_min": 18,
-      "unilateral": true,
       "role": [
         "main"
       ],
@@ -2114,13 +2113,12 @@
         "finger_sensitive"
       ],
       "prescription_defaults": {
-        "sets": 3,
+        "sets": 6,
         "reps": 4,
         "work_seconds": null,
         "rest_between_reps_seconds": null,
-        "rest_between_sets_seconds": 180,
-        "rest_between_hands_seconds": 120,
-        "notes": "Unilateral campus power. Perform all reps with one leading hand, rest 2 min, then switch. A full set = right + left."
+        "rest_between_sets_seconds": 150,
+        "notes": "Alternate leading hand each set: RIGHT, LEFT, RIGHT, LEFT, RIGHT, LEFT. Each hand gets 3 sets total."
       },
       "stress_tags": {
         "fingers": "high",
@@ -2128,12 +2126,11 @@
         "cns": "high",
         "skin": "medium"
       },
-      "description": "Unilateral campus power: one hand locks on a rung while the other bumps up 1-2 rungs in quick succession. Perform all reps with one leading hand, rest, then switch. Trains explosive contact strength and deep lock-off. (Hörst, Gresham)",
+      "description": "Unilateral campus power. Alternate leading hand each set: RIGHT set \u2192 rest \u2192 LEFT set \u2192 rest. Each hand gets 3 sets total. One set = 4 bumps with one hand while the other locks on a lower rung. Trains explosive contact strength and deep lock-off. (H\u00f6rst, Gresham)",
       "cues": [
-        "RIGHT hand first: lock left hand low, bump right hand up 1-2 rungs \u00d7 4 bumps",
-        "Rest 2 minutes between hands",
-        "LEFT hand: lock right hand low, bump left hand up \u00d7 4 bumps",
-        "Rest 3 minutes between sets (a full set = right + left)",
+        "Alternate hands every set: RIGHT, LEFT, RIGHT, LEFT, RIGHT, LEFT",
+        "Each set: lock one hand low, bump the other up 1-2 rungs \u00d7 4 bumps",
+        "2:30 rest between every set \u2014 each hand gets ~5 min recovery between its sets",
         "Maximum explosive power \u2014 quality over quantity",
         "Stop immediately if you feel finger or elbow pain"
       ],

@@ -310,8 +310,29 @@ export default function GuidedSessionPage() {
         return ex;
       });
 
-      // 1. Fetch fresh week plan and mark session done
-      const weekData = await getWeek(0);
+      // 1. Fetch fresh week plan for the session's date (not always week 0)
+      // B157: calculate correct week_num from session date vs macrocycle start
+      let weekNum = 0;
+      try {
+        const userState = await getState();
+        const mcStart = userState.macrocycle?.start_date;
+        if (mcStart && state.date) {
+          const mcMonday = new Date(mcStart + "T00:00:00");
+          const sessionDate = new Date(state.date + "T00:00:00");
+          // Session's Monday (ISO week: Monday = 1)
+          const sessionDay = sessionDate.getDay();
+          const sessionMonday = new Date(sessionDate);
+          sessionMonday.setDate(sessionDate.getDate() - ((sessionDay + 6) % 7));
+          const diffMs = sessionMonday.getTime() - mcMonday.getTime();
+          const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+          weekNum = diffWeeks + 1; // 1-based
+          if (weekNum < 1) weekNum = 0; // fallback to current
+        }
+      } catch {
+        // Fallback: use week 0 (current) if state fetch fails
+        weekNum = 0;
+      }
+      const weekData = await getWeek(weekNum);
       const weekPlan: WeekPlan = weekData.week_plan;
 
       await applyEvents({

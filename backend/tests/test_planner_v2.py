@@ -1449,5 +1449,118 @@ class TestD150AvailabilityCompliance(unittest.TestCase):
                                 "Thu/Fri (real availability) should not be dropped in favor of empty-dict days")
 
 
+class TestB157TemporarySkipBudget(unittest.TestCase):
+    """B157: temporary skips (hard_gap, finger_gap) must NOT burn primary_uses budget.
+
+    Root cause: the Pass 1 circular rotation exhausted its budget on
+    day-specific constraint skips, preventing sessions from being placed
+    on later days where the constraints were satisfied.
+    """
+
+    @staticmethod
+    def _daniele_availability():
+        """6 gym days + 1 home day — real-world S&P availability."""
+        return {
+            "mon": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "bkl"}},
+            "tue": {"evening": {"available": True, "preferred_location": "home"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "cocque"}},
+            "thu": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "cocque"}},
+            "fri": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "work"}},
+            "sat": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "cocque"}},
+            "sun": {"evening": {"available": True, "preferred_location": "gym", "gym_id": "cocque"}},
+        }
+
+    @staticmethod
+    def _daniele_gyms():
+        return [
+            {"gym_id": "bkl", "name": "BKL", "equipment": ["gym_boulder", "spraywall", "hangboard", "campus_board", "pullup_bar"]},
+            {"gym_id": "cocque", "name": "Cocque", "equipment": ["gym_boulder", "gym_routes", "hangboard", "campus_board", "pullup_bar"]},
+            {"gym_id": "work", "name": "Work", "equipment": ["gym_boulder", "hangboard", "pullup_bar"]},
+        ]
+
+    def test_sp_6gym_produces_3_hard_sessions(self):
+        """With 6 gym days and hard_cap=4, S&P must place ≥3 hard sessions."""
+        from backend.engine.planner_v2 import _SESSION_META
+        kwargs = _make_kwargs(
+            "strength_power",
+            availability=self._daniele_availability(),
+            gyms=self._daniele_gyms(),
+            default_gym_id="bkl",
+            hard_cap_per_week=4,
+            planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 4},
+            home_equipment=["hangboard", "pullup_bar", "dumbbell", "band"],
+        )
+        plan = generate_phase_week(**kwargs)
+        days = plan["weeks"][0]["days"]
+        all_sessions = [s for d in days for s in d["sessions"]]
+        hard = [s for s in all_sessions if _SESSION_META.get(s["session_id"], {}).get("hard")]
+        hard_ids = [s["session_id"] for s in hard]
+        self.assertGreaterEqual(len(hard), 3,
+                                f"S&P with 6 gym days should have ≥3 hard sessions, got {len(hard)}: {hard_ids}")
+        # strength_long must be among them — it was previously blocked by budget exhaustion
+        self.assertIn("strength_long", hard_ids,
+                       f"strength_long should be placed on a later day, got: {hard_ids}")
+
+    def test_sp_6gym_strength_long_on_saturday(self):
+        """strength_long should land on Sat (gap from Thu hard ≥ 2)."""
+        from backend.engine.planner_v2 import _SESSION_META
+        kwargs = _make_kwargs(
+            "strength_power",
+            availability=self._daniele_availability(),
+            gyms=self._daniele_gyms(),
+            default_gym_id="bkl",
+            hard_cap_per_week=4,
+            planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 4},
+            home_equipment=["hangboard", "pullup_bar", "dumbbell", "band"],
+        )
+        plan = generate_phase_week(**kwargs)
+        sat = plan["weeks"][0]["days"][5]
+        sat_ids = [s["session_id"] for s in sat["sessions"]]
+        self.assertIn("strength_long", sat_ids,
+                       f"Expected strength_long on Saturday, got: {sat_ids}")
+
+    def test_2_day_availability_permanent_skips_still_work(self):
+        """With only 2 available days, hard_cap and max_per_week still limit correctly."""
+        from backend.engine.planner_v2 import _SESSION_META
+        avail = {
+            "mon": {"evening": {"available": True, "locations": ["gym", "home"]}},
+            "thu": {"evening": {"available": True, "locations": ["gym", "home"]}},
+        }
+        kwargs = _make_kwargs(
+            "strength_power",
+            availability=avail,
+            hard_cap_per_week=2,
+            planning_prefs={"target_training_days_per_week": 2, "hard_day_cap_per_week": 2},
+        )
+        plan = generate_phase_week(**kwargs)
+        days = plan["weeks"][0]["days"]
+        all_sessions = [s for d in days for s in d["sessions"]]
+        hard = [s for s in all_sessions if _SESSION_META.get(s["session_id"], {}).get("hard")]
+        self.assertLessEqual(len(hard), 2,
+                              f"hard_cap=2 must be respected, got {len(hard)} hard sessions")
+        # Each session should appear at most once (max_per_week=1 default)
+        ids = [s["session_id"] for s in all_sessions]
+        for sid in ids:
+            max_pw = _SESSION_META.get(sid, {}).get("max_per_week", 1)
+            self.assertLessEqual(ids.count(sid), max_pw,
+                                  f"{sid} placed {ids.count(sid)} times, max_per_week={max_pw}")
+
+    def test_hard_cap_2_permanent_skip_respected(self):
+        """When hard_cap=2 and 2 hard sessions are placed, no more hard sessions appear."""
+        from backend.engine.planner_v2 import _SESSION_META
+        kwargs = _make_kwargs(
+            "strength_power",
+            hard_cap_per_week=2,
+            planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 2},
+        )
+        plan = generate_phase_week(**kwargs)
+        days = plan["weeks"][0]["days"]
+        all_sessions = [s for d in days for s in d["sessions"]]
+        hard = [s for s in all_sessions if _SESSION_META.get(s["session_id"], {}).get("hard")]
+        self.assertLessEqual(len(hard), 2,
+                              f"hard_cap=2 must be respected even with temporary skip fix, "
+                              f"got {len(hard)}: {[s['session_id'] for s in hard]}")
+
+
 if __name__ == "__main__":
     unittest.main()

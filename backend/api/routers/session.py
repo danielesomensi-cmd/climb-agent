@@ -86,11 +86,14 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     if not week_plan:
         raise HTTPException(status_code=422, detail="week_plan is required")
 
-    # Find the target day
+    # Find the target day (B157: search all weeks, not just weeks[0])
     target_day = None
-    for day in week_plan.get("weeks", [{}])[0].get("days", []):
-        if day.get("date") == req.date:
-            target_day = day
+    for week_block in week_plan.get("weeks", []):
+        for day in week_block.get("days", []):
+            if day.get("date") == req.date:
+                target_day = day
+                break
+        if target_day:
             break
     if target_day is None:
         raise HTTPException(status_code=404, detail=f"Date not found in plan: {req.date}")
@@ -153,10 +156,14 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
 
 def _find_session(week_plan: dict, date: str, session_index: int):
     """Locate day, session, resolved data in week_plan. Returns (day, session, resolved, exercise_instances)."""
+    # B157: search all weeks, not just weeks[0]
     target_day = None
-    for day in week_plan.get("weeks", [{}])[0].get("days", []):
-        if day.get("date") == date:
-            target_day = day
+    for week_block in week_plan.get("weeks", []):
+        for day in week_block.get("days", []):
+            if day.get("date") == date:
+                target_day = day
+                break
+        if target_day:
             break
     if target_day is None:
         raise HTTPException(status_code=404, detail=f"Date not found in plan: {date}")
