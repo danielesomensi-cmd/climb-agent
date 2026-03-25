@@ -36,13 +36,13 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "strength_long": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym", "home"), "required_equipment": ["hangboard"]},
     "power_contact_gym": {"hard": True, "finger": False, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "limit_boulder_gym": {"hard": True, "finger": False, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
-    "power_endurance_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "power_endurance_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"], "preferred_equipment": ["gym_routes"]},
     "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_routes"]},
     "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "finger_strength_home": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "prehab_maintenance": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
-    "flexibility_full": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
-    "yoga_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home",)},
+    "flexibility_full": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym"), "max_per_week": 2},
+    "yoga_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home",), "max_per_week": 2},
     "handstand_practice": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "complementary_conditioning": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "regeneration_easy": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym", "outdoor")},
@@ -60,7 +60,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "heavy_conditioning_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
     "lower_body_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
     "finger_aerobic_base": {"hard": False, "finger": True, "intensity": "low", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
-    "deload_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
+    "deload_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym"), "max_per_week": 2},
     "finger_endurance_short": {"hard": False, "finger": True, "intensity": "medium", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "boulder_circuit_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_boulder"]},
     "upper_body_weights": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
@@ -776,6 +776,34 @@ def generate_phase_week(
                 continue
 
             day_avail = normalized[day_keys[offset]]
+
+            # B160d: if session has preferred_equipment and this day's gym lacks
+            # it, defer to a later day that might have it (don't burn uses).
+            pref_equip = meta.get("preferred_equipment")
+            if pref_equip and session_count.get(sid, 0) == 0:
+                day_equip = _equipment_for_location(
+                    "gym", day_avail.get("evening") or day_avail.get("morning") or day_avail.get("lunch") or {},
+                    home_equipment, gyms, default_gym_id,
+                )
+                if day_equip is not None and not any(pe in day_equip for pe in pref_equip):
+                    # Check if any LATER unprocessed day has the preferred equipment
+                    remaining = [o for o in pass1_day_order if o > offset and day_has_available_slot[o] and o not in {off for off, _ in enumerate(day_sessions) if day_sessions[off]}]
+                    has_better_day = False
+                    for ro in remaining:
+                        r_avail = normalized[day_keys[ro]]
+                        for rs in SLOTS:
+                            if r_avail[rs]["available"]:
+                                r_equip = _equipment_for_location("gym", r_avail[rs], home_equipment, gyms, default_gym_id)
+                                if r_equip and any(pe in r_equip for pe in pref_equip):
+                                    has_better_day = True
+                                    break
+                        if has_better_day:
+                            break
+                    if has_better_day:
+                        primary_idx += 1
+                        attempts += 1
+                        continue  # defer to day with preferred equipment
+
             result = _find_best_slot(day_avail, meta, locations, prefer_evening=True,
                                      home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
             if result is None:
@@ -912,11 +940,11 @@ def generate_phase_week(
             sid = complementary_pool[comp_idx % len(complementary_pool)]
             meta = _SESSION_META[sid]
 
-            # Anti-repetition check
+            # Anti-repetition check — PERMANENT skip (burns uses)
             max_pw = meta.get("max_per_week", 1)
             if session_count.get(sid, 0) >= max_pw:
                 comp_idx += 1
-                comp_uses += 1
+                comp_uses += 1  # permanent: session exhausted for the week
                 attempts += 1
                 continue
 
@@ -926,7 +954,7 @@ def generate_phase_week(
             if result is None:
                 comp_idx += 1
                 attempts += 1
-                continue  # try next session for SAME day
+                continue  # location mismatch — don't burn uses
 
             slot, slot_info = result
             entry = _make_session_entry(

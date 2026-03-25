@@ -107,6 +107,8 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "prehab_maintenance": "primary",
         "power_endurance_gym": "available",
         "power_contact_gym": "available",
+        "boulder_circuit_gym": "available",
+        "route_endurance_gym": "available",
         "finger_strength_home": "available",
         "flexibility_full": "available",
         "handstand_practice": "available",
@@ -185,6 +187,7 @@ _SESSION_POOL_BOULDER: Dict[str, Dict[str, str]] = {
         "limit_boulder_gym": "primary",
         "prehab_maintenance": "primary",
         "power_contact_gym": "available",
+        "boulder_circuit_gym": "available",
         "finger_strength_home": "available",
         "flexibility_full": "available",
         "handstand_practice": "available",
@@ -629,7 +632,7 @@ def apply_deload_week(week_plan: Dict[str, Any]) -> Dict[str, Any]:
     """Transform a week plan into a deload week.
 
     - Remove sessions with max/high intensity
-    - Keep max 3 sessions
+    - Keep max 5 sessions (B160c: raised from 3 — literature expects 4-6 light sessions)
     - Replace removed sessions with deload alternatives
     """
     if not week_plan or "weeks" not in week_plan:
@@ -642,9 +645,9 @@ def apply_deload_week(week_plan: Dict[str, Any]) -> Dict[str, Any]:
         for day in days:
             filtered = []
             for sess in day.get("sessions", []):
-                # Keep low/medium intensity sessions, cap at 3 total
+                # Keep low/medium intensity sessions, cap at 5 total
                 tags = sess.get("tags", {})
-                if kept_sessions >= 3:
+                if kept_sessions >= 5:
                     continue
                 if tags.get("hard"):
                     continue

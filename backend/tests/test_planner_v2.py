@@ -647,8 +647,8 @@ class TestPlannerV2LoadScore(unittest.TestCase):
         plan = generate_phase_week(**_make_kwargs("deload"))
         summary = plan["weekly_load_summary"]
         self.assertEqual(summary["hard_days_count"], 0)
-        # All deload sessions are low intensity, max 20 per session, max 3 sessions
-        self.assertLessEqual(summary["total_load"], 20 * 3)
+        # All deload sessions are low intensity, max 20 per session, max 5 sessions (B160c)
+        self.assertLessEqual(summary["total_load"], 20 * 5)
 
 
 class TestPlannerV2OtherActivity(unittest.TestCase):
