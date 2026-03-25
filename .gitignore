@@ -32,6 +32,9 @@ _archive/
 # images (local assets, not tracked)
 *.jpg
 *.png
+# but track exercise images
+!frontend/public/exercises/**/*.jpg
+!frontend/public/exercises/**/*.png
 
 # frontend
 frontend/node_modules/

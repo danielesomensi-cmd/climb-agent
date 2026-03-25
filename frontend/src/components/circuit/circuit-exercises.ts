@@ -29,7 +29,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "isometric",
     advanced: false,
-    image: "01_hollow_body.png.jpg",
+    image: "01_hollow_body.jpg",
   },
   {
     id: "ce_dead_bug",
@@ -38,7 +38,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "dynamic",
     advanced: false,
-    image: "02_dead_bug.png.jpg",
+    image: "02_dead_bug.jpg",
   },
   {
     id: "ce_plank_shoulder_taps",
@@ -47,7 +47,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "dynamic",
     advanced: false,
-    image: "03_plank_shoulder_taps.png.jpg",
+    image: "03_plank_shoulder_taps.jpg",
   },
   {
     id: "ce_bear_crawl_hold",
@@ -56,7 +56,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "isometric",
     advanced: false,
-    image: "04_bear_crawl_hold.png.jpg",
+    image: "04_bear_crawl_hold.jpg",
   },
   {
     id: "ce_body_saw",
@@ -76,7 +76,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_rotation",
     type: "dynamic",
     advanced: false,
-    image: "06_bird_dog.png.jpg",
+    image: "06_bird_dog.jpg",
   },
   {
     id: "ce_plank_hip_dips",
@@ -85,6 +85,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_rotation",
     type: "dynamic",
     advanced: false,
+    image: "07_plank_hip_dips.jpg",
   },
   {
     id: "ce_thread_the_needle",
@@ -102,6 +103,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_rotation",
     type: "dynamic",
     advanced: false,
+    image: "09_dead_bug_cross.png",
   },
 
   // 3.3 Anti-Lateral Flexion (sides — resist sideways bending)
@@ -112,6 +114,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_lateral_flexion",
     type: "isometric",
     advanced: false,
+    image: "10_side_plank_r.jpg",
   },
   {
     id: "ce_side_plank_l",
@@ -120,6 +123,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_lateral_flexion",
     type: "isometric",
     advanced: false,
+    image: "11_side_plank_l.jpg",
   },
   {
     id: "ce_copenhagen_r",
