@@ -218,3 +218,82 @@ class TestAssessmentScalarLatestWins:
         ])
         state = apply_feedback(log2, state)
         assert state["assessment"]["tests"]["max_hang_20mm_5s_total_kg"] == 108.0
+
+
+# ---------------------------------------------------------------------------
+# B156: test_measurement exercises added via Add Exercise to non-test sessions
+# ---------------------------------------------------------------------------
+
+class TestB156TestMeasurementInNonTestSession:
+    """B156: test exercises added via Add Exercise to a non-test session
+    must still persist results to assessment.tests."""
+
+    def test_l_sit_in_non_test_session_persists(self):
+        """L-sit test added to power_contact_gym → result saved."""
+        state = _base_state(75.0)
+        log = {
+            "date": "2026-03-24",
+            "session_id": "power_contact_gym",
+            "planned": [{"session_id": "power_contact_gym", "exercise_instances": []}],
+            "actual": {
+                "exercise_feedback_v1": [
+                    {"exercise_id": "board_limit_boulders", "feedback_label": "hard", "completed": True},
+                    {"exercise_id": "test_l_sit_hold", "l_sit_hold_seconds": 65.0, "feedback_label": "ok", "completed": True},
+                ]
+            },
+        }
+        result = apply_feedback(log, state)
+        assert result["assessment"]["tests"]["l_sit_hold_seconds"] == 65.0
+
+    def test_hip_flexibility_in_non_test_session_persists(self):
+        """Hip flexibility test added to strength_long → result saved."""
+        state = _base_state(75.0)
+        log = {
+            "date": "2026-03-24",
+            "session_id": "strength_long",
+            "planned": [{"session_id": "strength_long", "exercise_instances": []}],
+            "actual": {
+                "exercise_feedback_v1": [
+                    {"exercise_id": "weighted_pullup", "used_total_load_kg": 90.0, "feedback_label": "ok", "completed": True},
+                    {"exercise_id": "test_hip_flexibility", "hip_flexibility_cm": 130.0, "feedback_label": "ok", "completed": True},
+                ]
+            },
+        }
+        result = apply_feedback(log, state)
+        assert result["assessment"]["tests"]["hip_flexibility_cm"] == 130.0
+
+    def test_non_test_exercises_still_ignored_in_non_test_session(self):
+        """Legacy test exercises (max_hang_5s) in non-test session must NOT persist — B156 only
+        applies to exercise_ids starting with test_."""
+        state = _base_state(75.0)
+        log = {
+            "date": "2026-03-24",
+            "session_id": "finger_strength_home",
+            "planned": [{"session_id": "finger_strength_home", "exercise_instances": []}],
+            "actual": {
+                "exercise_feedback_v1": [
+                    {"exercise_id": "max_hang_5s", "used_total_load_kg": 95.0, "feedback_label": "ok", "completed": True},
+                ]
+            },
+        }
+        result = apply_feedback(log, state)
+        # max_hang_5s does NOT start with "test_" → guard still blocks
+        assert result["assessment"]["tests"].get("max_hang_20mm_5s_total_kg") is None
+
+    def test_multiple_test_exercises_in_non_test_session(self):
+        """Multiple test_measurement exercises added to a regular session."""
+        state = _base_state(75.0)
+        log = {
+            "date": "2026-03-24",
+            "session_id": "prehab_maintenance",
+            "planned": [{"session_id": "prehab_maintenance", "exercise_instances": []}],
+            "actual": {
+                "exercise_feedback_v1": [
+                    {"exercise_id": "test_l_sit_hold", "l_sit_hold_seconds": 45.0, "feedback_label": "ok", "completed": True},
+                    {"exercise_id": "test_hip_flexibility", "hip_flexibility_cm": 140.0, "feedback_label": "ok", "completed": True},
+                ]
+            },
+        }
+        result = apply_feedback(log, state)
+        assert result["assessment"]["tests"]["l_sit_hold_seconds"] == 45.0
+        assert result["assessment"]["tests"]["hip_flexibility_cm"] == 140.0
