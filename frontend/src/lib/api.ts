@@ -162,13 +162,11 @@ export const reorderSessionExercises = (data: {
   session_index: number;
   new_order: number[];
   week_plan: WeekPlan;
-}) => {
-  console.log("[B155c] reorderSessionExercises: calling API", { date: data.date, sessionIndex: data.session_index, newOrder: data.new_order });
-  return request<{ week_plan: WeekPlan }>("/api/session/reorder-exercises", {
+}) =>
+  request<{ week_plan: WeekPlan }>("/api/session/reorder-exercises", {
     method: "POST",
     body: JSON.stringify(data),
   });
-};
 
 // Replanner
 export const applyOverride = (data: {

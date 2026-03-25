@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { flushSync } from "react-dom";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, GripVertical } from "lucide-react";
 import {
@@ -638,6 +637,9 @@ export function SessionCard({
   // B153: Optimistic reorder — localOrder is a permutation of server exercise_instances indices
   const [localOrder, setLocalOrder] = useState<number[] | null>(null);
   const [reorderPending, setReorderPending] = useState(false);
+  // B155d: refs to prevent useEffect reset after user reorder + double-fire guard
+  const justReorderedRef = useRef(false);
+  const dragInProgressRef = useRef(false);
   const router = useRouter();
 
   // Server exercise instances (from props)
@@ -648,8 +650,12 @@ export function SessionCard({
   }, [session.resolved]);
 
   // Reset local order when server data changes (after refetch)
+  // B155d: skip reset if user just reordered — the server data already has the new order
   useEffect(() => {
-    console.log("[B155c] useEffect: resetting localOrder", { serverInstancesLen: serverInstances.length, firstId: serverInstances[0]?.exercise_id });
+    if (justReorderedRef.current) {
+      justReorderedRef.current = false;
+      return;
+    }
     setLocalOrder(null);
     setReorderPending(false);
   }, [serverInstances]);
@@ -677,39 +683,32 @@ export function SessionCard({
       });
       onSessionUpdated?.(result.week_plan);
     } catch (err) {
-      console.error("[B153c] remove exercise FAILED:", err);
+      console.error("[B155d] remove exercise FAILED:", err);
     }
   }, [weekPlan, date, sessionIndex, onSessionUpdated]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent, sortableIds: string[]) => {
     const { active, over } = event;
-    console.log("[B155c] handleDragEnd START", { activeId: active.id, overId: over?.id, hasWeekPlan: !!weekPlan });
-    if (!over || active.id === over.id || !weekPlan) {
-      console.log("[B155c] handleDragEnd BAIL", { noOver: !over, sameId: active.id === over?.id, noWeekPlan: !weekPlan });
-      return;
-    }
+    if (!over || active.id === over.id || !weekPlan) return;
+
+    // B155d: guard against double-fire (DndContext remount during parent re-render)
+    if (dragInProgressRef.current) return;
+    dragInProgressRef.current = true;
 
     // B153: Use visual positions in the sortable list, not raw instanceIdx
     const activePos = sortableIds.indexOf(active.id as string);
     const overPos = sortableIds.indexOf(over.id as string);
-    if (activePos === -1 || overPos === -1) {
-      console.log("[B155c] handleDragEnd BAIL: pos not found", { activePos, overPos, sortableIds });
-      return;
-    }
+    if (activePos === -1 || overPos === -1) { dragInProgressRef.current = false; return; }
 
     // Current order: mapping from visual position → server exercise_instances index
     const currentOrder = localOrder ?? Array.from({ length: serverInstances.length }, (_, i) => i);
     const newOrder = arrayMove(currentOrder, activePos, overPos);
-    console.log("[B155c] handleDragEnd: computed newOrder", { activePos, overPos, newOrder });
 
-    // B155b: flushSync forces DOM update before @dnd-kit clears transforms,
-    // preventing the visual snap-back to original position
-    flushSync(() => {
-      setLocalOrder(newOrder);
-      setReorderPending(true);
-      if (!reorderWarningShown) setReorderWarningShown(true);
-    });
-    console.log("[B155c] handleDragEnd: flushSync done, calling API");
+    // B155d: mark so the useEffect skips the reset when props update
+    justReorderedRef.current = true;
+    setLocalOrder(newOrder);
+    setReorderPending(true);
+    if (!reorderWarningShown) setReorderWarningShown(true);
 
     try {
       const result = await reorderSessionExercises({
@@ -718,14 +717,14 @@ export function SessionCard({
         new_order: newOrder,
         week_plan: weekPlan,
       });
-      console.log("[B155c] handleDragEnd: API success, calling onSessionUpdated", { hasResult: !!result.week_plan });
       onSessionUpdated?.(result.week_plan);
-      console.log("[B155c] handleDragEnd: onSessionUpdated returned");
     } catch (err) {
-      console.error("[B155c] handleDragEnd: API FAILED", err);
-      // Revert optimistic update on failure
+      console.error("[B155d] reorder API FAILED:", err);
+      justReorderedRef.current = false;
       setLocalOrder(null);
       setReorderPending(false);
+    } finally {
+      dragInProgressRef.current = false;
     }
   }, [weekPlan, date, sessionIndex, onSessionUpdated, reorderWarningShown, localOrder, serverInstances.length]);
 

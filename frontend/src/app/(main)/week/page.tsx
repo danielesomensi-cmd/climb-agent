@@ -92,7 +92,6 @@ export default function WeekPage() {
   }, []);
 
   const fetchWeek = useCallback(async (wn: number) => {
-    console.log("[B155c] fetchWeek called", { weekNum: wn, trigger: new Error().stack?.split("\n")[2]?.trim() });
     setLoading(true);
     setError(null);
     try {
@@ -136,7 +135,6 @@ export default function WeekPage() {
   // B155: gate on Clerk readiness to avoid 422 race on first load
   useEffect(() => {
     if (!authReady) return;
-    console.log("[B155c] useEffect: fetchInitial triggered", { authReady });
     fetchInitial();
   }, [fetchInitial, authReady]);
 
@@ -777,8 +775,6 @@ export default function WeekPage() {
                   outdoorDurationMinutes={outdoorDurationMap[day.date]}
                   weekPlan={weekPlan}
                   onSessionUpdated={(updatedPlan) => {
-                    console.log("[B155c] onSessionUpdated called", { hasUpdatedPlan: !!updatedPlan });
-                    // B153d: use response data when available to avoid 422 reload race
                     if (updatedPlan) { setWeekPlan(updatedPlan); } else { fetchWeek(displayWeekNum); }
                   }}
                   showActions
