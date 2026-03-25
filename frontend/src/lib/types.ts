@@ -565,6 +565,9 @@ export interface GuidedExercise {
   testMeasurement?: number;
   testMeasurementRight?: number;  // per-hand measurement (e.g. seconds for lp_duration_test)
   testMeasurementLeft?: number;
+
+  // B156: per-exercise notes (free text, max 500 chars)
+  notes?: string;
 }
 
 export interface GuidedSessionState {

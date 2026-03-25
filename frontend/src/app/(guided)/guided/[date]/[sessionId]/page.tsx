@@ -403,6 +403,16 @@ export default function GuidedSessionPage() {
         exerciseFeedback.push(item);
       }
 
+      // B156: inject per-exercise notes into feedback items
+      const notesMap = new Map<string, string>();
+      for (const ex of finalExercises) {
+        if (ex.notes) notesMap.set(ex.exerciseId, ex.notes);
+      }
+      for (const fb of exerciseFeedback) {
+        const exNotes = notesMap.get(fb.exercise_id as string);
+        if (exNotes) fb.notes = exNotes;
+      }
+
       const durationSeconds = Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000));
 
       try {
@@ -446,6 +456,15 @@ export default function GuidedSessionPage() {
     (completedSets: number) => {
       if (!state) return;
       updateExercise(state.currentIndex, { completedSets });
+    },
+    [state, updateExercise]
+  );
+
+  // B156: per-exercise notes
+  const handleNotesChange = useCallback(
+    (notes: string) => {
+      if (!state) return;
+      updateExercise(state.currentIndex, { notes: notes || undefined });
     },
     [state, updateExercise]
   );
@@ -564,6 +583,7 @@ export default function GuidedSessionPage() {
               onDone={handleDone}
               onSkip={handleSkip}
               onSetChange={handleSetChange}
+              onNotesChange={handleNotesChange}
             />
 
             {/* Finish early button */}

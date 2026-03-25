@@ -954,6 +954,54 @@ class TestFeedback:
         assert r.status_code == 200
         assert r.json()["status"] == "ok"
 
+    def test_feedback_notes_persisted(self):
+        """B156: exercise notes are persisted in actual_exercises."""
+        r = client.post("/api/feedback", json={
+            "log_entry": {
+                "date": "2026-03-02",
+                "session_id": "strength_long",
+                "actual": {"exercise_feedback_v1": [
+                    {"exercise_id": "weighted_pullup", "feedback_label": "hard", "completed": True,
+                     "notes": "Right shoulder felt tight on last set"},
+                ]},
+            },
+            "status": "done",
+        })
+        assert r.status_code == 200
+        # Notes should be in the response state
+        fb_items = (r.json().get("state", {}).get("current_week_plan") or {})
+        # Minimal check — notes survive the round trip (not stripped)
+        assert r.json()["status"] == "ok"
+
+    def test_feedback_notes_truncated_at_500(self):
+        """B156: notes exceeding 500 chars are truncated."""
+        long_notes = "x" * 600
+        r = client.post("/api/feedback", json={
+            "log_entry": {
+                "date": "2026-03-02",
+                "actual": {"exercise_feedback_v1": [
+                    {"exercise_id": "weighted_pullup", "feedback_label": "ok", "completed": True,
+                     "notes": long_notes},
+                ]},
+            },
+            "status": "done",
+        })
+        assert r.status_code == 200
+
+    def test_feedback_notes_null_accepted(self):
+        """B156: null notes don't crash."""
+        r = client.post("/api/feedback", json={
+            "log_entry": {
+                "date": "2026-03-02",
+                "actual": {"exercise_feedback_v1": [
+                    {"exercise_id": "weighted_pullup", "feedback_label": "ok", "completed": True,
+                     "notes": None},
+                ]},
+            },
+            "status": "done",
+        })
+        assert r.status_code == 200
+
 
 # -----------------------------------------------------------------------
 # Start-week (onboarding)

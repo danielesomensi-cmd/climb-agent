@@ -985,7 +985,13 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
     test_sessions = [s for s in planned_sessions if str(s.get("session_id") or "").startswith("test_") or bool((s.get("tags") or {}).get("test"))]
     if not test_sessions:
         top_session_id = str(log_entry.get("session_id") or "")
-        if not top_session_id.startswith("test_"):
+        # B156: also process if any feedback item is a test_measurement exercise
+        # (covers test exercises added via Add Exercise to non-test sessions)
+        has_test_measurement = any(
+            str(fb.get("exercise_id") or "").startswith("test_")
+            for fb in feedback_items
+        )
+        if not top_session_id.startswith("test_") and not has_test_measurement:
             return
     date_str = str(log_entry.get("date") or "")
     assessment = updated.setdefault("assessment", {})

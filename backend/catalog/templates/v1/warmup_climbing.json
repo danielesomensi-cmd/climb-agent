@@ -9,7 +9,7 @@
   "compatible_slots": ["short", "medium", "long"],
   "requires_environment": { "equipment_any_of": ["none", "band", "mat", "floor"] },
 
-  "goals": ["increase_body_temperature", "improve_joint_readiness", "activate_shoulders"],
+  "goals": ["increase_body_temperature", "improve_joint_readiness", "hip_mobility", "activate_shoulders"],
   "stress_tags": { "fingers": "none", "cns": "low", "elbow": "low", "skin": "none" },
 
   "scheduling_rules": {
@@ -35,6 +35,16 @@
       "domain": ["mobility", "flexibility"]
     },
     {
+      "block_id": "hip_mobility",
+      "type": "warmup_general",
+      "mode": "select_one",
+      "exercise_id": "active_hip_mobility",
+      "role": ["warmup"],
+      "domain": ["flexibility", "mobility"],
+      "prescription": { "sets": 1, "work_seconds": 480 },
+      "notes": ["Dynamic hip CARs, leg swings, 90/90 switches. Improves high-step and drop-knee range."]
+    },
+    {
       "block_id": "upper_activation",
       "type": "activation",
       "mode": "select_one",
@@ -42,6 +52,16 @@
       "domain": ["prehab_shoulder"],
       "prescription": { "sets_range": [2, 3], "reps_range": [8, 15], "rest_seconds_range": [30, 60] },
       "notes": ["Light scap/rotator cuff activation. Band pull-aparts or shoulder CARs. Submaximal."]
+    },
+    {
+      "block_id": "climbing_activation",
+      "type": "warmup_specific",
+      "mode": "select_one",
+      "exercise_id": "warmup_easy_boulders",
+      "role": ["warmup"],
+      "domain": ["technique_footwork"],
+      "prescription": { "sets": 1, "work_seconds": 600 },
+      "notes": ["Progressive easy boulders to warm up fingers, tendons, and movement patterns before hard climbing."]
     }
   ],
 

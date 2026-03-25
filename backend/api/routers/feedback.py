@@ -48,8 +48,14 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
     exercises_by_id = load_exercises_by_id()
     append_feedback_log(state, req.log_entry, req.resolved_day, exercises_by_id)
 
-    # 3b. A139: Persist raw actual exercise data in session slot
+    # B156: sanitize exercise-level notes (max 500 chars)
     _fb_items = (req.log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
+    for _item in _fb_items:
+        _notes = _item.get("notes")
+        if _notes is not None:
+            _item["notes"] = str(_notes)[:500] if _notes else None
+
+    # 3b. A139: Persist raw actual exercise data in session slot
     if _fb_items:
         _target_date = req.log_entry.get("date")
         _target_sid = req.log_entry.get("session_id")

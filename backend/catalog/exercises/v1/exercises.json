@@ -2092,6 +2092,7 @@
       "name": "Campus Bumps (Touch-and-Go)",
       "category": "main_strength",
       "time_min": 18,
+      "unilateral": true,
       "role": [
         "main"
       ],
@@ -2113,12 +2114,13 @@
         "finger_sensitive"
       ],
       "prescription_defaults": {
-        "sets": 5,
+        "sets": 3,
         "reps": 4,
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 180,
-        "notes": "Touch-and-go on higher rung, one arm at a time. Focus explosive contact."
+        "rest_between_hands_seconds": 120,
+        "notes": "Unilateral campus power. Perform all reps with one leading hand, rest 2 min, then switch. A full set = right + left."
       },
       "stress_tags": {
         "fingers": "high",
@@ -2126,13 +2128,14 @@
         "cns": "high",
         "skin": "medium"
       },
-      "description": "One-arm bump sequence on campus board. One hand stays on lower rung while the other bumps as high as possible in rapid succession. Trains unilateral contact strength and deep lock-off simultaneously. Higher RFD stimulus than two-arm laddering. (Hörst, Gresham)",
+      "description": "Unilateral campus power: one hand locks on a rung while the other bumps up 1-2 rungs in quick succession. Perform all reps with one leading hand, rest, then switch. Trains explosive contact strength and deep lock-off. (Hörst, Gresham)",
       "cues": [
-        "Lower hand locked, upper hand bumps high repeatedly without touching",
-        "Go for maximum height per bump — speed and reach combined",
-        "Lock-off with lower arm while upper arm catches each bump",
-        "Alternate leading hand between sets",
-        "3 sets per side, 2-3 min rest — quality over speed"
+        "RIGHT hand first: lock left hand low, bump right hand up 1-2 rungs \u00d7 4 bumps",
+        "Rest 2 minutes between hands",
+        "LEFT hand: lock right hand low, bump left hand up \u00d7 4 bumps",
+        "Rest 3 minutes between sets (a full set = right + left)",
+        "Maximum explosive power \u2014 quality over quantity",
+        "Stop immediately if you feel finger or elbow pain"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
       "load_model": "bodyweight_only"
@@ -9059,6 +9062,46 @@
         "Step 3: Fall from 2m above (normal lead fall)",
         "Step 4: Partner calls 'fall' from unexpected positions",
         "Do 3-5 falls per step — push away from wall, feet facing wall, knees slightly bent"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "warmup_easy_boulders",
+      "name": "Easy Boulder Progression",
+      "category": "warmup_specific",
+      "time_min": 10,
+      "role": ["warmup"],
+      "domain": ["technique_footwork"],
+      "pattern": "climbing_limit_boulder",
+      "intensity_level": "low",
+      "fatigue_cost": 1,
+      "recency_group": "warmup_climbing",
+      "equipment_required_any": ["gym_boulder", "kilter_board", "moonboard", "tension_board", "spraywall"],
+      "location_allowed": ["gym"],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 600,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Progressive climbing warm-up. Start very easy, gradually increase difficulty."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Progressive climbing warm-up. Start very easy, gradually increase difficulty. Prepares fingers, tendons, and neural pathways for hard climbing.",
+      "cues": [
+        "Start 3-4 grades below your onsight level (e.g., if you onsight 7A, start at 5-5+)",
+        "Do 2-3 easy boulders focusing on silent feet and precise movement",
+        "Then 2 boulders at moderate difficulty (2 grades below onsight)",
+        "Finally 1 boulder near onsight level — if it feels hard, you're warm",
+        "Total time: ~10 minutes. No pump, no fatigue — just activation",
+        "If fingers still feel cold after moderate boulders, add one more"
       ],
       "video_url": null,
       "load_model": "bodyweight_only"

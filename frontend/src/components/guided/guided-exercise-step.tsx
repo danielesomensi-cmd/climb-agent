@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer } from "lucide-react";
+import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
 import type { GuidedExercise } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 
@@ -17,6 +17,7 @@ interface GuidedExerciseStepProps {
   onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }) => void;
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
+  onNotesChange?: (notes: string) => void;
 }
 
 const FEEDBACK_OPTIONS = [
@@ -87,6 +88,7 @@ export function GuidedExerciseStep({
   onDone,
   onSkip,
   onSetChange,
+  onNotesChange,
 }: GuidedExerciseStepProps) {
   const [feedback, setFeedback] = useState(exercise.feedbackLabel || "ok");
   const [loadInput, setLoadInput] = useState("");
@@ -97,6 +99,64 @@ export function GuidedExerciseStep({
   const [setsInput, setSetsInput] = useState("");
   const [repsInputRight, setRepsInputRight] = useState("");
   const [repsInputLeft, setRepsInputLeft] = useState("");
+  const [notesInput, setNotesInput] = useState(exercise.notes ?? "");
+  const [notesExpanded, setNotesExpanded] = useState(false);
+
+  // B156: countup stopwatch for timed test_measurement exercises (e.g. L-sit hold)
+  const [stopwatchRunning, setStopwatchRunning] = useState(false);
+  const [stopwatchElapsed, setStopwatchElapsed] = useState(0);
+  const stopwatchStartRef = useRef<number>(0);
+  const stopwatchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const STOPWATCH_CAP = 300; // 5 minutes max
+
+  const startStopwatch = useCallback(() => {
+    stopwatchStartRef.current = Date.now();
+    setStopwatchElapsed(0);
+    setStopwatchRunning(true);
+  }, []);
+
+  const stopStopwatch = useCallback(() => {
+    setStopwatchRunning(false);
+    if (stopwatchIntervalRef.current) {
+      clearInterval(stopwatchIntervalRef.current);
+      stopwatchIntervalRef.current = null;
+    }
+    const elapsed = Math.floor((Date.now() - stopwatchStartRef.current) / 1000);
+    const capped = Math.min(elapsed, STOPWATCH_CAP);
+    setStopwatchElapsed(capped);
+    setMeasurementInput(String(capped));
+  }, []);
+
+  // Wall-clock tick for stopwatch (iOS Safari safe)
+  useEffect(() => {
+    if (!stopwatchRunning) return;
+    stopwatchIntervalRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - stopwatchStartRef.current) / 1000);
+      if (elapsed >= STOPWATCH_CAP) {
+        stopStopwatch();
+        return;
+      }
+      setStopwatchElapsed(elapsed);
+    }, 250);
+    return () => {
+      if (stopwatchIntervalRef.current) clearInterval(stopwatchIntervalRef.current);
+    };
+  }, [stopwatchRunning, stopStopwatch]);
+
+  // Recover from iOS background suspension
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== "visible" || !stopwatchRunning) return;
+      const elapsed = Math.floor((Date.now() - stopwatchStartRef.current) / 1000);
+      if (elapsed >= STOPWATCH_CAP) {
+        stopStopwatch();
+      } else {
+        setStopwatchElapsed(elapsed);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [stopwatchRunning, stopStopwatch]);
 
   // Test measurement exercises: just a number input, no feedback
   const isTestMeasurement = exercise.category === "test_measurement" && !!exercise.testField;
@@ -157,6 +217,8 @@ export function GuidedExerciseStep({
     if (exercise.completedSets != null) {
       setSetsInput(String(exercise.completedSets));
     }
+    setNotesInput(exercise.notes ?? "");
+    setNotesExpanded(!!(exercise.notes));
     setFeedback(exercise.feedbackLabel || "ok");
   }, [exercise]);
 
@@ -398,6 +460,44 @@ export function GuidedExerciseStep({
         {isTestMeasurement ? (
           <div className="space-y-3 rounded-md border border-primary/30 bg-primary/5 p-3">
             <p className="text-xs font-medium text-primary">Record your result</p>
+
+            {/* B156: Countup stopwatch for seconds-based tests (L-sit, max hang duration) */}
+            {exercise.testUnit === "seconds" && (
+              <div className="flex flex-col items-center gap-3 py-2">
+                <div className="text-4xl font-bold tabular-nums text-primary">
+                  {Math.floor(stopwatchElapsed / 60)}:{String(stopwatchElapsed % 60).padStart(2, "0")}
+                </div>
+                {!stopwatchRunning && stopwatchElapsed === 0 && (
+                  <Button
+                    size="lg"
+                    className="bg-green-600 hover:bg-green-700 text-white gap-2 w-40"
+                    onClick={startStopwatch}
+                  >
+                    <Play className="size-5" />
+                    Start
+                  </Button>
+                )}
+                {stopwatchRunning && (
+                  <Button
+                    size="lg"
+                    variant="destructive"
+                    className="gap-2 w-40"
+                    onClick={stopStopwatch}
+                  >
+                    <Square className="size-5" />
+                    Stop
+                  </Button>
+                )}
+                {!stopwatchRunning && stopwatchElapsed > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {stopwatchElapsed >= STOPWATCH_CAP
+                      ? "Impressive! 5 minutes is the maximum we track."
+                      : "Result auto-filled below. Edit if needed."}
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-1.5">
               <Label htmlFor="measurement-input" className="text-xs text-muted-foreground">
                 Result ({exercise.testUnit ?? "value"}) *
@@ -878,6 +978,37 @@ export function GuidedExerciseStep({
             )}
           </>
         )}
+
+        {/* B156: Per-exercise notes */}
+        <div className="pt-1">
+          {!notesExpanded ? (
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => setNotesExpanded(true)}
+            >
+              <MessageSquare className="size-3.5" />
+              Add note
+            </button>
+          ) : (
+            <div className="space-y-1">
+              <textarea
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
+                rows={2}
+                maxLength={500}
+                placeholder="How did it feel? Any details to remember..."
+                value={notesInput}
+                onChange={(e) => {
+                  setNotesInput(e.target.value);
+                  onNotesChange?.(e.target.value);
+                }}
+              />
+              {notesInput.length > 400 && (
+                <p className="text-[10px] text-muted-foreground text-right">{notesInput.length}/500</p>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 pt-2">
