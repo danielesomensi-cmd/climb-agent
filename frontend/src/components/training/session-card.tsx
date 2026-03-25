@@ -649,6 +649,7 @@ export function SessionCard({
 
   // Reset local order when server data changes (after refetch)
   useEffect(() => {
+    console.log("[B155c] useEffect: resetting localOrder", { serverInstancesLen: serverInstances.length, firstId: serverInstances[0]?.exercise_id });
     setLocalOrder(null);
     setReorderPending(false);
   }, [serverInstances]);
@@ -682,16 +683,24 @@ export function SessionCard({
 
   const handleDragEnd = useCallback(async (event: DragEndEvent, sortableIds: string[]) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !weekPlan) return;
+    console.log("[B155c] handleDragEnd START", { activeId: active.id, overId: over?.id, hasWeekPlan: !!weekPlan });
+    if (!over || active.id === over.id || !weekPlan) {
+      console.log("[B155c] handleDragEnd BAIL", { noOver: !over, sameId: active.id === over?.id, noWeekPlan: !weekPlan });
+      return;
+    }
 
     // B153: Use visual positions in the sortable list, not raw instanceIdx
     const activePos = sortableIds.indexOf(active.id as string);
     const overPos = sortableIds.indexOf(over.id as string);
-    if (activePos === -1 || overPos === -1) return;
+    if (activePos === -1 || overPos === -1) {
+      console.log("[B155c] handleDragEnd BAIL: pos not found", { activePos, overPos, sortableIds });
+      return;
+    }
 
     // Current order: mapping from visual position → server exercise_instances index
     const currentOrder = localOrder ?? Array.from({ length: serverInstances.length }, (_, i) => i);
     const newOrder = arrayMove(currentOrder, activePos, overPos);
+    console.log("[B155c] handleDragEnd: computed newOrder", { activePos, overPos, newOrder });
 
     // B155b: flushSync forces DOM update before @dnd-kit clears transforms,
     // preventing the visual snap-back to original position
@@ -700,6 +709,7 @@ export function SessionCard({
       setReorderPending(true);
       if (!reorderWarningShown) setReorderWarningShown(true);
     });
+    console.log("[B155c] handleDragEnd: flushSync done, calling API");
 
     try {
       const result = await reorderSessionExercises({
@@ -708,11 +718,11 @@ export function SessionCard({
         new_order: newOrder,
         week_plan: weekPlan,
       });
-      // B153d: use response data directly instead of full reload to avoid
-      // 422 race condition when Clerk token is briefly unavailable
+      console.log("[B155c] handleDragEnd: API success, calling onSessionUpdated", { hasResult: !!result.week_plan });
       onSessionUpdated?.(result.week_plan);
+      console.log("[B155c] handleDragEnd: onSessionUpdated returned");
     } catch (err) {
-      console.error("[B153c] reorder API FAILED:", err);
+      console.error("[B155c] handleDragEnd: API FAILED", err);
       // Revert optimistic update on failure
       setLocalOrder(null);
       setReorderPending(false);
