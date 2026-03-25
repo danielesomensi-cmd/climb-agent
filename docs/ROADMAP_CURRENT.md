@@ -79,7 +79,29 @@ Clerk auth ✅ and Supabase JSONB ✅ are complete. Remaining:
 
 ---
 
-## Priority 2.5 — Catalog & Polish
+## Priority 2.5 — Session Quality (post-launch)
+
+### Combo sessions (climbing + conditioning tail)
+
+**Status:** Open | **Effort:** M
+
+Sessions with a primary climbing block (60-70 min) + secondary conditioning block (15-20 min core/prehab/antagonists). Resolves conditioning deficit without replacing climbing days. Pattern already exists in strength_long (hangboard + pulling). Extend to boulder sessions: e.g., limit_boulder_gym + 15min core/antagonist tail. Requires session template redesign to support optional conditioning appendix.
+
+### Flex/rest auto-fill (Pass 3)
+
+**Status:** Open | **Effort:** S
+
+After Pass 1 (primary) and Pass 2 (complementary), add a Pass 3 that fills remaining empty days with flex/rest/mobility sessions. Currently empty days stay empty. Especially needed in deload phase (3 sessions on 7 days). Depends on: nothing.
+
+### Gym-aware PE routing
+
+**Status:** Open | **Effort:** S
+
+PE sessions should prefer gyms with gym_routes over boulder-only gyms when both are available. Currently the planner picks the first gym day regardless of equipment fit. Cosmetic improvement — PE on routes at Cocque is better training than PE on boulders at BKL. Depends on: nothing.
+
+---
+
+## Priority 2.5b — Catalog & Polish
 
 ### C130 — Audit sistematico domain/intensity/pattern
 
