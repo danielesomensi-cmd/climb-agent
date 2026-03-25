@@ -490,6 +490,7 @@ def generate_phase_week(
     pulling_baseline: Optional[Dict[str, Any]] = None,
     max_pullups_bw: Optional[int] = None,
     recent_test_dates: Optional[Dict[str, str]] = None,
+    prev_week_plan: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -598,6 +599,22 @@ def generate_phase_week(
     finger_day_offsets: List[int] = []
     hard_day_offsets: List[int] = []
     session_count: Dict[str, int] = {}  # anti-repetition: session_id → times placed this week
+
+    # B161: seed spacing constraints from previous week's trailing days.
+    # Offsets are negative (e.g., Sunday of prev week = -1, Saturday = -2).
+    if prev_week_plan:
+        prev_days = (prev_week_plan.get("weeks") or [{}])[0].get("days", [])
+        for i, pd in enumerate(prev_days):
+            neg_offset = i - 7  # Mon=-7 … Sun=-1
+            for s in pd.get("sessions", []):
+                sid = s.get("session_id", "")
+                meta = _SESSION_META.get(sid)
+                if meta is None:
+                    continue
+                if meta.get("hard") and s.get("tags", {}).get("hard", meta["hard"]):
+                    hard_day_offsets.append(neg_offset)
+                if meta.get("finger") and s.get("tags", {}).get("finger", meta["finger"]):
+                    finger_day_offsets.append(neg_offset)
 
     # Reduce intensity on day after other-activity (when flagged)
     # AND on the other-activity day itself (no hard sessions alongside other sport).

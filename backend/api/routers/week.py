@@ -321,6 +321,11 @@ def get_week(
             _pulling_bl = (state.get("baselines") or {}).get("pulling") or {}
             if _pulling_bl.get("updated_at"):
                 _recent_test_dates["pulling"] = _pulling_bl["updated_at"]
+            # B161: look up previous week's plan for cross-week spacing
+            _prev_week_plan = None
+            prev_start = (datetime.strptime(ctx["start_date"], "%Y-%m-%d") - timedelta(weeks=1)).strftime("%Y-%m-%d")
+            _prev_week_plan = week_plans.get(prev_start)
+
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
                 domain_weights=ctx["domain_weights"],
@@ -342,6 +347,7 @@ def get_week(
                 pulling_baseline=_pulling_baseline,
                 max_pullups_bw=_max_pullups_bw,
                 recent_test_dates=_recent_test_dates if _recent_test_dates else None,
+                prev_week_plan=_prev_week_plan,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")

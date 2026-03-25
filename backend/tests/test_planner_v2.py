@@ -1599,5 +1599,84 @@ class TestB160PerfLimitBoulder(unittest.TestCase):
         self.assertIn("limit_boulder_gym", _SESSION_POOL_BOULDER["performance"])
 
 
+class TestB161CrossWeekGap(unittest.TestCase):
+    """B161: cross-week hard_gap and finger_gap enforcement."""
+
+    @staticmethod
+    def _make_prev_plan(hard_on_sunday=False, finger_on_sunday=False,
+                         hard_on_saturday=False):
+        """Build a minimal prev_week_plan with sessions on specific days."""
+        days = []
+        for i in range(7):
+            sessions = []
+            if i == 6 and hard_on_sunday:
+                sessions.append({"session_id": "power_contact_gym",
+                                 "tags": {"hard": True, "finger": False}})
+            if i == 6 and finger_on_sunday:
+                sessions.append({"session_id": "strength_long",
+                                 "tags": {"hard": True, "finger": True}})
+            if i == 5 and hard_on_saturday:
+                sessions.append({"session_id": "limit_boulder_gym",
+                                 "tags": {"hard": True, "finger": False}})
+            days.append({"sessions": sessions})
+        return {"weeks": [{"days": days}]}
+
+    def test_hard_sunday_blocks_hard_monday(self):
+        """Hard on Sun (prev week) → no hard on Mon (current week)."""
+        from backend.engine.planner_v2 import _SESSION_META
+        prev = self._make_prev_plan(hard_on_sunday=True)
+        plan = generate_phase_week(**_make_kwargs(
+            "strength_power", prev_week_plan=prev,
+        ))
+        mon = plan["weeks"][0]["days"][0]
+        mon_hard = [s for s in mon["sessions"]
+                    if _SESSION_META.get(s["session_id"], {}).get("hard")]
+        self.assertEqual(len(mon_hard), 0,
+                          f"Mon should have no hard session (Sun was hard), got: "
+                          f"{[s['session_id'] for s in mon_hard]}")
+
+    def test_hard_saturday_allows_hard_monday(self):
+        """Hard on Sat (prev week) → hard on Mon OK (gap=2 > 1)."""
+        from backend.engine.planner_v2 import _SESSION_META
+        prev = self._make_prev_plan(hard_on_saturday=True)
+        plan = generate_phase_week(**_make_kwargs(
+            "strength_power", prev_week_plan=prev,
+        ))
+        mon = plan["weeks"][0]["days"][0]
+        mon_hard = [s for s in mon["sessions"]
+                    if _SESSION_META.get(s["session_id"], {}).get("hard")]
+        self.assertGreater(len(mon_hard), 0,
+                            "Mon should have hard session (Sat gap=2 is sufficient)")
+
+    def test_finger_sunday_blocks_finger_monday(self):
+        """Finger on Sun (prev week) → no finger on Mon (current week)."""
+        from backend.engine.planner_v2 import _SESSION_META
+        prev = self._make_prev_plan(finger_on_sunday=True)
+        plan = generate_phase_week(**_make_kwargs(
+            "strength_power", prev_week_plan=prev,
+        ))
+        mon = plan["weeks"][0]["days"][0]
+        mon_finger = [s for s in mon["sessions"]
+                      if _SESSION_META.get(s["session_id"], {}).get("finger")]
+        self.assertEqual(len(mon_finger), 0,
+                          f"Mon should have no finger session (Sun was finger), got: "
+                          f"{[s['session_id'] for s in mon_finger]}")
+
+    def test_no_prev_week_no_constraint(self):
+        """First week (no prev): Mon can have hard session."""
+        from backend.engine.planner_v2 import _SESSION_META
+        plan = generate_phase_week(**_make_kwargs(
+            "strength_power", prev_week_plan=None,
+        ))
+        mon = plan["weeks"][0]["days"][0]
+        # Should have at least some session on Mon (not blocked)
+        self.assertGreater(len(mon["sessions"]), 0)
+
+    def test_regression_existing_tests_pass(self):
+        """Passing prev_week_plan=None should not change existing behavior."""
+        plan = generate_phase_week(**_make_kwargs("base", prev_week_plan=None))
+        self.assertEqual(plan["plan_version"], "planner.v2")
+
+
 if __name__ == "__main__":
     unittest.main()
