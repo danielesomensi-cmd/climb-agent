@@ -33,7 +33,8 @@ Assessment (5 dimensions → radar profile 0-100)
 
 - **Backend:** Python / FastAPI on Railway
 - **Frontend:** Next.js 14 PWA (React + Tailwind + shadcn/ui) on Vercel
-- **Persistence:** JSON/JSONL on Railway volume (Supabase Postgres planned)
+- **Auth:** Clerk
+- **Persistence:** Supabase Postgres + JSONB (production), JSON files (dev/test)
 - **Methodology:** Hörst 4-3-2-1 with DUP concurrent training
 
 ## Repository layout

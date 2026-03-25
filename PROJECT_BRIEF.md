@@ -57,16 +57,14 @@ compute_assessment_profile()    [assessment_v1]
 | Decision | Choice |
 |----------|--------|
 | Runtime logic | Pure Python, deterministic, no LLM |
-| Persistence (current) | JSON/JSONL files on Railway persistent volume |
-| Persistence (production) | Supabase Postgres (planned) |
+| Persistence | Supabase Postgres + JSONB (production), JSON files (dev/test) |
+| Auth | Clerk (Next.js native + backend verification) |
 | Frontend | Next.js 14 + React + Tailwind CSS + shadcn/ui (PWA mobile-first) |
 | Periodization | Hörst 4-3-2-1 with DUP concurrent training |
 | Assessment | 5-axis profile, benchmarks by target grade, periodic retesting |
 | Deload | Mixed: programmed + adaptive + pre-trip |
 | Feedback | Granular per exercise (5 levels: very_easy → very_hard) |
 | Equipment | `equipment_required` for essential gear only, optional in notes |
-| Multi-user (current) | UUID in localStorage + X-User-ID header |
-| Auth (production) | Clerk (planned) |
 | Payments | Stripe (planned) |
 | App store | Capacitor wrapping PWA (planned) |
 | LLM Coach | Claude Sonnet conversational layer (planned, Phase 3.5) |

@@ -769,6 +769,66 @@ Implementato 2026-02-25 in due commit. 472 test verdi (25 nuovi).
 
 ---
 
+## §11b — Closed items archived from ROADMAP_CURRENT (D156, 2026-03-25)
+
+### P1 — Stability and bug fixes (all completed)
+
+- **B159** (2026-03-25) — Boulder surface equivalence + weight expansion. Any gym with spraywall, board_kilter, board_moonboard, or board_other now implies `gym_boulder`. Same logic for weight: dumbbell/kettlebell/barbell implies `weight`. Unified `expand_equipment()` in `equipment_utils.py`. 14 new tests (1391 total).
+- **B158** (2026-03-25) — Planner Pass 1 uses budget fix. Temporary day-specific skips no longer burn `primary_uses` budget. `permanent_skip` flag. 4 new tests (1381 total).
+- **D154 Phase 1** (2026-03-25) — Fix S&P climbing distribution. `finger_strength_home` metadata corrected. New `limit_boulder_gym` session. 13 new tests (1376 total, 34 sessions).
+- **B157** (2026-03-25) — Three bugs from live session: campus_bumps prescription, R/L weight input guard for bodyweight_only, guided session completion for future-week sessions.
+- **B156** (2026-03-25) — Session UX Fixes (6 items): test_measurement persistence, countup stopwatch, warmup_easy_boulders, campus_bumps rewrite, active_hip_mobility, per-exercise notes. 7 new tests (1363 total).
+- **B155e** (2026-03-25) — Removed exercise drag & drop reorder entirely. −1 endpoint (50 total), −3 npm deps, −8 reorder tests.
+- **B155** (2026-03-25) — Clerk auth race condition fix. Gate all page-level fetches on `useAuth().isLoaded`. One-time 401 retry safety net.
+- **B153d** (2026-03-25) — Exercise reorder 422 fix. Frontend uses response data directly instead of GET reload.
+- **A141** (2026-03-24) — Process cues, phase rationales, fall drill, nav restructure. 14 new tests (1335 total).
+- **A142** (2026-03-24) — Exercise Detail Preview Sheet (ExerciseDetailSheet). 1 new component (58 total).
+- **B-SUPP** (2026-03-23) — Supplementary training via quick-add. `supplementary: true` flag on 5 sessions. 7 new tests (1321 total).
+- **A140** (2026-03-23) — Core Circuit add-on. New activity type in Free Session with configurable timer. 30 core exercises. 9 new backend tests.
+- **D151** (2026-03-23) — Load coherence audit & fix. 5 incoherences fixed. 20 new tests (1307 total).
+- **D152** (2026-03-24) — Add Exercise UX audit. 3 new tests (1338 total).
+- **B151** (2026-03-22) — Settings page: 4 bugs fixed. 2 new tests (1287 total).
+- **D150** (2026-03-22) — Planner availability compliance audit & fix. 14 new tests (1250 total).
+- **D35** (2026-03-22) — Hangboard experience gates. 7 new tests.
+- **D64** (2026-03-22) — RED-S guardrails. 3 new tests.
+- **B137b** (2026-03-22) — Resolver homewall equipment equivalence. 5 new tests.
+- **B139** (2026-03-22) — Week navigation picker.
+- **B137** (2026-03-21) — Homewall users get climbing sessions at home. 3 new tests (1223 total).
+- **B138** (2026-03-21) — Test interval 14→42 days.
+- **B136 + B136b** (2026-03-21) — Test results not visible in Today/Week view.
+- **B135** (2026-03-21) — Settings not showing max hang baseline.
+- **A139** (2026-03-21) — Session review: show actual logged data for completed sessions. 6 new tests (1220 total).
+- **B139** (2026-03-21) — Root URL 404 + OG meta tags.
+- **B153c** (2026-03-24) — Exercise reorder persistence audit. 1 new test (1356 total).
+- **B153b** (2026-03-24) — Drag reorder not persisting. `_user_edited` flag. 3 new tests (1355 total).
+- **B153** (2026-03-24) — Reorder exercises drag UX.
+- **A153** (2026-03-24) — Remove + Reorder exercises in resolved sessions. 14 new tests.
+- **A138** (2026-03-20) — Free session integration.
+- **D134** (2026-03-20) — Outdoor session persistence audit & fix. 8 new tests (1205 total).
+- **A137** (2026-03-20) — Free climbing session frontend.
+- **A136** (2026-03-20) — Free climbing session backend. 72 new tests.
+- **A135** (2026-03-20) — Tabata timer tab.
+- **B133 + B133-fix + B134** (2026-03-19) — Repeater test protocol fix (Lattice 2025).
+- **Session 1** (2026-03-17) — Assessment & Onboarding mega brief decisions (D01, D38, D68, D80, D81, D83).
+- **Session 1b** (2026-03-18) — Test protocol revision (D84-D91).
+- **B131** (2026-03-17) — LP test session UX fixes.
+- **A121** (2026-03-18) — Phase-aware intra-session exercise ordering. 41 new tests.
+- **D126/B126** (2026-03-15) — Resolver Stage 2c bug fix.
+- **B127** (2026-03-15) — Assessment profile auto-refresh.
+- **B126** (2026-03-15) — Weekly report audit: 5 bugs fixed.
+- **B127 duration** (2026-03-15) — 3-level duration capture.
+
+### P1b — Beta feedback (all completed)
+
+- **B128** — Test interval updated by B138 (14→42 days).
+
+### P2.5 — Catalog audit (closed items)
+
+- **B129** (2026-03-19) — `threshold_climbing` domain fix (aerobic_capacity → power_endurance).
+- **B-SUPP** (2026-03-23) — Supplementary training via quick-add.
+
+---
+
 ## §12 — Regole di allineamento
 
 1. **Dopo ogni sessione di sviluppo**: aggiornare questo file (stati, nuovi item) E

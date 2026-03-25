@@ -210,15 +210,19 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
 - **Deploy**: `git push` to main → both services update within 2-3 minutes.
 
-- **Multi-user**: UUID from `crypto.randomUUID()` stored in localStorage as `climb_user_id`, sent as `X-User-ID` header. State: `backend/data/users/{user_id}/user_state.json`. Without header → fallback to `backend/data/user_state.json` (local dev).
+- **Auth**: Clerk (Next.js native). Backend resolves `clerk_id` → internal `user_id` (UUID). Supabase `users` table with `clerk_id` column. In-memory LRU cache for `clerk_id → user_id` mapping. Without Clerk header → fallback to legacy UUID system (local dev only).
 
 - **Environment variables (Railway)**:
   | Variable | Description |
   |----------|-------------|
   | DATA_DIR | Persistent volume path (`/data/climb-agent`) |
   | ADMIN_SECRET | Key for admin endpoints (never commit) |
+  | STORAGE_BACKEND | `supabase` (production) or `file` (pytest/dev) |
+  | SUPABASE_URL | Supabase project URL |
+  | SUPABASE_SERVICE_KEY | Supabase service role key (never commit) |
+  | CLERK_SECRET_KEY | Clerk backend secret (never commit) |
 
-- **Persistence**: Railway persistent volume at `/data/climb-agent`. User data survives redeploys. `/health` exposes `ephemeral_warning`.
+- **Persistence**: Supabase Postgres with JSONB (`STORAGE_BACKEND=supabase` in production). `user_state` stored as JSONB column. Railway persistent volume (`/data/climb-agent`) as fallback for `STORAGE_BACKEND=file` (pytest, local dev). `/health` exposes `ephemeral_warning`.
 
 ## Documentation architecture
 

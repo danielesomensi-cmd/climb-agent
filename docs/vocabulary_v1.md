@@ -545,7 +545,7 @@ Currently used by: loading pin exercises (`lp_*`).
 
 Session templates define complete training sessions. Module templates define reusable blocks within sessions.
 
-Verify with: `python scripts/audit_templates.py`
+Verify with: `python _archive/scripts/audit_templates.py`
 
 ### 3.0 Canonical session template_ids (33)
 
