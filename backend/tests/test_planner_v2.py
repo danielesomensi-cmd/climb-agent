@@ -1562,5 +1562,42 @@ class TestB157TemporarySkipBudget(unittest.TestCase):
                               f"got {len(hard)}: {[s['session_id'] for s in hard]}")
 
 
+class TestB160PerfLimitBoulder(unittest.TestCase):
+    """B160: PERF phase must include limit_boulder_gym for ≥2 hard climbing."""
+
+    def test_perf_has_2_hard_climbing_with_4_gym_days(self):
+        from backend.engine.planner_v2 import _SESSION_META
+        avail = {
+            "mon": {"evening": {"available": True, "preferred_location": "gym"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym"}},
+            "fri": {"evening": {"available": True, "preferred_location": "gym"}},
+            "sat": {"evening": {"available": True, "preferred_location": "gym"}},
+        }
+        kwargs = _make_kwargs(
+            "performance",
+            availability=avail,
+            hard_cap_per_week=4,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 4},
+        )
+        plan = generate_phase_week(**kwargs)
+        days = plan["weeks"][0]["days"]
+        all_sessions = [s for d in days for s in d["sessions"]]
+        hard_climbing = [
+            s for s in all_sessions
+            if _SESSION_META.get(s["session_id"], {}).get("hard")
+            and _SESSION_META.get(s["session_id"], {}).get("climbing")
+        ]
+        self.assertGreaterEqual(
+            len(hard_climbing), 2,
+            f"PERF with 4 gym days should have ≥2 hard climbing, got "
+            f"{len(hard_climbing)}: {[s['session_id'] for s in hard_climbing]}",
+        )
+
+    def test_limit_boulder_in_perf_pool(self):
+        from backend.engine.macrocycle_v1 import _SESSION_POOL, _SESSION_POOL_BOULDER
+        self.assertIn("limit_boulder_gym", _SESSION_POOL["performance"])
+        self.assertIn("limit_boulder_gym", _SESSION_POOL_BOULDER["performance"])
+
+
 if __name__ == "__main__":
     unittest.main()
