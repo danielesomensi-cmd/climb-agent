@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import { RadarChart } from "@/components/onboarding/radar-chart";
 import { MacrocycleTimeline } from "@/components/training/macrocycle-timeline";
@@ -52,7 +53,8 @@ function computeCurrentWeek(startDate: string): number {
 }
 
 export default function PlanPage() {
-  const { state, loading, error, refresh } = useUserState();
+  const { isLoaded: authReady } = useAuth();
+  const { state, loading, error, refresh } = useUserState(authReady);
   const [expandedPhase, setExpandedPhase] = useState<string | null>(null);
   const [expandedRationale, setExpandedRationale] = useState<string | null>(null);
   const [aboutPlanOpen, setAboutPlanOpen] = useState(false);
@@ -75,9 +77,11 @@ export default function PlanPage() {
     }
   }, []);
 
+  // B155: gate on Clerk readiness
   useEffect(() => {
+    if (!authReady) return;
     checkStale();
-  }, [checkStale]);
+  }, [checkStale, authReady]);
 
   function togglePhase(phaseId: string) {
     setExpandedPhase((prev) => (prev === phaseId ? null : phaseId));

@@ -2,6 +2,7 @@
 
 import { Suspense, useState, useCallback, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import {
   Layers, Target, Repeat, Eye, ArrowLeft,
   Smartphone, Moon, Box, Route, Flame,
@@ -126,6 +127,7 @@ const PHASE_BADGE: Record<string, { label: string; color: string }> = {
 function FreeSessionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isLoaded: authReady } = useAuth();
   const paramContext = searchParams.get("context") || "standalone";
   const paramDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
   const [step, setStep] = useState<Step>("surface");
@@ -152,12 +154,13 @@ function FreeSessionContent() {
   const [circuitResult, setCircuitResult] = useState<CircuitResult | null>(null);
   const [circuitSessionId, setCircuitSessionId] = useState<string | null>(null);
 
-  // Load gyms on mount
+  // B155: gate on Clerk readiness
   useEffect(() => {
+    if (!authReady) return;
     getFreeSessionSurfaces()
       .then((data) => setGyms(data.gyms))
       .catch(() => {});
-  }, []);
+  }, [authReady]);
 
   // ── Handlers ───────────────────────────────────────────────────────
 

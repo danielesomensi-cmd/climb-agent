@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { getState, setStartWeek } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,18 +16,21 @@ import { Label } from "@/components/ui/label";
 
 export default function StartWeekPage() {
   const router = useRouter();
+  const { isLoaded: authReady } = useAuth();
   const [maxOffset, setMaxOffset] = useState(0);
   const [selected, setSelected] = useState("0");
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
 
+  // B155: gate on Clerk readiness
   useEffect(() => {
+    if (!authReady) return;
     getState().then((state) => {
       const dur = state.macrocycle?.phases?.[0]?.duration_weeks ?? 1;
       setMaxOffset(Math.min(dur - 1, 3));
       setReady(true);
     });
-  }, []);
+  }, [authReady]);
 
   const handleContinue = async () => {
     const offset = parseInt(selected, 10);

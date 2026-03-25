@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import { ExerciseCard } from "@/components/training/exercise-card";
 import { resolveSession } from "@/lib/api";
@@ -32,6 +33,7 @@ export default function SessionPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isLoaded: authReady } = useAuth();
   const sessionId = typeof params.id === "string" ? params.id : "";
   const date = searchParams.get("date") || new Date().toISOString().slice(0, 10);
 
@@ -58,9 +60,11 @@ export default function SessionPage() {
     }
   }, [sessionId]);
 
+  // B155: gate on Clerk readiness
   useEffect(() => {
+    if (!authReady) return;
     fetchSession();
-  }, [fetchSession]);
+  }, [fetchSession, authReady]);
 
   const displayName = (resolved as unknown as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(sessionId);
 

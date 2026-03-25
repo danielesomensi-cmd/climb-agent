@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -113,6 +114,7 @@ function currentMonday(): string {
 
 function WeeklyReportContent() {
   const searchParams = useSearchParams();
+  const { isLoaded: authReady } = useAuth();
   const paramStart = searchParams.get("week_start");
   const [weekStart, setWeekStart] = useState(paramStart || currentMonday());
   const [report, setReport] = useState<WeeklyReport | null>(null);
@@ -140,9 +142,11 @@ function WeeklyReportContent() {
     }
   }, []);
 
+  // B155: gate on Clerk readiness
   useEffect(() => {
+    if (!authReady) return;
     if (weekStart) fetchReport(weekStart);
-  }, [weekStart, fetchReport]);
+  }, [weekStart, fetchReport, authReady]);
 
   const handlePrev = () => setWeekStart(shiftWeek(weekStart, -1));
   const handleNext = () => setWeekStart(shiftWeek(weekStart, 1));

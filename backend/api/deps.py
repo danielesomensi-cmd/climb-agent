@@ -105,15 +105,6 @@ def get_user_id(request: Request) -> Optional[str]:
     # 2. Fallback: X-User-ID (dev/test)
     header = request.headers.get("X-User-ID")
     if header is None:
-        # B153d: if Clerk is configured (production) but no auth was provided,
-        # return 401 instead of None — prevents loading the empty legacy bucket
-        # which causes 422 "No macrocycle" on week endpoints.
-        from backend.api.auth import is_clerk_configured
-        if is_clerk_configured():
-            raise HTTPException(
-                status_code=401,
-                detail="Authentication required (no Bearer token or X-User-ID)",
-            )
         return None
     try:
         _uuid.UUID(header, version=4)

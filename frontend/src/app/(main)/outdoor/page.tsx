@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import { getOutdoorSessions, getOutdoorStats } from "@/lib/api";
 import type { OutdoorSession, OutdoorStats } from "@/lib/types";
@@ -8,11 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function OutdoorPage() {
+  const { isLoaded: authReady } = useAuth();
   const [sessions, setSessions] = useState<(OutdoorSession & { load_score?: number })[]>([]);
   const [stats, setStats] = useState<OutdoorStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // B155: gate on Clerk readiness
   useEffect(() => {
+    if (!authReady) return;
     Promise.all([getOutdoorSessions(), getOutdoorStats()])
       .then(([sessData, statsData]) => {
         setSessions(sessData.sessions as (OutdoorSession & { load_score?: number })[]);
@@ -20,7 +24,7 @@ export default function OutdoorPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [authReady]);
 
   // Group sessions by spot
   const bySpot: Record<string, (OutdoorSession & { load_score?: number })[]> = {};

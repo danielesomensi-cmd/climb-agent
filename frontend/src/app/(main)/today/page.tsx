@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
@@ -75,6 +76,7 @@ function formatDateSubtitle(dateStr: string): string {
 function TodayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isLoaded: authReady } = useAuth();
   const dateParam = searchParams.get("date");
   const targetDate = dateParam || todayISO();
   const isViewingToday = targetDate === todayISO();
@@ -187,9 +189,11 @@ function TodayContent() {
     }
   }, []);
 
+  // B155: gate on Clerk readiness to avoid 422 race on first load
   useEffect(() => {
+    if (!authReady) return;
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, authReady]);
 
   // Fetch daily quote once the week plan is loaded
   useEffect(() => {

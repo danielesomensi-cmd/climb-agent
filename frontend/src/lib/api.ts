@@ -29,7 +29,7 @@ async function _getAuthHeaders(): Promise<Record<string, string>> {
   return {};
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+async function request<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
   const authHeaders = await _getAuthHeaders();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -40,6 +40,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers,
   });
+  // B155: on 401, retry once after 500ms — Clerk token may not be ready yet
+  if (res.status === 401 && !_isRetry && typeof window !== "undefined") {
+    console.warn(`[B155] 401 on ${path} — retrying in 500ms (Clerk may still be loading)`);
+    await new Promise((r) => setTimeout(r, 500));
+    return request<T>(path, options, true);
+  }
   if (res.status === 401 && typeof window !== "undefined") {
     window.location.href = "/sign-in";
     throw new Error("Session expired");

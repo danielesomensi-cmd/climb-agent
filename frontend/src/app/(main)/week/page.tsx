@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import { WeekGrid } from "@/components/training/week-grid";
 import { DayCard } from "@/components/training/day-card";
@@ -49,6 +50,7 @@ function todayISO(): string {
 }
 
 export default function WeekPage() {
+  const { isLoaded: authReady } = useAuth();
   const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);
   const [phaseId, setPhaseId] = useState<string | null>(null);
   const [weekNum, setWeekNum] = useState(0); // 0 = current week
@@ -130,9 +132,11 @@ export default function WeekPage() {
     }
   }, []);
 
+  // B155: gate on Clerk readiness to avoid 422 race on first load
   useEffect(() => {
+    if (!authReady) return;
     fetchInitial();
-  }, [fetchInitial]);
+  }, [fetchInitial, authReady]);
 
   // Fetch outdoor session routes for days marked "done"
   useEffect(() => {
