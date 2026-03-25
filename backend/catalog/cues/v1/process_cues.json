@@ -2,7 +2,7 @@
   {
     "id": "cue_001",
     "text": "Read each problem fully before starting. Where's the crux? Where will you rest?",
-    "session_types": ["boulder_circuit_gym", "power_contact_gym", "power_endurance_gym"],
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "power_endurance_gym"],
     "source": "D78"
   },
   {
@@ -38,7 +38,7 @@
   {
     "id": "cue_007",
     "text": "Between hard attempts, do 2-3 minutes of easy traversing instead of sitting. Active recovery promotes faster reperfusion than passive rest.",
-    "session_types": ["boulder_circuit_gym", "power_contact_gym", "strength_long"],
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "strength_long"],
     "source": "D48 (Valenzuela 2015)"
   },
   {
@@ -128,7 +128,7 @@
   {
     "id": "cue_022",
     "text": "Engage your core before every dynamic move. A split second of tension through your midsection transfers power from feet to hands.",
-    "session_types": ["boulder_circuit_gym", "power_contact_gym"],
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym"],
     "source": "D78"
   },
   {
@@ -146,7 +146,7 @@
   {
     "id": "cue_025",
     "text": "Breathe. Exhale on the hardest part of each move. Holding your breath increases blood pressure and wastes energy.",
-    "session_types": ["boulder_circuit_gym", "power_contact_gym", "route_endurance_gym", "power_endurance_gym"],
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "route_endurance_gym", "power_endurance_gym"],
     "source": "D78"
   }
 ]

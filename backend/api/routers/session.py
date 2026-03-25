@@ -13,7 +13,6 @@ from backend.api.deps import REPO_ROOT, get_user_id, load_state, save_state
 from backend.api.models import (
     AddExerciseRequest,
     RemoveExerciseRequest,
-    ReorderExercisesRequest,
     SessionResolveRequest,
 )
 from backend.engine.resolve_session import resolve_session
@@ -221,36 +220,3 @@ def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends
     return {"week_plan": week_plan}
 
 
-@router.post("/reorder-exercises")
-def reorder_exercises(req: ReorderExercisesRequest, user_id: Optional[str] = Depends(get_user_id)):
-    """Reorder exercises in a resolved session."""
-    state = load_state(user_id)
-    week_plan = req.week_plan
-    if not week_plan:
-        raise HTTPException(status_code=422, detail="week_plan is required")
-
-    _, session, resolved, exercise_instances = _find_session(week_plan, req.date, req.session_index)
-    _assert_session_mutable(session, req.date)
-
-    n = len(exercise_instances)
-    new_order = req.new_order
-
-    # Validate: must be a valid permutation
-    if len(new_order) != n:
-        raise HTTPException(
-            status_code=422,
-            detail=f"new_order length {len(new_order)} != exercise count {n}",
-        )
-    if sorted(new_order) != list(range(n)):
-        raise HTTPException(
-            status_code=422,
-            detail="new_order must be a valid permutation (each index 0..N-1 exactly once)",
-        )
-
-    reordered = [exercise_instances[i] for i in new_order]
-    resolved["resolved_session"]["exercise_instances"] = reordered
-    # B153b: mark session so _auto_resolve skips re-resolution
-    session["_user_edited"] = True
-    _persist_week_plan(week_plan, state, user_id)
-
-    return {"week_plan": week_plan}

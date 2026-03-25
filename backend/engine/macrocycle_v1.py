@@ -80,6 +80,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
     },
     "strength_power": {
         "power_contact_gym": "primary",
+        "limit_boulder_gym": "primary",
         "strength_long": "primary",
         "finger_strength_home": "primary",
         "prehab_maintenance": "primary",
@@ -160,6 +161,7 @@ _SESSION_POOL_BOULDER: Dict[str, Dict[str, str]] = {
     },
     "strength_power": {
         "power_contact_gym": "primary",
+        "limit_boulder_gym": "primary",
         "strength_long": "primary",
         "finger_strength_home": "primary",
         "prehab_maintenance": "primary",

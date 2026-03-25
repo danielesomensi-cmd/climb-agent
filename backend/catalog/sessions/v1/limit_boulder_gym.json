@@ -1,0 +1,79 @@
+{
+  "id": "limit_boulder_gym",
+  "name": "Limit Bouldering (Projecting)",
+  "version": "2.0",
+  "intent": {
+    "primary_goal": "limit_projecting",
+    "secondary_goals": [
+      "technique_boulder",
+      "movement_quality",
+      "core_tension"
+    ],
+    "notes": "Dedicated limit projecting session. Read the whole problem. Rest long. Quality over quantity. 3-4 attempts per boulder max, 5-8 min rest between problems for full neural recovery."
+  },
+  "compatibility": {
+    "slot": ["long"],
+    "sports": ["climbing"]
+  },
+  "required_equipment": ["gym_boulder"],
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 75,
+    "hard_cap_min": 100
+  },
+  "modules": [
+    {
+      "template_id": "warmup_climbing",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "limit_projecting",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Limit bouldering: 4-6 problems at V_max to V_max-1. Project mindset: read, visualize, attempt, analyze. 3-4 attempts per problem max. Rest 5-8 min between problems (FULL neural recovery).",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["main"],
+            "domain": ["power", "technique_boulder"],
+            "pattern": ["climbing_limit_boulder"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "supplementary_pulling",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "1-2 sets heavy pulling to complement limit bouldering. Archer or weighted pull-up.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["main"],
+            "domain": ["strength_general"],
+            "pattern": ["pull_vertical"]
+          },
+          "pick": 1
+        }
+      }
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": true,
+      "priority": 65,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ]
+}

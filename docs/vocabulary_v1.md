@@ -566,6 +566,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `handstand_practice` *(handstand_skill, home)*
 - `heavy_conditioning_gym` *(strength_general, gym)*
 - `legs_strength` *(strength_general, home)*
+- `limit_boulder_gym` *(limit_projecting, gym)*
 - `lower_body_gym` *(strength_general, gym)*
 - `power_contact_gym` *(contact_strength, gym)*
 - `power_endurance_gym` *(power_endurance, gym)*

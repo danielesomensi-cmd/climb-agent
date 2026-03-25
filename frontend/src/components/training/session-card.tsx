@@ -1,24 +1,8 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, GripVertical } from "lucide-react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,7 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
-import { getExercises, addExerciseToSession, removeExerciseFromSession, reorderSessionExercises } from "@/lib/api";
+import { getExercises, addExerciseToSession, removeExerciseFromSession } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 
@@ -555,58 +539,24 @@ function AddExerciseDialog({
   );
 }
 
-// ─── Sortable Exercise Item (A153) ──────────────────────────────────
+// ─── Exercise Item Wrapper ───────────────────────────────────────────
 
-interface SortableExerciseItemProps {
-  id: string;
+function ExerciseItemWrapper({ children, canEdit, onRemove }: {
   children: React.ReactNode;
   canEdit: boolean;
   onRemove?: () => void;
-}
-
-function SortableExerciseItem({ id, children, canEdit, onRemove }: SortableExerciseItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id, disabled: !canEdit });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : undefined,
-  };
-
+}) {
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-start gap-1.5 rounded-md ${isDragging ? "opacity-80 shadow-lg shadow-primary/20 ring-1 ring-primary/30 bg-card" : ""}`}
-    >
-      {canEdit && (
+    <div className="relative">
+      {children}
+      {canEdit && onRemove && (
         <button
-          className="flex items-center justify-center w-11 h-11 mt-0.5 touch-none text-muted-foreground/70 hover:text-muted-foreground cursor-grab active:cursor-grabbing shrink-0"
-          {...attributes}
-          {...listeners}
+          className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/30 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
         >
-          <GripVertical className="size-5" />
+          <Trash2 className="size-3.5" />
         </button>
       )}
-      <div className="relative flex-1 min-w-0">
-        {children}
-        {/* B153b: Trash icon inside card, top-right */}
-        {canEdit && onRemove && (
-          <button
-            className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/30 hover:text-red-500 hover:bg-red-500/10 transition-colors"
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          >
-            <Trash2 className="size-3.5" />
-          </button>
-        )}
-      </div>
     </div>
   );
 }
@@ -633,44 +583,14 @@ export function SessionCard({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
   const [exerciseToRemove, setExerciseToRemove] = useState<{ index: number; name: string } | null>(null);
-  const [reorderWarningShown, setReorderWarningShown] = useState(false);
-  // B153: Optimistic reorder — localOrder is a permutation of server exercise_instances indices
-  const [localOrder, setLocalOrder] = useState<number[] | null>(null);
-  const [reorderPending, setReorderPending] = useState(false);
-  // B155d: refs to prevent useEffect reset after user reorder + double-fire guard
-  const justReorderedRef = useRef(false);
-  const dragInProgressRef = useRef(false);
   const router = useRouter();
 
-  // Server exercise instances (from props)
-  const serverInstances = useMemo(() => {
+  // Exercise instances from resolved session
+  const exerciseInstances = useMemo(() => {
     const r = session.resolved as Record<string, unknown> | undefined;
     const rs = r?.resolved_session as Record<string, unknown> | undefined;
     return (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
   }, [session.resolved]);
-
-  // Reset local order when server data changes (after refetch)
-  // B155d: skip reset if user just reordered — the server data already has the new order
-  useEffect(() => {
-    if (justReorderedRef.current) {
-      justReorderedRef.current = false;
-      return;
-    }
-    setLocalOrder(null);
-    setReorderPending(false);
-  }, [serverInstances]);
-
-  // Effective instances: local override (optimistic) or server data
-  const effectiveInstances = useMemo(() => {
-    if (!localOrder) return serverInstances;
-    return localOrder.map((i) => serverInstances[i]);
-  }, [localOrder, serverInstances]);
-
-  // DnD sensors — require 8px drag distance to avoid accidental drags
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
-  );
 
   const handleRemoveExercise = useCallback(async (exerciseIndex: number) => {
     if (!weekPlan) return;
@@ -686,47 +606,6 @@ export function SessionCard({
       console.error("[B155d] remove exercise FAILED:", err);
     }
   }, [weekPlan, date, sessionIndex, onSessionUpdated]);
-
-  const handleDragEnd = useCallback(async (event: DragEndEvent, sortableIds: string[]) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id || !weekPlan) return;
-
-    // B155d: guard against double-fire (DndContext remount during parent re-render)
-    if (dragInProgressRef.current) return;
-    dragInProgressRef.current = true;
-
-    // B153: Use visual positions in the sortable list, not raw instanceIdx
-    const activePos = sortableIds.indexOf(active.id as string);
-    const overPos = sortableIds.indexOf(over.id as string);
-    if (activePos === -1 || overPos === -1) { dragInProgressRef.current = false; return; }
-
-    // Current order: mapping from visual position → server exercise_instances index
-    const currentOrder = localOrder ?? Array.from({ length: serverInstances.length }, (_, i) => i);
-    const newOrder = arrayMove(currentOrder, activePos, overPos);
-
-    // B155d: mark so the useEffect skips the reset when props update
-    justReorderedRef.current = true;
-    setLocalOrder(newOrder);
-    setReorderPending(true);
-    if (!reorderWarningShown) setReorderWarningShown(true);
-
-    try {
-      const result = await reorderSessionExercises({
-        date,
-        session_index: sessionIndex,
-        new_order: newOrder,
-        week_plan: weekPlan,
-      });
-      onSessionUpdated?.(result.week_plan);
-    } catch (err) {
-      console.error("[B155d] reorder API FAILED:", err);
-      justReorderedRef.current = false;
-      setLocalOrder(null);
-      setReorderPending(false);
-    } finally {
-      dragInProgressRef.current = false;
-    }
-  }, [weekPlan, date, sessionIndex, onSessionUpdated, reorderWarningShown, localOrder, serverInstances.length]);
 
   // Compute available equipment for this session (expanded with implicit items)
   const availableEquipment = useMemo<Set<string> | null>(() => {
@@ -886,8 +765,7 @@ export function SessionCard({
               )?.resolved_session as Record<string, unknown> | undefined;
               const allBlocks = (rs?.blocks ?? []) as Array<Record<string, unknown>>;
 
-              // B153: use effectiveInstances (optimistic local order or server data)
-              const allInstances = effectiveInstances;
+              const allInstances = exerciseInstances;
 
               if (allInstances.length === 0 && allBlocks.length === 0) {
                 return (
@@ -897,47 +775,33 @@ export function SessionCard({
                 );
               }
 
-              // B153: When user has reordered (localOrder set), show flat exercise list
-              // to respect their explicit ordering. Otherwise, use block-based grouping.
+              // Block-based grouping for display
               const items: Array<{ type: "instruction"; block: Record<string, unknown>; visualPos?: undefined } | { type: "exercise"; inst: Record<string, unknown>; visualPos: number }> = [];
+              const usedIdx = new Set<number>();
+              let exerciseCounter = 0;
 
-              if (localOrder) {
-                // Flat list — user's explicit order takes precedence over block grouping
-                for (let i = 0; i < allInstances.length; i++) {
-                  items.push({ type: "exercise", inst: allInstances[i], visualPos: i });
-                }
-              } else {
-                // Block-based grouping (default)
-                const usedIdx = new Set<number>();
-                let exerciseCounter = 0;
+              for (const block of allBlocks) {
+                const blockUid = (block.block_uid as string) ?? "";
+                const selEx = (block.selected_exercises ?? []) as unknown[];
 
-                for (const block of allBlocks) {
-                  const blockUid = (block.block_uid as string) ?? "";
-                  const selEx = (block.selected_exercises ?? []) as unknown[];
-
-                  if (selEx.length === 0 && block.instructions) {
-                    items.push({ type: "instruction", block });
-                  } else {
-                    for (let i = 0; i < allInstances.length; i++) {
-                      if (!usedIdx.has(i) && (allInstances[i].block_uid as string) === blockUid) {
-                        items.push({ type: "exercise", inst: allInstances[i], visualPos: exerciseCounter++ });
-                        usedIdx.add(i);
-                      }
+                if (selEx.length === 0 && block.instructions) {
+                  items.push({ type: "instruction", block });
+                } else {
+                  for (let i = 0; i < allInstances.length; i++) {
+                    if (!usedIdx.has(i) && (allInstances[i].block_uid as string) === blockUid) {
+                      items.push({ type: "exercise", inst: allInstances[i], visualPos: exerciseCounter++ });
+                      usedIdx.add(i);
                     }
                   }
                 }
-                for (let i = 0; i < allInstances.length; i++) {
-                  if (!usedIdx.has(i)) {
-                    items.push({ type: "exercise", inst: allInstances[i], visualPos: exerciseCounter++ });
-                  }
+              }
+              for (let i = 0; i < allInstances.length; i++) {
+                if (!usedIdx.has(i)) {
+                  items.push({ type: "exercise", inst: allInstances[i], visualPos: exerciseCounter++ });
                 }
               }
 
-              const canEditExercises = !isFinalized && !!weekPlan && !reorderPending;
-              // B153: Sortable IDs use sequential visual positions (not server instanceIdx)
-              const exerciseSortableIds = items
-                .filter((it) => it.type === "exercise")
-                .map((it) => `exercise-${it.visualPos}`);
+              const canEditExercises = !isFinalized && !!weekPlan;
 
               const renderExerciseCard = (ex: Record<string, unknown>, i: number) => {
                 const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
@@ -972,52 +836,39 @@ export function SessionCard({
               };
 
               return (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, exerciseSortableIds)}>
-                  <SortableContext items={exerciseSortableIds} strategy={verticalListSortingStrategy}>
-                    <div className="space-y-1.5">
-                      {/* Reorder warning banner (shown once per session on first reorder) */}
-                      {reorderWarningShown && (
-                        <div className="flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-400">
-                          <span>L&apos;ordine è stato ottimizzato per sicurezza e prestazioni. Puoi comunque personalizzarlo.</span>
-                          <button className="shrink-0 underline" onClick={() => setReorderWarningShown(false)}>OK</button>
+                <div className="space-y-1.5">
+                  {items.map((item, i) => {
+                    if (item.type === "instruction") {
+                      const instr = (item.block.instructions ?? {}) as Record<string, unknown>;
+                      const notes = (instr.notes ?? []) as string[];
+                      const dur = instr.duration_min_range as [number, number] | undefined;
+                      const blockId = (item.block.block_id as string) ?? "";
+                      return (
+                        <div key={`instr-${i}`} className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                          <span className="text-primary mt-0.5 text-xs font-medium shrink-0">
+                            {dur ? `${dur[0]}–${dur[1]} min` : ""}
+                          </span>
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-medium text-foreground">
+                              {blockId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                            </span>
+                            {notes[0] && <span className="ml-1">— {notes[0]}</span>}
+                          </div>
                         </div>
-                      )}
-                      {items.map((item, i) => {
-                        if (item.type === "instruction") {
-                          const instr = (item.block.instructions ?? {}) as Record<string, unknown>;
-                          const notes = (instr.notes ?? []) as string[];
-                          const dur = instr.duration_min_range as [number, number] | undefined;
-                          const blockId = (item.block.block_id as string) ?? "";
-                          return (
-                            <div key={`instr-${i}`} className="flex items-start gap-2 rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                              <span className="text-primary mt-0.5 text-xs font-medium shrink-0">
-                                {dur ? `${dur[0]}–${dur[1]} min` : ""}
-                              </span>
-                              <div className="text-xs text-muted-foreground">
-                                <span className="font-medium text-foreground">
-                                  {blockId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
-                                </span>
-                                {notes[0] && <span className="ml-1">— {notes[0]}</span>}
-                              </div>
-                            </div>
-                          );
-                        }
-                        const sortableId = `exercise-${item.visualPos}`;
-                        const exName = (item.inst.name as string) ?? (item.inst.exercise_id as string) ?? "";
-                        return (
-                          <SortableExerciseItem
-                            key={sortableId}
-                            id={sortableId}
-                            canEdit={canEditExercises}
-                            onRemove={canEditExercises && allInstances.length > 1 ? () => setExerciseToRemove({ index: item.visualPos, name: exName }) : undefined}
-                          >
-                            {renderExerciseCard(item.inst, i)}
-                          </SortableExerciseItem>
-                        );
-                      })}
-                    </div>
-                  </SortableContext>
-                </DndContext>
+                      );
+                    }
+                    const exName = (item.inst.name as string) ?? (item.inst.exercise_id as string) ?? "";
+                    return (
+                      <ExerciseItemWrapper
+                        key={`exercise-${item.visualPos}`}
+                        canEdit={canEditExercises}
+                        onRemove={canEditExercises && allInstances.length > 1 ? () => setExerciseToRemove({ index: item.visualPos, name: exName }) : undefined}
+                      >
+                        {renderExerciseCard(item.inst, i)}
+                      </ExerciseItemWrapper>
+                    );
+                  })}
+                </div>
               );
             })()}
 

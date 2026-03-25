@@ -64,13 +64,6 @@ class RemoveExerciseRequest(BaseModel):
     week_plan: Optional[Dict[str, Any]] = None
 
 
-class ReorderExercisesRequest(BaseModel):
-    """Body for POST /api/session/reorder-exercises."""
-    date: str
-    session_index: int = 0
-    new_order: List[int]
-    week_plan: Optional[Dict[str, Any]] = None
-
 
 # --------------------------------------------------------------------------- #
 # Replanner

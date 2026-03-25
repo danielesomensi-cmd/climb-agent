@@ -157,16 +157,6 @@ export const removeExerciseFromSession = (data: {
     body: JSON.stringify(data),
   });
 
-export const reorderSessionExercises = (data: {
-  date: string;
-  session_index: number;
-  new_order: number[];
-  week_plan: WeekPlan;
-}) =>
-  request<{ week_plan: WeekPlan }>("/api/session/reorder-exercises", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
 
 // Replanner
 export const applyOverride = (data: {
