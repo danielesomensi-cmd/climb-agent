@@ -1168,9 +1168,12 @@ def _make_v2_plan(gym_equipment=None):
 
 
 def test_b96_override_respects_gym_equipment():
-    """B96: Endurance override at gym without gym_routes should NOT produce power_endurance_gym."""
+    """B96/B157: PE override at gym with gym_boulder SHOULD produce power_endurance_gym.
+
+    After B157, power_endurance_gym requires gym_boulder (not gym_routes).
+    Boulder intervals (4x4, linked boulders) are the primary PE stimulus.
+    """
     plan = _make_v2_plan(gym_equipment=["gym_boulder", "hangboard"])
-    # power_endurance_gym requires gym_routes; gym only has gym_boulder
     updated = apply_day_override(
         plan,
         intent="power_endurance",
@@ -1182,9 +1185,9 @@ def test_b96_override_respects_gym_equipment():
     )
     target_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
     session_ids = [s["session_id"] for s in target_day["sessions"]]
-    # Should NOT be power_endurance_gym (requires gym_routes)
-    assert "power_endurance_gym" not in session_ids, (
-        "power_endurance_gym requires gym_routes which this gym doesn't have"
+    # B157: power_endurance_gym now requires gym_boulder, so it SHOULD be placed
+    assert "power_endurance_gym" in session_ids, (
+        "power_endurance_gym requires gym_boulder and should be placed at this gym"
     )
 
 

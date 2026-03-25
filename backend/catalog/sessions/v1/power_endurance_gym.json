@@ -15,7 +15,7 @@
     "slot": ["long"],
     "sports": ["climbing"]
   },
-  "required_equipment": ["gym_routes"],
+  "required_equipment": ["gym_boulder"],
   "context": {
     "location": "gym"
   },
@@ -32,8 +32,8 @@
     },
     {
       "block_id": "pe_routes",
-      "required": true,
-      "priority": 90,
+      "required": false,
+      "priority": 85,
       "module_role": "primary",
       "notes": "Route intervals preferred when gym_routes available. High pump tolerance on rope.",
       "selection": {
@@ -49,8 +49,8 @@
     },
     {
       "block_id": "pe_boulder",
-      "required": false,
-      "priority": 85,
+      "required": true,
+      "priority": 90,
       "module_role": "primary",
       "notes": "Boulder intervals fallback: 4x4, linked boulders when routes unavailable.",
       "selection": {
