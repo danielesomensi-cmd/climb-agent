@@ -192,6 +192,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "extension",
     type: "dynamic",
     advanced: false,
+    image: "19_superman_swimmers.jpg",
   },
   {
     id: "ce_glute_bridge",
