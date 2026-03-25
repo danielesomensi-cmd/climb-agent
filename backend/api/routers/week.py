@@ -219,6 +219,11 @@ def get_week(
 
     macrocycle = state.get("macrocycle")
     if not macrocycle:
+        logger.warning(
+            "B153d: 422 No macrocycle for user_id=%s (state keys: %s)",
+            user_id,
+            sorted(state.keys()) if state else "NO_STATE",
+        )
         raise HTTPException(status_code=422, detail="No macrocycle — generate one first")
 
     try:

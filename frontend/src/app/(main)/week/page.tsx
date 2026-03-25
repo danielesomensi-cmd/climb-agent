@@ -770,7 +770,10 @@ export default function WeekPage() {
                   outdoorRoutes={outdoorRoutesMap[day.date]}
                   outdoorDurationMinutes={outdoorDurationMap[day.date]}
                   weekPlan={weekPlan}
-                  onSessionUpdated={() => fetchWeek(displayWeekNum)}
+                  onSessionUpdated={(updatedPlan) => {
+                    // B153d: use response data when available to avoid 422 reload race
+                    if (updatedPlan) { setWeekPlan(updatedPlan); } else { fetchWeek(displayWeekNum); }
+                  }}
                   showActions
                   onMarkDone={(sessionId) => handleMarkDone(sessionId, day.date)}
                   onMarkSkipped={(sessionId) => handleMarkSkipped(sessionId, day.date)}

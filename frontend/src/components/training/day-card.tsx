@@ -54,7 +54,7 @@ interface DayCardProps {
   onDeleteFreeSession?: (sessionId: string) => void;
   showActions?: boolean;
   weekPlan?: WeekPlan | null;
-  onSessionUpdated?: () => void;
+  onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
 }
 
 const FEEDBACK_OPTIONS = [

@@ -795,7 +795,10 @@ function TodayContent() {
             outdoorRoutes={outdoorRoutesMap[dayPlan.date]}
             outdoorDurationMinutes={outdoorDurationMap[dayPlan.date]}
             weekPlan={weekPlan}
-            onSessionUpdated={fetchData}
+            onSessionUpdated={(updatedPlan) => {
+              // B153d: use response data when available to avoid 422 reload race
+              if (updatedPlan) { setWeekPlan(updatedPlan); } else { fetchData(); }
+            }}
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}
             onUndo={handleUndo}

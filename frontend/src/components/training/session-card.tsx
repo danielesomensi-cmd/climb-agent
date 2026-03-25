@@ -73,7 +73,7 @@ interface SessionCardProps {
   onMove?: () => void;
   onRemove?: () => void;
   onReplan?: () => void;
-  onSessionUpdated?: () => void;
+  onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
 }
 
 /** Format session_id into a readable string: replace _ with spaces, capitalize */
@@ -284,7 +284,7 @@ function AddExerciseDialog({
   sessionIndex: number;
   weekPlan: WeekPlan;
   availableEquipment: Set<string> | null;
-  onSuccess: () => void;
+  onSuccess: (updatedPlan?: WeekPlan) => void;
 }) {
   const [catalog, setCatalog] = useState<Exercise[]>([]);
   const [loading, setLoading] = useState(false);
@@ -397,11 +397,11 @@ function AddExerciseDialog({
         prescription_override: overrides,
         week_plan: weekPlan,
       };
-      await addExerciseToSession(payload);
+      const result = await addExerciseToSession(payload);
       onOpenChange(false);
       setSelected(null);
       setSearch("");
-      onSuccess();
+      onSuccess(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add exercise");
     } finally {
@@ -667,13 +667,13 @@ export function SessionCard({
   const handleRemoveExercise = useCallback(async (exerciseIndex: number) => {
     if (!weekPlan) return;
     try {
-      await removeExerciseFromSession({
+      const result = await removeExerciseFromSession({
         date,
         session_index: sessionIndex,
         exercise_index: exerciseIndex,
         week_plan: weekPlan,
       });
-      onSessionUpdated?.();
+      onSessionUpdated?.(result.week_plan);
     } catch (err) {
       console.error("[B153c] remove exercise FAILED:", err);
     }
@@ -699,15 +699,15 @@ export function SessionCard({
     if (!reorderWarningShown) setReorderWarningShown(true);
 
     try {
-      console.log("[B153c] reorder API call:", { date, session_index: sessionIndex, new_order: newOrder, has_week_plan: !!weekPlan, start_date: (weekPlan as unknown as Record<string, unknown>)?.start_date });
       const result = await reorderSessionExercises({
         date,
         session_index: sessionIndex,
         new_order: newOrder,
         week_plan: weekPlan,
       });
-      console.log("[B153c] reorder API success");
-      onSessionUpdated?.();
+      // B153d: use response data directly instead of full reload to avoid
+      // 422 race condition when Clerk token is briefly unavailable
+      onSessionUpdated?.(result.week_plan);
     } catch (err) {
       console.error("[B153c] reorder API FAILED:", err);
       // Revert optimistic update on failure
@@ -1210,7 +1210,7 @@ export function SessionCard({
           sessionIndex={sessionIndex}
           weekPlan={weekPlan}
           availableEquipment={availableEquipment}
-          onSuccess={() => onSessionUpdated?.()}
+          onSuccess={(updatedPlan) => onSessionUpdated?.(updatedPlan)}
         />
       )}
     </>
