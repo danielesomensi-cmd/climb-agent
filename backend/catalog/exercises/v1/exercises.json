@@ -2428,8 +2428,8 @@
       "intensity_level": "high",
       "fatigue_cost": 8,
       "recency_group": "gym_linked_boulders",
-      "equipment_required": [
-        "gym_boulder"
+      "equipment_required_any": [
+        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -2728,8 +2728,8 @@
       "intensity_level": "low",
       "fatigue_cost": 3,
       "recency_group": "gym_arc",
-      "equipment_required": [
-        "gym_boulder"
+      "equipment_required_any": [
+        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -4113,8 +4113,8 @@
       "intensity_level": "low",
       "fatigue_cost": 3,
       "recency_group": "technique_body_position_drills",
-      "equipment_required": [
-        "gym_boulder"
+      "equipment_required_any": [
+        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -8883,8 +8883,8 @@
       "intensity_level": "low",
       "fatigue_cost": 3,
       "recency_group": "technique_body_position_drills",
-      "equipment_required": [
-        "gym_boulder"
+      "equipment_required_any": [
+        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -8931,8 +8931,8 @@
       "intensity_level": "low",
       "fatigue_cost": 3,
       "recency_group": "technique_body_position_drills",
-      "equipment_required": [
-        "gym_boulder"
+      "equipment_required_any": [
+        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -9074,7 +9074,7 @@
       "intensity_level": "low",
       "fatigue_cost": 1,
       "recency_group": "warmup_climbing",
-      "equipment_required_any": ["gym_boulder", "kilter_board", "moonboard", "tension_board", "spraywall"],
+      "equipment_required_any": ["gym_boulder", "board_kilter", "board_moonboard", "board_other", "spraywall", "homewall"],
       "location_allowed": ["gym"],
       "contraindications": [],
       "prescription_defaults": {

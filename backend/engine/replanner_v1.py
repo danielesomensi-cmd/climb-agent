@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import os
 from copy import deepcopy
+
+from backend.engine.equipment_utils import expand_equipment
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
@@ -947,7 +949,7 @@ def apply_events(
             if new_location == "gym" and gyms and new_gym_id:
                 for g in (gyms or []):
                     if g.get("gym_id") == new_gym_id:
-                        gym_equipment = set(g.get("equipment", []))
+                        gym_equipment = set(expand_equipment(g.get("equipment", [])))
                         break
 
             change_warnings: list = []
@@ -973,10 +975,7 @@ def apply_events(
                                 equipment_ok = False
                                 missing = req_eq - gym_equipment
                         elif new_location == "home":
-                            home_eq = set(event.get("home_equipment") or [])
-                            # B137: homewall implies gym_boulder at home
-                            if "homewall" in home_eq and "gym_boulder" not in home_eq:
-                                home_eq.add("gym_boulder")
+                            home_eq = set(expand_equipment(event.get("home_equipment") or []))
                             if home_eq and not req_eq.issubset(home_eq):
                                 equipment_ok = False
                                 missing = req_eq - home_eq
@@ -1255,13 +1254,13 @@ def apply_day_override(
     if location == "gym" and gyms and gym_id:
         for g in gyms:
             if g.get("gym_id") == gym_id:
-                gym_equipment = set(g.get("equipment", []))
+                gym_equipment = set(expand_equipment(g.get("equipment", [])))
                 break
     elif location == "gym" and gyms:
         # No specific gym_id — use first gym by priority
         sorted_g = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
         if sorted_g:
-            gym_equipment = set(sorted_g[0].get("equipment", []))
+            gym_equipment = set(expand_equipment(sorted_g[0].get("equipment", [])))
 
     session_id = _resolve_intent_for_equipment(intent, gym_equipment)
     meta = _meta_for(session_id)

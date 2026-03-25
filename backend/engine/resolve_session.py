@@ -4,6 +4,8 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+from backend.engine.equipment_utils import expand_equipment
+
 from backend.engine.cluster_utils import cluster_key_for_exercise, parse_date
 from backend.engine.progression_v1 import inject_targets
 
@@ -600,9 +602,6 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
         eq = user_state.get("equipment") or {}
         if location == "home":
             equipment = norm_list_str(eq.get("home"))
-            # B137b: homewall implies gym_boulder capability at home
-            if "homewall" in equipment and "gym_boulder" not in equipment:
-                equipment.append("gym_boulder")
         elif location == "gym":
             # gym_id drives gym equipment (NOT location)
             gym_id = None
@@ -627,6 +626,9 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
                 )
                 equipment = norm_list_str(sorted_gyms[0].get("equipment"))
 
+
+    # B159: expand boulder surfaces + weight subtypes
+    equipment = expand_equipment(equipment)
 
     # Always-available "virtual equipment"
     if "floor" not in equipment:
@@ -1138,10 +1140,8 @@ def resolve_session(
     # Remove implicit/obvious equipment
     available_equipment = [e for e in available_equipment if norm_str(e) != "floor"]
 
-    # Equipment implications (v1): if any weight subtype is present, expose canonical 'weight'.
-    weight_subtypes = {"dumbbell", "kettlebell", "barbell"}
-    if any(w in available_equipment for w in weight_subtypes) and "weight" not in available_equipment:
-        available_equipment.append("weight")
+    # B159: unified equipment expansion (boulder surfaces + weight subtypes)
+    available_equipment = expand_equipment(available_equipment)
 
     # Equipment aliases (v1): loading_pin → hangboard.
     # When finger_training_device == "loading_pin", do NOT alias — use native lp_* exercises.

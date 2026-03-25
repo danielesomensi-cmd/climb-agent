@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from backend.engine.equipment_utils import expand_equipment
 from backend.engine.macrocycle_v1 import (
     PHASE_INTENSITY_CAP,
     PHASE_ORDER,
@@ -83,19 +84,15 @@ def _expand_session_locations(
     required_equipment: Optional[List[str]],
     home_equipment: Optional[List[str]],
 ) -> Tuple[str, ...]:
-    """B137: Expand session locations when home equipment satisfies gym requirements.
+    """Expand session locations when home equipment satisfies gym requirements.
 
-    If a session is gym-only but requires only gym_boulder, and the user has a homewall,
-    the session becomes assignable at home too.
+    B137: homewall → gym_boulder.  B159: generalised via expand_equipment.
     """
     if "home" in session_locations:
         return session_locations  # already home-compatible
     if not home_equipment or not required_equipment:
         return session_locations
-    # Check if home equipment (with homewall→gym_boulder expansion) satisfies requirements
-    home_eq = set(home_equipment)
-    if "homewall" in home_eq:
-        home_eq.add("gym_boulder")
+    home_eq = set(expand_equipment(home_equipment))
     if all(eq in home_eq for eq in required_equipment):
         return tuple(session_locations) + ("home",)
     return session_locations
@@ -144,15 +141,14 @@ def _equipment_for_location(
             return None  # no gym info → assume everything available
         if "pullup_bar" not in equip:
             equip.append("pullup_bar")
-        return equip
+        # B159: expand boulder surfaces + weight subtypes
+        return expand_equipment(equip)
     elif location == "home":
         if home_equipment is None:
             return None  # no home info → assume everything available
         equip = list(home_equipment)
-        # B137: homewall implies gym_boulder capability at home
-        if "homewall" in equip and "gym_boulder" not in equip:
-            equip.append("gym_boulder")
-        return equip
+        # B159: expand boulder surfaces + weight subtypes (supersedes B137)
+        return expand_equipment(equip)
     return None
 
 
