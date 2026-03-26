@@ -1111,6 +1111,17 @@ def resolve_session(
     user_id: Optional[str] = None,
     phase: Optional[str] = None,
 ) -> Dict[str, Any]:
+    # --- Input validation ---
+    if not session_path:
+        raise ValueError("resolve_session: session_path must be a non-empty string")
+    full_session_path = os.path.join(repo_root, session_path)
+    if not os.path.isfile(full_session_path):
+        raise ValueError(f"resolve_session: session file not found: {full_session_path}")
+    if phase is not None:
+        from backend.engine.macrocycle_v1 import PHASE_ORDER
+        if phase not in PHASE_ORDER:
+            raise ValueError(f"resolve_session: invalid phase '{phase}', must be one of {PHASE_ORDER}")
+
     user_state = user_state_override if user_state_override is not None else load_user_state(repo_root)
     limitation_map = normalize_limitations(user_state) if user_state else {}
 
@@ -1490,7 +1501,7 @@ def resolve_session(
                 else:
                     _effective_phase = phases[-1].get("phase_id") or phases[-1].get("id")
             except (ValueError, TypeError):
-                pass
+                logger.warning("Failed to compute effective phase from macrocycle dates — skipping phase-aware ordering")
     if _effective_phase:
         from backend.engine.exercise_ordering import sort_exercises_by_phase, enforce_ordering_constraints
         # Build catalog lookup: {exercise_id → {role, domain, pattern, ...}}

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 from typing import Any, Dict, List, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 STIMULUS_CATEGORIES: Tuple[str, ...] = (

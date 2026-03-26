@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 from backend.engine.assessment_v1 import _GRADE_INDEX, grade_gap
 
@@ -498,6 +501,12 @@ def generate_macrocycle(
     Returns:
         Macrocycle dict with phases, domain weights, session pools, etc.
     """
+    # --- Input validation ---
+    if not goal or not isinstance(goal, dict):
+        raise ValueError("generate_macrocycle: goal must be a non-empty dict")
+    if not assessment_profile or not isinstance(assessment_profile, dict):
+        raise ValueError("generate_macrocycle: assessment_profile must be a non-empty dict")
+
     goal_warnings = _validate_goal(goal)
     trips = user_state.get("trips") or []
     start = datetime.strptime(start_date, "%Y-%m-%d").date()

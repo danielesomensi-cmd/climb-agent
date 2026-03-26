@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import os
 from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 from backend.engine.assessment_v1 import _FINGER_BENCHMARK
 

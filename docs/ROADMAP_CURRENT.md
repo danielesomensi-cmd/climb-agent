@@ -49,16 +49,11 @@ Clerk auth ✅ and Supabase JSONB ✅ are complete. Remaining:
 
 > Origin: Full codebase audit con Agent Teams (2026-03-21)
 
-### R140 — Backend Error Handling Hardening
+### R140 — Backend Error Handling Hardening ✅
 
-**Priority:** P2.25 | **Status:** Open | **Type:** R (refactor)
+**Priority:** P2.25 | **Status:** Closed (2026-03-26) | **Type:** R (refactor)
 
-- Sostituire `except Exception` silenziosi in `closed_loop_v1.py` con logging esplicito
-- Validazione `perceived_difficulty` (range 1-5) in `closed_loop_v1.py`
-- Validazione input sulle funzioni pubbliche di: `planner_v2.py`, `resolve_session.py`, `macrocycle_v1.py`, `replanner_v1.py`
-- Sostituire global mutable state (`_CATALOG_CACHE`, `_cached_quotes`) con `@lru_cache`
-
-**Rischio:** MEDIO — moduli core ma cambiamenti difensivi
+Logging aggiunto a 6 moduli engine, 5 `except:pass` silenziosi sostituiti con `logger.warning`, cache globali mutabili (`_required_equipment_cache`, `_cached_quotes`) sostituite con `@lru_cache`, validazione input su `generate_phase_week`, `generate_macrocycle`, `resolve_session`, `suggest_sessions`, `apply_day_add`.
 
 ### R141 — Frontend Error Handling Hardening
 

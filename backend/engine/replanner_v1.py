@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import functools
 import json
+import logging
 import os
 from copy import deepcopy
 
@@ -8,19 +10,17 @@ from backend.engine.equipment_utils import expand_equipment
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
+logger = logging.getLogger(__name__)
+
 from backend.engine.macrocycle_v1 import _build_session_pool
 from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META, generate_phase_week
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _SESSIONS_DIR = os.path.join(_REPO_ROOT, "backend", "catalog", "sessions", "v1")
 
-_required_equipment_cache: Dict[str, list] = {}
-
-
-def _get_required_equipment(session_id: str) -> list:
-    """Load required_equipment from session JSON file (cached)."""
-    if session_id in _required_equipment_cache:
-        return _required_equipment_cache[session_id]
+@functools.lru_cache(maxsize=None)
+def _get_required_equipment(session_id: str) -> tuple:
+    """Load required_equipment from session JSON file (cached via lru_cache)."""
     path = os.path.join(_SESSIONS_DIR, f"{session_id}.json")
     try:
         with open(path, encoding="utf-8") as f:
@@ -28,8 +28,7 @@ def _get_required_equipment(session_id: str) -> list:
             eq = data.get("required_equipment", [])
     except (FileNotFoundError, json.JSONDecodeError):
         eq = []
-    _required_equipment_cache[session_id] = eq
-    return eq
+    return tuple(eq)
 
 
 def _find_gym_change_replacement(
@@ -202,6 +201,15 @@ def suggest_sessions(
 
     Scoring is deterministic — same inputs always yield the same output.
     """
+    # --- Input validation ---
+    _VALID_LOCATIONS = {"home", "gym", "outdoor", "travel"}
+    if location not in _VALID_LOCATIONS:
+        raise ValueError(f"suggest_sessions: invalid location '{location}', must be one of {_VALID_LOCATIONS}")
+    try:
+        datetime.strptime(target_date, "%Y-%m-%d")
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"suggest_sessions: invalid target_date '{target_date}', expected YYYY-MM-DD") from exc
+
     phase_id = (plan.get("profile_snapshot") or {}).get("phase_id", "base")
     candidates = session_pool if session_pool is not None else _build_session_pool(phase_id)
 
@@ -240,7 +248,7 @@ def suggest_sessions(
                 if any((s.get("tags") or {}).get("finger") for s in day.get("sessions", [])):
                     finger_adjacent = True
         except (KeyError, ValueError):
-            pass
+            logger.warning("Failed to check finger adjacency for target_date=%s", target_date)
 
     # Check if target_date follows a hard day
     follows_hard = False
@@ -253,7 +261,7 @@ def suggest_sessions(
                     follows_hard = True
                 break
     except (KeyError, ValueError):
-        pass
+        logger.warning("Failed to check hard-day adjacency for target_date=%s", target_date)
 
     # Score each candidate
     scored: List[tuple] = []
@@ -321,6 +329,16 @@ def apply_day_add(
     gym_id: Optional[str] = None,
 ) -> tuple:
     """Append a session to an existing day (quick-add). Returns (updated_plan, warnings)."""
+    # --- Input validation ---
+    if not session_id:
+        raise ValueError("apply_day_add: session_id must be a non-empty string")
+    if session_id not in _SESSION_META:
+        raise ValueError(f"apply_day_add: unknown session_id '{session_id}'")
+    try:
+        datetime.strptime(target_date, "%Y-%m-%d")
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"apply_day_add: invalid target_date '{target_date}', expected YYYY-MM-DD") from exc
+
     updated = deepcopy(plan)
     updated.setdefault("adaptations", [])
     target_day = _find_day(updated, target_date)
@@ -495,7 +513,7 @@ def merge_prev_week_sessions(
             try:
                 prev_by_wd[datetime.strptime(d, "%Y-%m-%d").weekday()] = day
             except ValueError:
-                pass
+                logger.warning("Invalid date format in previous plan day: %s", d)
 
     if not prev_by_date:
         return result
@@ -1336,6 +1354,7 @@ def apply_day_override(
             try:
                 ripple_day = _find_day(updated, ripple_key)
             except ValueError:
+                logger.debug("Ripple target day %s not found in plan — skipping", ripple_key)
                 continue
             if not ripple_day.get("sessions"):
                 continue

@@ -2,30 +2,26 @@
 
 from __future__ import annotations
 
+import functools
 import json
+import logging
 import os
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # Path to quotes catalog (relative to repo root)
 _QUOTES_CATALOG_PATH = os.path.join(
     os.path.dirname(__file__), "..", "catalog", "quotes", "v1", "quotes_catalog_v1.json"
 )
 
-_cached_quotes: Optional[List[Dict[str, Any]]] = None
-
-
+@functools.lru_cache(maxsize=1)
 def _load_quotes() -> List[Dict[str, Any]]:
     """Load and cache the quotes catalog."""
-    global _cached_quotes
-    if _cached_quotes is not None:
-        return _cached_quotes
-
     path = os.path.normpath(_QUOTES_CATALOG_PATH)
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
-
-    _cached_quotes = data.get("quotes", [])
-    return _cached_quotes
+    return data.get("quotes", [])
 
 
 def detect_quote_context(

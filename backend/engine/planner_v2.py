@@ -13,10 +13,13 @@ Constraints:
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+logger = logging.getLogger(__name__)
 
 from backend.engine.equipment_utils import expand_equipment
 from backend.engine.macrocycle_v1 import (
@@ -520,6 +523,19 @@ def generate_phase_week(
     Returns:
         Week plan dict compatible with planner.v1 format.
     """
+    # --- Input validation ---
+    if phase_id not in PHASE_ORDER:
+        raise ValueError(f"generate_phase_week: invalid phase_id '{phase_id}', must be one of {PHASE_ORDER}")
+    try:
+        _sd = datetime.strptime(start_date, "%Y-%m-%d").date()
+        if _sd.weekday() != 0:
+            # Auto-fix to previous Monday (same pattern as generate_macrocycle)
+            _sd -= timedelta(days=_sd.weekday())
+            start_date = _sd.isoformat()
+            logger.warning("generate_phase_week: start_date adjusted to Monday %s", start_date)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f"generate_phase_week: invalid start_date format '{start_date}', expected YYYY-MM-DD") from exc
+
     locations = sorted(set(allowed_locations or ["home", "gym"]))
     normalized = _normalize_availability(availability, locations)
     cap = intensity_cap or PHASE_INTENSITY_CAP.get(phase_id, "max")
@@ -1167,7 +1183,7 @@ def generate_phase_week(
                     if 0 <= days_ago < TEST_FRESHNESS_DAYS:
                         continue  # Skip — test completed recently
                 except (ValueError, TypeError):
-                    pass  # Invalid date — schedule normally
+                    logger.warning("Invalid test date '%s' for %s — scheduling normally", last_date_str, test_sid)
             _filtered_schedule.append((test_sid, _required))
 
         test_placed_offsets: set = set()
