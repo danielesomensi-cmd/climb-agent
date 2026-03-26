@@ -6664,7 +6664,7 @@
         "work_seconds": 7,
         "rest_between_reps_seconds": 3,
         "rest_between_sets_seconds": 180,
-        "notes": "Transition mid-hang from half-crimp to open-hand."
+        "notes": "Control exercise — high quality, smooth transitions only. If fingers slip or form breaks, stop the set. Use 20mm edge (or your half-crimp baseline edge). Bodyweight only. Rest fully between sets (3 minutes minimum). This is a neuromuscular control exercise, not a max-strength exercise. It trains the ability to change grip types smoothly — a skill used constantly in real climbing. Always warm up fingers thoroughly before this exercise."
       },
       "stress_tags": {
         "elbow": "high",
@@ -6672,11 +6672,17 @@
         "cns": "high",
         "skin": "medium"
       },
-      "description": "Improves grip adaptability and tendon resilience.",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp_to_open"
+      },
+      "description": "Hang from the hangboard on a 20mm edge with both hands. Feet off the ground, arms slightly bent, shoulders actively engaged (down and back, not shrugging). Bodyweight only.\n\nEach rep: start in half-crimp (fingers curled ~90° at the middle knuckle, thumb on the side of index finger). Over the full 7 seconds, slowly and smoothly open your grip into open-hand (fingers gradually extend until nearly straight, hooked over the edge by the tips). The transition should take the entire 7 seconds — not a sudden release. At the end, let go, rest 3 seconds, then start the next rep back in half-crimp.",
       "cues": [
-        "Smooth transition",
-        "No slip",
-        "Shoulders engaged"
+        "Transition takes the FULL 7 seconds — don't dump the crimp early",
+        "Smooth and continuous — imagine slowly turning a dial",
+        "No slip — if fingers slide, edge is too small or you're fatigued",
+        "Shoulders engaged throughout — active hang, never passive",
+        "Breathe out slowly during the transition"
       ],
       "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/",
       "load_model": "bodyweight_only"
