@@ -94,6 +94,7 @@ interface CircuitTimerProps {
   totalExercises: number;
   onComplete: (result: CircuitResult) => void;
   onStop: (result: CircuitResult) => void;
+  onExit: () => void;
 }
 
 export function CircuitTimer({
@@ -102,6 +103,7 @@ export function CircuitTimer({
   totalExercises,
   onComplete,
   onStop,
+  onExit,
 }: CircuitTimerProps) {
   // Generate exercise sequence once on mount
   const [sequence] = useState<CircuitExercise[]>(() =>
@@ -321,49 +323,74 @@ export function CircuitTimer({
   function handleNext() {
     if (phase === "done" || phase === "prepare") return;
 
-    // Mark current exercise as skipped (doesn't count as completed)
-    const curIdx = currentIndex;
-    skippedRef.current.add(curIdx);
+    if (phase === "work") {
+      // Skip remaining work → go to REST (same as natural timer expiry)
+      completedRef.current++;
+      const curIdx = currentIndexRef.current;
+      const nextIdx = curIdx + 1;
 
-    const nextIdx = curIdx + 1;
-    if (nextIdx >= totalExercises) {
-      // Last exercise — go to completion
-      setPhase("done");
-      setSecondsLeft(0);
-      pendingVoiceCueRef.current = "complete";
-      setTransitionId((id) => id + 1);
-      if (startTimeRef.current > 0) {
-        elapsedAtPauseRef.current += Math.floor((Date.now() - startTimeRef.current) / 1000);
-        startTimeRef.current = 0;
+      if (nextIdx >= totalExercises) {
+        setPhase("done");
+        setSecondsLeft(0);
+        pendingVoiceCueRef.current = "complete";
+        setTransitionId((id) => id + 1);
+        if (startTimeRef.current > 0) {
+          elapsedAtPauseRef.current += Math.floor((Date.now() - startTimeRef.current) / 1000);
+          startTimeRef.current = 0;
+        }
+        return;
       }
+
+      setPhase("rest");
+      startCountdown(restSeconds);
+      pendingVoiceCueRef.current = "rest";
+      setTransitionId((id) => id + 1);
       return;
     }
 
-    // Advance to next exercise, start work
-    setCurrentIndex(nextIdx);
-    performedRef.current.push(sequence[nextIdx].id);
-    setPhase("work");
-    startCountdown(workSeconds);
-    pendingVoiceCueRef.current = "work";
-    setTransitionId((id) => id + 1);
+    if (phase === "rest") {
+      // Skip remaining rest → go to WORK for next exercise
+      const nextIdx = currentIndexRef.current + 1;
+      setCurrentIndex(nextIdx);
+      if (nextIdx < sequence.length) {
+        performedRef.current.push(sequence[nextIdx].id);
+      }
+      setPhase("work");
+      startCountdown(workSeconds);
+      pendingVoiceCueRef.current = "work";
+      setTransitionId((id) => id + 1);
+    }
   }
 
   function handleBack() {
     if (phase === "done" || phase === "prepare") return;
-    if (currentIndex <= 0) return; // first exercise — no-op
 
-    const prevIdx = currentIndex - 1;
-    // Un-skip previous if it was skipped
-    skippedRef.current.delete(prevIdx);
+    if (phase === "rest") {
+      // During REST → go back to current exercise's WORK (redo it)
+      setPhase("work");
+      startCountdown(workSeconds);
+      completedRef.current = Math.max(0, completedRef.current - 1);
+      pendingVoiceCueRef.current = "work";
+      setTransitionId((id) => id + 1);
+      return;
+    }
 
-    setCurrentIndex(prevIdx);
-    // Remove last entry from performed if it was the current exercise
-    // and re-add the previous one
-    performedRef.current.push(sequence[prevIdx].id);
-    setPhase("work");
-    startCountdown(workSeconds);
-    pendingVoiceCueRef.current = "work";
-    setTransitionId((id) => id + 1);
+    if (phase === "work") {
+      // During WORK → go back to previous exercise's WORK
+      if (currentIndex <= 0) return;
+      const prevIdx = currentIndex - 1;
+      setCurrentIndex(prevIdx);
+      performedRef.current.push(sequence[prevIdx].id);
+      setPhase("work");
+      startCountdown(workSeconds);
+      pendingVoiceCueRef.current = "work";
+      setTransitionId((id) => id + 1);
+    }
+  }
+
+  function handleExit() {
+    clearTimer();
+    onExit();
   }
 
   // Auto-call onComplete when done
@@ -474,9 +501,9 @@ export function CircuitTimer({
             {/* Back arrow */}
             <button
               onClick={(e) => { e.stopPropagation(); handleBack(); }}
-              disabled={currentIndex <= 0 || phase === "rest"}
+              disabled={currentIndex <= 0 && phase === "work"}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/50 transition-colors hover:text-white/80 disabled:opacity-20 disabled:cursor-default self-center"
-              aria-label="Previous exercise"
+              aria-label="Previous"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 18l-6-6 6-6" />
@@ -495,7 +522,7 @@ export function CircuitTimer({
               <h3 className="text-xl font-bold text-center mb-1">
                 {displayExercise.name}
               </h3>
-              <p className="text-sm text-center text-white/70 leading-relaxed line-clamp-2">
+              <p className="text-sm text-center text-white/70 leading-relaxed line-clamp-4">
                 {displayExercise.description}
               </p>
             </div>
@@ -503,9 +530,8 @@ export function CircuitTimer({
             {/* Next arrow */}
             <button
               onClick={(e) => { e.stopPropagation(); handleNext(); }}
-              disabled={phase === "rest"}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/50 transition-colors hover:text-white/80 disabled:opacity-20 disabled:cursor-default self-center"
-              aria-label="Skip exercise"
+              aria-label="Next"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 18l6-6-6-6" />
@@ -528,7 +554,7 @@ export function CircuitTimer({
             <h3 className="text-xl font-bold text-center mb-1">
               {sequence[0].name}
             </h3>
-            <p className="text-sm text-center text-white/70 leading-relaxed line-clamp-2">
+            <p className="text-sm text-center text-white/70 leading-relaxed line-clamp-4">
               {sequence[0].description}
             </p>
           </div>
@@ -557,48 +583,63 @@ export function CircuitTimer({
         )}
       </div>
 
-      {/* Bottom: elapsed + controls — shrink-0, always visible */}
-      <div className="shrink-0 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        <div className="flex justify-center gap-8 text-sm text-muted-foreground tabular-nums mb-3">
-          <div className="flex flex-col items-center">
-            <span className="text-xs uppercase tracking-wider mb-0.5">Elapsed</span>
-            <span className="font-semibold text-foreground">{formatTime(elapsed)}</span>
+      {/* Bottom bar — compact: counters + controls on same row */}
+      <div className="shrink-0 px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <div className="flex items-center justify-between gap-2">
+          {/* Counters */}
+          <div className="flex gap-4 text-sm tabular-nums">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Elapsed</span>
+              <span className="font-semibold text-foreground">{formatTime(elapsed)}</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Exercise</span>
+              <span className="font-semibold text-foreground">
+                {completedRef.current + (phase === "work" ? 1 : 0)}/{totalExercises}
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-xs uppercase tracking-wider mb-0.5">Exercise</span>
-            <span className="font-semibold text-foreground">
-              {completedRef.current + (phase === "work" ? 1 : 0)}/{totalExercises}
-            </span>
+
+          {/* Controls */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); handlePauseToggle(); }}
+              className="flex h-12 min-w-[100px] items-center justify-center gap-2 rounded-2xl border border-border bg-card/50 text-sm font-bold text-foreground transition-all active:scale-[0.98]"
+            >
+              {paused ? (
+                <>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+                  RESUME
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
+                  PAUSE
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); handleStop(); }}
+              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
+              aria-label="Stop circuit"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
+            </button>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={(e) => { e.stopPropagation(); handlePauseToggle(); }}
-            className="flex h-14 flex-1 max-w-[160px] items-center justify-center gap-2 rounded-2xl border border-border bg-card/50 text-sm font-bold text-foreground transition-all active:scale-[0.98]"
-          >
-            {paused ? (
-              <>
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
-                RESUME
-              </>
-            ) : (
-              <>
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></svg>
-                PAUSE
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); handleStop(); }}
-            className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
-            aria-label="Stop circuit"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
-          </button>
-        </div>
+        {/* Exit button — small, unobtrusive */}
+        <button
+          onClick={(e) => { e.stopPropagation(); handleExit(); }}
+          className="mt-2 flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors"
+          aria-label="Exit circuit"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+          Exit
+        </button>
       </div>
     </div>
   );

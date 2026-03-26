@@ -640,6 +640,7 @@ function FreeSessionContent() {
           totalExercises={circuitConfig.totalExercises}
           onComplete={handleCircuitComplete}
           onStop={handleCircuitStop}
+          onExit={() => setStep("surface")}
         />
       )}
     </>

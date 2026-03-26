@@ -45,6 +45,7 @@ All P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`
 - ✅ **B159a** — Campus gate + selection quality: added `experience_minimum_years`, `age_minimum: 16`, `difficulty_tier`, and `contraindications` to all 10 campus exercises. Added generic `experience_minimum_years` gate (Stage 2f) in resolver. Beginners now get tier-appropriate exercises (2026-03-26)
 - ✅ **B159b** — Exercise rotation: `load_recent_exercise_ids()` now reads from `week_plans` (status=done, lookback 3 weeks). Added `recency_group` penalty (-15) in `score_exercise`. All templates now produce 3/3 unique weeks instead of 1/3 (2026-03-26)
 - ✅ **B160** — Circuit timer: off-by-one fix (exercise mismatch REST→WORK), added "Rest" voice cue, 3-2-1 beep edge case (skip if phase ≤ 3s), image-first layout redesign with always-visible controls (2026-03-26)
+- ✅ **B160b** — Circuit timer hotfix: full description (line-clamp-4), arrows advance one phase at a time (work→rest→work), STOP+EXIT buttons visible, compact bottom bar layout (2026-03-26)
 
 ---
 
