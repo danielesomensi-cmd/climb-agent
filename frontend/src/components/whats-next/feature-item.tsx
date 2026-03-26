@@ -11,9 +11,10 @@ interface FeatureItemProps {
   voted: boolean;
   onToggle: () => void;
   implemented?: boolean;
+  comingSoon?: boolean;
 }
 
-export function FeatureItem({ icon: Icon, label, voted, onToggle, implemented }: FeatureItemProps) {
+export function FeatureItem({ icon: Icon, label, voted, onToggle, implemented, comingSoon }: FeatureItemProps) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
       <div className="flex items-center gap-3 min-w-0">
@@ -23,6 +24,11 @@ export function FeatureItem({ icon: Icon, label, voted, onToggle, implemented }:
           {implemented && (
             <Badge className="flex w-fit items-center gap-1 bg-green-600/15 text-green-400 border border-green-600/30 text-[10px] px-2 py-0.5 font-medium">
               ✅ Implemented — try it out!
+            </Badge>
+          )}
+          {comingSoon && (
+            <Badge className="flex w-fit items-center gap-1 bg-yellow-400/10 text-yellow-400 border border-yellow-400/30 text-[10px] px-2 py-0.5 font-medium">
+              Coming soon
             </Badge>
           )}
         </div>

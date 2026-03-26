@@ -23,6 +23,7 @@ interface Feature {
   icon: LucideIcon;
   label: string;
   implemented?: boolean;
+  comingSoon?: boolean;
 }
 
 const SHORT_TERM: Feature[] = [
@@ -30,15 +31,15 @@ const SHORT_TERM: Feature[] = [
   { slug: "outdoor-logging", icon: Mountain, label: "Outdoor session logging — log your crag sessions", implemented: true },
   { slug: "progress-reports", icon: BarChart3, label: "Progress reports — weekly and monthly stats", implemented: true },
   { slug: "testing-week", icon: ClipboardCheck, label: "Testing week — dedicated assessment week after onboarding", implemented: true },
-  { slug: "add-exercise", icon: PlusCircle, label: "Add exercise to session — customize your workout on the fly" },
+  { slug: "add-exercise", icon: PlusCircle, label: "Add exercise to session — customize your workout on the fly", implemented: true },
   { slug: "modify-session", icon: Pencil, label: "Modify session — edit a completed session or fix a mistake" },
-  { slug: "injury-tracking", icon: ShieldAlert, label: "Injury tracking — log injuries and automatically filter incompatible exercises" },
+  { slug: "injury-tracking", icon: ShieldAlert, label: "Injury tracking — log injuries and automatically filter incompatible exercises", implemented: true },
 ];
 
 const LONG_TERM: Feature[] = [
   { slug: "kilter-ai", icon: Video, label: "Kilter Board AI analysis — video feedback on your moves" },
   { slug: "ai-coach", icon: Bot, label: "AI coach — chat with your training coach" },
-  { slug: "kilter-integration", icon: Smartphone, label: "Kilter App integration — sync your board sessions" },
+  { slug: "kilter-integration", icon: Smartphone, label: "Kilter App integration — sync your board sessions", comingSoon: true },
   { slug: "season-reset", icon: RotateCcw, label: "Season reset — archive your current cycle and start fresh keeping your history" },
   { slug: "annual-report", icon: CalendarRange, label: "Annual training report — year-end summary of your progression" },
 ];
@@ -117,6 +118,7 @@ export function RoadmapSection() {
               label={f.label}
               voted={!!votes[f.slug]}
               onToggle={() => toggle(f.slug)}
+              comingSoon={f.comingSoon}
             />
           ))}
         </div>

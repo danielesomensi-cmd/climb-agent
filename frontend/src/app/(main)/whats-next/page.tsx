@@ -8,7 +8,7 @@ import { FeedbackSection } from "@/components/whats-next/feedback-section";
 export default function WhatsNextPage() {
   return (
     <>
-      <TopBar title="What's next" />
+      <TopBar title="Roadmap & Support" />
 
       <main className="mx-auto max-w-2xl space-y-8 p-4">
         <RoadmapSection />

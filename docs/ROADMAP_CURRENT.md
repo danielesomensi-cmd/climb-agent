@@ -34,6 +34,7 @@ All P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`
 - ✅ **B157** — Orphan exercise leak: `critical_force_test` removed from catalog (deferred to v2/D89), role filter added to `easy_climbing_post_finger` block, 4 catalog validation tests added (2026-03-26)
 - ✅ **B158** — Change Plan + Quick-Add dialog Confirm button hidden on Android: split DialogContent into scrollable body + sticky footer, added `viewport-fit: cover` + `safe-area-inset-bottom` padding, switched to `75dvh` (2026-03-26)
 - ✅ **D158** — `finger_strength_home` template selecting Grip Transitions instead of MaxHangs: resolver now reads `pattern` from template blocks, `grip_transitions` role→activation + pattern→grip_transition, `finger_max_strength` main block filters by `isometric_hang` (2026-03-26)
+- ✅ **B159** — What's Next page: renamed to "Roadmap & Support", flagged Add Exercise + Injury Tracking as implemented, added "Coming soon" badge to Kilter integration (2026-03-26)
 
 ---
 
