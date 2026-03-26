@@ -6,24 +6,31 @@
 
 ---
 
-## Mega Brief v1 — Implementation Status
+## Mega Brief v1 — ARCHIVED (2026-03-26)
 
 > Source: `docs/claude_code_mega_brief_v1.md` (57 v1 decisions, 10 sessions)
-> Rule: ogni sessione completata o deferita aggiorna questa tabella E la sezione roadmap appropriata.
+> Status: **Archived.** ~80% implemented. Remaining decisions migrated to backlog below.
+> Triage report: D160 (claude.ai, 2026-03-26)
+> Codebase verification: D160 Phase 0 (Claude Code, 2026-03-26)
 
-| Session | Decisions | Status | Notes |
-|---------|-----------|--------|-------|
-| 1: Assessment & Onboarding | D01, D38, D68, D80, D81, D83 | ✅ Done (2026-03-17) | D68: via limitations, non domande esplicite |
-| 1b: Test Protocol Revision | D84, D84b, D85, D86, D88, D90 | ✅ Done (2026-03-18) | D87b, D89, D91 → v2 |
-| 2: Exercise DB — Strength | D10, D11, D12, D39, D50, D72 | 🟡 Partial | D11 ✅ D12 ✅ D39 ✅. Deferred: D10 (equipment), D50 (selector logic), D72 (grip field) |
-| 3: Exercise DB — Conditioning | D37, D43, D55, D56, D57, D60, D76 | 🟡 Partial | D43 ✅ D55 ✅ D56 ✅ D57 ✅ D76 ✅. Deferred: D37 (core drills Matros). D60 already done. |
-| 4: Warm-Up | D33, D36, D74 | 🟡 Partial | Warmup via template (non funzione dedicata). Nessun PAP. silent_feet esiste ma non in warmup |
-| 5: Intensity System (EL) | D34, D52, D14 | 🔲 Not started | Zero codice EL/intensity/load monitoring |
-| 6: Hangboard Logic | D35, D49 | 🟡 Partial | D35 ✅ experience gate (<2yr blocks MaxHangs/MED). Deferred: D49 (method restriction) |
-| 7: Endurance & Intervals | D47, D48, D53 | 🟡 Partial | 4x4 esiste. D48 absorbed into process cues (A141). Mancano: varied-intensity |
-| 8: Conditioning & Ratio | D51, D54, D58, D59, D73, D78 | 🟡 Partial | face_pull + band_pull_apart + planks. D78 ✅ process cues (A141). Mancano: ratio, technique allocation |
-| 9: Periodization & Load | D19-D21, D44, D45, D69-D71 | 🟡 Partial | min_weeks esiste. Mancano: beginner linear, overreach, ACWR, OTS, volume cap |
-| 10: Coaching & UX | D17, D29, D30, D41, D64-D67, D75, D77, D79 | 🟡 Partial | D64 ✅ RED-S guardrails. D17 ✅ G-Tox cue (A141). D30 ✅ fall practice drill (A141). Remaining: D29, D41, D65-D67, D75, D77, D79 |
+| Session | Status | Implemented | Deferred to v2 |
+|---------|--------|-------------|-----------------|
+| 1: Assessment & Onboarding | ✅ Done | D01, D38, D68, D80, D81, D83 | — |
+| 1b: Test Protocol Revision | ✅ Done | D84, D84b, D85, D86, D88, D90 | D87b, D89, D91 |
+| 2: Exercise DB — Strength | ✅ Closed | D11, D12, D39 | D10, D50, D72 |
+| 3: Exercise DB — Conditioning | ✅ Closed | D43, D55*, D56, D57, D60, D76 | D37 |
+| 4: Warm-Up | ✅ Closed | (warmup via template) | D33, D36, D74 |
+| 5: Intensity System (EL) | ✅ Closed | — (entire session deferred) | D34, D52, D14 |
+| 6: Hangboard Logic | ✅ Closed | D35 | D49 |
+| 7: Endurance & Intervals | ✅ Closed | D48 (A141) | D47, D53 |
+| 8: Conditioning & Ratio | ✅ Closed | D54, D58*, D78 (A141) | D51, D59, D73 |
+| 9: Periodization & Load | ✅ Closed | D21, D44* | D19, D20, D45, D69, D70, D71 |
+| 10: Coaching & UX | ✅ Closed | D17, D30, D64, D75* (A141) | D29, D41, D65, D66, D67, D77, D79 |
+
+*D55: de facto safe (exercises not in catalog) but no formal blacklist guard — v2.
+*D58: 4/5 postural exercises done, YTW missing — v2.
+*D44: code has base=4wk/floor=2wk, not ≥6wk — intentional trade-off, v2 via D19.
+*D75: cue_008 + timed_route_preview exercise exist — sufficient for launch.
 
 ---
 
@@ -298,15 +305,92 @@ Rehab exercise catalog + injury→exercise mapping. Medical disclaimer required.
 
 ## Backlog / exploration
 
+### Mega Brief v1 — Deferred Decisions (v2+)
+
+> Full specifications in `docs/claude_code_mega_brief_v1.md`. Grouped by theme.
+
+**Effort Level / Intensity System (mega brief Session 5)**
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D34 | EL (Effort Level) as primary intensity metric | L | New field on every prescription, resolver + feedback changes. Current very_easy→very_hard feedback sufficient for launch. |
+| D52 | EL prescription table by experience level | M | Depends on D34. Intensity ranges per beginner/intermediate/advanced. |
+| D14 | López load monitoring (EL trend tracking) | M | Depends on D34. Autoregulation: reported_el vs target_el trend → load adjustment. |
+
+**Periodization & Load Management (mega brief Session 9)**
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D19 | Simplified linear periodization for beginners | M | Longer base, no MaxHangs, more technique. Also subsumes D44 (ARC ≥6wk for beginners). |
+| D20 | Overreach + taper before Performance phase | M | +10-15% volume overreach → 40-60% taper. Advanced periodization. |
+| D44 | ARC ≥6 weeks in Base phase | S | Currently base=4wk/floor=2wk. Best handled via D19 (beginner path gets ≥6wk base). |
+| D45 | ARC <25% MVC formal enforcement | S | Currently via process cues only. Formal resolver load cap. |
+| D69 | ACWR-based load monitoring | L | Needs 4+ weeks accumulated data. Overlaps Load Model v2 section. |
+| D70 | Overtraining detection heuristics | M | 5-flag system (performance decline, elevated RPE, incomplete sessions, fatigue, ACWR). Depends on D69. |
+| D71 | <10% weekly volume increase cap | S | Guard on planner output. Needs historical volume baseline. |
+
+**Warm-Up & Recovery (mega brief Sessions 4, 7)**
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D33 | Dedicated `generate_warmup()` function | M | 5-phase protocol generator. Current template approach works. Architectural improvement. |
+| D36 | PAP (Post-Activation Potentiation) | S | Advanced users only (3+ years, pulling ≥60). Niche. |
+| D74 | `silent_feet` auto-inject in warmup template | XS | Drill exists, not auto-injected in warmup. |
+| D53 | Active recovery progression (3-step) | S | References EL system (D34). |
+
+**Session Balance & Ratios (mega brief Session 8)**
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D51 | Climbing vs conditioning ratio by level | M | 70/30 → 60/40 → 50/50. Currently approximated by template weights. Formal enforcement = resolver change. |
+| D59 | Hypertonic/inhibited muscle reference table | S | Internal resolver pairing logic. Exercises already exist. |
+| D73 | Technique drill % allocation by level | M | Beginners ≥30% drill time. Resolver change. |
+
+**Endurance & Hangboard (mega brief Sessions 6, 7)**
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D47 | Varied-intensity intervals (replace 4×4) | M | Consuegra Ch.8. Add as option first, 4×4 is industry standard. |
+| D49 | Don't combine MaxHangs + IntHangs in same mesocycle | M | López-Rivera 2018. Planner change (high-risk). Current system tends to pick one naturally. |
+
+**Coaching & UX (mega brief Session 10)**
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D29 | Post-climb mental reflection questions | S | 5 rotating questions, free text, optional. Good UX differentiator. |
+| D41 | Campus board auto-stop rules | S | RPE check after campus sets → stop + substitute. Safety layer on top of B159a. |
+| D77 | SDT principles in all copy | S | Audit + rewrite all user-facing strings. Partially followed already. |
+| D79 | "Train better, not more" personality | S | Messaging guidelines. Already embodied in current copy. |
+| D65 | Sleep education tips | S | Best delivered via LLM Coach. |
+| D66 | Nutrition messaging at phase transitions | S | Needs disclaimer review. Best for Coach layer. |
+| D67 | Collagen + vitamin C educational mention | XS | Only when user asks. LLM Coach feature. |
+
+**Exercise Catalog (mega brief Sessions 2, 3)**
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D10 | Overcoming isometric pull exercise | S | Requires pin/strap equipment not in vocabulary. Tyler Nelson protocol. |
+| D37 | Core activation drills from Matros (8 exercises) | M | Tic tac toe, diagonal, freeze wall, etc. Catalog enrichment. |
+| D50 | Three named repeater protocols (López/Anderson/Hörst) | M | Level-based selection logic in resolver. |
+| D55 | Exercise safety blacklist formal guard | S | Validate no blacklisted exercises in catalog (CI test or resolver check). De facto safe today. |
+| D58 | YTW raises exercise (missing from postural set) | XS | 4/5 postural exercises done, only YTW missing. |
+| D72 | `grip_type` field on hangboard exercises | M | Structural schema change + full_crimp validation block. |
+
+**Test Protocols v2 (mega brief Session 1b deferred)**
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D87b | PE diagnostic test (repeaters 60% to failure) | M | New test protocol for power endurance baseline. |
+| D89 | Critical Force test (simplified, 2-point) | M | `critical_force_test` orphan exists in catalog. |
+| D91 | `test_pe_repeaters_60` + `baselines.power_endurance` | S | Depends on D87b. |
+
+### Other backlog items
+
 | Theme | Detail | Origin |
 |-------|--------|--------|
 | R150 | Integration test full-pipeline (assessment → closed-loop) | audit 2026-03-21 |
 | R151 | Type hints (`TypedDict`/`dataclass`), eliminate `any`, date utils | audit 2026-03-21 |
 | R152 | Periodic full codebase audit con Agent Teams | audit 2026-03-21 |
-| D10 | Overcoming isometric pull exercise (pin/strap equipment) | mega brief Session 2 |
-| D37 | Core activation drills from Matros (8 exercises) | mega brief Session 3 |
-| D50 | Three named repeater protocols (López/Anderson/Hörst) | mega brief Session 2 |
-| D72 | grip_type field on hangboard exercises | mega brief Session 2 |
 | — | Dynamic background imagery (Midjourney, phase-aware) | roadmap discussion |
 | — | Technique drills from book (scan + catalog) | roadmap discussion |
 
