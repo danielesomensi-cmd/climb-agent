@@ -1909,7 +1909,10 @@
         "gym"
       ],
       "contraindications": [
-        "elbow_sensitive"
+        "age_under_16",
+        "elbow_sensitive",
+        "finger_injury",
+        "shoulder_sensitive"
       ],
       "prescription_defaults": {
         "sets": 5,
@@ -1935,7 +1938,10 @@
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
       "load_model": "bodyweight_only",
-      "focus": "body_position"
+      "focus": "body_position",
+      "experience_minimum_years": 2,
+      "age_minimum": 16,
+      "difficulty_tier": 3
     },
     {
       "id": "campus_laddering_feet_off",
@@ -1959,8 +1965,11 @@
         "gym"
       ],
       "contraindications": [
+        "age_under_16",
         "elbow_sensitive",
-        "finger_sensitive"
+        "finger_injury",
+        "finger_sensitive",
+        "shoulder_sensitive"
       ],
       "prescription_defaults": {
         "sets": 6,
@@ -1985,7 +1994,10 @@
         "Stop at first sign of form breakdown — never full crimp"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "experience_minimum_years": 2,
+      "age_minimum": 16,
+      "difficulty_tier": 2
     },
     {
       "id": "campus_laddering_feet_on",
@@ -2008,7 +2020,11 @@
       "location_allowed": [
         "gym"
       ],
-      "contraindications": [],
+      "contraindications": [
+        "age_under_16",
+        "finger_injury",
+        "shoulder_sensitive"
+      ],
       "prescription_defaults": {
         "sets": 5,
         "reps": 6,
@@ -2032,7 +2048,10 @@
         "Half-crimp grip unless specifically training open-hand"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "experience_minimum_years": 1,
+      "age_minimum": 16,
+      "difficulty_tier": 1
     },
     {
       "id": "campus_bumps",
@@ -2056,8 +2075,11 @@
         "gym"
       ],
       "contraindications": [
+        "age_under_16",
         "elbow_sensitive",
-        "finger_sensitive"
+        "finger_injury",
+        "finger_sensitive",
+        "shoulder_sensitive"
       ],
       "prescription_defaults": {
         "sets": 6,
@@ -2073,16 +2095,19 @@
         "cns": "high",
         "skin": "medium"
       },
-      "description": "Unilateral campus power. Alternate leading hand each set: RIGHT set \u2192 rest \u2192 LEFT set \u2192 rest. Each hand gets 3 sets total. One set = 4 bumps with one hand while the other locks on a lower rung. Trains explosive contact strength and deep lock-off. (H\u00f6rst, Gresham)",
+      "description": "Unilateral campus power. Alternate leading hand each set: RIGHT set → rest → LEFT set → rest. Each hand gets 3 sets total. One set = 4 bumps with one hand while the other locks on a lower rung. Trains explosive contact strength and deep lock-off. (Hörst, Gresham)",
       "cues": [
         "Alternate hands every set: RIGHT, LEFT, RIGHT, LEFT, RIGHT, LEFT",
-        "Each set: lock one hand low, bump the other up 1-2 rungs \u00d7 4 bumps",
-        "2:30 rest between every set \u2014 each hand gets ~5 min recovery between its sets",
-        "Maximum explosive power \u2014 quality over quantity",
+        "Each set: lock one hand low, bump the other up 1-2 rungs × 4 bumps",
+        "2:30 rest between every set — each hand gets ~5 min recovery between its sets",
+        "Maximum explosive power — quality over quantity",
         "Stop immediately if you feel finger or elbow pain"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "experience_minimum_years": 3,
+      "age_minimum": 16,
+      "difficulty_tier": 4
     },
     {
       "id": "campus_double_dyno",
@@ -2107,7 +2132,9 @@
         "gym"
       ],
       "contraindications": [
+        "age_under_16",
         "elbow_sensitive",
+        "finger_injury",
         "finger_sensitive",
         "shoulder_sensitive"
       ],
@@ -2134,7 +2161,10 @@
         "If you miss or straight-arm catch — stop immediately"
       ],
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "experience_minimum_years": 3,
+      "age_minimum": 16,
+      "difficulty_tier": 5
     },
     {
       "id": "limit_bouldering",
@@ -2376,7 +2406,12 @@
       "fatigue_cost": 8,
       "recency_group": "gym_linked_boulders",
       "equipment_required_any": [
-        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -2676,7 +2711,12 @@
       "fatigue_cost": 3,
       "recency_group": "gym_arc",
       "equipment_required_any": [
-        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -4061,7 +4101,12 @@
       "fatigue_cost": 3,
       "recency_group": "technique_body_position_drills",
       "equipment_required_any": [
-        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -5930,7 +5975,11 @@
       "location_allowed": [
         "gym"
       ],
-      "contraindications": [],
+      "contraindications": [
+        "age_under_16",
+        "finger_injury",
+        "shoulder_sensitive"
+      ],
       "prescription_defaults": {
         "sets": 5,
         "reps": 4,
@@ -5954,7 +6003,10 @@
         "Alternate leading hand each rep",
         "Minimum contact time on the catch rung"
       ],
-      "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/"
+      "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
+      "experience_minimum_years": 1,
+      "age_minimum": 16,
+      "difficulty_tier": 1
     },
     {
       "id": "campus_max_ladders",
@@ -5979,8 +6031,11 @@
         "gym"
       ],
       "contraindications": [
+        "age_under_16",
         "elbow_sensitive",
-        "finger_sensitive"
+        "finger_injury",
+        "finger_sensitive",
+        "shoulder_sensitive"
       ],
       "prescription_defaults": {
         "sets": 4,
@@ -6005,7 +6060,10 @@
         "3 sets, 2-3 min rest — stop before form fails",
         "Elite only: do not add weight without 2+ years campus experience"
       ],
-      "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/"
+      "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
+      "experience_minimum_years": 3,
+      "age_minimum": 16,
+      "difficulty_tier": 4
     },
     {
       "id": "campus_switches",
@@ -6028,7 +6086,11 @@
       "location_allowed": [
         "gym"
       ],
-      "contraindications": [],
+      "contraindications": [
+        "age_under_16",
+        "finger_injury",
+        "shoulder_sensitive"
+      ],
       "prescription_defaults": {
         "sets": 5,
         "reps": 8,
@@ -6052,7 +6114,10 @@
         "Land with bent elbows to absorb force",
         "Rest 3+ min between sets — CNS demanding"
       ],
-      "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/"
+      "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
+      "experience_minimum_years": 2,
+      "age_minimum": 16,
+      "difficulty_tier": 2
     },
     {
       "id": "campus_sprint_endurance",
@@ -6076,7 +6141,11 @@
       "location_allowed": [
         "gym"
       ],
-      "contraindications": [],
+      "contraindications": [
+        "age_under_16",
+        "finger_injury",
+        "shoulder_sensitive"
+      ],
       "prescription_defaults": {
         "sets": 3,
         "reps": null,
@@ -6100,7 +6169,10 @@
         "Stop immediately at any shoulder elevation or shrugging — campus work demands scapular engagement throughout",
         "120s rest between sets: full PCr recovery before the next all-out sprint"
       ],
-      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
+      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/",
+      "experience_minimum_years": 2,
+      "age_minimum": 16,
+      "difficulty_tier": 3
     },
     {
       "id": "emom_bouldering",
@@ -8611,6 +8683,8 @@
         "gym"
       ],
       "contraindications": [
+        "age_under_16",
+        "finger_injury",
         "finger_sensitive",
         "shoulder_sensitive"
       ],
@@ -8638,7 +8712,9 @@
         "Stop immediately if any finger pain"
       ],
       "load_model": "bodyweight_only",
-      "video_url": null
+      "video_url": null,
+      "experience_minimum_years": 2,
+      "difficulty_tier": 2
     },
     {
       "id": "nordic_curl",
@@ -8837,7 +8913,12 @@
       "fatigue_cost": 3,
       "recency_group": "technique_body_position_drills",
       "equipment_required_any": [
-        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -8885,7 +8966,12 @@
       "fatigue_cost": 3,
       "recency_group": "technique_body_position_drills",
       "equipment_required_any": [
-        "gym_boulder", "spraywall", "board_kilter", "board_moonboard", "board_other", "homewall"
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "homewall"
       ],
       "location_allowed": [
         "gym"
@@ -8989,7 +9075,11 @@
         "gym"
       ],
       "contraindications": [],
-      "phase_affinity": ["strength_power", "power_endurance", "performance"],
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ],
       "experience_minimum_years": 0,
       "prescription_defaults": {
         "sets": 3,
@@ -9021,14 +9111,27 @@
       "name": "Easy Boulder Progression",
       "category": "warmup_specific",
       "time_min": 10,
-      "role": ["warmup"],
-      "domain": ["technique_footwork"],
+      "role": [
+        "warmup"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
       "pattern": "climbing_limit_boulder",
       "intensity_level": "low",
       "fatigue_cost": 1,
       "recency_group": "warmup_climbing",
-      "equipment_required_any": ["gym_boulder", "board_kilter", "board_moonboard", "board_other", "spraywall", "homewall"],
-      "location_allowed": ["gym"],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
       "contraindications": [],
       "prescription_defaults": {
         "sets": 1,

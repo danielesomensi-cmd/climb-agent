@@ -435,6 +435,12 @@ def pick_best_exercise_p0(
         ]
     trace["counts"]["after_experience_gate"] = len(base2)
 
+    # Stage 2f: generic experience_minimum_years gate (B159a/D43)
+    # Block exercises whose experience_minimum_years > user's experience.
+    if experience_years is not None:
+        base2 = [e for e in base2 if experience_years >= (e.get("experience_minimum_years") or 0)]
+    trace["counts"]["after_exp_min_gate"] = len(base2)
+
     # Stage 3: role (ANY match)
     base3 = base2
     if role_set:
