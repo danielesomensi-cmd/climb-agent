@@ -264,7 +264,7 @@ export function QuickAddDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-md max-h-[75dvh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Add session — {formatDateLabel(date)}</DialogTitle>
         </DialogHeader>

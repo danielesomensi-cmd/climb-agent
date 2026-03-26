@@ -100,12 +100,12 @@ export function ReplanDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[75dvh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Change plan — {formatDateLabel(date)}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 py-2 overflow-y-auto min-h-0 flex-1">
           {/* Location */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Location</Label>
@@ -192,7 +192,7 @@ export function ReplanDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row">
+        <DialogFooter className="flex-col gap-2 sm:flex-row shrink-0 pb-[env(safe-area-inset-bottom,0px)]">
           <Button
             variant="destructive"
             size="sm"
