@@ -444,7 +444,7 @@ export function CircuitTimer({
   return (
     <div
       className={cn(
-        "fixed inset-0 flex flex-col transition-colors duration-500",
+        "fixed inset-0 z-50 flex flex-col transition-colors duration-500",
         PHASE_BG[phase]
       )}
     >
