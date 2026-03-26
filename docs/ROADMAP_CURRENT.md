@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-25
+> Last updated: 2026-03-26
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -30,6 +30,8 @@
 ## Priority 1 — Stability and bug fixes
 
 All P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`.
+
+- ✅ **B157** — Orphan exercise leak: `critical_force_test` removed from catalog (deferred to v2/D89), role filter added to `easy_climbing_post_finger` block, 4 catalog validation tests added (2026-03-26)
 
 ---
 
