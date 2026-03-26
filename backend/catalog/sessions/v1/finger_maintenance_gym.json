@@ -50,6 +50,7 @@
       "selection": {
         "primary": {
           "filters": {
+            "role": ["main"],
             "domain": ["endurance"],
             "intensity_max": "low"
           },

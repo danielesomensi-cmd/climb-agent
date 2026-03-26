@@ -126,7 +126,6 @@ GRADE_TO_HANG_OFFSET: Dict[str, float] = {
 }
 
 HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
-    "critical_force_test": 0.80,
     "density_hangs": 0.75,
     "hangboard_moving_hangs": 0.55,
     "horst_7_53": 0.70,

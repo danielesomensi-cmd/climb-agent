@@ -205,8 +205,9 @@ class TestD90_MedTestRemoved:
     def test_med_test_not_in_catalog(self, exercises):
         assert "med_test" not in exercises
 
-    def test_critical_force_test_still_exists(self, exercises):
-        assert "critical_force_test" in exercises
+    def test_critical_force_test_removed(self, exercises):
+        """B157: critical_force_test removed (orphan leak, deferred to v2/D89)."""
+        assert "critical_force_test" not in exercises
 
 
 # ---------------------------------------------------------------------------

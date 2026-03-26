@@ -902,59 +902,6 @@
       }
     },
     {
-      "id": "critical_force_test",
-      "name": "Critical Force Test",
-      "category": "test",
-      "time_min": 15,
-      "role": [
-        "test"
-      ],
-      "domain": [
-        "finger_strength",
-        "endurance"
-      ],
-      "pattern": "isometric_hang",
-      "intensity_level": "medium",
-      "fatigue_cost": 8,
-      "recency_group": "finger_test",
-      "equipment_required": [
-        "hangboard"
-      ],
-      "location_allowed": [
-        "home",
-        "gym"
-      ],
-      "contraindications": [],
-      "prescription_defaults": {
-        "sets": 1,
-        "reps": 20,
-        "work_seconds": 7,
-        "rest_between_reps_seconds": 3,
-        "rest_between_sets_seconds": null,
-        "notes": "7s on / 3s off to failure at fixed load. Determines aerobic threshold of forearm. Stop when you can't hold anymore."
-      },
-      "attributes": {
-        "edge_mm": 20,
-        "grip": "half_crimp"
-      },
-      "load_model": "total_load",
-      "stress_tags": {
-        "elbow": "high",
-        "fingers": "high",
-        "cns": "high",
-        "skin": "medium"
-      },
-      "description": "Scientific 3-stage all-out test to determine finger flexor critical force (CF) and W' (Giles et al. / Lattice).",
-      "cues": [
-        "Requires force gauge (Tindeq)",
-        "Stage 1: 80% MVC to failure",
-        "Stage 2: 60% MVC immediately",
-        "Stage 3: 45% MVC immediately",
-        "Record time to failure each stage"
-      ],
-      "video_url": null
-    },
-    {
       "id": "gym_arc_easy_volume",
       "name": "ARC / Easy Volume (Aerobic Endurance)",
       "category": "endurance",

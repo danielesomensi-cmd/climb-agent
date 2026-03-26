@@ -123,6 +123,17 @@ Single "Climbing" card with tap-to-expand, showing 5 surfaces. Add-ons section b
 
 Semi-realistic illustrations via Gemini AI. 26 of 30 exercises remaining. Non-blocking.
 
+### Exercise images for complex exercises
+
+**Priority:** P2.5 | **Status:** Open — TBD post-launch | **Type:** A + C (schema + content)
+
+- Add `image_url` or `images[]` field to exercise catalog schema (currently no image support — only `video_url` exists)
+- Generate instructional images (Gemini AI) for exercises that assume prior knowledge and are hard to understand from text alone
+- Priority targets: hangboard grip exercises (grip_transitions, overcoming_isometric_pull), campus board exercises, technique drills
+- Style: clean side-view instructional photos, consistent framing, suitable for in-app display on exercise detail cards
+- Frontend: display image(s) on `exercise-detail-sheet.tsx`, above or below the description
+- Discovered during B157 audit: `grip_transitions_half_to_open` was the only hangboard exercise with a one-line description and no visual reference
+
 ---
 
 ## Priority 2b — Test results → full exercise calibration
