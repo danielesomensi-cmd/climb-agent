@@ -36,6 +36,7 @@ All P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`
 - ✅ **D158** — `finger_strength_home` template selecting Grip Transitions instead of MaxHangs: resolver now reads `pattern` from template blocks, `grip_transitions` role→activation + pattern→grip_transition, `finger_max_strength` main block filters by `isometric_hang` (2026-03-26)
 - ✅ **B159** — What's Next page: renamed to "Roadmap & Support", flagged Add Exercise + Injury Tracking as implemented, added "Coming soon" badge to Kilter integration (2026-03-26)
 - ✅ **B159a** — Campus gate + selection quality: added `experience_minimum_years`, `age_minimum: 16`, `difficulty_tier`, and `contraindications` to all 10 campus exercises. Added generic `experience_minimum_years` gate (Stage 2f) in resolver. Beginners now get tier-appropriate exercises (2026-03-26)
+- ✅ **B159b** — Exercise rotation: `load_recent_exercise_ids()` now reads from `week_plans` (status=done, lookback 3 weeks). Added `recency_group` penalty (-15) in `score_exercise`. All templates now produce 3/3 unique weeks instead of 1/3 (2026-03-26)
 
 ---
 
