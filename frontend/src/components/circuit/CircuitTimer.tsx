@@ -188,14 +188,17 @@ export function CircuitTimer({
     }
   }, [transitionId]);
 
-  // Countdown ticks at 3-2-1
+  // Countdown ticks at 3-2-1 (skip if phase duration ≤ 3s)
   useEffect(() => {
     if (secondsLeft >= 1 && secondsLeft <= 3) {
       if (!pausedRef.current && phaseRef.current !== "done") {
-        countdownTick();
+        const dur = phaseRef.current === "work" ? workSeconds
+          : phaseRef.current === "rest" ? restSeconds
+          : PREPARE_SECONDS;
+        if (dur > 3) countdownTick();
       }
     }
-  }, [secondsLeft]);
+  }, [secondsLeft, workSeconds, restSeconds]);
 
   // ── Main tick loop (wall-clock) ──────────────────────────────────
 
@@ -246,19 +249,20 @@ export function CircuitTimer({
             return;
           }
 
-          // Go to rest (show next exercise)
-          setCurrentIndex(nextIdx);
+          // Go to rest — do NOT increment index yet (REST display reads currentIndex+1)
           setPhase("rest");
           startCountdown(restSeconds);
+          pendingVoiceCueRef.current = "rest";
           setTransitionId((id) => id + 1);
           return;
         }
 
         if (curPhase === "rest") {
-          // Rest done — start next exercise work
-          const idx = currentIndexRef.current;
-          if (idx < sequence.length) {
-            performedRef.current.push(sequence[idx].id);
+          // Rest done — advance to next exercise and start work
+          const nextIdx = currentIndexRef.current + 1;
+          setCurrentIndex(nextIdx);
+          if (nextIdx < sequence.length) {
+            performedRef.current.push(sequence[nextIdx].id);
           }
           setPhase("work");
           startCountdown(workSeconds);
@@ -417,8 +421,8 @@ export function CircuitTimer({
         PHASE_BG[phase]
       )}
     >
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-1">
+      {/* Top bar — shrink-0 */}
+      <div className="flex shrink-0 items-center justify-between px-4 pt-4 pb-1">
         <span className={cn("text-sm font-bold uppercase tracking-[0.2em]", PHASE_TEXT[phase])}>
           {PHASE_LABEL[phase]}
         </span>
@@ -427,13 +431,12 @@ export function CircuitTimer({
         </span>
       </div>
 
-      {/* Main content area — tap to pause */}
+      {/* Timer ring — shrink-0, smaller (176px) */}
       <div
-        className="flex flex-1 flex-col items-center justify-center px-4 cursor-pointer"
+        className="flex shrink-0 items-center justify-center px-4 pt-2 pb-1 cursor-pointer"
         onClick={handlePauseToggle}
       >
-        {/* Progress ring + countdown */}
-        <div className="relative w-56 h-56 mb-4">
+        <div className="relative w-44 h-44">
           <svg viewBox="0 0 220 220" className="w-full h-full -rotate-90">
             <circle
               cx="110" cy="110" r={RING_RADIUS}
@@ -451,22 +454,28 @@ export function CircuitTimer({
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className={cn(
-              "text-6xl font-bold tabular-nums leading-none transition-transform duration-150",
+              "text-5xl font-bold tabular-nums leading-none transition-transform duration-150",
               secondsLeft <= 3 && secondsLeft > 0 && "scale-110"
             )}>
               {formatTime(secondsLeft)}
             </span>
           </div>
         </div>
+      </div>
 
+      {/* Exercise card area — flex-1, scrollable, tap to pause */}
+      <div
+        className="flex flex-1 flex-col items-center px-4 overflow-y-auto cursor-pointer"
+        onClick={handlePauseToggle}
+      >
         {/* Exercise card with back/next arrows */}
         {phase !== "prepare" && (
-          <div className="w-full max-w-sm flex items-center gap-2">
+          <div className="w-full max-w-sm flex items-center gap-2 py-2">
             {/* Back arrow */}
             <button
               onClick={(e) => { e.stopPropagation(); handleBack(); }}
               disabled={currentIndex <= 0 || phase === "rest"}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/50 transition-colors hover:text-white/80 disabled:opacity-20 disabled:cursor-default"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/50 transition-colors hover:text-white/80 disabled:opacity-20 disabled:cursor-default self-center"
               aria-label="Previous exercise"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -475,18 +484,18 @@ export function CircuitTimer({
             </button>
 
             {/* Exercise info */}
-            <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-5 backdrop-blur-sm">
+            <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
               {displayExercise.image && (
                 <img
                   src={`/exercises/core/${displayExercise.image}`}
                   alt={displayExercise.name}
-                  className="mx-auto mb-3 max-w-[300px] w-full rounded-xl"
+                  className="mx-auto mb-2 max-h-[160px] w-full object-contain rounded-xl"
                 />
               )}
-              <h3 className="text-2xl font-bold text-center mb-2">
+              <h3 className="text-xl font-bold text-center mb-1">
                 {displayExercise.name}
               </h3>
-              <p className="text-sm text-center text-white/70 leading-relaxed">
+              <p className="text-sm text-center text-white/70 leading-relaxed line-clamp-2">
                 {displayExercise.description}
               </p>
             </div>
@@ -495,7 +504,7 @@ export function CircuitTimer({
             <button
               onClick={(e) => { e.stopPropagation(); handleNext(); }}
               disabled={phase === "rest"}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/50 transition-colors hover:text-white/80 disabled:opacity-20 disabled:cursor-default"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/50 transition-colors hover:text-white/80 disabled:opacity-20 disabled:cursor-default self-center"
               aria-label="Skip exercise"
             >
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
@@ -507,19 +516,19 @@ export function CircuitTimer({
 
         {/* Prepare: show first exercise preview */}
         {phase === "prepare" && (
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-5 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur-sm">
             <p className="text-xs text-center text-white/50 uppercase tracking-wider mb-2">First up</p>
             {sequence[0].image && (
               <img
                 src={`/exercises/core/${sequence[0].image}`}
                 alt={sequence[0].name}
-                className="mx-auto mb-3 max-w-[300px] w-full rounded-xl"
+                className="mx-auto mb-2 max-h-[160px] w-full object-contain rounded-xl"
               />
             )}
-            <h3 className="text-2xl font-bold text-center mb-2">
+            <h3 className="text-xl font-bold text-center mb-1">
               {sequence[0].name}
             </h3>
-            <p className="text-sm text-center text-white/70 leading-relaxed">
+            <p className="text-sm text-center text-white/70 leading-relaxed line-clamp-2">
               {sequence[0].description}
             </p>
           </div>
@@ -527,7 +536,7 @@ export function CircuitTimer({
 
         {/* Next exercise preview (during work) */}
         {previewExercise && phase === "work" && (
-          <div className="w-full max-w-sm mt-3 rounded-xl border border-white/5 bg-black/10 px-4 py-2.5">
+          <div className="w-full max-w-sm mt-2 rounded-xl border border-white/5 bg-black/10 px-4 py-2">
             <span className="text-xs text-white/40">Next: </span>
             <span className="text-sm font-medium text-white/60">{previewExercise.name}</span>
           </div>
@@ -535,22 +544,22 @@ export function CircuitTimer({
 
         {/* REST: pulsing GET READY */}
         {phase === "rest" && (
-          <div className="mt-4 animate-pulse">
+          <div className="mt-2 animate-pulse">
             <span className="text-lg font-bold text-blue-300 uppercase tracking-wider">Get Ready</span>
           </div>
         )}
 
         {/* Paused overlay */}
         {paused && (
-          <div className="mt-4 rounded-xl bg-white/10 px-8 py-3 backdrop-blur-sm">
+          <div className="mt-3 rounded-xl bg-white/10 px-8 py-3 backdrop-blur-sm">
             <span className="text-xl font-bold text-white/80 tracking-wider">PAUSED</span>
           </div>
         )}
       </div>
 
-      {/* Bottom: elapsed + controls */}
-      <div className="pb-28 px-4">
-        <div className="flex justify-center gap-8 text-sm text-muted-foreground tabular-nums mb-5">
+      {/* Bottom: elapsed + controls — shrink-0, always visible */}
+      <div className="shrink-0 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="flex justify-center gap-8 text-sm text-muted-foreground tabular-nums mb-3">
           <div className="flex flex-col items-center">
             <span className="text-xs uppercase tracking-wider mb-0.5">Elapsed</span>
             <span className="font-semibold text-foreground">{formatTime(elapsed)}</span>

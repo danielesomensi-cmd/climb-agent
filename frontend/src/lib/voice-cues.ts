@@ -26,6 +26,7 @@ function speak(text: string, lang?: string): void {
 
 const PHASE_CUES: Record<string, string> = {
   work: "Go",
+  rest: "Rest",
   set_rest: "Rest",
   rep_rest: "Hold",
   complete: "Done",
