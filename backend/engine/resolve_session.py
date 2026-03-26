@@ -1290,9 +1290,10 @@ def resolve_session(
 
            
             else:
-                # P0: hard-filter only selection based on v1 schema (role/domain)
+                # P0: hard-filter only selection based on v1 schema (role/domain/pattern)
                 role_req = b.get("role")   # P0 requires explicit block.role; block.type is NOT a selector input
                 domain_req = b.get("domain")
+                pattern_req = b.get("pattern")  # D158: template blocks can filter by pattern
 
                 trace = {}
                 if role_req is None:
@@ -1306,6 +1307,7 @@ def resolve_session(
                         available_equipment=available_equipment,
                         role_req=role_req,
                         domain_req=domain_req,
+                        pattern_req=pattern_req,
                         exclude_ids=set(recent_ex_ids),
                         recent_ex_ids=recent_ex_ids,
                         limitation_map=limitation_map,

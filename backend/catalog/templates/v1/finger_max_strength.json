@@ -177,6 +177,9 @@
       ],
       "domain": [
         "finger_strength"
+      ],
+      "pattern": [
+        "isometric_hang"
       ]
     },
     {

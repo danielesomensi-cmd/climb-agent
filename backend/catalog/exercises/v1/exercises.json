@@ -6586,12 +6586,12 @@
       "category": "main_strength",
       "time_min": 10,
       "role": [
-        "main"
+        "activation"
       ],
       "domain": [
         "finger_strength"
       ],
-      "pattern": "isometric_hang",
+      "pattern": "grip_transition",
       "intensity_level": "high",
       "fatigue_cost": 6,
       "recency_group": "finger_transition",
