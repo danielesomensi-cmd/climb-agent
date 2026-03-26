@@ -70,6 +70,8 @@ INTENT_TO_SESSION = {
     "finger_maintenance": "finger_maintenance_home",
     "finger_max": "finger_strength_home",
     "projecting": "power_contact_gym",
+    "endurance": "endurance_aerobic_gym",
+    "hard": "strength_long",
 }
 
 # B97: outdoor intent → discipline mapping (no session_id — outdoor is logged separately)
