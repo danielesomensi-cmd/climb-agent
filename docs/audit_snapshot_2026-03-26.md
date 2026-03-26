@@ -994,66 +994,11 @@ Stage 6:  Limitation filter
 
 # Section 9: USER STATE
 
-## User: 681431ae-31c7-4965-9b68-e2695c4fc037
+## User: 7ea9f0ee-e629-4ce9-8f4f-f8e6e3dc771e
+**Source:** Production API (https://web-production-fb1e9.up.railway.app)
 
-### Assessment Profile
-
-| Axis | Score |
-|------|-------|
-| finger_strength | 66 |
-| pulling_strength | 61 |
-| power_endurance | 37 |
-| technique | 35 |
-| endurance | 30 |
-
-### Body
-
-- body_fat_pct: None
-- height_cm: 182
-- weight_kg: 77
-
-### Goal
-
-- current_grade: 8a+
-- deadline: 2026-08-22
-- discipline: lead
-- goal_type: lead_grade
-- target_grade: 8b
-- target_style: redpoint
-
-### Experience
-
-- climbing_years: 15
-- structured_training_years: 7
-
-### Equipment
-
-- Home: hangboard
-- Gym: Gym 1 — gym_boulder, board_moonboard, spraywall, gym_routes, board_kilter, campus_board, hangboard, barbell, dumbbell, bench, leg_press, cable_machine
-
-### Limitations
-
-```json
-{
-  "active_flags": [],
-  "details": []
-}
-```
-
-### Macrocycle
-
-- Total weeks: 12
-- Start date: 2026-02-16
-
-| Phase | Name | Weeks | Start Week | End Week | Intensity Cap |
-|-------|------|-------|------------|----------|---------------|
-| base | Endurance Base | 5 | 1 | 5 | medium |
-| strength_power | Strength & Power | 2 | 6 | 7 | max |
-| power_endurance | Power Endurance | 2 | 8 | 9 | high |
-| performance | Performance | 2 | 10 | 11 | max |
-| deload | Deload | 1 | 12 | 12 | low |
-
-## Test Fixture User State
+**Name:** Dani
+**Body:** 182cm, 77kg, body_fat=None
 
 ### Assessment Profile
 
@@ -1061,28 +1006,150 @@ Stage 6:  Limitation filter
 |------|-------|
 | finger_strength | 100 |
 | pulling_strength | 100 |
-| power_endurance | 51 |
+| power_endurance | 54 |
 | technique | 30 |
-| endurance | 46 |
+| endurance | 48 |
 
-- Height: 182cm, Weight: 77kg
-- Climbing years: 15, Structured training: 8
-- Goal: ? 8b by 2026-06-30
-- Grades: boulder OS=? RP=?, lead OS=? RP=?
-- Home equipment: pullup_bar, dumbbell, band, hangboard
-- Gym: Blocx — spraywall, board_kilter, hangboard, dumbbell, barbell, bench
-- Gym: Work Gym — dumbbell, bench, barbell
-- Gym: BKL — gym_boulder, spraywall, board_moonboard
-- Limitations: {"active_flags": ["gomito_sinistro"], "details": [{"area": "gomito", "id": "elbow_left_tendon", "notes": "Irritation risk with high intensity pulling/hangs.", "severity": "lieve", "side": "sinistro", "updated_at": "2026-01-19"}]}
+### Grades
 
-### Macrocycle (12 weeks)
-| Phase | Weeks |
-|-------|-------|
-| base | 4 |
-| strength_power | 3 |
-| power_endurance | 2 |
-| performance | 2 |
-| deload | 1 |
+- Lead: OS=7a+, RP=8a
+- Boulder: OS=7A, RP=7C
+
+### Self-Evaluation
+
+- Primary weakness: technique_errors
+- Secondary weakness: pump_too_early
+
+### Goal
+
+- Type: lead_grade
+- Discipline: lead
+- Target: 8a+ (redpoint)
+- Current: 8a
+- Deadline: 2026-06-01
+
+### Experience
+
+- Climbing years: 16
+- Structured training years: 10
+
+### Equipment
+
+**Home:** hangboard, pullup_bar, dumbbell, band, resistance_band, loading_pin
+
+**Bkl** (3cd991ce): hangboard, board_moonboard, spraywall, gym_boulder, campus_board, pullup_bar, dumbbell, rings
+**Cocque** (16710e5a): spraywall, board_kilter, gym_routes, hangboard, campus_board, pullup_bar
+**Work** (3c7f08e0): barbell, cable_machine, leg_press, bench, dumbbell, pullup_bar, weight, resistance_band, rings, ab_wheel, foam_roller
+
+### Preferences
+
+- Finger training device: hangboard
+
+### Planning Preferences
+
+- Target training days/week: 7
+- Hard day cap/week: 4
+
+### Availability
+
+| Day | Slot | Location | Gym |
+|-----|------|----------|-----|
+| mon | evening | gym | 3cd991ce |
+| tue | evening | home |  |
+| wed | evening | gym | 16710e5a |
+| thu | evening | gym | 16710e5a |
+| fri | evening | gym | 3c7f08e0 |
+| sat | evening | gym | 16710e5a |
+| sun | evening | gym | 16710e5a |
+
+### Limitations
+
+None active.
+
+### Test Results
+
+- **max_hang_5s_total_load** (2026-03-17): total_load=120.0kg, external=43.0kg, BW=77.0kg
+- **repeater_7_3_max_reps** (2026-03-19): reps=25, BW=77.0kg
+
+### Baselines
+
+**Pulling:** 1RM=130.0kg (external=53.0kg), BW=77.0kg, updated=2026-03-25
+**Hangboard:** max_total_load=120.0kg, grade=8a, updated=2026-03-17
+
+### Macrocycle
+
+- Total weeks: 12
+- Start date: 2026-02-23
+- End date: 2026-05-17
+- Generated at: 2026-03-26T17:48:24
+
+| Phase | Name | Weeks | Start Wk | End Wk | Intensity Cap | Session Pool |
+|-------|------|-------|----------|--------|---------------|-------------|
+| base | Endurance Base | 4 | 1 | 4 | medium | boulder_circuit_gym, endurance_aerobic_gym, finger_maintenance_home, prehab_maintenance, technique_focus_gym, complementary_conditioning (+3 more) |
+| strength_power | Strength & Power | 3 | 5 | 7 | max | finger_strength_home, limit_boulder_gym, power_contact_gym, prehab_maintenance, strength_long, complementary_conditioning (+5 more) |
+| power_endurance | Power Endurance | 2 | 8 | 9 | high | power_endurance_gym, prehab_maintenance, endurance_aerobic_gym, finger_strength_home, flexibility_full, handstand_practice (+2 more) |
+| performance | Performance | 2 | 10 | 11 | max | limit_boulder_gym, prehab_maintenance, technique_focus_gym, boulder_circuit_gym, finger_strength_home, flexibility_full (+4 more) |
+| deload | Deload | 1 | 12 | 12 | low | flexibility_full, prehab_maintenance, regeneration_easy, yoga_recovery, deload_recovery, easy_climbing_deload (+1 more) |
+
+### Working Loads
+
+| Exercise | Next Load | Last Feedback | Updated |
+|----------|-----------|---------------|---------|
+| density_hangs | 1.5kg | very_hard | 2026-03-12 |
+| elbow_eccentric_curl | 1.5kg | ok | 2026-03-19 |
+| forearm_pronation_supination | 5.0kg | ok | 2026-03-26 |
+| max_hang_5s | 46.0kg | ok | 2026-03-17 |
+| test_repeater_7_3_to_failure | -2.0kg | hard | 2026-03-19 |
+| weighted_pullup | 27.5kg | ok | 2026-03-13 |
+| wrist_curl | 5.0kg | ok | 2026-03-17 |
+
+### Recent Week Plans
+
+#### Week starting 2026-03-10
+
+Phase: **base**
+
+| Date | Sessions | Status | Load |
+|------|----------|--------|------|
+| 2026-03-10 | finger_maintenance_home | pending | 40 |
+| 2026-03-11 | route_endurance_gym | pending | 40 |
+| 2026-03-12 | endurance_aerobic_gym | pending | 40 |
+| 2026-03-13 | prehab_maintenance | pending | 20 |
+| 2026-03-14 | endurance_aerobic_gym | pending | 40 |
+| 2026-03-15 | complementary_conditioning | pending | 40 |
+| 2026-03-16 | boulder_circuit_gym | done | 40 |
+
+#### Week starting 2026-03-16
+
+Phase: **base**
+
+| Date | Sessions | Status | Load |
+|------|----------|--------|------|
+| 2026-03-16 | boulder_circuit_gym | done | 40 |
+| 2026-03-17 | test_max_hang_5s | done | 65 |
+| 2026-03-18 | route_endurance_gym | done | 40 |
+| 2026-03-19 | test_repeater_7_3 | done | 65 |
+| 2026-03-20 | rest | — | — |
+| 2026-03-21 | rest | — | — |
+| 2026-03-22 | rest | — | — |
+
+#### Week starting 2026-03-23
+
+Phase: **strength_power**
+
+| Date | Sessions | Status | Load |
+|------|----------|--------|------|
+| 2026-03-23 | regeneration_easy | done | 20 |
+| 2026-03-24 | power_contact_gym | done | 85 |
+| 2026-03-25 | regeneration_easy | done | 20 |
+| 2026-03-26 | finger_strength_home | done | 65 |
+| 2026-03-27 | complementary_conditioning | pending | 40 |
+| 2026-03-28 | technique_focus_gym | pending | 40 |
+| 2026-03-29 | power_contact_gym | pending | 85 |
+
+### Trips
+
+None configured.
 
 ---
 

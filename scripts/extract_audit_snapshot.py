@@ -18,11 +18,14 @@ import ast
 import json
 import os
 import re
+import subprocess
 import sys
 from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+PROD_API_URL = "https://web-production-fb1e9.up.railway.app"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -667,182 +670,317 @@ def section_safety() -> str:
     return "\n".join(out)
 
 
+def _fetch_user_state_from_api(user_id: str) -> Optional[dict]:
+    """Fetch user state from production API. Returns None on failure."""
+    try:
+        result = subprocess.run(
+            ["curl", "-s", "-f", "--max-time", "15",
+             f"{PROD_API_URL}/api/state",
+             "-H", f"X-User-ID: {user_id}"],
+            capture_output=True, text=True, timeout=20,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return json.loads(result.stdout)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        pass
+    return None
+
+
+def _fetch_week_plan_from_api(user_id: str, week_num: int) -> Optional[dict]:
+    """Fetch a specific week plan from production API."""
+    try:
+        result = subprocess.run(
+            ["curl", "-s", "-f", "--max-time", "15",
+             f"{PROD_API_URL}/api/week/{week_num}",
+             "-H", f"X-User-ID: {user_id}"],
+            capture_output=True, text=True, timeout=20,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return json.loads(result.stdout)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        pass
+    return None
+
+
+def _render_user_state(state: dict, user_id: str, source: str) -> List[str]:
+    """Render a user state dict into markdown lines."""
+    out: List[str] = []
+    out.append(f"## User: {user_id}")
+    out.append(f"**Source:** {source}\n")
+
+    # --- User info ---
+    user_info = state.get("user", {})
+    if user_info:
+        out.append(f"**Name:** {user_info.get('preferred_name', user_info.get('name', '?'))}")
+
+    # --- Body ---
+    body = state.get("body", state.get("assessment", {}).get("body", {}))
+    if body:
+        out.append(f"**Body:** {body.get('height_cm', '?')}cm, {body.get('weight_kg', '?')}kg, body_fat={body.get('body_fat_pct', 'N/A')}\n")
+
+    # --- Assessment profile ---
+    profile = state.get("assessment", {}).get("profile", {})
+    if profile:
+        out.append("### Assessment Profile\n")
+        out.append("| Axis | Score |")
+        out.append("|------|-------|")
+        for axis in ["finger_strength", "pulling_strength", "power_endurance", "technique", "endurance"]:
+            out.append(f"| {axis} | {profile.get(axis, '?')} |")
+        out.append("")
+
+    # --- Grades ---
+    grades = state.get("assessment", {}).get("grades", {})
+    if grades:
+        out.append("### Grades\n")
+        out.append(f"- Lead: OS={grades.get('lead_max_os', '?')}, RP={grades.get('lead_max_rp', '?')}")
+        out.append(f"- Boulder: OS={grades.get('boulder_max_os', '?')}, RP={grades.get('boulder_max_rp', '?')}")
+        out.append("")
+
+    # --- Self-eval ---
+    self_eval = state.get("assessment", {}).get("self_eval", {})
+    if self_eval:
+        out.append("### Self-Evaluation\n")
+        out.append(f"- Primary weakness: {self_eval.get('primary_weakness', '?')}")
+        out.append(f"- Secondary weakness: {self_eval.get('secondary_weakness', '?')}")
+        out.append("")
+
+    # --- Goal ---
+    goal = state.get("goal", {})
+    if goal:
+        out.append("### Goal\n")
+        out.append(f"- Type: {goal.get('goal_type', '?')}")
+        out.append(f"- Discipline: {goal.get('discipline', '?')}")
+        out.append(f"- Target: {goal.get('target_grade', '?')} ({goal.get('target_style', '?')})")
+        out.append(f"- Current: {goal.get('current_grade', '?')}")
+        out.append(f"- Deadline: {goal.get('deadline', '?')}")
+        out.append("")
+
+    # --- Experience ---
+    exp = state.get("assessment", {}).get("experience", {})
+    if exp:
+        out.append("### Experience\n")
+        out.append(f"- Climbing years: {exp.get('climbing_years', '?')}")
+        out.append(f"- Structured training years: {exp.get('structured_training_years', '?')}")
+        out.append("")
+
+    # --- Equipment ---
+    equip = state.get("equipment", {})
+    if equip:
+        out.append("### Equipment\n")
+        home = equip.get("home", [])
+        if home:
+            out.append(f"**Home:** {', '.join(home)}\n")
+        gyms = equip.get("gyms", [])
+        for g in gyms:
+            out.append(f"**{g.get('name', '?')}** ({g.get('gym_id', '')[:8]}): {', '.join(g.get('equipment', []))}")
+        out.append("")
+
+    # --- Preferences ---
+    prefs = state.get("preferences", {})
+    if prefs:
+        out.append("### Preferences\n")
+        out.append(f"- Finger training device: {prefs.get('finger_training_device', '?')}")
+        out.append("")
+
+    # --- Planning prefs ---
+    pp = state.get("planning_prefs", {})
+    if pp:
+        out.append("### Planning Preferences\n")
+        out.append(f"- Target training days/week: {pp.get('target_training_days_per_week', '?')}")
+        out.append(f"- Hard day cap/week: {pp.get('hard_day_cap_per_week', '?')}")
+        out.append("")
+
+    # --- Availability ---
+    avail = state.get("availability", {})
+    if avail:
+        out.append("### Availability\n")
+        out.append("| Day | Slot | Location | Gym |")
+        out.append("|-----|------|----------|-----|")
+        for day in ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]:
+            d = avail.get(day, {})
+            if not isinstance(d, dict):
+                out.append(f"| {day} | — | rest | — |")
+                continue
+            has_slot = False
+            for slot in ["morning", "lunch", "evening"]:
+                si = d.get(slot, {})
+                if isinstance(si, dict) and si.get("available"):
+                    pref = si.get("preferred_location", "")
+                    gid = si.get("gym_id", "")[:8]
+                    out.append(f"| {day} | {slot} | {pref or ', '.join(si.get('locations', []))} | {gid} |")
+                    has_slot = True
+            if not has_slot:
+                out.append(f"| {day} | — | rest | — |")
+        out.append("")
+
+    # --- Limitations ---
+    lims = state.get("limitations", {})
+    if lims:
+        active = lims.get("active_flags", [])
+        details = lims.get("details", [])
+        if active or details:
+            out.append("### Limitations\n")
+            out.append(f"- Active flags: {active}")
+            out.append(f"- Details: {json.dumps(details, indent=2)}")
+            out.append("")
+        else:
+            out.append("### Limitations\n")
+            out.append("None active.\n")
+
+    # --- Tests ---
+    tests = state.get("tests", {})
+    if tests:
+        out.append("### Test Results\n")
+        for cat, entries in tests.items():
+            if not entries:
+                continue
+            for t in entries:
+                tid = t.get("test_id", "?")
+                tdate = t.get("date", "?")
+                details = []
+                if "total_load_kg" in t:
+                    details.append(f"total_load={t['total_load_kg']}kg")
+                if "external_load_kg" in t:
+                    details.append(f"external={t['external_load_kg']}kg")
+                if "completed_reps" in t:
+                    details.append(f"reps={t['completed_reps']}")
+                if "bodyweight_kg" in t:
+                    details.append(f"BW={t['bodyweight_kg']}kg")
+                out.append(f"- **{tid}** ({tdate}): {', '.join(details)}")
+        out.append("")
+
+    # --- Baselines ---
+    baselines = state.get("baselines", {})
+    if baselines:
+        out.append("### Baselines\n")
+        pull = baselines.get("pulling", {})
+        if pull:
+            out.append(f"**Pulling:** 1RM={pull.get('weighted_pullup_1rm_total_kg', '?')}kg (external={pull.get('max_external_load_kg', '?')}kg), BW={pull.get('bodyweight_kg', '?')}kg, updated={pull.get('updated_at', '?')}")
+        hb = baselines.get("hangboard", [])
+        for h in hb:
+            out.append(f"**Hangboard:** max_total_load={h.get('max_total_load_kg', '?')}kg, grade={h.get('grade_used', '?')}, updated={h.get('updated_at', '?')}")
+        out.append("")
+
+    # --- Macrocycle ---
+    macro = state.get("macrocycle", {})
+    if macro:
+        out.append("### Macrocycle\n")
+        out.append(f"- Total weeks: {macro.get('total_weeks', '?')}")
+        out.append(f"- Start date: {macro.get('start_date', '?')}")
+        out.append(f"- End date: {macro.get('end_date', '?')}")
+        out.append(f"- Generated at: {macro.get('generated_at', '?')}")
+        phases = macro.get("phases", [])
+        if phases:
+            out.append("\n| Phase | Name | Weeks | Start Wk | End Wk | Intensity Cap | Session Pool |")
+            out.append("|-------|------|-------|----------|--------|---------------|-------------|")
+            for p in phases:
+                pid = p.get("phase_id", p.get("id", "?"))
+                pname = p.get("phase_name", "")
+                dur = p.get("duration_weeks", p.get("weeks", "?"))
+                pool = p.get("session_pool", [])
+                pool_str = ", ".join(pool[:6])
+                if len(pool) > 6:
+                    pool_str += f" (+{len(pool)-6} more)"
+                out.append(f"| {pid} | {pname} | {dur} | {p.get('start_week', '?')} | {p.get('end_week', '?')} | {p.get('intensity_cap', '')} | {pool_str} |")
+        out.append("")
+
+    # --- Working loads ---
+    wl = state.get("working_loads", {})
+    entries = wl.get("entries", []) if isinstance(wl, dict) else []
+    if entries:
+        out.append("### Working Loads\n")
+        out.append("| Exercise | Next Load | Last Feedback | Updated |")
+        out.append("|----------|-----------|---------------|---------|")
+        for e in entries:
+            eid = e.get("exercise_id", "?")
+            nload = e.get("next_external_load_kg") or e.get("next_total_load_kg", "?")
+            fb = e.get("last_feedback_label", "?")
+            updated = e.get("updated_at", "?")[:10] if e.get("updated_at") else "?"
+            out.append(f"| {eid} | {nload}kg | {fb} | {updated} |")
+        out.append("")
+
+    # --- Week plans (recent 3 weeks) ---
+    wp = state.get("week_plans", {})
+    if wp:
+        recent_keys = sorted(wp.keys())[-3:]
+        out.append("### Recent Week Plans\n")
+        for wk_date in recent_keys:
+            plan = wp[wk_date]
+            out.append(f"#### Week starting {wk_date}\n")
+            weeks = plan.get("weeks", [])
+            for w in weeks:
+                phase = w.get("phase", "?")
+                out.append(f"Phase: **{phase}**\n")
+                out.append("| Date | Sessions | Status | Load |")
+                out.append("|------|----------|--------|------|")
+                for day in w.get("days", []):
+                    d = day.get("date", "?")
+                    sessions = day.get("sessions", [])
+                    if sessions:
+                        for sess in sessions:
+                            sid = sess.get("session_id", "?")
+                            status = sess.get("status", "pending")
+                            load = sess.get("session_load_score") or sess.get("estimated_load_score", "?")
+                            loc = sess.get("location", "")
+                            gym = sess.get("gym_id", "")[:8] if sess.get("gym_id") else ""
+                            out.append(f"| {d} | {sid} | {status} | {load} |")
+                    elif day.get("outdoor_slot"):
+                        out.append(f"| {d} | (outdoor) | — | — |")
+                    else:
+                        out.append(f"| {d} | rest | — | — |")
+            out.append("")
+
+    # --- Trips ---
+    trips = state.get("trips", [])
+    if trips:
+        out.append("### Trips\n")
+        for t in trips:
+            out.append(f"- {t.get('name', '?')}: {t.get('start', '?')} → {t.get('end', '?')}")
+        out.append("")
+    else:
+        out.append("### Trips\n")
+        out.append("None configured.\n")
+
+    return out
+
+
 def section_user_state(user_id: str) -> str:
     out = ["# Section 9: USER STATE\n"]
 
-    # Try local user state files
-    users_dir = REPO_ROOT / "backend" / "data" / "users"
-    found = False
+    # Strategy: try production API first, fall back to local files
+    state = _fetch_user_state_from_api(user_id)
+    if state:
+        out.extend(_render_user_state(state, user_id, f"Production API ({PROD_API_URL})"))
+        return "\n".join(out)
 
+    print(f"  Warning: API fetch failed for {user_id}, falling back to local data")
+
+    # Fallback: local user state files
+    users_dir = REPO_ROOT / "backend" / "data" / "users"
     if users_dir.exists():
-        for uid_dir in users_dir.iterdir():
+        # Try exact match first
+        exact = users_dir / user_id / "user_state.json"
+        if exact.exists():
+            state = json.loads(exact.read_text(encoding="utf-8"))
+            out.extend(_render_user_state(state, user_id, "Local file"))
+            return "\n".join(out)
+
+        # Fall back to any local user
+        for uid_dir in sorted(users_dir.iterdir()):
             state_file = uid_dir / "user_state.json"
             if state_file.exists():
                 state = json.loads(state_file.read_text(encoding="utf-8"))
-                uid = uid_dir.name
-                if uid == user_id or not found:
-                    found = True
-                    out.append(f"## User: {uid}\n")
-                    # Assessment
-                    profile = state.get("assessment", {}).get("profile", {})
-                    if profile:
-                        out.append("### Assessment Profile\n")
-                        out.append("| Axis | Score |")
-                        out.append("|------|-------|")
-                        for axis in ["finger_strength", "pulling_strength", "power_endurance", "technique", "endurance"]:
-                            out.append(f"| {axis} | {profile.get(axis, '?')} |")
-                        out.append("")
+                out.extend(_render_user_state(state, uid_dir.name, f"Local file (fallback, requested {user_id})"))
+                break
 
-                    # Body
-                    body = state.get("assessment", {}).get("body", {})
-                    if body:
-                        out.append("### Body\n")
-                        for k, v in body.items():
-                            out.append(f"- {k}: {v}")
-                        out.append("")
-
-                    # Goal
-                    goal = state.get("goal", {})
-                    if goal:
-                        out.append("### Goal\n")
-                        for k, v in goal.items():
-                            out.append(f"- {k}: {v}")
-                        out.append("")
-
-                    # Experience
-                    exp = state.get("assessment", {}).get("experience", {})
-                    if exp:
-                        out.append("### Experience\n")
-                        for k, v in exp.items():
-                            out.append(f"- {k}: {v}")
-                        out.append("")
-
-                    # Equipment
-                    equip = state.get("equipment", {})
-                    if equip:
-                        out.append("### Equipment\n")
-                        home = equip.get("home", [])
-                        if home:
-                            out.append(f"- Home: {', '.join(home)}")
-                        gyms = equip.get("gyms", [])
-                        for g in gyms:
-                            out.append(f"- Gym: {g.get('name', '?')} — {', '.join(g.get('equipment', []))}")
-                        out.append("")
-
-                    # Preferences
-                    prefs = state.get("preferences", {})
-                    if prefs:
-                        out.append("### Preferences\n")
-                        for k, v in prefs.items():
-                            out.append(f"- {k}: {v}")
-                        out.append("")
-
-                    # Limitations
-                    lims = state.get("limitations", {})
-                    if lims:
-                        out.append("### Limitations\n")
-                        out.append(f"```json\n{json.dumps(lims, indent=2)}\n```\n")
-
-                    # Macrocycle
-                    macro = state.get("macrocycle", {})
-                    if macro:
-                        out.append("### Macrocycle\n")
-                        out.append(f"- Total weeks: {macro.get('total_weeks', '?')}")
-                        out.append(f"- Start date: {macro.get('start_date', '?')}")
-                        phases = macro.get("phases", [])
-                        if phases:
-                            out.append("\n| Phase | Name | Weeks | Start Week | End Week | Intensity Cap |")
-                            out.append("|-------|------|-------|------------|----------|---------------|")
-                            for p in phases:
-                                pid = p.get("phase_id", p.get("id", "?"))
-                                pname = p.get("phase_name", "")
-                                dur = p.get("duration_weeks", p.get("weeks", "?"))
-                                out.append(f"| {pid} | {pname} | {dur} | {p.get('start_week', '?')} | {p.get('end_week', '?')} | {p.get('intensity_cap', '')} |")
-                        out.append("")
-
-                    # Baselines
-                    baselines = state.get("baselines", {})
-                    if baselines:
-                        out.append("### Baselines\n")
-                        out.append(f"```json\n{json.dumps(baselines, indent=2)}\n```\n")
-
-                    # Trips
-                    trips = state.get("trips", [])
-                    if trips:
-                        out.append("### Trips\n")
-                        for t in trips:
-                            out.append(f"- {t.get('name', '?')}: {t.get('start', '?')} → {t.get('end', '?')}")
-                        out.append("")
-
-                    if uid == user_id:
-                        break
-
-    # Also check test fixtures
+    # Test fixture as last resort
     fixture = REPO_ROOT / "backend" / "tests" / "fixtures" / "test_user_state.json"
-    if fixture.exists():
+    if fixture.exists() and not state:
         state = json.loads(fixture.read_text(encoding="utf-8"))
-        out.append("## Test Fixture User State\n")
-        profile = state.get("assessment", {}).get("profile", {})
-        if profile:
-            out.append("### Assessment Profile\n")
-            out.append("| Axis | Score |")
-            out.append("|------|-------|")
-            for axis in ["finger_strength", "pulling_strength", "power_endurance", "technique", "endurance"]:
-                out.append(f"| {axis} | {profile.get(axis, '?')} |")
-            out.append("")
+        out.extend(_render_user_state(state, "test_fixture", "Test fixture (fallback)"))
 
-        body = state.get("assessment", {}).get("body", {})
-        if body:
-            out.append(f"- Height: {body.get('height_cm', '?')}cm, Weight: {body.get('weight_kg', '?')}kg")
-
-        exp = state.get("assessment", {}).get("experience", {})
-        if exp:
-            out.append(f"- Climbing years: {exp.get('climbing_years', '?')}, Structured training: {exp.get('structured_training_years', '?')}")
-
-        goal = state.get("goal", {})
-        if goal:
-            out.append(f"- Goal: {goal.get('type', '?')} {goal.get('target_grade', '?')} by {goal.get('deadline', '?')}")
-
-        grades = state.get("assessment", {}).get("grades", {})
-        if grades:
-            out.append(f"- Grades: boulder OS={grades.get('boulder_max_onsight', '?')} RP={grades.get('boulder_max_redpoint', '?')}, lead OS={grades.get('lead_max_onsight', '?')} RP={grades.get('lead_max_redpoint', '?')}")
-
-        equip = state.get("equipment", {})
-        home = equip.get("home", [])
-        if home:
-            out.append(f"- Home equipment: {', '.join(home)}")
-        gyms = equip.get("gyms", [])
-        for g in gyms:
-            out.append(f"- Gym: {g.get('name', '?')} — {', '.join(g.get('equipment', []))}")
-
-        lims = state.get("limitations", {})
-        if lims:
-            out.append(f"- Limitations: {json.dumps(lims)}")
-
-        prefs = state.get("preferences", {})
-        if prefs:
-            out.append(f"- Finger device: {prefs.get('finger_training_device', '?')}")
-
-        baselines = state.get("baselines", {})
-        if baselines:
-            out.append(f"\n### Baselines\n```json\n{json.dumps(baselines, indent=2)}\n```")
-
-        macro = state.get("macrocycle", {})
-        if macro:
-            out.append(f"\n### Macrocycle ({macro.get('total_weeks', '?')} weeks)")
-            phases = macro.get("phases", [])
-            if phases:
-                out.append("| Phase | Weeks |")
-                out.append("|-------|-------|")
-                for p in phases:
-                    pid = p.get("phase_id", p.get("id", "?"))
-                    dur = p.get("duration_weeks", p.get("weeks", "?"))
-                    out.append(f"| {pid} | {dur} |")
-        out.append("")
-
-    if not found and not fixture.exists():
-        out.append(f"**User {user_id} not found in local data.**")
-        out.append("Production data is on Supabase — run with backend access to extract.\n")
+    if not state:
+        out.append(f"**User {user_id} not found.** Neither API nor local data available.\n")
 
     return "\n".join(out)
 

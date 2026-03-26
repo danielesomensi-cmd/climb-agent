@@ -234,6 +234,7 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 - `docs/literature_review_climbing_training.md` — Training science reference
 - `docs/docs_literature_hangboard.md` — Hangboard science reference
 - `docs/beta_feedback.md` — Beta tester feedback log
+- `docs/audit_workflow.md` — Repeatable literature audit process (snapshot extraction → knowledge base audit → implementation brief)
 
 ## Docs maintenance
 
