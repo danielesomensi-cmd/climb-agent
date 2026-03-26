@@ -466,7 +466,7 @@ export function CircuitTimer({
       </div>
 
       {/* Timer ring + controls — side by side, shrink-0 */}
-      <div className="flex shrink-0 items-center gap-3 px-4 mt-1">
+      <div className="flex shrink-0 items-center gap-3 px-4 mt-4">
         {/* Ring — left */}
         <div
           className="relative w-36 h-36 shrink-0 cursor-pointer"
