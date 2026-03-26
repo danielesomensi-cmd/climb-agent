@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 # B126: conditional resolver trace — set TRACE_RESOLVE=true on Railway to debug
 TRACE_RESOLVE = os.environ.get("TRACE_RESOLVE", "false").lower() == "true"
 
+# B159b: how many past weeks of completed sessions to scan for exercise recency
+RECENCY_LOOKBACK_WEEKS = 3
+
 
 # ---------------------------
 # IO helpers
@@ -337,6 +340,7 @@ def pick_best_exercise_p0(
     required_equipment: Any = None,
     exclude_ids: Optional[set] = None,
     recent_ex_ids: Optional[List[str]] = None,
+    recent_recency_groups: Optional[set] = None,
     limitation_map: Optional[Dict[str, str]] = None,
     finger_device: Optional[str] = None,
     user_age: Optional[int] = None,
@@ -519,10 +523,11 @@ def pick_best_exercise_p0(
 
     # Deterministic pick: score_exercise for recency-aware tie-breaking,
     # then exercise_id ascending for final deterministic tie-break
-    if recent_ex_ids:
+    if recent_ex_ids or recent_recency_groups:
         prefs_empty: Dict[str, Any] = {}
+        _rrg = recent_recency_groups or set()
         base3.sort(key=lambda e: (
-            -score_exercise(e, prefs_empty, recent_ex_ids),
+            -score_exercise(e, prefs_empty, recent_ex_ids or [], _rrg),
             norm_str(get_ex_id(e)),
         ))
     else:
@@ -643,23 +648,54 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
     return location, equipment
 
 
-def load_recent_exercise_ids(user_id: Optional[str] = None) -> List[str]:
-    """Read recently used exercise_ids from session logs via storage layer.
+def load_recent_exercise_ids(
+    user_id: Optional[str] = None,
+    user_state: Optional[Dict[str, Any]] = None,
+) -> List[str]:
+    """Extract exercise_ids from completed sessions in recent week_plans.
 
-    Uses per-user log directory (A128a fix: previously read from global path,
-    breaking multi-user exercise variety).
+    B159b: reads from user_state["week_plans"] (already persisted in Supabase)
+    instead of the unused session_logs table.  Scans the last
+    RECENCY_LOOKBACK_WEEKS weeks of plans, collecting exercise_ids from
+    sessions with status="done".
+
+    Falls back to session_logs storage if no week_plans data is available
+    (backward compat).
     """
-    from backend.engine import storage
-
-    entries = storage.read_recent_session_log_lines(user_id, max_lines=200)
     recent: List[str] = []
-    for obj in entries:
-        eis = obj.get("exercise_instances") or obj.get("resolved_session", {}).get("exercise_instances") or []
-        for e in eis:
-            ex_id = e.get("exercise_id")
-            if ex_id:
-                recent.append(norm_str(ex_id))
-    # last ones are most recent
+
+    # Primary source: week_plans in user_state
+    if user_state:
+        week_plans = user_state.get("week_plans") or {}
+        # Sort week keys descending (most recent first), take lookback window
+        sorted_keys = sorted(week_plans.keys(), reverse=True)[:RECENCY_LOOKBACK_WEEKS]
+        for wk_key in reversed(sorted_keys):  # oldest first → most recent last
+            plan = week_plans[wk_key]
+            for week_block in plan.get("weeks") or []:
+                for day_entry in week_block.get("days") or []:
+                    for sess in day_entry.get("sessions") or []:
+                        if sess.get("status") != "done":
+                            continue
+                        resolved = sess.get("resolved") or {}
+                        rs = resolved.get("resolved_session") or {}
+                        for inst in rs.get("exercise_instances") or []:
+                            ex_id = inst.get("exercise_id")
+                            if ex_id:
+                                recent.append(norm_str(ex_id))
+
+    # Fallback: legacy session_logs (kept for backward compat)
+    if not recent:
+        from backend.engine import storage
+        entries = storage.read_recent_session_log_lines(user_id, max_lines=200)
+        for obj in entries:
+            eis = (obj.get("exercise_instances")
+                   or obj.get("resolved_session", {}).get("exercise_instances")
+                   or [])
+            for e in eis:
+                ex_id = e.get("exercise_id")
+                if ex_id:
+                    recent.append(norm_str(ex_id))
+
     return recent[-100:]
 
 
@@ -779,17 +815,19 @@ def score_exercise(
     ex: Dict[str, Any],
     prefs: Dict[str, Any],
     recent_ex_ids: List[str],
+    recent_recency_groups: Optional[set] = None,
 ) -> float:
     """
     Simple scoring:
     + prefer edge_mm == preferred_edge
     + prefer grip == preferred_grip
-    - penalize if used very recently
+    - penalize if used very recently (exercise_id level)
+    - penalize if same recency_group was used recently (B159b)
     """
     s = 0.0
     ex_id = norm_str(get_ex_id(ex))
 
-    # recent penalty (coherence)
+    # recent penalty — exercise_id level (coherence)
     # If it appears in the last K selections, penalize more
     if ex_id in recent_ex_ids[-5:]:
         s -= 100.0
@@ -797,6 +835,12 @@ def score_exercise(
         s -= 25.0
     elif ex_id in recent_ex_ids:
         s -= 5.0
+
+    # B159b: recency_group penalty — penalizes exercises from same family
+    if recent_recency_groups:
+        rg = norm_str(ex.get("recency_group") or "")
+        if rg and rg in recent_recency_groups:
+            s -= 15.0
 
     # preference matching (strong preference but not mandatory)
     pref_edge = prefs.get("preferred_edge_mm")
@@ -1174,8 +1218,18 @@ def resolve_session(
         available_equipment.append("pullup_bar")
 
 
-    # recent history (MVP)
-    recent_ex_ids = load_recent_exercise_ids(user_id)
+    # recent history (B159b: reads from week_plans in user_state)
+    recent_ex_ids = load_recent_exercise_ids(user_id, user_state=user_state)
+
+    # B159b: build recency_group set from recent exercise_ids
+    _ex_by_id = {norm_str(get_ex_id(e)): e for e in exercises}
+    recent_recency_groups: set = set()
+    for _rid in recent_ex_ids:
+        _rex = _ex_by_id.get(_rid)
+        if _rex:
+            _rg = norm_str(_rex.get("recency_group") or "")
+            if _rg:
+                recent_recency_groups.add(_rg)
 
     # preferences (baseline 20mm strong preference, overridable)
     prefs = {
