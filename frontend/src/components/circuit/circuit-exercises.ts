@@ -119,7 +119,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
   {
     id: "ce_side_plank_l",
     name: "Side Plank (Left)",
-    description: "Left forearm side plank. Same cues as right side.",
+    description: "Left forearm side plank. Stack feet or stagger. Keep hips high, body in a straight line. Hold.",
     pattern: "anti_lateral_flexion",
     type: "isometric",
     advanced: false,
@@ -132,14 +132,16 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_lateral_flexion",
     type: "isometric",
     advanced: false,
+    image: "12_copenhagen_r.jpg",
   },
   {
     id: "ce_copenhagen_l",
     name: "Copenhagen Plank (Left)",
-    description: "Left side Copenhagen plank. Same cues as right side.",
+    description: "Left side plank with top leg on a chair or bench. Bottom leg hangs free. Adductors + lateral core. Simplified: use knee instead of foot.",
     pattern: "anti_lateral_flexion",
     type: "isometric",
     advanced: false,
+    image: "13_copenhagen_l.jpg",
   },
 
   // 3.4 Compression / Hip Flexion (critical for toe-hooks, overhanging body tension)
@@ -150,6 +152,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "compression",
     type: "dynamic",
     advanced: false,
+    image: "14_v_up.jpg",
   },
   {
     id: "ce_alt_leg_raise",
@@ -158,6 +161,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "compression",
     type: "dynamic",
     advanced: false,
+    image: "15_alt_leg_raise.jpg",
   },
   {
     id: "ce_bicycle_crunch",
@@ -166,6 +170,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "compression",
     type: "dynamic",
     advanced: false,
+    image: "16_bicycle_crunch.webp",
   },
   {
     id: "ce_tuck_up",
@@ -174,6 +179,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "compression",
     type: "dynamic",
     advanced: false,
+    image: "17_tuck_up.jpg",
   },
 
   // 3.5 Extension / Posterior Chain (anti-climber's-back — often neglected!)
@@ -184,6 +190,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "extension",
     type: "isometric",
     advanced: false,
+    image: "18_superman_hold.jpg",
   },
   {
     id: "ce_superman_swimmers",

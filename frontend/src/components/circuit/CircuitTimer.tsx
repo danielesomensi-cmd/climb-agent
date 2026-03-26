@@ -448,8 +448,8 @@ export function CircuitTimer({
         PHASE_BG[phase]
       )}
     >
-      {/* Header — thin */}
-      <div className="flex shrink-0 items-center justify-between px-4 pt-2 pb-1">
+      {/* Header — minimal */}
+      <div className="flex shrink-0 items-center justify-between px-4 pt-1 pb-0.5">
         <span className={cn("text-sm font-bold uppercase tracking-[0.2em]", PHASE_TEXT[phase])}>
           {PHASE_LABEL[phase]}
         </span>
