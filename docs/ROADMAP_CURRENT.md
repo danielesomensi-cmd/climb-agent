@@ -259,6 +259,17 @@ Same architecture as Core Circuit for post-session static stretching (30-60s hol
 **Status:** Open — design pending | **Effort:** M
 Same architecture for pre-session dynamic warmup (30s work / 10s transition).
 
+### Feedback Loop Education Copy
+
+**Status:** Open | **Effort:** XS
+User-facing copy explaining that feedback drives plan adaptation. Two touchpoints:
+1. **Onboarding:** Dedicated step or callout explaining the closed-loop: "Your feedback after each session calibrates your next plan — the more you share, the smarter your training gets."
+2. **Main UI (today/session pages):** Persistent slogan/banner near feedback controls, e.g. "Every rating fine-tunes your next session."
+
+Messaging should hint at written feedback value ("Your comments help us understand how you're feeling") without explicitly promising text analysis — that capability arrives with the LLM Coach layer (Phase 3.5).
+
+Related: D77 (SDT principles), D79 ("Train better, not more" personality), Educational content (methodology explanations).
+
 ---
 
 ## Priority 4 — Go-to-market
@@ -269,8 +280,22 @@ Same architecture for pre-session dynamic warmup (30s work / 10s transition).
 
 ### Board-specific features (Kilter first)
 
-**Status:** Open | **Effort:** L
-API integration for Kilter Board (problem lookup, difficulty, lighting). Other boards follow same pattern.
+**Status:** Open | **Effort:** L (basic) / XL (games)
+
+**Level 1 — Data integration (L):**
+API integration for Kilter Board problem lookup, difficulty grades, and ascent logging. Use [BoardLib](https://github.com/lemeryfertitta/BoardLib) (Python) for Aurora API access — downloads the SQLite DB with holes, LEDs, placements, and climbs. Covers all Aurora boards (Kilter, Tension, Grasshopper, Decoy). Other boards (MoonBoard) follow same pattern.
+
+**Level 2 — LED control + games (XL, exploratory):**
+Interactive games via BLE LED control: tic tac toe on the wall, incremental hold lighting (add one hold each round), circuit creation. Requires Web Bluetooth API (Chrome/Edge only — NOT Safari/iOS). May need native wrapper (Capacitor BLE plugin) for iOS support.
+
+**Open-source references:**
+- [BoardLib](https://github.com/lemeryfertitta/BoardLib) — Python, Aurora board API utilities, SQLite DB sync
+- [Boardsesh](https://github.com/marcodejongh/boardsesh) — Apache license, unified multi-board app with queue management and Party Mode
+- [kilterboard.app](https://tim.wants.coffee/posts/kilterboard-app/) — Web Bluetooth reverse engineering blog post
+- [fake_kilter_board](https://github.com/1-max-1/fake_kilter_board) — BLE protocol documentation
+- [Grip Connect](https://stevie-ray.github.io/hangtime-grip-connect/devices/kilterboard) — DB schema and placement format docs
+
+**Risk:** Kilter launched a new standalone app (kilterboard.io) separate from the old Aurora app — API stability uncertain. Level 2 blocked on iOS by Web Bluetooth unavailability.
 
 ---
 
@@ -334,7 +359,14 @@ Consolidates: B68, B69, B70, B72, B73.
 
 ### Social Session (fun bouldering with friends)
 
-Recreational session: game catalog, purpose selector, timer, social_modifier=0.5 load. Origin: real session 2026-03-14.
+**Status:** Open | **Effort:** M
+Recreational session: game catalog, purpose selector, timer, social_modifier=0.5 load. Available as a free session mode. Origin: real session 2026-03-14.
+
+### Technique Drills in Free Session
+
+**Status:** Open | **Effort:** S-M
+Add technique drill selection as a free session activity type. User picks from the drill catalog (D76) and runs drills as a standalone free session or add-on. Depends on D76 (drill catalog population) being complete.
+Related: D73 (technique drill % allocation), D76 (drill catalog).
 
 ### Injury-Specific Rehab/Prehab
 
