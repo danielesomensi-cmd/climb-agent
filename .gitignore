@@ -18,6 +18,7 @@ frontend/.env.local
 out/
 output/
 tmp/
+docs/audit_snapshot_*.md
 data/logs/
 backend/data/logs/
 backend/data/users/
