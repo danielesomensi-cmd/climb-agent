@@ -1,0 +1,59 @@
+{
+  "id": "route_projecting_gym",
+  "name": "Route Projecting (Gym — Redpoint Attempts)",
+  "version": "1.0",
+  "intent": {
+    "primary_goal": "route_projecting",
+    "secondary_goals": [
+      "technique_lead",
+      "power_endurance",
+      "core_tension"
+    ],
+    "notes": "Redpoint attempts and route projecting on gym routes at or near target grade. Primary session for performance phase lead climbers. Quality over quantity — 2-4 burns max, full rest between attempts."
+  },
+  "compatibility": {
+    "slot": ["long"],
+    "sports": ["climbing"]
+  },
+  "required_equipment": ["gym_routes"],
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 100,
+    "hard_cap_min": 120
+  },
+  "modules": [
+    {
+      "template_id": "warmup_climbing",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
+    {
+      "template_id": "route_projecting_main",
+      "required": true,
+      "priority": 90,
+      "module_role": "primary",
+      "notes": "Primary module. Redpoint attempts on project-level routes. Full rest between burns."
+    },
+    {
+      "template_id": "core_standard",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": true,
+      "priority": 55,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
+    }
+  ]
+}

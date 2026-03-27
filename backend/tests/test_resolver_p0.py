@@ -358,9 +358,12 @@ class TestResolverHomewallEquipment(unittest.TestCase):
         self.assertEqual(out["resolution_status"], "success")
         exercises = out["resolved_session"]["exercise_instances"]
         exercise_ids = [e["exercise_id"] for e in exercises]
-        # arc_easy_traverse requires gym_boulder — should be present via homewall equivalence
+        # B162: boulder_circuit_gym now also matches climbing_intervals exercises
         gym_boulder_exercises = {"arc_easy_traverse", "linked_boulders", "flag_practice",
-                                 "freeze_drill", "twist_lock_drill"}
+                                 "freeze_drill", "twist_lock_drill",
+                                 "aerobic_pyramid_intervals", "emom_bouldering",
+                                 "four_by_four_bouldering", "linked_boulders_circuit",
+                                 "one_on_one_off_intervals"}
         found = [eid for eid in exercise_ids if eid in gym_boulder_exercises]
         self.assertGreater(len(found), 0,
                            f"Boulder Circuit at home with homewall should include exercises needing "

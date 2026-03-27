@@ -93,6 +93,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "complementary_conditioning": "available",
         "finger_maintenance_gym": "available",
         "finger_endurance_short": "available",
+        "route_endurance_gym": "available",
     },
     "power_endurance": {
         "power_endurance_gym": "primary",
@@ -106,12 +107,13 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
     },
     "performance": {
         "technique_focus_gym": "primary",
-        "limit_boulder_gym": "primary",
+        "route_projecting_gym": "primary",
         "prehab_maintenance": "primary",
         "power_endurance_gym": "available",
         "power_contact_gym": "available",
         "boulder_circuit_gym": "available",
         "route_endurance_gym": "available",
+        "limit_boulder_gym": "available",
         "finger_strength_home": "available",
         "flexibility_full": "available",
         "handstand_practice": "available",

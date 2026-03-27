@@ -66,6 +66,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "deload_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym"), "max_per_week": 2},
     "finger_endurance_short": {"hard": False, "finger": True, "intensity": "medium", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "boulder_circuit_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_boulder"]},
+    "route_projecting_gym": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"], "max_per_week": 2},
     "upper_body_weights": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
     "legs_strength": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
     "core_training": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 3},

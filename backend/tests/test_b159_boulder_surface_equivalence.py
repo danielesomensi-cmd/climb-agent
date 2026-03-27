@@ -148,7 +148,10 @@ class TestDanieleRealPlan(unittest.TestCase):
             home_equipment=["hangboard", "pullup_bar", "dumbbell", "band", "resistance_band", "loading_pin"],
         )
 
-    def test_3_hard_climbing_sessions(self):
+    def test_hard_climbing_sessions(self):
+        """B162: S&P now includes route_endurance_gym for lead route mileage,
+        so hard climbing count drops from 3 to 2 (limit_boulder + strength_long).
+        power_contact_gym may or may not be placed depending on scheduling."""
         plan = generate_phase_week(**self._daniele_kwargs())
         days = plan["weeks"][0]["days"]
         all_sessions = [s for d in days for s in d["sessions"]]
@@ -158,20 +161,21 @@ class TestDanieleRealPlan(unittest.TestCase):
             and _SESSION_META.get(s["session_id"], {}).get("climbing")
         ]
         hard_ids = [s["session_id"] for s in hard_climbing]
-        self.assertGreaterEqual(len(hard_climbing), 3,
-                                f"Expected ≥3 hard climbing, got {len(hard_climbing)}: {hard_ids}")
+        self.assertGreaterEqual(len(hard_climbing), 2,
+                                f"Expected ≥2 hard climbing, got {len(hard_climbing)}: {hard_ids}")
 
-    def test_power_contact_at_cocque(self):
+    def test_power_contact_or_route_at_cocque(self):
+        """B162: with route_endurance_gym in S&P pool, Cocque gym_routes days
+        may get route_endurance instead of power_contact. Either is valid."""
         plan = generate_phase_week(**self._daniele_kwargs())
         days = plan["weeks"][0]["days"]
-        # power_contact_gym should be placed at Cocque (not BKL — BKL has limit_boulder)
+        cocque_climbing = []
         for d in days:
             for s in d["sessions"]:
-                if s["session_id"] == "power_contact_gym":
-                    self.assertEqual(s.get("gym_id"), "cocque",
-                                     f"power_contact_gym should be at Cocque, got gym_id={s.get('gym_id')}")
-                    return
-        self.fail("power_contact_gym not placed at all")
+                if s.get("gym_id") == "cocque" and _SESSION_META.get(s["session_id"], {}).get("climbing"):
+                    cocque_climbing.append(s["session_id"])
+        self.assertTrue(len(cocque_climbing) >= 1,
+                        f"Expected ≥1 climbing session at Cocque, got: {cocque_climbing}")
 
     def test_strength_long_placed(self):
         plan = generate_phase_week(**self._daniele_kwargs())

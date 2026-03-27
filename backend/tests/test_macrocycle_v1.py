@@ -144,9 +144,9 @@ class TestGenerateMacrocycleBasic(unittest.TestCase):
         self.assertIn("route_endurance_gym", base_pool)
         pe_pool = _build_session_pool("power_endurance")
         self.assertIn("route_endurance_gym", pe_pool)
-        # Should NOT be in strength_power or deload
+        # B162: route_endurance_gym added to S&P for lead route mileage
         sp_pool = _build_session_pool("strength_power")
-        self.assertNotIn("route_endurance_gym", sp_pool)
+        self.assertIn("route_endurance_gym", sp_pool)
 
     def test_macrocycle_session_pool_performance_phase(self):
         pool = _build_session_pool("performance")

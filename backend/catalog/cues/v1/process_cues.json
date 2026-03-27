@@ -2,7 +2,7 @@
   {
     "id": "cue_001",
     "text": "Read each problem fully before starting. Where's the crux? Where will you rest?",
-    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "power_endurance_gym"],
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "power_endurance_gym", "route_projecting_gym"],
     "source": "D78"
   },
   {
@@ -26,25 +26,25 @@
   {
     "id": "cue_005",
     "text": "Count your breaths at every rest position. Breathing rhythm is the foundation of route climbing endurance.",
-    "session_types": ["route_endurance_gym", "endurance_aerobic_gym"],
+    "session_types": ["route_endurance_gym", "endurance_aerobic_gym", "route_projecting_gym"],
     "source": "D78"
   },
   {
     "id": "cue_006",
     "text": "G-Tox: while resting on the wall, alternate your arms \u2014 overhead for 5s, then down at your side for 5s. Gravity helps clear metabolites faster.",
-    "session_types": ["route_endurance_gym", "endurance_aerobic_gym", "power_endurance_gym"],
+    "session_types": ["route_endurance_gym", "endurance_aerobic_gym", "power_endurance_gym", "route_projecting_gym"],
     "source": "D17"
   },
   {
     "id": "cue_007",
     "text": "Between hard attempts, do 2-3 minutes of easy traversing instead of sitting. Active recovery promotes faster reperfusion than passive rest.",
-    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "strength_long"],
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "strength_long", "route_projecting_gym"],
     "source": "D48 (Valenzuela 2015)"
   },
   {
     "id": "cue_008",
     "text": "Before each climb, scan the route bottom to top for 30 seconds. Identify rest spots, the crux, and your clipping positions.",
-    "session_types": ["route_endurance_gym", "technique_focus_gym"],
+    "session_types": ["route_endurance_gym", "technique_focus_gym", "route_projecting_gym"],
     "source": "D75 (Seifert 2017)"
   },
   {
@@ -146,7 +146,7 @@
   {
     "id": "cue_025",
     "text": "Breathe. Exhale on the hardest part of each move. Holding your breath increases blood pressure and wastes energy.",
-    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "route_endurance_gym", "power_endurance_gym"],
+    "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "route_endurance_gym", "power_endurance_gym", "route_projecting_gym"],
     "source": "D78"
   }
 ]

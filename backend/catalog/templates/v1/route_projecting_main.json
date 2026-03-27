@@ -1,0 +1,39 @@
+{
+  "id": "route_projecting_main",
+  "name": "Route Projecting (Module)",
+  "version": "1.0",
+  "category": "climbing_module",
+  "sport": "climbing",
+
+  "stress_tags": {
+    "fingers": "high",
+    "cns": "high",
+    "elbows": "medium",
+    "skin": "medium"
+  },
+
+  "blocks": [
+    {
+      "block_id": "redpoint_attempts",
+      "type": "main",
+      "role": ["main"],
+      "domain": ["climbing_routes"],
+      "prescription": {
+        "sets_range": [2, 4],
+        "rest_seconds_range": [300, 600],
+        "notes": "Full redpoint attempts on project-level routes. 2-4 quality burns. Rest 5-10 min between attempts. Stop if form degrades."
+      }
+    },
+    {
+      "block_id": "crux_work",
+      "type": "accessory",
+      "role": ["main", "accessory"],
+      "domain": ["climbing_routes", "technique_lead"],
+      "prescription": {
+        "sets_range": [2, 3],
+        "rest_seconds_range": [180, 300],
+        "notes": "Crux sequence rehearsal or hard sections isolated. Link crux moves under mild fatigue."
+      }
+    }
+  ]
+}

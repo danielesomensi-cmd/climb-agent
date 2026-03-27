@@ -248,7 +248,8 @@ class TestStage2cNonFingerSurvival:
             write_output=False,
         )
         instances = result.get("resolved_session", {}).get("exercise_instances", [])
-        climbing_patterns = {"climbing_continuous", "climbing_limit_boulder"}
+        # B162: boulder_circuit_gym now also matches climbing_intervals pattern
+        climbing_patterns = {"climbing_continuous", "climbing_limit_boulder", "climbing_intervals"}
         climbing_exercises = [
             e for e in instances
             if e.get("attributes", {}).get("pattern") in climbing_patterns
@@ -257,7 +258,10 @@ class TestStage2cNonFingerSurvival:
         ]
         # Also check by category — ARC exercises have category "endurance" + pattern in catalog
         ex_ids = {e["exercise_id"] for e in instances}
-        arc_ids = self._ARC_IDS | {"threshold_climbing", "threshold_long_intervals"}
+        arc_ids = self._ARC_IDS | {"threshold_climbing", "threshold_long_intervals",
+                                    "aerobic_pyramid_intervals", "emom_bouldering",
+                                    "four_by_four_bouldering", "linked_boulders",
+                                    "linked_boulders_circuit", "one_on_one_off_intervals"}
         has_climbing = bool(ex_ids & arc_ids) or bool(climbing_exercises)
         assert has_climbing, (
             f"Boulder Circuit Gym resolved with zero climbing exercises! "

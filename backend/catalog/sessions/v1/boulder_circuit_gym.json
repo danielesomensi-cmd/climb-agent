@@ -37,7 +37,7 @@
           "filters": {
             "role": ["main"],
             "domain": ["aerobic_capacity", "power_endurance"],
-            "pattern": ["climbing_limit_boulder", "climbing_continuous"]
+            "pattern": ["climbing_limit_boulder", "climbing_continuous", "climbing_intervals"]
           }
         }
       }
