@@ -37,8 +37,8 @@ WEEKDAYS: Tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 # climbing: True for climbing-related sessions (placed first in pass 1)
 _SESSION_META: Dict[str, Dict[str, Any]] = {
     "strength_long": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym", "home"), "required_equipment": ["hangboard"]},
-    "power_contact_gym": {"hard": True, "finger": False, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
-    "limit_boulder_gym": {"hard": True, "finger": False, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "power_contact_gym": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "limit_boulder_gym": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "power_endurance_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"], "preferred_equipment": ["gym_routes"]},
     "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_routes"]},
     "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},

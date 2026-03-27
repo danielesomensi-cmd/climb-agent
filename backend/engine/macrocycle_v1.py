@@ -45,7 +45,7 @@ PHASE_INTENSITY_CAP: Dict[str, str] = {
 _BASE_WEIGHTS: Dict[str, Dict[str, float]] = {
     "base": {
         "finger_strength": 0.20, "pulling_strength": 0.15, "power_endurance": 0.15,
-        "volume_climbing": 0.25, "technique": 0.20, "core_prehab": 0.05,
+        "volume_climbing": 0.25, "technique": 0.20, "core_prehab": 0.10,
     },
     "strength_power": {
         "finger_strength": 0.35, "pulling_strength": 0.25, "power_endurance": 0.10,
@@ -136,19 +136,19 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
 _BASE_WEIGHTS_BOULDER: Dict[str, Dict[str, float]] = {
     "base": {
         "finger_strength": 0.20, "pulling_strength": 0.15, "power_endurance": 0.05,
-        "volume_climbing": 0.35, "technique": 0.20, "core_prehab": 0.05,
+        "volume_climbing": 0.35, "technique": 0.20, "core_prehab": 0.10,
     },
     "strength_power": {
         "finger_strength": 0.40, "pulling_strength": 0.25, "power_endurance": 0.10,
-        "volume_climbing": 0.10, "technique": 0.10, "core_prehab": 0.05,
+        "volume_climbing": 0.10, "technique": 0.10, "core_prehab": 0.10,
     },
     "power_endurance": {
         "finger_strength": 0.20, "pulling_strength": 0.15, "power_endurance": 0.30,
-        "volume_climbing": 0.20, "technique": 0.10, "core_prehab": 0.05,
+        "volume_climbing": 0.20, "technique": 0.10, "core_prehab": 0.10,
     },
     "performance": {
         "finger_strength": 0.15, "pulling_strength": 0.10, "power_endurance": 0.15,
-        "volume_climbing": 0.30, "technique": 0.25, "core_prehab": 0.05,
+        "volume_climbing": 0.30, "technique": 0.25, "core_prehab": 0.10,
     },
     "deload": {
         "finger_strength": 0.05, "pulling_strength": 0.05, "power_endurance": 0.05,
@@ -403,7 +403,9 @@ def _adjust_domain_weights(
         score = profile.get(axis, 50)
         if weight_key not in adjusted:
             continue
-        if score < 50:
+        if score < 35:
+            adjusted[weight_key] += 0.10
+        elif score < 50:
             adjusted[weight_key] += 0.05
         elif score > 75:
             adjusted[weight_key] = max(0.02, adjusted[weight_key] - 0.03)

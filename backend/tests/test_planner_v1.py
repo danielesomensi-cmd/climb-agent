@@ -72,17 +72,18 @@ def test_replanner_override_updates_tomorrow_and_ripple():
         hard_cap_per_week=4,  # allow room for the override's hard session
         default_gym_id="work_gym",
     )
-    # Use "power" intent (finger=False) to avoid consecutive-finger downgrade
-    # since Monday already has a finger session (strength_long)
+    # Brief A: power_contact_gym now has finger=True, so "power" intent
+    # may be blocked by 48h finger gap if previous day has a finger session.
+    # Use "technique" intent instead — technique_focus_gym is finger=False.
     updated = apply_day_override(
         plan,
-        intent="power",
+        intent="technique",
         location="gym",
         reference_date="2026-01-05",
     )
 
     tomorrow = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
-    assert tomorrow["sessions"][0]["session_id"] == "power_contact_gym"
+    assert tomorrow["sessions"][0]["session_id"] == "technique_focus_gym"
 
     day2 = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-07")
     day3 = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-08")

@@ -5,6 +5,10 @@
   "context": {
     "location": "home"
   },
+  "time_budget": {
+    "target_duration_min": 30,
+    "hard_cap_min": 40
+  },
   "modules": [
     {
       "template_id": "deload_recovery",

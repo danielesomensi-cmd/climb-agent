@@ -319,7 +319,7 @@ class TestD154SessionMetaEntry(unittest.TestCase):
         meta = _SESSION_META["limit_boulder_gym"]
         self.assertTrue(meta["hard"])
         self.assertTrue(meta["climbing"])
-        self.assertFalse(meta["finger"])
+        self.assertTrue(meta["finger"])  # Brief A: limit bouldering = max finger stress, 48h gap
         self.assertEqual(meta["intensity"], "max")
         self.assertIn("gym", meta["location"])
         self.assertIn("gym_boulder", meta["required_equipment"])
