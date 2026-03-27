@@ -17,8 +17,8 @@
     "location": "gym"
   },
   "time_budget": {
-    "target_duration_min": 60,
-    "hard_cap_min": 75
+    "target_duration_min": 70,
+    "hard_cap_min": 85
   },
   "modules": [
     {
@@ -155,6 +155,12 @@
       "template_id": "core_standard",
       "required": true,
       "priority": 50,
+      "module_role": "secondary"
+    },
+    {
+      "template_id": "antagonist_prehab",
+      "required": false,
+      "priority": 45,
       "module_role": "secondary"
     },
     {

@@ -4,7 +4,7 @@
   "name": "Easy Climbing — Deload",
   "type": "climbing",
   "location": "gym",
-  "duration_minutes": 60,
+  "duration_minutes": 70,
   "intensity": "low",
   "phase_tags": [
     "deload"
@@ -42,6 +42,9 @@
         "rest_minutes": 2,
         "notes": "Climb 2-3 grades below max. Focus on silent feet, precise footwork, smooth movement. No hard crimping."
       }
+    },
+    {
+      "template_id": "antagonist_prehab"
     },
     {
       "template_id": "cooldown_stretch"

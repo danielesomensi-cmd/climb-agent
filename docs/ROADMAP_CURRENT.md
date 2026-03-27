@@ -47,6 +47,7 @@ All P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`
 - ✅ **B160** — Circuit timer: off-by-one fix (exercise mismatch REST→WORK), added "Rest" voice cue, 3-2-1 beep edge case (skip if phase ≤ 3s), image-first layout redesign with always-visible controls (2026-03-26)
 - ✅ **B160b** — Circuit timer hotfix: full description (line-clamp-4), arrows advance one phase at a time (work→rest→work), STOP+EXIT buttons visible, compact bottom bar layout (2026-03-26)
 - ✅ **B160c** — Circuit timer layout: timer ring + controls side-by-side (no more hidden buttons), ring 144px, image max-h-140, full description no truncation, EXIT in header (2026-03-26)
+- ✅ **B160g** — Template gap fix: added `core_standard` and/or `antagonist_prehab` modules to 7 gym session definitions (boulder_circuit, route_endurance, limit_boulder, pulling_strength, finger_maintenance, heavy_conditioning, easy_climbing_deload). All gym sessions now resolve with complete tail blocks. Updated duration estimates. Zero engine code changes (2026-03-27)
 
 ---
 
@@ -95,9 +96,9 @@ Logging aggiunto a 6 moduli engine, 5 `except:pass` silenziosi sostituiti con `l
 
 ### Combo sessions (climbing + conditioning tail)
 
-**Status:** Open | **Effort:** M
+**Status:** ✅ Resolved by B160g | **Effort:** M
 
-Sessions with a primary climbing block (60-70 min) + secondary conditioning block (15-20 min core/prehab/antagonists). Resolves conditioning deficit without replacing climbing days. Pattern already exists in strength_long (hangboard + pulling). Extend to boulder sessions: e.g., limit_boulder_gym + 15min core/antagonist tail. Requires session template redesign to support optional conditioning appendix.
+~~Sessions with a primary climbing block (60-70 min) + secondary conditioning block (15-20 min core/prehab/antagonists).~~ **Resolved:** B160g added core_standard + antagonist_prehab tail blocks to all gym sessions that were missing them. Every gym session now follows the strength_long pattern: warmup → main → core → antagonist → cooldown.
 
 ### Flex/rest auto-fill (Pass 3)
 
