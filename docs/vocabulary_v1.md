@@ -547,7 +547,7 @@ Session templates define complete training sessions. Module templates define reu
 
 Verify with: `python _archive/scripts/audit_templates.py`
 
-### 3.0 Canonical session template_ids (33)
+### 3.0 Canonical session template_ids (35)
 
 Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved session.
 
@@ -574,6 +574,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `pulling_strength_gym` *(pulling_strength, gym)*
 - `regeneration_easy` *(regeneration, gym)*
 - `route_endurance_gym` *(aerobic_capacity, gym)*
+- `route_projecting_gym` *(route_projecting, gym)*
 - `strength_long` *(finger_max_strength, gym)*
 - `technique_focus_gym` *(technique_footwork, gym)*
 - `test_lp_max_5s` *(finger_max_strength, test)*
@@ -586,7 +587,7 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `upper_body_weights` *(strength_general, home)*
 - `yoga_recovery` *(flexibility, home)*
 
-### Canonical module template_ids (26)
+### Canonical module template_ids (27)
 
 Module templates live in `backend/catalog/templates/v1/`. These are reusable blocks composed into session templates.
 
@@ -611,6 +612,7 @@ Module templates live in `backend/catalog/templates/v1/`. These are reusable blo
 - `pulling_endurance`
 - `pulling_strength`
 - `pulling_strength_compound`
+- `route_projecting_main`
 - `pulling_strength_test`
 - `pulling_strength_test_bw`
 - `warmup_climbing`
