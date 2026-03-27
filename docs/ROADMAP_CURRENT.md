@@ -136,6 +136,34 @@ Single "Climbing" card with tap-to-expand, showing 5 surfaces. Add-ons section b
 
 Semi-realistic illustrations via Gemini AI. 26 of 30 exercises remaining. Non-blocking.
 
+### C164 — Catalog expansion: Category B exercise pools
+
+**Priority:** P2.5b | **Status:** Open | **Type:** C (catalog) | **Effort:** M
+
+**Problem:** Phase 0 of Brief B (resolver scoring, 2026-03-28) diagnosed 4 template blocks
+where exercise variety is impossible regardless of scoring tuning, because the P0 filter
+pipeline leaves ≤2 candidates. No amount of recency rebalancing can fix a pool of 1-2.
+
+**Affected blocks (from production P0 analysis on Daniele's S&P weeks):**
+
+| Block | Session(s) | P0 survivors | Gap |
+|-------|-----------|-------------|-----|
+| `limit_projecting` | `limit_boulder_gym` | 2 (`board_limit_boulders`, `limit_bouldering`) | Need 2-3 more limit boulder variants (spray wall problems, system board limit, moonboard limit) |
+| `limit_bouldering` | `power_contact_gym` | 2 (same pool) | Same gap — shared role/domain/pattern filters |
+| `threshold_main` | `route_endurance_gym` | 1 (`threshold_climbing`) | Need 2-3 threshold route variants (linked laps, route on-the-minute, threshold circuit) |
+| `capacity_hangboard` | `endurance_aerobic_gym` | 1 (`long_duration_hang`) | Need 2-3 long finger endurance variants (density hangs, intermittent dead hangs, sub-max long hangs) |
+
+**Why this matters:** These blocks appear in sessions that run 1-2×/week in S&P and Performance
+phases. Users see the exact same exercise every single week for 4-6 weeks straight. This is the
+#1 visible monotony issue in the app.
+
+**Approach:** One C-type brief per block group. Each exercise needs: full JSON entry in
+`exercises.json`, correct `role`/`domain`/`pattern`/`recency_group` tags, `load_model` +
+`prescription_defaults`, literature-backed protocol parameters.
+
+**Depends on:** Nothing. Can be done independently of Brief B (scoring rebalance).
+**Cross-ref:** Engine Audit v3 finding F8, Brief B Phase 0 diagnosis.
+
 ### Exercise images for complex exercises
 
 **Priority:** P2.5 | **Status:** Open — TBD post-launch | **Type:** A + C (schema + content)
