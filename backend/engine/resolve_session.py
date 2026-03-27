@@ -830,9 +830,9 @@ def score_exercise(
     # recent penalty — exercise_id level (coherence)
     # If it appears in the last K selections, penalize more
     if ex_id in recent_ex_ids[-5:]:
-        s -= 100.0
+        s -= 30.0
     elif ex_id in recent_ex_ids[-15:]:
-        s -= 25.0
+        s -= 15.0
     elif ex_id in recent_ex_ids:
         s -= 5.0
 

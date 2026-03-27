@@ -120,8 +120,8 @@ class TestScoreExercise:
         ex = {"exercise_id": "test_ex"}
         base = score_exercise(ex, {}, [])
         penalized = score_exercise(ex, {}, ["test_ex"])
-        # Heavy penalty: -100 from base
-        assert penalized == base - 100.0
+        # Brief B: rebalanced from -100 to -30
+        assert penalized == base - 30.0
 
     def test_recent_medium_penalty(self):
         ex = {"exercise_id": "test_ex"}
@@ -129,7 +129,8 @@ class TestScoreExercise:
         # In last 15 but not last 5: test_ex early, then 10 others
         recent = ["test_ex"] + ["other"] * 10
         penalized = score_exercise(ex, {}, recent)
-        assert penalized == base - 25.0
+        # Brief B: rebalanced from -25 to -15
+        assert penalized == base - 15.0
 
 
 # ── NEW-F8: Easy climbing in deload pool ────────────────────────────────
