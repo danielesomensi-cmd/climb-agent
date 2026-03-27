@@ -304,17 +304,29 @@ Related: D77 (SDT principles), D79 ("Train better, not more" personality), Educa
 
 - Landing page / marketing site
 - Pricing model definition
-- App Store prep (Capacitor wrapping PWA)
+
+### Capacitor Native Wrap
+
+**Status:** Open | **Effort:** S (base wrap) / M (with native plugins)
+**Recommended timing:** 2-4 weeks post soft-launch, after stabilization.
+
+Base wrap (1-2 days): wrap the Next.js PWA in Capacitor for App Store + Google Play. Identical UX to PWA but gains: native push notifications, no localStorage loss on iOS Safari, App Store credibility. Free to test on own devices (Xcode + free Apple ID); Apple Developer Program (99€/yr) only needed for App Store publication. Google Play: 25$ one-time.
+
+Native plugins (incremental): BLE (Kilter Board), haptics, background timers. Each plugin added as needed.
+
+**Dependency sequence:** PWA soft-launch → bug stabilization → Capacitor base wrap → native plugins (BLE for Kilter, etc.)
 
 ### Board-specific features (Kilter first)
 
 **Status:** Open | **Effort:** L (basic) / XL (games)
 
+**Dependency sequence:** PWA launch → stabilization → Capacitor base wrap → Level 1 → Level 2.
+
 **Level 1 — Data integration (L):**
-API integration for Kilter Board problem lookup, difficulty grades, and ascent logging. Use [BoardLib](https://github.com/lemeryfertitta/BoardLib) (Python) for Aurora API access — downloads the SQLite DB with holes, LEDs, placements, and climbs. Covers all Aurora boards (Kilter, Tension, Grasshopper, Decoy). Other boards (MoonBoard) follow same pattern.
+API integration for Kilter Board problem lookup, difficulty grades, and ascent logging. Use [BoardLib](https://github.com/lemeryfertitta/BoardLib) (Python) for Aurora API access — downloads the SQLite DB with holes, LEDs, placements, and climbs. Covers all Aurora boards (Kilter, Tension, Grasshopper, Decoy). Other boards (MoonBoard) follow same pattern. Can start before Capacitor (data layer is web-only).
 
 **Level 2 — LED control + games (XL, exploratory):**
-Interactive games via BLE LED control: tic tac toe on the wall, incremental hold lighting (add one hold each round), circuit creation. Requires Web Bluetooth API (Chrome/Edge only — NOT Safari/iOS). May need native wrapper (Capacitor BLE plugin) for iOS support.
+Interactive games via BLE LED control: tic tac toe on the wall, incremental hold lighting (add one hold each round), circuit creation. **Requires Capacitor BLE plugin for iOS support** (Web Bluetooth API works on Chrome/Edge but NOT Safari/iOS). This is the main reason to do Capacitor wrap before Kilter Level 2.
 
 **Open-source references:**
 - [BoardLib](https://github.com/lemeryfertitta/BoardLib) — Python, Aurora board API utilities, SQLite DB sync
@@ -323,7 +335,7 @@ Interactive games via BLE LED control: tic tac toe on the wall, incremental hold
 - [fake_kilter_board](https://github.com/1-max-1/fake_kilter_board) — BLE protocol documentation
 - [Grip Connect](https://stevie-ray.github.io/hangtime-grip-connect/devices/kilterboard) — DB schema and placement format docs
 
-**Risk:** Kilter launched a new standalone app (kilterboard.io) separate from the old Aurora app — API stability uncertain. Level 2 blocked on iOS by Web Bluetooth unavailability.
+**Risk:** Kilter launched a new standalone app (kilterboard.io) separate from the old Aurora app — API stability uncertain.
 
 ---
 
