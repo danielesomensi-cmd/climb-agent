@@ -208,6 +208,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "extension",
     type: "isometric",
     advanced: false,
+    image: "20_glute_bridge.jpeg",
   },
 
   // 3.6 Advanced — Anti-Extension
@@ -218,6 +219,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "dynamic",
     advanced: true,
+    image: "21_hollow_flutter.png",
   },
   {
     id: "ce_inchworm",
@@ -226,6 +228,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "dynamic",
     advanced: true,
+    image: "22_inchworm.jpeg",
   },
   {
     id: "ce_plank_army_crawl",
@@ -234,6 +237,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_extension",
     type: "dynamic",
     advanced: true,
+    image: "23_plank_army_crawl.jpeg",
   },
 
   // 3.7 Advanced — Anti-Rotation
@@ -244,6 +248,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_rotation",
     type: "dynamic",
     advanced: true,
+    image: "24_renegade_row_bw.jpeg",
   },
   {
     id: "ce_windshield_wipers",
@@ -252,6 +257,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "anti_rotation",
     type: "dynamic",
     advanced: true,
+    image: "25_windshield_wipers.png",
   },
 
   // 3.8 Advanced — Compression
@@ -262,6 +268,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "compression",
     type: "isometric",
     advanced: true,
+    image: "26_l_sit_floor.jpeg",
   },
   {
     id: "ce_toes_to_hands",
@@ -270,6 +277,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "compression",
     type: "dynamic",
     advanced: true,
+    image: "27_toes_to_hands.jpeg",
   },
   {
     id: "ce_pike_pulse",
@@ -278,6 +286,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "compression",
     type: "dynamic",
     advanced: true,
+    image: "28_pike_pulse.jpeg",
   },
 
   // 3.9 Advanced — Posterior Chain
@@ -288,6 +297,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "extension",
     type: "isometric",
     advanced: true,
+    image: "29_reverse_plank.jpeg",
   },
   {
     id: "ce_sl_glute_bridge",
@@ -296,6 +306,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     pattern: "extension",
     type: "dynamic",
     advanced: true,
+    image: "30_sl_glute_bridge.png",
   },
 ];
 
