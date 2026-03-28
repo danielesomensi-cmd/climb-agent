@@ -3,7 +3,7 @@
 > Documento di design per il sistema di periodizzazione adattiva.
 > Versione: 1.2 (file: v1.1) — febbraio 2026
 > Stato: documento vivente, aggiornato post Phase 3.2
-> Ultimo audit: 2026-03-12
+> Ultimo audit: 2026-03-28
 
 ---
 
@@ -56,8 +56,8 @@ Il sistema fa domande mirate per costruire il profilo iniziale:
 2. Livello attuale: grado max boulder, grado max lead (RP e OS)
 3. Esperienza: anni di arrampicata, anni di training strutturato
 4. Test fisici (opzionali ma consigliati):
-   - Max hang 20mm 5s: carico totale
-   - Weighted pullup 1RM
+   - Max hang 20mm 7s MVC-7: carico totale (D85)
+   - Weighted pullup 2RM (D84)
    - Trazioni max a corpo libero
 5. Autovalutazione punti deboli:
    - "Dove senti di perdere di più sulle vie?"
@@ -430,7 +430,7 @@ L'LLM è l'interfaccia umana, non il cervello.
 
 | Decisione | Scelta | Motivazione |
 |-----------|--------|-------------|
-| **Persistenza** | JSON/JSONL | Semplice, funzionante, zero dipendenze. Migrazione DB se/quando serve multi-utente |
+| **Persistenza** | Supabase Postgres + JSONB (prod), JSON files (dev/test) | Migrazione completata. `STORAGE_BACKEND=supabase` in produzione, `file` per pytest/dev |
 | **Frontend** | Next.js 14 + React + Tailwind + shadcn/ui (PWA) | Mobile-first, Claude Code lo genera bene, PWA si installa su telefono, shadcn/ui + Recharts per UI/grafici |
 | **Assessment** | Ogni 6 settimane | Mini-test integrati in sessioni normali, non invasivo |
 | **Periodizzazione** | Hörst 4-3-2-1 con DUP | Concurrent training dentro ogni fase, pesi personalizzati da profilo debolezze |
@@ -480,7 +480,8 @@ carico troppo alto o pattern da correggere.
 ## 13. Roadmap
 
 Per lo stato dettagliato delle fasi, B-items, finding e pianificazione
-operativa, vedere **`docs/ROADMAP_v2.md`** (fonte autoritativa).
+operativa, vedere **`docs/ROADMAP_CURRENT.md`** (fonte autoritativa).
+Storia archiviata: `docs/ROADMAP_v2.md`.
 
 Le specifiche di design per fasi future sono contenute in questo documento:
 - **Guided Session Mode** (timer, countdown, rest colorato): §12b
@@ -488,5 +489,4 @@ Le specifiche di design per fasi future sono contenute in questo documento:
 - **LLM Coach** (conversational layer): §11
 - **Decisioni tecniche approvate**: §12
 
-Prossime fasi operative: Phase 2.5 (exercise catalog audit + B11 test protocols), Phase 3.5 (LLM Coach).
-Vedere `docs/ROADMAP_v2.md` per dettagli.
+Prossime fasi operative: vedere `docs/ROADMAP_CURRENT.md` per dettagli.

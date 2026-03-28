@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-26
+> Last updated: 2026-03-28
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -132,9 +132,9 @@ Single "Climbing" card with tap-to-expand, showing 5 surfaces. Add-ons section b
 
 ### Core Circuit exercise images — Gemini AI generation
 
-**Priority:** P2.5 | **Status:** In progress — 4/30 done | **Type:** C (content)
+**Priority:** P2.5 | **Status:** ✅ Done — 30/30 | **Type:** C (content)
 
-Semi-realistic illustrations via Gemini AI. 26 of 30 exercises remaining. Non-blocking.
+All 30 core circuit exercises have images. Generated via Gemini AI, renamed and linked in `circuit-exercises.ts`.
 
 ### C164 — Catalog expansion: Category B exercise pools
 
@@ -240,7 +240,7 @@ Depends on: B122 pattern, Supabase migration.
 
 ---
 
-## Priority 2.75 — Refactoring
+## Priority 2.8 — Refactoring
 
 > Origin: Full codebase audit con Agent Teams (2026-03-21)
 
