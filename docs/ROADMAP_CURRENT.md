@@ -671,6 +671,17 @@ Higher pulley injury rate, shoulder impingement from steep terrain, fall injurie
 
 ---
 
+## Post-launch — Christie feedback (2026-03-28)
+
+| ID | Title | Priority | Type | Effort | Status | Notes |
+|----|-------|----------|------|--------|--------|-------|
+| — | **Session Builder** — custom session from template modules | P3 | A | L | Open | User skips planned session → "Build my session" → selects goals from visual grid → system composes virtual session JSON from matching templates → resolver produces exercises. Leverages existing modular session JSONs. Design brief (D-type) needed first. |
+| — | **Free session expansion** — standalone non-structured activities | P3.5 | A | M | Open | Standalone hangboard cycle, mobility routine, core circuit. "Tap and go" — no resolver, no structured prescription. Complements Session Builder. Core/mobility partially exist in free session surfaces. |
+| — | **Quick-add filter/search** — session list discoverability | P4 | A | S | Open | Search/filter by goal or body part in quick-add list. Data available via `intent.primary_goal`. Low priority — Session Builder likely subsumes most of this. |
+| — | **Session phase coloring** — warmup/cooldown dimmed | P4 | A (frontend) | XS | Parked | Dim warmup/cooldown, vivid main work. Data from `module_role` + `exercise_ordering.py`. Pure CSS, zero backend. |
+
+---
+
 ## Completed phases (reference only)
 
 Full details in `docs/ROADMAP_v2.md`.
