@@ -34,11 +34,17 @@ export function WeekProgressBar({ weekPlan, freeSessions }: WeekProgressBarProps
       return sum + actual;
     }, 0);
 
+  // Add other activity load (Yoga, running, etc.) from completed days
+  const otherActivityLoad = days.reduce(
+    (sum, d) => sum + (d.other_activity_load ?? 0), 0
+  );
+
   // Add free session load (matches report_engine.py logic)
   const freeLoad = (freeSessions ?? []).reduce(
     (sum, fs) => sum + ((fs.load_score as number) || 0), 0
   );
-  const doneLoad = Math.round(doneSessionLoad + freeLoad);
+
+  const doneLoad = Math.round(doneSessionLoad + otherActivityLoad + freeLoad);
 
   const phaseId = (weekPlan.profile_snapshot?.phase_id as string) ?? "";
   const phaseLabel = PHASE_LABELS[phaseId] ?? phaseId;
