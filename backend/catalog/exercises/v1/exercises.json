@@ -9158,6 +9158,319 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only"
+    },
+    {
+      "id": "spray_wall_limit",
+      "name": "Spray Wall Limit Bouldering",
+      "category": "main_strength",
+      "time_min": 45,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power",
+        "technique_boulder"
+      ],
+      "pattern": "climbing_limit_boulder",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "limit_boulder_spray",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "spraywall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "finger_sensitive",
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 180,
+        "rest_between_sets_seconds": 300,
+        "notes": "Limit bouldering on spray wall. Set or follow problems at max grade. Full rest between attempts.",
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": 0
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": "Limit bouldering on spray wall — set or follow problems at your max grade. Spray wall forces creative 3D movement and unconventional body positions. Focus on quality attempts with full recovery between goes. (Hörst T4C: spray wall bouldering develops creative problem-solving and power in non-standard positions)",
+      "cues": [
+        "Set or pick problems at your max grade on the spray wall",
+        "Full rest (4-5 min) between serious attempts",
+        "Focus on reading the 3D movement before each go",
+        "Stop after 45-60 min or when attempt quality drops"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative"
+    },
+    {
+      "id": "system_board_limit",
+      "name": "System Board Limit Bouldering",
+      "category": "main_strength",
+      "time_min": 45,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power"
+      ],
+      "pattern": "climbing_limit_boulder",
+      "intensity_level": "max",
+      "fatigue_cost": 9,
+      "recency_group": "limit_boulder_system",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "board_kilter",
+        "board_moonboard",
+        "board_other"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "finger_sensitive",
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 180,
+        "rest_between_sets_seconds": 300,
+        "notes": "Benchmark problems at max grade on system board. Track sends for progress monitoring.",
+        "grade_ref": "boulder_max_rp",
+        "grade_offset": 0
+      },
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "high",
+        "skin": "high"
+      },
+      "description": "Limit bouldering on a standardised board (Moonboard, Kilter, Tension). Use benchmark problems at your max grade. The fixed hold sets enable objective tracking of progress across sessions. (Lattice: system boards provide repeatable, measurable limit bouldering stimuli)",
+      "cues": [
+        "Choose benchmark problems at your max grade on Moonboard/Kilter/Tension",
+        "Full rest (4-5 min) between serious attempts",
+        "Track which problems you send — useful for progress monitoring",
+        "Stop after 45-60 min or when power drops noticeably"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative"
+    },
+    {
+      "id": "route_linked_laps",
+      "name": "Route Linked Laps",
+      "category": "endurance",
+      "time_min": 35,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "threshold_route_laps",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 360,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 480,
+        "notes": "2-3 routes back-to-back at threshold intensity. Lower and immediately start the next.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -1
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "Climb 2-3 routes back-to-back at threshold intensity (1 grade below onsight max) with minimal rest between routes. Builds sustained power endurance and mental stamina for route climbing. (Lattice: linked route laps are a standard threshold/PE protocol; Hörst T4C: threshold climbing at the boundary of sustainable pump)",
+      "cues": [
+        "Pick 2-3 routes at 1 grade below your onsight level",
+        "Climb them back-to-back with only the walk to the next route as rest",
+        "Focus on maintaining technique as pump builds",
+        "Full rest (6-8 min) between sets of linked laps"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative"
+    },
+    {
+      "id": "route_on_the_minute",
+      "name": "Route On-The-Minute (OTM)",
+      "category": "endurance",
+      "time_min": 35,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "power_endurance"
+      ],
+      "pattern": "climbing_continuous",
+      "intensity_level": "high",
+      "fatigue_cost": 8,
+      "recency_group": "threshold_route_otm",
+      "equipment_required": [
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": null,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 0,
+        "notes": "Start a new route every 4-5 min. Rest = time remaining after finishing each route.",
+        "grade_ref": "lead_max_os",
+        "grade_offset": -1
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "medium"
+      },
+      "description": "Start a new route every X minutes regardless of when you finished the last one. Routes at threshold intensity (1-2 grades below onsight max). The fixed clock creates progressive fatigue. (Consuegra Performance Climbing Ch.8: on-the-minute variants for climbing-specific aerobic power development)",
+      "cues": [
+        "Set a timer: start a route every 4-5 minutes (adjust to route length)",
+        "Routes at 1-2 grades below onsight max",
+        "Rest only the time remaining after finishing each route",
+        "Stop the set if you fall twice on consecutive routes — recovery is failing"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative"
+    },
+    {
+      "id": "sub_max_capacity_hang",
+      "name": "Sub-Max Capacity Hang",
+      "category": "endurance",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_aerobic_endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "finger_endurance_sub_max",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive",
+        "finger_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 35,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Large edge (25-35mm). 35s hangs at 40-50% MVC. Focus on tissue loading and aerobic capacity."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Sustained sub-maximal hangs targeting aerobic finger capacity. 35-second hangs at 40-50% MVC train the forearm's oxidative system by staying below the vascular occlusion threshold. (López-Rivera & González-Badillo 2018: sub-maximal intermittent protocols improve grip endurance; Lattice: sub-max aerobic finger work targets oxidative adaptations)",
+      "cues": [
+        "Use ~40-50% of your max hang load",
+        "Hang for 30-45 seconds — should feel sustainable but not trivial",
+        "Rest 60-90 seconds between hangs",
+        "If you can't complete 30 seconds, reduce weight"
+      ],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 25,
+        "grip": "half_crimp"
+      }
+    },
+    {
+      "id": "density_hang_endurance",
+      "name": "Density Hangs (Endurance Variant)",
+      "category": "endurance",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_aerobic_endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "finger_endurance_density",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive",
+        "finger_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 6,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": 5,
+        "rest_between_sets_seconds": 180,
+        "notes": "10s on / 5s off x 6 reps at 45-55% MVC. Lighter than standard IntHangs. Aerobic focus."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Repeater-style protocol at sub-maximal intensity for aerobic finger endurance. 10 seconds on / 5 seconds off at 45-55% MVC — lighter than the standard López IntHangs (60-80% MVC). The lower intensity keeps the forearm in aerobic metabolism throughout. (López-Rivera & González-Badillo 2018; Lattice density hang protocols)",
+      "cues": [
+        "Use ~45-55% of your max hang load",
+        "10 seconds on, 5 seconds off — repeat 6 times = 1 set",
+        "Full rest (3 min) between sets",
+        "If you feel significant pump, reduce weight — this should stay aerobic"
+      ],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
+      }
     }
   ]
 }
