@@ -788,7 +788,7 @@ function TodayContent() {
 
         {/* Week progress bar */}
         {!loading && !error && weekPlan && (
-          <WeekProgressBar weekPlan={weekPlan} />
+          <WeekProgressBar weekPlan={weekPlan} freeSessions={freeSessions} />
         )}
 
         {/* Weekly check-in card (Sunday / Monday morning grace) */}
