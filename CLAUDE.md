@@ -255,3 +255,14 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 - Pre-push hook runs `sync_status.py` automatically. If counters are stale, the push is blocked — commit the sync changes first.
 - Repo hygiene check: every ~2 weeks or ~10 briefs (whichever first), run `python scripts/repo_hygiene.py`. Archive completed brief docs, delete temp files, verify core docs are current. Last full audit: D156 (2026-03-25).
 - Push at end of session: `git add -A && git commit -m 'description' && git push`
+
+## Lessons learned
+
+After completing a task, if you encountered unexpected behavior, made a mistake
+that required correction, or discovered a non-obvious pattern, check
+`docs/lessons.md` for existing lessons first, then append any NEW lessons with
+format:
+- **[YYYY-MM-DD] [BRIEF-ID or context]**: One-line lesson.
+
+Do NOT duplicate existing lessons. Keep each entry to one line.
+This is optional — only add genuine lessons, not routine observations.
