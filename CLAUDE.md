@@ -222,6 +222,31 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
   | SUPABASE_SERVICE_KEY | Supabase service role key (never commit) |
   | CLERK_SECRET_KEY | Clerk backend secret (never commit) |
 
+### Clerk user lookup
+
+To retrieve user info (name, email) from Clerk:
+
+```bash
+# Read key from local .env
+export CLERK_SECRET_KEY=$(grep CLERK_SECRET_KEY .env | cut -d= -f2)
+
+# List all users
+curl -s -H "Authorization: Bearer $CLERK_SECRET_KEY" \
+  https://api.clerk.com/v1/users | python3 -c "
+import json, sys
+for u in json.load(sys.stdin):
+    name = f\"{u.get('first_name','') or ''} {u.get('last_name','') or ''}\".strip() or '—'
+    email = u['email_addresses'][0]['email_address'] if u['email_addresses'] else '—'
+    print(f\"{u['id'][:12]}  {name:20s}  {email}\")
+"
+
+# Get a single user by Clerk ID
+curl -s -H "Authorization: Bearer $CLERK_SECRET_KEY" \
+  https://api.clerk.com/v1/users/{clerk_user_id}
+```
+
+Key location: `.env` in repo root (gitignored, never commit).
+
 - **Persistence**: Supabase Postgres with JSONB (`STORAGE_BACKEND=supabase` in production). `user_state` stored as JSONB column. Railway persistent volume (`/data/climb-agent`) as fallback for `STORAGE_BACKEND=file` (pytest, local dev). `/health` exposes `ephemeral_warning`.
 
 ## Documentation architecture
