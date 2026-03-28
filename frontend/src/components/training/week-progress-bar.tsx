@@ -58,7 +58,17 @@ export function WeekProgressBar({ weekPlan }: WeekProgressBarProps) {
       <div className="text-xs text-slate-400">
         {doneSessions}/{totalSessions} sessions{allDone ? " \u2713" : ""}
         {totalLoad > 0 && (
-          <> &middot; Load {doneLoad}/{totalLoad}</>
+          <>
+            {" \u00B7 Load "}
+            <span className={
+              doneLoad > totalLoad ? "text-emerald-400"
+              : doneLoad < totalLoad * 0.8 && doneSessions > 0 ? "text-amber-400"
+              : ""
+            }>
+              {doneLoad}
+            </span>
+            {" / "}{totalLoad}
+          </>
         )}
       </div>
     </div>
