@@ -117,9 +117,11 @@ class TestOutputStructure:
             allowed_locations=["gym"],
         )
         assert "weekly_load_summary" in plan
+        assert "planned_load" in plan["weekly_load_summary"]
         assert "total_load" in plan["weekly_load_summary"]
         assert "hard_days_count" in plan["weekly_load_summary"]
         assert "recovery_days_count" in plan["weekly_load_summary"]
+        assert plan["weekly_load_summary"]["planned_load"] == plan["weekly_load_summary"]["total_load"]
         week = plan["weeks"][0]
         assert week["phase"] == "test_week"
         for day in week["days"]:

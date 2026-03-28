@@ -224,10 +224,17 @@ def _build_load(
     since = start.isoformat()
     until = end.isoformat()
 
-    planned_total = 0
     actual_total = 0
     hard_days = 0
     recovery_days = 0
+
+    # B164: planned_load is the frozen periodization target from weekly_load_summary
+    summary = (week_plan or {}).get("weekly_load_summary") or {}
+    planned_total = (
+        summary.get("planned_load")
+        or summary.get("total_load")  # backward compat for pre-B164 plans
+        or 0
+    )
 
     if week_plan:
         for week in week_plan.get("weeks") or []:
@@ -236,14 +243,14 @@ def _build_load(
                 if not (since <= d <= until):
                     continue
                 sessions = day.get("sessions") or []
-                day_load_planned = sum(s.get("estimated_load_score", 0) for s in sessions)
                 day_load_actual = sum(
                     s.get("session_load_score") or s.get("estimated_load_score", 0)
                     for s in sessions
                     if s.get("status") == "done"
                 )
-                planned_total += day_load_planned
                 actual_total += day_load_actual
+                # B164: include other_activity_load in actual
+                actual_total += day.get("other_activity_load") or 0
 
                 has_hard = any(s.get("tags", {}).get("hard") for s in sessions)
                 if has_hard:
@@ -262,6 +269,19 @@ def _build_load(
         if fs.get("finished_at") and since <= fs.get("date", "") <= until
     )
     actual_total += free_session_load
+
+    # Fallback: if no planned_load in summary, sum estimated_load_score (pre-B164)
+    if not planned_total:
+        if week_plan:
+            for week in week_plan.get("weeks") or []:
+                for day in week.get("days") or []:
+                    d = day.get("date", "")
+                    if not (since <= d <= until):
+                        continue
+                    planned_total += sum(
+                        s.get("estimated_load_score", 0)
+                        for s in (day.get("sessions") or [])
+                    )
 
     load_ratio = round(actual_total / planned_total, 2) if planned_total else 0.0
 

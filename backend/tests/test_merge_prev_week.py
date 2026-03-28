@@ -464,3 +464,77 @@ class TestFeedbackLogIndependent:
         }
         invalidate_week_cache(state)
         assert len(state["working_loads"]["entries"]) == 1
+
+
+# ---- Part F: B164 — planned_load preservation --------------------------------
+
+
+class TestPlannedLoadPreservation:
+    """B164: planned_load must survive regeneration and merge."""
+
+    def test_merge_preserves_planned_load(self):
+        """merge_prev_week_sessions restores planned_load from prev plan."""
+        prev = _make_week_plan("2026-02-23")
+        prev["weekly_load_summary"] = {"planned_load": 395, "total_load": 395}
+        new = _make_week_plan("2026-02-23")
+        new["weekly_load_summary"] = {"planned_load": 165, "total_load": 165}
+
+        result = merge_prev_week_sessions(prev, new)
+        assert result["weekly_load_summary"]["planned_load"] == 395
+
+    def test_merge_falls_back_to_total_load(self):
+        """Pre-B164 plans without planned_load: falls back to total_load."""
+        prev = _make_week_plan("2026-02-23")
+        prev["weekly_load_summary"] = {"total_load": 350}  # no planned_load
+        new = _make_week_plan("2026-02-23")
+        new["weekly_load_summary"] = {"planned_load": 100, "total_load": 100}
+
+        result = merge_prev_week_sessions(prev, new)
+        assert result["weekly_load_summary"]["planned_load"] == 350
+
+    def test_regen_preserves_planned_load(self):
+        """regenerate_preserving_completed restores planned_load from old plan."""
+        from backend.engine.replanner_v1 import regenerate_preserving_completed
+
+        old = _make_week_plan("2026-02-23", {
+            0: [_session("strength_long", status="done", estimated_load_score=85)],
+        })
+        old["weekly_load_summary"] = {"planned_load": 395, "total_load": 395}
+
+        new = _make_week_plan("2026-02-23", {
+            0: [_session("endurance_aerobic_gym", estimated_load_score=40)],
+        })
+        new["weekly_load_summary"] = {"planned_load": 165, "total_load": 165}
+
+        result = regenerate_preserving_completed(old, new, preserve_before="2026-02-25")
+        assert result["weekly_load_summary"]["planned_load"] == 395
+
+    def test_quick_add_does_not_change_planned_load(self):
+        """Quick-add must NOT modify planned_load."""
+        from backend.engine.replanner_v1 import apply_day_add
+
+        plan = _make_week_plan("2026-02-23")
+        plan["weekly_load_summary"] = {"planned_load": 300, "total_load": 300}
+        plan["profile_snapshot"] = {"phase_id": "base"}
+
+        result, _ = apply_day_add(
+            plan, session_id="finger_strength_home",
+            target_date="2026-02-23", slot="evening", location="home",
+        )
+        assert result["weekly_load_summary"]["planned_load"] == 300
+
+    def test_override_does_not_change_planned_load(self):
+        """Override must NOT modify planned_load."""
+        from backend.engine.replanner_v1 import apply_day_override
+
+        plan = _make_week_plan("2026-02-23", {
+            0: [_session("strength_long", slot="evening", estimated_load_score=85)],
+        })
+        plan["weekly_load_summary"] = {"planned_load": 300, "total_load": 300}
+        plan["profile_snapshot"] = {"phase_id": "base"}
+
+        result = apply_day_override(
+            plan, intent="rest", target_date="2026-02-23",
+            location="home", reference_date="2026-02-23",
+        )
+        assert result["weekly_load_summary"]["planned_load"] == 300

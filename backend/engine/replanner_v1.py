@@ -591,6 +591,12 @@ def merge_prev_week_sessions(
     for day in (result.get("weeks") or [{}])[0].get("days", []):
         _recompute_day_status(day)
 
+    # B164: restore planned_load from previous plan (regen calculates only future days)
+    prev_summary = prev_plan.get("weekly_load_summary") or {}
+    prev_planned = prev_summary.get("planned_load") or prev_summary.get("total_load")
+    if prev_planned is not None:
+        result.setdefault("weekly_load_summary", {})["planned_load"] = prev_planned
+
     result["plan_revision"] = int(result.get("plan_revision") or 1) + 1
     return result
 
@@ -691,6 +697,12 @@ def regenerate_preserving_completed(
     # Recompute day-level status from merged sessions (B98)
     for day in (result.get("weeks") or [{}])[0].get("days", []):
         _recompute_day_status(day)
+
+    # B164: restore planned_load from old plan (regen calculates only future days)
+    old_summary = old_plan.get("weekly_load_summary") or {}
+    old_planned = old_summary.get("planned_load") or old_summary.get("total_load")
+    if old_planned is not None:
+        result.setdefault("weekly_load_summary", {})["planned_load"] = old_planned
 
     result["plan_revision"] = int(result.get("plan_revision") or 1) + 1
     return result

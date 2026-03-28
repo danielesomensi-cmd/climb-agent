@@ -683,16 +683,17 @@ export default function WeekPage() {
               {phaseLabel && (
                 <Badge variant="secondary">{phaseLabel}</Badge>
               )}
-              {weekPlan?.weekly_load_summary?.total_load != null && (
+              {(weekPlan?.weekly_load_summary?.planned_load ?? weekPlan?.weekly_load_summary?.total_load) != null && (
                 <Badge variant="outline">
-                  Load: {weekPlan.weekly_load_summary.total_load}
+                  Load: {weekPlan!.weekly_load_summary!.planned_load ?? weekPlan!.weekly_load_summary!.total_load}
                   {" · Done: "}
                   {days.reduce((sum, d) =>
                     sum
                     + d.sessions
                         .filter((s) => s.status === "done")
-                        .reduce((acc, s) => acc + (s.estimated_load_score ?? 0), 0)
-                    + (d.other_activity_load ?? 0),
+                        .reduce((acc, s) => acc + (s.session_load_score ?? s.estimated_load_score ?? 0), 0)
+                    + (d.other_activity_load ?? 0)
+                    + ((freeSessionsByDate[d.date] ?? []).reduce((a, fs) => a + ((fs.load_score as number) ?? 0), 0)),
                     0,
                   )}
                 </Badge>

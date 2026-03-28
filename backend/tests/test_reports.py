@@ -1085,3 +1085,53 @@ class TestActiveDays:
         report = generate_weekly_report(state, None, WEEK_START)
         sat = report["active_days"]["dots"][5]  # Saturday
         assert sat is True
+
+
+class TestB164PlannedLoad:
+    """B164: report uses planned_load from weekly_load_summary."""
+
+    def test_report_uses_planned_load(self, tmp_log_dir):
+        """planned_total should come from weekly_load_summary.planned_load."""
+        wp = _make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "done", load=85)]),
+            _make_plan_day("2026-03-17", [_make_session("s2", "done", load=40)]),
+        ])
+        wp["weekly_load_summary"] = {"planned_load": 395, "total_load": 395}
+        state = _make_state(current_week_plan=wp)
+        report = generate_weekly_report(state, None, WEEK_START)
+        assert report["load"]["planned_total"] == 395
+        assert report["load"]["actual_total"] == 125  # 85 + 40
+
+    def test_report_falls_back_to_total_load(self, tmp_log_dir):
+        """Pre-B164 plans: falls back to total_load."""
+        wp = _make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "done", load=85)]),
+        ])
+        wp["weekly_load_summary"] = {"total_load": 300}  # no planned_load
+        state = _make_state(current_week_plan=wp)
+        report = generate_weekly_report(state, None, WEEK_START)
+        assert report["load"]["planned_total"] == 300
+
+    def test_report_ultimate_fallback_sums_sessions(self, tmp_log_dir):
+        """No weekly_load_summary at all: falls back to summing sessions."""
+        wp = _make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "planned", load=85)]),
+            _make_plan_day("2026-03-17", [_make_session("s2", "planned", load=40)]),
+        ])
+        # No weekly_load_summary at all
+        state = _make_state(current_week_plan=wp)
+        report = generate_weekly_report(state, None, WEEK_START)
+        assert report["load"]["planned_total"] == 125  # 85 + 40
+
+    def test_report_includes_other_activity_load_in_actual(self, tmp_log_dir):
+        """B164: other_activity_load is included in actual_total."""
+        wp = _make_week_plan([
+            _make_plan_day("2026-03-16", [_make_session("s1", "done", load=85)]),
+            _make_plan_day("2026-03-17", [],
+                           other_activity=True,
+                           other_activity_load=30),
+        ])
+        wp["weekly_load_summary"] = {"planned_load": 200}
+        state = _make_state(current_week_plan=wp)
+        report = generate_weekly_report(state, None, WEEK_START)
+        assert report["load"]["actual_total"] == 115  # 85 + 30

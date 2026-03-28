@@ -53,6 +53,7 @@ export interface SessionSlot {
   tags?: Record<string, boolean>;
   resolved?: Record<string, unknown> | null;
   estimated_load_score?: number;
+  session_load_score?: number;
   intensity?: string;
   feedback_summary?: string;
   exercise_feedback?: Record<string, string>;
@@ -86,7 +87,8 @@ export interface WeekPlan {
   weeks: Array<{ days: DayPlan[] }>;
   profile_snapshot?: Record<string, unknown>;
   weekly_load_summary?: {
-    total_load?: number;
+    planned_load?: number;
+    total_load?: number;  // deprecated — use planned_load
     hard_days_count?: number;
     recovery_days_count?: number;
   };

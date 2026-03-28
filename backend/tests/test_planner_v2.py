@@ -624,23 +624,31 @@ class TestPlannerV2LoadScore(unittest.TestCase):
                         f"expected load={expected}, got {s['estimated_load_score']}")
 
     def test_weekly_load_summary_present(self):
-        """Week plan must have weekly_load_summary."""
+        """Week plan must have weekly_load_summary with planned_load."""
         plan = generate_phase_week(**_make_kwargs("base"))
         self.assertIn("weekly_load_summary", plan)
         summary = plan["weekly_load_summary"]
-        self.assertIn("total_load", summary)
+        self.assertIn("planned_load", summary)
+        self.assertIn("total_load", summary)  # backward compat
         self.assertIn("hard_days_count", summary)
         self.assertIn("recovery_days_count", summary)
 
     def test_weekly_load_summary_correct_total(self):
-        """total_load must equal sum of all session load scores."""
+        """planned_load must equal sum of all session load scores."""
         plan = generate_phase_week(**_make_kwargs("strength_power"))
         expected_total = sum(
             s.get("estimated_load_score", 0)
             for d in plan["weeks"][0]["days"]
             for s in d["sessions"]
         )
+        self.assertEqual(plan["weekly_load_summary"]["planned_load"], expected_total)
         self.assertEqual(plan["weekly_load_summary"]["total_load"], expected_total)
+
+    def test_planned_load_equals_total_load_at_generation(self):
+        """B164: at generation, planned_load == total_load."""
+        plan = generate_phase_week(**_make_kwargs("base"))
+        summary = plan["weekly_load_summary"]
+        self.assertEqual(summary["planned_load"], summary["total_load"])
 
     def test_deload_week_low_load(self):
         """Deload week should have low total load."""
@@ -648,6 +656,7 @@ class TestPlannerV2LoadScore(unittest.TestCase):
         summary = plan["weekly_load_summary"]
         self.assertEqual(summary["hard_days_count"], 0)
         # All deload sessions are low intensity, max 20 per session, max 5 sessions (B160c)
+        self.assertLessEqual(summary["planned_load"], 20 * 5)
         self.assertLessEqual(summary["total_load"], 20 * 5)
 
 

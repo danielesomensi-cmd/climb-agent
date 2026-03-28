@@ -1306,7 +1306,8 @@ def generate_phase_week(
             "hard_cap_per_week": effective_hard_cap,
         },
         "weekly_load_summary": {
-            "total_load": total_load,
+            "planned_load": total_load,
+            "total_load": total_load,  # deprecated — use planned_load
             "hard_days_count": hard_days_count,
             "recovery_days_count": recovery_days_count,
         },
@@ -1330,8 +1331,10 @@ def generate_phase_week(
         all_deload_sessions = [
             s for d in week_plan["weeks"][0]["days"] for s in d["sessions"]
         ]
+        deload_load = sum(s.get("estimated_load_score", 0) for s in all_deload_sessions)
         week_plan["weekly_load_summary"] = {
-            "total_load": sum(s.get("estimated_load_score", 0) for s in all_deload_sessions),
+            "planned_load": deload_load,
+            "total_load": deload_load,  # deprecated — use planned_load
             "hard_days_count": 0,
             "recovery_days_count": sum(
                 1 for d in week_plan["weeks"][0]["days"]
@@ -1508,7 +1511,8 @@ def generate_test_week(
             "allowed_locations": locations,
         },
         "weekly_load_summary": {
-            "total_load": total_load,
+            "planned_load": total_load,
+            "total_load": total_load,  # deprecated — use planned_load
             "hard_days_count": hard_days_count,
             "recovery_days_count": recovery_days_count,
         },
