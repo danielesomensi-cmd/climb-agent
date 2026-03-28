@@ -3,7 +3,7 @@
 This document defines the canonical vocabulary and schema constraints for the climb-agent repository.
 No new values may be introduced outside of this vocabulary without updating this document.
 
-Last updated: 2026-03-23
+Last updated: 2026-03-28
 
 ---
 
@@ -767,8 +767,8 @@ Example (illustrative only):
 Allowed `goal_type` values:
 
 - `lead_grade` *(implemented in v1)*
-- `boulder_grade` *(future)*
-- `all_round` *(future)*
+- `boulder_grade` *(planned — A-B1)*
+- `all_round` *(planned — A-B1; uses lead macrocycle + merged session pool, DD-B3)*
 - `outdoor_season` *(future)*
 - `maintenance` *(future)*
 
@@ -799,6 +799,15 @@ Allowed `self_eval` weakness values (used in `assessment.self_eval.primary_weakn
 - `cant_manage_rests` — poor ability to recover on rests during routes
 - `lack_power` — insufficient explosive power for dynamic moves
 - `injury_prone` — frequent injuries or niggles limiting training
+
+**Boulder-only options (planned — A-B3):**
+
+- `poor_body_tension` — can't maintain tension on steep terrain, feet cut *(maps to technique axis)*
+- `poor_dynamic_movement` — can't execute coordination/dynamic moves *(maps to power_endurance + technique axes)*
+- `weak_on_slopers` — struggle on rounded/open-hand holds *(maps to finger_strength axis)*
+- `poor_problem_reading` — can't read sequences or find beta efficiently *(maps to technique axis)*
+
+**Discipline scope:** Universal options apply to all disciplines. `pump_too_early`, `cant_manage_rests`, `cant_read_routes` are lead-only. Boulder-only options above are boulder/both only. `Both` discipline shows all options.
 
 ### 5.5 Macrocycle phases
 

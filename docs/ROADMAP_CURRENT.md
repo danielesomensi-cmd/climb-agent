@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-28
+> Last updated: 2026-03-28 (boulder support roadmap A-B1–A-B24 added)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -51,12 +51,80 @@ All P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`
 
 ---
 
+## Priority 1.5 — Boulder & Discipline Support (pre-launch)
+
+> Origin: Strategic analysis (claude.ai, 2026-03-28)
+> Full reference doc: `docs/roadmap_boulder_support.md`
+> Design decisions: DD-B1 (discipline model), DD-B2 (grade display), DD-B3 (Both = lead macrocycle)
+
+### A-B1 — Discipline selection in onboarding
+
+**Priority:** P1.5 | **Status:** Open | **Type:** A (feature) | **Effort:** M
+
+Add discipline selector in onboarding: Lead / Boulder / Both.
+- Boulder → `goal_type: boulder_grade`, activates existing `_SESSION_POOL_BOULDER` + `_BASE_DURATIONS` boulder config
+- Both → `goal_type: all_round`, uses lead macrocycle + merged session pool (lead + boulder primary sessions)
+- Onboarding flow adapts: Boulder skips `target_style`, asks boulder target grade; Both asks both grades
+- Backend: `macrocycle_v1.py` already has boulder durations (base:2, S&P:4, PE:1, perf:2, deload:1). Activate for `boulder_grade`. Add `all_round` using lead config + merged pool.
+
+**Depends on:** A-B2, A-B3
+
+### A-B2 — Grade display preference (Font / V-scale)
+
+**Priority:** P1.5 | **Status:** Open | **Type:** A (feature) | **Effort:** S
+
+New user preference `grade_system_boulder: "font" | "v_scale"` (default: font). Engine internals unchanged (always Fontainebleau). Frontend utility `displayBoulderGrade(fontGrade, pref)` converts at render time. Set during onboarding, changeable in settings. Conversion table: 6A=V4, 7A=V6, 7C+=V10, 8A=V11, etc.
+
+### A-B3 — Self-eval weakness options per discipline
+
+**Priority:** P1.5 | **Status:** Open | **Type:** A (feature) | **Effort:** S
+
+Discipline-conditional self-eval options. Universal options kept (cant_hold_hard_moves, fingers_give_out, technique_errors, lack_power, injury_prone). Lead-only: pump_too_early, cant_manage_rests, cant_read_routes. Boulder-only (NEW): poor_body_tension, poor_dynamic_movement, weak_on_slopers, poor_problem_reading. Both: show all. Update vocabulary_v1.md. New options map to existing axes (e.g. poor_body_tension → technique axis).
+
+### A-B4 — Assessment radar discipline-aware labels
+
+**Priority:** P1.5 | **Status:** Open | **Type:** A (frontend) | **Effort:** XS
+
+Same 5 axes, different display labels per discipline. Example: `power_endurance` → "Power Endurance" (lead) / "Work Capacity" (boulder). `technique` → "Technique & Tactics" (lead) / "Movement & Reading" (boulder). Frontend-only, axis IDs unchanged.
+
+---
+
 ## Priority 2 — Auth + Payments + DB (go-to-market blockers)
 
 Clerk auth ✅ and Supabase JSONB ✅ are complete. Remaining:
 
 - **Stripe subscriptions** — pricing model TBD
   - Free tier vs paid features to be defined
+
+### A-B5 — Phase labels and messaging per discipline
+
+**Priority:** P2 | **Status:** Open | **Type:** A (frontend + backend) | **Effort:** S
+
+Phase display names adapt: base → "Movement & Volume Base" (boulder), strength_power → "Max Strength & Power" (boulder), power_endurance → "Work Capacity" (boulder), performance → "Projecting & Peak" (boulder). Phase notes and tips discipline-aware.
+
+### A-B6 — Session pool boulder audit & completion
+
+**Priority:** P2 | **Status:** Open | **Type:** D + A (audit + feature) | **Effort:** M
+
+Audit `_SESSION_POOL_BOULDER`: verify ≥3 primary sessions per phase, limit_boulder exists, board session templates exist (board_limit, board_volume), PE sessions adapted (boulder_circuit, linked_boulders), climbing_routes excluded from boulder pool, technique sessions adapted, all_round pool = union of lead + boulder.
+
+### A-B7 — Boulder target in guided sessions
+
+**Priority:** P2 | **Status:** Open | **Type:** A (backend + frontend) | **Effort:** S
+
+Resolver outputs boulder-appropriate grade targets: limit = max to max-1, volume = max-2 to max-3, PE = max-2 to max-1. Include attempt guidance and rest time guidance per session type.
+
+### A-B8 — Board session templates (guided)
+
+**Priority:** P2 | **Status:** Open | **Type:** A (catalog + template) | **Effort:** M
+
+Three new session definitions: `board_limit_session` (6-10 problems at max, 3-5 min rest), `board_volume_session` (15-20 problems 2-3 below max, 1-2 min rest), `board_pe_session` (4x4 format, 3-4 below max). Equipment: board_kilter/board_moonboard/board_other. No board API integration.
+
+### A-B9 — Process cues and phase tips for boulder
+
+**Priority:** P2 | **Status:** Open | **Type:** C (content) | **Effort:** S
+
+Add boulder-tagged process cues: "Read the whole problem before you pull on", "One attempt at full intensity, then rest completely", etc. Phase tips for boulder discipline (base: movement vocabulary, S&P: limit projects, PE: work capacity, performance: project sends, deload: easy + fun).
 
 ---
 
@@ -163,6 +231,42 @@ phases. Users see the exact same exercise every single week for 4-6 weeks straig
 
 **Depends on:** Nothing. Can be done independently of Brief B (scoring rebalance).
 **Cross-ref:** Engine Audit v3 finding F8, Brief B Phase 0 diagnosis.
+
+### A-B10 — Board benchmark tracking
+
+**Priority:** P2.5 | **Status:** Open | **Type:** A (feature) | **Effort:** M
+
+Track max grade + angle per board type in free session logs. Dashboard trend widget. Optional benchmark problems (user marks 2-3 reference problems).
+
+### A-B11 — Movement drills for boulder in exercise catalog
+
+**Priority:** P2.5 | **Status:** Open | **Type:** C (catalog) | **Effort:** S
+
+Add exercises: flagging practice, heel/toe hook drills, volume traversing, coordination drills, drop knee practice, body tension drill, smearing practice. Tag with technique_drill pattern.
+
+### A-B12 — Discipline-aware PE routing
+
+**Priority:** P2.5 | **Status:** Open | **Type:** A (planner) | **Effort:** S
+
+Expand gym-aware PE routing: boulder discipline → prefer gyms with gym_boulder, lead → prefer gym_routes, all_round → no preference.
+
+### A-B13 — Conditioning weights audit per discipline
+
+**Priority:** P2.5 | **Status:** Open | **Type:** A (engine) | **Effort:** S
+
+Audit `_BASE_DOMAIN_WEIGHTS` for boulder: more power pulling, core, antagonist push; less ARC, forearm endurance.
+
+### A-B14 — Free session UX for boulder
+
+**Priority:** P2.5 | **Status:** Open | **Type:** A (frontend) | **Effort:** S
+
+Phase-aware suggestion card when logging free session on gym_boulder. Grade range suggestions based on user max + phase.
+
+### A-B15 — Spray wall as guided session surface
+
+**Priority:** P2.5 | **Status:** Open | **Type:** A (catalog) | **Effort:** S
+
+Add spraywall to location_any for relevant session templates: limit bouldering, technique drills, work capacity circuits.
 
 ### Exercise images for complex exercises
 
@@ -408,6 +512,12 @@ Recreational session: game catalog, purpose selector, timer, social_modifier=0.5
 Add technique drill selection as a free session activity type. User picks from the drill catalog (D76) and runs drills as a standalone free session or add-on. Depends on D76 (drill catalog population) being complete.
 Related: D73 (technique drill % allocation), D76 (drill catalog).
 
+### A-B20 — Video/GIF reference for movement patterns
+
+**Priority:** P3 | **Status:** Open | **Type:** C (content) | **Effort:** L
+
+Short clips for technique drills and complex exercises. Priority: flagging, heel hooks, drop knees, dynos. Boulder is more visual than lead — video reference is a differentiator.
+
 ### Injury-Specific Rehab/Prehab
 
 Rehab exercise catalog + injury→exercise mapping. Medical disclaimer required. Best candidate for LLM Coach layer (Phase 3.5). Origin: Christie feedback 2026-03-21.
@@ -415,6 +525,30 @@ Rehab exercise catalog + injury→exercise mapping. Medical disclaimer required.
 ---
 
 ## Future — Evolution (Phase 4+)
+
+### A-B16 — Board workout generator
+
+**Priority:** P3 | **Status:** Open | **Type:** A (feature) | **Effort:** L
+
+Structured board workout mode: input board type + angle + goal → output grade range, problem count, rest times, timer, RPE per problem.
+
+### A-B17 — Pyramid/circuit builder for board
+
+**Priority:** P3 | **Status:** Open | **Type:** A (feature) | **Effort:** M
+
+Pre-built formats: grade pyramid, 4x4, density sets. User can save custom circuits.
+
+### A-B18 — Competition prep mode
+
+**Priority:** P3 | **Status:** Open | **Type:** A (feature) | **Effort:** L
+
+Flash/onsight training, time pressure, style variety, comp-specific periodization.
+
+### A-B19 — Indoor grade calibration
+
+**Priority:** P3 | **Status:** Open | **Type:** A (feature) | **Effort:** M
+
+Self-report gym grading (soft/accurate/hard) or anchor to board grades. Multiplier on grade-based calculations.
 
 - UI-25 — Test Maxes & Loads panel (Plan tab)
 - Multi-goal support (boulder, all-round, outdoor_season)
@@ -424,6 +558,22 @@ Rehab exercise catalog + injury→exercise mapping. Medical disclaimer required.
 - Season reset (partial re-onboarding)
 - Gym preferences per day
 - Crowdsourced gym DB
+
+### A-B21 — Board API integration (v2+)
+
+When Kilter/Tension/Moon open public APIs: sync sends, problem recommendation, auto-log. Future/v2+.
+
+### A-B22 — Style finder — strength profile analysis (v2+)
+
+Analyze boulder style preferences (crimpy, dynamic, slopey). Best candidate for LLM Coach layer. Future/v2+.
+
+### A-B23 — Advanced finger strength periodization (v2+)
+
+Lattice-style stimulus cycling: max hang → repeaters → contact strength → board. Refined DUP. Future/v2+.
+
+### A-B24 — Boulder-specific injury prevention (v2+)
+
+Higher pulley injury rate, shoulder impingement from steep terrain, fall injuries. Adapted prehab emphasis. Combine with injury tracking (Phase 3.5/4). Future/v2+.
 
 ---
 
