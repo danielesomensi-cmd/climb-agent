@@ -9419,8 +9419,8 @@
       }
     },
     {
-      "id": "density_hang_endurance",
-      "name": "Density Hangs (Endurance Variant)",
+      "id": "repeater_sub_max_endurance",
+      "name": "Sub-Max Repeaters (Endurance Variant)",
       "category": "endurance",
       "time_min": 15,
       "role": [
@@ -9432,7 +9432,7 @@
       "pattern": "repeater_hang",
       "intensity_level": "medium",
       "fatigue_cost": 5,
-      "recency_group": "finger_endurance_density",
+      "recency_group": "finger_endurance_repeater_sub_max",
       "equipment_required": [
         "hangboard"
       ],
@@ -9458,12 +9458,13 @@
         "cns": "low",
         "skin": "low"
       },
-      "description": "Repeater-style protocol at sub-maximal intensity for aerobic finger endurance. 10 seconds on / 5 seconds off at 45-55% MVC — lighter than the standard López IntHangs (60-80% MVC). The lower intensity keeps the forearm in aerobic metabolism throughout. (López-Rivera & González-Badillo 2018; Lattice density hang protocols)",
+      "description": "Repeater-style protocol at sub-maximal intensity for aerobic finger endurance. 10 seconds on / 5 seconds off at 45-55% MVC — lighter than the standard López IntHangs (60-80% MVC). The lower intensity keeps the forearm in aerobic metabolism throughout, maximising capillary training stimulus without glycolytic accumulation. (López-Rivera & González-Badillo 2018)",
       "cues": [
         "Use ~45-55% of your max hang load",
         "10 seconds on, 5 seconds off — repeat 6 times = 1 set",
         "Full rest (3 min) between sets",
-        "If you feel significant pump, reduce weight — this should stay aerobic"
+        "If you feel significant pump, reduce weight — this should stay aerobic",
+        "This is lighter than standard repeaters — if you feel significant pump, you're going too hard. Reduce weight"
       ],
       "video_url": null,
       "load_model": "total_load",
