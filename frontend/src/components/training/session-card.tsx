@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
+import { SessionContextCard } from "@/components/training/session-context-card";
 import { getExercises, addExerciseToSession, removeExerciseFromSession } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
@@ -758,6 +759,20 @@ export function SessionCard({
         {/* Expanded content */}
         {expanded && (
           <CardContent className="pt-0 pb-3 space-y-3">
+            {/* Session context card — why this session matters */}
+            {(() => {
+              const r = session.resolved as Record<string, unknown> | undefined;
+              const rs = r?.resolved_session as Record<string, unknown> | undefined;
+              const phaseId = weekPlan?.profile_snapshot?.phase_id as string | undefined;
+              return (
+                <SessionContextCard
+                  resolvedSession={rs ?? undefined}
+                  phaseId={phaseId}
+                  loadScore={session.estimated_load_score ?? undefined}
+                />
+              );
+            })()}
+
             {/* Exercise list from resolved session (with instruction blocks) */}
             {(() => {
               const rs = (
@@ -776,20 +791,21 @@ export function SessionCard({
               }
 
               // Block-based grouping for display
-              const items: Array<{ type: "instruction"; block: Record<string, unknown>; visualPos?: undefined } | { type: "exercise"; inst: Record<string, unknown>; visualPos: number }> = [];
+              const items: Array<{ type: "instruction"; block: Record<string, unknown>; visualPos?: undefined; moduleRole?: undefined } | { type: "exercise"; inst: Record<string, unknown>; visualPos: number; moduleRole?: string }> = [];
               const usedIdx = new Set<number>();
               let exerciseCounter = 0;
 
               for (const block of allBlocks) {
                 const blockUid = (block.block_uid as string) ?? "";
                 const selEx = (block.selected_exercises ?? []) as unknown[];
+                const blockModuleRole = (block.module_role as string) ?? undefined;
 
                 if (selEx.length === 0 && block.instructions) {
                   items.push({ type: "instruction", block });
                 } else {
                   for (let i = 0; i < allInstances.length; i++) {
                     if (!usedIdx.has(i) && (allInstances[i].block_uid as string) === blockUid) {
-                      items.push({ type: "exercise", inst: allInstances[i], visualPos: exerciseCounter++ });
+                      items.push({ type: "exercise", inst: allInstances[i], visualPos: exerciseCounter++, moduleRole: blockModuleRole });
                       usedIdx.add(i);
                     }
                   }
@@ -803,7 +819,7 @@ export function SessionCard({
 
               const canEditExercises = !isFinalized && !!weekPlan;
 
-              const renderExerciseCard = (ex: Record<string, unknown>, i: number) => {
+              const renderExerciseCard = (ex: Record<string, unknown>, i: number, moduleRole?: string) => {
                 const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
                 const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
                 const exerciseId = (ex.exercise_id as string) ?? "";
@@ -831,6 +847,7 @@ export function SessionCard({
                     feedbackLevel={session.exercise_feedback?.[exerciseId]}
                     actual={actualMatch}
                     rawExercise={ex}
+                    moduleRole={moduleRole}
                   />
                 );
               };
@@ -864,7 +881,7 @@ export function SessionCard({
                         canEdit={canEditExercises}
                         onRemove={canEditExercises && allInstances.length > 1 ? () => setExerciseToRemove({ index: item.visualPos, name: exName }) : undefined}
                       >
-                        {renderExerciseCard(item.inst, i)}
+                        {renderExerciseCard(item.inst, i, item.moduleRole)}
                       </ExerciseItemWrapper>
                     );
                   })}

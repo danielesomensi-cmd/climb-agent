@@ -30,6 +30,23 @@ const FEEDBACK_LABELS: Record<string, string> = {
   very_hard: "Very Hard",
 };
 
+/** Visual treatment based on module role */
+const MODULE_ROLE_STYLES: Record<string, { opacity: string; border: string }> = {
+  general_warmup: { opacity: "opacity-55", border: "border-l-2 border-l-slate-500/50" },
+  cooldown:       { opacity: "opacity-55", border: "border-l-2 border-l-slate-500/50" },
+  secondary:      { opacity: "opacity-85", border: "border-l-2 border-l-teal-500/60" },
+  primary:        { opacity: "",           border: "border-l-2 border-l-amber-500/80" },
+};
+
+/** Fallback: derive visual treatment from exercise role array */
+function roleToModuleStyle(roles: string[]): string {
+  if (roles.some(r => r === "warmup" || r === "activation")) return "general_warmup";
+  if (roles.includes("cooldown")) return "cooldown";
+  if (roles.includes("recovery")) return "cooldown";
+  if (roles.includes("prehab") && !roles.includes("main")) return "secondary";
+  return "primary";
+}
+
 interface ExerciseCardProps {
   exercise: {
     exercise_id: string;
@@ -50,6 +67,8 @@ interface ExerciseCardProps {
   actual?: ActualExercise;
   /** Raw resolved exercise instance — opens detail sheet on tap when provided */
   rawExercise?: Record<string, unknown>;
+  /** Module role from parent block (general_warmup, primary, secondary, cooldown) */
+  moduleRole?: string;
 }
 
 /** Format rest as mm:ss (e.g. 120 → "2:00", 90 → "1:30") */
@@ -64,8 +83,18 @@ function formatLoad(kg: number): string {
   return kg >= 0 ? `+${kg} kg` : `${kg} kg`;
 }
 
-export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise }: ExerciseCardProps) {
+export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise, moduleRole }: ExerciseCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Phase coloring: resolve visual style from moduleRole or exercise role fallback
+  const effectiveRole = moduleRole
+    ?? roleToModuleStyle(
+      rawExercise
+        ? (Array.isArray((rawExercise as Record<string, unknown>).role) ? (rawExercise as Record<string, unknown>).role as string[] : [(rawExercise as Record<string, unknown>).role as string ?? "main"])
+        : ["main"]
+    );
+  const phaseStyle = MODULE_ROLE_STYLES[effectiveRole] ?? MODULE_ROLE_STYLES.primary;
+
   // Use actual feedback label if available, fall back to exercise_feedback dot
   const effectiveFeedback = actual?.feedback_label ?? feedbackLevel;
 
@@ -110,7 +139,7 @@ export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise }: E
   return (
     <>
     <Card
-      className={`gap-0 py-0${rawExercise ? " cursor-pointer active:bg-muted/50 transition-colors" : ""}`}
+      className={`gap-0 py-0 ${phaseStyle.border} ${phaseStyle.opacity}${rawExercise ? " cursor-pointer active:bg-muted/50 transition-colors" : ""}`}
       onClick={rawExercise ? (e) => { e.stopPropagation(); setSheetOpen(true); } : undefined}
     >
       <CardHeader className="py-2.5">
