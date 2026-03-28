@@ -30,21 +30,36 @@ const FEEDBACK_LABELS: Record<string, string> = {
   very_hard: "Very Hard",
 };
 
-/** Visual treatment based on module role */
-const MODULE_ROLE_STYLES: Record<string, { opacity: string; border: string }> = {
-  general_warmup: { opacity: "opacity-55", border: "border-l-2 border-l-slate-500/50" },
-  cooldown:       { opacity: "opacity-55", border: "border-l-2 border-l-slate-500/50" },
-  secondary:      { opacity: "opacity-85", border: "border-l-2 border-l-teal-500/60" },
-  primary:        { opacity: "",           border: "border-l-2 border-l-amber-500/80" },
+/** Visual treatment keys */
+type PhaseStyle = { opacity: string; border: string };
+
+const DIMMED: PhaseStyle   = { opacity: "opacity-50", border: "border-l-2 border-l-slate-500" };
+const MEDIUM: PhaseStyle   = { opacity: "opacity-70", border: "border-l-2 border-l-teal-600" };
+const VIVID: PhaseStyle    = { opacity: "",           border: "border-l-2 border-l-amber-500" };
+
+/** Map block type (from resolver) to visual treatment */
+const BLOCK_TYPE_STYLES: Record<string, PhaseStyle> = {
+  general_warmup: DIMMED,
+  warmup:         DIMMED,
+  activation:     DIMMED,
+  cooldown:       DIMMED,
+  prehab:         MEDIUM,
+  antagonist_prehab: MEDIUM,
+  core:           MEDIUM,
+  secondary:      MEDIUM,
+  primary:        VIVID,
+  main:           VIVID,
+  technique:      VIVID,
+  test:           VIVID,
 };
 
 /** Fallback: derive visual treatment from exercise role array */
-function roleToModuleStyle(roles: string[]): string {
-  if (roles.some(r => r === "warmup" || r === "activation")) return "general_warmup";
-  if (roles.includes("cooldown")) return "cooldown";
-  if (roles.includes("recovery")) return "cooldown";
-  if (roles.includes("prehab") && !roles.includes("main")) return "secondary";
-  return "primary";
+function roleArrayToStyle(roles: string[]): PhaseStyle {
+  if (roles.some(r => r === "warmup" || r === "activation")) return DIMMED;
+  if (roles.includes("cooldown")) return DIMMED;
+  if (roles.includes("recovery")) return DIMMED;
+  if (roles.includes("prehab") && !roles.includes("main")) return MEDIUM;
+  return VIVID;
 }
 
 interface ExerciseCardProps {
@@ -86,14 +101,16 @@ function formatLoad(kg: number): string {
 export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise, moduleRole }: ExerciseCardProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Phase coloring: resolve visual style from moduleRole or exercise role fallback
-  const effectiveRole = moduleRole
-    ?? roleToModuleStyle(
-      rawExercise
-        ? (Array.isArray((rawExercise as Record<string, unknown>).role) ? (rawExercise as Record<string, unknown>).role as string[] : [(rawExercise as Record<string, unknown>).role as string ?? "main"])
-        : ["main"]
-    );
-  const phaseStyle = MODULE_ROLE_STYLES[effectiveRole] ?? MODULE_ROLE_STYLES.primary;
+  // Phase coloring: resolve from block type or exercise role fallback
+  const phaseStyle: PhaseStyle = moduleRole && BLOCK_TYPE_STYLES[moduleRole]
+    ? BLOCK_TYPE_STYLES[moduleRole]
+    : rawExercise
+      ? roleArrayToStyle(
+          Array.isArray((rawExercise as Record<string, unknown>).role)
+            ? (rawExercise as Record<string, unknown>).role as string[]
+            : ["main"]
+        )
+      : VIVID;
 
   // Use actual feedback label if available, fall back to exercise_feedback dot
   const effectiveFeedback = actual?.feedback_label ?? feedbackLevel;

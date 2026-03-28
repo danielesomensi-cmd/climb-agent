@@ -34,7 +34,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
-import { SessionContextCard } from "@/components/training/session-context-card";
 import { getExercises, addExerciseToSession, removeExerciseFromSession } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
@@ -759,20 +758,6 @@ export function SessionCard({
         {/* Expanded content */}
         {expanded && (
           <CardContent className="pt-0 pb-3 space-y-3">
-            {/* Session context card — why this session matters */}
-            {(() => {
-              const r = session.resolved as Record<string, unknown> | undefined;
-              const rs = r?.resolved_session as Record<string, unknown> | undefined;
-              const phaseId = weekPlan?.profile_snapshot?.phase_id as string | undefined;
-              return (
-                <SessionContextCard
-                  resolvedSession={rs ?? undefined}
-                  phaseId={phaseId}
-                  loadScore={session.estimated_load_score ?? undefined}
-                />
-              );
-            })()}
-
             {/* Exercise list from resolved session (with instruction blocks) */}
             {(() => {
               const rs = (
@@ -798,7 +783,7 @@ export function SessionCard({
               for (const block of allBlocks) {
                 const blockUid = (block.block_uid as string) ?? "";
                 const selEx = (block.selected_exercises ?? []) as unknown[];
-                const blockModuleRole = (block.module_role as string) ?? undefined;
+                const blockModuleRole = (block.module_role ?? block.type) as string | undefined;
 
                 if (selEx.length === 0 && block.instructions) {
                   items.push({ type: "instruction", block });

@@ -12,6 +12,7 @@ import { ReplanDialog } from "@/components/training/replan-dialog";
 import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
+import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
@@ -783,6 +784,11 @@ function TodayContent() {
               Start Onboarding
             </Link>
           </div>
+        )}
+
+        {/* Week progress bar */}
+        {!loading && !error && weekPlan && (
+          <WeekProgressBar weekPlan={weekPlan} />
         )}
 
         {/* Weekly check-in card (Sunday / Monday morning grace) */}
