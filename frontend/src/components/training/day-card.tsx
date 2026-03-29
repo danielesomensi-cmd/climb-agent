@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp, Clock, Grip } from "lucide-react";
+import { MapPin, Mountain, Pencil, Plus, RefreshCw, Check, Undo2, ClipboardList, X, ChevronDown, ChevronUp, Clock, Grip } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +52,7 @@ interface DayCardProps {
     circuit?: { work_seconds: number; rest_seconds: number; target_exercises: number; completed_exercises: number; exercises_performed: string[] };
   }>;
   onDeleteFreeSession?: (sessionId: string) => void;
+  /** @deprecated No longer used — View day button removed (B166) */
   showActions?: boolean;
   weekPlan?: WeekPlan | null;
   onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
@@ -654,16 +655,8 @@ export function DayCard({
             )}
 
         {/* Action buttons */}
-        {(showActions || onReplan || onQuickAdd || onChangeGym) && (
+        {(onReplan || onQuickAdd || onChangeGym) && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            {showActions && (
-              <Link href={`/today?date=${day.date}`}>
-                <Button size="sm" variant="outline" className="text-xs px-2 py-1">
-                  <Eye className="size-3 mr-1" />
-                  View day
-                </Button>
-              </Link>
-            )}
             {onReplan && day.sessions.length <= 1 && (
               <Button
                 size="sm"
