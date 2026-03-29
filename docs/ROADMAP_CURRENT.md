@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-28 (boulder support roadmap A-B1–A-B24 added)
+> Last updated: 2026-03-29 (D163+D164 audit remediation tracking added)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -36,7 +36,8 @@
 
 ## Priority 1 — Stability and bug fixes
 
-All P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`.
+Previous P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`.
+New P1 items identified by D163 + D164 audits — tracked below in Audit Remediation section.
 
 - ✅ **B157** — Orphan exercise leak: `critical_force_test` removed from catalog (deferred to v2/D89), role filter added to `easy_climbing_post_finger` block, 4 catalog validation tests added (2026-03-26)
 - ✅ **B158** — Change Plan + Quick-Add dialog Confirm button hidden on Android: split DialogContent into scrollable body + sticky footer, added `viewport-fit: cover` + `safe-area-inset-bottom` padding, switched to `75dvh` (2026-03-26)
@@ -49,6 +50,70 @@ All P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`
 - ✅ **B160c** — Circuit timer layout: timer ring + controls side-by-side (no more hidden buttons), ring 144px, image max-h-140, full description no truncation, EXIT in header (2026-03-26)
 - ✅ **B160g** — Template gap fix: added `core_standard` and/or `antagonist_prehab` modules to 7 gym session definitions (boulder_circuit, route_endurance, limit_boulder, pulling_strength, finger_maintenance, heavy_conditioning, easy_climbing_deload). All gym sessions now resolve with complete tail blocks. Updated duration estimates. Zero engine code changes (2026-03-27)
 - ✅ **B167** — Sync safety net: `sync_status.py` now aborts with warning if non-sync files are uncommitted (SYNC_FILES whitelist = PROJECT_BRIEF.md + README.md). CLAUDE.md rule added: commit before sync. (2026-03-29)
+
+---
+
+## Priority 1.25 — Audit Remediation (D163 + D164)
+
+> Full reports: `docs/audit/D164/` (138 findings) and `docs/audit/D163_frontend_audit.md` (67 findings)
+> Date: 2026-03-28
+> Combined: 205 findings (20 P1, 71 P2, 102 P3, 12 P4)
+
+### P1 findings — must fix before paid launch
+
+**Engine (D164):**
+- F3-P1-009 — Replanner hardcodes finger/hard spacing to 1-day gaps, ignoring `recovery_multiplier` for 40+ users (replanner_v1.py)
+
+**Frontend (D164):**
+- F1-P1-001 — Profanity in voice cues ("Vaffanculo!", "Punani!") spoken aloud via TTS at 30% probability (voice-cues.ts)
+- F1-P1-002 — `useSearchParams()` without Suspense boundary causes Next.js 14 build/SSR crash (session/[id]/page.tsx)
+
+**Frontend (D163):**
+- Equipment editor allows saving with 0 locations → planner breaks (equipment-editor.tsx)
+- No RP ≥ OS cross-validation in profile editor → nonsensical assessment (profile-assessment-editor.tsx)
+- Grade histogram NaN when all grades have count=0 (outdoor/page.tsx)
+- Onboarding complete API call has no timeout → infinite "Generating..." (onboarding/review/page.tsx)
+- Tabata zero-duration rest phase causes infinite loop (tabata/page.tsx)
+- Trip editor can produce end_date < start_date (onboarding/trips/page.tsx)
+- Whitespace-only gym names pass validation (onboarding/locations/page.tsx)
+- Gym slot with 0 gyms → undefined gym_id in submission (onboarding/availability/page.tsx)
+- Guided session double-tap exit race condition → data loss (guided/page.tsx)
+- Limitations validation passes with empty array when hasLimitations=true (onboarding/limitations/page.tsx)
+
+**Catalog (D164):**
+- F7-P1-001 — Unknown vocabulary value `lead_wall` in `fall_practice.equipment_required_any`
+- F7-P1-002 — Unknown vocabulary value `grip_transition` pattern in `grip_transitions_half_to_open`
+
+**Test coverage (D164):**
+- F10-P1-001 — `POST /api/user/recovery-code` and `POST /api/user/recover` have zero test coverage
+
+### Remediation briefs
+
+| Brief | Scope | Effort | Status |
+|-------|-------|--------|--------|
+| B165a | Quick P1 wins — profanity, Suspense, vocabulary sync, equipment editor 0-locations guard, histogram NaN, tabata guard, RP≥OS validation, onboarding timeout, trip dates, gym name validation, availability 0-gyms guard, limitations empty array, guided double-tap | S | Open |
+| B165b | Replanner recovery_multiplier fix + age threshold shift to 50 (high-risk: replanner_v1.py, STOP gate required) | M | Open |
+| B165c | Frontend error handling sweep — replace ~20 `.catch(() => {})` with error states/toasts (subsumes R141) | M | Open |
+| B165d | Security hardening — atomic file writes, rate limiting, `secrets` for recovery codes, error response sanitization, `PUT /api/state` key whitelist | M | Open |
+| B165e | Catalog cleanup — 8 broken video URLs, `easy_climbing_deload` + `deload_recovery` schema normalization, `finger_warmup_generic` description/cues, `age_under_16` contraindication cleanup | S | Open |
+
+### P2 highlights (not individually tracked — see full reports)
+
+**Security (D164 Agent 2):** Non-atomic file writes, error messages leaking internals, no rate limiting, `random` instead of `secrets`, `PUT /api/state` accepts arbitrary keys, feedback returns full state → all covered by B165d.
+
+**Engine (D164 Agents 3-5):** Phase duration sum mismatch for 9-11 week macrocycles (P2), deload weights sum 0.40 not 1.0 (P2), `move_session` doesn't validate spacing (P2), `_reconcile()` enforces finger but not hard-day spacing (P2), streak field saved but unused in multiplier (P2).
+
+**Frontend (D164 Agent 1 + D163):** PHASE_LABELS duplicated 4 files, `window.location.href` instead of router.push, console.warn/error in prod, eslint-disable on hooks deps, hardcoded email, session-card 1081 lines, tap targets <44px (6 instances), missing aria-labels (5 instances) → partially covered by B165c, rest deferred to R141/R144/R145.
+
+**Catalog (D164 Agents 7-8):** 10 campus exercises use non-canonical `age_under_16` contraindication, `easy_climbing_deload` legacy schema, `deload_recovery` missing fields, 8 orphan templates, 11 generic placeholder video URLs → covered by B165e.
+
+**Docs (D164 Agent 6):** Intent counts wrong in CLAUDE.md (13+3 vs actual 15+4), `closed_loop_v1.py` filename stale, session "active" label mismatch in sync_status.py, `grip_transition` missing from vocabulary → vocabulary fix in B165a, rest are P2 doc fixes (standalone).
+
+**API contract (D164 Agent 9):** `POST /api/outdoor/convert-slot` response shape mismatch.
+
+**Test coverage (D164 Agent 10):** 9 API endpoints lack integration tests, no full-pipeline E2E test (R150), `cluster_utils` 5/6 functions untested, test fixtures duplicated inline.
+
+### P3 items (102 total) — see full reports, not individually tracked in roadmap
 
 ---
 
@@ -147,6 +212,8 @@ Logging aggiunto a 6 moduli engine, 5 `except:pass` silenziosi sostituiti con `l
 - Validazione Zod su `JSON.parse` del localStorage nella guided session
 - `AbortController` sulla navigazione week
 - Stati loading/error consistenti su `today/`, `plan/`, `outdoor/`
+
+> Note: D163 + D164 audits confirmed ~20+ instances. Will be addressed as part of B165c.
 
 **Rischio:** BASSO — cambiamenti UX difensivi
 
@@ -663,7 +730,7 @@ Higher pulley injury rate, shoulder impingement from steep terrain, fall injurie
 
 | Theme | Detail | Origin |
 |-------|--------|--------|
-| R150 | Integration test full-pipeline (assessment → closed-loop) | audit 2026-03-21 |
+| R150 | Integration test full-pipeline (assessment → closed-loop) | audit 2026-03-21, confirmed by D164 Agent 10 |
 | R151 | Type hints (`TypedDict`/`dataclass`), eliminate `any`, date utils | audit 2026-03-21 |
 | R152 | Periodic full codebase audit con Agent Teams | audit 2026-03-21 |
 | R160 | Audio util dedup: beep/countdownTick/transitionBeep duplicated in CircuitTimer and Tabata — extract to single shared module in lib/ | B160 audit 2026-03-26 |
