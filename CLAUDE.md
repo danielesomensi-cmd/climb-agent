@@ -75,6 +75,24 @@ Any change touching these modules requires a **mandatory analysis phase** before
 
 Never skip the STOP between Phase 1 and Phase 2 — even if the change looks trivial.
 
+## Model switching (suggestion-only)
+
+Claude Code defaults to Sonnet (`claude --dangerously-skip-permissions --model sonnet`).
+
+When starting a high-risk brief, **suggest** (never auto-switch) upgrading to Opus:
+- Phase 0 analysis of briefs touching: `planner_v2.py`, `replanner_v1.py`, `macrocycle_v1.py`, `resolve_session.py`, `progression_v1.py`, `closed_loop_v1.py`
+- D-type audit briefs (read-only codebase analysis)
+
+Suggest switching back to Sonnet after the STOP gate, before Phase 1 implementation.
+
+Format: print a one-line reminder like:
+
+```
+💡 Questo brief tocca moduli ad alto rischio. Considera `/model opus` per la fase di analisi.
+```
+
+Never switch model autonomously. The decision is always Daniele's.
+
 ## Import conventions
 
 All Python imports use the `backend.` prefix. Data paths are relative to repo root.
