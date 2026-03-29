@@ -112,6 +112,7 @@ function TodayContent() {
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
   const [freeSessions, setFreeSessions] = useState<Array<Record<string, unknown>>>([]);
+  const [weekFreeSessions, setWeekFreeSessions] = useState<Array<Record<string, unknown>>>([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -252,6 +253,20 @@ function TodayContent() {
       .then((data) => setFreeSessions(data.sessions))
       .catch(() => setFreeSessions([]));
   }, [targetDate, weekPlan]); // re-fetch when weekPlan changes (after save)
+
+  // Fetch free sessions for ALL week days (for WeekProgressBar load total)
+  useEffect(() => {
+    if (!weekPlan) return;
+    const dates = weekPlan.weeks.flatMap(w => w.days).map(d => d.date);
+    if (dates.length === 0) return;
+    Promise.all(
+      dates.map(d =>
+        getFreeSessionHistory(d)
+          .then(r => r.sessions as Array<Record<string, unknown>>)
+          .catch(() => [] as Array<Record<string, unknown>>)
+      )
+    ).then(results => setWeekFreeSessions(results.flat()));
+  }, [weekPlan]);
 
   /** Find target day in the weekly plan */
   const dayPlan: DayPlan | undefined = weekPlan?.weeks
@@ -788,7 +803,7 @@ function TodayContent() {
 
         {/* Week progress bar */}
         {!loading && !error && weekPlan && (
-          <WeekProgressBar weekPlan={weekPlan} freeSessions={freeSessions} />
+          <WeekProgressBar weekPlan={weekPlan} freeSessions={weekFreeSessions} />
         )}
 
         {/* Weekly check-in card (Sunday / Monday morning grace) */}

@@ -81,6 +81,7 @@ export default function WeekPage() {
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
   const [freeSessionsByDate, setFreeSessionsByDate] = useState<Record<string, Array<Record<string, unknown>>>>({});
+  const [freeSessionsLoaded, setFreeSessionsLoaded] = useState(false);
   const weekRouter = useRouter();
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -169,9 +170,10 @@ export default function WeekPage() {
   // Fetch free sessions for all days in the week (A138)
   useEffect(() => {
     if (!weekPlan) return;
+    setFreeSessionsLoaded(false);
     const allDays = weekPlan.weeks.flatMap(w => w.days);
     const dates = allDays.map(d => d.date);
-    if (dates.length === 0) return;
+    if (dates.length === 0) { setFreeSessionsLoaded(true); return; }
     Promise.all(dates.map(d => getFreeSessionHistory(d).then(r => ({ date: d, sessions: r.sessions })).catch(() => ({ date: d, sessions: [] }))))
       .then((results) => {
         const map: Record<string, Array<Record<string, unknown>>> = {};
@@ -179,6 +181,7 @@ export default function WeekPage() {
           if (r.sessions.length > 0) map[r.date] = r.sessions;
         }
         setFreeSessionsByDate(map);
+        setFreeSessionsLoaded(true);
       });
   }, [weekPlan]);
 
@@ -687,15 +690,17 @@ export default function WeekPage() {
                 <Badge variant="outline">
                   Load: {weekPlan!.weekly_load_summary!.planned_load ?? weekPlan!.weekly_load_summary!.total_load}
                   {" · Done: "}
-                  {days.reduce((sum, d) =>
-                    sum
-                    + d.sessions
-                        .filter((s) => s.status === "done")
-                        .reduce((acc, s) => acc + (s.session_load_score ?? s.estimated_load_score ?? 0), 0)
-                    + (d.other_activity_load ?? 0)
-                    + ((freeSessionsByDate[d.date] ?? []).reduce((a, fs) => a + ((fs.load_score as number) ?? 0), 0)),
-                    0,
-                  )}
+                  {freeSessionsLoaded
+                    ? days.reduce((sum, d) =>
+                        sum
+                        + d.sessions
+                            .filter((s) => s.status === "done")
+                            .reduce((acc, s) => acc + (s.session_load_score ?? s.estimated_load_score ?? 0), 0)
+                        + (d.other_activity_load ?? 0)
+                        + ((freeSessionsByDate[d.date] ?? []).reduce((a, fs) => a + ((fs.load_score as number) ?? 0), 0)),
+                        0,
+                      )
+                    : "—"}
                 </Badge>
               )}
             </div>
