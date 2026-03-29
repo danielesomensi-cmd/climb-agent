@@ -68,7 +68,7 @@ function formatSessionName(sessionId: string): string {
 }
 
 const FEEDBACK_BADGE_STYLE: Record<string, string> = {
-  very_easy: "bg-green-500/20 text-green-400 border-green-500/30",
+  very_easy: "bg-emerald-400/20 text-emerald-300 border-emerald-400/30",
   easy: "bg-green-500/20 text-green-400 border-green-500/30",
   ok: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
   hard: "bg-orange-500/20 text-orange-400 border-orange-500/30",

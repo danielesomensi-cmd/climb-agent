@@ -31,6 +31,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { isVoiceCuesEnabled, setVoiceCuesEnabled } from "@/lib/voice-cues";
 
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -654,12 +665,21 @@ export default function SettingsPage() {
                         </span>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleDeleteSpot(spot.id)}
-                      className="text-xs text-destructive hover:underline"
-                    >
-                      Remove
-                    </button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button className="text-xs text-destructive hover:underline">Remove</button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Rimuovere questo spot?</AlertDialogTitle>
+                          <AlertDialogDescription>Questa azione non può essere annullata.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annulla</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteSpot(spot.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Rimuovi</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 ))}
                 {addingSpot && (
@@ -811,11 +831,20 @@ export default function SettingsPage() {
                   >
                     {exporting ? "Exporting..." : "Export data"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={importing}
-                    onClick={() => {
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={importing}>
+                        {importing ? "Importing..." : "Import data"}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Importare dati?</AlertDialogTitle>
+                        <AlertDialogDescription>L&apos;importazione sovrascriverà tutti i tuoi dati attuali. Assicurati di avere un backup.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annulla</AlertDialogCancel>
+                        <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => {
                       const input = document.createElement("input");
                       input.type = "file";
                       input.accept = ".json";
@@ -838,10 +867,10 @@ export default function SettingsPage() {
                         }
                       };
                       input.click();
-                    }}
-                  >
-                    {importing ? "Importing..." : "Import data"}
-                  </Button>
+                    }}>Importa</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
                 {backupMsg && (
                   <p className={`text-xs ${backupMsg.type === "ok" ? "text-green-500" : "text-destructive"}`}>

@@ -136,52 +136,6 @@ function SessionPageInner() {
             ))}
 
             <Separator />
-
-            {/* Rest timer placeholder */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Rest timer</CardTitle>
-              </CardHeader>
-              <CardContent className="text-center space-y-3">
-                <div className="flex items-center justify-center">
-                  <div className="flex items-center justify-center h-24 w-24 rounded-full border-4 border-primary/20">
-                    <span className="text-2xl font-mono font-bold text-muted-foreground">
-                      0:00
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Rest timer between sets. Coming soon.
-                </p>
-
-                {/* Suggested rest times from exercises */}
-                {resolved.blocks.some((b) =>
-                  b.exercises.some((e) => e.rest_s != null)
-                ) && (
-                  <div className="mt-2 space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Suggested rest times
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {Array.from(
-                        new Set(
-                          resolved.blocks
-                            .flatMap((b) => b.exercises)
-                            .filter((e) => e.rest_s != null)
-                            .map((e) => e.rest_s!)
-                        )
-                      )
-                        .sort((a, b) => a - b)
-                        .map((rest) => (
-                          <Badge key={rest} variant="outline" className="text-xs">
-                            {formatRest(rest)}
-                          </Badge>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </>
         )}
 

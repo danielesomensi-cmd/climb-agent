@@ -18,7 +18,7 @@ interface GuidedSummaryProps {
 }
 
 const FEEDBACK_STYLE: Record<string, string> = {
-  very_easy: "text-green-400",
+  very_easy: "text-emerald-300",
   easy: "text-green-400",
   ok: "text-yellow-400",
   hard: "text-orange-400",

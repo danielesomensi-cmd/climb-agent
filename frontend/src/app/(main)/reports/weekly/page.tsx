@@ -37,7 +37,7 @@ const PHASE_LABELS: Record<string, string> = {
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  very_easy: "bg-green-400",
+  very_easy: "bg-emerald-400",
   easy: "bg-green-500",
   ok: "bg-yellow-500",
   hard: "bg-orange-500",
