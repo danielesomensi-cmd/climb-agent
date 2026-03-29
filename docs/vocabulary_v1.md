@@ -799,23 +799,28 @@ Allowed `override_mode` values:
 
 Allowed `self_eval` weakness values (used in `assessment.self_eval.primary_weakness` and `secondary_weakness`):
 
-- `pump_too_early` — forearm pump limits climbing before strength does
-- `cant_hold_hard_moves` — lack of max strength or power on crux moves
-- `cant_read_routes` — poor route reading and beta finding
-- `technique_errors` — falling due to poor body positioning or movement quality
-- `fingers_give_out` — finger strength is the limiting factor
-- `cant_manage_rests` — poor ability to recover on rests during routes
-- `lack_power` — insufficient explosive power for dynamic moves
-- `injury_prone` — frequent injuries or niggles limiting training
+**Universal (all disciplines):**
 
-**Boulder-only options (planned — A-B3):**
+- `fingers_give_out` — finger strength is the limiting factor *(maps to finger_strength axis, -15/-8)*
+- `cant_hold_hard_moves` — lack of max strength or power on crux moves *(maps to pulling_strength axis, -10/-5)*
+- `technique_errors` — falling due to poor body positioning or movement quality *(maps to technique axis, -10/-5)*
+- `lack_power` — insufficient explosive power for dynamic moves *(not mapped to axis in v1)*
+- `injury_prone` — frequent injuries or niggles limiting training *(not mapped to axis in v1)*
 
-- `poor_body_tension` — can't maintain tension on steep terrain, feet cut *(maps to technique axis)*
-- `poor_dynamic_movement` — can't execute coordination/dynamic moves *(maps to power_endurance + technique axes)*
-- `weak_on_slopers` — struggle on rounded/open-hand holds *(maps to finger_strength axis)*
-- `poor_problem_reading` — can't read sequences or find beta efficiently *(maps to technique axis)*
+**Lead-only:**
 
-**Discipline scope:** Universal options apply to all disciplines. `pump_too_early`, `cant_manage_rests`, `cant_read_routes` are lead-only. Boulder-only options above are boulder/both only. `Both` discipline shows all options.
+- `pump_too_early` — forearm pump limits climbing before strength does *(maps to power_endurance axis, -8/-4 weighted; endurance axis, -10/-5)*
+- `cant_read_routes` — poor route reading and beta finding *(maps to technique axis, -10/-5)*
+- `cant_manage_rests` — poor ability to recover on rests during routes *(maps to endurance axis, -10/-5)*
+
+**Boulder-only:**
+
+- `poor_body_tension` — can't maintain tension on steep terrain, feet cut *(maps to technique axis, -10/-5)*
+- `poor_dynamic_movement` — can't execute coordination/dynamic moves *(maps to power_endurance axis, -8/-4 weighted; technique axis, -10/-5)*
+- `weak_on_slopers` — struggle on rounded/open-hand holds *(maps to finger_strength axis, -15/-8)*
+- `poor_problem_reading` — can't read sequences or find beta efficiently *(maps to technique axis, -10/-5)*
+
+**Discipline scope:** Universal options apply to all disciplines. Lead-only options shown for lead and both. Boulder-only options shown for boulder and both. `Both` discipline shows all options.
 
 ### 5.5 Macrocycle phases
 

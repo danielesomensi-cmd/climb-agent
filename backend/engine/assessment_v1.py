@@ -134,9 +134,9 @@ def _compute_finger_strength(
         else:
             score = 50.0
         # Self-eval modifier
-        if self_eval.get("primary_weakness") == "fingers_give_out":
+        if self_eval.get("primary_weakness") in ("fingers_give_out", "weak_on_slopers"):
             score -= 15
-        elif self_eval.get("secondary_weakness") == "fingers_give_out":
+        elif self_eval.get("secondary_weakness") in ("fingers_give_out", "weak_on_slopers"):
             score -= 8
 
     return _clamp(score)
@@ -225,9 +225,9 @@ def _compute_power_endurance(
 
     # --- Self-eval modifier (reduced penalties to avoid double counting) ---
     eval_modifier = 0.0
-    if self_eval.get("primary_weakness") == "pump_too_early":
+    if self_eval.get("primary_weakness") in ("pump_too_early", "poor_dynamic_movement"):
         eval_modifier = -8.0
-    elif self_eval.get("secondary_weakness") == "pump_too_early":
+    elif self_eval.get("secondary_weakness") in ("pump_too_early", "poor_dynamic_movement"):
         eval_modifier = -4.0
 
     # --- Weighted combination ---
@@ -261,9 +261,13 @@ def _compute_technique(
     else:
         score = 50.0
 
-    if self_eval.get("primary_weakness") in ("technique_errors", "cant_read_routes"):
+    technique_weaknesses = (
+        "technique_errors", "cant_read_routes",
+        "poor_body_tension", "poor_problem_reading", "poor_dynamic_movement",
+    )
+    if self_eval.get("primary_weakness") in technique_weaknesses:
         score -= 10
-    elif self_eval.get("secondary_weakness") in ("technique_errors", "cant_read_routes"):
+    elif self_eval.get("secondary_weakness") in technique_weaknesses:
         score -= 5
 
     return _clamp(score)

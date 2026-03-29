@@ -24,16 +24,29 @@ BOULDER_GRADE_ORDER = [
     "8A", "8A+", "8B", "8B+", "8C", "8C+",
 ]
 
-WEAKNESS_OPTIONS = [
-    {"id": "pump_too_early", "label": "I pump out too early", "description": "My forearms pump before my strength gives out"},
+WEAKNESS_OPTIONS_UNIVERSAL = [
     {"id": "fingers_give_out", "label": "My fingers give out", "description": "Finger strength is my main limiter"},
     {"id": "cant_hold_hard_moves", "label": "Can't hold hard moves", "description": "I lack strength/power on single crux moves"},
     {"id": "technique_errors", "label": "Technique errors", "description": "I fall due to body position or movement mistakes"},
-    {"id": "cant_read_routes", "label": "Can't read routes", "description": "I struggle to find the beta and read sequences"},
-    {"id": "cant_manage_rests", "label": "Can't manage rests", "description": "I don't recover well on rest stances"},
     {"id": "lack_power", "label": "Lack explosive power", "description": "Dynamic moves and dynos are my weak point"},
     {"id": "injury_prone", "label": "Frequent injuries", "description": "Physical issues limit my training"},
 ]
+
+WEAKNESS_OPTIONS_LEAD = [
+    {"id": "pump_too_early", "label": "I pump out too early", "description": "My forearms pump before my strength gives out"},
+    {"id": "cant_read_routes", "label": "Can't read routes", "description": "I struggle to find the beta and read sequences"},
+    {"id": "cant_manage_rests", "label": "Can't manage rests", "description": "I don't recover well on rest stances"},
+]
+
+WEAKNESS_OPTIONS_BOULDER = [
+    {"id": "poor_body_tension", "label": "Poor body tension", "description": "I can't maintain tension on steep terrain, feet cut"},
+    {"id": "poor_dynamic_movement", "label": "Poor dynamic movement", "description": "I struggle with coordination moves and dynos"},
+    {"id": "weak_on_slopers", "label": "Weak on slopers", "description": "I struggle on rounded or open-hand holds"},
+    {"id": "poor_problem_reading", "label": "Poor problem reading", "description": "I can't read sequences or find beta efficiently"},
+]
+
+# Flat list for backward compatibility
+WEAKNESS_OPTIONS = WEAKNESS_OPTIONS_UNIVERSAL + WEAKNESS_OPTIONS_LEAD + WEAKNESS_OPTIONS_BOULDER
 
 EQUIPMENT_HOME = [
     {"id": "hangboard", "label": "Hangboard", "description": "Finger training board"},
@@ -109,6 +122,11 @@ def onboarding_defaults():
         "boulder_grades": BOULDER_GRADE_ORDER,
         "disciplines": ["lead", "boulder"],
         "weakness_options": WEAKNESS_OPTIONS,
+        "weakness_options_grouped": {
+            "universal": WEAKNESS_OPTIONS_UNIVERSAL,
+            "lead": WEAKNESS_OPTIONS_LEAD,
+            "boulder": WEAKNESS_OPTIONS_BOULDER,
+        },
         "equipment_home": EQUIPMENT_HOME,
         "equipment_gym": EQUIPMENT_GYM,
         "limitation_areas": ["elbow", "finger", "shoulder", "wrist", "knee", "back", "other"],
