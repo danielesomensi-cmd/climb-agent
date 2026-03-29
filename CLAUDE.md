@@ -292,6 +292,7 @@ Key location: `.env` in repo root (gitignored, never commit).
 - Always respond in Italian.
 - Analyze before implementing — wait for explicit OK on non-trivial changes.
 - Run tests before committing. Run `python scripts/sync_status.py` after every dev session.
+- Every brief MUST end with an explicit `git add -A && git commit -m '<brief-id>: <description>'` BEFORE running `sync_status.py`. Never leave work files uncommitted when sync runs — the script will abort if it detects non-sync dirty files.
 - After closing any roadmap item: update `docs/ROADMAP_CURRENT.md` in the same commit.
 - After any A (feature) or B (bugfix) brief that changes user-facing behavior: check if `docs/user_guide_v1.md` needs updating. If yes, update in the same commit.
 - Code and documentation must always be aligned. Never leave an implemented item marked as open.

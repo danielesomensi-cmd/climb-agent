@@ -275,9 +275,40 @@ def validate(endpoints: int) -> list[str]:
     return warnings
 
 
+# ── Safety net ─────────────────────────────────────────────────────
+
+SYNC_FILES = {"PROJECT_BRIEF.md", "README.md"}
+
+
+def check_uncommitted_work() -> None:
+    """Abort if non-sync files are uncommitted (staged or unstaged)."""
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        capture_output=True, text=True, cwd=REPO_ROOT,
+    )
+    dirty = []
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        # porcelain format: "XY filepath" — strip status prefix
+        filepath = line[3:].strip().strip('"')
+        basename = filepath.split("/")[-1] if "/" in filepath else filepath
+        if basename not in SYNC_FILES:
+            dirty.append(filepath)
+
+    if dirty:
+        print("\n\u26a0\ufe0f  UNCOMMITTED WORK FILES DETECTED!")
+        print("Commit your work before running sync_status.py:\n")
+        for f in dirty:
+            print(f"  - {f}")
+        print("\nRun: git add -A && git commit -m '<brief-id>: <description>'")
+        sys.exit(1)
+
+
 # ── Main ────────────────────────────────────────────────────────────
 
 def main() -> int:
+    check_uncommitted_work()
     print("Collecting counts...")
     counts = collect_counts()
     endpoints = dict(counts)["API endpoints"]
