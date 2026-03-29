@@ -490,12 +490,17 @@ export default function GuidedSessionPage() {
     [state, updateExercise]
   );
 
+  const isNavigatingRef = useRef(false);
+
   const handleBack = useCallback(() => {
+    if (isNavigatingRef.current) return;
     if (!state || state.exercises.every((ex) => ex.status === "pending")) {
+      isNavigatingRef.current = true;
       router.replace(`/today?date=${date}`);
       return;
     }
     if (confirmLeave) {
+      isNavigatingRef.current = true;
       router.replace(`/today?date=${date}`);
     } else {
       setConfirmLeave(true);

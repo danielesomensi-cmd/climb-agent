@@ -39,8 +39,8 @@ const PHASE_CUES: Record<string, string> = {
 
 const ENCOURAGEMENT_POOL = [
   { text: "Alé duro!", lang: "it-IT" },
-  { text: "Punani!", lang: "it-IT" },
-  { text: "Vaffanculo!", lang: "it-IT" },
+  { text: "Forza!", lang: "it-IT" },
+  { text: "Dai che ce la fai!", lang: "it-IT" },
   { text: "Venga!", lang: "es-ES" },
   { text: "Let's go!", lang: "en-US" },
   { text: "Send it!", lang: "en-US" },

@@ -80,10 +80,11 @@ export const getSessions = () =>
 // Onboarding
 export const getOnboardingDefaults = () =>
   request<OnboardingDefaults>("/api/onboarding/defaults");
-export const completeOnboarding = (data: OnboardingData) =>
+export const completeOnboarding = (data: OnboardingData, extra?: RequestInit) =>
   request<{ profile: AssessmentProfile; macrocycle: Macrocycle }>("/api/onboarding/complete", {
     method: "POST",
     body: JSON.stringify(data),
+    ...extra,
   });
 export const setStartWeek = (offsetWeeks: number) =>
   request<{ status: string; start_date: string; offset_applied: number }>(

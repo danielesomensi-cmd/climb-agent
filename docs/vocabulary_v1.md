@@ -220,6 +220,7 @@ Allowed `pattern` values:
 - `climbing_intervals`
 - `climbing_continuous`
 - `climbing_routes`
+- `grip_transition` *(hangboard grip transition protocols)*
 
 
 ---

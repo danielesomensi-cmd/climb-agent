@@ -109,6 +109,10 @@ export function EquipmentEditor({
   };
 
   const handleSave = () => {
+    if (gyms.length === 0 && !homeEnabled) {
+      alert("Aggiungi almeno una palestra o abilita l'allenamento a casa");
+      return;
+    }
     onSave({
       home_enabled: homeEnabled,
       home: homeEnabled ? home : [],

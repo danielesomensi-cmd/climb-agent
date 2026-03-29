@@ -126,32 +126,48 @@ export default function ReviewPage() {
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      await completeOnboarding(data);
+      await completeOnboarding(data, { signal: controller.signal });
       sessionStorage.removeItem("climb_onboarding_draft");
       setSuccess(true);
       setTimeout(() => {
         router.push("/onboarding/start-week");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error generating the plan");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("La generazione sta impiegando troppo. Riprova.");
+      } else {
+        setError(err instanceof Error ? err.message : "Error generating the plan");
+      }
       setLoading(false);
+    } finally {
+      clearTimeout(timeout);
     }
   };
 
   const handleTestWeek = async () => {
     setLoading(true);
     setError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      await completeOnboarding({ ...data, test_week_requested: true });
+      await completeOnboarding({ ...data, test_week_requested: true }, { signal: controller.signal });
       sessionStorage.removeItem("climb_onboarding_draft");
       setSuccess(true);
       setTimeout(() => {
         router.push("/plan");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error generating the plan");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError("La generazione sta impiegando troppo. Riprova.");
+      } else {
+        setError(err instanceof Error ? err.message : "Error generating the plan");
+      }
       setLoading(false);
+    } finally {
+      clearTimeout(timeout);
     }
   };
 

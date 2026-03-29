@@ -38,8 +38,13 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": null,
-      "cues": [],
+      "description": "Progressive finger warm-up on large holds, gradually increasing grip intensity over 5-10 minutes. Start with jugs, move to slopers, then edges. Focus on smooth, controlled movement with full engagement of the fingers.",
+      "cues": [
+        "Start on the largest holds available",
+        "Gradually decrease hold size over 5-10 minutes",
+        "Keep grip relaxed — no full crimping during warmup",
+        "If using a hangboard, start with 4-finger open grip on the largest edge"
+      ],
       "video_url": null,
       "load_model": "bodyweight_only"
     },
@@ -9069,7 +9074,7 @@
       "recency_group": "technique_lead_specific",
       "equipment_required": [],
       "equipment_required_any": [
-        "lead_wall"
+        "gym_routes"
       ],
       "location_allowed": [
         "gym"

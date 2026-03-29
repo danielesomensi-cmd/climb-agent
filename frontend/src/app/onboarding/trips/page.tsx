@@ -65,6 +65,12 @@ export default function TripsPage() {
         d.setDate(d.getDate() + 1);
         updated.end_date = d.toISOString().split("T")[0];
       }
+      // Prevent end_date before start_date
+      if (field === "end_date" && updated.start_date && value <= updated.start_date) {
+        const d = new Date(updated.start_date);
+        d.setDate(d.getDate() + 1);
+        updated.end_date = d.toISOString().split("T")[0];
+      }
       return updated;
     });
     update("trips", next);

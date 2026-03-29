@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
@@ -29,7 +29,7 @@ function formatRest(seconds: number): string {
   return `${seconds}s`;
 }
 
-export default function SessionPage() {
+function SessionPageInner() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -208,5 +208,13 @@ export default function SessionPage() {
         )}
       </main>
     </>
+  );
+}
+
+export default function SessionPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><p>Loading...</p></div>}>
+      <SessionPageInner />
+    </Suspense>
   );
 }

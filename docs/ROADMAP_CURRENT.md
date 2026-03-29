@@ -91,7 +91,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 
 | Brief | Scope | Effort | Status |
 |-------|-------|--------|--------|
-| B165a | Quick P1 wins — profanity, Suspense, vocabulary sync, equipment editor 0-locations guard, histogram NaN, tabata guard, RP≥OS validation, onboarding timeout, trip dates, gym name validation, availability 0-gyms guard, limitations empty array, guided double-tap | S | Open |
+| B165a | Quick P1 wins — profanity, Suspense, vocabulary sync, equipment editor 0-locations guard, histogram NaN, RP≥OS validation, onboarding timeout, trip dates, availability 0-gyms guard, limitations empty array, guided double-tap, recovery code tests, finger_warmup_generic description | S | ✅ Done (2026-03-29) |
 | B165b | Replanner recovery_multiplier fix + age threshold shift to 50 (high-risk: replanner_v1.py, STOP gate required) | M | Open |
 | B165c | Frontend error handling sweep — replace ~20 `.catch(() => {})` with error states/toasts (subsumes R141) | M | Open |
 | B165d | Security hardening — atomic file writes, rate limiting, `secrets` for recovery codes, error response sanitization, `PUT /api/state` key whitelist | M | Open |

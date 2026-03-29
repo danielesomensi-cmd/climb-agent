@@ -92,10 +92,11 @@ export default function LimitationsPage() {
     }
   };
 
-  // Valid if no limitations, or all have area+side+severity
+  // Valid if no limitations, or has at least one fully-filled limitation
   const isValid =
     !hasLimitations ||
-    limitations.every((l) => l.area !== "" && l.side !== "" && l.severity !== "");
+    (limitations.length > 0 &&
+      limitations.every((l) => l.area !== "" && l.side !== "" && l.severity !== ""));
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">

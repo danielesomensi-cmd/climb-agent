@@ -194,7 +194,7 @@ export default function OutdoorPage() {
                       .sort(([a], [b]) => a.localeCompare(b))
                       .map(([grade, count]) => {
                         const maxCount = Math.max(
-                          ...Object.values(stats.grade_histogram),
+                          ...Object.values(stats.grade_histogram), 1,
                         );
                         const pct = (count / maxCount) * 100;
 

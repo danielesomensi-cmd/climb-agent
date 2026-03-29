@@ -180,6 +180,9 @@ export default function AvailabilityPage() {
                             </button>
                           </div>
 
+                          {s.preferred_location === "gym" && gyms.length === 0 && (
+                            <p className="text-[10px] text-red-500">Aggiungi una palestra in Locations</p>
+                          )}
                           {s.preferred_location === "gym" && gyms.length > 0 && (
                             <Select
                               value={s.gym_id ?? ""}
@@ -297,7 +300,12 @@ export default function AvailabilityPage() {
         >
           Back
         </Button>
-        <Button onClick={() => router.push("/onboarding/trips")}>
+        <Button
+          disabled={gyms.length === 0 && Object.values(availability).some(day =>
+            day && Object.values(day).some((s: SlotData) => s.available && s.preferred_location === "gym")
+          )}
+          onClick={() => router.push("/onboarding/trips")}
+        >
           Next
         </Button>
       </div>

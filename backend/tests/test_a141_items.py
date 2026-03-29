@@ -21,11 +21,11 @@ class TestFallPracticeExercise:
         fall = [e for e in exercises if e["id"] == "fall_practice"]
         assert len(fall) == 1, "fall_practice exercise not found in catalog"
 
-    def test_requires_lead_wall(self):
+    def test_requires_gym_routes(self):
         exercises = _load_exercises()
         fall = next(e for e in exercises if e["id"] == "fall_practice")
-        assert "lead_wall" in fall.get("equipment_required_any", []), \
-            "fall_practice should require lead_wall in equipment_required_any"
+        assert "gym_routes" in fall.get("equipment_required_any", []), \
+            "fall_practice should require gym_routes in equipment_required_any"
 
     def test_gym_only(self):
         exercises = _load_exercises()

@@ -101,7 +101,14 @@ export function ProfileAssessmentEditor({
     }
   }, [open, body, grades, tests]);
 
-  const isValid = leadMaxRp !== "" && leadMaxOs !== "";
+  const rpOsError = (() => {
+    if (leadMaxRp && leadMaxOs && LEAD_GRADES.indexOf(leadMaxRp) < LEAD_GRADES.indexOf(leadMaxOs))
+      return "Il grado RP deve essere ≥ del grado OS (lead)";
+    if (boulderMaxRp && boulderMaxOs && BOULDER_GRADES.indexOf(boulderMaxRp) < BOULDER_GRADES.indexOf(boulderMaxOs))
+      return "Il grado RP deve essere ≥ del grado OS (boulder)";
+    return null;
+  })();
+  const isValid = leadMaxRp !== "" && leadMaxOs !== "" && !rpOsError;
 
   function buildPatch(): Record<string, unknown> {
     const patch: Record<string, unknown> = {};
@@ -376,6 +383,9 @@ export function ProfileAssessmentEditor({
               </div>
             </div>
 
+            {rpOsError && (
+              <p className="text-sm text-red-500 mt-2">{rpOsError}</p>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={onCancel}>
                 Cancel
