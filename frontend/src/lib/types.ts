@@ -235,6 +235,7 @@ export interface OnboardingData {
   };
   preferences: {
     finger_training_device: "hangboard" | "loading_pin";
+    grade_system_boulder?: "font" | "v_scale";
   };
   trips: Array<{
     name: string;

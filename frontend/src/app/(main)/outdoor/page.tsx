@@ -7,9 +7,13 @@ import { getOutdoorSessions, getOutdoorStats } from "@/lib/api";
 import type { OutdoorSession, OutdoorStats } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useUserState } from "@/lib/hooks/use-state";
+import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 
 export default function OutdoorPage() {
   const { isLoaded: authReady } = useAuth();
+  const { state: userState } = useUserState(authReady);
+  const gradeSystem: BoulderGradeSystem = ((userState as Record<string, unknown>)?.preferences as Record<string, unknown>)?.grade_system_boulder as BoulderGradeSystem || "font";
   const [sessions, setSessions] = useState<(OutdoorSession & { load_score?: number })[]>([]);
   const [stats, setStats] = useState<OutdoorStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +72,7 @@ export default function OutdoorPage() {
               />
               <StatCard
                 label="Top grade"
-                value={stats.top_grade_sent || "—"}
+                value={stats.top_grade_sent ? displayBoulderGrade(stats.top_grade_sent, gradeSystem) : "—"}
               />
             </div>
 
@@ -107,7 +111,7 @@ export default function OutdoorPage() {
                           <span>{totalRoutes} routes</span>
                           {topGrade && (
                             <Badge variant="outline" className="text-[10px]">
-                              {topGrade}
+                              {displayBoulderGrade(topGrade, gradeSystem)}
                             </Badge>
                           )}
                         </div>
@@ -161,7 +165,7 @@ export default function OutdoorPage() {
                               {s.discipline}
                             </Badge>
                             <span>{s.routes?.length || 0} routes</span>
-                            {topGrade && <span>top: {topGrade}</span>}
+                            {topGrade && <span>top: {displayBoulderGrade(topGrade, gradeSystem)}</span>}
                           </div>
                         </div>
                         {s.load_score != null && (

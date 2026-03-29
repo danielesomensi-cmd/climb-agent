@@ -1,21 +1,26 @@
 "use client";
 
 import type { AssessmentProfile } from "@/lib/types";
+import { getRadarLabels, type Discipline } from "@/lib/gradeUtils";
 
-const AXES: { key: keyof AssessmentProfile; label: string }[] = [
-  { key: "finger_strength", label: "Fingers" },
-  { key: "pulling_strength", label: "Pulling" },
-  { key: "power_endurance", label: "Power End." },
-  { key: "technique", label: "Technique" },
-  { key: "endurance", label: "Endurance" },
+const AXIS_KEYS: (keyof AssessmentProfile)[] = [
+  "finger_strength",
+  "pulling_strength",
+  "power_endurance",
+  "technique",
+  "endurance",
 ];
 
 interface RadarChartProps {
   profile: AssessmentProfile;
   size?: number;
+  discipline?: Discipline;
 }
 
-export function RadarChart({ profile, size = 280 }: RadarChartProps) {
+export function RadarChart({ profile, size = 280, discipline }: RadarChartProps) {
+  const labels = getRadarLabels(discipline);
+  const AXES = AXIS_KEYS.map((key) => ({ key, label: labels[key] ?? key }));
+
   const cx = size / 2;
   const cy = size / 2;
   const r = size / 2 - 40;

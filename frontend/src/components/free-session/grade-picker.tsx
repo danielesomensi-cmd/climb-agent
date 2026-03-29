@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 
 const FONT_GRADES = [
   "4A", "4B", "4C",
@@ -15,9 +16,10 @@ const FONT_GRADES = [
 interface GradePickerProps {
   value: string;
   onChange: (grade: string) => void;
+  gradeSystem?: BoulderGradeSystem;
 }
 
-export function GradePicker({ value, onChange }: GradePickerProps) {
+export function GradePicker({ value, onChange, gradeSystem = "font" }: GradePickerProps) {
   const currentIndex = FONT_GRADES.indexOf(value.toUpperCase());
   const idx = currentIndex >= 0 ? currentIndex : 9; // default 6A
 
@@ -28,6 +30,8 @@ export function GradePicker({ value, onChange }: GradePickerProps) {
   const next = useCallback(() => {
     if (idx < FONT_GRADES.length - 1) onChange(FONT_GRADES[idx + 1]);
   }, [idx, onChange]);
+
+  const displayGrade = FONT_GRADES[idx] || value;
 
   return (
     <div className="flex items-center justify-center gap-3">
@@ -41,7 +45,7 @@ export function GradePicker({ value, onChange }: GradePickerProps) {
         <ChevronLeft className="size-6" />
       </Button>
       <span className="min-w-[80px] text-center text-3xl font-bold tabular-nums">
-        {FONT_GRADES[idx] || value}
+        {displayBoulderGrade(displayGrade, gradeSystem)}
       </span>
       <Button
         variant="outline"

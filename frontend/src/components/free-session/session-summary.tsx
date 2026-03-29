@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 
 interface SummaryData {
   total_climbs: number;
@@ -23,6 +24,7 @@ interface SessionSummaryProps {
   climbs: Array<{ grade: string; status: string }>;
   startedAt?: number; // Date.now() when session started
   onSave: (feel?: string, notes?: string) => void;
+  gradeSystem?: BoulderGradeSystem;
 }
 
 export function SessionSummary({
@@ -35,6 +37,7 @@ export function SessionSummary({
   climbs,
   startedAt,
   onSave,
+  gradeSystem = "font",
 }: SessionSummaryProps) {
   const [feel, setFeel] = useState<string | undefined>();
   const [notes, setNotes] = useState("");
@@ -142,9 +145,9 @@ export function SessionSummary({
 
         {summary.max_grade_sent && (
           <div className="mt-3 text-center text-sm">
-            Max sent: <span className="font-bold text-emerald-400">{summary.max_grade_sent}</span>
+            Max sent: <span className="font-bold text-emerald-400">{surface === "gym_routes" ? summary.max_grade_sent : displayBoulderGrade(summary.max_grade_sent, gradeSystem)}</span>
             {summary.max_grade_attempted && summary.max_grade_attempted !== summary.max_grade_sent && (
-              <> &middot; Max tried: <span className="font-bold text-red-400">{summary.max_grade_attempted}</span></>
+              <> &middot; Max tried: <span className="font-bold text-red-400">{surface === "gym_routes" ? summary.max_grade_attempted : displayBoulderGrade(summary.max_grade_attempted, gradeSystem)}</span></>
             )}
           </div>
         )}
@@ -161,7 +164,7 @@ export function SessionSummary({
               const attPct = (counts.attempted / maxCount) * 100;
               return (
                 <div key={grade} className="flex items-center gap-2">
-                  <span className="w-8 text-right text-xs font-medium">{grade}</span>
+                  <span className="w-8 text-right text-xs font-medium">{surface === "gym_routes" ? grade : displayBoulderGrade(grade, gradeSystem)}</span>
                   <div className="flex flex-1 gap-px">
                     {counts.sent > 0 && (
                       <div

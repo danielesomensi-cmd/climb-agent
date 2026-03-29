@@ -76,6 +76,14 @@ When `loading_pin` is selected:
 - Duration test uses `lp_duration_test` instead of `test_max_hang_duration_20mm`
 - Baselines use `baselines.loading_pin` (per-hand)
 
+### 1.4 Boulder grade display system
+
+Allowed `grade_system_boulder` values:
+- `font` (default) — Fontainebleau scale (6A, 7B, 8A+)
+- `v_scale` — Hueco/V-scale (V4, V8, V11)
+
+Engine always stores grades in Fontainebleau. This preference is render-only — the frontend converts at display time via `displayBoulderGrade()`.
+
 ---
 
 ## 2) Exercise schema (canonical fields)

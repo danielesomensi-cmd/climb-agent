@@ -20,6 +20,8 @@ import {
 import { CircuitSetup, type CircuitConfig } from "@/components/circuit/CircuitSetup";
 import { CircuitTimer, type CircuitResult } from "@/components/circuit/CircuitTimer";
 import { CircuitCompletion } from "@/components/circuit/CircuitCompletion";
+import { useUserState } from "@/lib/hooks/use-state";
+import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -128,6 +130,8 @@ function FreeSessionContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded: authReady } = useAuth();
+  const { state: userState } = useUserState(authReady);
+  const gradeSystem: BoulderGradeSystem = ((userState as Record<string, unknown>)?.preferences as Record<string, unknown>)?.grade_system_boulder as BoulderGradeSystem || "font";
   const paramContext = searchParams.get("context") || "standalone";
   const paramDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
   const [step, setStep] = useState<Step>("surface");
@@ -565,7 +569,7 @@ function FreeSessionContent() {
                   </div>
                   <p className="text-sm text-muted-foreground">{p.description}</p>
                   <div className="flex gap-3 text-xs text-muted-foreground">
-                    {p.target_grade && <span>~{p.target_grade}</span>}
+                    {p.target_grade && <span>~{displayBoulderGrade(p.target_grade, gradeSystem)}</span>}
                     <span>{Math.floor(p.rest_seconds / 60)} min rest</span>
                     <span>{p.target_climbs} climbs</span>
                     <span>{p.duration}</span>
@@ -591,6 +595,7 @@ function FreeSessionContent() {
             onFinish={handleFinish}
             onCancel={handleCancel}
             onClimbLogged={(climb) => setSessionClimbs((prev) => [...prev, climb])}
+            gradeSystem={gradeSystem}
           />
         )}
 
@@ -606,6 +611,7 @@ function FreeSessionContent() {
             climbs={sessionClimbs}
             startedAt={sessionStartedAt}
             onSave={handleSaveSummary}
+            gradeSystem={gradeSystem}
           />
         )}
 

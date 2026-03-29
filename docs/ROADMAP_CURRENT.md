@@ -67,13 +67,13 @@ Add discipline selector in onboarding: Lead / Boulder / Both.
 - Onboarding flow adapts: Boulder skips `target_style`, asks boulder target grade; Both asks both grades
 - Backend: `macrocycle_v1.py` already has boulder durations (base:2, S&P:4, PE:1, perf:2, deload:1). Activate for `boulder_grade`. Add `all_round` using lead config + merged pool.
 
-**Depends on:** A-B2, A-B3
+**Depends on:** ~~A-B2~~ ✅, A-B3
 
 ### A-B2 — Grade display preference (Font / V-scale)
 
-**Priority:** P1.5 | **Status:** Open | **Type:** A (feature) | **Effort:** S
+**Priority:** P1.5 | **Status:** ✅ Done | **Type:** A (feature) | **Effort:** S
 
-New user preference `grade_system_boulder: "font" | "v_scale"` (default: font). Engine internals unchanged (always Fontainebleau). Frontend utility `displayBoulderGrade(fontGrade, pref)` converts at render time. Set during onboarding, changeable in settings. Conversion table: 6A=V4, 7A=V6, 7C+=V10, 8A=V11, etc.
+New user preference `grade_system_boulder: "font" | "v_scale"` (default: font). Engine internals unchanged (always Fontainebleau). Frontend utility `displayBoulderGrade(fontGrade, pref)` converts at render time. Settings toggle added. Applied to: GradePicker, ClimbLogger, SessionSummary, outdoor page, free-session presets. 14 unit tests. (2026-03-29)
 
 ### A-B3 — Self-eval weakness options per discipline
 
@@ -83,9 +83,9 @@ Discipline-conditional self-eval options. Universal options kept (cant_hold_hard
 
 ### A-B4 — Assessment radar discipline-aware labels
 
-**Priority:** P1.5 | **Status:** Open | **Type:** A (frontend) | **Effort:** XS
+**Priority:** P1.5 | **Status:** ✅ Done | **Type:** A (frontend) | **Effort:** XS
 
-Same 5 axes, different display labels per discipline. Example: `power_endurance` → "Power Endurance" (lead) / "Work Capacity" (boulder). `technique` → "Technique & Tactics" (lead) / "Movement & Reading" (boulder). Frontend-only, axis IDs unchanged.
+Same 5 axes, different display labels per discipline. RadarChart now accepts `discipline` prop, labels switch between lead/boulder/all_round. `getDiscipline()` infers from goal_type. 5 unit tests. (2026-03-29)
 
 ---
 

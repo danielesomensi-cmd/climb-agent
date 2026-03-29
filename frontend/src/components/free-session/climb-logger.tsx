@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { GradePicker } from "./grade-picker";
 import { RestTimer } from "./rest-timer";
 import { logFreeClimb } from "@/lib/api";
+import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 
 interface Climb {
   index: number;
@@ -42,6 +43,7 @@ interface ClimbLoggerProps {
   onFinish: () => void;
   onCancel?: () => void;
   onClimbLogged?: (climb: LoggedClimb) => void;
+  gradeSystem?: BoulderGradeSystem;
 }
 
 const isLead = (surface: string) => surface === "gym_routes";
@@ -59,6 +61,7 @@ export function ClimbLogger({
   onFinish,
   onCancel,
   onClimbLogged,
+  gradeSystem = "font",
 }: ClimbLoggerProps) {
   // Form state
   const [grade, setGrade] = useState(targetGrade || "6A");
@@ -183,7 +186,7 @@ export function ClimbLogger({
         </h2>
         {sessionMode === "template" && targetGrade && restSeconds && (
           <p className="text-sm text-muted-foreground">
-            Target: ~{targetGrade} &middot; Rest: {Math.floor(restSeconds / 60)}:{String(restSeconds % 60).padStart(2, "0")}
+            Target: ~{isLead(surface) ? targetGrade : displayBoulderGrade(targetGrade, gradeSystem)} &middot; Rest: {Math.floor(restSeconds / 60)}:{String(restSeconds % 60).padStart(2, "0")}
           </p>
         )}
       </div>
@@ -198,7 +201,7 @@ export function ClimbLogger({
       {/* LOG FORM */}
       <div className="rounded-xl border bg-card p-4">
         <div className="mb-4">
-          <GradePicker value={grade} onChange={setGrade} />
+          <GradePicker value={grade} onChange={setGrade} gradeSystem={isLead(surface) ? "font" : gradeSystem} />
         </div>
 
         {/* Boulder status selector */}
@@ -341,7 +344,7 @@ export function ClimbLogger({
             {climbs.map((c) => (
               <div key={c.index} className="flex items-center gap-2 text-sm">
                 <span className="w-6 text-right text-xs text-muted-foreground">#{c.index}</span>
-                <span className="font-medium">{c.grade}</span>
+                <span className="font-medium">{isLead(surface) ? c.grade : displayBoulderGrade(c.grade, gradeSystem)}</span>
                 <span className={`flex items-center gap-0.5 ${
                   c.status === "flash" ? "text-amber-400" :
                   c.status === "sent" ? "text-emerald-400" : "text-red-400"

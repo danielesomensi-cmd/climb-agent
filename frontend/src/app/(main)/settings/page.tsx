@@ -112,8 +112,11 @@ export default function SettingsPage() {
     home?: string[];
     gyms?: Array<{ gym_id: string; name: string; equipment: string[] }>;
   };
-  const fingerDevice = ((state as Record<string, unknown>)?.preferences as Record<string, unknown>)?.finger_training_device as "hangboard" | "loading_pin" | undefined ?? "hangboard";
+  const prefs = (state as Record<string, unknown>)?.preferences as Record<string, unknown> | undefined;
+  const fingerDevice = prefs?.finger_training_device as "hangboard" | "loading_pin" | undefined ?? "hangboard";
+  const gradeSystemBoulder = (prefs?.grade_system_boulder as "font" | "v_scale" | undefined) ?? "font";
   const [savingDevice, setSavingDevice] = useState(false);
+  const [savingGradeSystem, setSavingGradeSystem] = useState(false);
   const availability = (state?.availability ?? {}) as Record<
     string,
     Record<string, { available: boolean; preferred_location?: string; gym_id?: string }>
@@ -707,7 +710,7 @@ export default function SettingsPage() {
               <CardHeader>
                 <CardTitle className="text-base">Session preferences</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">Voice cues</p>
@@ -722,6 +725,48 @@ export default function SettingsPage() {
                       setVoiceCuesEnabled(checked);
                     }}
                   />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* ----- Display preferences ----- */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Display preferences</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Boulder grade system</p>
+                    <p className="text-xs text-muted-foreground">
+                      {gradeSystemBoulder === "font"
+                        ? "Fontainebleau (6A, 7B, 8A+)"
+                        : "V-scale (V4, V8, V11)"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={savingGradeSystem}
+                    onClick={async () => {
+                      const next = gradeSystemBoulder === "font" ? "v_scale" : "font";
+                      setSavingGradeSystem(true);
+                      try {
+                        await putState({ preferences: { grade_system_boulder: next } });
+                        await refresh();
+                      } catch (e) {
+                        setActionError(e instanceof Error ? e.message : "Failed to save");
+                      } finally {
+                        setSavingGradeSystem(false);
+                      }
+                    }}
+                  >
+                    {savingGradeSystem
+                      ? "..."
+                      : gradeSystemBoulder === "font"
+                        ? "Switch to V-scale"
+                        : "Switch to Font"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>

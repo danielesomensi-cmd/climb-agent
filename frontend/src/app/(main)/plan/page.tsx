@@ -18,6 +18,7 @@ import {
   type RegenerateStartOption,
 } from "@/components/training/regenerate-plan-sheet";
 import { PERIODIZATION_RATIONALE, PHASE_RATIONALES } from "@/lib/phase-rationales";
+import { getDiscipline } from "@/lib/gradeUtils";
 import type { Phase } from "@/lib/types";
 
 /** Phase labels */
@@ -67,6 +68,7 @@ export default function PlanPage() {
   const macrocycle = state?.macrocycle ?? null;
   const profile = state?.assessment?.profile ?? null;
   const currentWeek = macrocycle ? computeCurrentWeek(macrocycle.start_date) : undefined;
+  const discipline = getDiscipline((state?.goal as Record<string, unknown>)?.goal_type as string | undefined);
 
   const checkStale = useCallback(async () => {
     try {
@@ -158,7 +160,7 @@ export default function PlanPage() {
                   <CardTitle className="text-base">Assessment profile</CardTitle>
                 </CardHeader>
                 <CardContent className="flex justify-center">
-                  <RadarChart profile={profile} />
+                  <RadarChart profile={profile} discipline={discipline} />
                 </CardContent>
               </Card>
             )}
