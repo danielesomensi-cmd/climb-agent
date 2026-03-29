@@ -14,9 +14,11 @@ interface WeekProgressBarProps {
   weekPlan: WeekPlan;
   /** Free sessions for the week — each should have load_score */
   freeSessions?: Array<Record<string, unknown>>;
+  /** When true, free session data has finished loading */
+  freeSessionsLoaded?: boolean;
 }
 
-export function WeekProgressBar({ weekPlan, freeSessions }: WeekProgressBarProps) {
+export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = true }: WeekProgressBarProps) {
   const days = weekPlan.weeks?.[0]?.days ?? [];
   const allSessions = days.flatMap((d) => d.sessions ?? []).filter((s) => s.session_id);
   const totalSessions = allSessions.length;
@@ -88,7 +90,7 @@ export function WeekProgressBar({ weekPlan, freeSessions }: WeekProgressBarProps
               : doneLoad < totalLoad * 0.8 && doneSessions > 0 ? "text-amber-400"
               : ""
             }>
-              {doneLoad}
+              {freeSessionsLoaded ? doneLoad : "—"}
             </span>
             {" / "}{totalLoad}
           </>
