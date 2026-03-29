@@ -23,7 +23,10 @@ export function WeekProgressBar({ weekPlan, freeSessions }: WeekProgressBarProps
   if (totalSessions === 0) return null;
 
   const doneSessions = allSessions.filter((s) => s.status === "done").length;
-  const totalLoad = allSessions.reduce((sum, s) => sum + (s.estimated_load_score || 0), 0);
+  // B164 follow-up: align with week header + report — use planned_load from summary
+  const wls = weekPlan.weekly_load_summary;
+  const totalLoad = wls?.planned_load ?? wls?.total_load ??
+    allSessions.reduce((sum, s) => sum + (s.estimated_load_score || 0), 0);
 
   // Actual load: prefer session_load_score (post-resolve actual), fall back to estimated
   const doneSessionLoad = allSessions
