@@ -221,7 +221,20 @@ export default function ReviewPage() {
           {/* Goal */}
           <SummaryRow
             label="Goal"
-            value={`${data.goal.target_grade} ${data.goal.discipline} (${data.goal.target_style}), by ${data.goal.deadline}`}
+            value={(() => {
+              const g = data.goal;
+              const parts = [];
+              if (g.discipline === "both") {
+                parts.push(`Lead ${g.target_grade}`);
+                if (g.target_boulder_grade) parts.push(`Boulder ${g.target_boulder_grade}`);
+                parts.push(`(${g.target_style})`);
+              } else {
+                parts.push(`${g.target_grade} ${g.discipline}`);
+                if (g.discipline !== "boulder") parts.push(`(${g.target_style})`);
+              }
+              parts.push(`by ${g.deadline}`);
+              return parts.join(" ");
+            })()}
             editHref="/onboarding/goals"
             router={router}
           />

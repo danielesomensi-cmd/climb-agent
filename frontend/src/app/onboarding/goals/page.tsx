@@ -47,31 +47,46 @@ export default function GoalsPage() {
   const grades = data.grades;
 
   const discipline = goal.discipline || "lead";
+  const showLeadTarget = discipline === "lead" || discipline === "both";
+  const showBoulderTarget = discipline === "boulder" || discipline === "both";
+  const showTargetStyle = discipline !== "boulder";
   const targetStyle = goal.target_style || "redpoint";
 
-  // Derive the current grade based on discipline + style
-  const currentGrade = useMemo(() => {
-    if (discipline === "lead") {
-      return targetStyle === "onsight" ? grades.lead_max_os : grades.lead_max_rp;
-    }
-    return targetStyle === "onsight"
-      ? (grades.boulder_max_os ?? "")
-      : (grades.boulder_max_rp ?? "");
-  }, [discipline, targetStyle, grades]);
+  // Derive the current grade for lead target (used for assessment)
+  const currentLeadGrade = useMemo(() => {
+    return targetStyle === "onsight" ? grades.lead_max_os : grades.lead_max_rp;
+  }, [targetStyle, grades]);
+
+  // Derive the current grade for boulder target
+  const currentBoulderGrade = useMemo(() => {
+    return grades.boulder_max_rp ?? "";
+  }, [grades]);
+
+  // The "main" current grade (for display and gap computation)
+  const currentGrade = discipline === "boulder" ? currentBoulderGrade : currentLeadGrade;
 
   // Derive goal_type from discipline
-  const goalType = discipline === "lead" ? "lead_grade" : "boulder_grade";
+  const goalType = discipline === "lead"
+    ? "lead_grade"
+    : discipline === "boulder"
+      ? "boulder_grade"
+      : "all_round";
 
-  // Grade list for the chosen discipline
-  const gradeList = discipline === "lead" ? LEAD_GRADES : BOULDER_GRADES;
+  // Lead target grades (above current)
+  const leadCurrentIdx = gradeIndex(currentLeadGrade, LEAD_GRADES);
+  const leadTargetGrades = leadCurrentIdx >= 0
+    ? LEAD_GRADES.slice(leadCurrentIdx + 1)
+    : LEAD_GRADES;
 
-  // Filter target grades: only those strictly above current
-  const currentIdx = gradeIndex(currentGrade, gradeList);
-  const targetGrades = currentIdx >= 0
-    ? gradeList.slice(currentIdx + 1)
-    : gradeList;
+  // Boulder target grades (above current)
+  const boulderCurrentIdx = gradeIndex(currentBoulderGrade, BOULDER_GRADES);
+  const boulderTargetGrades = boulderCurrentIdx >= 0
+    ? BOULDER_GRADES.slice(boulderCurrentIdx + 1)
+    : BOULDER_GRADES;
 
-  // Gap in half-grades between current and target
+  // For single-discipline: use the discipline's grade list
+  const gradeList = discipline === "boulder" ? BOULDER_GRADES : LEAD_GRADES;
+  const currentIdx = discipline === "boulder" ? boulderCurrentIdx : leadCurrentIdx;
   const targetIdx = gradeIndex(goal.target_grade, gradeList);
   const gap = targetIdx >= 0 && currentIdx >= 0 ? targetIdx - currentIdx : 0;
 
@@ -103,14 +118,16 @@ export default function GoalsPage() {
   const setGoal = (
     fields: Partial<typeof goal>,
   ) => {
+    const nextDiscipline = fields.discipline ?? discipline;
+    const nextGoalType = nextDiscipline === "lead"
+      ? "lead_grade"
+      : nextDiscipline === "boulder"
+        ? "boulder_grade"
+        : "all_round";
     update("goal", {
       ...goal,
       ...fields,
-      goal_type: fields.discipline
-        ? fields.discipline === "lead"
-          ? "lead_grade"
-          : "boulder_grade"
-        : goalType,
+      goal_type: nextGoalType,
     });
   };
 
@@ -120,26 +137,32 @@ export default function GoalsPage() {
     const nextStyle = fields.target_style ?? targetStyle;
 
     let nextCurrent: string;
-    if (nextDiscipline === "lead") {
-      nextCurrent = nextStyle === "onsight" ? grades.lead_max_os : grades.lead_max_rp;
+    if (nextDiscipline === "boulder") {
+      nextCurrent = grades.boulder_max_rp ?? "";
     } else {
-      nextCurrent = nextStyle === "onsight"
-        ? (grades.boulder_max_os ?? "")
-        : (grades.boulder_max_rp ?? "");
+      nextCurrent = nextStyle === "onsight" ? grades.lead_max_os : grades.lead_max_rp;
     }
 
     setGoal({
       ...fields,
       current_grade: nextCurrent,
-      // Reset target when discipline/style changes (it may no longer be valid)
-      ...(fields.discipline !== undefined || fields.target_style !== undefined
+      // Reset targets when discipline changes
+      ...(fields.discipline !== undefined
+        ? { target_grade: "", target_boulder_grade: undefined }
+        : {}),
+      // Reset target when style changes
+      ...(fields.target_style !== undefined && !fields.discipline
         ? { target_grade: "" }
         : {}),
     });
   };
 
+  // Validation
+  const hasLeadTarget = !showLeadTarget || goal.target_grade !== "";
+  const hasBoulderTarget = !showBoulderTarget || (discipline === "both" ? !!goal.target_boulder_grade : goal.target_grade !== "");
   const isValid =
-    goal.target_grade !== "" &&
+    hasLeadTarget &&
+    hasBoulderTarget &&
     goal.deadline !== "" &&
     !isTooLow &&
     !isDeadlinePast;
@@ -157,7 +180,7 @@ export default function GoalsPage() {
             <RadioGroup
               value={discipline}
               onValueChange={(v) => syncAndSetGoal({ discipline: v })}
-              className="flex gap-6"
+              className="flex gap-4"
             >
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="lead" id="disc-lead" />
@@ -167,55 +190,97 @@ export default function GoalsPage() {
                 <RadioGroupItem value="boulder" id="disc-boulder" />
                 <Label htmlFor="disc-boulder">Boulder</Label>
               </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="both" id="disc-both" />
+                <Label htmlFor="disc-both">Both</Label>
+              </div>
             </RadioGroup>
           </div>
 
-          {/* Target style */}
-          <div className="space-y-3">
-            <Label>Target style</Label>
-            <RadioGroup
-              value={targetStyle}
-              onValueChange={(v) => syncAndSetGoal({ target_style: v })}
-              className="flex gap-6"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="redpoint" id="style-rp" />
-                <Label htmlFor="style-rp">Redpoint</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="onsight" id="style-os" />
-                <Label htmlFor="style-os">Onsight</Label>
-              </div>
-            </RadioGroup>
-          </div>
+          {/* Target style — hidden for boulder-only */}
+          {showTargetStyle && (
+            <div className="space-y-3">
+              <Label>Target style</Label>
+              <RadioGroup
+                value={targetStyle}
+                onValueChange={(v) => syncAndSetGoal({ target_style: v })}
+                className="flex gap-6"
+              >
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="redpoint" id="style-rp" />
+                  <Label htmlFor="style-rp">Redpoint</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <RadioGroupItem value="onsight" id="style-os" />
+                  <Label htmlFor="style-os">Onsight</Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
 
           {/* Current grade display */}
           {currentGrade && (
             <div className="rounded-md bg-muted px-3 py-2 text-sm">
-              Your current grade ({discipline} {targetStyle}):{" "}
+              Your current grade ({discipline === "both" ? "lead" : discipline}{" "}
+              {showTargetStyle ? targetStyle : "redpoint"}):{" "}
               <strong>{currentGrade}</strong>
+              {discipline === "both" && currentBoulderGrade && (
+                <span className="ml-2">
+                  · boulder: <strong>{currentBoulderGrade}</strong>
+                </span>
+              )}
             </div>
           )}
 
-          {/* Target grade */}
-          <div className="space-y-2">
-            <Label>Target grade *</Label>
-            <Select
-              value={goal.target_grade}
-              onValueChange={(v) => setGoal({ target_grade: v, current_grade: currentGrade })}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select grade" />
-              </SelectTrigger>
-              <SelectContent>
-                {targetGrades.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Lead target grade */}
+          {showLeadTarget && (
+            <div className="space-y-2">
+              <Label>{discipline === "both" ? "Lead target grade *" : "Target grade *"}</Label>
+              <Select
+                value={goal.target_grade}
+                onValueChange={(v) => setGoal({ target_grade: v, current_grade: currentLeadGrade })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {leadTargetGrades.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Boulder target grade */}
+          {showBoulderTarget && (
+            <div className="space-y-2">
+              <Label>{discipline === "both" ? "Boulder target grade *" : "Target grade *"}</Label>
+              <Select
+                value={discipline === "both" ? (goal.target_boulder_grade ?? "") : goal.target_grade}
+                onValueChange={(v) => {
+                  if (discipline === "both") {
+                    setGoal({ target_boulder_grade: v });
+                  } else {
+                    setGoal({ target_grade: v, current_grade: currentBoulderGrade });
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {boulderTargetGrades.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Deadline */}
           <div className="space-y-2">

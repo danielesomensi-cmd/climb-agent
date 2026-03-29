@@ -376,13 +376,24 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <InfoRow
-                  label="Target grade"
-                  value={(goal.target_grade as string) || "—"}
+                  label="Discipline"
+                  value={
+                    (goal.discipline as string) === "both"
+                      ? "Both (Lead + Boulder)"
+                      : (goal.discipline as string) || "—"
+                  }
                 />
                 <InfoRow
-                  label="Discipline"
-                  value={(goal.discipline as string) || "—"}
+                  label={goal.discipline === "both" ? "Lead target" : "Target grade"}
+                  value={(goal.target_grade as string) || "—"}
                 />
+                {(goal.discipline === "boulder" || goal.discipline === "both") &&
+                  !!goal.target_boulder_grade && (
+                    <InfoRow
+                      label="Boulder target"
+                      value={String(goal.target_boulder_grade)}
+                    />
+                  )}
                 <InfoRow
                   label="Deadline"
                   value={

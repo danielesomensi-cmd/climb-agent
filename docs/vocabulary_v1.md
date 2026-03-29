@@ -774,9 +774,9 @@ Example (illustrative only):
 
 Allowed `goal_type` values:
 
-- `lead_grade` *(implemented in v1)*
-- `boulder_grade` *(planned — A-B1)*
-- `all_round` *(planned — A-B1; uses lead macrocycle + merged session pool, DD-B3)*
+- `lead_grade` — discipline = lead
+- `boulder_grade` — discipline = boulder (10-week macrocycle, boulder session pool)
+- `all_round` — discipline = both (lead durations + merged lead/boulder session pool, DD-B3)
 - `outdoor_season` *(future)*
 - `maintenance` *(future)*
 

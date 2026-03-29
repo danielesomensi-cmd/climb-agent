@@ -256,14 +256,14 @@ def _compute_phase_durations(
     Raises:
         ValueError: If total_weeks < 9 (minimum structural requirement).
     """
-    min_weeks = 5 if discipline == "boulder" else _MIN_TOTAL_WEEKS
+    is_boulder = discipline == "boulder"
+    min_weeks = 5 if is_boulder else _MIN_TOTAL_WEEKS
     if total_weeks < min_weeks:
         raise ValueError(
             f"total_weeks must be >= {min_weeks} "
             f"(minimum structural requirement), got {total_weeks}"
         )
-
-    base_dur = _BASE_DURATIONS_BOULDER if discipline == "boulder" else _BASE_DURATIONS
+    base_dur = _BASE_DURATIONS_BOULDER if is_boulder else _BASE_DURATIONS
     durations = dict(base_dur)
 
     # Find the weakest axis
@@ -276,7 +276,7 @@ def _compute_phase_durations(
             weakest_axis = axis
 
     # Apply adjustment if primary weakness is below threshold
-    shrink_floor = 1 if discipline == "boulder" else 2
+    shrink_floor = 1 if is_boulder else 2
     if weakest_axis and weakest_score < 50 and weakest_axis in _WEAKNESS_ADJUSTMENTS:
         extend_phase, shrink_phase = _WEAKNESS_ADJUSTMENTS[weakest_axis]
         if durations[shrink_phase] > shrink_floor:
@@ -285,14 +285,14 @@ def _compute_phase_durations(
 
     # Enforce floor: min 1 week per non-deload phase (boulder PE can be 1),
     # min 2 for lead non-deload phases, min 1 for deload
-    floor = 1 if discipline == "boulder" else 2
+    floor = 1 if is_boulder else 2
     for phase_id in ("base", "strength_power", "power_endurance", "performance"):
         durations[phase_id] = max(floor, durations[phase_id])
     durations["deload"] = max(1, durations["deload"])
 
     # Scale to total_weeks — flex phase absorbs surplus/deficit
-    # Boulder: strength_power is most flexible; Lead: base is most flexible
-    flex_phase = "strength_power" if discipline == "boulder" else "base"
+    # Boulder: strength_power is most flexible; Lead/all_round: base is most flexible
+    flex_phase = "strength_power" if is_boulder else "base"
     current_total = sum(durations.values())
     if current_total != total_weeks:
         diff = total_weeks - current_total
@@ -301,7 +301,7 @@ def _compute_phase_durations(
     # Ensure total sums correctly — re-enforce floor after adjustment
     actual_total = sum(durations.values())
     if actual_total != total_weeks:
-        durations[flex_phase] = max(floor, durations[flex_phase] + total_weeks - actual_total)
+        durations[flex_phase] = max(floor, durations[flex_phase] + (total_weeks - actual_total))
 
     return durations
 
@@ -419,9 +419,24 @@ def _adjust_domain_weights(
 
 
 def _build_session_pool(phase_id: str, discipline: str = "lead") -> List[str]:
-    """Return the ordered session pool for a phase."""
-    pool_map = _SESSION_POOL_BOULDER if discipline == "boulder" else _SESSION_POOL
-    pool_def = pool_map.get(phase_id, {})
+    """Return the ordered session pool for a phase.
+
+    For ``all_round``, merge lead and boulder pools: a session that is
+    "primary" in either pool stays primary; otherwise "available".
+    """
+    if discipline in ("both", "all_round"):
+        lead_def = _SESSION_POOL.get(phase_id, {})
+        boulder_def = _SESSION_POOL_BOULDER.get(phase_id, {})
+        merged: Dict[str, str] = {}
+        for sid, role in lead_def.items():
+            merged[sid] = role
+        for sid, role in boulder_def.items():
+            if sid not in merged or role == "primary":
+                merged[sid] = role
+        pool_def = merged
+    else:
+        pool_map = _SESSION_POOL_BOULDER if discipline == "boulder" else _SESSION_POOL
+        pool_def = pool_map.get(phase_id, {})
     # Primary sessions first, then available
     primary = sorted(k for k, v in pool_def.items() if v == "primary")
     available = sorted(k for k, v in pool_def.items() if v == "available")
@@ -611,6 +626,7 @@ def generate_macrocycle(
             "goal_type": goal.get("goal_type"),
             "discipline": discipline,
             "target_grade": goal.get("target_grade"),
+            "target_boulder_grade": goal.get("target_boulder_grade"),
             "current_grade": goal.get("current_grade"),
             "deadline": goal.get("deadline"),
         },

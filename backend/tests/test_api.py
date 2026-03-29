@@ -179,7 +179,12 @@ class TestOnboarding:
         assert "grades" in data
         assert "boulder_grades" in data
         assert "weakness_options" in data
-        assert len(data["weakness_options"]) == 8
+        assert len(data["weakness_options"]) == 12  # 5 universal + 3 lead + 4 boulder
+        assert "weakness_options_grouped" in data
+        grouped = data["weakness_options_grouped"]
+        assert len(grouped["universal"]) == 5
+        assert len(grouped["lead"]) == 3
+        assert len(grouped["boulder"]) == 4
         assert "equipment_home" in data
         assert "equipment_gym" in data
         assert "test_descriptions" in data

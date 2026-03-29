@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { Button } from "@/components/ui/button";
@@ -9,48 +10,84 @@ interface WeaknessItem {
   id: string;
   title: string;
   description: string;
+  scope: "universal" | "lead" | "boulder";
 }
 
-const WEAKNESSES: WeaknessItem[] = [
-  {
-    id: "pump_too_early",
-    title: "I pump out too early",
-    description: "My forearms pump before my strength gives out",
-  },
+const ALL_WEAKNESSES: WeaknessItem[] = [
+  // Universal
   {
     id: "fingers_give_out",
     title: "My fingers give out",
     description: "Finger strength is my main limiter",
+    scope: "universal",
   },
   {
     id: "cant_hold_hard_moves",
     title: "Can't hold hard moves",
     description: "I lack strength/power on single crux moves",
+    scope: "universal",
   },
   {
     id: "technique_errors",
     title: "Technique errors",
     description: "I fall due to body position or movement mistakes",
-  },
-  {
-    id: "cant_read_routes",
-    title: "Can't read routes",
-    description: "I struggle to find the beta and read sequences",
-  },
-  {
-    id: "cant_manage_rests",
-    title: "Can't manage rests",
-    description: "I don't recover well on rest stances",
+    scope: "universal",
   },
   {
     id: "lack_power",
     title: "Lack explosive power",
     description: "Dynamic moves and dynos are my weak point",
+    scope: "universal",
   },
   {
     id: "injury_prone",
     title: "Frequent injuries",
     description: "Physical issues limit my training",
+    scope: "universal",
+  },
+  // Lead-only
+  {
+    id: "pump_too_early",
+    title: "I pump out too early",
+    description: "My forearms pump before my strength gives out",
+    scope: "lead",
+  },
+  {
+    id: "cant_read_routes",
+    title: "Can't read routes",
+    description: "I struggle to find the beta and read sequences",
+    scope: "lead",
+  },
+  {
+    id: "cant_manage_rests",
+    title: "Can't manage rests",
+    description: "I don't recover well on rest stances",
+    scope: "lead",
+  },
+  // Boulder-only
+  {
+    id: "poor_body_tension",
+    title: "Poor body tension",
+    description: "I can't maintain tension on steep terrain, feet cut",
+    scope: "boulder",
+  },
+  {
+    id: "poor_dynamic_movement",
+    title: "Poor dynamic movement",
+    description: "I struggle with coordination moves and dynos",
+    scope: "boulder",
+  },
+  {
+    id: "weak_on_slopers",
+    title: "Weak on slopers",
+    description: "I struggle on rounded or open-hand holds",
+    scope: "boulder",
+  },
+  {
+    id: "poor_problem_reading",
+    title: "Poor problem reading",
+    description: "I can't read sequences or find beta efficiently",
+    scope: "boulder",
   },
 ];
 
@@ -90,13 +127,23 @@ export default function WeaknessesPage() {
   const router = useRouter();
   const { data, update } = useOnboarding();
   const selfEval = data.self_eval;
+  const discipline = data.goal.discipline || "lead";
+
+  // Filter weaknesses by discipline
+  const weaknesses = useMemo(() => {
+    return ALL_WEAKNESSES.filter((w) => {
+      if (w.scope === "universal") return true;
+      if (discipline === "both") return true;
+      return w.scope === discipline;
+    });
+  }, [discipline]);
 
   const setPrimary = (id: string) => {
     const next = selfEval.primary_weakness === id ? "" : id;
     update("self_eval", {
       ...selfEval,
       primary_weakness: next,
-      // Clear secondary if it conflicts
+      // Clear secondary if it conflicts or is no longer in scope
       secondary_weakness:
         selfEval.secondary_weakness === next ? "" : selfEval.secondary_weakness,
     });
@@ -123,7 +170,7 @@ export default function WeaknessesPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {WEAKNESSES.map((w) => (
+          {weaknesses.map((w) => (
             <WeaknessCard
               key={w.id}
               item={w}
@@ -144,7 +191,7 @@ export default function WeaknessesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {WEAKNESSES.map((w) => (
+            {weaknesses.map((w) => (
               <WeaknessCard
                 key={w.id}
                 item={w}

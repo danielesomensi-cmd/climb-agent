@@ -120,7 +120,7 @@ def onboarding_defaults():
     return {
         "grades": GRADE_ORDER,
         "boulder_grades": BOULDER_GRADE_ORDER,
-        "disciplines": ["lead", "boulder"],
+        "disciplines": ["lead", "boulder", "both"],
         "weakness_options": WEAKNESS_OPTIONS,
         "weakness_options_grouped": {
             "universal": WEAKNESS_OPTIONS_UNIVERSAL,
@@ -293,13 +293,26 @@ def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(g
     assessment = state.get("assessment", {})
     goal = state.get("goal", {})
 
+    discipline = goal.get("discipline", "lead")
+
+    # Derive goal_type from discipline if not explicitly set
+    if not goal.get("goal_type"):
+        goal["goal_type"] = {
+            "lead": "lead_grade",
+            "boulder": "boulder_grade",
+            "both": "all_round",
+        }.get(discipline, "lead_grade")
+
     if not goal.get("current_grade") and assessment.get("grades"):
         grades = assessment["grades"]
-        discipline = goal.get("discipline", "lead")
-        if discipline == "lead":
-            goal["current_grade"] = grades.get("lead_max_rp", "7a")
-        else:
+        if discipline == "boulder":
             goal["current_grade"] = grades.get("boulder_max_rp", "6A")
+        else:
+            goal["current_grade"] = grades.get("lead_max_rp", "7a")
+
+    # For boulder-only: use target_boulder_grade as target_grade for assessment
+    if discipline == "boulder" and goal.get("target_boulder_grade") and not goal.get("target_grade"):
+        goal["target_grade"] = goal["target_boulder_grade"]
 
     try:
         profile = compute_assessment_profile(assessment, goal)
@@ -317,7 +330,8 @@ def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(g
     # 5. Always generate macrocycle (start = next Monday)
     try:
         start = next_monday()
-        macrocycle = generate_macrocycle(goal, profile, state, start, 12)
+        total_weeks = 10 if discipline == "boulder" else 12
+        macrocycle = generate_macrocycle(goal, profile, state, start, total_weeks)
     except Exception as e:
         save_state(state, user_id)
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")

@@ -158,6 +158,11 @@ export interface OnboardingDefaults {
   boulder_grades: string[];
   disciplines: string[];
   weakness_options: WeaknessOption[];
+  weakness_options_grouped?: {
+    universal: WeaknessOption[];
+    lead: WeaknessOption[];
+    boulder: WeaknessOption[];
+  };
   equipment_home: EquipmentOption[];
   equipment_gym: EquipmentOption[];
   limitation_areas: string[];
@@ -193,6 +198,7 @@ export interface OnboardingData {
     goal_type: string;
     discipline: string;
     target_grade: string;
+    target_boulder_grade?: string;
     target_style: string;
     current_grade: string;
     deadline: string;

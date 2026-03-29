@@ -125,15 +125,11 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 
 ### A-B1 — Discipline selection in onboarding
 
-**Priority:** P1.5 | **Status:** Open | **Type:** A (feature) | **Effort:** M
+**Priority:** P1.5 | **Status:** ✅ Done | **Type:** A (feature) | **Effort:** M
 
-Add discipline selector in onboarding: Lead / Boulder / Both.
-- Boulder → `goal_type: boulder_grade`, activates existing `_SESSION_POOL_BOULDER` + `_BASE_DURATIONS` boulder config
-- Both → `goal_type: all_round`, uses lead macrocycle + merged session pool (lead + boulder primary sessions)
-- Onboarding flow adapts: Boulder skips `target_style`, asks boulder target grade; Both asks both grades
-- Backend: `macrocycle_v1.py` already has boulder durations (base:2, S&P:4, PE:1, perf:2, deload:1). Activate for `boulder_grade`. Add `all_round` using lead config + merged pool.
+Discipline selector (Lead/Boulder/Both) in onboarding goals page. `boulder_grade` activates `_SESSION_POOL_BOULDER` + `_BASE_DURATIONS_BOULDER` (10-week cycle). `all_round` uses lead durations + merged lead/boulder session pool. Frontend: conditional target_style (hidden for boulder), dual grade pickers for Both, discipline-filtered weakness options. Settings page shows discipline + boulder target. Backward-compatible: missing `discipline` defaults to lead. 22 new tests. (2026-03-29)
 
-**Depends on:** ~~A-B2~~ ✅, A-B3
+**Depends on:** ~~A-B2~~ ✅, ~~A-B3~~ ✅
 
 ### A-B2 — Grade display preference (Font / V-scale)
 
@@ -143,9 +139,9 @@ New user preference `grade_system_boulder: "font" | "v_scale"` (default: font). 
 
 ### A-B3 — Self-eval weakness options per discipline
 
-**Priority:** P1.5 | **Status:** Open | **Type:** A (feature) | **Effort:** S
+**Priority:** P1.5 | **Status:** ✅ Done | **Type:** A (feature) | **Effort:** S
 
-Discipline-conditional self-eval options. Universal options kept (cant_hold_hard_moves, fingers_give_out, technique_errors, lack_power, injury_prone). Lead-only: pump_too_early, cant_manage_rests, cant_read_routes. Boulder-only (NEW): poor_body_tension, poor_dynamic_movement, weak_on_slopers, poor_problem_reading. Both: show all. Update vocabulary_v1.md. New options map to existing axes (e.g. poor_body_tension → technique axis).
+4 boulder-specific weakness values added (poor_body_tension, poor_dynamic_movement, weak_on_slopers, poor_problem_reading) with axis mappings in assessment_v1.py. Onboarding defaults API returns grouped weakness options by discipline scope. Frontend weakness page filters by selected discipline. Vocabulary updated. 18 new tests. (2026-03-29)
 
 ### A-B4 — Assessment radar discipline-aware labels
 
@@ -448,6 +444,7 @@ Depends on: B122 pattern, Supabase migration.
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Staging/production branches |
+| R148 | Centralize weakness→axis mapping | S | Single dict in assessment_v1.py instead of scattered if-strings. Prerequisite for R149 and LLM Coach. LOW risk. |
 
 ### Stretching Circuit add-on
 
@@ -522,6 +519,12 @@ Design spec: `_archive/docs/coach_knowledge_base_spec.md`
 - The LLM suggests and converses — it does NOT modify the plan directly
 
 **Dependent items:** B89 (weekly report narrative), B11 (configurable test protocols), B29a (dedicated test exercises), science explainers, nutrition hints.
+
+### R149 — Weakness→resolver hints
+
+**Priority:** P3.5 | **Status:** Open | **Type:** A (feature) | **Effort:** S
+
+Pass user weaknesses as soft preferences to `score_exercise()` in the resolver. Example: `weak_on_slopers` → boost exercises with `grip: open_hand`. Depends on R148 (centralized weakness mapping).
 
 ---
 
