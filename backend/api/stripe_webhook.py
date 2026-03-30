@@ -125,10 +125,10 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
     if subscription_id and _STRIPE_SECRET_KEY:
         try:
             client = stripe.StripeClient(_STRIPE_SECRET_KEY)
-            sub = client.subscriptions.retrieve(subscription_id)
+            sub = client.subscriptions.retrieve(subscription_id).to_dict_recursive()
             trial_start = _ts(sub.get("trial_start"))
             trial_end = _ts(sub.get("trial_end"))
-            period_start = _ts((sub.get("current_period_start")))
+            period_start = _ts(sub.get("current_period_start"))
             period_end = _ts(sub.get("current_period_end"))
             logger.info(
                 "DIAG checkout_completed sub fetched trial_start=%s trial_end=%s",
@@ -292,7 +292,7 @@ def _resolve_user_id(
     if subscription_id and _STRIPE_SECRET_KEY:
         try:
             client = stripe.StripeClient(_STRIPE_SECRET_KEY)
-            sub = client.subscriptions.retrieve(subscription_id)
+            sub = client.subscriptions.retrieve(subscription_id).to_dict_recursive()
             uid = (sub.get("metadata") or {}).get("user_id")
             if uid:
                 logger.info("_resolve_user_id: found user_id=%s via subscription metadata", uid)
@@ -304,8 +304,9 @@ def _resolve_user_id(
         try:
             client = stripe.StripeClient(_STRIPE_SECRET_KEY)
             sessions = client.checkout.sessions.list({"customer": customer_id, "limit": 5})
-            for s in sessions.data or []:
-                uid = s.get("client_reference_id")
+            for s in (sessions.data or []):
+                s_dict = s.to_dict_recursive() if hasattr(s, "to_dict_recursive") else s
+                uid = s_dict.get("client_reference_id")
                 if uid:
                     logger.info("_resolve_user_id: found user_id=%s via checkout client_reference_id", uid)
                     return uid
