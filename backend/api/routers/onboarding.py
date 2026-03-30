@@ -150,14 +150,15 @@ def _ensure_gym_ids(equipment: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _recovery_multiplier_for_age(age: int | None) -> float:
-    """D83: compute default recovery multiplier from age."""
-    if age is None or age < 40:
+    """B165b: compute default recovery multiplier from age.
+
+    Thresholds: 1.0× under 50, 1.25× at 50-59, 1.5× at 60+.
+    """
+    if age is None or age < 50:
         return 1.0
-    if age < 50:
-        return 1.25
     if age < 60:
-        return 1.5
-    return 1.75
+        return 1.25
+    return 1.5
 
 
 def _normalize_test_keys(tests: dict) -> dict:
