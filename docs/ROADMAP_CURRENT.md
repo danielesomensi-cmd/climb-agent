@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-29 (D163+D164 audit remediation tracking added)
+> Last updated: 2026-03-31 (B170/B171/B172 closed; A159 SQL migration confirmed)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -169,7 +169,7 @@ Clerk auth ✅ and Supabase JSONB ✅ are complete. Remaining:
   - Backend: `subscription_guard.py`, 4 endpoints (status/checkout/portal/webhook), guards on 10 POST endpoints
   - Frontend: `useSubscription()` hook, `TrialBanner`, `/subscribe` page, settings portal link, guided session gate
   - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)
-  - SQL migration: `docs/migrations/subscriptions_table.sql` — **run in Supabase before deploying**
+  - SQL migration: `docs/migrations/subscriptions_table.sql` — ✅ run in Supabase (confirmed 2026-03-31)
 
 ### A-B5 — Phase labels and messaging per discipline
 
