@@ -12,7 +12,30 @@
   "modules": [
     {
       "template_id": "deload_recovery",
-      "required": true
+      "required": true,
+      "priority": 100,
+      "module_role": "primary"
     }
+  ],
+  "intent": {
+    "primary_goal": "regeneration",
+    "secondary_goals": [
+      "mobility",
+      "prehab_elbow",
+      "prehab_shoulder"
+    ],
+    "notes": "Full deload recovery session for home. Mobility, light prehab, optional core. No climbing, no load on fingers or CNS."
+  },
+  "compatibility": {
+    "slot": [
+      "short"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  },
+  "required_equipment": [],
+  "phase_tags": [
+    "deload"
   ]
 }
