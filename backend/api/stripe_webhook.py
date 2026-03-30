@@ -33,6 +33,15 @@ _STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 _STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
 
+def _stripe_to_dict(obj: Any) -> Dict[str, Any]:
+    """Convert a StripeObject to a plain dict regardless of stripe-python version."""
+    if hasattr(obj, "to_dict_recursive"):
+        return obj.to_dict_recursive()
+    if hasattr(obj, "to_dict"):
+        return obj.to_dict()
+    return dict(obj)
+
+
 async def handle_stripe_webhook(request: Request) -> JSONResponse:
     """Validate Stripe signature and dispatch to event handlers."""
     if not _STRIPE_SECRET_KEY:
@@ -54,7 +63,7 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
         return JSONResponse({"error": "Bad request"}, status_code=400)
 
     event_type = event["type"]
-    data_object = event["data"]["object"].to_dict_recursive()
+    data_object = _stripe_to_dict(event["data"]["object"])
 
     # DIAG: surface env state on every event so Railway logs show the truth
     import os as _os
@@ -125,7 +134,7 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
     if subscription_id and _STRIPE_SECRET_KEY:
         try:
             client = stripe.StripeClient(_STRIPE_SECRET_KEY)
-            sub = client.subscriptions.retrieve(subscription_id).to_dict_recursive()
+            sub = _stripe_to_dict(client.subscriptions.retrieve(subscription_id))
             trial_start = _ts(sub.get("trial_start"))
             trial_end = _ts(sub.get("trial_end"))
             period_start = _ts(sub.get("current_period_start"))
@@ -292,7 +301,7 @@ def _resolve_user_id(
     if subscription_id and _STRIPE_SECRET_KEY:
         try:
             client = stripe.StripeClient(_STRIPE_SECRET_KEY)
-            sub = client.subscriptions.retrieve(subscription_id).to_dict_recursive()
+            sub = _stripe_to_dict(client.subscriptions.retrieve(subscription_id))
             uid = (sub.get("metadata") or {}).get("user_id")
             if uid:
                 logger.info("_resolve_user_id: found user_id=%s via subscription metadata", uid)
@@ -305,7 +314,7 @@ def _resolve_user_id(
             client = stripe.StripeClient(_STRIPE_SECRET_KEY)
             sessions = client.checkout.sessions.list({"customer": customer_id, "limit": 5})
             for s in (sessions.data or []):
-                s_dict = s.to_dict_recursive() if hasattr(s, "to_dict_recursive") else s
+                s_dict = _stripe_to_dict(s)
                 uid = s_dict.get("client_reference_id")
                 if uid:
                     logger.info("_resolve_user_id: found user_id=%s via checkout client_reference_id", uid)
