@@ -45,7 +45,7 @@ const LEAD_LABELS: Record<string, string> = {
 
 const BOULDER_LABELS: Record<string, string> = {
   finger_strength: "Finger Strength",
-  pulling_strength: "Contact",
+  pulling_strength: "Pulling Power",
   power_endurance: "Work Capacity",
   technique: "Movement & Reading",
   endurance: "Recovery",
@@ -93,8 +93,8 @@ export const AXIS_DESCRIPTIONS: Record<string, { lead: AxisInfo; boulder: AxisIn
       low: "You struggle on steep or powerful sections even when your fingers can hold on. You might pump out early on overhangs or fail to make dynamic moves.",
     },
     boulder: {
-      label: "Contact",
-      description: "How explosively you can latch holds and pull through big moves. Measured by your best weighted pull-up — a proxy for the raw upper-body power that bouldering demands.",
+      label: "Pulling Power",
+      description: "How much explosive pulling force your arms and back can generate for powerful moves on steep terrain. Measured by your best weighted pull-up.",
       low: "You struggle on steep or powerful sections even when your fingers can hold on. You fail to make dynamic moves that are within your finger strength.",
     },
   },
