@@ -117,7 +117,7 @@ Your daily workflow:
 4. When done, tap **Done** and give feedback
 5. If you can't train, tap **Skip** — the system adapts
 
-**Done** and **Skip** are always reversible with **Undo** — don't worry about misclicks.
+**Done** and **Skip** are always reversible — tap **Undo completion** (to reverse Done) or **Undo skip** (to reverse Skip) — don't worry about misclicks.
 
 ---
 

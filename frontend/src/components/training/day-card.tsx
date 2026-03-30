@@ -270,7 +270,7 @@ export function DayCard({
                     onClick={() => onUndoOtherActivity(day.date)}
                   >
                     <Undo2 className="size-3.5 mr-1" />
-                    Undo
+                    Undo completion
                   </Button>
                 )}
                 {/* B127: Edit other activity inline form */}
@@ -445,7 +445,7 @@ export function DayCard({
                           onClick={() => onUndoOutdoor(day.date)}
                         >
                           <Undo2 className="size-3.5 mr-1" />
-                          Undo
+                          Undo completion
                         </Button>
                       )}
                     </>

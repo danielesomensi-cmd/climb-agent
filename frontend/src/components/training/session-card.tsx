@@ -1013,7 +1013,7 @@ export function SessionCard({
                   onClick={() => onUndo()}
                 >
                   <Undo2 className="size-5 text-muted-foreground" />
-                  <span className="text-sm">Undo</span>
+                  <span className="text-sm">{isDone ? "Undo completion" : "Undo skip"}</span>
                 </button>
               </DrawerClose>
             )}
@@ -1025,9 +1025,9 @@ export function SessionCard({
       <AlertDialog open={confirmRemove} onOpenChange={setConfirmRemove}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove this session?</AlertDialogTitle>
+            <AlertDialogTitle>Remove {formatSessionName(session.session_id)}?</AlertDialogTitle>
             <AlertDialogDescription>
-              This session will be removed from today&apos;s plan.
+              This session will be removed from your plan. This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

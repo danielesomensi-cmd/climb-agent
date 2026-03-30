@@ -125,7 +125,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           <Li>When done, tap <B>Done</B> and give feedback</Li>
           <Li>If you can&apos;t train, tap <B>Skip</B> &mdash; the system adapts</Li>
         </Ul>
-        <P><B>Done</B> and <B>Skip</B> are always reversible with <B>Undo</B> &mdash; don&apos;t worry about misclicks.</P>
+        <P><B>Done</B> and <B>Skip</B> are always reversible — tap <B>Undo completion</B> or <B>Undo skip</B> to reverse &mdash; don&apos;t worry about misclicks.</P>
       </>
     ),
   },
