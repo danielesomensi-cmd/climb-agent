@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
-import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState } from "@/lib/api";
+import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState, createBillingPortal } from "@/lib/api";
+import { useSubscription } from "@/lib/hooks/use-subscription";
 import { UserButton, useAuth } from "@clerk/nextjs";
 import {
   RegeneratePlanSheet,
@@ -51,6 +52,8 @@ export default function SettingsPage() {
   // B151: delay fetch until Clerk auth is ready — prevents empty-template flash
   const { state, loading, error, refresh } = useUserState(authReady);
   const router = useRouter();
+  const { status: subStatus, isActive: subActive, isTrialing, trialDaysRemaining } = useSubscription();
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const [regeneratingMacro, setRegeneratingMacro] = useState(false);
   const [restartMacroDialogOpen, setRestartMacroDialogOpen] = useState(false);
@@ -719,6 +722,59 @@ export default function SettingsPage() {
                       </Button>
                     </div>
                   </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* ----- Subscription ----- */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Subscription</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className="font-medium capitalize">
+                    {subStatus === "trialing"
+                      ? `Trial${trialDaysRemaining != null ? ` (${trialDaysRemaining}d left)` : ""}`
+                      : subStatus === "active"
+                        ? "Active"
+                        : subStatus === "past_due"
+                          ? "Payment failed"
+                          : subStatus === "canceled"
+                            ? "Canceled"
+                            : subStatus === "pending_checkout"
+                              ? "Pending"
+                              : "—"}
+                  </span>
+                </div>
+                {!subActive ? (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => router.push("/subscribe")}
+                  >
+                    Subscribe — €9.99/mo
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    disabled={portalLoading}
+                    onClick={async () => {
+                      setPortalLoading(true);
+                      try {
+                        const { portal_url } = await createBillingPortal();
+                        window.location.href = portal_url;
+                      } catch {
+                        setPortalLoading(false);
+                      }
+                    }}
+                  >
+                    {portalLoading ? "Loading..." : "Manage subscription"}
+                  </Button>
                 )}
               </CardContent>
             </Card>

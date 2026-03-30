@@ -10,6 +10,7 @@ import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GuidedSummary } from "@/components/guided/guided-summary";
 import { applyEvents, postFeedback, getWeek, getState } from "@/lib/api";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
+import { useSubscription } from "@/lib/hooks/use-subscription";
 import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -60,6 +61,14 @@ export default function GuidedSessionPage() {
   const router = useRouter();
   const date = params.date as string;
   const sessionId = params.sessionId as string;
+  const { canInteract, loading: subLoading } = useSubscription();
+
+  // Gate: redirect expired users to subscribe page
+  useEffect(() => {
+    if (!subLoading && !canInteract) {
+      router.replace("/subscribe");
+    }
+  }, [canInteract, subLoading, router]);
 
   const [state, setState] = useState<GuidedSessionState | null>(null);
   const [showSummary, setShowSummary] = useState(false);

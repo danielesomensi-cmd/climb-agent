@@ -14,6 +14,7 @@ import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
+import { useSubscription } from "@/lib/hooks/use-subscription";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -78,9 +79,11 @@ function TodayContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoaded: authReady } = useAuth();
+  const { canInteract } = useSubscription();
   const dateParam = searchParams.get("date");
   const targetDate = dateParam || todayISO();
   const isViewingToday = targetDate === todayISO();
+  const checkoutSuccess = searchParams.get("checkout") === "success";
 
   const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);
   const [gyms, setGyms] = useState<
@@ -285,6 +288,7 @@ function TodayContent() {
 
   /** Mark a session as completed */
   async function handleMarkDone(sessionId: string) {
+    if (!canInteract) { router.push("/subscribe"); return; }
     if (!weekPlan) return;
     try {
       const result = await applyEvents({
@@ -309,6 +313,7 @@ function TodayContent() {
 
   /** Mark a session as skipped */
   async function handleMarkSkipped(sessionId: string) {
+    if (!canInteract) { router.push("/subscribe"); return; }
     if (!weekPlan) return;
     try {
       const result = await applyEvents({
@@ -769,6 +774,13 @@ function TodayContent() {
       </div>
 
       <main className="relative z-10 mx-auto max-w-2xl space-y-4 p-4">
+        {/* Checkout success banner */}
+        {checkoutSuccess && (
+          <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
+            Your subscription is active. Welcome to climb-agent Pro!
+          </div>
+        )}
+
         {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center py-12">
@@ -834,7 +846,7 @@ function TodayContent() {
             onUndo={handleUndo}
             onRemoveSession={handleRemoveSession}
             onReplan={(date, sessionIndex) => { setReplanDate(date); setReplanSessionIndex(sessionIndex); }}
-            onQuickAdd={(date) => setQuickAddDate(date)}
+            onQuickAdd={(date) => { if (!canInteract) { router.push("/subscribe"); return; } setQuickAddDate(date); }}
             onMoveSession={(date, slot, sessionId) =>
               setMoveSession({ date, slot, sessionId })
             }

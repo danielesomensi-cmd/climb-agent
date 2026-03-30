@@ -434,3 +434,25 @@ export const getMonthlyReport = (month: string) =>
 // Quotes
 export const getDailyQuote = (context?: string) =>
   request<Quote>(`/api/quotes/daily${context ? `?context=${context}` : ""}`);
+
+// Subscription
+export type SubscriptionStatus = {
+  status: string;
+  is_active: boolean;
+  trial_days_remaining: number | null;
+  can_interact: boolean;
+};
+
+export const getSubscriptionStatus = () =>
+  request<SubscriptionStatus>("/api/subscription/status");
+
+export const createCheckoutSession = (email?: string) =>
+  request<{ checkout_url: string }>("/api/subscription/checkout", {
+    method: "POST",
+    body: JSON.stringify({ email: email ?? null }),
+  });
+
+export const createBillingPortal = () =>
+  request<{ portal_url: string }>("/api/subscription/portal", {
+    method: "POST",
+  });
