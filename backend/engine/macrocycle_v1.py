@@ -283,10 +283,11 @@ def _compute_phase_durations(
             durations[extend_phase] += 1
             durations[shrink_phase] -= 1
 
-    # Enforce floor: min 1 week per non-deload phase (boulder PE can be 1),
-    # min 2 for lead non-deload phases, min 1 for deload
+    # Enforce floor: min 2 for base (all disciplines), min 1 for other boulder
+    # non-deload phases, min 2 for lead non-deload phases, min 1 for deload
     floor = 1 if is_boulder else 2
-    for phase_id in ("base", "strength_power", "power_endurance", "performance"):
+    durations["base"] = max(2, durations["base"])  # base always >= 2
+    for phase_id in ("strength_power", "power_endurance", "performance"):
         durations[phase_id] = max(floor, durations[phase_id])
     durations["deload"] = max(1, durations["deload"])
 
@@ -344,7 +345,12 @@ def _compute_remaining_durations(
     # --- floor enforcement ------------------------------------------------
     non_deload_floor = 1 if discipline == "boulder" else 2
     for p in remaining_phases:
-        fl = 1 if p == "deload" else non_deload_floor
+        if p == "deload":
+            fl = 1
+        elif p == "base":
+            fl = 2  # base always >= 2, all disciplines
+        else:
+            fl = non_deload_floor
         durations[p] = max(fl, durations[p])
 
     min_needed = sum(1 if p == "deload" else non_deload_floor for p in remaining_phases)

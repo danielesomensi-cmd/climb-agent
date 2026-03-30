@@ -52,6 +52,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 - ✅ **B167** — Sync safety net: `sync_status.py` now aborts with warning if non-sync files are uncommitted (SYNC_FILES whitelist = PROJECT_BRIEF.md + README.md). CLAUDE.md rule added: commit before sync. (2026-03-29)
 - ✅ **B164-trimmed** — Frontend P2 fixes: rest timer placeholder removed, very_easy/easy feedback badge distinction, outdoor spot delete confirmation dialog, import data confirmation dialog (2026-03-30)
 - ✅ **B168** — Fix boulder onboarding flow: boulder-to-lead grade mapping for assessment benchmarks (P0 fix), discipline step before grades, conditional grade fields per discipline, Font/V toggle in grades page, weakness labels in review page (2026-03-30)
+- ✅ **B169** — Radar label truncation fix (boulder labels shortened), boulder base phase floor raised to min 2 weeks. Planner diagnostic: 2/3 hard sessions is correct (finger spacing blocks Tue/Thu), not a bug. (2026-03-30)
 
 ---
 

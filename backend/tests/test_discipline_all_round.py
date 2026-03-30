@@ -188,6 +188,46 @@ class TestBoulderRegression:
         assert "endurance_aerobic_gym" not in pool
 
 
+class TestBoulderBaseFloor:
+    """B169: boulder base phase must be >= 2 weeks even with severe weakness adjustments."""
+
+    def test_base_floor_with_weak_finger_and_pulling(self):
+        """Both finger + pulling at 0 should extend S&P but not shrink base below 2."""
+        weak_profile = {
+            "finger_strength": 0,
+            "pulling_strength": 0,
+            "power_endurance": 50,
+            "technique": 50,
+            "endurance": 50,
+        }
+        durations = _compute_phase_durations(weak_profile, total_weeks=10, discipline="boulder")
+        assert durations["base"] >= 2, f"base={durations['base']} should be >= 2"
+        assert sum(durations.values()) == 10
+
+    def test_base_floor_with_all_weak(self):
+        """All axes at 0 — base still >= 2."""
+        all_weak = {k: 0 for k in ("finger_strength", "pulling_strength", "power_endurance", "technique", "endurance")}
+        durations = _compute_phase_durations(all_weak, total_weeks=10, discipline="boulder")
+        assert durations["base"] >= 2
+        assert sum(durations.values()) == 10
+
+    def test_lead_unaffected(self):
+        """Lead base floor should still be 2 (unchanged)."""
+        durations = _compute_phase_durations(_PROFILE, total_weeks=12, discipline="lead")
+        assert durations["base"] >= 2
+        assert sum(durations.values()) == 12
+
+    def test_boulder_macrocycle_base_floor_end_to_end(self):
+        """Full macrocycle generation with very weak profile — base >= 2."""
+        weak_profile = {"finger_strength": 0, "pulling_strength": 0,
+                        "power_endurance": 50, "technique": 50, "endurance": 50}
+        mc = generate_macrocycle(
+            _BOULDER_GOAL, weak_profile, _USER_STATE, "2026-03-09", total_weeks=10,
+        )
+        base_phase = next(p for p in mc["phases"] if p["phase_id"] == "base")
+        assert base_phase["duration_weeks"] >= 2
+
+
 # ---------------------------------------------------------------------------
 # Backward compatibility
 # ---------------------------------------------------------------------------

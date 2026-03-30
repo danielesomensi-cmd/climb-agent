@@ -45,10 +45,10 @@ const LEAD_LABELS: Record<string, string> = {
 
 const BOULDER_LABELS: Record<string, string> = {
   finger_strength: "Finger Strength",
-  pulling_strength: "Pulling & Contact Strength",
+  pulling_strength: "Contact Strength",
   power_endurance: "Work Capacity",
   technique: "Movement & Reading",
-  endurance: "Recovery Between Attempts",
+  endurance: "Recovery",
 };
 
 export function getRadarLabels(
