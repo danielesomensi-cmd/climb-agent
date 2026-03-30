@@ -7,7 +7,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import get_user_id, load_state, save_state
+from backend.api.deps import get_user_id, load_state, require_active_subscription, save_state
 from backend.api.models import FeedbackRequest
 from backend.engine.adaptive_replan import (
     append_feedback_log,
@@ -22,7 +22,7 @@ from backend.engine.resolve_session import normalize_limitations, _check_exercis
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_active_subscription)])
 def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply session feedback: progression updates + closed-loop state changes."""
     state = load_state(user_id)

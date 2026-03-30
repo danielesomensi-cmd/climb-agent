@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.api.deps import get_user_id, load_state, save_state, REPO_ROOT
+from backend.api.deps import get_user_id, load_state, require_active_subscription, save_state, REPO_ROOT
 from backend.api.models import (
     FreeSessionFinishRequest,
     FreeSessionLogClimbRequest,
@@ -126,7 +126,7 @@ def get_presets(
     return {"presets": result, "free_mode_tip": free_tip, "phase_id": phase_id}
 
 
-@router.post("/start")
+@router.post("/start", dependencies=[Depends(require_active_subscription)])
 def start_session(
     req: FreeSessionStartRequest,
     user_id: Optional[str] = Depends(get_user_id),
@@ -218,7 +218,7 @@ def start_session(
     }
 
 
-@router.post("/{session_id}/log-climb")
+@router.post("/{session_id}/log-climb", dependencies=[Depends(require_active_subscription)])
 def log_climb(
     session_id: str,
     req: FreeSessionLogClimbRequest,
@@ -258,7 +258,7 @@ def log_climb(
     return {"index": index, "logged_at": now}
 
 
-@router.post("/{session_id}/finish")
+@router.post("/{session_id}/finish", dependencies=[Depends(require_active_subscription)])
 def finish_session(
     session_id: str,
     req: FreeSessionFinishRequest,

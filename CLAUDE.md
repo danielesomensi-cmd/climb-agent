@@ -198,6 +198,10 @@ user_state.assessment + user_state.goal
 | DELETE | `/api/free-session/{session_id}` | Delete a free session |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
+| GET | `/api/subscription/status` | Current subscription status + trial days remaining |
+| POST | `/api/subscription/checkout` | Create Stripe Checkout Session → returns hosted URL |
+| POST | `/api/subscription/portal` | Create Stripe Customer Portal session (manage/cancel) |
+| POST | `/api/stripe/webhook` | Stripe webhook receiver (signature-verified) |
 
 ## Frontend
 
@@ -239,6 +243,11 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
   | SUPABASE_URL | Supabase project URL |
   | SUPABASE_SERVICE_KEY | Supabase service role key (never commit) |
   | CLERK_SECRET_KEY | Clerk backend secret (never commit) |
+  | STRIPE_SECRET_KEY | Stripe secret key — `sk_test_*` or `sk_live_*` (never commit) |
+  | STRIPE_WEBHOOK_SECRET | Stripe webhook signing secret — `whsec_*` (never commit) |
+  | STRIPE_PRICE_ID | Stripe Price ID for monthly plan (e.g. `price_1TGff4...`) |
+  | STRIPE_PORTAL_ENABLED | `true` to enable Customer Portal (default: true) |
+  | FRONTEND_BASE_URL | Base URL for Stripe redirect (default: Vercel prod URL) |
 
 ### Clerk user lookup
 

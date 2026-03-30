@@ -65,7 +65,7 @@ compute_assessment_profile()    [assessment_v1]
 | Deload | Mixed: programmed + adaptive + pre-trip |
 | Feedback | Granular per exercise (5 levels: very_easy → very_hard) |
 | Equipment | `equipment_required` for essential gear only, optional in notes |
-| Payments | Stripe (planned) |
+| Payments | Stripe (active, test mode) |
 | App store | Capacitor wrapping PWA (planned) |
 | LLM Coach | Claude Sonnet conversational layer (planned, Phase 3.5) |
 

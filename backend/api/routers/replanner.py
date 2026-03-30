@@ -10,7 +10,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, current_phase_and_week, get_user_id, load_state, save_state
+from backend.api.deps import REPO_ROOT, current_phase_and_week, get_user_id, load_state, require_active_subscription, save_state
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
@@ -141,7 +141,7 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
                     session_entry["resolved"] = None
 
 
-@router.post("/override")
+@router.post("/override", dependencies=[Depends(require_active_subscription)])
 def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply a day override (change a day's session by intent)."""
     state = load_state(user_id)
@@ -232,7 +232,7 @@ def get_suggestions(target_date: str, location: str = "gym", user_id: Optional[s
     return {"suggestions": suggestions, "supplementary": supplementary}
 
 
-@router.post("/quick-add")
+@router.post("/quick-add", dependencies=[Depends(require_active_subscription)])
 def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Add an extra session to a day without replacing existing ones."""
     state = load_state(user_id)
@@ -266,7 +266,7 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
     return {"week_plan": updated, "warnings": warnings}
 
 
-@router.post("/events")
+@router.post("/events", dependencies=[Depends(require_active_subscription)])
 def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply a list of events (move, mark_done, mark_skipped, etc.) to a week plan."""
     state = load_state(user_id)

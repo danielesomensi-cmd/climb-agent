@@ -5,3 +5,4 @@ pytest
 httpx
 supabase
 PyJWT[crypto]
+stripe

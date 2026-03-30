@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 
 from backend.engine import storage as _storage
 
@@ -297,3 +297,29 @@ def week_num_to_phase_context(macrocycle: Dict[str, Any], week_num: int) -> Dict
         cumulative += duration
 
     raise ValueError(f"week_num {week_num} exceeds macrocycle total weeks ({cumulative})")
+
+
+# ---------------------------------------------------------------------------
+# Subscription guard dependency
+# ---------------------------------------------------------------------------
+
+def require_active_subscription(user_id: Optional[str] = Depends(get_user_id)) -> None:
+    """FastAPI dependency: raise 402 if subscription is expired or canceled.
+
+    No-op when:
+    - STRIPE_SECRET_KEY is not set (dev/test)
+    - STORAGE_BACKEND != 'supabase' (pytest uses file backend)
+    - user_id is None (unauthenticated dev request)
+    - No subscription row exists (user hasn't completed checkout = still onboarding)
+    """
+    from backend.engine.subscription_guard import check_subscription
+    result = check_subscription(user_id)
+    if not result["can_interact"]:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "subscription_required",
+                "status": result["status"],
+                "message": "Your trial has ended. Subscribe to continue training.",
+            },
+        )

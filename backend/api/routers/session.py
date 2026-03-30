@@ -9,7 +9,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, get_user_id, load_state, save_state
+from backend.api.deps import REPO_ROOT, get_user_id, load_state, require_active_subscription, save_state
 from backend.api.models import (
     AddExerciseRequest,
     RemoveExerciseRequest,
@@ -48,7 +48,7 @@ def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
     _replanner_persist(updated, state, user_id)
 
 
-@router.post("/resolve")
+@router.post("/resolve", dependencies=[Depends(require_active_subscription)])
 def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Resolve a session_id into concrete exercises."""
     session_path = os.path.join(SESSIONS_DIR, f"{req.session_id}.json")
@@ -78,7 +78,7 @@ def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_use
     return {"resolved": resolved}
 
 
-@router.post("/add-exercise")
+@router.post("/add-exercise", dependencies=[Depends(require_active_subscription)])
 def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Add an exercise to an already-resolved session in the week plan."""
     state = load_state(user_id)
@@ -195,7 +195,7 @@ def _recalc_load_score(resolved: dict, exercise_instances: list) -> None:
     resolved["session_load_score"] = round(min(85, raw_fatigue * 1.5))
 
 
-@router.post("/remove-exercise")
+@router.post("/remove-exercise", dependencies=[Depends(require_active_subscription)])
 def remove_exercise(req: RemoveExerciseRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Remove an exercise from a resolved session."""
     state = load_state(user_id)

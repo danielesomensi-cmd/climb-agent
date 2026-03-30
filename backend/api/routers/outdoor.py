@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.api.deps import get_user_id, load_state, save_state
+from backend.api.deps import get_user_id, load_state, require_active_subscription, save_state
 from backend.api.models import OutdoorSpotCreate, OutdoorSessionLog, ConvertSlotRequest
 from backend.engine.outdoor_log import (
     append_outdoor_session,
@@ -74,7 +74,7 @@ def delete_outdoor_spot(spot_id: str, user_id: Optional[str] = Depends(get_user_
 
 # ── Session logging ─────────────────────────────────────────────────────
 
-@router.post("/log")
+@router.post("/log", dependencies=[Depends(require_active_subscription)])
 def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get_user_id)):
     """Validate and append an outdoor session to the log."""
     entry = req.model_dump(exclude_none=True)
@@ -169,7 +169,7 @@ def get_outdoor_stats(since: Optional[str] = Query(None), user_id: Optional[str]
 
 # ── Slot conversion ─────────────────────────────────────────────────────
 
-@router.post("/convert-slot")
+@router.post("/convert-slot", dependencies=[Depends(require_active_subscription)])
 def convert_outdoor_slot(req: ConvertSlotRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Convert an outdoor day slot to gym/home and suggest a session."""
     from backend.engine.replanner_v1 import suggest_sessions

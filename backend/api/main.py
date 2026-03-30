@@ -23,10 +23,12 @@ from backend.api.routers import (
     reports,
     session,
     state,
+    subscription,
     user,
     week,
     weekly_override,
 )
+from backend.api.stripe_webhook import handle_stripe_webhook
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +112,15 @@ app.include_router(quotes.router)
 app.include_router(user.router)
 app.include_router(weekly_override.router)
 app.include_router(admin.router)
+app.include_router(subscription.router)
+
+# Stripe webhook — registered directly to preserve raw body for signature verification
+app.add_api_route(
+    "/api/stripe/webhook",
+    handle_stripe_webhook,
+    methods=["POST"],
+    tags=["subscription"],
+)
 
 
 @app.get("/health")
