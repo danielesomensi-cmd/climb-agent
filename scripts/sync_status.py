@@ -85,12 +85,14 @@ def count_api_endpoints() -> int:
             for line in f:
                 if re.match(r"\s*@router\.(get|post|put|delete|patch)\b", line):
                     count += 1
-    # Check main.py for app-level routes (e.g. /health)
+    # Check main.py for app-level routes (decorators + add_api_route calls)
     main_path = os.path.join(REPO_ROOT, "backend/api/main.py")
     if os.path.exists(main_path):
         with open(main_path) as f:
             for line in f:
                 if re.match(r"\s*@app\.(get|post|put|delete|patch)\b", line):
+                    count += 1
+                elif re.match(r"\s*app\.add_api_route\b", line):
                     count += 1
     return count
 
