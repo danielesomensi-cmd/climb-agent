@@ -533,8 +533,9 @@ Returns up to N session suggestions for quick-add, filtered by location and equi
 ### Ripple effects
 
 - `_enforce_caps()`: After changes, deterministic downshift removes lowest-priority sessions if hard cap is exceeded.
-- `_enforce_no_consecutive_finger()`: Checks 48h finger gap, removes violating sessions.
-- `_compensate_finger()`: If a finger session is lost, auto-injects `finger_maintenance` on a safe day.
+- `_enforce_no_consecutive_finger()`: Checks finger gap using `recovery_multiplier` from `plan.profile_snapshot` (B165b). Default gap=1 day (48h); with multiplier=1.25+ the gap increases to 2+ days. Violating sessions are deterministically downshifted to `regeneration_easy`.
+- `_compensate_finger()`: If a finger session is lost, auto-injects `finger_maintenance` on a safe day. Respects recovery gap from `recovery_multiplier`.
+- `_recovery_gap(plan)`: Helper (B165b) — reads `profile_snapshot.recovery_multiplier` and returns `ceil(1 * multiplier)`. Same formula used by the planner.
 
 ### Completed session preservation
 
