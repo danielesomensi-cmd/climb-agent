@@ -14,17 +14,17 @@ const DISCIPLINES = [
   {
     value: "lead",
     title: "Lead",
-    description: "Sport climbing — routes on rope",
+    description: "Lead — I want to send harder routes",
   },
   {
     value: "boulder",
     title: "Boulder",
-    description: "Bouldering — short powerful problems",
+    description: "Boulder — I want to send harder problems",
   },
   {
     value: "both",
     title: "Both",
-    description: "I train and climb both",
+    description: "Both — I want to improve at everything",
   },
 ] as const;
 
@@ -55,7 +55,7 @@ export default function DisciplinePage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">What do you climb?</CardTitle>
+          <CardTitle className="text-2xl">What do you want to improve?</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {DISCIPLINES.map((d) => (

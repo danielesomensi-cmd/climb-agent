@@ -233,7 +233,16 @@ export default function ReviewPage() {
           {/* Grades */}
           <SummaryRow
             label="Grades"
-            value={`Lead RP: ${data.grades.lead_max_rp}, OS: ${data.grades.lead_max_os}${data.grades.boulder_max_rp ? `, Boulder RP: ${data.grades.boulder_max_rp}` : ""}${data.grades.boulder_max_os ? `, OS: ${data.grades.boulder_max_os}` : ""}`}
+            value={(() => {
+              const parts: string[] = [];
+              if (data.grades.lead_max_rp || data.grades.lead_max_os) {
+                parts.push(`Lead RP: ${data.grades.lead_max_rp || "—"}, OS: ${data.grades.lead_max_os || "—"}`);
+              }
+              if (data.grades.boulder_max_rp || data.grades.boulder_max_os) {
+                parts.push(`Boulder RP: ${data.grades.boulder_max_rp || "—"}, OS: ${data.grades.boulder_max_os || "—"}`);
+              }
+              return parts.join(" · ") || "—";
+            })()}
             editHref="/onboarding/grades"
             router={router}
           />
