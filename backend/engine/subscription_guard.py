@@ -43,11 +43,27 @@ def get_subscription_row(user_id: str) -> Optional[Dict[str, Any]]:
 
 def upsert_subscription(user_id: str, fields: Dict[str, Any]) -> None:
     """Create or update subscription row for user_id."""
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    _log.info(
+        "DIAG upsert_subscription called user_id=%s fields_keys=%s supabase_enabled=%s",
+        user_id, list(fields.keys()), _supabase_enabled(),
+    )
     if not _supabase_enabled():
+        _log.warning(
+            "DIAG upsert_subscription NO-OP: supabase not enabled "
+            "(STORAGE_BACKEND=%s). Row will NOT be written.",
+            _STORAGE_BACKEND,
+        )
         return
     from backend.engine.storage_supabase import _sb
     payload = {"user_id": user_id, **fields}
-    _sb().table("subscriptions").upsert(payload, on_conflict="user_id").execute()
+    try:
+        result = _sb().table("subscriptions").upsert(payload, on_conflict="user_id").execute()
+        _log.info("DIAG upsert_subscription OK user_id=%s result_count=%s", user_id, len(result.data or []))
+    except Exception as exc:
+        _log.error("DIAG upsert_subscription FAILED user_id=%s: %s", user_id, exc, exc_info=True)
+        raise
 
 
 def find_subscription_by_stripe_customer(stripe_customer_id: str) -> Optional[Dict[str, Any]]:

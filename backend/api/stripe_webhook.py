@@ -56,7 +56,19 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
     event_type = event["type"]
     data_object = event["data"]["object"]
 
-    logger.info("Stripe webhook received: %s", event_type)
+    # DIAG: surface env state on every event so Railway logs show the truth
+    import os as _os
+    _sb_backend = _os.environ.get("STORAGE_BACKEND", "<unset>")
+    _has_stripe_key = bool(_os.environ.get("STRIPE_SECRET_KEY", ""))
+    _has_webhook_secret = bool(_os.environ.get("STRIPE_WEBHOOK_SECRET", ""))
+    _has_supabase_url = bool(_os.environ.get("SUPABASE_URL", ""))
+    _has_supabase_key = bool(_os.environ.get("SUPABASE_SERVICE_KEY", ""))
+    logger.info(
+        "DIAG stripe_webhook recv event_type=%s | STORAGE_BACKEND=%s stripe_key=%s "
+        "webhook_secret=%s supabase_url=%s supabase_key=%s",
+        event_type, _sb_backend, _has_stripe_key,
+        _has_webhook_secret, _has_supabase_url, _has_supabase_key,
+    )
 
     try:
         if event_type == "checkout.session.completed":
@@ -70,11 +82,10 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
         elif event_type == "invoice.payment_failed":
             _handle_payment_failed(data_object)
         else:
-            logger.debug("Stripe webhook: unhandled event type %s", event_type)
+            logger.info("Stripe webhook: unhandled event type %s", event_type)
     except Exception as exc:
-        logger.error("Error handling Stripe webhook %s: %s", event_type, exc)
+        logger.error("Error handling Stripe webhook %s: %s", event_type, exc, exc_info=True)
         # Return 200 anyway — Stripe will not retry on 200
-        # Log the error for alerting
 
     return JSONResponse({"received": True}, status_code=200)
 
@@ -85,16 +96,25 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
 
 def _handle_checkout_completed(session: Dict[str, Any]) -> None:
     """checkout.session.completed — link Stripe customer to internal user_id."""
-    user_id = (
-        (session.get("metadata") or {}).get("user_id")
-        or session.get("client_reference_id")
+    metadata = session.get("metadata") or {}
+    client_ref = session.get("client_reference_id")
+    user_id = metadata.get("user_id") or client_ref
+
+    logger.info(
+        "DIAG checkout_completed metadata=%s client_reference_id=%s → user_id=%s",
+        metadata, client_ref, user_id,
     )
+
     if not user_id:
         logger.warning("checkout.session.completed: no user_id in metadata or client_reference_id")
         return
 
     customer_id = session.get("customer")
     subscription_id = session.get("subscription")
+    logger.info(
+        "DIAG checkout_completed customer_id=%s subscription_id=%s",
+        customer_id, subscription_id,
+    )
 
     # Fetch subscription details from Stripe for trial dates
     trial_start = None
@@ -110,6 +130,10 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
             trial_end = _ts(sub.get("trial_end"))
             period_start = _ts((sub.get("current_period_start")))
             period_end = _ts(sub.get("current_period_end"))
+            logger.info(
+                "DIAG checkout_completed sub fetched trial_start=%s trial_end=%s",
+                trial_start, trial_end,
+            )
         except Exception as exc:
             logger.warning("Could not fetch subscription from Stripe: %s", exc)
 
