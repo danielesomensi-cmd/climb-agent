@@ -114,9 +114,9 @@ Questi pesi influenzano la distribuzione delle sessioni in ogni fase.
 
 | goal_type | Discipline | Stato | Note |
 |-----------|-----------|-------|------|
-| `lead_grade` | Lead/Sport | **v1** | Primo da implementare |
-| `boulder_grade` | Boulder | futuro | Macrociclo power-heavy |
-| `all_round` | Misto | futuro | Bilanciato |
+| `lead_grade` | Lead/Sport | **v1** | Macrociclo 12 settimane, pool sessioni lead |
+| `boulder_grade` | Boulder | **v1** (A-B1) | Macrociclo 10 settimane, pool sessioni boulder, pesi boulder |
+| `all_round` | Both (Lead + Boulder) | **v1** (A-B1) | Durate lead + pool sessioni merged lead/boulder (DD-B3) |
 | `outdoor_season` | Misto | futuro | Peak per date specifiche |
 | `maintenance` | Qualsiasi | futuro | Mantenimento, basso volume |
 

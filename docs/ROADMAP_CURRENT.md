@@ -53,6 +53,9 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 - ✅ **B164-trimmed** — Frontend P2 fixes: rest timer placeholder removed, very_easy/easy feedback badge distinction, outdoor spot delete confirmation dialog, import data confirmation dialog (2026-03-30)
 - ✅ **B168** — Fix boulder onboarding flow: boulder-to-lead grade mapping for assessment benchmarks (P0 fix), discipline step before grades, conditional grade fields per discipline, Font/V toggle in grades page, weakness labels in review page (2026-03-30)
 - ✅ **B169** — Radar label truncation fix (boulder labels shortened), boulder base phase floor raised to min 2 weeks. Planner diagnostic: 2/3 hard sessions is correct (finger spacing blocks Tue/Thu), not a bug. (2026-03-30)
+- ✅ **B168c** — Onboarding copy polish: discipline page "What do you want to improve?" + goal-focused descriptions, review page hides empty grade fields for boulder-only users (2026-03-30)
+- ✅ **B165b-fix** — `_recovery_multiplier_for_age()` thresholds corrected: 1.0× under 50 (was 40), 1.25× at 50-59, 1.5× at 60+. Removed 1.75× tier. Replanner spacing now uses `_recovery_gap()` from plan snapshot. (2026-03-30)
+- ✅ **A-B4b** — Radar chart axis tooltips: (i) icon on each legend axis, tap shows discipline-aware description + "low score means" popover. (2026-03-30)
 
 ---
 
