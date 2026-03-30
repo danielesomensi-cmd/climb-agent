@@ -582,6 +582,23 @@ Content: 5 phases, DUP vs linear, feedback loop, deload science, exercise orderi
 Guided outdoor session mode, load calculation, ripple effect, done tracking, history/stats UI, spots in onboarding.
 Consolidates: B68, B69, B70, B72, B73.
 
+### Trip Management (post-onboarding CRUD)
+
+**Status:** Open | **Effort:** M | **Priority:** P3
+
+Full trip lifecycle outside onboarding: add, edit, delete planned trips from Settings.
+When a trip is added/modified:
+- Trip days auto-marked as outdoor in affected week plans
+- Pre-trip deload (3-5 days before, no hard/max sessions) via existing `compute_pretrip_dates()`
+- Recovery day after return
+- Affected week plans auto-regenerated
+
+Backend: CRUD endpoints for `user_state.trips` + trigger plan regeneration on change.
+Frontend: Settings → "Planned Trips" section (list + add/edit/delete). Week view shows trip days with visual badge (read-only).
+Workaround until implemented: use weekly overrides to manually mark days as outdoor/rest.
+
+Related: Outdoor redesign (B68-B73), `compute_pretrip_dates()` in planner_v2.
+
 ### Social Session (fun bouldering with friends)
 
 **Status:** Open | **Effort:** M
