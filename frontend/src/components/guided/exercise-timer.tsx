@@ -17,7 +17,7 @@ interface ExerciseTimerProps {
   sets: number;
   reps: number;                     // reps per set (timer loops reps only when workSeconds > 0)
   initialSet?: number;
-  unilateral?: boolean;             // alternate RIGHT/LEFT each set; internally doubles set count
+  altSides?: boolean;               // alternate RIGHT/LEFT each set; internally doubles set count
   onSetChange?: (completedSets: number) => void;
 }
 
@@ -87,7 +87,7 @@ export function ExerciseTimer({
   sets,
   reps,
   initialSet = 1,
-  unilateral = false,
+  altSides = false,
   onSetChange,
 }: ExerciseTimerProps) {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -118,12 +118,12 @@ export function ExerciseTimer({
   // B124: manual work + timed rest between reps (technique drills, limit bouldering)
   const hasManualRepLoop = isManual && reps > 1 && restBetweenRepsSeconds > 0;
 
-  // B169-F3b: unilateral — internally double the set count, alternate sides
-  const totalSets = unilateral ? sets * 2 : sets;
-  const currentSide: "RIGHT" | "LEFT" | null = unilateral
+  // B169-F3b: altSides — internally double the set count, alternate sides
+  const totalSets = altSides ? sets * 2 : sets;
+  const currentSide: "RIGHT" | "LEFT" | null = altSides
     ? currentSet % 2 === 1 ? "RIGHT" : "LEFT"
     : null;
-  const displaySet = unilateral ? Math.ceil(currentSet / 2) : currentSet;
+  const displaySet = altSides ? Math.ceil(currentSet / 2) : currentSet;
 
   // Total duration for current phase (progress arc denominator)
   const totalForPhase = (() => {
@@ -570,7 +570,7 @@ export function ExerciseTimer({
             </span>
 
             {/* Unilateral side badge — enlarged mode */}
-            {unilateral && isActive && currentSide && (
+            {altSides && phase !== "complete" && currentSide && (
               <div className={cn(
                 "flex items-center justify-center rounded-xl px-8 py-2 text-3xl font-black tracking-widest",
                 currentSide === "RIGHT"
@@ -679,7 +679,7 @@ export function ExerciseTimer({
         </div>
       )}
       {/* Unilateral side badge */}
-      {unilateral && isActive && currentSide && (
+      {altSides && phase !== "complete" && currentSide && (
         <div className={cn(
           "flex items-center justify-center rounded-lg px-5 py-1.5 text-lg font-bold tracking-widest",
           currentSide === "RIGHT"

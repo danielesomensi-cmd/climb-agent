@@ -110,7 +110,8 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
     category: (inst.category as string) ?? "",
     blockUid: (inst.block_uid as string) ?? "",
     loadModel: (inst.load_model as string) ?? "",
-    unilateral: !!(inst.alt_sides ?? inst.unilateral ?? rightHand),
+    unilateral: !!(inst.unilateral ?? rightHand),
+    altSides: !!(inst.alt_sides),
     prescription: {
       sets: prescription.sets as number | undefined,
       reps: prescription.reps != null ? (prescription.reps as string | number) : undefined,

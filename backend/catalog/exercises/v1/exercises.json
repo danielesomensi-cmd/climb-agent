@@ -1922,7 +1922,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "elbow_sensitive",
         "finger_injury",
         "shoulder_sensitive"
@@ -1978,7 +1977,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "elbow_sensitive",
         "finger_injury",
         "finger_sensitive",
@@ -2034,7 +2032,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "finger_injury",
         "shoulder_sensitive"
       ],
@@ -2088,7 +2085,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "elbow_sensitive",
         "finger_injury",
         "finger_sensitive",
@@ -2146,7 +2142,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "elbow_sensitive",
         "finger_injury",
         "finger_sensitive",
@@ -5475,7 +5470,7 @@
       ],
       "contraindications": [],
       "prescription_defaults": {
-        "sets": 2,
+        "sets": 4,
         "reps": null,
         "work_seconds": 30,
         "rest_between_reps_seconds": null,
@@ -5497,8 +5492,7 @@
         "Intensity: 4/10 pull — never force. Tendons respond to gentle sustained load only"
       ],
       "video_url": "https://www.hoopersbeta.com/library/forearm-stretching",
-      "load_model": "bodyweight_only",
-      "alt_sides": true
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_hip_pigeon",
@@ -5526,7 +5520,7 @@
       "prescription_defaults": {
         "sets": 1,
         "reps": null,
-        "work_seconds": 30,
+        "work_seconds": 60,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
         "notes": "Each side. Keep hips square. Breathe into the stretch."
@@ -5624,7 +5618,7 @@
       "prescription_defaults": {
         "sets": 2,
         "reps": null,
-        "work_seconds": 20,
+        "work_seconds": 30,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
         "notes": "Doorway stretch or wall pec stretch. Each side. Open chest and anterior shoulder."
@@ -5644,8 +5638,7 @@
         "Breathe slowly throughout — the stretch deepens naturally with each exhale"
       ],
       "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers",
-      "load_model": "bodyweight_only",
-      "alt_sides": true
+      "load_model": "bodyweight_only"
     },
     {
       "id": "cooldown_hamstring_fold",
@@ -6013,7 +6006,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "finger_injury",
         "shoulder_sensitive"
       ],
@@ -6068,7 +6060,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "elbow_sensitive",
         "finger_injury",
         "finger_sensitive",
@@ -6124,7 +6115,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "finger_injury",
         "shoulder_sensitive"
       ],
@@ -6179,7 +6169,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "finger_injury",
         "shoulder_sensitive"
       ],
@@ -8738,7 +8727,6 @@
         "gym"
       ],
       "contraindications": [
-        "age_under_16",
         "finger_injury",
         "finger_sensitive",
         "shoulder_sensitive"

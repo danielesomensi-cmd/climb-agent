@@ -515,7 +515,8 @@ export interface GuidedExercise {
   category: string;
   blockUid: string;
   loadModel: string;
-  unilateral?: boolean;
+  unilateral?: boolean;    // true for loading-pin LP exercises (per-hand load tracking)
+  altSides?: boolean;      // true for timer side-alternation exercises (RIGHT/LEFT badge)
 
   // Instruction-only blocks (warmup, mobility) — no exercise selection
   isInstructionOnly?: boolean;
