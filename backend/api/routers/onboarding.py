@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from copy import deepcopy
 from typing import Any, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -324,8 +327,13 @@ def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(g
             goal["current_grade"] = grades.get("lead_max_rp", "7a")
 
     # For boulder-only: map target_boulder_grade to lead equivalent for assessment
-    if discipline == "boulder" and goal.get("target_boulder_grade"):
-        goal["target_grade"] = _BOULDER_TO_LEAD.get(goal["target_boulder_grade"], "7a")
+    if discipline == "boulder":
+        boulder_target = goal.get("target_boulder_grade") or goal.get("target_grade", "")
+        if boulder_target:
+            goal["target_boulder_grade"] = boulder_target  # preserve original
+            goal["target_grade"] = _BOULDER_TO_LEAD.get(boulder_target, "7a")
+
+    logger.info("goal before assessment: %s", goal)
 
     try:
         profile = compute_assessment_profile(assessment, goal)

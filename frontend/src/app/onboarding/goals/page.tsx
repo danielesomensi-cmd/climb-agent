@@ -159,7 +159,7 @@ export default function GoalsPage() {
 
   // Validation
   const hasLeadTarget = !showLeadTarget || goal.target_grade !== "";
-  const hasBoulderTarget = !showBoulderTarget || (discipline === "both" ? !!goal.target_boulder_grade : goal.target_grade !== "");
+  const hasBoulderTarget = !showBoulderTarget || !!goal.target_boulder_grade;
   const isValid =
     hasLeadTarget &&
     hasBoulderTarget &&
@@ -236,12 +236,13 @@ export default function GoalsPage() {
             <div className="space-y-2">
               <Label>{discipline === "both" ? "Boulder target grade *" : "Target grade *"}</Label>
               <Select
-                value={discipline === "both" ? (goal.target_boulder_grade ?? "") : goal.target_grade}
+                value={goal.target_boulder_grade ?? ""}
                 onValueChange={(v) => {
                   if (discipline === "both") {
                     setGoal({ target_boulder_grade: v });
                   } else {
-                    setGoal({ target_grade: v, current_grade: currentBoulderGrade });
+                    // Boulder-only: store in target_boulder_grade (backend maps to lead equivalent)
+                    setGoal({ target_boulder_grade: v, target_grade: "", current_grade: currentBoulderGrade });
                   }
                 }}
               >

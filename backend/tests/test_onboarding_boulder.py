@@ -90,6 +90,11 @@ class TestBoulderOnboardingComplete:
         assert "profile" in data
         assert "macrocycle" in data
 
+    def test_boulder_8A_plus_no_error(self):
+        """Hotfix: 8A+ must also work (was failing because target_grade had boulder grade)."""
+        resp = client.post("/api/onboarding/complete", json=_make_boulder_payload("8A+"))
+        assert resp.status_code == 200, f"8A+ failed: {resp.json()}"
+
     def test_boulder_7C_success(self):
         resp = client.post("/api/onboarding/complete", json=_make_boulder_payload("7C"))
         assert resp.status_code == 200
@@ -142,9 +147,18 @@ class TestBothOnboardingComplete:
 class TestBoulderGradeMapping:
     """Grade mapping covers the full range."""
 
+    def test_boulder_grade_in_target_grade_field(self):
+        """Backend handles boulder grade in target_grade (legacy frontend behavior)."""
+        payload = _make_boulder_payload("8A+")
+        # Simulate old frontend: target_grade has boulder grade, target_boulder_grade empty
+        payload["goal"]["target_grade"] = "8A+"
+        payload["goal"]["target_boulder_grade"] = ""
+        resp = client.post("/api/onboarding/complete", json=payload)
+        assert resp.status_code == 200, f"Legacy path failed: {resp.json()}"
+
     def test_all_standard_boulder_grades_complete(self):
         """Every standard boulder grade should produce a valid onboarding."""
-        for grade in ["6A", "6B+", "7A", "7B+", "7C", "8A", "8B"]:
+        for grade in ["6A", "6B+", "7A", "7B+", "7C", "8A", "8A+", "8B"]:
             resp = client.post(
                 "/api/onboarding/complete",
                 json=_make_boulder_payload(grade, boulder_rp="6A"),
