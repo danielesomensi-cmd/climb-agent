@@ -54,7 +54,7 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
         return JSONResponse({"error": "Bad request"}, status_code=400)
 
     event_type = event["type"]
-    data_object = event["data"]["object"]
+    data_object = event["data"]["object"].to_dict_recursive()
 
     # DIAG: surface env state on every event so Railway logs show the truth
     import os as _os
