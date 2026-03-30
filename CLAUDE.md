@@ -144,7 +144,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-53 endpoints total (52 router + 1 app-level health check).
+54 endpoints total (53 router + 1 app-level health check).
 
 | Method | Path | Description |
 |--------|------|-------------|
