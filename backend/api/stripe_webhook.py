@@ -85,9 +85,12 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
 
 def _handle_checkout_completed(session: Dict[str, Any]) -> None:
     """checkout.session.completed — link Stripe customer to internal user_id."""
-    user_id = (session.get("metadata") or {}).get("user_id")
+    user_id = (
+        (session.get("metadata") or {}).get("user_id")
+        or session.get("client_reference_id")
+    )
     if not user_id:
-        logger.warning("checkout.session.completed: no user_id in metadata")
+        logger.warning("checkout.session.completed: no user_id in metadata or client_reference_id")
         return
 
     customer_id = session.get("customer")
@@ -131,18 +134,23 @@ def _handle_subscription_updated(sub: Dict[str, Any]) -> None:
     # Map Stripe status to our status vocabulary
     status = _map_stripe_status(stripe_status)
 
-    row = find_subscription_by_stripe_subscription_id(subscription_id)
-    if row is None:
-        row = find_subscription_by_stripe_customer(customer_id)
-    if row is None:
-        logger.warning(
-            "subscription.updated: no row found for subscription_id=%s customer=%s",
-            subscription_id, customer_id,
-        )
-        return
+    # Prefer metadata.user_id (propagated via subscription_data.metadata at checkout) —
+    # this survives race conditions where the DB row hasn't been linked yet.
+    user_id = (sub.get("metadata") or {}).get("user_id")
+    if not user_id:
+        row = find_subscription_by_stripe_subscription_id(subscription_id)
+        if row is None:
+            row = find_subscription_by_stripe_customer(customer_id)
+        if row is None:
+            logger.warning(
+                "subscription.updated: no row found for subscription_id=%s customer=%s",
+                subscription_id, customer_id,
+            )
+            return
+        user_id = row["user_id"]
 
-    user_id = row["user_id"]
     upsert_subscription(user_id, {
+        "stripe_customer_id": customer_id,
         "stripe_subscription_id": subscription_id,
         "status": status,
         "trial_start": _ts(sub.get("trial_start")),
@@ -159,18 +167,21 @@ def _handle_subscription_deleted(sub: Dict[str, Any]) -> None:
     subscription_id = sub.get("id")
     customer_id = sub.get("customer")
 
-    row = find_subscription_by_stripe_subscription_id(subscription_id)
-    if row is None:
-        row = find_subscription_by_stripe_customer(customer_id)
-    if row is None:
-        logger.warning(
-            "subscription.deleted: no row for subscription_id=%s customer=%s",
-            subscription_id, customer_id,
-        )
-        return
+    user_id = (sub.get("metadata") or {}).get("user_id")
+    if not user_id:
+        row = find_subscription_by_stripe_subscription_id(subscription_id)
+        if row is None:
+            row = find_subscription_by_stripe_customer(customer_id)
+        if row is None:
+            logger.warning(
+                "subscription.deleted: no row for subscription_id=%s customer=%s",
+                subscription_id, customer_id,
+            )
+            return
+        user_id = row["user_id"]
 
-    upsert_subscription(row["user_id"], {"status": "canceled"})
-    logger.info("subscription.deleted: user_id=%s → canceled", row["user_id"])
+    upsert_subscription(user_id, {"status": "canceled"})
+    logger.info("subscription.deleted: user_id=%s → canceled", user_id)
 
 
 def _handle_payment_succeeded(invoice: Dict[str, Any]) -> None:
@@ -178,17 +189,14 @@ def _handle_payment_succeeded(invoice: Dict[str, Any]) -> None:
     subscription_id = invoice.get("subscription")
     customer_id = invoice.get("customer")
 
-    row = find_subscription_by_stripe_subscription_id(subscription_id)
-    if row is None:
-        row = find_subscription_by_stripe_customer(customer_id)
-    if row is None:
+    user_id = _resolve_user_id(subscription_id, customer_id)
+    if not user_id:
         logger.warning(
             "invoice.payment_succeeded: no row for subscription_id=%s customer=%s",
             subscription_id, customer_id,
         )
         return
 
-    # Fetch updated period from Stripe
     period_start = None
     period_end = None
     lines = (invoice.get("lines") or {}).get("data") or []
@@ -197,12 +205,14 @@ def _handle_payment_succeeded(invoice: Dict[str, Any]) -> None:
         period_start = _ts(period.get("start"))
         period_end = _ts(period.get("end"))
 
-    upsert_subscription(row["user_id"], {
+    upsert_subscription(user_id, {
+        "stripe_customer_id": customer_id,
+        "stripe_subscription_id": subscription_id,
         "status": "active",
         "current_period_start": period_start,
         "current_period_end": period_end,
     })
-    logger.info("invoice.payment_succeeded: user_id=%s → active", row["user_id"])
+    logger.info("invoice.payment_succeeded: user_id=%s → active", user_id)
 
 
 def _handle_payment_failed(invoice: Dict[str, Any]) -> None:
@@ -210,23 +220,76 @@ def _handle_payment_failed(invoice: Dict[str, Any]) -> None:
     subscription_id = invoice.get("subscription")
     customer_id = invoice.get("customer")
 
-    row = find_subscription_by_stripe_subscription_id(subscription_id)
-    if row is None:
-        row = find_subscription_by_stripe_customer(customer_id)
-    if row is None:
+    user_id = _resolve_user_id(subscription_id, customer_id)
+    if not user_id:
         logger.warning(
             "invoice.payment_failed: no row for subscription_id=%s customer=%s",
             subscription_id, customer_id,
         )
         return
 
-    upsert_subscription(row["user_id"], {"status": "past_due"})
-    logger.info("invoice.payment_failed: user_id=%s → past_due", row["user_id"])
+    upsert_subscription(user_id, {
+        "stripe_customer_id": customer_id,
+        "stripe_subscription_id": subscription_id,
+        "status": "past_due",
+    })
+    logger.info("invoice.payment_failed: user_id=%s → past_due", user_id)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _resolve_user_id(
+    subscription_id: "str | None",
+    customer_id: "str | None",
+) -> "str | None":
+    """Resolve internal user_id for invoice events.
+
+    Priority:
+    1. DB lookup by stripe_subscription_id (fast path post-checkout)
+    2. DB lookup by stripe_customer_id
+    3. Stripe API: retrieve subscription → read metadata.user_id
+       (set via subscription_data.metadata at checkout creation)
+    4. Stripe API: list checkout sessions → read client_reference_id
+       (last resort for legacy rows without subscription metadata)
+    """
+    if subscription_id:
+        row = find_subscription_by_stripe_subscription_id(subscription_id)
+        if row:
+            return row["user_id"]
+    if customer_id:
+        row = find_subscription_by_stripe_customer(customer_id)
+        if row:
+            return row["user_id"]
+
+    # Stripe API fallback — handles race condition where invoice.payment_succeeded
+    # arrives before checkout.session.completed has written the Stripe IDs to DB.
+    if subscription_id and _STRIPE_SECRET_KEY:
+        try:
+            client = stripe.StripeClient(_STRIPE_SECRET_KEY)
+            sub = client.subscriptions.retrieve(subscription_id)
+            uid = (sub.get("metadata") or {}).get("user_id")
+            if uid:
+                logger.info("_resolve_user_id: found user_id=%s via subscription metadata", uid)
+                return uid
+        except Exception as exc:
+            logger.warning("_resolve_user_id: could not retrieve subscription: %s", exc)
+
+    if customer_id and _STRIPE_SECRET_KEY:
+        try:
+            client = stripe.StripeClient(_STRIPE_SECRET_KEY)
+            sessions = client.checkout.sessions.list({"customer": customer_id, "limit": 5})
+            for s in sessions.data or []:
+                uid = s.get("client_reference_id")
+                if uid:
+                    logger.info("_resolve_user_id: found user_id=%s via checkout client_reference_id", uid)
+                    return uid
+        except Exception as exc:
+            logger.warning("_resolve_user_id: could not list checkout sessions: %s", exc)
+
+    return None
+
 
 def _ts(unix_ts) -> str | None:
     """Convert a Unix timestamp (int) to ISO-8601 string, or None."""

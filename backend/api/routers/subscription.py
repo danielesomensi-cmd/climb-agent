@@ -80,11 +80,18 @@ def create_checkout_session(
     checkout_params: dict = {
         "mode": "subscription",
         "line_items": [{"price": _STRIPE_PRICE_ID, "quantity": 1}],
-        "subscription_data": {"trial_period_days": 14},
+        "subscription_data": {
+            "trial_period_days": 14,
+            # Propagated to the Subscription object — survives race conditions
+            # where invoice events arrive before checkout.session.completed.
+            "metadata": {"user_id": user_id},
+        },
         "success_url": f"{_FRONTEND_BASE}/today?checkout=success",
         "cancel_url": f"{_FRONTEND_BASE}/today?checkout=canceled",
         "allow_promotion_codes": True,
         "payment_method_types": ["card"],
+        # Stripe-native field — surfaced on checkout session and child sessions.
+        "client_reference_id": user_id,
         "metadata": {"user_id": user_id},
     }
 
