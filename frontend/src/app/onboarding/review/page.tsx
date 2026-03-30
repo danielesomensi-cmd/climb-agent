@@ -39,6 +39,10 @@ const WEAKNESS_LABELS: Record<string, string> = {
   cant_manage_rests: "Can't manage rests",
   lack_power: "Lack explosive power",
   injury_prone: "Frequent injuries",
+  poor_body_tension: "Poor body tension",
+  poor_dynamic_movement: "Poor dynamic movement",
+  weak_on_slopers: "Weak on slopers",
+  poor_problem_reading: "Poor problem reading",
 };
 
 function SummaryRow({

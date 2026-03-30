@@ -303,16 +303,29 @@ def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(g
             "both": "all_round",
         }.get(discipline, "lead_grade")
 
+    # Boulder grades (uppercase Font) must be mapped to lead equivalents
+    # for assessment benchmarks which are calibrated to French lead grades.
+    _BOULDER_TO_LEAD = {
+        "4A": "5c", "4B": "6a", "4C": "6a+",
+        "5A": "6a+", "5A+": "6b", "5B": "6b", "5B+": "6b+", "5C": "6c", "5C+": "6c+",
+        "6A": "6c+", "6A+": "7a", "6B": "7a", "6B+": "7a+", "6C": "7b", "6C+": "7b+",
+        "7A": "7b+", "7A+": "7c", "7B": "7c+", "7B+": "8a",
+        "7C": "8a", "7C+": "8a+",
+        "8A": "8b", "8A+": "8b+", "8B": "8c", "8B+": "8c+",
+        "8C": "9a", "8C+": "9a+",
+    }
+
     if not goal.get("current_grade") and assessment.get("grades"):
         grades = assessment["grades"]
         if discipline == "boulder":
-            goal["current_grade"] = grades.get("boulder_max_rp", "6A")
+            boulder_current = grades.get("boulder_max_rp", "6A")
+            goal["current_grade"] = _BOULDER_TO_LEAD.get(boulder_current, "6c+")
         else:
             goal["current_grade"] = grades.get("lead_max_rp", "7a")
 
-    # For boulder-only: use target_boulder_grade as target_grade for assessment
-    if discipline == "boulder" and goal.get("target_boulder_grade") and not goal.get("target_grade"):
-        goal["target_grade"] = goal["target_boulder_grade"]
+    # For boulder-only: map target_boulder_grade to lead equivalent for assessment
+    if discipline == "boulder" and goal.get("target_boulder_grade"):
+        goal["target_grade"] = _BOULDER_TO_LEAD.get(goal["target_boulder_grade"], "7a")
 
     try:
         profile = compute_assessment_profile(assessment, goal)

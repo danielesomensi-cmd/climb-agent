@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
 
 const STEPS = [
-  "welcome", "profile", "experience", "grades", "goals",
+  "welcome", "profile", "experience", "discipline", "grades", "goals",
   "weaknesses", "tests", "limitations", "locations", "availability", "trips", "review",
 ];
 

@@ -174,29 +174,6 @@ export default function GoalsPage() {
           <CardTitle className="text-2xl">Your goal</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Discipline */}
-          <div className="space-y-3">
-            <Label>Discipline</Label>
-            <RadioGroup
-              value={discipline}
-              onValueChange={(v) => syncAndSetGoal({ discipline: v })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="lead" id="disc-lead" />
-                <Label htmlFor="disc-lead">Lead</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="boulder" id="disc-boulder" />
-                <Label htmlFor="disc-boulder">Boulder</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="both" id="disc-both" />
-                <Label htmlFor="disc-both">Both</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
           {/* Target style — hidden for boulder-only */}
           {showTargetStyle && (
             <div className="space-y-3">

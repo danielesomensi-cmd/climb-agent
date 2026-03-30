@@ -51,6 +51,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 - ✅ **B160g** — Template gap fix: added `core_standard` and/or `antagonist_prehab` modules to 7 gym session definitions (boulder_circuit, route_endurance, limit_boulder, pulling_strength, finger_maintenance, heavy_conditioning, easy_climbing_deload). All gym sessions now resolve with complete tail blocks. Updated duration estimates. Zero engine code changes (2026-03-27)
 - ✅ **B167** — Sync safety net: `sync_status.py` now aborts with warning if non-sync files are uncommitted (SYNC_FILES whitelist = PROJECT_BRIEF.md + README.md). CLAUDE.md rule added: commit before sync. (2026-03-29)
 - ✅ **B164-trimmed** — Frontend P2 fixes: rest timer placeholder removed, very_easy/easy feedback badge distinction, outdoor spot delete confirmation dialog, import data confirmation dialog (2026-03-30)
+- ✅ **B168** — Fix boulder onboarding flow: boulder-to-lead grade mapping for assessment benchmarks (P0 fix), discipline step before grades, conditional grade fields per discipline, Font/V toggle in grades page, weakness labels in review page (2026-03-30)
 
 ---
 

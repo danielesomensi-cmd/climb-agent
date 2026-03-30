@@ -77,7 +77,7 @@ export default function ExperiencePage() {
         >
           Back
         </Button>
-        <Button onClick={() => router.push("/onboarding/grades")}>
+        <Button onClick={() => router.push("/onboarding/discipline")}>
           Next
         </Button>
       </div>
