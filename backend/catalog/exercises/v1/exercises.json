@@ -2908,7 +2908,7 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/one-arm-pull-up-progressions",
       "load_model": "bodyweight_only",
-      "unilateral": true
+      "alt_sides": true
     },
     {
       "id": "lock_off_isometric",
@@ -4893,8 +4893,7 @@
         "If hips pop or click without pain: normal. If click with pain: reduce range"
       ],
       "video_url": "https://www.hoopersbeta.com/library/hip-mobility-for-climbers",
-      "load_model": "bodyweight_only",
-      "alt_sides": true
+      "load_model": "bodyweight_only"
     },
     {
       "id": "wall_handstand_hold",
