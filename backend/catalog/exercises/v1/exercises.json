@@ -352,7 +352,7 @@
         "cns": "medium",
         "skin": "medium"
       },
-      "description": "7-second near-maximal hangs for maximum finger strength and neural drive (Hörst/López protocol).",
+      "description": "Near-maximal 7-second hangs for maximum finger strength and neural drive. Load selection: choose edge/weight you can hold for exactly 10 seconds maximum. Hang 7 seconds — well short of failure. 3-minute rest between sets allows full phosphocreatine recovery. (Hörst/López max-strength protocol)",
       "cues": [
         "Edge/weight you can hold exactly 10s max",
         "Hang precisely 7 seconds",
@@ -500,7 +500,7 @@
       ],
       "prescription_defaults": {
         "sets": 4,
-        "reps": null,
+        "reps": 3,
         "work_seconds": 7,
         "rest_between_reps_seconds": 53,
         "rest_between_sets_seconds": 180,
@@ -841,18 +841,19 @@
       },
       "description": "Advanced one-arm hang protocol (Cameron Hörst) for unilateral finger strength using assistance to reduce bodyweight.",
       "cues": [
-        "Use pulley system or band",
-        "5-10 second hangs",
-        "Prevent body spinning",
-        "Shoulder stable and packed",
-        "Progress by reducing assistance"
+        "Use pulley system or resistance band to reduce load",
+        "5-10 second hangs per arm — complete all sets on one hand, then switch",
+        "Prevent body spinning — use a slight offset stance",
+        "Shoulder stable and packed throughout the hang",
+        "Progress by gradually reducing assistance over weeks"
       ],
       "video_url": null,
       "load_model": "total_load",
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp"
-      }
+      },
+      "unilateral": true
     },
     {
       "id": "lopez_subhangs",
@@ -1059,10 +1060,12 @@
         "Knee tracks over second toe throughout — no valgus collapse",
         "Torso upright or slight forward lean, core engaged",
         "Full range: back knee approaches but does not touch floor",
-        "3-second eccentric lower for maximum tendon adaptation"
+        "3-second eccentric lower for maximum tendon adaptation",
+        "Complete all reps on one leg before switching — equal volume both sides"
       ],
       "video_url": "https://www.youtube.com/watch?v=1V4ypd3YBbA",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "unilateral": true
     },
     {
       "id": "pistol_squat_progression",
@@ -1108,10 +1111,12 @@
         "Heel flat throughout; knee tracks over 2nd–3rd toe — no valgus collapse",
         "Non-working leg extended forward, parallel to floor at full depth",
         "3-second eccentric descent for maximum neuromuscular adaptation",
-        "Progression ladder: box squat → TRX-assisted → counterweight → free pistol"
+        "Progression ladder: box squat → TRX-assisted → counterweight → free pistol",
+        "Complete all reps on one leg before switching — equal volume both sides"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "unilateral": true
     },
     {
       "id": "romanian_deadlift",
@@ -1882,7 +1887,7 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "Light cardio to raise body temperature before training.",
+      "description": "Light cardio to raise core body temperature and prepare the cardiovascular system before training. Goal: mild warmth and slightly elevated heart rate — NOT fatigue. Choose any low-intensity option: brisk walk, easy jog in place, jumping jacks, or a flowing sequence of air squats and arm swings. 3-5 minutes is sufficient.",
       "cues": [
         "Options: brisk walk, easy jog, jumping jacks, air squats flow",
         "Goal: warmth and light sweat, not fatigue",
@@ -2112,7 +2117,8 @@
       "load_model": "bodyweight_only",
       "experience_minimum_years": 3,
       "age_minimum": 16,
-      "difficulty_tier": 4
+      "difficulty_tier": 4,
+      "unilateral": true
     },
     {
       "id": "campus_double_dyno",
@@ -2899,10 +2905,12 @@
         "Straight arm PUSHES DOWN as working arm pulls up",
         "Pull until chin is over working hand",
         "Controlled slow lowering — 3s eccentric minimum",
-        "Alternate sides, both arms equal volume"
+        "3 reps per side per set — alternate sides (6 total reps per set)",
+        "Both arms must get equal volume"
       ],
       "video_url": "https://www.hoopersbeta.com/library/one-arm-pull-up-progressions",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "unilateral": true
     },
     {
       "id": "lock_off_isometric",
@@ -3434,6 +3442,7 @@
       },
       "description": "Lateral anti-rotation isometric targeting obliques, lateral hip stabilizers and hip abductors. Essential for flagging, hip drops and side-pull sequences where the body is under rotational stress. (inSPIRE Rock; Horst core series)",
       "cues": [
+        "Hold for prescribed time per side — complete both sides before resting",
         "Ear, shoulder, hip and ankle in one straight line — no hip sag",
         "Hips stacked vertically — do not let top hip roll forward",
         "Breathe steadily and maintain full tension throughout",
@@ -3441,7 +3450,8 @@
         "Progression: top arm overhead, or top foot raised"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "unilateral": true
     },
     {
       "id": "dead_bug",
@@ -5656,13 +5666,14 @@
         "cns": "none",
         "skin": "none"
       },
-      "description": "Seated hamstring stretch — forward fold or single-leg extension targeting biceps femoris, semimembranosus, and semitendinosus. Hamstring flexibility directly supports high heel placements and seated rest positions on overhangs. Seated forward fold or supine single-leg hamstring stretch.",
+      "description": "Standing forward fold targeting hamstrings, calves, and lower back. Feet hip-width apart, hinge from hips and let torso hang heavy. Soft knees if hamstrings are tight. Hamstring flexibility directly supports high heel placements and seated rest positions on overhangs.",
       "cues": [
-        "Seated: legs straight, flex feet, hinge from hips (not waist) — keep spine long",
-        "Do NOT round the lower back — prioritise a flat back over reaching further",
-        "Supine option: lying flat, loop a strap over foot, pull leg toward ceiling — safer for lower back",
-        "Hold 30-60s per side",
-        "Reaching further is less important than keeping the pelvis in anterior tilt (long spine)"
+        "Stand feet hip-width, hinge from hips — NOT the waist — and fold forward",
+        "Let arms and head hang heavy; grip opposite elbows for added weight",
+        "Soft bent knees if hamstrings are very tight — priority is hip hinge, not straight legs",
+        "Do NOT round the lower back to reach further — keep pelvis in anterior tilt",
+        "Hold 30-60s; breathe out to deepen the stretch gently",
+        "To deepen: straighten legs progressively as flexibility improves"
       ],
       "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y",
       "load_model": "bodyweight_only"
@@ -6550,11 +6561,14 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "Isometric hold targeting pronator teres to prevent climber's elbow.",
+      "description": "Isometric forearm pronation hold against band resistance to strengthen and condition pronator teres. Targets medial elbow stability — a common site of climber's elbow (medial epicondylitis). Submaximal loading (RPE 5-6) for health and prevention, not strength development. Perform pain-free only.",
       "cues": [
-        "Elbow at 90°",
-        "Palm up, resist internal rotation",
-        "Keep shoulder relaxed"
+        "Sit or stand with elbow bent 90° — forearm horizontal, palm facing up initially",
+        "Anchor resistance band under foot; grip band and pronate (rotate palm down) against resistance",
+        "Alternative: press palm against wall or doorframe and resist internal rotation isometrically",
+        "Hold at mid-range position (palm halfway between up and down) — RPE 5-6, NOT maximum effort",
+        "Keep shoulder relaxed and down — this is a forearm/elbow exercise, not a shoulder exercise",
+        "Hold 20-30s per set; this is health work — stop immediately if medial elbow pain increases"
       ],
       "video_url": null,
       "load_model": "bodyweight_only"
@@ -6598,11 +6612,15 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "Eccentric rotation for medial epicondylitis prevention.",
+      "description": "Eccentric-emphasis forearm rotation using a light dumbbell or hammer held at the far end for leverage. Trains pronator and supinator muscles eccentrically to prevent and rehabilitate medial epicondylitis (climber's elbow). The slow eccentric phase is the active treatment — the concentric is just resetting.",
       "cues": [
-        "Slow control on lowering",
-        "Neutral wrist",
-        "No pain allowed"
+        "Hold a light dumbbell or hammer by the handle end — grip at the very base for maximum lever arm",
+        "Elbow at 90°, upper arm fixed against your side or resting on a thigh",
+        "Pronation eccentrics: start palm up, slowly lower to palm down — 4-5 seconds down",
+        "Supination eccentrics: start palm down, slowly raise to palm up — 4-5 seconds up",
+        "Use the OTHER hand to help reset — only resist on the way down/up, not on the return",
+        "Very light load — if 10 reps feels easy, you're holding the dumbbell too close to the head",
+        "Stop if medial elbow pain increases — this is rehab work, not through-pain training"
       ],
       "video_url": "https://trainingforclimbing.com/treating-climbers-elbow-medial-epicondylitis/",
       "load_model": "bodyweight_only"
@@ -6648,11 +6666,14 @@
         "cns": "medium",
         "skin": "low"
       },
-      "description": "Isolates heel-hook technique on volume terrain.",
+      "description": "Deliberate practice of heel-hook mechanics on easy terrain (2 grades below flash). Focus exclusively on heel placement accuracy, hip engagement, and the pulling tension through the hamstring. Most climbers neglect the active pull — this drill builds the neuromuscular pattern to engage the heel as an active contact point, not just a passive prop.",
       "cues": [
-        "Active heel pull",
-        "Hip close to wall",
-        "Relaxed arms"
+        "Choose problems 2+ grades below your flash level — difficulty must NOT be the challenge",
+        "Place heel deliberately: find the best position on the hold before weighting it",
+        "Active heel pull: once the heel is set, actively pull with the hamstring (like a leg curl)",
+        "Drive hip close to the wall immediately after placing heel — don't reach with your foot",
+        "Relax the upper body — arms only stabilize, not pull. The heel does the work",
+        "Reset and repeat on each attempt — quality of movement, not speed"
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "grade_relative"
@@ -6772,7 +6793,7 @@
       "domain": [
         "finger_strength"
       ],
-      "pattern": "isometric_hang",
+      "pattern": "tendon_glide",
       "intensity_level": "low",
       "fatigue_cost": 3,
       "recency_group": "prehab_finger_dynamic",
@@ -6790,9 +6811,9 @@
         "sets": 3,
         "reps": 8,
         "work_seconds": null,
-        "rest_between_reps_seconds": 10,
-        "rest_between_sets_seconds": 120,
-        "notes": "Hang at 50-70% BW on open-hand edge. Each rep: curl fingertips for ~3s, then hold 10s static hang before next rep. Maintain grip throughout the set. Submaximal always."
+        "rest_between_sets_seconds": 90,
+        "notes": "Tendon conditioning drill. Both setup options (A/B) are valid — choose based on available equipment.",
+        "rest_between_reps_seconds": null
       },
       "stress_tags": {
         "elbow": "low",
@@ -6800,13 +6821,15 @@
         "cns": "low",
         "skin": "low"
       },
-      "description": "Dynamic tendon loading via small active curls on hangboard edge. Tyler Nelson (Camp 4 Human Performance) protocol for stimulating tendon adaptation through controlled dynamic loading — distinct from the purely isometric approach of long_duration_hang. Creates different mechanical stimulus for pulley and tendon health.",
+      "description": "Finger tendon conditioning on hangboard edge. Two options: (A) Hang with pulley assistance — load 50-70% BW on edge, or (B) Stand facing the hangboard — place fingers on edge and lean in to load. Slowly let fingers uncurl/extend from the edge (2s), then re-curl to grip firmly (2s). Small controlled movement at the finger joints only.",
       "cues": [
-        "Load edge at 50-70% bodyweight — use pulley assist if needed",
-        "Open-hand grip only, never full crimp for prehab",
-        "Small curl movement at fingertips — not a full grip change",
-        "Controlled speed in both directions, no snapping",
-        "Submaximal: this is health work, stop if any pulley pain"
+        "Two setups: (A) pulley-assisted hang at 50-70% BW, or (B) standing with hands on edge, lean in to load",
+        "Open-hand grip only — never full crimp",
+        "Slow tempo: 2s uncurl (let fingers extend away from edge), 2s re-curl (grip edge firmly)",
+        "Movement is small — just at the fingertips, not a full grip change",
+        "8 continuous reps per set, rest 90s between sets",
+        "This is tendon health work — stop immediately if any finger or pulley pain",
+        "Adapted from Tyler Nelson (PIMA) and Hörst (protective finger rolls)"
       ],
       "video_url": null,
       "load_model": "bodyweight_only"
@@ -8427,7 +8450,7 @@
     },
     {
       "id": "dynamic_mobility_flow",
-      "name": "Dynamic Mobility Flow",
+      "name": "Full-Body Warm-up Flow",
       "category": "warmup_general",
       "time_min": 5,
       "role": [
@@ -8462,7 +8485,7 @@
         "cns": "none",
         "skin": "none"
       },
-      "description": "Full-body dynamic mobility routine to prepare joints for training.",
+      "description": "Quick full-body dynamic mobilization covering ALL major joints before training: spine, shoulders, hips, wrists, and ankles. Not a deep stretch — the goal is to wake up the whole body and increase tissue temperature. For hip-specific depth work, see Active Hip Mobility (CARs/High Step/Frog).",
       "cues": [
         "Thoracic spine: cat-cow, thread the needle rotations",
         "Hips: hip circles, leg swings, deep squat hold",
@@ -8510,7 +8533,7 @@
         "cns": "low",
         "skin": "low"
       },
-      "description": "Progressive finger loading on large holds to prepare tendons for max effort.",
+      "description": "Progressive finger loading warm-up before max-effort hang sessions. Three to five hangs on large holds (jugs or 35mm+ edges), increasing load from bodyweight to ~50% of session max. Full 60-90s rest between hangs. Prepares pulleys and tendons for high-intensity work without accumulated fatigue.",
       "cues": [
         "Start on jugs or large edges",
         "Hang 1: bodyweight only, 5-10s",
@@ -8558,7 +8581,7 @@
         "cns": "none",
         "skin": "none"
       },
-      "description": "Self-myofascial release to promote blood flow and reduce stiffness.",
+      "description": "Self-myofascial release using foam roller or lacrosse ball. Promotes blood flow, reduces tissue stiffness, and improves movement quality before training. Focus on areas loaded in the upcoming session: lats and thoracic spine before pulling, quads and calves before footwork-heavy sessions. 30-60s per area.",
       "cues": [
         "Thoracic spine: roll upper back slowly",
         "Lats: side-lying, roll from armpit to waist",
@@ -8810,7 +8833,8 @@
         "Equal reps each leg"
       ],
       "load_model": "bodyweight_only",
-      "video_url": null
+      "video_url": null,
+      "unilateral": true
     },
     {
       "id": "step_ups",
