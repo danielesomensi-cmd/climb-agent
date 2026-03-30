@@ -94,7 +94,8 @@
         "Pain-free range only — mild discomfort acceptable"
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "band_external_rotation",
@@ -141,7 +142,8 @@
         "If it feels hard, use lighter band — rotator cuff is endurance, not power"
       ],
       "video_url": "https://trainingforclimbing.com/rotator-cuff-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "finger_recruitment_pulls",
@@ -796,7 +798,8 @@
       "attributes": {
         "edge_mm": null,
         "grip": "pinch"
-      }
+      },
+      "alt_sides": true
     },
     {
       "id": "one_arm_hang_assisted",
@@ -3012,7 +3015,8 @@
         "Stop if elbow snaps or sharp pain — reduce load"
       ],
       "video_url": "https://www.hoopersbeta.com/library/one-arm-pull-up-progressions",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "barbell_row",
@@ -3110,7 +3114,8 @@
         "Slow and controlled — no swinging or momentum"
       ],
       "video_url": "https://www.hoopersbeta.com/library/one-arm-pull-up-progressions",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "ring_pushup",
@@ -3402,7 +3407,8 @@
         "Train both directions each set — do not skip the weaker side"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "side_plank",
@@ -3643,7 +3649,8 @@
         "Keep fingers relaxed throughout"
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "alt_sides": true
     },
     {
       "id": "reverse_wrist_curl",
@@ -3691,7 +3698,8 @@
         "Keep load light enough to maintain perfect form for all reps"
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "alt_sides": true
     },
     {
       "id": "forearm_pronation_supination",
@@ -3737,7 +3745,8 @@
         "No sharp pain — reduce weight or range if needed"
       ],
       "video_url": "https://trainingforclimbing.com/treating-climbers-elbow-medial-epicondylitis/",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "alt_sides": true
     },
     {
       "id": "finger_extensor_training",
@@ -3832,7 +3841,8 @@
         "Sharp pain = stop immediately"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "alt_sides": true
     },
     {
       "id": "shoulder_car",
@@ -3881,7 +3891,8 @@
         "Note any pinching or restriction — these are signals, not to push through"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "silent_feet_drill",
@@ -4398,7 +4409,8 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "alt_sides": true
     },
     {
       "id": "sloth_monkey",
@@ -4886,7 +4898,8 @@
         "If hips pop or click without pain: normal. If click with pain: reduce range"
       ],
       "video_url": "https://www.hoopersbeta.com/library/hip-mobility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "wall_handstand_hold",
@@ -5237,7 +5250,8 @@
         "Beginners: learn with no weight first, then a shoe, then a light kettlebell"
       ],
       "video_url": "https://www.youtube.com/watch?v=0bR6bDCiMpg",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "alt_sides": true
     },
     {
       "id": "farmers_carry",
@@ -5483,7 +5497,8 @@
         "Intensity: 4/10 pull — never force. Tendons respond to gentle sustained load only"
       ],
       "video_url": "https://www.hoopersbeta.com/library/forearm-stretching",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "cooldown_hip_pigeon",
@@ -5531,7 +5546,8 @@
         "Avoid if sharp knee pain — try a supine figure-4 stretch instead"
       ],
       "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "cooldown_hip_frog",
@@ -5628,7 +5644,8 @@
         "Breathe slowly throughout — the stretch deepens naturally with each exhale"
       ],
       "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "cooldown_hamstring_fold",
@@ -5724,7 +5741,8 @@
         "Exhale to allow deeper rotation — do not force with hands"
       ],
       "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "cooldown_deep_squat_hold",
@@ -5819,7 +5837,8 @@
         "If ankle rolls or heel lifts on bent leg, use a small plate under the heel"
       ],
       "video_url": "https://www.youtube.com/watch?v=tpczTeSkHz0",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "flexibility_active_leg_raise",
@@ -5865,7 +5884,8 @@
         "8 reps/side: quality over height. Better to stop at 70° with perfect form than 90° with compensation"
       ],
       "video_url": "https://www.youtube.com/watch?v=tpczTeSkHz0",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "flexibility_ninety_ninety",
@@ -5912,7 +5932,8 @@
         "Active version: lift each knee off the floor without using hands — this tests hip strength in range"
       ],
       "video_url": "https://www.youtube.com/watch?v=rMRGNHbxLPc",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "max_hang_10s",
@@ -6224,7 +6245,7 @@
       "prescription_defaults": {
         "sets": 12,
         "reps": 1,
-        "work_seconds": 30,
+        "work_seconds": 60,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": null,
         "notes": "Every Minute On the Minute: start a problem at 0:00, 1:00, 2:00... rest is whatever remains of each minute. Typical problem takes 20-30s. Grade 2-4 below boulder max. 12 problems = 12 min. Reduce grade mid-session to maintain form — EMOM trains capacity, not failure.",
@@ -6571,7 +6592,8 @@
         "Hold 20-30s per set; this is health work — stop immediately if medial elbow pain increases"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "stick_pronation_supination_eccentric",
@@ -6623,7 +6645,8 @@
         "Stop if medial elbow pain increases — this is rehab work, not through-pain training"
       ],
       "video_url": "https://trainingforclimbing.com/treating-climbers-elbow-medial-epicondylitis/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "heel_hook_specific_drill",
@@ -6883,7 +6906,8 @@
         "Both sides equal — do not skip the weaker side"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "hangboard_moving_hangs",
@@ -7101,7 +7125,8 @@
         "30 cm offset for beginners → 45 cm → 60 cm as a rough progression",
         "To increase climbing specificity: high hand uses palms-away (pronated) grip"
       ],
-      "video_url": "https://trainingforclimbing.com/develop-one-arm-lock-off-strength-with-uneven-grip-pull-ups/"
+      "video_url": "https://trainingforclimbing.com/develop-one-arm-lock-off-strength-with-uneven-grip-pull-ups/",
+      "alt_sides": true
     },
     {
       "id": "one_on_one_off_intervals",
@@ -7133,8 +7158,8 @@
         "sets": 10,
         "reps": 1,
         "work_seconds": 60,
-        "rest_between_reps_seconds": 60,
-        "rest_between_sets_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
         "notes": "1 min climbing / 1 min rest x 10 rounds = 20 min total. Grade 1-2 below lead onsight. Aim for zero pump — intensity sits just above ARC but below threshold. If pump accumulates by round 6-7, reduce grade next session. Lattice Randall/Torr protocol.",
         "grade_ref": "lead_max_os",
         "grade_offset": -1
@@ -7262,7 +7287,8 @@
         "Hold 90s minimum per side — 30s holds produce negligible adaptation in hip flexors",
         "After: squeeze glute of stretched leg to reinforce hip extension pattern"
       ],
-      "video_url": "https://www.youtube.com/watch?v=wC5_iobGlmg"
+      "video_url": "https://www.youtube.com/watch?v=wC5_iobGlmg",
+      "alt_sides": true
     },
     {
       "id": "lat_overhead_stretch",
@@ -7312,7 +7338,8 @@
         "Breathe into the stretched side: feel the ribs expand on the inhale",
         "Option A note: fingers and pulleys take load — avoid if fingers are injured; use Option B or C instead"
       ],
-      "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers"
+      "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers",
+      "alt_sides": true
     },
     {
       "id": "dumbbell_bench_press",
@@ -8879,7 +8906,8 @@
         "Hold dumbbells for added resistance"
       ],
       "load_model": "external_load",
-      "video_url": null
+      "video_url": null,
+      "alt_sides": true
     },
     {
       "id": "hip_flexor_strengthening",
@@ -8924,7 +8952,8 @@
         "Equal reps each leg"
       ],
       "load_model": "bodyweight_only",
-      "video_url": null
+      "video_url": null,
+      "alt_sides": true
     },
     {
       "id": "freeze_drill",

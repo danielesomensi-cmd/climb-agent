@@ -17,6 +17,7 @@ interface ExerciseTimerProps {
   sets: number;
   reps: number;                     // reps per set (timer loops reps only when workSeconds > 0)
   initialSet?: number;
+  unilateral?: boolean;             // alternate RIGHT/LEFT each set; internally doubles set count
   onSetChange?: (completedSets: number) => void;
 }
 
@@ -86,6 +87,7 @@ export function ExerciseTimer({
   sets,
   reps,
   initialSet = 1,
+  unilateral = false,
   onSetChange,
 }: ExerciseTimerProps) {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -115,6 +117,13 @@ export function ExerciseTimer({
   const hasRepLoop = !isManual && reps > 1;
   // B124: manual work + timed rest between reps (technique drills, limit bouldering)
   const hasManualRepLoop = isManual && reps > 1 && restBetweenRepsSeconds > 0;
+
+  // B169-F3b: unilateral — internally double the set count, alternate sides
+  const totalSets = unilateral ? sets * 2 : sets;
+  const currentSide: "RIGHT" | "LEFT" | null = unilateral
+    ? currentSet % 2 === 1 ? "RIGHT" : "LEFT"
+    : null;
+  const displaySet = unilateral ? Math.ceil(currentSet / 2) : currentSet;
 
   // Total duration for current phase (progress arc denominator)
   const totalForPhase = (() => {
@@ -218,7 +227,7 @@ export function ExerciseTimer({
           }
           // End of set
           onSetChangeRef.current?.(currentSet);
-          if (currentSet >= sets) {
+          if (currentSet >= totalSets) {
             setPhase("complete");
             pendingVoiceCueRef.current = "complete";
             setTransitionId((id) => id + 1);
@@ -271,7 +280,7 @@ export function ExerciseTimer({
     }, 1000);
 
     return clearTimer;
-  }, [phase, paused, currentSet, currentRep, sets, reps, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, hasManualRepLoop, clearTimer, startCountdown]);
+  }, [phase, paused, currentSet, currentRep, sets, reps, totalSets, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, hasManualRepLoop, clearTimer, startCountdown]);
 
   // Immediate recalc when PWA returns to foreground (iOS suspends setInterval in background).
   useEffect(() => {
@@ -320,7 +329,7 @@ export function ExerciseTimer({
 
     // End of set (all reps done, or no rep loop)
     onSetChangeRef.current?.(currentSet);
-    if (currentSet >= sets) {
+    if (currentSet >= totalSets) {
       setPhase("complete");
       pendingVoiceCueRef.current = "complete";
     } else if (restBetweenSetsSeconds > 0) {
@@ -379,7 +388,7 @@ export function ExerciseTimer({
       } else {
         // End of set
         onSetChangeRef.current?.(currentSet);
-        if (currentSet >= sets) {
+        if (currentSet >= totalSets) {
           setPhase("complete");
           pendingVoiceCueRef.current = "complete";
           setSecondsLeft(0);
@@ -560,6 +569,18 @@ export function ExerciseTimer({
               {phaseLabel}
             </span>
 
+            {/* Unilateral side badge — enlarged mode */}
+            {unilateral && isActive && currentSide && (
+              <div className={cn(
+                "flex items-center justify-center rounded-xl px-8 py-2 text-3xl font-black tracking-widest",
+                currentSide === "RIGHT"
+                  ? "bg-orange-500/15 text-orange-400 border border-orange-500/30"
+                  : "bg-sky-500/15 text-sky-400 border border-sky-500/30"
+              )}>
+                {currentSide}
+              </div>
+            )}
+
             {/* Big time display */}
             {phase === "work" && isManual ? (
               <div className="flex flex-col items-center gap-2">
@@ -569,7 +590,7 @@ export function ExerciseTimer({
                   </span>
                 ) : (
                   <span className="text-[120px] leading-none font-bold tabular-nums">
-                    {currentSet}<span className="text-muted-foreground/40">/{sets}</span>
+                    {displaySet}<span className="text-muted-foreground/40">/{sets}</span>
                   </span>
                 )}
               </div>
@@ -587,7 +608,7 @@ export function ExerciseTimer({
             {/* Set/rep counter */}
             {isActive && (
               <span className="text-lg text-muted-foreground tabular-nums">
-                Set {currentSet}/{sets}
+                Set {displaySet}/{sets}
                 {(hasRepLoop || hasManualRepLoop) && (
                   <> &mdash; Rep {currentRep}/{reps}</>
                 )}
@@ -657,6 +678,18 @@ export function ExerciseTimer({
           </div>
         </div>
       )}
+      {/* Unilateral side badge */}
+      {unilateral && isActive && currentSide && (
+        <div className={cn(
+          "flex items-center justify-center rounded-lg px-5 py-1.5 text-lg font-bold tracking-widest",
+          currentSide === "RIGHT"
+            ? "bg-orange-500/15 text-orange-400 border border-orange-500/30"
+            : "bg-sky-500/15 text-sky-400 border border-sky-500/30"
+        )}>
+          {currentSide}
+        </div>
+      )}
+
       {/* Timer row: ‹ arrow | circle | › arrow */}
       <div className="flex items-center gap-2">
         {/* ‹ Back phase arrow — always visible when active */}
@@ -763,7 +796,7 @@ export function ExerciseTimer({
                   </>
                 ) : (
                   <>
-                    <span className="text-2xl font-bold">Set {currentSet}</span>
+                    <span className="text-2xl font-bold">Set {displaySet}</span>
                     <span className="text-xs text-muted-foreground mt-1">
                       {reps > 1 ? `Do ${reps} reps` : "Do your set"}
                     </span>
@@ -839,7 +872,7 @@ export function ExerciseTimer({
       <div className="flex flex-col items-center gap-2">
         {isActive && (
           <span className="text-xs text-muted-foreground tabular-nums">
-            Set {currentSet} / {sets}
+            Set {displaySet} / {sets}
             {(hasRepLoop || hasManualRepLoop) && (
               <> &mdash; Rep {currentRep} / {reps}</>
             )}

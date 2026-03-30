@@ -664,12 +664,14 @@ export function GuidedExerciseStep({
                 restBetweenSetsSeconds={exercise.prescription.restSeconds ?? 0}
                 sets={exercise.prescription.sets ?? 1}
                 reps={typeof exercise.prescription.reps === "number" ? exercise.prescription.reps : 1}
-                initialSet={
-                  exercise.completedSets != null &&
-                  exercise.completedSets < (exercise.prescription.sets ?? 1)
+                unilateral={exercise.unilateral ?? false}
+                initialSet={(() => {
+                  const prescSets = exercise.prescription.sets ?? 1;
+                  const totalSets = (exercise.unilateral ?? false) ? prescSets * 2 : prescSets;
+                  return exercise.completedSets != null && exercise.completedSets < totalSets
                     ? exercise.completedSets + 1
-                    : 1
-                }
+                    : 1;
+                })()}
                 onSetChange={onSetChange}
               />
             )}
