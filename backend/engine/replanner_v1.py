@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import json
 import logging
+import math
 import os
 from copy import deepcopy
 
@@ -14,6 +15,12 @@ logger = logging.getLogger(__name__)
 
 from backend.engine.macrocycle_v1 import _build_session_pool
 from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META, generate_phase_week
+
+def _recovery_gap(plan: Dict[str, Any]) -> int:
+    """B165b: read recovery_multiplier from plan and return spacing gap (same formula as planner)."""
+    mult = float((plan.get("profile_snapshot") or {}).get("recovery_multiplier", 1.0))
+    return math.ceil(1 * mult)
+
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _SESSIONS_DIR = os.path.join(_REPO_ROOT, "backend", "catalog", "sessions", "v1")
@@ -244,21 +251,25 @@ def suggest_sessions(
         try:
             target_d = _parse_date(target_date)
             day_d = _parse_date(day["date"])
-            if abs((target_d - day_d).days) <= 1 and day["date"] != target_date:
+            if abs((target_d - day_d).days) <= _recovery_gap(plan) and day["date"] != target_date:
                 if any((s.get("tags") or {}).get("finger") for s in day.get("sessions", [])):
                     finger_adjacent = True
         except (KeyError, ValueError):
             logger.warning("Failed to check finger adjacency for target_date=%s", target_date)
 
-    # Check if target_date follows a hard day
+    # Check if target_date follows a hard day (within recovery gap)
     follows_hard = False
     try:
         target_d = _parse_date(target_date)
-        prev_date = (target_d - timedelta(days=1)).isoformat()
-        for day in (plan.get("weeks") or [{}])[0].get("days", []):
-            if day.get("date") == prev_date:
-                if any((s.get("tags") or {}).get("hard") for s in day.get("sessions", [])):
-                    follows_hard = True
+        gap = _recovery_gap(plan)
+        for i in range(1, gap + 1):
+            check_date = (target_d - timedelta(days=i)).isoformat()
+            for day in (plan.get("weeks") or [{}])[0].get("days", []):
+                if day.get("date") == check_date:
+                    if any((s.get("tags") or {}).get("hard") for s in day.get("sessions", [])):
+                        follows_hard = True
+                    break
+            if follows_hard:
                 break
     except (KeyError, ValueError):
         logger.warning("Failed to check hard-day adjacency for target_date=%s", target_date)
@@ -372,7 +383,7 @@ def apply_day_add(
         key=lambda s: (SLOTS.index(s.get("slot", "evening")), s.get("priority", 99), s.get("session_id", ""))
     )
 
-    # Ripple day+1 only (lighter than override's day+1+2)
+    # Ripple day+1 only (spacing enforcement handled by _reconcile)
     if meta["hard"] or meta["finger"]:
         target_d = _parse_date(target_date)
         ripple_key = (target_d + timedelta(days=1)).isoformat()
@@ -735,7 +746,7 @@ def _enforce_no_consecutive_finger(plan: Dict[str, Any]) -> None:
     for day in days:
         cur = _parse_date(day["date"])
         has_finger = any((s.get("tags") or {}).get("finger") and s.get("status") != "done" for s in day.get("sessions") or [])
-        if has_finger and last_finger_date and (cur - last_finger_date).days <= 1:
+        if has_finger and last_finger_date and (cur - last_finger_date).days <= _recovery_gap(plan):
             for session in day.get("sessions") or []:
                 if (session.get("tags") or {}).get("finger"):
                     recovery_meta = _meta_for("regeneration_easy")
@@ -1112,19 +1123,20 @@ def _compensate_finger(
         if any((s.get("tags") or {}).get("finger") for s in day.get("sessions", [])):
             finger_dates.add(_parse_date(day["date"]))
 
-    # Search from excluded_date+2 onwards (48h gap)
+    # Search from excluded_date onwards, respecting recovery gap (B165b)
     comp_session_id = "finger_maintenance_home"
     comp_meta = _meta_for(comp_session_id)
+    gap = _recovery_gap(plan)
 
     for day in days:
         day_d = _parse_date(day["date"])
-        if (day_d - excluded_d).days < 2:
+        if (day_d - excluded_d).days < gap + 1:
             continue
 
-        # Check 48h gap from ALL existing finger days
+        # Check gap from ALL existing finger days (B165b: recovery_multiplier aware)
         too_close = False
         for fd in finger_dates:
-            if abs((day_d - fd).days) <= 1:
+            if abs((day_d - fd).days) <= gap:
                 too_close = True
                 break
         if too_close:

@@ -1304,6 +1304,7 @@ def generate_phase_week(
             "intensity_cap": cap,
             "allowed_locations": locations,
             "hard_cap_per_week": effective_hard_cap,
+            "recovery_multiplier": recovery_mult,
         },
         "weekly_load_summary": {
             "planned_load": total_load,
@@ -1380,6 +1381,7 @@ def generate_test_week(
     locations = list(allowed_locations or ["gym", "home"])
     gyms_list = list(gyms or [])
     norm_avail = _normalize_availability(availability, locations)
+    recovery_mult = 1.0  # test weeks always use default spacing
 
     start = _parse_date(start_date)
     days_info: List[Dict[str, Any]] = []
@@ -1509,6 +1511,7 @@ def generate_test_week(
         "profile_snapshot": {
             "phase_id": "test_week",
             "allowed_locations": locations,
+            "recovery_multiplier": recovery_mult,
         },
         "weekly_load_summary": {
             "planned_load": total_load,
