@@ -57,6 +57,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 - ✅ **B165b-fix** — `_recovery_multiplier_for_age()` thresholds corrected: 1.0× under 50 (was 40), 1.25× at 50-59, 1.5× at 60+. Removed 1.75× tier. Replanner spacing now uses `_recovery_gap()` from plan snapshot. (2026-03-30)
 - ✅ **A-B4b** — Radar chart axis tooltips: (i) icon on each legend axis, tap shows discipline-aware description + "low score means" popover. (2026-03-30)
 - ✅ **B170** — Undo button UX clarity: label now context-dependent ("Undo completion" / "Undo skip"). Remove session dialog improved. (2026-03-30)
+- ✅ **B172** — Post-deploy verification: altSides badge visible in idle; unilateral/altSides separated in GuidedExercise (test form no longer triggers on prehab exercises in test sessions); cooldown_forearm_wrist_stretch sets 2→4; cooldown_shoulder_chest work_seconds 20→30; cooldown_hip_pigeon work_seconds 30→60. (2026-03-31)
 - ✅ **B171** — ExerciseTimer fixes from D169 audit: F1 `emom_bouldering` work_seconds 30→60 (full EMOM interval); F2 `one_on_one_off_intervals` rest moved to set_rest; F3a 29 exercises marked `alt_sides=true` (catalog field, separate from loading-pin `unilateral`); F3b ExerciseTimer `unilateral` prop — RIGHT/LEFT badge, doubled internal sets, displaySet/totalSets logic. (2026-03-30)
 
 ---
