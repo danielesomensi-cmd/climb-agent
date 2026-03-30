@@ -45,7 +45,7 @@ const LEAD_LABELS: Record<string, string> = {
 
 const BOULDER_LABELS: Record<string, string> = {
   finger_strength: "Finger Strength",
-  pulling_strength: "Contact Strength",
+  pulling_strength: "Contact",
   power_endurance: "Work Capacity",
   technique: "Movement & Reading",
   endurance: "Recovery",

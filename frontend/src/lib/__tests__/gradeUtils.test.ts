@@ -46,7 +46,7 @@ describe("getRadarLabels", () => {
 
   it("returns boulder labels for boulder discipline", () => {
     const labels = getRadarLabels("boulder");
-    expect(labels.pulling_strength).toBe("Contact Strength");
+    expect(labels.pulling_strength).toBe("Contact");
     expect(labels.power_endurance).toBe("Work Capacity");
     expect(labels.technique).toBe("Movement & Reading");
     expect(labels.endurance).toBe("Recovery");
