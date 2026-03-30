@@ -33,7 +33,7 @@ export default function SubscribePage() {
       <div className="p-4 space-y-6 max-w-md mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">climb-agent Pro</CardTitle>
+            <CardTitle className="text-xl">Your AI-Powered Climbing Coach</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-baseline gap-2">
@@ -42,16 +42,16 @@ export default function SubscribePage() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              14-day free trial — card required, cancel anytime.
+              Train smarter. Climb harder. 14-day free trial.
             </p>
 
             <ul className="space-y-2 text-sm">
               {[
-                "Personalised weekly training plans",
-                "Guided session timer with voice cues",
-                "Closed-loop progression tracking",
-                "Outdoor session logging",
-                "Free climbing session tracker",
+                "Personalised training plans built on 200+ scientific papers",
+                "Guided sessions with step-by-step timer and voice cues",
+                "Adapts to you — your plan evolves based on your feedback",
+                "Indoor + outdoor — track gym sessions and crag days",
+                "Proven methodology — Hörst periodisation used by elite coaches",
               ].map((feature) => (
                 <li key={feature} className="flex items-start gap-2">
                   <span className="text-primary mt-0.5">✓</span>
