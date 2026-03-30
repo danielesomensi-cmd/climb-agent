@@ -183,3 +183,54 @@ def test_template_domain_filters_use_canonical_values():
     assert violations == [], (
         "Non-canonical domain values in filters:\n" + "\n".join(violations)
     )
+
+
+# ---------------------------------------------------------------------------
+# Test 5 (B165e): all contraindication values are canonical
+# ---------------------------------------------------------------------------
+CANONICAL_CONTRAINDICATIONS = {
+    "elbow_sensitive",
+    "elbow_injury",
+    "finger_sensitive",
+    "finger_injury",
+    "shoulder_sensitive",
+    "wrist_sensitive",
+    "knee_injury",
+}
+
+
+def test_all_contraindications_are_canonical():
+    """Every value in contraindications must be in vocabulary §2.9.1 canonical set.
+
+    age_under_16 is NOT canonical — age gating is handled by age_minimum field.
+    """
+    exercises = _load_exercises()
+    violations = []
+    for e in exercises:
+        contras = e.get("contraindications", [])
+        bad = [c for c in contras if c not in CANONICAL_CONTRAINDICATIONS]
+        if bad:
+            violations.append(f"{e['id']}: {bad}")
+    assert violations == [], (
+        "Non-canonical contraindication values (vocabulary §2.9.1):\n"
+        + "\n".join(violations)
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 6 (B165e): no broken or empty video_url values
+# ---------------------------------------------------------------------------
+def test_no_broken_video_urls():
+    """Every non-null video_url must start with https:// — no empty strings, no placeholders."""
+    exercises = _load_exercises()
+    violations = []
+    for e in exercises:
+        url = e.get("video_url")
+        if url is None:
+            continue  # null is valid
+        if not isinstance(url, str) or not url.startswith("https://"):
+            violations.append(f"{e['id']}: {url!r}")
+    assert violations == [], (
+        "Invalid video_url values (must be null or https:// URL):\n"
+        + "\n".join(violations)
+    )

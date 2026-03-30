@@ -15,7 +15,10 @@
   "description": "Light climbing session for deload weeks. Focus on movement quality and enjoyment at easy grades. No projecting or limit moves.",
   "modules": [
     {
-      "template_id": "warmup_climbing"
+      "template_id": "warmup_climbing",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
     },
     {
       "block_id": "slow_climbing_deload",
@@ -41,13 +44,45 @@
         "duration_minutes_per_set": 8,
         "rest_minutes": 2,
         "notes": "Climb 2-3 grades below max. Focus on silent feet, precise footwork, smooth movement. No hard crimping."
-      }
+      },
+      "required": true,
+      "priority": 90
     },
     {
-      "template_id": "antagonist_prehab"
+      "template_id": "antagonist_prehab",
+      "required": true,
+      "priority": 55,
+      "module_role": "secondary"
     },
     {
-      "template_id": "cooldown_stretch"
+      "template_id": "cooldown_stretch",
+      "required": false,
+      "priority": 40,
+      "module_role": "cooldown"
     }
-  ]
+  ],
+  "version": "1.0",
+  "context": {
+    "location": "gym"
+  },
+  "time_budget": {
+    "target_duration_min": 70,
+    "hard_cap_min": 90
+  },
+  "intent": {
+    "primary_goal": "regeneration",
+    "secondary_goals": [
+      "technique_boulder",
+      "technique_footwork"
+    ],
+    "notes": "Deload session focused on movement quality at easy grades. No projecting, no limit moves. Active recovery through enjoyable climbing."
+  },
+  "compatibility": {
+    "slot": [
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
+  }
 }
