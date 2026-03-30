@@ -39,9 +39,9 @@ export default function StartWeekPage() {
       if (offset > 0) {
         await setStartWeek(offset);
       }
-      router.push("/today");
+      router.push("/subscribe");
     } catch {
-      router.push("/today");
+      router.push("/subscribe");
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ export default function StartWeekPage() {
         <Button
           variant="outline"
           disabled={loading}
-          onClick={() => router.push("/today")}
+          onClick={() => router.push("/subscribe")}
         >
           Skip
         </Button>

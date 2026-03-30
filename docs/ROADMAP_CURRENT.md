@@ -161,12 +161,12 @@ Same 5 axes, different display labels per discipline. RadarChart now accepts `di
 
 Clerk auth ✅ and Supabase JSONB ✅ are complete. Remaining:
 
-- **A159 — Stripe subscriptions** — Phase 1 ✅ + Phase 2 ✅ complete
+- **A159 — Stripe subscriptions** ✅ — Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ complete
   - €9.99/mo, 14-day trial, card required upfront
   - Backend: `subscription_guard.py`, 4 endpoints (status/checkout/portal/webhook), guards on 10 POST endpoints
   - Frontend: `useSubscription()` hook, `TrialBanner`, `/subscribe` page, settings portal link, guided session gate
+  - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)
   - SQL migration: `docs/migrations/subscriptions_table.sql` — **run in Supabase before deploying**
-  - Phase 3 (onboarding flow trigger): redirect after macrocycle — **open**
 
 ### A-B5 — Phase labels and messaging per discipline
 
