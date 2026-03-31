@@ -7,8 +7,77 @@ import { getOutdoorSessions, getOutdoorStats } from "@/lib/api";
 import type { OutdoorSession, OutdoorStats } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Check, ArrowUpRight, ChevronDown } from "lucide-react";
 import { useUserState } from "@/lib/hooks/use-state";
 import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
+
+// ---------------------------------------------------------------------------
+// Route aggregation (A180)
+// ---------------------------------------------------------------------------
+
+interface RouteAggregate {
+  name: string;
+  spot: string;
+  grade: string;
+  discipline?: "lead" | "boulder";
+  totalAttempts: number;
+  totalSessions: number;
+  bestStyle: string;
+  isSent: boolean;
+  lastDate: string;
+}
+
+const STYLE_RANK: Record<string, number> = {
+  onsight: 5,
+  flash: 4,
+  redpoint: 3,
+  repeat: 2,
+  project: 1,
+};
+
+const STYLE_LABEL: Record<string, string> = {
+  onsight: "onsight",
+  flash: "flash",
+  redpoint: "sent",
+  repeat: "repeat",
+  project: "projecting",
+};
+
+function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
+  const map = new Map<string, RouteAggregate>();
+  for (const s of sessions) {
+    for (const r of s.routes || []) {
+      if (!r.name?.trim()) continue;
+      const key = `${r.name.trim()}||${s.spot_name || ""}`;
+      const existing = map.get(key);
+      const attempts = r.attempts?.length || 0;
+      if (attempts === 0) continue;
+      const styleRank = STYLE_RANK[r.style || "project"] || 0;
+      if (existing) {
+        existing.totalAttempts += attempts;
+        existing.totalSessions += 1;
+        if (styleRank > (STYLE_RANK[existing.bestStyle] || 0)) {
+          existing.bestStyle = r.style || "project";
+        }
+        existing.isSent = (STYLE_RANK[existing.bestStyle] || 0) >= STYLE_RANK.redpoint;
+        if (s.date > existing.lastDate) existing.lastDate = s.date;
+      } else {
+        map.set(key, {
+          name: r.name.trim(),
+          spot: s.spot_name || "",
+          grade: r.grade || "",
+          discipline: r.discipline,
+          totalAttempts: attempts,
+          totalSessions: 1,
+          bestStyle: r.style || "project",
+          isSent: styleRank >= STYLE_RANK.redpoint,
+          lastDate: s.date,
+        });
+      }
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+}
 
 export default function OutdoorPage() {
   const { isLoaded: authReady } = useAuth();
@@ -33,6 +102,11 @@ export default function OutdoorPage() {
       })
       .finally(() => setLoading(false));
   }, [authReady]);
+
+  const [routesExpanded, setRoutesExpanded] = useState(true);
+
+  // Aggregate routes across all sessions (A180)
+  const routes = aggregateRoutes(sessions);
 
   // Group sessions by spot
   const bySpot: Record<string, (OutdoorSession & { load_score?: number })[]> = {};
@@ -129,6 +203,67 @@ export default function OutdoorPage() {
                     );
                   })}
                 </CardContent>
+              </Card>
+            )}
+
+            {/* Routes list (A180) */}
+            {routes.length > 0 && (
+              <Card>
+                <CardHeader
+                  className="cursor-pointer select-none"
+                  onClick={() => setRoutesExpanded((v) => !v)}
+                >
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm">Routes ({routes.length})</CardTitle>
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${routesExpanded ? "" : "-rotate-90"}`}
+                    />
+                  </div>
+                </CardHeader>
+                {routesExpanded && (
+                  <CardContent className="space-y-2">
+                    {routes.map((r) => {
+                      const displayGrade =
+                        r.discipline === "boulder"
+                          ? displayBoulderGrade(r.grade, gradeSystem)
+                          : r.grade;
+                      return (
+                        <div
+                          key={`${r.name}||${r.spot}`}
+                          className="flex items-center justify-between rounded-md border px-3 py-2"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{r.name}</span>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] ${r.isSent ? "border-green-600 text-green-500" : "text-muted-foreground"}`}
+                              >
+                                {STYLE_LABEL[r.bestStyle] || r.bestStyle}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {r.spot && <>{r.spot} · </>}
+                              {r.totalAttempts} attempt{r.totalAttempts !== 1 ? "s" : ""} · {r.totalSessions} session{r.totalSessions !== 1 ? "s" : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {displayGrade && (
+                              <span className="font-mono text-xs text-muted-foreground">
+                                {displayGrade}
+                              </span>
+                            )}
+                            {r.isSent ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                )}
               </Card>
             )}
 
