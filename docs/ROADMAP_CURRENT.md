@@ -128,6 +128,43 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 
 ---
 
+## Priority 1.26 — Audit Remediation (D170 + D172)
+
+> Tracking docs: `docs/audit/D172_findings_tracker.md` (full 25-finding breakdown with status per item)
+> Audits: D170 (gym_id propagation, 24 findings, 2026-03-31), D172 (all other fields: session_id / template_id / equipment / slot / phase / API validation, 25 findings, 2026-03-31)
+> Combined: 49 findings — 13 fixed in B173, 2 P1 hotfixes pending (B174/B175), 21 deferred to B176
+
+### Completed
+
+| ID | Title | Date |
+|----|-------|------|
+| B169 (quick-add) | Quick-add location mismatch — frontend sent `gym.name` instead of `gym_id` UUID | 2026-03-31 |
+| D170 | Silent fallback audit — 5 agents, 24 findings (gym_id propagation) | 2026-03-31 |
+| B173 | Systematic gym_id + silent fallback remediation (D170 findings) — 13 findings fixed, +9 tests | 2026-03-31 |
+| D172 | Field propagation audit — 6 agents, 25 findings (session_id, template_id, equipment, slot, phase, API validation) | 2026-03-31 |
+
+### Ready to implement (P1 — pre-launch blockers)
+
+| ID | Title | Type | Effort | Notes |
+|----|-------|------|--------|-------|
+| **B174** | `_resolve_inline_block` ignores explicit `exercise_id` → wrong exercises in sessions with inline blocks (D172-01) | B | S | Hotfix — affects production sessions now. `resolve_session.py`. |
+| **B175** | Input validation hardening: 500→422 on bad dict keys (D172-02), `ensure_monday` crash (D172-03), stale session guard (D172-04), boulder `domain_weights` in `set_availability` (D172-06) | B | M | Pre-launch. 4 fixes in replanner/deps/feedback. |
+
+### Post-launch (P2)
+
+| ID | Title | Type | Effort | Notes |
+|----|-------|------|--------|-------|
+| **B176** | D172 consolidated remediation — 21 remaining findings (P2+P3) | B | L | 5 groups: type safety (D172-05,11,12), equipment validation (D172-07,08,22), event/input validation (D172-09,13,14,25), logging (D172-10,15,17-20,23,24), structural/deferred (D172-16,21). Do before Supabase migration. |
+
+### Deferred from B173 (need API refactoring)
+
+| Title | Priority | Effort | Notes |
+|-------|----------|--------|-------|
+| `free-session/page.tsx` sends `gym_name` not `gym_id` (D170 P2-04) | P3 | S | Needs API contract change (`startFreeSession` + backend). Low impact — free session doesn't use resolver. |
+| `apply_day_add` doesn't receive `gyms` parameter (D170 P1-04) | P3 | M | Needs signature refactoring. Frontend fix in B173 covers the main user-facing path. |
+
+---
+
 ## Priority 1.5 — Boulder & Discipline Support (pre-launch)
 
 > Origin: Strategic analysis (claude.ai, 2026-03-28)
