@@ -111,8 +111,6 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 
 ### P2 highlights (not individually tracked — see full reports)
 
-**Security (D164 Agent 2):** Non-atomic file writes, error messages leaking internals, no rate limiting, `random` instead of `secrets`, `PUT /api/state` accepts arbitrary keys, feedback returns full state → all covered by B165d.
-
 **Engine (D164 Agents 3-5):** Phase duration sum mismatch for 9-11 week macrocycles (P2), deload weights sum 0.40 not 1.0 (P2), `move_session` doesn't validate spacing (P2), `_reconcile()` enforces finger but not hard-day spacing (P2), streak field saved but unused in multiplier (P2).
 
 **Frontend (D164 Agent 1 + D163):** PHASE_LABELS duplicated 4 files, `window.location.href` instead of router.push, console.warn/error in prod, eslint-disable on hooks deps, hardcoded email, session-card 1081 lines, tap targets <44px (6 instances), missing aria-labels (5 instances) → partially covered by B165c, rest deferred to R141/R144/R145.
@@ -169,7 +167,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 ## Priority 1.5 — Boulder & Discipline Support (pre-launch)
 
 > Origin: Strategic analysis (claude.ai, 2026-03-28)
-> Full reference doc: `docs/roadmap_boulder_support.md`
+> Full reference doc: `_archive/docs/roadmap_boulder_support.md`
 > Design decisions: DD-B1 (discipline model), DD-B2 (grade display), DD-B3 (Both = lead macrocycle)
 
 ### A-B1 — Discipline selection in onboarding
@@ -404,7 +402,7 @@ Add spraywall to location_any for relevant session templates: limit bouldering, 
 > All research files, Hörst syntheses, topic files, and decision consolidations live in that project's knowledge.
 >
 > **⚠️ RULE: Before implementing any deferred decision from the backlog below, open the KB project and check
-> `horst_integration_audit.md` for enrichment material. Many deferred decisions have ready-to-use content.**
+> `_archive/docs/horst_integration_audit.md` for enrichment material. Many deferred decisions have ready-to-use content.**
 
 ### Hörst "Training for Climbing" (3rd ed.) — Status
 
@@ -429,8 +427,8 @@ Add spraywall to location_any for relevant session templates: limit bouldering, 
 | Session 2 patch (4 corrections: D11, D12, D39, D72) | ⏸️ Prepared | KB project memory (not yet a file) |
 | D84 pulling strength test (max load review) | ⏸️ Under review | KB project |
 | Finger strength test architecture (5s→7s Lattice) | ⏸️ Under review | KB project |
-| CUE-02 formalize (forearm stretch → D33 amendment) | 📋 Proposed | `horst_integration_audit.md` §6 |
-| Coach KB spec: add 8 Hörst coaching cues | 📋 Proposed | `horst_integration_audit.md` §5 |
+| CUE-02 formalize (forearm stretch → D33 amendment) | 📋 Proposed | `_archive/docs/horst_integration_audit.md` §6 |
+| Coach KB spec: add 8 Hörst coaching cues | 📋 Proposed | `_archive/docs/horst_integration_audit.md` §5 |
 | Decision consolidation: append D84-D91 | 📋 Proposed | `kb_gaps_analysis.md` |
 | Topics 05-10 Steps 4-5 (decision specs) | ⏳ Not started | KB project |
 
@@ -748,7 +746,7 @@ Higher pulley injury rate, shoulder impingement from steep terrain, fall injurie
 
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
-| D33 | Dedicated `generate_warmup()` function | M | 5-phase protocol generator. **⚠️ KB: Ch. 6 has warm-up exercises + CUE-02 (no forearm flexor stretch pre-performance). See `horst_integration_audit.md` §5-§6.** |
+| D33 | Dedicated `generate_warmup()` function | M | 5-phase protocol generator. **⚠️ KB: Ch. 6 has warm-up exercises + CUE-02 (no forearm flexor stretch pre-performance). See `_archive/docs/horst_integration_audit.md` §5-§6.** |
 | D36 | PAP (Post-Activation Potentiation) | S | Advanced users only (3+ years, pulling ≥60). Niche. |
 | D74 | `silent_feet` auto-inject in warmup template | XS | Drill exists, not auto-injected in warmup. |
 | D53 | Active recovery progression (3-step) | S | References EL system (D34). **KB: Ch. 12 confirms active rest +35% lactate clearance (Watts 2000).** |
