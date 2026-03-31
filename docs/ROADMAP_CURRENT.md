@@ -107,7 +107,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 | B165b | Replanner recovery_multiplier fix + age threshold shift to 50 (high-risk: replanner_v1.py, STOP gate required) | M | ✅ Done (2026-03-30) |
 | B165c | Frontend error handling sweep — replace ~20 `.catch(() => {})` with error states/toasts (subsumes R141) | M | ✅ Done (2026-03-31) |
 | B165d | Security hardening — atomic file writes, rate limiting, `secrets` for recovery codes, error response sanitization, `PUT /api/state` key whitelist | M | ✅ Done (2026-03-31) |
-| B165e | Catalog cleanup — `easy_climbing_deload` + `deload_recovery` schema normalization ✅; video_url + contraindication tests added ✅; residuo: 8 video URL rotti da correggere, `finger_warmup_generic` description/cues, `age_under_16` 10 campus exercises | S | ⚠️ Partial (2026-03-31) |
+| B165e | Catalog cleanup — `easy_climbing_deload` + `deload_recovery` schema normalization, video_url + contraindication tests, placeholder URLs→null, `finger_warmup_generic` description/cues, `age_under_16`→`age_minimum:16` on 10 campus exercises | S | ✅ Done (2026-03-31) |
 
 ### P2 highlights (not individually tracked — see full reports)
 
