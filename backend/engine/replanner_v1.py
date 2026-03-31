@@ -1095,8 +1095,15 @@ def apply_events(
                             availability[weekday][slot][key] = av[key]
                 snapshot = updated.get("profile_snapshot") or {}
                 phase_id = snapshot.get("phase_id", "base")
-                from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _build_session_pool, _adjust_domain_weights
-                base_weights = _BASE_WEIGHTS.get(phase_id, _BASE_WEIGHTS["base"])
+                discipline = snapshot.get("discipline")
+                if not discipline:
+                    logger.warning(
+                        "set_availability: profile_snapshot missing 'discipline', defaulting to 'lead'"
+                    )
+                    discipline = "lead"
+                from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _BASE_WEIGHTS_BOULDER, _build_session_pool, _adjust_domain_weights
+                _weights_map = _BASE_WEIGHTS_BOULDER if discipline == "boulder" else _BASE_WEIGHTS
+                base_weights = _weights_map.get(phase_id, _weights_map["base"])
                 domain_weights = snapshot.get("domain_weights", base_weights)
                 session_pool = _build_session_pool(phase_id)
                 regenerated = generate_phase_week(
