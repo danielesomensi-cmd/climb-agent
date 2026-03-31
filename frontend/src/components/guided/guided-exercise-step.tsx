@@ -668,9 +668,10 @@ export function GuidedExerciseStep({
                 initialSet={(() => {
                   const prescSets = exercise.prescription.sets ?? 1;
                   const totalSets = (exercise.altSides ?? false) ? prescSets * 2 : prescSets;
-                  return exercise.completedSets != null && exercise.completedSets < totalSets
-                    ? exercise.completedSets + 1
-                    : 1;
+                  if (exercise.completedSets != null && exercise.completedSets < totalSets) {
+                    return Math.min(exercise.completedSets + 1, totalSets);
+                  }
+                  return 1;
                 })()}
                 onSetChange={onSetChange}
               />

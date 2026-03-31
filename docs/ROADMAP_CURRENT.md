@@ -809,6 +809,21 @@ Higher pulley injury rate, shoulder impingement from steep terrain, fall injurie
 | — | Dynamic background imagery (Midjourney, phase-aware) | roadmap discussion |
 | — | Technique drills from book (scan + catalog) | roadmap discussion |
 
+### Bodyweight exercises — load and band progression (v2+)
+
+Exercises like dip, push-up, pull-up currently use `load_model: bodyweight_only`.
+When feedback is "too easy", the engine should suggest adding external load (weight belt + disc).
+When feedback is "hard" or "failed", it should suggest resistance band assistance.
+
+Implementation approach:
+- Add two optional boolean flags to the exercise catalog schema: `supports_load_progression` and `supports_band_assistance`
+- Extend `closed_loop_v1.py` / `progression_v1.py` to read these flags and adjust suggestions accordingly
+- Same pattern as existing external_load progression — no new concepts
+
+**Scope:** catalog schema change + closed-loop extension. Generic solution (not dip-specific).
+**Depends on:** nothing. Natural fit alongside LLM Coach closed-loop work (Phase 3.5).
+**Origin:** beta feedback (Daniele, 2026-03-31)
+
 ---
 
 ## Post-launch — Christie feedback (2026-03-28)

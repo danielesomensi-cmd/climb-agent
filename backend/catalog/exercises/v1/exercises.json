@@ -4797,7 +4797,8 @@
         "Perform after every climbing session while forearms are still warm"
       ],
       "video_url": "https://www.hoopersbeta.com/library/forearm-stretching",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "full_body_stretch_flow",
@@ -4893,7 +4894,8 @@
         "If hips pop or click without pain: normal. If click with pain: reduce range"
       ],
       "video_url": "https://www.hoopersbeta.com/library/hip-mobility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "wall_handstand_hold",
@@ -5491,7 +5493,8 @@
         "Intensity: 4/10 pull — never force. Tendons respond to gentle sustained load only"
       ],
       "video_url": "https://www.hoopersbeta.com/library/forearm-stretching",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "cooldown_hip_pigeon",
@@ -5637,7 +5640,8 @@
         "Breathe slowly throughout — the stretch deepens naturally with each exhale"
       ],
       "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "alt_sides": true
     },
     {
       "id": "cooldown_hamstring_fold",

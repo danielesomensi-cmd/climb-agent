@@ -410,7 +410,8 @@ export function ExerciseTimer({
       pendingVoiceCueRef.current = "work";
       if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
     } else if (phase === "set_rest") {
-      setCurrentSet((s) => s + 1);
+      const next = Math.min(currentSet + 1, totalSets);
+      setCurrentSet(next);
       setCurrentRep(1);
       setPhase("work");
       pendingVoiceCueRef.current = "work";
@@ -789,7 +790,7 @@ export function ExerciseTimer({
                 {hasManualRepLoop ? (
                   <>
                     <span className="text-2xl font-bold">Rep {currentRep}/{reps}</span>
-                    <span className="text-xs text-muted-foreground mt-1">Set {currentSet}/{sets}</span>
+                    <span className="text-xs text-muted-foreground mt-1">Set {displaySet}/{sets}</span>
                     <span className="text-[10px] text-muted-foreground/60 mt-0.5">
                       Tap when done
                     </span>

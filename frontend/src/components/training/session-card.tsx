@@ -642,6 +642,7 @@ export function SessionCard({
 
   return (
     <>
+      <div className="relative">
       <Card className="gap-0 py-0 overflow-hidden">
         {/* Header — clickable to expand */}
         <CardHeader
@@ -937,6 +938,26 @@ export function SessionCard({
           </CardContent>
         )}
       </Card>
+
+      {/* FAB — Start session (visible without expanding the card) */}
+      {!isFinalized && hasExercises && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const guidedState = buildGuidedState(session, date);
+            if (!guidedState) return;
+            const userId = window.Clerk?.session ? "clerk" : "";
+            const key = `guided_session_${userId}_${date}_${session.session_id}`;
+            localStorage.setItem(key, JSON.stringify(guidedState));
+            router.push(`/guided/${date}/${session.session_id}`);
+          }}
+          className="absolute bottom-[-16px] right-4 z-10 w-11 h-11 rounded-full bg-green-500 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+          aria-label="Start session"
+        >
+          <Play className="w-5 h-5 text-white ml-0.5" />
+        </button>
+      )}
+      </div>
 
       {/* ⋯ Bottom sheet drawer */}
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
