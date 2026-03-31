@@ -3819,7 +3819,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 30,
-        "notes": "Slow eccentric. Key exercise for elbow tendinopathy prevention. Tyler twist / reverse Tyler twist."
+        "notes": "Eccentric wrist curl (Tyler Twist). Palm DOWN = lateral elbow, palm UP = medial elbow. Do both orientations. Forearm on thigh, wrist past knee. Assist the concentric with free hand, slow 4-6s eccentric only."
       },
       "stress_tags": {
         "fingers": "none",
@@ -3827,12 +3827,14 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "Eccentric biceps curl targeting the distal biceps tendon and brachialis to address medial epicondylitis and golfer's elbow. The slow lowering phase is the primary therapeutic stimulus. (Dave Macleod 10-ways elbow protocol, StrengthClimbing elbow guide)",
+      "description": "Eccentric wrist curl for elbow tendinopathy prevention. Forearm rests on thigh, wrist hanging over the knee. Use a light dumbbell — the focus is on slow, controlled eccentric lowering (4-6 seconds), not heavy load. Palm-down (pronated) targets the lateral elbow (tennis elbow); palm-up (supinated) targets the medial elbow (climber's elbow).",
       "cues": [
-        "Use other hand to assist the concentric (lifting) phase",
-        "All effort on slow 4-6 second eccentric lowering",
-        "Keep upper arm vertical and still throughout",
-        "Mild discomfort during eccentric is normal and expected",
+        "Sit down, rest your forearm on your thigh with your wrist hanging past the knee",
+        "Palm facing DOWN for lateral elbow (tennis elbow) / Palm facing UP for medial elbow (climber's elbow)",
+        "Use your free hand to lift the weight into the top position (wrist extended) — this is the assisted concentric phase",
+        "Release the free hand and SLOWLY lower the weight (4-6 seconds) — this is the eccentric phase that counts",
+        "Keep the upper arm and forearm completely still — only the wrist moves",
+        "Use a light weight (1-2 kg). You should feel mild discomfort (3-4/10) but never sharp pain",
         "Sharp pain = stop immediately"
       ],
       "video_url": null,
