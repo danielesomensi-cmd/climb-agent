@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-31 (B170/B171/B172 closed; A159 SQL migration confirmed)
+> Last updated: 2026-03-31 (B170/B171/B172/B172b closed; B165e partial; A159 SQL migration confirmed)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -58,6 +58,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 - ✅ **A-B4b** — Radar chart axis tooltips: (i) icon on each legend axis, tap shows discipline-aware description + "low score means" popover. (2026-03-30)
 - ✅ **B170** — Undo button UX clarity: label now context-dependent ("Undo completion" / "Undo skip"). Remove session dialog improved. (2026-03-30)
 - ✅ **B172** — Post-deploy verification: altSides badge visible in idle; unilateral/altSides separated in GuidedExercise (test form no longer triggers on prehab exercises in test sessions); cooldown_forearm_wrist_stretch sets 2→4; cooldown_shoulder_chest work_seconds 20→30; cooldown_hip_pigeon work_seconds 30→60. (2026-03-31)
+- ✅ **B172b** — Catalog hotfix: `active_hip_mobility` alt_sides removed (non-bilateral exercise); `archer_pullup` corrected unilateral→alt_sides. (2026-03-31)
 - ✅ **B171** — ExerciseTimer fixes from D169 audit: F1 `emom_bouldering` work_seconds 30→60 (full EMOM interval); F2 `one_on_one_off_intervals` rest moved to set_rest; F3a 29 exercises marked `alt_sides=true` (catalog field, separate from loading-pin `unilateral`); F3b ExerciseTimer `unilateral` prop — RIGHT/LEFT badge, doubled internal sets, displaySet/totalSets logic. (2026-03-30)
 
 ---
@@ -104,7 +105,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 | B165b | Replanner recovery_multiplier fix + age threshold shift to 50 (high-risk: replanner_v1.py, STOP gate required) | M | ✅ Done (2026-03-30) |
 | B165c | Frontend error handling sweep — replace ~20 `.catch(() => {})` with error states/toasts (subsumes R141) | M | Open |
 | B165d | Security hardening — atomic file writes, rate limiting, `secrets` for recovery codes, error response sanitization, `PUT /api/state` key whitelist | M | Open |
-| B165e | Catalog cleanup — 8 broken video URLs, `easy_climbing_deload` + `deload_recovery` schema normalization, `finger_warmup_generic` description/cues, `age_under_16` contraindication cleanup | S | Open |
+| B165e | Catalog cleanup — `easy_climbing_deload` + `deload_recovery` schema normalization ✅; video_url + contraindication tests added ✅; residuo: 8 video URL rotti da correggere, `finger_warmup_generic` description/cues, `age_under_16` 10 campus exercises | S | ⚠️ Partial (2026-03-31) |
 
 ### P2 highlights (not individually tracked — see full reports)
 
