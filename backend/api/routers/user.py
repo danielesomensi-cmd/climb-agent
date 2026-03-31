@@ -46,6 +46,12 @@ router = APIRouter(prefix="/api/user", tags=["user"])
 
 _REQUIRED_KEYS = {"schema_version"}
 
+# Keys that must be dicts IF present (all guaranteed by EMPTY_TEMPLATE)
+_REQUIRED_DICT_KEYS = {
+    "assessment": "assessment deve essere un oggetto JSON",
+    "equipment": "equipment deve essere un oggetto JSON",
+}
+
 
 def _validate_import(data: Any) -> None:
     """Validate that *data* looks like a plausible user_state.
@@ -64,6 +70,12 @@ def _validate_import(data: Any) -> None:
         raise ValueError(
             f"schema_version non supportata: {sv!r} (attesa: '1.5')"
         )
+
+    for key, msg in _REQUIRED_DICT_KEYS.items():
+        if key not in data:
+            raise ValueError(f"Campo obbligatorio mancante: {key!r}")
+        if not isinstance(data[key], dict):
+            raise ValueError(f"Campo non valido: {key!r} deve essere un oggetto JSON (trovato: {type(data[key]).__name__})")
 
 
 def _append_import_event(user_id: Optional[str]) -> None:
