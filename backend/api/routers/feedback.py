@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import date as date_type
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException
 
@@ -83,6 +86,38 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
                                 _sess_c["actual_exercises"] = _fb_items
                                 break
 
+    # 3c. D172-04: Stale exercise guard — warn if feedback exercise_ids don't match
+    # the resolved session (session removed from catalog or exercises changed)
+    stale_exercise_warning: Optional[str] = None
+    if _fb_items:
+        _fb_target_date = req.log_entry.get("date")
+        _fb_target_sid = req.log_entry.get("session_id")
+        _resolved_exercise_ids: set = set()
+        _wp_for_guard = state.get("current_week_plan") or {}
+        for _wk in _wp_for_guard.get("weeks", []):
+            for _dy in _wk.get("days", []):
+                if _dy.get("date") != _fb_target_date:
+                    continue
+                for _ss in _dy.get("sessions", []):
+                    if _ss.get("session_id") != _fb_target_sid:
+                        continue
+                    _rs = (_ss.get("resolved") or {}).get("resolved_session", {})
+                    for _ex in _rs.get("exercise_instances", []):
+                        _ex_id = str(_ex.get("exercise_id") or "").strip()
+                        if _ex_id:
+                            _resolved_exercise_ids.add(_ex_id)
+        if _resolved_exercise_ids:
+            _fb_ids = {str(i.get("exercise_id") or "").strip() for i in _fb_items if i.get("exercise_id")}
+            _stale_ids = _fb_ids - _resolved_exercise_ids
+            if _stale_ids:
+                logger.warning(
+                    "post_feedback: exercise_ids %r not found in resolved session %r on %r — possible stale session reference",
+                    _stale_ids, _fb_target_sid, _fb_target_date,
+                )
+                stale_exercise_warning = (
+                    f"Exercise IDs not found in current session plan: {sorted(_stale_ids)}"
+                )
+
     # 4. Check adaptive replanning (B25)
     plan = state.get("current_week_plan")
     if plan and plan.get("weeks"):
@@ -142,4 +177,6 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
     response = {"status": "ok", "state": state}
     if limitation_suggestions:
         response["limitation_suggestions"] = limitation_suggestions
+    if stale_exercise_warning:
+        response["warning"] = stale_exercise_warning
     return response

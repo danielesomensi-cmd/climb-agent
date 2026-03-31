@@ -72,6 +72,10 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                 ]
 
                 if not full_path.exists():
+                    logger.warning(
+                        "Session %r not found in catalog, skipping resolution",
+                        session_id,
+                    )
                     session_entry["resolved"] = None
                     continue
                 try:
