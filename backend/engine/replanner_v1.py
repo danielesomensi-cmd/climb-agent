@@ -18,8 +18,23 @@ from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META, generat
 
 def _recovery_gap(plan: Dict[str, Any]) -> int:
     """B165b: read recovery_multiplier from plan and return spacing gap (same formula as planner)."""
-    mult = float((plan.get("profile_snapshot") or {}).get("recovery_multiplier", 1.0))
+    raw = (plan.get("profile_snapshot") or {}).get("recovery_multiplier", 1.0)
+    try:
+        mult = float(raw)
+    except (TypeError, ValueError):
+        logger.warning("Invalid recovery_multiplier %r, defaulting to 1.0", raw)
+        mult = 1.0
     return math.ceil(1 * mult)
+
+
+def _safe_hard_cap(snapshot: Dict[str, Any]) -> int:
+    """Return hard_cap_per_week as int, defaulting to 3 on bad input."""
+    raw = (snapshot or {}).get("hard_cap_per_week", 3)
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        logger.warning("Invalid hard_cap_per_week %r, defaulting to 3", raw)
+        return 3
 
 
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -33,7 +48,11 @@ def _get_required_equipment(session_id: str) -> tuple:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
             eq = data.get("required_equipment", [])
-    except (FileNotFoundError, json.JSONDecodeError):
+    except FileNotFoundError:
+        logger.warning("_get_required_equipment: session file not found for %r — assuming no required equipment", session_id)
+        eq = []
+    except json.JSONDecodeError as e:
+        logger.warning("_get_required_equipment: JSON decode error for %r: %s — assuming no required equipment", session_id, e)
         eq = []
     return tuple(eq)
 
@@ -159,7 +178,7 @@ def _insert_or_replace(day: Dict[str, Any], moved: Dict[str, Any], to_slot: str)
             break
     else:
         sessions.append(moved)
-    sessions.sort(key=lambda s: (SLOTS.index(s.get("slot", "evening")), s.get("priority", 99), s.get("session_id", "")))
+    sessions.sort(key=lambda s: (SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"), s.get("priority", 99), s.get("session_id", "")))
 
 
 def _slots_from_day(day: Dict[str, Any]) -> set[str]:
@@ -244,7 +263,7 @@ def suggest_sessions(
                 scheduled.add(s.get("session_id", ""))
 
     # Determine hard cap
-    hard_cap = int((plan.get("profile_snapshot") or {}).get("hard_cap_per_week", 3))
+    hard_cap = _safe_hard_cap(plan.get("profile_snapshot"))
     hard_count = 0
     finger_adjacent = False
     for day in (plan.get("weeks") or [{}])[0].get("days", []):
@@ -383,7 +402,7 @@ def apply_day_add(
 
     target_day.setdefault("sessions", []).append(new_session)
     target_day["sessions"].sort(
-        key=lambda s: (SLOTS.index(s.get("slot", "evening")), s.get("priority", 99), s.get("session_id", ""))
+        key=lambda s: (SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"), s.get("priority", 99), s.get("session_id", ""))
     )
 
     # Ripple day+1 only (spacing enforcement handled by _reconcile)
@@ -436,7 +455,7 @@ def apply_day_add(
 
     # Warnings (don't block)
     warnings: List[str] = []
-    hard_cap = int((updated.get("profile_snapshot") or {}).get("hard_cap_per_week", 3))
+    hard_cap = _safe_hard_cap(updated.get("profile_snapshot"))
     hard_count = sum(
         1 for d in updated["weeks"][0]["days"]
         if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions", []))
@@ -723,7 +742,7 @@ def regenerate_preserving_completed(
 
 
 def _enforce_caps(plan: Dict[str, Any]) -> None:
-    hard_cap = int(((plan.get("profile_snapshot") or {}).get("hard_cap_per_week") or 3))
+    hard_cap = _safe_hard_cap(plan.get("profile_snapshot"))
     days = plan["weeks"][0]["days"]
     hard_days = [d for d in days if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions") or [])]
     if len(hard_days) > hard_cap:
@@ -1088,6 +1107,14 @@ def apply_events(
                     weekday = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")[date_key]
                 else:
                     weekday = av.get("weekday")
+                    # Convert long-form weekday keys to short-form
+                    _WEEKDAY_LONG = {
+                        "monday": "mon", "tuesday": "tue", "wednesday": "wed",
+                        "thursday": "thu", "friday": "fri", "saturday": "sat",
+                        "sunday": "sun",
+                    }
+                    if weekday and weekday.lower() in _WEEKDAY_LONG:
+                        weekday = _WEEKDAY_LONG[weekday.lower()]
                 slot = av.get("slot")
                 if weekday and slot and weekday in availability and slot in availability[weekday]:
                     for key in ("available", "locations", "preferred_location", "gym_id"):
@@ -1113,13 +1140,17 @@ def apply_events(
                     start_date=updated["start_date"],
                     availability=availability,
                     allowed_locations=snapshot.get("allowed_locations", ["home", "gym"]),
-                    hard_cap_per_week=int(snapshot.get("hard_cap_per_week", 3)),
+                    hard_cap_per_week=_safe_hard_cap(snapshot),
                     planning_prefs=planning_prefs,
                     default_gym_id=((planning_prefs or {}).get("default_gym_id")),
                     gyms=gyms,
                 )
                 updated["weeks"] = regenerated["weeks"]
                 updated["profile_snapshot"] = regenerated["profile_snapshot"]
+
+        else:
+            if event_type is not None:
+                logger.warning("apply_events: unknown event_type %r — event ignored", event_type)
 
         updated["adaptations"].append({"type": "event", "event": event})
 

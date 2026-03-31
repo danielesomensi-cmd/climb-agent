@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -74,7 +74,7 @@ class OverrideRequest(BaseModel):
     intent: str
     location: str
     reference_date: str
-    slot: str = "evening"
+    slot: Literal["morning", "lunch", "evening"] = "evening"
     phase_id: Optional[str] = None
     week_plan: Optional[Dict[str, Any]] = None
     target_date: Optional[str] = None
@@ -92,7 +92,7 @@ class QuickAddRequest(BaseModel):
     """Body for POST /api/replanner/quick-add."""
     session_id: str
     target_date: str
-    slot: str = "evening"
+    slot: Literal["morning", "lunch", "evening"] = "evening"
     location: str = "gym"
     phase_id: Optional[str] = None
     week_plan: Optional[Dict[str, Any]] = None
@@ -150,14 +150,14 @@ class OutdoorSpotCreate(BaseModel):
     """Body for POST /api/outdoor/spots."""
     id: Optional[str] = None
     name: str
-    discipline: str  # lead | boulder | both
+    discipline: Literal["lead", "boulder", "both"]
     typical_days: Optional[List[str]] = None
     notes: Optional[str] = None
 
 
 class OutdoorAttempt(BaseModel):
     """Single attempt on a route."""
-    result: str  # sent | fell | topped_out
+    result: Literal["sent", "fell", "topped_out"]
     notes: Optional[str] = None
 
 
@@ -165,8 +165,8 @@ class OutdoorRoute(BaseModel):
     """A route/problem attempted in an outdoor session."""
     name: str
     grade: str
-    discipline: Optional[str] = None
-    style: Optional[str] = None
+    discipline: Optional[Literal["lead", "boulder", "both"]] = None
+    style: Optional[Literal["onsight", "flash", "redpoint", "project"]] = None
     attempts: List[OutdoorAttempt] = Field(default_factory=list)
 
 
@@ -175,7 +175,7 @@ class OutdoorSessionLog(BaseModel):
     date: str
     spot_id: Optional[str] = None
     spot_name: str
-    discipline: str
+    discipline: Literal["lead", "boulder", "both"]
     duration_minutes: int
     conditions: Optional[Dict[str, Any]] = None
     routes: List[OutdoorRoute] = Field(default_factory=list)
@@ -222,9 +222,9 @@ class FreeSessionStartRequest(BaseModel):
 class FreeSessionLogClimbRequest(BaseModel):
     """Body for POST /api/free-session/{session_id}/log-climb."""
     grade: str
-    status: str  # flash | sent | attempted
+    status: Literal["flash", "sent", "attempted"]
     attempts: int = 1
-    style: Optional[str] = None  # lead only: onsight | flash | redpoint | project
+    style: Optional[Literal["onsight", "flash", "redpoint", "project"]] = None  # lead only
     topped: Optional[bool] = None  # lead only
     notes: Optional[str] = None
 
