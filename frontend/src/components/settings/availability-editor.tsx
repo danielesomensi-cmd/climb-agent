@@ -240,7 +240,7 @@ export function AvailabilityEditor({
                               </SelectTrigger>
                               <SelectContent>
                                 {gyms.map((g, i) => (
-                                  <SelectItem key={g.gym_id || i} value={g.gym_id || g.name || `gym-${i}`}>
+                                  <SelectItem key={g.gym_id || i} value={g.gym_id || ""}>
                                     {g.name || `Gym ${i + 1}`}
                                   </SelectItem>
                                 ))}

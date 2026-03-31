@@ -173,7 +173,7 @@ export function QuickAddDialog({
       ? gyms.find(g => g.name === location)
       : undefined;
     const resolvedGymId = selectedGym
-      ? (selectedGym.gym_id ?? location)
+      ? selectedGym.gym_id
       : undefined;
     onApply({
       session_id: selectedSession,

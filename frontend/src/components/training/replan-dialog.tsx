@@ -123,7 +123,7 @@ export function ReplanDialog({
               </button>
               {gyms.length > 0
                 ? gyms.map((g, i) => {
-                    const id = g.name || `gym-${i}`;
+                    const id = g.gym_id || `gym-${i}`;
                     return (
                       <button
                         key={i}

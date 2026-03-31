@@ -90,13 +90,17 @@ export function GymPickerDialog({
               key={gym.name}
               type="button"
               className={`w-full rounded-lg border p-3 text-left text-sm transition-colors ${
-                selected?.gym_id === (gym.gym_id || gym.name)
+                selected?.gym_id === gym.gym_id
                   ? "border-primary bg-primary/10"
                   : "border-border hover:bg-accent"
               }`}
-              onClick={() =>
-                setSelected({ gym_id: gym.gym_id || gym.name, location: "gym" })
-              }
+              onClick={() => {
+                if (!gym.gym_id) {
+                  console.warn("GymPickerDialog: gym has no gym_id, skipping selection", gym.name);
+                  return;
+                }
+                setSelected({ gym_id: gym.gym_id, location: "gym" });
+              }}
             >
               <div className="flex items-center gap-2">
                 <MapPin className="size-4" />
