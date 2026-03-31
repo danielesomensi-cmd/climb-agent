@@ -381,16 +381,50 @@ def _intensity_label(session: Dict[str, Any]) -> str:
 
 
 def _boulder_offset(session: Dict[str, Any], user_state: Dict[str, Any]) -> int:
+    """Return the single primary offset for grade calculation."""
+    return _boulder_target_info(session, user_state)["offset_high"]
+
+
+def _boulder_target_info(session: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
+    """Return boulder target info: offset range + attempt/rest guidance."""
     intent = str(session.get("intent") or "").strip().lower()
     tags = session.get("tags") or {}
     cfg = (((user_state.get("progression_config") or {}).get("boulder_targets") or {}).get("offsets") or {})
+
     if intent in {"warmup", "technique", "recovery", "accessory"} or tags.get("technique"):
-        return int(cfg.get("warmup_tech", -2))
-    if intent in {"power_endurance", "aerobic_endurance", "endurance", "volume"} or tags.get("volume"):
-        return int(cfg.get("volume", -1))
+        return {
+            "offset_high": int(cfg.get("warmup_tech", -2)),
+            "offset_low": int(cfg.get("warmup_tech", -2)) - 1,
+            "attempt_guidance": None,
+            "rest_guidance": None,
+        }
     if intent in {"power", "limit"} or tags.get("hard"):
-        return int(cfg.get("limit_power", 0))
-    return int(cfg.get("default", -1))
+        return {
+            "offset_high": int(cfg.get("limit_power", 0)),
+            "offset_low": -1,
+            "attempt_guidance": "1 serious attempt per problem, full rest between",
+            "rest_guidance": "3-5 min between problems",
+        }
+    if intent in {"power_endurance", "aerobic_endurance", "endurance"} or tags.get("pe"):
+        return {
+            "offset_high": -1,
+            "offset_low": -2,
+            "attempt_guidance": "Multiple attempts per problem, controlled pump",
+            "rest_guidance": "1-2 min between problems",
+        }
+    if intent == "volume" or tags.get("volume"):
+        return {
+            "offset_high": -2,
+            "offset_low": -3,
+            "attempt_guidance": "Many attempts, focus on movement quality",
+            "rest_guidance": "1-2 min between problems",
+        }
+    return {
+        "offset_high": int(cfg.get("default", -1)),
+        "offset_low": int(cfg.get("default", -1)) - 1,
+        "attempt_guidance": None,
+        "rest_guidance": None,
+    }
 
 
 def _working_entries(user_state: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -746,7 +780,8 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
 
     for session in out.get("sessions") or []:
         intensity = _intensity_label(session)
-        offset = _boulder_offset(session, user_state)
+        boulder_info = _boulder_target_info(session, user_state)
+        offset = boulder_info["offset_high"]
         for inst in session.get("exercise_instances") or []:
             ex_id = str(inst.get("exercise_id") or "")
             prescription = inst.get("prescription") or {}
@@ -814,6 +849,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 options = _surface_options(user_state, session.get("gym_id"))
                 selected_surface = _select_surface(preferred=None, options=options, gym_id=session.get("gym_id"), user_state=user_state)
                 target_grade = step_grade(benchmark_grade, offset)
+                target_grade_low = step_grade(benchmark_grade, boulder_info["offset_low"])
                 grade_entry = _best_entry(
                     user_state,
                     ex_id,
@@ -822,13 +858,19 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 )
                 if grade_entry and normalize_font_grade(grade_entry.get("next_target_grade")):
                     target_grade = grade_entry["next_target_grade"]
-                suggested["suggested_boulder_target"] = {
+                boulder_target: Dict[str, Any] = {
                     "schema_version": "boulder_grade_font_v0",
                     "surface_options": options,
                     "surface_selected": selected_surface,
                     "target_grade": target_grade,
+                    "target_grade_low": target_grade_low,
                     "intensity_label": intensity,
                 }
+                if boulder_info.get("attempt_guidance"):
+                    boulder_target["attempt_guidance"] = boulder_info["attempt_guidance"]
+                if boulder_info.get("rest_guidance"):
+                    boulder_target["rest_guidance"] = boulder_info["rest_guidance"]
+                suggested["suggested_boulder_target"] = boulder_target
 
             # Grade-relative exercises with grade_ref (excludes limit_bouldering which has its own logic above)
             grade_ref = prescription.get("grade_ref")

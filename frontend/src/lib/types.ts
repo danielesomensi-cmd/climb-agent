@@ -541,8 +541,11 @@ export interface GuidedExercise {
     externalLoadKg?: number;
     totalLoadKg?: number;
     grade?: string;
+    gradeLow?: string;         // A-B7: lower bound of target grade range
     repScheme?: string;
     surface?: string;
+    attemptGuidance?: string;  // A-B7: e.g. "1 serious attempt per problem"
+    restGuidance?: string;     // A-B7: e.g. "3-5 min between problems"
     loadSource?: string;   // "estimated" if derived from grade/pullup (no real test)
     loadWarning?: string;  // "counterweight_required..." if external < 0
     rightHand?: { externalLoadKg?: number };

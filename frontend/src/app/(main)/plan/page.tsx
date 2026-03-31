@@ -19,16 +19,8 @@ import {
 } from "@/components/training/regenerate-plan-sheet";
 import { PERIODIZATION_RATIONALE, PHASE_RATIONALES } from "@/lib/phase-rationales";
 import { getDiscipline } from "@/lib/gradeUtils";
+import { getPhaseName } from "@/lib/phase-labels";
 import type { Phase } from "@/lib/types";
-
-/** Phase labels */
-const PHASE_LABELS: Record<string, string> = {
-  base: "Base",
-  strength_power: "Strength & Power",
-  power_endurance: "Power Endurance",
-  performance: "Performance",
-  deload: "Deload",
-};
 
 /** Domain labels */
 const DOMAIN_LABELS: Record<string, string> = {
@@ -211,6 +203,7 @@ export default function PlanPage() {
                 <MacrocycleTimeline
                   macrocycle={macrocycle}
                   currentWeek={currentWeek}
+                  discipline={discipline}
                 />
               </CardContent>
             </Card>
@@ -277,8 +270,7 @@ export default function PlanPage() {
 
               {macrocycle.phases.map((phase: Phase) => {
                 const isExpanded = expandedPhase === phase.phase_id;
-                const label =
-                  PHASE_LABELS[phase.energy_system] ?? phase.phase_name;
+                const label = getPhaseName(phase.energy_system, discipline);
 
                 return (
                   <Card

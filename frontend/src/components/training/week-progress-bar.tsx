@@ -1,14 +1,7 @@
 "use client";
 
 import type { WeekPlan } from "@/lib/types";
-
-const PHASE_LABELS: Record<string, string> = {
-  base: "Base",
-  strength_power: "Strength & Power",
-  power_endurance: "Power Endurance",
-  performance: "Performance",
-  deload: "Deload",
-};
+import { getPhaseName } from "@/lib/phase-labels";
 
 interface WeekProgressBarProps {
   weekPlan: WeekPlan;
@@ -52,7 +45,8 @@ export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = t
   const doneLoad = Math.round(doneSessionLoad + otherActivityLoad + freeLoad);
 
   const phaseId = (weekPlan.profile_snapshot?.phase_id as string) ?? "";
-  const phaseLabel = PHASE_LABELS[phaseId] ?? phaseId;
+  const wpDiscipline = (weekPlan.profile_snapshot?.discipline as string) ?? "lead";
+  const phaseLabel = getPhaseName(phaseId, wpDiscipline as "lead" | "boulder" | "all_round");
   const weekNum = (weekPlan.profile_snapshot as Record<string, unknown> | undefined)?.week_number as number | undefined;
   const totalWeeks = (weekPlan.profile_snapshot as Record<string, unknown> | undefined)?.total_weeks as number | undefined;
 

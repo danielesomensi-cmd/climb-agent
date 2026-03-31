@@ -31,14 +31,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 
-/** English labels for phase names */
-const PHASE_LABELS: Record<string, string> = {
-  base: "Base",
-  strength_power: "Strength & Power",
-  power_endurance: "Power Endurance",
-  performance: "Performance",
-  deload: "Deload",
-};
+import { getPhaseName } from "@/lib/phase-labels";
 
 /** Returns today's date in YYYY-MM-DD format */
 function todayISO(): string {
@@ -633,8 +626,9 @@ export default function WeekPage() {
 
   const today = todayISO();
   const days: DayPlan[] = weekPlan?.weeks.flatMap((w) => w.days) ?? [];
+  const discipline = (weekPlan?.profile_snapshot?.discipline as string) ?? "lead";
   const phaseLabel = phaseId
-    ? PHASE_LABELS[phaseId] ?? phaseId.replace(/_/g, " ")
+    ? getPhaseName(phaseId, discipline as "lead" | "boulder" | "all_round")
     : null;
 
   // Extract exercises + slot for the feedback dialog
@@ -946,7 +940,7 @@ export default function WeekPage() {
               {weekPhaseMap.map(({ weekNum: wn, phase }) => {
                 const isCurrent = wn === displayWeekNum;
                 const isPast = wn < displayWeekNum;
-                const label = PHASE_LABELS[phase.phase_id] ?? phase.phase_name.replace(/_/g, " ");
+                const label = getPhaseName(phase.phase_id, discipline as "lead" | "boulder" | "all_round");
                 return (
                   <button
                     key={wn}

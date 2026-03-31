@@ -1,11 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { getPhaseNameShort } from "@/lib/phase-labels";
 import type { Macrocycle } from "@/lib/types";
 
 interface MacrocycleTimelineProps {
   macrocycle: Macrocycle;
   currentWeek?: number;
+  discipline?: "lead" | "boulder" | "all_round";
 }
 
 /** Background color based on the phase energy_system */
@@ -26,18 +28,10 @@ const PHASE_TEXT: Record<string, string> = {
   deload: "text-gray-700",
 };
 
-/** Labels for phase names */
-const PHASE_LABELS: Record<string, string> = {
-  base: "Base",
-  strength_power: "Strength",
-  power_endurance: "Power End.",
-  performance: "Performance",
-  deload: "Deload",
-};
-
 export function MacrocycleTimeline({
   macrocycle,
   currentWeek,
+  discipline = "lead",
 }: MacrocycleTimelineProps) {
   const totalWeeks = macrocycle.total_weeks;
 
@@ -63,7 +57,7 @@ export function MacrocycleTimeline({
             const bgColor = PHASE_COLORS[phase.energy_system] ?? "bg-gray-300";
             const txtColor = PHASE_TEXT[phase.energy_system] ?? "text-gray-800";
             const label =
-              PHASE_LABELS[phase.energy_system] ?? phase.phase_name;
+              getPhaseNameShort(phase.energy_system, discipline);
 
             return (
               <div
@@ -98,7 +92,7 @@ export function MacrocycleTimeline({
         {phasesWithOffset.map((phase) => {
           const widthPct = (phase.duration_weeks / totalWeeks) * 100;
           const label =
-            PHASE_LABELS[phase.energy_system] ?? phase.phase_name;
+            getPhaseNameShort(phase.energy_system, discipline);
 
           return (
             <div

@@ -24,6 +24,14 @@ PHASE_NAMES: Dict[str, str] = {
     "deload": "Deload",
 }
 
+PHASE_NAMES_BOULDER: Dict[str, str] = {
+    "base": "Movement & Volume Base",
+    "strength_power": "Max Strength & Power",
+    "power_endurance": "Work Capacity",
+    "performance": "Projecting & Peak",
+    "deload": "Deload",
+}
+
 PHASE_ENERGY: Dict[str, str] = {
     "base": "aerobic",
     "strength_power": "anaerobic_alactic",
@@ -598,7 +606,7 @@ def generate_macrocycle(
 
         phase: Dict[str, Any] = {
             "phase_id": phase_id,
-            "phase_name": PHASE_NAMES[phase_id],
+            "phase_name": (PHASE_NAMES_BOULDER if discipline in ("boulder", "all_round") else PHASE_NAMES)[phase_id],
             "start_week": current_week,
             "end_week": current_week + duration - 1,
             "duration_weeks": duration,

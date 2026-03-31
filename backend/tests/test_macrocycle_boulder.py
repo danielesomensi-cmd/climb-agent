@@ -1,4 +1,4 @@
-"""Tests for boulder-specific macrocycle generation (B91)."""
+"""Tests for boulder-specific macrocycle generation (B91) + A-B5/A-B7."""
 
 import pytest
 
@@ -9,6 +9,7 @@ from backend.engine.macrocycle_v1 import (
     _compute_phase_durations,
     generate_macrocycle,
 )
+from backend.engine.progression_v1 import _boulder_target_info
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -149,3 +150,79 @@ class TestBoulderPoolContents:
         boulder_pool = _build_session_pool("deload", discipline="boulder")
         lead_pool = _build_session_pool("deload", discipline="lead")
         assert set(boulder_pool) == set(lead_pool)
+
+
+# ---------------------------------------------------------------------------
+# A-B5: Phase names per discipline
+# ---------------------------------------------------------------------------
+
+class TestPhaseNamesPerDiscipline:
+    """A-B5: generate_macrocycle produces discipline-aware phase names."""
+
+    def test_lead_phase_names(self):
+        mc = generate_macrocycle(
+            _LEAD_GOAL, _PROFILE, _USER_STATE, "2026-03-09", total_weeks=11,
+        )
+        names = [p["phase_name"] for p in mc["phases"]]
+        assert "Endurance Base" in names
+        assert "Strength & Power" in names
+
+    def test_boulder_phase_names(self):
+        mc = generate_macrocycle(
+            _BOULDER_GOAL, _PROFILE, _USER_STATE, "2026-03-09", total_weeks=11,
+        )
+        names = [p["phase_name"] for p in mc["phases"]]
+        assert "Movement & Volume Base" in names
+        assert "Max Strength & Power" in names
+        assert "Work Capacity" in names
+        assert "Projecting & Peak" in names
+
+    def test_all_round_uses_boulder_names(self):
+        all_round_goal = {
+            "goal_type": "all_round",
+            "discipline": "all_round",
+            "target_grade": "7a+",
+            "current_grade": "7a",
+            "deadline": "2026-08-01",
+        }
+        mc = generate_macrocycle(
+            all_round_goal, _PROFILE, _USER_STATE, "2026-03-09", total_weeks=11,
+        )
+        names = [p["phase_name"] for p in mc["phases"]]
+        assert "Movement & Volume Base" in names
+
+
+# ---------------------------------------------------------------------------
+# A-B7: Boulder target info (offset range + guidance)
+# ---------------------------------------------------------------------------
+
+class TestBoulderTargetInfo:
+    """A-B7: _boulder_target_info returns correct ranges and guidance."""
+
+    def test_limit_session(self):
+        info = _boulder_target_info({"intent": "limit"}, {})
+        assert info["offset_high"] == 0
+        assert info["offset_low"] == -1
+        assert info["attempt_guidance"] is not None
+        assert "3-5 min" in info["rest_guidance"]
+
+    def test_volume_session(self):
+        info = _boulder_target_info({"intent": "volume"}, {})
+        assert info["offset_high"] == -2
+        assert info["offset_low"] == -3
+        assert info["rest_guidance"] is not None
+
+    def test_pe_session(self):
+        info = _boulder_target_info({"intent": "power_endurance"}, {})
+        assert info["offset_high"] == -1
+        assert info["offset_low"] == -2
+
+    def test_warmup_session(self):
+        info = _boulder_target_info({"intent": "warmup"}, {})
+        assert info["offset_high"] == -2
+        assert info["attempt_guidance"] is None
+
+    def test_custom_config_override(self):
+        state = {"progression_config": {"boulder_targets": {"offsets": {"limit_power": 1}}}}
+        info = _boulder_target_info({"intent": "limit"}, state)
+        assert info["offset_high"] == 1

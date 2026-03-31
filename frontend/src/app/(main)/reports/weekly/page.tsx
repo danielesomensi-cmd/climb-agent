@@ -28,13 +28,7 @@ import type {
   WeeklyReportFreeSession,
 } from "@/lib/types";
 
-const PHASE_LABELS: Record<string, string> = {
-  base: "Base",
-  strength_power: "Strength & Power",
-  power_endurance: "Power Endurance",
-  performance: "Performance",
-  deload: "Deload",
-};
+import { getPhaseName } from "@/lib/phase-labels";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   very_easy: "bg-emerald-400",
@@ -151,8 +145,14 @@ function WeeklyReportContent() {
   const handlePrev = () => setWeekStart(shiftWeek(weekStart, -1));
   const handleNext = () => setWeekStart(shiftWeek(weekStart, 1));
 
+  const reportDiscipline = (() => {
+    const gt = (report?.context.goal as Record<string, unknown> | null)?.goal_type as string | undefined;
+    if (gt === "boulder_grade") return "boulder" as const;
+    if (gt === "all_round") return "all_round" as const;
+    return "lead" as const;
+  })();
   const phaseLabel = report?.context.phase_id
-    ? PHASE_LABELS[report.context.phase_id] ?? report.context.phase_id.replace(/_/g, " ")
+    ? getPhaseName(report.context.phase_id, reportDiscipline)
     : null;
 
   return (

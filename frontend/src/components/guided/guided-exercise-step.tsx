@@ -640,11 +640,21 @@ export function GuidedExerciseStep({
                   )}
                   {exercise.suggested.grade && (
                     <p>
-                      Target: <span className="font-semibold">{exercise.suggested.grade}</span>
+                      Target: <span className="font-semibold">
+                        {exercise.suggested.gradeLow && exercise.suggested.gradeLow !== exercise.suggested.grade
+                          ? `${exercise.suggested.gradeLow} – ${exercise.suggested.grade}`
+                          : exercise.suggested.grade}
+                      </span>
                       {exercise.suggested.surface && (
                         <span className="text-muted-foreground"> on {exercise.suggested.surface}</span>
                       )}
                     </p>
+                  )}
+                  {(exercise.suggested.attemptGuidance || exercise.suggested.restGuidance) && (
+                    <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+                      {exercise.suggested.attemptGuidance && <p>{exercise.suggested.attemptGuidance}</p>}
+                      {exercise.suggested.restGuidance && <p>Rest: {exercise.suggested.restGuidance}</p>}
+                    </div>
                   )}
                   {exercise.suggested.loadWarning && (
                     <p className="text-xs text-orange-500 mt-1">

@@ -211,9 +211,9 @@ Clerk auth ✅ and Supabase JSONB ✅ are complete. Remaining:
 
 ### A-B5 — Phase labels and messaging per discipline
 
-**Priority:** P2 | **Status:** Open | **Type:** A (frontend + backend) | **Effort:** S
+**Priority:** P2 | **Status:** ✅ Done (2026-03-31) | **Type:** A (frontend + backend) | **Effort:** S
 
-Phase display names adapt: base → "Movement & Volume Base" (boulder), strength_power → "Max Strength & Power" (boulder), power_endurance → "Work Capacity" (boulder), performance → "Projecting & Peak" (boulder). Phase notes and tips discipline-aware.
+Phase display names adapt: base → "Movement & Volume Base" (boulder), strength_power → "Max Strength & Power" (boulder), power_endurance → "Work Capacity" (boulder), performance → "Projecting & Peak" (boulder). Centralized in `lib/phase-labels.ts` (frontend) and `PHASE_NAMES_BOULDER` (backend). 7 frontend + 3 backend tests.
 
 ### A-B6 — Session pool boulder audit & completion
 
@@ -223,9 +223,9 @@ Audit `_SESSION_POOL_BOULDER`: verify ≥3 primary sessions per phase, limit_bou
 
 ### A-B7 — Boulder target in guided sessions
 
-**Priority:** P2 | **Status:** Open | **Type:** A (backend + frontend) | **Effort:** S
+**Priority:** P2 | **Status:** ✅ Done (2026-03-31) | **Type:** A (backend + frontend) | **Effort:** S
 
-Resolver outputs boulder-appropriate grade targets: limit = max to max-1, volume = max-2 to max-3, PE = max-2 to max-1. Include attempt guidance and rest time guidance per session type.
+`_boulder_target_info()` returns grade range (offset_high/offset_low) + attempt/rest guidance per session intent. Guided session shows target grade range and guidance tips. 5 backend tests.
 
 ### A-B8 — Board session templates (guided)
 
