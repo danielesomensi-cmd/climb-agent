@@ -3805,9 +3805,7 @@
       "intensity_level": "low",
       "fatigue_cost": 2,
       "recency_group": "prehab_elbow_extensors",
-      "equipment_required": [
-        "resistance_band"
-      ],
+      "equipment_required": [],
       "location_allowed": [
         "home",
         "gym"
@@ -3839,7 +3837,11 @@
       ],
       "video_url": null,
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "equipment_required_any": [
+        "weight",
+        "resistance_band"
+      ]
     },
     {
       "id": "shoulder_car",
