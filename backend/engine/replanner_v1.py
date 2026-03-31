@@ -786,7 +786,16 @@ def apply_events(
     for event in events:
         event_type = event.get("event_type")
         if event_type == "move_session":
-            from_day = _find_day(updated, event["from_date"])
+            from_date = event.get("from_date")
+            to_date = event.get("to_date")
+            to_slot = event.get("to_slot")
+            if not from_date:
+                raise ValueError("move_session requires 'from_date'")
+            if not to_date:
+                raise ValueError("move_session requires 'to_date'")
+            if not to_slot:
+                raise ValueError("move_session requires 'to_slot'")
+            from_day = _find_day(updated, from_date)
             # B120: block moving completed/skipped sessions (immutability pillar)
             ref = event.get("session_ref")
             from_slot = event.get("from_slot")
@@ -797,9 +806,9 @@ def apply_events(
                             f"Cannot move a session with status '{s['status']}'"
                         )
                     break
-            to_day = _find_day(updated, event["to_date"])
+            to_day = _find_day(updated, to_date)
             moved = _extract_session(from_day, session_ref=ref, slot=from_slot)
-            _insert_or_replace(to_day, moved, event["to_slot"])
+            _insert_or_replace(to_day, moved, to_slot)
 
             if event.get("from_slot") not in _slots_from_day(from_day):
                 fill_kind = "accessory" if any((s.get("tags") or {}).get("hard") for s in from_day.get("sessions") or []) else "recovery"
@@ -904,7 +913,10 @@ def apply_events(
 
         elif event_type == "add_outdoor":
             day = _find_day(updated, event["date"])
-            day["outdoor_spot_name"] = event["spot_name"]
+            spot_name = event.get("spot_name")
+            if not spot_name:
+                raise ValueError("add_outdoor requires 'spot_name'")
+            day["outdoor_spot_name"] = spot_name
             day["outdoor_discipline"] = event.get("discipline", "both")
             if event.get("spot_id"):
                 day["outdoor_spot_id"] = event["spot_id"]
