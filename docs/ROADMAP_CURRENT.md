@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-31 (B170/B171/B172/B172b closed; B165e partial; A159 SQL migration confirmed)
+> Last updated: 2026-03-31 (B173 closed — gym_id + silent fallback remediation; B170/B171/B172/B172b closed; B165e partial; A159 SQL migration confirmed)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -59,6 +59,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 - ✅ **B170** — Undo button UX clarity: label now context-dependent ("Undo completion" / "Undo skip"). Remove session dialog improved. (2026-03-30)
 - ✅ **B172** — Post-deploy verification: altSides badge visible in idle; unilateral/altSides separated in GuidedExercise (test form no longer triggers on prehab exercises in test sessions); cooldown_forearm_wrist_stretch sets 2→4; cooldown_shoulder_chest work_seconds 20→30; cooldown_hip_pigeon work_seconds 30→60. (2026-03-31)
 - ✅ **B172b** — Catalog hotfix: `active_hip_mobility` alt_sides removed (non-bilateral exercise); `archer_pullup` corrected unilateral→alt_sides. (2026-03-31)
+- ✅ **B173** — Systematic gym_id + silent fallback remediation (D170 audit). Frontend: `replan-dialog`, `gym-picker-dialog`, `quick-add-dialog`, `availability` always send gym_id UUID (not name). Backend: `logger.warning` on gym_id miss in resolver, replanner (change_gym, apply_day_override, suggest_sessions), `logger.warning` on hangboard baseline mismatch in progression_v1, `logger.error` on session resolution failure in routers. 9 new caplog tests. (2026-03-31)
 - ✅ **B171** — ExerciseTimer fixes from D169 audit: F1 `emom_bouldering` work_seconds 30→60 (full EMOM interval); F2 `one_on_one_off_intervals` rest moved to set_rest; F3a 29 exercises marked `alt_sides=true` (catalog field, separate from loading-pin `unilateral`); F3b ExerciseTimer `unilateral` prop — RIGHT/LEFT badge, doubled internal sets, displaySet/totalSets logic. (2026-03-30)
 
 ---
