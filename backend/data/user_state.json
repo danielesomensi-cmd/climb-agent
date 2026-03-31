@@ -16,7 +16,7 @@
       "lead_max_os": "6b+",
       "lead_max_rp": "7a"
     },
-    "last_assessed": "2026-03-30",
+    "last_assessed": "2026-04-06",
     "profile": {
       "endurance": 40,
       "finger_strength": 40,
@@ -53,7 +53,7 @@
   "baselines": {
     "hangboard": [
       {
-        "estimated_at": "2026-03-30",
+        "estimated_at": "2026-03-31",
         "grade_used": "7a",
         "max_total_load_kg": 75.0,
         "source": "estimated_from_grade"
@@ -103,8 +103,8 @@
       "pulling_strength": 45,
       "technique": 60
     },
-    "end_date": "2026-06-21",
-    "generated_at": "2026-03-30T16:01:18",
+    "end_date": "2026-06-28",
+    "generated_at": "2026-03-31T09:37:34",
     "goal_snapshot": {
       "current_grade": "7a",
       "deadline": "2026-09-01",
@@ -266,7 +266,7 @@
         "start_week": 12
       }
     ],
-    "start_date": "2026-03-30",
+    "start_date": "2026-04-06",
     "total_weeks": 12
   },
   "outdoor_spots": [],
