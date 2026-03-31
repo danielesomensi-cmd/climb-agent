@@ -84,6 +84,7 @@ export default function WeekPage() {
   const [freeSessionsLoaded, setFreeSessionsLoaded] = useState(false);
   const weekRouter = useRouter();
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const fetchWeekGenRef = useRef(0);
 
   const handleDayClick = useCallback((date: string) => {
     dayRefs.current[date]?.scrollIntoView({
@@ -93,17 +94,20 @@ export default function WeekPage() {
   }, []);
 
   const fetchWeek = useCallback(async (wn: number) => {
+    const gen = ++fetchWeekGenRef.current;
     setLoading(true);
     setError(null);
     try {
       const weekData = await getWeek(wn);
+      if (gen !== fetchWeekGenRef.current) return; // stale — newer request in flight
       setWeekPlan(weekData.week_plan);
       setPhaseId(weekData.phase_id);
       setDisplayWeekNum(weekData.week_num);
     } catch (e) {
+      if (gen !== fetchWeekGenRef.current) return;
       setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
-      setLoading(false);
+      if (gen === fetchWeekGenRef.current) setLoading(false);
     }
   }, []);
 
@@ -164,7 +168,7 @@ export default function WeekPage() {
         setOutdoorRoutesMap(map);
         setOutdoorDurationMap(durMap);
       })
-      .catch(() => {});
+      .catch((err) => { console.error("Failed to load outdoor sessions:", err); });
   }, [weekPlan]);
 
   // Fetch free sessions for all days in the week (A138)
@@ -552,7 +556,7 @@ export default function WeekPage() {
   /** Open outdoor log form */
   function handleLogOutdoor(date: string) {
     setOutdoorLogDate(date);
-    getOutdoorSpots().then((data) => setOutdoorSpots(data.spots)).catch(() => {});
+    getOutdoorSpots().then((data) => setOutdoorSpots(data.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
   }
 
   /** After outdoor log, verify data persisted, then mark complete (D134) */
@@ -614,7 +618,7 @@ export default function WeekPage() {
       const data = await getOutdoorLogByDate(date);
       setOutdoorEditData(data.session);
       setOutdoorEditDate(date);
-      getOutdoorSpots().then((d) => setOutdoorSpots(d.spots)).catch(() => {});
+      getOutdoorSpots().then((d) => setOutdoorSpots(d.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
     } catch {
       setError("No outdoor session found for this date");
     }

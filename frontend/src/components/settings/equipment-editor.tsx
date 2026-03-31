@@ -60,7 +60,7 @@ export function EquipmentEditor({
         setHomeOptions(defaults.equipment_home as EquipmentItem[]);
         setGymOptions(defaults.equipment_gym as EquipmentItem[]);
       })
-      .catch(() => {})
+      .catch((err) => { console.error("Failed to load equipment defaults:", err); })
       .finally(() => setLoadingDefaults(false));
   }, []);
 

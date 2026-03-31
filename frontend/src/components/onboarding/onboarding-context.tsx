@@ -126,7 +126,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         setData(d);
         saveDraft(d);
       })
-      .catch(() => {})
+      .catch((err) => { console.error("Failed to load draft state from API:", err); })
       .finally(() => setLoaded(true));
   }, []);
 

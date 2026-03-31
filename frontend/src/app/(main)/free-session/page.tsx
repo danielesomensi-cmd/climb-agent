@@ -163,7 +163,7 @@ function FreeSessionContent() {
     if (!authReady) return;
     getFreeSessionSurfaces()
       .then((data) => setGyms(data.gyms))
-      .catch(() => {});
+      .catch((err) => { console.error("Failed to load gym list:", err); });
   }, [authReady]);
 
   // ── Handlers ───────────────────────────────────────────────────────

@@ -290,7 +290,7 @@ function AddExerciseDialog({
       setLoading(true);
       getExercises()
         .then((data) => setCatalog(data.exercises))
-        .catch(() => {})
+        .catch((err) => { console.error("Failed to load exercise catalog:", err); })
         .finally(() => setLoading(false));
     }
   }, [open, catalog.length]);

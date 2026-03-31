@@ -102,7 +102,7 @@ export default function GuidedSessionPage() {
           if (bw) {
             setState((prev) => prev ? { ...prev, bodyweightKg: bw } : prev);
           }
-        }).catch(() => {});
+        }).catch((err) => { console.error("Failed to prefetch bodyweight:", err); });
       }
     } else {
       // No saved state — redirect back to today

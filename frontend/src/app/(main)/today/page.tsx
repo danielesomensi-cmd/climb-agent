@@ -179,7 +179,8 @@ function TodayContent() {
                 status: "done",
               }).then(() => {
                 localStorage.removeItem(key);
-              }).catch(() => {
+              }).catch((err) => {
+                console.error("Failed to retry pending feedback submission:", err);
                 // Leave in localStorage for next retry
               });
             }
@@ -218,7 +219,7 @@ function TodayContent() {
       context = "hard_day";
     }
 
-    getDailyQuote(context).then(setQuote).catch(() => {});
+    getDailyQuote(context).then(setQuote).catch((err) => { console.error("Failed to load daily quote:", err); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekPlan]);
 
@@ -247,7 +248,7 @@ function TodayContent() {
         setOutdoorRoutesMap(map);
         setOutdoorDurationMap(durMap);
       })
-      .catch(() => {});
+      .catch((err) => { console.error("Failed to load outdoor sessions:", err); });
   }, [weekPlan]);
 
   // Fetch free sessions for target date (A138)
@@ -610,7 +611,7 @@ function TodayContent() {
   /** Open the outdoor log form for a day */
   function handleLogOutdoor(date: string) {
     setOutdoorLogDate(date);
-    getOutdoorSpots().then((data) => setOutdoorSpots(data.spots)).catch(() => {});
+    getOutdoorSpots().then((data) => setOutdoorSpots(data.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
   }
 
   /** After outdoor routes are logged, verify data persisted, then mark complete (D134) */
@@ -670,7 +671,7 @@ function TodayContent() {
       const data = await getOutdoorLogByDate(date);
       setOutdoorEditData(data.session);
       setOutdoorEditDate(date);
-      getOutdoorSpots().then((d) => setOutdoorSpots(d.spots)).catch(() => {});
+      getOutdoorSpots().then((d) => setOutdoorSpots(d.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
     } catch {
       setError("No outdoor session found for this date");
     }

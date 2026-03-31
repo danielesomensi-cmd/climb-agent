@@ -17,6 +17,7 @@ export default function OutdoorPage() {
   const [sessions, setSessions] = useState<(OutdoorSession & { load_score?: number })[]>([]);
   const [stats, setStats] = useState<OutdoorStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // B155: gate on Clerk readiness
   useEffect(() => {
@@ -26,7 +27,10 @@ export default function OutdoorPage() {
         setSessions(sessData.sessions as (OutdoorSession & { load_score?: number })[]);
         setStats(statsData);
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("Failed to load outdoor data:", err);
+        setError("Could not load outdoor history. Please try again.");
+      })
       .finally(() => setLoading(false));
   }, [authReady]);
 
@@ -49,7 +53,13 @@ export default function OutdoorPage() {
           </div>
         )}
 
-        {!loading && sessions.length === 0 && (
+        {!loading && error && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && sessions.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-sm text-muted-foreground">
               No outdoor sessions logged yet.
@@ -60,7 +70,7 @@ export default function OutdoorPage() {
           </div>
         )}
 
-        {!loading && stats && sessions.length > 0 && (
+        {!loading && !error && stats && sessions.length > 0 && (
           <>
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

@@ -40,7 +40,8 @@ export default function LocationsPage() {
         setHomeEquipment(defaults.equipment_home as EquipmentItem[]);
         setGymEquipment(defaults.equipment_gym as EquipmentItem[]);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Failed to load equipment defaults:", err);
         // Silently fail — lists will be empty, user can still proceed
       })
       .finally(() => setLoadingDefaults(false));

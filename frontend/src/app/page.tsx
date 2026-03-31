@@ -27,7 +27,8 @@ export default function Home() {
           router.replace("/onboarding/welcome");
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Failed to load state on root redirect:", err);
         router.replace("/onboarding/welcome");
       })
       .finally(() => setLoading(false));
