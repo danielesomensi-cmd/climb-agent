@@ -1296,6 +1296,10 @@ def resolve_session(
 
     instance_counter = 0
 
+    # D172-21: catalog/templates/v1/*.json define requires_environment.equipment_any_of
+    # but this field is never read by the resolution engine. Either implement it
+    # (gate template inclusion on equipment availability) or remove from templates.
+    # Deferred: evaluate after Supabase migration when equipment context is richer.
     for mod in modules:
         if isinstance(mod, str):
             template_id = mod
@@ -1328,6 +1332,10 @@ def resolve_session(
             continue
 
         if not template_id:
+            logger.warning(
+                "resolve_session: module in session has no template_id and no inline block, skipping: %r",
+                mod,
+            )
             continue
 
         template_file = os.path.join(repo_root, templates_dir, template_version, f"{template_id}.json")

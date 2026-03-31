@@ -120,6 +120,10 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
                 session_path = os.path.join(SESSIONS_DIR, f"{session_id}.json")
                 full_path = REPO_ROOT / session_path
                 if not full_path.exists():
+                    logger.warning(
+                        "_auto_resolve: session %r not found in catalog (user=%s), skipping resolution",
+                        session_id, user_id,
+                    )
                     session_entry["resolved"] = None
                     continue
                 try:

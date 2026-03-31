@@ -310,7 +310,14 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
             e["id"]: {"load_model": e.get("load_model"), "unilateral": bool(e.get("unilateral"))}
             for e in data.get("exercises", [])
         }
-    except (FileNotFoundError, KeyError):
+    except FileNotFoundError:
+        logger.error(
+            "_load_catalog_cache: exercises.json not found at %s — exercise targets will be unavailable",
+            catalog_path,
+        )
+        _CATALOG_CACHE = {}
+    except KeyError as e:
+        logger.error("_load_catalog_cache: unexpected catalog structure: %s", e)
         _CATALOG_CACHE = {}
     return _CATALOG_CACHE
 
