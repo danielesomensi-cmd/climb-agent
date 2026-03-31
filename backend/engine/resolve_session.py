@@ -939,31 +939,53 @@ def _resolve_inline_block(
 
     _finger_dev = ((user_state or {}).get("preferences") or {}).get("finger_training_device")
 
-    if TRACE_RESOLVE:
-        logger.warning(
-            "INLINE_BLOCK_TRACE | block=%s role=%s dom=%s pat=%s equip=%s "
-            "| location=%s avail_eq=%s finger_dev=%s exclude_count=%d",
-            block_id, role_req, domain_req, pattern_req, equipment_req,
-            location, sorted(available_equipment), _finger_dev, len(recent_ex_ids),
-        )
+    # B174: explicit exercise_id in selection.primary bypasses P0 filters entirely
+    # (mirrors template block behavior at resolve_session.py:1359-1365)
+    explicit_ex_id = primary.get("exercise_id")
+    selected_ex = None
+    chosen_by: str = "p0_inline_block"
+    trace: Dict[str, Any] = {}
 
-    selected_ex, trace = pick_best_exercise_p0(
-        exercises=exercises,
-        location=location,
-        available_equipment=available_equipment,
-        role_req=role_req,
-        domain_req=domain_req,
-        pattern_req=pattern_req,
-        required_equipment=equipment_req,
-        exclude_ids=set(recent_ex_ids),
-        recent_ex_ids=recent_ex_ids,
-        recent_recency_groups=recent_recency_groups,
-        limitation_map=limitation_map,
-        finger_device=_finger_dev,
-        user_age=user_age,
-        experience_years=experience_years,
-    )
-    chosen_by = "p0_inline_block"
+    if explicit_ex_id:
+        selected_ex = next(
+            (e for e in exercises if norm_str(get_ex_id(e)) == norm_str(explicit_ex_id)),
+            None,
+        )
+        if selected_ex is not None:
+            chosen_by = "explicit_exercise_id"
+            trace = {"counts": {}, "domain_filter_applied": None, "note": "explicit_exercise_id: bypassed P0 filters"}
+        else:
+            logger.warning(
+                "resolve_session: explicit exercise_id '%s' not found in catalog for block '%s' — falling back to P0",
+                explicit_ex_id, block_id,
+            )
+
+    if selected_ex is None:
+        if TRACE_RESOLVE:
+            logger.warning(
+                "INLINE_BLOCK_TRACE | block=%s role=%s dom=%s pat=%s equip=%s "
+                "| location=%s avail_eq=%s finger_dev=%s exclude_count=%d",
+                block_id, role_req, domain_req, pattern_req, equipment_req,
+                location, sorted(available_equipment), _finger_dev, len(recent_ex_ids),
+            )
+
+        selected_ex, trace = pick_best_exercise_p0(
+            exercises=exercises,
+            location=location,
+            available_equipment=available_equipment,
+            role_req=role_req,
+            domain_req=domain_req,
+            pattern_req=pattern_req,
+            required_equipment=equipment_req,
+            exclude_ids=set(recent_ex_ids),
+            recent_ex_ids=recent_ex_ids,
+            recent_recency_groups=recent_recency_groups,
+            limitation_map=limitation_map,
+            finger_device=_finger_dev,
+            user_age=user_age,
+            experience_years=experience_years,
+        )
+        chosen_by = "p0_inline_block"
 
     # Cooldown fallback (same logic as template blocks)
     replanner_note = None
@@ -1000,12 +1022,16 @@ def _resolve_inline_block(
         ex_id = get_ex_id(selected_ex)
 
         prescription = mod.get("prescription") or {}
+        primary_overrides = primary.get("prescription_overrides") or {}
         ex_defaults = selected_ex.get("defaults") or selected_ex.get("prescription_defaults") or {}
         merged: Dict[str, Any] = {}
         if isinstance(ex_defaults, dict):
             merged.update(ex_defaults)
         if isinstance(prescription, dict):
             merged.update(prescription)
+        # B174: selection.primary.prescription_overrides take highest priority
+        if isinstance(primary_overrides, dict):
+            merged.update(primary_overrides)
 
         if replanner_note and replanner_note.get("reason") == "cluster_cooldown_downshift":
             merged.setdefault("multiplier", 1.0)

@@ -242,5 +242,77 @@ class TestTestSessionsResolveExactExercise(unittest.TestCase):
         )
 
 
+class TestInlineBlockExplicitExerciseId(unittest.TestCase):
+    """B174: _resolve_inline_block must respect selection.primary.exercise_id."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.base_us = _load_user_state()
+
+    def _resolve_heavy_conditioning(self):
+        us = _make_user_state(self.base_us, "gym", "blocx")
+        return _resolve("heavy_conditioning_gym", us)
+
+    def test_heavy_conditioning_gym_contains_dip(self):
+        """B174: triceps_dip block must resolve to 'dip', not a random exercise."""
+        result = self._resolve_heavy_conditioning()
+        ex_ids = [e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]]
+        self.assertIn("dip", ex_ids, "triceps_dip block must resolve to exercise_id='dip'")
+
+    def test_heavy_conditioning_gym_contains_hanging_leg_raise(self):
+        """B174: core_compression block must resolve to 'hanging_leg_raise'."""
+        result = self._resolve_heavy_conditioning()
+        ex_ids = [e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]]
+        self.assertIn(
+            "hanging_leg_raise", ex_ids,
+            "core_compression block must resolve to exercise_id='hanging_leg_raise'",
+        )
+
+    def test_explicit_exercise_id_prescription_overrides_applied(self):
+        """B174: prescription_overrides from selection.primary are applied over exercise defaults."""
+        result = self._resolve_heavy_conditioning()
+        dip_instances = [
+            e for e in result["resolved_session"]["exercise_instances"]
+            if e["exercise_id"] == "dip"
+        ]
+        self.assertEqual(len(dip_instances), 1)
+        p = dip_instances[0]["prescription"]
+        self.assertEqual(p.get("sets"), 3, "prescription_overrides.sets must be 3 for dip")
+        self.assertEqual(p.get("reps"), 10, "prescription_overrides.reps must be 10 for dip")
+        self.assertEqual(
+            p.get("rest_between_sets_seconds"), 60,
+            "prescription_overrides.rest must be 60s for dip",
+        )
+
+    def test_inline_block_without_exercise_id_uses_p0(self):
+        """B174: inline blocks without exercise_id still use P0 filters (no regression)."""
+        result = self._resolve_heavy_conditioning()
+        blocks = result["resolved_session"]["blocks"]
+        # compound_pull block has no exercise_id — picked_by must NOT be explicit_exercise_id
+        pull_blocks = [b for b in blocks if "compound_pull" in b.get("block_uid", "")]
+        self.assertTrue(len(pull_blocks) > 0, "compound_pull block must be present")
+        for b in pull_blocks:
+            source = b.get("selected_exercises", [{}])[0].get("source", {}) if b.get("selected_exercises") else {}
+            picked_by = source.get("picked_by", "")
+            self.assertNotIn(
+                "explicit_exercise_id", picked_by,
+                "compound_pull block must use P0, not explicit_exercise_id",
+            )
+
+    def test_explicit_exercise_id_block_uid_source(self):
+        """B174: exercise_instances for dip have picked_by containing 'explicit_exercise_id'."""
+        result = self._resolve_heavy_conditioning()
+        dip_instances = [
+            e for e in result["resolved_session"]["exercise_instances"]
+            if e["exercise_id"] == "dip"
+        ]
+        self.assertEqual(len(dip_instances), 1)
+        picked_by = dip_instances[0].get("source", {}).get("picked_by", "")
+        self.assertIn(
+            "explicit_exercise_id", picked_by,
+            f"dip must be picked via explicit_exercise_id, got '{picked_by}'",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
