@@ -146,7 +146,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 
 | ID | Title | Type | Effort | Notes |
 |----|-------|------|--------|-------|
-| **B174** | `_resolve_inline_block` ignores explicit `exercise_id` → wrong exercises in sessions with inline blocks (D172-01) | B | S | Hotfix — affects production sessions now. `resolve_session.py`. |
+| **B174** | `_resolve_inline_block` ignores explicit `exercise_id` → wrong exercises in sessions with inline blocks (D172-01) | B | S | ✅ Done (implemented, tracking missed) |
 | **B175** | Input validation hardening: 500→422 on bad dict keys (D172-02), `ensure_monday` crash (D172-03), stale session guard (D172-04), boulder `domain_weights` in `set_availability` (D172-06) | B | M | Pre-launch. 4 fixes in replanner/deps/feedback. |
 
 ### Post-launch (P2)
