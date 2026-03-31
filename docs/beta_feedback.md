@@ -126,3 +126,32 @@
 **Comportamento desiderato:** Specific rehab exercises matched to injury type and body zone.
 **Status:** Added to roadmap as Future feature. Candidate for LLM Coach (Phase 3.5).
 **Roadmap ref:** "Future — Injury-Specific Rehab/Prehab" section in ROADMAP_CURRENT.md
+
+---
+
+### 2026-03-31 — Daniele — Guided Session: intermittent scroll + timer block (iOS PWA)
+
+**Device:** iPhone, iOS Safari PWA
+**Page:** Guided session — "Heavy Conditioning Gym" (16 exercises)
+**Severity:** P3 (intermittent, self-resolving)
+**Screenshots:** provided (IMG_5447.png, IMG_5448.png)
+
+**Symptoms (both intermittent, resolved on their own):**
+1. Vertical scroll blocked — content bounces back, cannot reach Done/Skip buttons
+2. Timer ring unresponsive to tap — cannot start/pause timer
+
+**Suspected causes:**
+- Loading state overlay not clearing (covers scroll + timer area)
+- Re-render timing issue (component re-mount places element on top temporarily)
+- iOS Safari PWA touch freeze after background/foreground cycle
+- CSS animation on timer ring interfering with touch events
+
+**Reproduction:** not reliably reproducible yet. If it recurs, note:
+- Does it happen immediately on page open, or after some interaction?
+- Does it happen after returning from background?
+- Does a pull-to-refresh or page reload fix it?
+
+**Action:** monitor. On next frontend brief, audit guided session for:
+- Any overlay/loading div with `pointer-events: auto` or high `z-index`
+- Any `overflow: hidden` on parent containers that could block scroll
+- Any `touch-action` CSS that could interfere with vertical scrolling
