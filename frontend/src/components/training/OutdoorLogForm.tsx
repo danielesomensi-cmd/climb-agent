@@ -58,6 +58,13 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   const updateAttemptResult = (rIdx: number, aIdx: number, result: OutdoorAttempt["result"]) => {
     const updated = [...routes];
     updated[rIdx].attempts[aIdx] = { ...updated[rIdx].attempts[aIdx], result };
+    // B181: auto-fill style when user marks first send and style is empty
+    if (result === "sent" && !updated[rIdx].style) {
+      const isFirstAttempt = !updated[rIdx].attempts.slice(0, aIdx).some((a) => a.result === "sent");
+      if (isFirstAttempt) {
+        (updated[rIdx] as unknown as Record<string, unknown>).style = aIdx === 0 ? "flash" : "redpoint";
+      }
+    }
     setRoutes(updated);
   };
 

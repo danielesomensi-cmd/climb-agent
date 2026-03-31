@@ -43,6 +43,15 @@ const STYLE_LABEL: Record<string, string> = {
   project: "projecting",
 };
 
+/** Infer effective style from explicit style + attempt outcomes (B181). */
+function inferStyle(route: { style?: string; attempts?: { result: string }[] }): string {
+  if (route.style && STYLE_RANK[route.style]) return route.style;
+  const hasSend = route.attempts?.some((a) => a.result === "sent");
+  if (!hasSend) return "project";
+  const sendIdx = route.attempts!.findIndex((a) => a.result === "sent");
+  return sendIdx === 0 ? "flash" : "redpoint";
+}
+
 function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
   const map = new Map<string, RouteAggregate>();
   for (const s of sessions) {
@@ -52,12 +61,13 @@ function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
       const existing = map.get(key);
       const attempts = r.attempts?.length || 0;
       if (attempts === 0) continue;
-      const styleRank = STYLE_RANK[r.style || "project"] || 0;
+      const effectiveStyle = inferStyle(r);
+      const styleRank = STYLE_RANK[effectiveStyle] || 0;
       if (existing) {
         existing.totalAttempts += attempts;
         existing.totalSessions += 1;
         if (styleRank > (STYLE_RANK[existing.bestStyle] || 0)) {
-          existing.bestStyle = r.style || "project";
+          existing.bestStyle = effectiveStyle;
         }
         existing.isSent = (STYLE_RANK[existing.bestStyle] || 0) >= STYLE_RANK.redpoint;
         if (s.date > existing.lastDate) existing.lastDate = s.date;
@@ -69,7 +79,7 @@ function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
           discipline: r.discipline,
           totalAttempts: attempts,
           totalSessions: 1,
-          bestStyle: r.style || "project",
+          bestStyle: effectiveStyle,
           isSent: styleRank >= STYLE_RANK.redpoint,
           lastDate: s.date,
         });
