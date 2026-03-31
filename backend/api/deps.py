@@ -204,7 +204,10 @@ def save_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
 
 def ensure_monday(d: str) -> str:
     """If *d* (YYYY-MM-DD) is not a Monday, round DOWN to the previous Monday."""
-    dt = datetime.strptime(d, "%Y-%m-%d").date()
+    try:
+        dt = datetime.strptime(d, "%Y-%m-%d").date()
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid date format: expected YYYY-MM-DD, got {d!r}")
     return (dt - timedelta(days=dt.weekday())).isoformat()
 
 
