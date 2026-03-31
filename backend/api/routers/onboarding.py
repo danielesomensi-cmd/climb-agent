@@ -149,6 +149,29 @@ def _ensure_gym_ids(equipment: Dict[str, Any]) -> Dict[str, Any]:
     return equipment
 
 
+def _validate_equipment_keys(equipment: Dict[str, Any]) -> None:
+    """Validate that all equipment IDs are known. Raises ValueError with hint on unknown keys."""
+    from backend.engine.equipment_utils import KNOWN_EQUIPMENT_KEYS
+    all_unknown = []
+    home_eq = equipment.get("home") or []
+    for key in home_eq:
+        if key not in KNOWN_EQUIPMENT_KEYS:
+            all_unknown.append(key)
+    for gym in (equipment.get("gyms") or []):
+        for key in (gym.get("equipment") or []):
+            if key not in KNOWN_EQUIPMENT_KEYS:
+                all_unknown.append(key)
+    if all_unknown:
+        # Build a hint for the most common typo
+        import difflib
+        hints = []
+        for uk in sorted(set(all_unknown)):
+            close = difflib.get_close_matches(uk, KNOWN_EQUIPMENT_KEYS, n=1, cutoff=0.6)
+            hint = f" (did you mean: {close[0]!r}?)" if close else ""
+            hints.append(f"{uk!r}{hint}")
+        raise ValueError(f"Unknown equipment key(s): {', '.join(hints)}")
+
+
 def _recovery_multiplier_for_age(age: int | None) -> float:
     """B165b: compute default recovery multiplier from age.
 
@@ -222,7 +245,7 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             "finger_training_device": "hangboard",
         },
         "availability": data.availability,
-        "equipment": _ensure_gym_ids(data.equipment),
+        "equipment": _ensure_gym_ids(data.equipment),  # validation done before this call
         "limitations": {
             "active_flags": [
                 f"{lim['area']}_{lim.get('side', 'both')}"
@@ -287,6 +310,12 @@ def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(g
     Always generates a full macrocycle. When test_week_requested=True, sets
     initial_tests_requested flag so that test sessions are injected into week 1.
     """
+    # 0. Validate equipment keys before anything else
+    try:
+        _validate_equipment_keys(data.equipment)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
     # 1. Build user state
     state = _build_user_state_from_onboarding(data)
 

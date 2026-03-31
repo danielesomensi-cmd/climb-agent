@@ -72,6 +72,32 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "core_training": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 3},
 }
 
+
+def _validate_session_meta_equipment() -> None:
+    """D172-17: warn if _SESSION_META.required_equipment differs from session JSON files."""
+    import os as _os
+    import json as _json
+    sessions_dir = _os.path.join(_os.path.dirname(__file__), "..", "catalog", "sessions", "v1")
+    for sid, meta in _SESSION_META.items():
+        path = _os.path.join(sessions_dir, f"{sid}.json")
+        if not _os.path.exists(path):
+            continue
+        try:
+            with open(path, encoding="utf-8") as _f:
+                data = _json.load(_f)
+            json_eq = set(data.get("required_equipment") or [])
+            meta_eq = set(meta.get("required_equipment") or [])
+            if json_eq != meta_eq:
+                logger.warning(
+                    "_SESSION_META/%s required_equipment mismatch: meta=%r json=%r",
+                    sid, sorted(meta_eq), sorted(json_eq),
+                )
+        except Exception:
+            pass
+
+
+_validate_session_meta_equipment()
+
 _INTENSITY_ORDER = {"low": 0, "medium": 1, "high": 2, "max": 3}
 
 # Fallback load score for unresolved sessions (real score uses fatigue_cost from exercises)
@@ -186,7 +212,8 @@ def _location_has_equipment(
             equip = list(g.get("equipment", []))
             if "pullup_bar" not in equip:
                 equip.append("pullup_bar")
-            if all(eq in equip for eq in required_equipment):
+            expanded = expand_equipment(equip)
+            if all(eq in expanded for eq in required_equipment):
                 return True
         return False
     avail = _equipment_for_location(location, slot_info, home_equipment, gyms, default_gym_id)
@@ -242,6 +269,15 @@ def _normalize_availability(
     normalized: Dict[str, Dict[str, Dict[str, Any]]] = {}
     raw = availability or {}
     locs = sorted(set(allowed_locations))
+
+    # Warn about unknown weekday keys
+    _VALID_WEEKDAYS = set(WEEKDAYS)
+    for wd_key in raw:
+        if wd_key not in _VALID_WEEKDAYS:
+            logger.warning(
+                "_normalize_availability: unknown availability key %r — treating as rest day",
+                wd_key,
+            )
 
     def _unavailable() -> Dict[str, Any]:
         return {"available": False, "locations": locs,
@@ -534,6 +570,8 @@ def generate_phase_week(
             _sd -= timedelta(days=_sd.weekday())
             start_date = _sd.isoformat()
             logger.warning("generate_phase_week: start_date adjusted to Monday %s", start_date)
+            # D172-24: start_date is corrected here; all subsequent uses of start_date
+            # in this function use the corrected Monday value.
     except (ValueError, TypeError) as exc:
         raise ValueError(f"generate_phase_week: invalid start_date format '{start_date}', expected YYYY-MM-DD") from exc
 
@@ -1298,6 +1336,9 @@ def generate_phase_week(
         "plan_version": "planner.v2",
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "start_date": start_date,
+        # D172-16: planning_prefs (incl. default_gym_id) are not included in profile_snapshot.
+        # No current downstream consumer reads default_gym_id from snapshot, but this gap
+        # must be addressed before the Supabase migration when per-request state is removed.
         "profile_snapshot": {
             "phase_id": phase_id,
             "domain_weights": domain_weights,

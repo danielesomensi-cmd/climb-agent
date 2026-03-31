@@ -6,7 +6,10 @@ matching across the planning and resolution pipeline.
 
 from __future__ import annotations
 
+import logging
 from typing import Collection, List, Set
+
+logger = logging.getLogger(__name__)
 
 # Any of these surfaces lets a user do bouldering.  Sessions requiring
 # "gym_boulder" should be placeable at any location with at least one
@@ -27,6 +30,20 @@ WEIGHT_SUBTYPES: frozenset[str] = frozenset({
     "barbell",
 })
 
+KNOWN_EQUIPMENT_KEYS: frozenset[str] = frozenset({
+    # climbing surfaces
+    "gym_boulder", "gym_routes", "spraywall",
+    "board_kilter", "board_moonboard", "board_other", "homewall",
+    # finger training (generic and size-specific variants)
+    "hangboard", "hangboard_20mm", "loading_pin", "pinch_block",
+    # strength
+    "pullup_bar", "weight", "dumbbell", "kettlebell", "barbell", "bench",
+    "cable_machine", "leg_press",
+    # accessories
+    "resistance_band", "rings", "foam_roller", "ab_wheel",
+    "campus_board",
+})
+
 
 def expand_equipment(equipment: Collection[str]) -> List[str]:
     """Apply all equipment implication rules and return an expanded list.
@@ -36,6 +53,9 @@ def expand_equipment(equipment: Collection[str]) -> List[str]:
     - If any WEIGHT_SUBTYPE is present  → implies "weight".
     """
     eq: List[str] = list(equipment)
+    for k in eq:
+        if k not in KNOWN_EQUIPMENT_KEYS:
+            logger.warning("Unknown equipment key: %r — will be ignored by planning engine", k)
     eq_set: Set[str] = set(eq)
 
     if eq_set & BOULDER_SURFACES and "gym_boulder" not in eq_set:
