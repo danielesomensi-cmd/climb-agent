@@ -57,7 +57,7 @@ export default function WeekPage() {
   const [displayWeekNum, setDisplayWeekNum] = useState(1);
   const [macrocycle, setMacrocycle] = useState<Macrocycle | null>(null);
   const [gyms, setGyms] = useState<
-    Array<{ name: string; equipment: string[] }>
+    Array<{ gym_id?: string; name: string; equipment: string[] }>
   >([]);
   const [homeEquipment, setHomeEquipment] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +123,7 @@ export default function WeekPage() {
       if (goal?.current_grade) setCurrentGrade(goal.current_grade);
       const eq = stateData.equipment as Record<string, unknown> | undefined;
       setGyms(
-        (eq?.gyms as Array<{ name: string; equipment: string[] }>) ?? []
+        (eq?.gyms as Array<{ gym_id?: string; name: string; equipment: string[] }>) ?? []
       );
       setHomeEquipment((eq?.home as string[]) ?? []);
     } catch (e) {

@@ -167,11 +167,19 @@ export function QuickAddDialog({
   const handleApply = () => {
     if (!selectedSession) return;
     const isGym = location !== "home";
+    // Resolve gym_id: use the gym's actual gym_id (UUID from onboarding),
+    // falling back to the name string for legacy/unnamed gyms.
+    const selectedGym = isGym && location !== "gym"
+      ? gyms.find(g => g.name === location)
+      : undefined;
+    const resolvedGymId = selectedGym
+      ? (selectedGym.gym_id ?? location)
+      : undefined;
     onApply({
       session_id: selectedSession,
       slot,
       location: isGym ? "gym" : "home",
-      gym_id: isGym && location !== "gym" ? location : undefined,
+      gym_id: resolvedGymId,
     });
   };
 

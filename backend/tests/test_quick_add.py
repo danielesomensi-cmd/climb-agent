@@ -415,3 +415,91 @@ def test_quick_add_test_session_has_test_tag():
     test_sessions = [s for s in updated_day["sessions"] if s["session_id"] == "test_max_hang_5s"]
     assert len(test_sessions) == 1, "test_max_hang_5s should have been added"
     assert test_sessions[0]["tags"].get("test") is True, "Quick-add test session must have tags.test=True"
+
+
+# ---------- B169: gym_id propagation ----------
+
+
+def _plan_with_two_gyms():
+    """Plan with two gyms: 'main_gym' (default) and 'secondary_gym'."""
+    from backend.engine.macrocycle_v1 import _BASE_WEIGHTS, _build_session_pool, _adjust_domain_weights
+    from backend.engine.planner_v2 import generate_phase_week
+    profile = {
+        "finger_strength": 60, "pulling_strength": 55, "power_endurance": 45,
+        "technique": 50, "endurance": 40,
+    }
+    phase_id = "base"
+    base_weights = _BASE_WEIGHTS[phase_id]
+    domain_weights = _adjust_domain_weights(base_weights, profile)
+    session_pool = _build_session_pool(phase_id)
+    plan = generate_phase_week(
+        phase_id=phase_id,
+        domain_weights=domain_weights,
+        session_pool=session_pool,
+        start_date="2026-01-05",
+        availability=_availability(),
+        allowed_locations=["home", "gym"],
+        hard_cap_per_week=3,
+        planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+        default_gym_id="main_gym",
+        gyms=[
+            {"gym_id": "main_gym", "equipment": ["gym_boulder", "board_kilter"]},
+            {"gym_id": "secondary_gym", "equipment": ["barbell", "dumbbell", "pullup_bar"]},
+        ],
+    )
+    # Inject planning_prefs into profile_snapshot so _default_gym_id_from_plan works
+    plan["profile_snapshot"]["planning_prefs"] = {"default_gym_id": "main_gym"}
+    return plan
+
+
+def test_quick_add_explicit_gym_id_overrides_plan_default():
+    """B169: quick-add with explicit gym_id stores that gym, not the plan default."""
+    plan = _plan_with_two_gyms()
+    day = next(d for d in plan["weeks"][0]["days"] if d["sessions"])
+    occupied = {s["slot"] for s in day["sessions"]}
+    free_slot = next((sl for sl in ("morning", "lunch", "evening") if sl not in occupied), None)
+    if free_slot is None:
+        plan["weeks"][0]["days"][-1]["sessions"] = []
+        day = plan["weeks"][0]["days"][-1]
+        free_slot = "evening"
+
+    updated, _ = apply_day_add(
+        plan,
+        session_id="heavy_conditioning_gym",
+        target_date=day["date"],
+        slot=free_slot,
+        location="gym",
+        gym_id="secondary_gym",  # explicitly NOT the plan default
+    )
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == day["date"])
+    added = next(s for s in updated_day["sessions"] if s["session_id"] == "heavy_conditioning_gym")
+    assert added["gym_id"] == "secondary_gym", (
+        f"Expected gym_id='secondary_gym', got '{added['gym_id']}'"
+    )
+    assert added["location"] == "gym"
+
+
+def test_quick_add_no_gym_id_falls_back_to_plan_default():
+    """B169: quick-add without gym_id falls back to plan's default_gym_id."""
+    plan = _plan_with_two_gyms()
+    day = next(d for d in plan["weeks"][0]["days"] if d["sessions"])
+    occupied = {s["slot"] for s in day["sessions"]}
+    free_slot = next((sl for sl in ("morning", "lunch", "evening") if sl not in occupied), None)
+    if free_slot is None:
+        plan["weeks"][0]["days"][-1]["sessions"] = []
+        day = plan["weeks"][0]["days"][-1]
+        free_slot = "evening"
+
+    updated, _ = apply_day_add(
+        plan,
+        session_id="regeneration_easy",
+        target_date=day["date"],
+        slot=free_slot,
+        location="gym",
+        gym_id=None,  # omitted — should use plan default
+    )
+    updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == day["date"])
+    added = next(s for s in updated_day["sessions"] if s["session_id"] == "regeneration_easy")
+    assert added["gym_id"] == "main_gym", (
+        f"Expected fallback to plan default 'main_gym', got '{added['gym_id']}'"
+    )
