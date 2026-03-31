@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import logging
 from copy import deepcopy
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import (
     EMPTY_TEMPLATE, ensure_monday, get_user_id,
     invalidate_future_week_cache, load_state, save_state,
 )
+from backend.api.rate_limit import limiter
 from backend.engine import storage
 from backend.engine.state_checks import is_macrocycle_stale
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/state", tags=["state"])
 
@@ -33,9 +37,32 @@ def get_state(user_id: Optional[str] = Depends(get_user_id)):
     return load_state(user_id)
 
 
+# B165d: Keys the frontend/engine are allowed to set via PUT /api/state
+_ALLOWED_STATE_KEYS = {
+    "profile", "assessment", "goal", "availability", "equipment",
+    "baselines", "macrocycle", "current_week_plan", "week_plans",
+    "outdoor_spots", "planning_prefs", "preferences", "limitations",
+    "trips", "working_loads", "free_sessions", "weekly_overrides",
+    "schema_version", "feedback_log", "session_completion_log",
+    "outdoor_log", "fatigue_proxy", "stimulus_recency",
+    "quote_history", "progression_counters", "test_queue",
+    "other_activities", "_prev_week_plan",
+    "user", "progression_config",
+}
+
+
 @router.put("")
-def put_state(patch: Dict[str, Any], user_id: Optional[str] = Depends(get_user_id)):
+@limiter.limit("30/minute")
+def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = Depends(get_user_id)):
     """Deep-merge patch into existing state."""
+    # B165d: reject unknown top-level keys
+    unknown = set(patch.keys()) - _ALLOWED_STATE_KEYS
+    if unknown:
+        logger.warning("PUT /api/state rejected unknown keys: %s (user=%s)", unknown, user_id)
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown state keys: {', '.join(sorted(unknown))}",
+        )
     # Auto-correct macrocycle.start_date to Monday if present in patch
     mc_patch = patch.get("macrocycle")
     if isinstance(mc_patch, dict) and "start_date" in mc_patch:

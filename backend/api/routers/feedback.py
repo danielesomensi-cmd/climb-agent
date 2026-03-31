@@ -8,9 +8,10 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import get_user_id, load_state, require_active_subscription, save_state
+from backend.api.rate_limit import limiter
 from backend.api.models import FeedbackRequest
 from backend.engine.adaptive_replan import (
     append_feedback_log,
@@ -26,7 +27,8 @@ router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
 
 @router.post("", dependencies=[Depends(require_active_subscription)])
-def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_user_id)):
+@limiter.limit("30/minute")
+def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply session feedback: progression updates + closed-loop state changes."""
     state = load_state(user_id)
 
@@ -34,7 +36,8 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
     try:
         state = apply_feedback(req.log_entry, state)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Feedback application failed: {e}")
+        logger.error("Feedback application failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Feedback application failed. Please try again.")
 
     # 2. Apply closed-loop state update (stimulus recency, fatigue proxy)
     if req.resolved_day:
@@ -45,7 +48,8 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
                 status=req.status,
             )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Closed-loop update failed: {e}")
+            logger.error("Closed-loop update failed: %s", e, exc_info=True)
+            raise HTTPException(status_code=500, detail="Closed-loop update failed. Please try again.")
 
     # 3. Append to feedback log (B25)
     exercises_by_id = load_exercises_by_id()
@@ -174,7 +178,7 @@ def post_feedback(req: FeedbackRequest, user_id: Optional[str] = Depends(get_use
                 break
 
     save_state(state, user_id)
-    response = {"status": "ok", "state": state}
+    response: dict = {"status": "ok"}
     if limitation_suggestions:
         response["limitation_suggestions"] = limitation_suggestions
     if stale_exercise_warning:

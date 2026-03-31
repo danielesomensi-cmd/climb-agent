@@ -9,9 +9,10 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import REPO_ROOT, ensure_monday, get_user_id, invalidate_week_cache, load_state, next_monday, this_monday, save_state
+from backend.api.rate_limit import limiter
 from backend.api.models import OnboardingData, StartWeekRequest
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
 from backend.engine.macrocycle_v1 import generate_macrocycle
@@ -304,7 +305,8 @@ def _build_current_level(grades: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.post("/complete")
-def onboarding_complete(data: OnboardingData, user_id: Optional[str] = Depends(get_user_id)):
+@limiter.limit("3/minute")
+def onboarding_complete(request: Request, data: OnboardingData, user_id: Optional[str] = Depends(get_user_id)):
     """Atomic onboarding: save state + estimate baselines + assessment + macrocycle.
 
     Always generates a full macrocycle. When test_week_requested=True, sets

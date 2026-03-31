@@ -10,6 +10,7 @@ import glob
 import json
 import os
 import shutil
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -17,6 +18,22 @@ from typing import Any, Dict, List, Optional, Tuple
 # ---------------------------------------------------------------------------
 # Path resolution
 # ---------------------------------------------------------------------------
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Write *content* to *path* atomically (write to temp, then rename)."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        os.replace(tmp, str(path))
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = Path(os.environ.get("DATA_DIR", str(REPO_ROOT / "backend" / "data")))
@@ -57,13 +74,9 @@ def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
 
 
 def write_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
-    """Write user_state.json to disk."""
+    """Write user_state.json to disk (atomic)."""
     path = _user_state_path(user_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    _atomic_write_text(path, json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
 
 
 def user_state_mtime(user_id: str) -> Optional[float]:
@@ -305,12 +318,8 @@ def load_recovery_codes() -> Dict[str, Any]:
 
 
 def save_recovery_codes(codes: Dict[str, Any]) -> None:
-    """Write recovery_codes.json."""
-    _CODES_PATH.parent.mkdir(parents=True, exist_ok=True)
-    _CODES_PATH.write_text(
-        json.dumps(codes, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    """Write recovery_codes.json (atomic)."""
+    _atomic_write_text(_CODES_PATH, json.dumps(codes, ensure_ascii=False, indent=2) + "\n")
 
 
 # ---------------------------------------------------------------------------

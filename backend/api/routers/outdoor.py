@@ -18,6 +18,10 @@ from backend.engine.outdoor_log import (
     update_outdoor_session,
 )
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/outdoor", tags=["outdoor"])
 
 
@@ -91,16 +95,18 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
             )
         raise HTTPException(status_code=422, detail=str(e))
     except OSError as e:
+        logger.error("Failed to write outdoor log: %s", e, exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to write outdoor log: {e}",
+            detail="Failed to write outdoor log. Please try again.",
         )
 
     # Verify write persisted (file backend only — Supabase has read-after-write in storage layer)
     if not log_path.startswith("supabase://") and not os.path.isfile(log_path):
+        logger.error("Outdoor log write succeeded but file not found at %s", log_path)
         raise HTTPException(
             status_code=500,
-            detail=f"Outdoor log write succeeded but file not found at {log_path}",
+            detail="Outdoor log write succeeded but file could not be verified.",
         )
 
     return {"status": "ok", "log_path": os.path.basename(log_path)}
@@ -133,7 +139,8 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
         status = 404 if "No outdoor session found" in detail or "No outdoor log file" in detail else 422
         raise HTTPException(status_code=status, detail=detail)
     except OSError as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update outdoor log: {e}")
+        logger.error("Failed to update outdoor log: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to update outdoor log. Please try again.")
 
     # Update state.outdoor_log[] (B116) with recalculated load_score
     state = load_state(user_id)

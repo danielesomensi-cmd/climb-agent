@@ -17,6 +17,10 @@ from backend.api.models import (
 )
 from backend.engine.resolve_session import resolve_session
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/session", tags=["session"])
 
 SESSIONS_DIR = "backend/catalog/sessions/v1"
@@ -73,7 +77,8 @@ def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_use
             user_id=user_id,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Session resolution failed: {e}")
+        logger.error("Session resolution failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Session resolution failed. Please try again.")
 
     return {"resolved": resolved}
 

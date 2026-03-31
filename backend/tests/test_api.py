@@ -1433,3 +1433,49 @@ class TestUserEditedFlag:
         assert session.get("_user_edited") is True
 
 
+# -----------------------------------------------------------------------
+# B165d: Security hardening tests
+# -----------------------------------------------------------------------
+
+class TestSecurityHardening:
+    """B165d: state key whitelist, feedback response trim, error sanitization."""
+
+    def test_put_state_rejects_unknown_keys(self):
+        """PUT /api/state with unknown top-level keys → 422."""
+        r = client.put("/api/state", json={"hacker_key": "evil"})
+        assert r.status_code == 422
+        assert "hacker_key" in r.json()["detail"]
+
+    def test_put_state_allows_known_keys(self):
+        """PUT /api/state with known keys → 200."""
+        r = client.put("/api/state", json={"user": {"preferred_name": "OK"}})
+        assert r.status_code == 200
+
+    def test_put_state_mixed_keys_rejected(self):
+        """PUT /api/state with mix of known + unknown → 422 (unknown listed)."""
+        r = client.put("/api/state", json={
+            "user": {"name": "OK"},
+            "injected": True,
+            "xss_payload": "<script>",
+        })
+        assert r.status_code == 422
+        detail = r.json()["detail"]
+        assert "injected" in detail
+        assert "xss_payload" in detail
+
+    def test_feedback_response_has_no_state(self):
+        """POST /api/feedback response must NOT include full state."""
+        r = client.post("/api/feedback", json={
+            "log_entry": {"date": "2026-01-05", "session_id": "test"},
+        })
+        # Should succeed or fail on validation — either way, response should not leak state
+        if r.status_code == 200:
+            data = r.json()
+            assert "state" not in data
+            assert data["status"] == "ok"
+
+    def test_error_responses_no_internal_details(self):
+        """Error messages should not leak internal exception details."""
+        # Invalid JSON body → FastAPI 422 (not our code, but still safe)
+        r = client.put("/api/state", content="not json", headers={"Content-Type": "application/json"})
+        assert r.status_code == 422

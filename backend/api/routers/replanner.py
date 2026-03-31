@@ -184,7 +184,8 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Override failed: {e}")
+        logger.error("Override failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Override failed. Please try again.")
 
     _persist_week_plan(updated, state, user_id)
 
@@ -222,7 +223,8 @@ def get_suggestions(target_date: str, location: str = "gym", user_id: Optional[s
             session_pool=session_pool,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Suggestion failed: {e}")
+        logger.error("Suggestion failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Suggestion failed. Please try again.")
 
     # Enrich suggestions with human-readable names and equipment info
     for s in suggestions:
@@ -268,7 +270,8 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Quick-add failed: {e}")
+        logger.error("Quick-add failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Quick-add failed. Please try again.")
 
     _persist_week_plan(updated, state, user_id)
 
@@ -312,7 +315,8 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Events application failed: {e}")
+        logger.error("Events application failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Events application failed. Please try again.")
 
     # Remove outdoor log entries for any undo_outdoor events so re-logging
     # doesn't produce duplicates.

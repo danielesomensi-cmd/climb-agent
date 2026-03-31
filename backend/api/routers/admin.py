@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
+from backend.api.rate_limit import limiter
 from backend.engine import storage
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -106,6 +107,7 @@ def list_users(request: Request):
 
 
 @router.delete("/users/{uuid}")
+@limiter.limit("5/minute")
 def delete_user(uuid: str, request: Request):
     """Delete a user directory entirely. Requires X-Admin-Key header."""
     _require_admin(request)

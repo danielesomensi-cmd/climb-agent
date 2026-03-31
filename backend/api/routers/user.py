@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import json
-import random
+import secrets
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 
 from backend.api.deps import (
@@ -15,6 +15,7 @@ from backend.api.deps import (
     load_state,
     save_state,
 )
+from backend.api.rate_limit import limiter
 from backend.engine import storage
 
 # ── Recovery code helpers ───────────────────────────────────────────────
@@ -33,8 +34,8 @@ def _save_codes(codes: Dict[str, Any]) -> None:
 def _generate_code(codes: Dict[str, Any]) -> str:
     """Generate a unique CLIMB-XXXX-XXXX code not already in *codes*."""
     for _ in range(100):
-        part1 = "".join(random.choices(_ALPHABET, k=4))
-        part2 = "".join(random.choices(_ALPHABET, k=4))
+        part1 = "".join(secrets.choice(_ALPHABET) for _ in range(4))
+        part2 = "".join(secrets.choice(_ALPHABET) for _ in range(4))
         code = f"CLIMB-{part1}-{part2}"
         if code not in codes:
             return code
@@ -119,7 +120,9 @@ def import_state(
 
 
 @router.post("/recovery-code")
+@limiter.limit("5/minute")
 def get_or_create_recovery_code(
+    request: Request,
     user_id: Optional[str] = Depends(get_user_id),
 ):
     """Return existing recovery code for this user, or generate a new one.
@@ -147,7 +150,8 @@ def get_or_create_recovery_code(
 
 
 @router.post("/recover")
-def recover_account(body: Dict[str, Any]):
+@limiter.limit("5/minute")
+def recover_account(request: Request, body: Dict[str, Any]):
     """Given a recovery code, return the associated UUID.
 
     Public endpoint — no X-User-ID required.

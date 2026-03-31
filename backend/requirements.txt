@@ -6,3 +6,4 @@ httpx
 supabase
 PyJWT[crypto]
 stripe
+slowapi

@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-31 (A180 outdoor routes list; B165c closed — frontend error handling sweep; B173 closed — gym_id + silent fallback remediation; B170/B171/B172/B172b closed; B165e partial; A159 SQL migration confirmed)
+> Last updated: 2026-03-31 (B165d closed — security hardening; A180 outdoor routes list; B165c closed — frontend error handling sweep; B173 closed — gym_id + silent fallback remediation; B170/B171/B172/B172b closed; B165e partial; A159 SQL migration confirmed)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -106,7 +106,7 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 | B165a | Quick P1 wins — profanity, Suspense, vocabulary sync, equipment editor 0-locations guard, histogram NaN, RP≥OS validation, onboarding timeout, trip dates, availability 0-gyms guard, limitations empty array, guided double-tap, recovery code tests, finger_warmup_generic description | S | ✅ Done (2026-03-29) |
 | B165b | Replanner recovery_multiplier fix + age threshold shift to 50 (high-risk: replanner_v1.py, STOP gate required) | M | ✅ Done (2026-03-30) |
 | B165c | Frontend error handling sweep — replace ~20 `.catch(() => {})` with error states/toasts (subsumes R141) | M | ✅ Done (2026-03-31) |
-| B165d | Security hardening — atomic file writes, rate limiting, `secrets` for recovery codes, error response sanitization, `PUT /api/state` key whitelist | M | Open |
+| B165d | Security hardening — atomic file writes, rate limiting, `secrets` for recovery codes, error response sanitization, `PUT /api/state` key whitelist | M | ✅ Done (2026-03-31) |
 | B165e | Catalog cleanup — `easy_climbing_deload` + `deload_recovery` schema normalization ✅; video_url + contraindication tests added ✅; residuo: 8 video URL rotti da correggere, `finger_warmup_generic` description/cues, `age_under_16` 10 campus exercises | S | ⚠️ Partial (2026-03-31) |
 
 ### P2 highlights (not individually tracked — see full reports)

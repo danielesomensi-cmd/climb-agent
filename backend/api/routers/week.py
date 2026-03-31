@@ -358,7 +358,8 @@ def get_week(
                 prev_week_plan=_prev_week_plan,
             )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Week generation failed: {e}")
+            logger.error("Week generation failed: %s", e, exc_info=True)
+            raise HTTPException(status_code=500, detail="Week generation failed. Please try again.")
 
         # When force-regenerating, preserve completed sessions from old plan
         if (
