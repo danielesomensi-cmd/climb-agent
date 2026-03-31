@@ -643,7 +643,7 @@ export function DayCard({
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors"
               >
                 <Plus className="size-3" />
-                Log extra session
+                Log Free Session
               </Link>
             )}
 
