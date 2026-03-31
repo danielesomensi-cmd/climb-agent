@@ -97,7 +97,11 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                         rs = resolved.get("resolved_session", {})
                         rs.setdefault("exercise_instances", []).extend(user_added)
                     session_entry["resolved"] = resolved
-                except Exception:
+                except Exception as _resolve_err:
+                    logger.error(
+                        "_auto_resolve: session resolution failed for %r: %s",
+                        session_entry.get("session_id"), _resolve_err, exc_info=True,
+                    )
                     session_entry["resolved"] = None
 
 

@@ -539,7 +539,10 @@ def generate_macrocycle(
     if start.weekday() != 0:
         start -= timedelta(days=start.weekday())
         start_date = start.isoformat()
-    discipline = goal.get("discipline", "lead")
+    discipline = goal.get("discipline")
+    if discipline is None:
+        logger.warning("generate_macrocycle: 'discipline' not set in goal — defaulting to 'lead'")
+        discipline = "lead"
 
     # --- decide which phases to keep vs regenerate ------------------------
     if from_phase:

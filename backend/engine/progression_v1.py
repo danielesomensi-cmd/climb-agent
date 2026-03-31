@@ -498,7 +498,11 @@ def _max_hang_suggested(user_state: Dict[str, Any], prescription: Dict[str, Any]
     attrs = exercise_attrs or {}
     intensity = float(prescription.get("intensity_pct_of_total_load") or attrs.get("intensity_pct") or 0.9)
     baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
-    baseline = baselines[0] if baselines else {}
+    if baselines:
+        baseline = baselines[0]
+    else:
+        logger.warning("_max_hang_suggested: no hangboard baselines found — using bodyweight as fallback")
+        baseline = {}
     max_total = float(baseline.get("max_total_load_kg") or bodyweight)
     target_total = _round_half_step(max_total * intensity)
     suggested_external = _round_half_step(target_total - bodyweight)
@@ -522,7 +526,11 @@ def _hangboard_suggested(user_state: Dict[str, Any], exercise_id: str, prescript
         intensity = HANGBOARD_DEFAULT_INTENSITY_PCT.get(exercise_id, 0.70)
     intensity = float(intensity)
     baselines = ((user_state.get("baselines") or {}).get("hangboard") or [])
-    baseline = baselines[0] if baselines else {}
+    if baselines:
+        baseline = baselines[0]
+    else:
+        logger.warning("_hangboard_suggested: no hangboard baselines for exercise %s — using bodyweight as fallback", exercise_id)
+        baseline = {}
     baseline_source = ""
     if baseline.get("max_total_load_kg"):
         max_total = float(baseline["max_total_load_kg"])

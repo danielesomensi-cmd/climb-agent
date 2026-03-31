@@ -217,7 +217,10 @@ def suggest_sessions(
     except (ValueError, TypeError) as exc:
         raise ValueError(f"suggest_sessions: invalid target_date '{target_date}', expected YYYY-MM-DD") from exc
 
-    phase_id = (plan.get("profile_snapshot") or {}).get("phase_id", "base")
+    phase_id = (plan.get("profile_snapshot") or {}).get("phase_id")
+    if phase_id is None:
+        logger.warning("suggest_sessions: profile_snapshot missing or has no phase_id — defaulting to 'base'")
+        phase_id = "base"
     candidates = session_pool if session_pool is not None else _build_session_pool(phase_id)
 
     # Always include complementary add-on mini-sessions regardless of phase
@@ -994,6 +997,11 @@ def apply_events(
                     if g.get("gym_id") == new_gym_id:
                         gym_equipment = set(expand_equipment(g.get("equipment", [])))
                         break
+                else:
+                    logger.warning(
+                        "change_gym: gym_id %r not found in user gyms (%d total) — equipment set is empty, all sessions may downshift",
+                        new_gym_id, len(gyms),
+                    )
 
             change_warnings: list = []
             lost_finger = False
@@ -1235,6 +1243,10 @@ def _resolve_intent_for_equipment(
             return fb_sid
 
     # No compatible fallback found — use original (will work with whatever equipment is there)
+    logger.warning(
+        "_resolve_intent_for_equipment: no equipment-compatible fallback for %r — returning original session unchanged",
+        session_id,
+    )
     return session_id
 
 
@@ -1300,6 +1312,11 @@ def apply_day_override(
             if g.get("gym_id") == gym_id:
                 gym_equipment = set(expand_equipment(g.get("equipment", [])))
                 break
+        else:
+            logger.warning(
+                "apply_day_override: gym_id %r not found in user gyms (%d total) — equipment check skipped",
+                gym_id, len(gyms),
+            )
     elif location == "gym" and gyms:
         # No specific gym_id — use first gym by priority
         sorted_g = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))

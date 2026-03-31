@@ -116,7 +116,13 @@ def _pick_hangboard_baseline(user_state: Dict[str, Any], edge_mm: int, grip: str
     for b in baselines:
         if int(b.get("edge_mm", -1)) == int(edge_mm) and str(b.get("grip","")).strip().lower() == str(grip).strip().lower() and int(b.get("hang_seconds",-1)) == int(hang_seconds):
             return b
-    return baselines[0] if baselines else None
+    if baselines:
+        logger.warning(
+            "_pick_hangboard_baseline: no match for edge=%s grip=%s hang_seconds=%s — using baselines[0] as fallback",
+            edge_mm, grip, hang_seconds,
+        )
+        return baselines[0]
+    return None
 
 def suggest_max_hang_load(user_state: Optional[Dict[str, Any]], prescription: Dict[str, Any], exercise_attrs: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     '''
@@ -635,6 +641,11 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
                     gyms,
                     key=lambda g: (g.get("priority", 999), g.get("gym_id", "")),
                 )
+                if gym_id:
+                    logger.warning(
+                        "get_location_equipment: gym_id %r not found in user gyms (%d total) — falling back to %r",
+                        gym_id, len(gyms), sorted_gyms[0].get("gym_id"),
+                    )
                 equipment = norm_list_str(sorted_gyms[0].get("equipment"))
 
 
@@ -1362,6 +1373,10 @@ def resolve_session(
 
                 trace = {}
                 if role_req is None:
+                    logger.warning(
+                        "resolve_session: block missing 'role' in template — block will be skipped (session=%s)",
+                        session_data.get("session_id", "unknown"),
+                    )
                     selected_ex = None
                     chosen_by = "p0_missing_role"
                     trace = {"counts": {}, "domain_filter_applied": None, "error": "Missing block.role (P0 requires role for selection)."}
