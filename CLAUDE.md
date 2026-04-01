@@ -237,6 +237,8 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
 - **Deploy**: `git push` to main → both services update within 2-3 minutes.
 
+- **Stripe**: sk_test keys configured in Railway. Currently **DISABLED** (STRIPE_SECRET_KEY removed) for open beta validation phase. Re-enable with sk_live when ready for paid launch. Pricing at launch: EUR 14.99/month, 14-day trial, monthly-only. Founding Climber offer: first 50 users at EUR 9.99 lifetime (Stripe discount code).
+
 - **Auth**: Clerk (Next.js native). Backend resolves `clerk_id` → internal `user_id` (UUID). Supabase `users` table with `clerk_id` column. In-memory LRU cache for `clerk_id → user_id` mapping. Without Clerk header → fallback to legacy UUID system (local dev only).
 
 - **Environment variables (Railway)**:

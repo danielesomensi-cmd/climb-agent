@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-03-31 (B165d closed — security hardening; A180 outdoor routes list; B165c closed — frontend error handling sweep; B173 closed — gym_id + silent fallback remediation; B170/B171/B172/B172b closed; B165e partial; A159 SQL migration confirmed)
+> Last updated: 2026-04-01 (D-DOCS: post-council session — Supabase confirmed live, Stripe paused for open beta, pricing EUR 14.99)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -132,7 +132,7 @@ All 16 P1 findings from D163 + D164 audits verified fixed in code. See remediati
 
 | ID | Title | Type | Effort | Notes |
 |----|-------|------|--------|-------|
-| **B176** | D172 consolidated remediation — 21 remaining findings (P2+P3) | B | L | 5 groups: type safety (D172-05,11,12), equipment validation (D172-07,08,22), event/input validation (D172-09,13,14,25), logging (D172-10,15,17-20,23,24), structural/deferred (D172-16,21). Do before Supabase migration. |
+| **B176** | D172 consolidated remediation — 21 remaining findings (P2+P3) | B | L | 5 groups: type safety (D172-05,11,12), equipment validation (D172-07,08,22), event/input validation (D172-09,13,14,25), logging (D172-10,15,17-20,23,24), structural/deferred (D172-16,21). Supabase migration already complete — no longer a prerequisite. |
 
 ### Deferred from B173 (need API refactoring)
 
@@ -179,14 +179,17 @@ Same 5 axes, different display labels per discipline. RadarChart now accepts `di
 
 ## Priority 2 — Auth + Payments + DB (go-to-market blockers)
 
-Clerk auth ✅ and Supabase JSONB ✅ are complete. Remaining:
+Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Currently in open beta with Stripe paused.
 
-- **A159 — Stripe subscriptions** ✅ — Phase 1 ✅ + Phase 2 ✅ + Phase 3 ✅ complete
-  - €9.99/mo, 14-day trial, card required upfront
+- **Supabase migration** ✅ — JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions)
+- **A159 — Stripe subscriptions** ✅ — Code complete, sk_test verified, **temporarily disabled** (STRIPE_SECRET_KEY removed from Railway for open beta validation phase)
   - Backend: `subscription_guard.py`, 4 endpoints (status/checkout/portal/webhook), guards on 10 POST endpoints
   - Frontend: `useSubscription()` hook, `TrialBanner`, `/subscribe` page, settings portal link, guided session gate
   - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)
   - SQL migration: `docs/migrations/subscriptions_table.sql` — ✅ run in Supabase (confirmed 2026-03-31)
+- **Re-enable Stripe (sk_live)** — Open | After beta validation: 6+ non-founder users showing 3x/week usage for 2 consecutive weeks
+- **Pricing update** — Open | Change `/subscribe` page from EUR 9.99 → EUR 14.99/month before Stripe re-enable
+- **Founding Climber offer** — Open | First 50 paid users get EUR 9.99/month lifetime lock-in. Implement via Stripe discount code or special price ID
 
 ### A-B5 — Phase labels and messaging per discipline
 
@@ -434,7 +437,7 @@ Every test result we collect MUST influence exercise prescription.
 | Repeater 7/3 max sets | radar only | Finger endurance volume calibration | Prescription (sets/volume) |
 | Max hang duration (sec) | radar only | Endurance hang calibration | Prescription (time) |
 
-Depends on: B122 pattern, Supabase migration.
+Depends on: B122 pattern. Supabase migration ✅ complete.
 
 ---
 
@@ -502,7 +505,7 @@ Related: D77 (SDT principles), D79 ("Train better, not more" personality), Educa
 ## Priority 4 — Go-to-market
 
 - Landing page / marketing site
-- Pricing model definition
+- ~~Pricing model definition~~ ✅ Decided: EUR 14.99/month, 14-day trial, Founding Climber EUR 9.99 lifetime for first 50 users
 
 ### Capacitor Native Wrap
 

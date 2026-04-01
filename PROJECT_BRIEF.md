@@ -27,6 +27,12 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Frontend components | 60 |
 <!-- STATUS_TABLE_END -->
 
+**Current phase:** Open beta — free access for ~6-10 real users. Stripe paused intentionally (STRIPE_SECRET_KEY removed from Railway). Re-enable with sk_live keys after usage validation (target: 6+ users at 3x/week for 2 consecutive weeks).
+
+**Persistence:** Supabase JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions).
+
+**Pricing at launch:** EUR 14.99/month, 14-day trial, monthly-only. Founding Climber offer: first 50 paid users locked at EUR 9.99/month lifetime.
+
 ---
 
 ## Architecture: the full flow
@@ -65,7 +71,7 @@ compute_assessment_profile()    [assessment_v1]
 | Deload | Mixed: programmed + adaptive + pre-trip |
 | Feedback | Granular per exercise (5 levels: very_easy → very_hard) |
 | Equipment | `equipment_required` for essential gear only, optional in notes |
-| Payments | Stripe (active, test mode) |
+| Payments | Stripe (code complete, sk_test verified — temporarily disabled for open beta) |
 | App store | Capacitor wrapping PWA (planned) |
 | LLM Coach | Claude Sonnet conversational layer (planned, Phase 3.5) |
 
