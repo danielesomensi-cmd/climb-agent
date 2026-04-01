@@ -13,4 +13,10 @@ Then respond with:
 
 For each item: ID, short title, effort (S/M/L), 1 line of context.
 
+**Important:** Only report items that are genuinely open. Cross-reference:
+- If a section header says "✅ All closed" or "✅ Done", skip its contents entirely
+- If a remediation brief is marked ✅ Done, all findings it covers are closed — do NOT report them
+- If an individual item has ✅, skip it
+- When in doubt, trust the remediation brief status over individual finding bullets
+
 Do not write code. Do not modify files. Wait for instructions.

@@ -71,33 +71,12 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 > Date: 2026-03-28
 > Combined: 205 findings (20 P1, 71 P2, 102 P3, 12 P4)
 
-### P1 findings — must fix before paid launch
+### P1 findings — ✅ All closed (B165a-e, 2026-03-29 to 2026-03-31)
 
-**Engine (D164):**
-- F3-P1-009 — Replanner hardcodes finger/hard spacing to 1-day gaps, ignoring `recovery_multiplier` for 40+ users (replanner_v1.py)
+All 16 P1 findings from D163 + D164 audits verified fixed in code. See remediation briefs below for details.
 
-**Frontend (D164):**
-- F1-P1-001 — Profanity in voice cues ("Vaffanculo!", "Punani!") spoken aloud via TTS at 30% probability (voice-cues.ts)
-- F1-P1-002 — `useSearchParams()` without Suspense boundary causes Next.js 14 build/SSR crash (session/[id]/page.tsx)
-
-**Frontend (D163):**
-- Equipment editor allows saving with 0 locations → planner breaks (equipment-editor.tsx)
-- No RP ≥ OS cross-validation in profile editor → nonsensical assessment (profile-assessment-editor.tsx)
-- Grade histogram NaN when all grades have count=0 (outdoor/page.tsx)
-- Onboarding complete API call has no timeout → infinite "Generating..." (onboarding/review/page.tsx)
-- Tabata zero-duration rest phase causes infinite loop (tabata/page.tsx)
-- Trip editor can produce end_date < start_date (onboarding/trips/page.tsx)
-- Whitespace-only gym names pass validation (onboarding/locations/page.tsx)
-- Gym slot with 0 gyms → undefined gym_id in submission (onboarding/availability/page.tsx)
-- Guided session double-tap exit race condition → data loss (guided/page.tsx)
-- Limitations validation passes with empty array when hasLimitations=true (onboarding/limitations/page.tsx)
-
-**Catalog (D164):**
-- F7-P1-001 — Unknown vocabulary value `lead_wall` in `fall_practice.equipment_required_any`
-- F7-P1-002 — Unknown vocabulary value `grip_transition` pattern in `grip_transitions_half_to_open`
-
-**Test coverage (D164):**
-- F10-P1-001 — `POST /api/user/recovery-code` and `POST /api/user/recover` have zero test coverage
+**Remaining (moved to post-launch):**
+- F3-P1-009 — Replanner hardcodes finger/hard spacing to 1-day gaps, ignoring `recovery_multiplier` for 50+ users (replanner_v1.py). Age threshold shifted to 50 in B165b. Remaining: replanner hardcoded spacing — impacts only users ≥50. Post-launch.
 
 ### Remediation briefs
 
