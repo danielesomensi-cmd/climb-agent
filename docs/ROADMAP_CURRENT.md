@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-01 (D-DOCS: post-council session — Supabase confirmed live, Stripe paused for open beta, pricing EUR 14.99)
+> Last updated: 2026-04-01 (B182: Go-to-Market Sprint section added — Council output, 2× runs, 5 advisors each)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -177,19 +177,68 @@ Same 5 axes, different display labels per discipline. RadarChart now accepts `di
 
 ---
 
+## Priority 1.75 — Go-to-Market Sprint
+
+> Origin: Strategic Advisory Council (2× runs, 5 advisors each, 2026-04-01)
+> Key insight: distribution + onboarding friction are the real blockers, not features.
+> Constraint: solo founder, zero marketing budget, feature freeze for 30 days.
+> Stripe status: A159 implemented in TEST MODE. Not live. Currently disabled for beta period.
+
+### Timeline
+
+- **Week 0 (now):** Beta testers using the app (4-5 users). Stripe disabled. Founder dry-run.
+- **Week 1-2:** Collect beta feedback + fix onboarding blockers from dry-run.
+- **Week 2-3:** Pricing decision → activate Stripe live → soft launch on r/climbharder.
+- **Week 3-6:** Feature freeze. Only fix bugs from paying/trialing users. Measure.
+
+### Phase 0 — Onboarding dry-run + beta feedback (week 0-2)
+
+| ID | Title | Type | Effort | Status | Notes |
+|----|-------|------|--------|--------|-------|
+| GTM-01 | **Onboarding dry-run** — Daniele completes full flow as unknown user (clean account, no founder help). Document every friction point. | D | S | Open | Assessment → macrocycle → first session, target < 10 min. Record screen if possible. |
+| GTM-02 | **Fix onboarding blockers** — only items that cause drop-off or confusion | B | M | Open | Depends on GTM-01 findings. Only fix what blocks completion — no polish. |
+| GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Vato, Alexis on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay €14.99/mo. |
+
+### Phase 1 — Pricing + Stripe go-live (week 2-3)
+
+| ID | Title | Type | Effort | Status | Notes |
+|----|-------|------|--------|--------|-------|
+| GTM-03 | **Pricing decision** — choose final price point and model | — | — | Open | Options: (A) €14.99/mo standard, (B) €9.99/mo Founding Climber lock-in for first 20-30 + €14.99 standard, (C) keep €9.99/mo. Council consensus: don't go below €9.99. **Decision needed from Daniele after beta feedback.** |
+| GTM-04 | **Stripe go-live** — switch from test to live keys, verify webhook, enable subscription guard | B | S | Open | A159 infra is already built. This is config change + smoke test. Depends on GTM-03. |
+| GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. Measure: how many complete onboarding in 48h. |
+
+### Phase 2 — Measure + iterate (week 3-6)
+
+| ID | Title | Type | Effort | Status | Notes |
+|----|-------|------|--------|--------|-------|
+| GTM-06 | **Feature freeze** — zero new features for 30 days, only fix bugs reported by paying/trialing users | — | — | Open | Starts when first non-beta user signs up. |
+| GTM-07 | **Success metric** — 3-5 paying users by end of April 2026 | — | — | Open | 0 paying after 30 days → reassess PMF. 3+ paying → validate and continue. |
+
+### Council recommendations (reference)
+
+**Convergence across both runs (high confidence):**
+- Launch NOW — Supabase migration is not a blocker (JSONB handles ~260KB/year/user)
+- r/climbharder is the #1 acquisition channel
+- Zero new features for 30 days post-launch
+- Onboarding is the critical blind spot — no advisor caught it initially, both chairmen flagged it
+- Don't build Kilter/Capacitor/LLM Coach before validating willingness to pay
+
+**Divergence (Daniele decides after beta feedback):**
+- Price: €14.99/mo (Run 1) vs €9.99/mo Founding Climber lock-in (Run 2)
+- Synthesis: €14.99 standard + €9.99 Founding Climber for first 20-30 users
+
+---
+
 ## Priority 2 — Auth + Payments + DB (go-to-market blockers)
 
 Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Currently in open beta with Stripe paused.
 
 - **Supabase migration** ✅ — JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions)
-- **A159 — Stripe subscriptions** ✅ — Code complete, sk_test verified, **temporarily disabled** (STRIPE_SECRET_KEY removed from Railway for open beta validation phase)
+- **A159 — Stripe subscriptions** ✅ — Code complete, sk_test verified, **temporarily disabled** (STRIPE_SECRET_KEY removed from Railway for open beta validation phase). Go-live tracked as GTM-04.
   - Backend: `subscription_guard.py`, 4 endpoints (status/checkout/portal/webhook), guards on 10 POST endpoints
   - Frontend: `useSubscription()` hook, `TrialBanner`, `/subscribe` page, settings portal link, guided session gate
   - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)
   - SQL migration: `docs/migrations/subscriptions_table.sql` — ✅ run in Supabase (confirmed 2026-03-31)
-- **Re-enable Stripe (sk_live)** — Open | After beta validation: 6+ non-founder users showing 3x/week usage for 2 consecutive weeks
-- **Pricing update** — Open | Change `/subscribe` page from EUR 9.99 → EUR 14.99/month before Stripe re-enable
-- **Founding Climber offer** — Open | First 50 paid users get EUR 9.99/month lifetime lock-in. Implement via Stripe discount code or special price ID
 
 ### A-B5 — Phase labels and messaging per discipline
 
