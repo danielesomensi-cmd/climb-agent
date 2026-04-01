@@ -549,6 +549,19 @@ Messaging should hint at written feedback value ("Your comments help us understa
 
 Related: D77 (SDT principles), D79 ("Train better, not more" personality), Educational content (methodology explanations).
 
+### Smart planner availability suggestions
+
+**Priority:** P3 (post-launch) | **Status:** Open | **Type:** A (engine + frontend) | **Effort:** M
+
+When the planner struggles to fit sessions into the user's availability (e.g., too many skips, spacing violations, key sessions dropped), surface proactive suggestions:
+- "Your plan needs 2 hard climbing sessions per week, but you only have 1 gym slot. Consider adding a gym day on Wednesday."
+- "Finger training on Monday and Wednesday violates the 48h spacing rule. Try moving Wednesday's session to Thursday."
+
+**Implementation:** After `planner_v2` generates a week, run a diagnostic pass checking: sessions dropped vs requested, spacing violations resolved by skipping, equipment mismatches forcing substitutions. If diagnostic score is below threshold → generate suggestion(s) as structured data. Frontend: suggestion card on Week view ("Optimize your schedule" expandable). User can accept → triggers availability update + replan.
+
+**Depends on:** Nothing (standalone diagnostic layer on top of existing planner).
+**Origin:** GTM-01 dry-run insight (2026-04-01) — if the plan looks weak because of bad availability input, the user blames the app, not their schedule.
+
 ---
 
 ## Priority 4 — Go-to-market

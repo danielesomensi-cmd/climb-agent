@@ -383,7 +383,11 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
     # 5. Always generate macrocycle (start = next Monday)
     try:
         start = next_monday()
-        total_weeks = 10 if discipline == "boulder" else 12
+        default_weeks = 10 if discipline == "boulder" else 12
+        total_weeks = goal.get("total_weeks", default_weeks)
+        # Clamp to valid range (engine requires >= 5 for boulder, >= 9 for lead)
+        min_weeks = 5 if discipline == "boulder" else 9
+        total_weeks = max(min_weeks, min(total_weeks, 52))
         macrocycle = generate_macrocycle(goal, profile, state, start, total_weeks)
     except Exception as e:
         save_state(state, user_id)

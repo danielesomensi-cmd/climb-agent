@@ -261,7 +261,7 @@ export default function ReviewPage() {
                 parts.push(`${g.target_grade} ${g.discipline}`);
                 if (g.discipline !== "boulder") parts.push(`(${g.target_style})`);
               }
-              parts.push(`by ${g.deadline}`);
+              parts.push(`${g.total_weeks ?? 12} weeks`);
               return parts.join(" ");
             })()}
             editHref="/onboarding/goals"

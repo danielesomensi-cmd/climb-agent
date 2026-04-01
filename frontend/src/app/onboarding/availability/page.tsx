@@ -107,6 +107,9 @@ export default function AvailabilityPage() {
         <CardContent className="space-y-4">
           <div className="rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-200">
             Set your typical training week. The planner will build sessions around your schedule, matching each slot to the right location and equipment. You can adjust this anytime — and each weekend you&apos;ll review and confirm next week&apos;s plan.
+            {gyms.length > 1 && (
+              <span className="mt-2 block">If you don&apos;t select a specific gym for a slot, the planner will choose the best one based on available equipment.</span>
+            )}
           </div>
           {/* Grid header */}
           <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1 text-center">

@@ -8,7 +8,7 @@ const DEFAULT_DATA: OnboardingData = {
   profile: { name: "", age: 0, weight_kg: 0, height_cm: 0 },
   experience: { climbing_years: 0, structured_training_years: 0 },
   grades: { lead_max_rp: "", lead_max_os: "" },
-  goal: { goal_type: "lead_grade", discipline: "lead", target_grade: "", target_style: "redpoint", current_grade: "", deadline: "" },
+  goal: { goal_type: "lead_grade", discipline: "lead", target_grade: "", target_style: "redpoint", current_grade: "", deadline: "", total_weeks: 12 },
   self_eval: { primary_weakness: "", secondary_weakness: "" },
   tests: {},
   limitations: [],

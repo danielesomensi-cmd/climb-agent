@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -51,6 +51,7 @@ export default function GoalsPage() {
   const showBoulderTarget = discipline === "boulder" || discipline === "both";
   const showTargetStyle = discipline !== "boulder";
   const targetStyle = goal.target_style || "redpoint";
+  const totalWeeks = goal.total_weeks ?? 12;
 
   // Derive the current grade for lead target (used for assessment)
   const currentLeadGrade = useMemo(() => {
@@ -90,30 +91,12 @@ export default function GoalsPage() {
   const targetIdx = gradeIndex(goal.target_grade, gradeList);
   const gap = targetIdx >= 0 && currentIdx >= 0 ? targetIdx - currentIdx : 0;
 
-  // Deadline validation
-  const today = new Date();
-  const todayISO = today.toISOString().split("T")[0];
-  const minDeadline = (() => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + 1);
+  // Calculated end date from weeks
+  const endDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + totalWeeks * 7);
     return d.toISOString().split("T")[0];
-  })();
-  const isDeadlinePast = goal.deadline !== "" && goal.deadline <= todayISO;
-  const isDeadlineShort = (() => {
-    if (!goal.deadline || isDeadlinePast) return false;
-    const dl = new Date(goal.deadline);
-    const nineWeeks = new Date(today);
-    nineWeeks.setDate(nineWeeks.getDate() + 63);
-    return dl < nineWeeks;
-  })();
-
-  // Program duration in weeks
-  const programWeeks = useMemo(() => {
-    if (!goal.deadline || isDeadlinePast) return null;
-    const dl = new Date(goal.deadline);
-    const diffMs = dl.getTime() - today.getTime();
-    return Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
-  }, [goal.deadline, isDeadlinePast]);
+  }, [totalWeeks]);
 
   // Warnings
   const isAmbitious = gap > 8;
@@ -171,9 +154,7 @@ export default function GoalsPage() {
   const isValid =
     hasLeadTarget &&
     hasBoulderTarget &&
-    goal.deadline !== "" &&
-    !isTooLow &&
-    !isDeadlinePast;
+    !isTooLow;
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -271,34 +252,39 @@ export default function GoalsPage() {
             </div>
           )}
 
-          {/* Deadline */}
-          <div className="space-y-2">
-            <Label htmlFor="deadline">Target date *</Label>
-            <Input
-              id="deadline"
-              type="date"
-              value={goal.deadline}
-              min={minDeadline}
-              onChange={(e) => setGoal({ deadline: e.target.value })}
+          {/* Plan duration (weeks) */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Plan duration (weeks) *</Label>
+              <span className="text-sm font-medium tabular-nums">
+                {totalWeeks} weeks
+              </span>
+            </div>
+            <Slider
+              min={8}
+              max={24}
+              step={1}
+              value={[totalWeeks]}
+              onValueChange={([v]) => setGoal({ total_weeks: v, deadline: (() => {
+                const d = new Date();
+                d.setDate(d.getDate() + v * 7);
+                return d.toISOString().split("T")[0];
+              })() })}
             />
-            {isDeadlinePast && (
-              <p className="text-xs text-red-500">
-                Deadline must be in the future
-              </p>
-            )}
-            {isDeadlineShort && (
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>8 wk</span>
+              <span className="font-medium text-primary">12 wk recommended</span>
+              <span>24 wk</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Your plan ends: <strong>{endDate}</strong>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              A well-structured periodization cycle needs at least 12 weeks to go through all training phases (base, strength, power endurance, peak, recovery). Shorter plans compress phases and reduce effectiveness.
+            </p>
+            {totalWeeks < 12 && (
               <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
-                This is a short timeframe. The macrocycle may be compressed.
-              </div>
-            )}
-            {programWeeks !== null && programWeeks >= 8 && (
-              <p className="text-xs text-muted-foreground">
-                Your plan: ~{programWeeks} weeks (from today to {goal.deadline})
-              </p>
-            )}
-            {programWeeks !== null && programWeeks > 0 && programWeeks < 8 && (
-              <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-600 dark:bg-red-950 dark:text-red-200">
-                ~{programWeeks} weeks — minimum recommended is 8 weeks
+                Short plan — some training phases will be compressed
               </div>
             )}
           </div>

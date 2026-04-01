@@ -202,6 +202,7 @@ export interface OnboardingData {
     target_style: string;
     current_grade: string;
     deadline: string;
+    total_weeks?: number;
   };
   self_eval: {
     primary_weakness: string;
