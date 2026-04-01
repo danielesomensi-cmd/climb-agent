@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { getInProgressSession, clearSavedSession, type InProgressSession } from "@/lib/guided-session-utils";
 import type { WeekPlan, DayPlan, Quote, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
 
 /** Full weekday names */
@@ -117,6 +118,12 @@ function TodayContent() {
   const [freeSessions, setFreeSessions] = useState<Array<Record<string, unknown>>>([]);
   const [weekFreeSessions, setWeekFreeSessions] = useState<Array<Record<string, unknown>>>([]);
   const [weekFreeSessionsLoaded, setWeekFreeSessionsLoaded] = useState(false);
+  const [resumeSession, setResumeSession] = useState<InProgressSession | null>(null);
+
+  // Check for in-progress session on mount
+  useEffect(() => {
+    setResumeSession(getInProgressSession());
+  }, []);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -779,6 +786,37 @@ function TodayContent() {
         {checkoutSuccess && (
           <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
             Your subscription is active. Welcome to climb-agent Pro!
+          </div>
+        )}
+
+        {/* Resume in-progress session banner */}
+        {resumeSession && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
+            <p className="text-sm font-medium text-amber-300">
+              You have a session in progress — exercise {resumeSession.completedCount} of {resumeSession.totalCount}
+            </p>
+            <p className="text-xs text-amber-400/70">
+              {resumeSession.state.sessionName}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-black hover:bg-amber-400 transition-colors"
+                onClick={() => router.push(`/guided/${resumeSession.date}/${resumeSession.sessionId}`)}
+              >
+                Resume
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-amber-500/30 px-3 py-1.5 text-xs text-amber-400 hover:bg-amber-500/10 transition-colors"
+                onClick={() => {
+                  clearSavedSession(resumeSession.date, resumeSession.sessionId);
+                  setResumeSession(null);
+                }}
+              >
+                Discard
+              </button>
+            </div>
           </div>
         )}
 

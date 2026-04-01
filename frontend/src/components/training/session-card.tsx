@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { hasSavedProgress } from "@/lib/guided-session-utils";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -888,6 +889,11 @@ export function SessionCard({
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
+                      // B181: don't overwrite saved progress — resume instead
+                      if (hasSavedProgress(date, session.session_id)) {
+                        router.push(`/guided/${date}/${session.session_id}`);
+                        return;
+                      }
                       const guidedState = buildGuidedState(session, date);
                       if (!guidedState) return;
                       const userId = window.Clerk?.session ? "clerk" : "";
@@ -947,6 +953,11 @@ export function SessionCard({
         <button
           onClick={(e) => {
             e.stopPropagation();
+            // B181: don't overwrite saved progress — resume instead
+            if (hasSavedProgress(date, session.session_id)) {
+              router.push(`/guided/${date}/${session.session_id}`);
+              return;
+            }
             const guidedState = buildGuidedState(session, date);
             if (!guidedState) return;
             const userId = window.Clerk?.session ? "clerk" : "";
