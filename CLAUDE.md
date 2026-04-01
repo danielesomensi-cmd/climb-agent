@@ -17,6 +17,8 @@ A deterministic climbing training engine. It generates personalised weekly train
 - **Data-driven**: Sessions, exercises, and templates are JSON catalogs — logic is separate from data.
 - **Test-first**: All engine behaviour is covered by pytest. Tests must pass before merging.
 - **Past sessions are immutable**: Completed and past sessions MUST NEVER be modified by any regeneration, device switch, equipment change, or any other user action. The only exception is explicit user edit (pencil icon). This applies to: exercise_id, loads, feedback, completion status, timestamps. Test this invariant after ANY change that triggers plan regeneration.
+- **Fontainebleau for boulder grades**: Engine always stores boulder grades in Fontainebleau internally (6A, 7B, 8A+). Display preference (font | v_scale) is render-only — convert via `displayBoulderGrade()` at display time. Never store V-scale values in the engine or user_state.
+- **Equipment-based filtering**: Sessions are filtered by `required_equipment`, not by `location_type`. Never gate a session on gym location — check equipment availability instead.
 
 ## Commands
 
@@ -110,7 +112,7 @@ backend/
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
   api/               # FastAPI REST API (17 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -144,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-54 endpoints total (53 router + 1 app-level health check).
+54 endpoints total (52 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -207,7 +209,7 @@ user_state.assessment + user_state.goal
 
 Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (33):** 9 main views + 15 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
+**Pages (33):** 12 main views + 15 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
 
 - `/today` — Today's sessions, mark done/skipped, post-session feedback
 - `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
@@ -218,7 +220,10 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 - `/whats-next` — Votable roadmap + feedback form
 - `/settings` — Profile, goals, equipment, spots, regenerate assessment/macrocycle
 - `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
-- `/onboarding/*` — 14-step wizard: welcome, profile, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover
+- `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
+- `/guide` — User guide
+- `/subscribe` — Subscription plans and checkout
+- `/onboarding/*` — 15-step wizard: welcome, profile, discipline, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover
 
 ## Deployment
 
@@ -307,6 +312,7 @@ Key location: `.env` in repo root (gitignored, never commit).
 - Code and documentation must always be aligned. Never leave an implemented item marked as open.
 - Pre-push hook runs `sync_status.py` automatically. If counters are stale, the push is blocked — commit the sync changes first.
 - Repo hygiene check: every ~2 weeks or ~10 briefs (whichever first), run `python scripts/repo_hygiene.py`. Archive completed brief docs, delete temp files, verify core docs are current. Last full audit: D156 (2026-03-25).
+- Brief types: A = new feature, B = bugfix, C = catalog/content, D = audit/documentation (read-only). Briefs are numbered sequentially across all types. Never reuse a number.
 - Push at end of session: `git add -A && git commit -m 'description' && git push`
 
 ## Lessons learned
