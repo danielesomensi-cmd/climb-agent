@@ -115,7 +115,7 @@ def parse_clerk_user(raw: dict) -> dict:
 def fetch_supabase_users() -> list[dict]:
     """Fetch all rows from the users table."""
     client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
-    resp = client.table("users").select("id, clerk_id, state").execute()
+    resp = client.table("users").select("user_id, clerk_id, state").execute()
     return resp.data or []
 
 
@@ -619,7 +619,7 @@ def main():
 
         users_data.append({
             **cu,
-            "internal_id": sb_row["id"] if sb_row else None,
+            "internal_id": sb_row["user_id"] if sb_row else None,
             "has_state": has_state,
             "activity": activity,
             "warnings": warnings,
