@@ -6,9 +6,10 @@ __pycache__/
 # virtual env
 .venv/
 
-# claude code (track commands/, ignore the rest)
+# claude code (track commands/ and agents/, ignore the rest)
 .claude/*
 !.claude/commands/
+!.claude/agents/
 
 # environment
 .env
@@ -19,6 +20,7 @@ out/
 output/
 tmp/
 reports/
+docs/council_reports/
 docs/audit_snapshot_*.md
 data/logs/
 backend/data/logs/
