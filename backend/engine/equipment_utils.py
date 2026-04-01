@@ -40,7 +40,7 @@ KNOWN_EQUIPMENT_KEYS: frozenset[str] = frozenset({
     "pullup_bar", "weight", "dumbbell", "kettlebell", "barbell", "bench",
     "cable_machine", "leg_press",
     # accessories
-    "resistance_band", "rings", "foam_roller", "ab_wheel",
+    "band", "resistance_band", "rings", "foam_roller", "ab_wheel",
     "campus_board",
 })
 
