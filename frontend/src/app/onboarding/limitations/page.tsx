@@ -106,7 +106,7 @@ export default function LimitationsPage() {
             Do you have current injuries or limitations?
           </CardTitle>
           <CardDescription>
-            The plan will avoid exercises that aggravate your limitations
+            The plan will avoid exercises that aggravate your limitations and prioritize targeted prehab work to support your recovery.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

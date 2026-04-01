@@ -56,6 +56,9 @@ export default function DisciplinePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">What do you want to improve?</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            This sets your main training focus. You&apos;ll still improve across all areas.
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
           {DISCIPLINES.map((d) => (

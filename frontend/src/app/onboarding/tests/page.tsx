@@ -37,7 +37,7 @@ function buildTestSections(device: "hangboard" | "loading_pin"): TestSection[] {
   if (device === "hangboard") {
     sections.push({
       key: "max_hang",
-      title: "Max Hang 20mm/7s (MVC-7)",
+      title: "Max Hang 20mm / 7 seconds",
       description:
         "Hang on a 20mm edge for 7 seconds with the maximum possible weight (half crimp). Include your body weight in the total.",
       fieldKey: "max_hang_20mm_7s_total_kg",
@@ -76,7 +76,7 @@ function buildTestSections(device: "hangboard" | "loading_pin"): TestSection[] {
     },
     {
       key: "repeater",
-      title: "Repeater 7/3",
+      title: "Repeater 7/3 (20mm edge)",
       description:
         "Hang 7s, rest 3s, repeat to failure at 60% of max hang.",
       fieldKey: "repeater_7_3_max_sets_20mm",

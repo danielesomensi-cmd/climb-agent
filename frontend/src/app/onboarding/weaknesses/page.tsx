@@ -115,9 +115,9 @@ function WeaknessCard({
         if (!disabled) onSelect();
       }}
     >
-      <CardContent className="py-3 px-4">
-        <p className="text-sm font-medium">{item.title}</p>
-        <p className="text-xs text-muted-foreground">{item.description}</p>
+      <CardContent className="py-2 px-3">
+        <p className="text-sm font-medium leading-tight">{item.title}</p>
+        <p className="text-xs text-muted-foreground leading-tight">{item.description}</p>
       </CardContent>
     </Card>
   );
@@ -169,7 +169,7 @@ export default function WeaknessesPage() {
             What is your main weakness?
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-2">
           {weaknesses.map((w) => (
             <WeaknessCard
               key={w.id}
@@ -190,7 +190,7 @@ export default function WeaknessesPage() {
               And your second weakness?
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2">
             {weaknesses.map((w) => (
               <WeaknessCard
                 key={w.id}

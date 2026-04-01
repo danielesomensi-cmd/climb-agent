@@ -105,6 +105,9 @@ export default function AvailabilityPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-200">
+            Set your typical training week. The planner will build sessions around your schedule, matching each slot to the right location and equipment. You can adjust this anytime — and each weekend you&apos;ll review and confirm next week&apos;s plan.
+          </div>
           {/* Grid header */}
           <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1 text-center">
             <div />
@@ -237,6 +240,11 @@ export default function AvailabilityPage() {
               </div>
             </div>
           ))}
+
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <p><strong>Other</strong> — other activities (sports, circus, etc.) block this slot from climbing training and help calculate your total weekly training load.</p>
+            <p><strong>Reduce next day</strong> — enable if this activity is physically demanding. We&apos;ll lower the intensity of your next climbing session.</p>
+          </div>
         </CardContent>
       </Card>
 

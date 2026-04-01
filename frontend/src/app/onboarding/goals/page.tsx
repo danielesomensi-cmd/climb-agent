@@ -107,6 +107,14 @@ export default function GoalsPage() {
     return dl < nineWeeks;
   })();
 
+  // Program duration in weeks
+  const programWeeks = useMemo(() => {
+    if (!goal.deadline || isDeadlinePast) return null;
+    const dl = new Date(goal.deadline);
+    const diffMs = dl.getTime() - today.getTime();
+    return Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
+  }, [goal.deadline, isDeadlinePast]);
+
   // Warnings
   const isAmbitious = gap > 8;
   const isTooLow =
@@ -192,6 +200,9 @@ export default function GoalsPage() {
                   <Label htmlFor="style-os">Onsight</Label>
                 </div>
               </RadioGroup>
+              <p className="text-xs text-muted-foreground">
+                Redpoint = your max grade after working the route. Onsight = climbing it clean on the first try. This changes how we prioritize your weaknesses.
+              </p>
             </div>
           )}
 
@@ -278,6 +289,16 @@ export default function GoalsPage() {
             {isDeadlineShort && (
               <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
                 This is a short timeframe. The macrocycle may be compressed.
+              </div>
+            )}
+            {programWeeks !== null && programWeeks >= 8 && (
+              <p className="text-xs text-muted-foreground">
+                Your plan: ~{programWeeks} weeks (from today to {goal.deadline})
+              </p>
+            )}
+            {programWeeks !== null && programWeeks > 0 && programWeeks < 8 && (
+              <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-600 dark:bg-red-950 dark:text-red-200">
+                ~{programWeeks} weeks — minimum recommended is 8 weeks
               </div>
             )}
           </div>

@@ -19,29 +19,29 @@ export default function WelcomePage() {
           <CardTitle className="text-2xl">Welcome to Climb Agent</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-muted-foreground">
-            Climb Agent helps you improve at climbing with a training plan
-            built specifically for you.
+          <p className="text-lg font-medium text-foreground">
+            Intelligent training, built for serious climbers
           </p>
 
           <p className="text-sm text-muted-foreground">
-            The more complete your initial assessment, the more personalized
-            your training plan will be. Climb Agent will also learn from your
-            session feedback and refine your plan over time.
+            Climb Agent uses AI-driven periodization to build a training plan
+            tailored to your strengths, weaknesses, and schedule. The more
+            complete your initial assessment, the better. Your plan also adapts
+            from session feedback over time.
           </p>
 
           <ul className="space-y-2 text-sm">
             <li className="flex items-start gap-2">
               <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-              Analyzes your current level
+              Maps your strengths and weaknesses across 5 performance axes
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-              Creates a personalized training plan
+              Builds a periodized macrocycle matched to your goal and timeline
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-              Adapts to your feedback week after week
+              Adapts every week based on your session feedback
             </li>
           </ul>
         </CardContent>

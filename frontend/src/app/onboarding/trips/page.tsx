@@ -102,6 +102,11 @@ export default function TripsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {trips.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No trips? No problem — you can add them anytime from Settings.
+            </p>
+          )}
           {trips.map((trip, index) => (
             <div key={index} className="space-y-4 rounded-lg border p-4">
               <div className="flex items-center justify-between">
@@ -215,20 +220,18 @@ export default function TripsPage() {
           Back
         </Button>
         <div className="flex gap-2">
-          {trips.length === 0 && (
+          {trips.length === 0 ? (
+            <Button onClick={() => router.push("/onboarding/review")}>
+              Skip — no trips planned
+            </Button>
+          ) : (
             <Button
-              variant="ghost"
+              disabled={!isValid}
               onClick={() => router.push("/onboarding/review")}
             >
-              No trips planned
+              Next
             </Button>
           )}
-          <Button
-            disabled={!isValid}
-            onClick={() => router.push("/onboarding/review")}
-          >
-            Next
-          </Button>
         </div>
       </div>
     </div>
