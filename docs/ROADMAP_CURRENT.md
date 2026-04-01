@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-01 (B182: Go-to-Market Sprint section added — Council output, 2× runs, 5 advisors each)
+> Last updated: 2026-04-01 (GTM-02: onboarding quick fixes from dry-run — 9 items done)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -195,8 +195,8 @@ Same 5 axes, different display labels per discipline. RadarChart now accepts `di
 
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
-| GTM-01 | **Onboarding dry-run** — Daniele completes full flow as unknown user (clean account, no founder help). Document every friction point. | D | S | Open | Assessment → macrocycle → first session, target < 10 min. Record screen if possible. |
-| GTM-02 | **Fix onboarding blockers** — only items that cause drop-off or confusion | B | M | Open | Depends on GTM-01 findings. Only fix what blocks completion — no polish. |
+| GTM-01 | **Onboarding dry-run** — Daniele completes full flow as unknown user (clean account, no founder help). Document every friction point. | D | S | ✅ Done | Completed 2026-04-01. 13 pages reviewed. 0 blockers, 3 P2, 5 P3. |
+| GTM-02 | **Fix onboarding blockers** — 9 quick fixes from dry-run (copy, CSS, info boxes) | B | S | ✅ Done | Welcome copy, discipline subtitle, goals helpers + weeks display, weakness padding, test labels, limitations copy, availability info box, trips skip. (2026-04-01) |
 | GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Vato, Alexis on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay €14.99/mo. |
 
 ### Phase 1 — Pricing + Stripe go-live (week 2-3)
