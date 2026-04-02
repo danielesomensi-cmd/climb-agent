@@ -25,6 +25,7 @@
       "domain": [
         "power"
       ],
+      "pattern": ["climbing_limit_boulder", "campus_ladder"],
       "prescription": {
         "notes": [
           "Limit bouldering. Long rests. Quality > volume."

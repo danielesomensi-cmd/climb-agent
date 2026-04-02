@@ -5016,8 +5016,7 @@
         "accessory"
       ],
       "domain": [
-        "handstand_skill",
-        "core"
+        "handstand_skill"
       ],
       "pattern": "handstand",
       "intensity_level": "high",

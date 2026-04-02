@@ -18,6 +18,7 @@
       "type": "main_set",
       "role": ["main"],
       "domain": ["strength_general"],
+      "pattern": ["pull_vertical", "pull_horizontal"],
       "prescription": {
         "sets_range": [3, 4],
         "reps_range": [3, 5],

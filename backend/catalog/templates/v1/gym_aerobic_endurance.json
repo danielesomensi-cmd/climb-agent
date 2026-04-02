@@ -25,6 +25,7 @@
       "domain": [
         "aerobic_capacity"
       ],
+      "pattern": ["climbing_continuous"],
       "prescription": {
         "notes": [
           "Easy continuous volume. Low pump."
