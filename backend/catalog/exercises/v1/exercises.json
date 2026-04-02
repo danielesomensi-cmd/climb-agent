@@ -2305,7 +2305,7 @@
         "main"
       ],
       "domain": [
-        "power"
+        "strength_general"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",

@@ -260,11 +260,12 @@ class TestResolverP0Determinism(unittest.TestCase):
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
         self.assertNotIn("limit_bouldering", ids)
-        # With implicit pullup_bar at gym, fallback may pick power_pullups or density_hangs
+        # power_pullups_explosive is now strength_general (not "power"), so it must NOT appear
+        # in the limit_projecting block — it belongs in supplementary_pulling
+        self.assertNotIn("power_pullups_explosive", ids)
+        # The main block still resolves to something (all domain/pattern filters drop — expected)
         main_block = self._main_block(out)
         self.assertEqual(main_block.get("status"), "selected")
-        fallback_id = main_block.get("selected_exercises", [])[0].get("exercise_id")
-        self.assertIn(fallback_id, {"density_hangs", "power_pullups_explosive"})
 
 
 class TestResolverInlineBlocks(unittest.TestCase):
