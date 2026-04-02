@@ -1563,7 +1563,8 @@ def resolve_session(
             "session_id": session_id,
             "session_name": session_name,
             "session_version": session_version,
-            "source_path": session_path
+            "source_path": session_path,
+            "target_duration_min": (session.get("time_budget") or {}).get("target_duration_min")
         },
         "resolved_session": {
             "resolver_version": "0.2",

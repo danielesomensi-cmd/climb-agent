@@ -703,6 +703,15 @@ export function SessionCard({
                 Load: {session.estimated_load_score}
               </Badge>
             )}
+            {!isDone && !isSkipped && (() => {
+              const targetMin = (session.resolved as Record<string, Record<string, unknown>> | undefined)?.session?.target_duration_min as number | undefined;
+              if (!targetMin) return null;
+              return (
+                <Badge variant="outline" className="text-[10px] text-slate-400">
+                  ~{targetMin} min
+                </Badge>
+              );
+            })()}
             {isDone && (() => {
               const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
               const slotEst: Record<string, number> = { lunch: 35, morning: 60, evening: 90 };

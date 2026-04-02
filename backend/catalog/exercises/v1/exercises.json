@@ -856,7 +856,8 @@
         "edge_mm": 20,
         "grip": "half_crimp"
       },
-      "unilateral": true
+      "unilateral": true,
+      "alt_sides": true
     },
     {
       "id": "lopez_subhangs",
@@ -1068,7 +1069,8 @@
       ],
       "video_url": "https://www.youtube.com/watch?v=1V4ypd3YBbA",
       "load_model": "external_load",
-      "unilateral": true
+      "unilateral": true,
+      "alt_sides": true
     },
     {
       "id": "pistol_squat_progression",
@@ -1119,7 +1121,8 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "unilateral": true
+      "unilateral": true,
+      "alt_sides": true
     },
     {
       "id": "romanian_deadlift",
@@ -2117,7 +2120,8 @@
       "experience_minimum_years": 3,
       "age_minimum": 16,
       "difficulty_tier": 4,
-      "unilateral": true
+      "unilateral": true,
+      "alt_sides": true
     },
     {
       "id": "campus_double_dyno",
@@ -3452,7 +3456,8 @@
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only",
-      "unilateral": true
+      "unilateral": true,
+      "alt_sides": true
     },
     {
       "id": "dead_bug",
@@ -8823,7 +8828,7 @@
       "domain": [
         "strength_general"
       ],
-      "pattern": "squat",
+      "pattern": "calf_raise",
       "intensity_level": "low",
       "fatigue_cost": 2,
       "recency_group": "lower_body_calf",
@@ -8851,12 +8856,12 @@
         "Stand on one foot on a step edge, heel hanging off",
         "Rise up as high as possible, pause 1 second at top",
         "Lower slowly below step level for full range of motion",
-        "Hold a wall or rail for balance if needed",
-        "Equal reps each leg"
+        "Hold a wall or rail for balance if needed"
       ],
       "load_model": "bodyweight_only",
       "video_url": null,
-      "unilateral": true
+      "unilateral": true,
+      "alt_sides": true
     },
     {
       "id": "step_ups",
@@ -8938,13 +8943,13 @@
         "cns": "none",
         "skin": "none"
       },
-      "description": "Seated or hanging knee raises targeting hip flexor strength. Essential for high steps, heel hooks, and maintaining foot placements on steep terrain.",
+      "description": "Seated knee raises targeting hip flexor (iliopsoas) strength. Essential for high steps, heel hooks, and maintaining foot placements on steep terrain. Advanced progression: hanging knee raises from pull-up bar.",
       "cues": [
-        "Seated on edge of bench: lift one knee as high as possible",
-        "Hold 2 seconds at the top, lower slowly",
-        "Keep back straight — do not lean back to lift higher",
-        "For progression: hanging knee raises from pull-up bar",
-        "Equal reps each leg"
+        "Seated on edge of bench, feet flat on floor, torso upright — engage glutes to stabilise",
+        "Slowly lift one knee toward chest as high as possible — feel the contraction in the front of the hip",
+        "Hold 2 seconds at the top, then lower in 3 seconds with control",
+        "Don't lean back to gain height — the range of motion comes from the hip, not the spine",
+        "To progress: place a light dumbbell on the thigh (2–5 kg)"
       ],
       "load_model": "bodyweight_only",
       "video_url": null,
@@ -9525,6 +9530,42 @@
         "edge_mm": 20,
         "grip": "half_crimp"
       }
+    },
+    {
+      "id": "reverse_lunge",
+      "name": "Reverse Lunge",
+      "category": "strength_accessory",
+      "role": ["accessory"],
+      "domain": ["strength_general"],
+      "pattern": "lunge",
+      "intensity_level": "moderate",
+      "fatigue_cost": 4,
+      "recency_group": "lunge",
+      "equipment_required": [],
+      "equipment_required_any": [],
+      "location_allowed": ["home", "gym"],
+      "contraindications": ["knee_injury"],
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true,
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
+      },
+      "stress_tags": {"fingers": "none", "elbow": "none", "cns": "low"},
+      "cues": [
+        "Stand tall, feet hip-width apart — step one foot back and lower until both knees are at 90°",
+        "Front knee tracks over 2nd–3rd toe, never collapses inward",
+        "Lower with control: 3-second descent, drive back up through the front heel",
+        "Keep torso upright — don't lean forward or let the hips shift laterally",
+        "Complete all reps on one leg before switching",
+        "To progress: hold dumbbells at sides (5–15 kg) or use a barbell"
+      ],
+      "description": "Unilateral lower-body strength exercise targeting quads, glutes, and balance. The reverse (stepping-back) variant is more knee-friendly than forward lunges and transfers well to climbing footwork and high-step control.",
+      "video_url": null
     }
   ]
 }

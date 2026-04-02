@@ -187,6 +187,8 @@ Allowed `pattern` values:
 - `push`
 - `hinge`
 - `squat`
+- `lunge` *(unilateral lunge patterns: reverse lunge, forward lunge, split stance)*
+- `calf_raise` *(calf raise patterns: single-leg, bilateral, weighted)*
 - `carry`
 - `rotation`
 - `anti_extension`
