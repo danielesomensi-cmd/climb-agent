@@ -1,14 +1,14 @@
 {
   "id": "handstand_practice",
   "name": "Handstand Practice (Skill Session)",
-  "version": "1.0",
+  "version": "1.1",
   "intent": {
     "primary_goal": "handstand_skill",
     "secondary_goals": [
       "prehab_shoulder",
       "core"
     ],
-    "notes": "Handstand progression work. Skill-focused, not conditioning. Home or gym. 20-30 min."
+    "notes": "Handstand progression work. Skill-focused, not conditioning. Home or gym. 25-35 min."
   },
   "compatibility": {
     "slot": [
@@ -23,15 +23,21 @@
     "location": "home"
   },
   "time_budget": {
-    "target_duration_min": 25,
-    "hard_cap_min": 35
+    "target_duration_min": 30,
+    "hard_cap_min": 40
   },
   "modules": [
     {
-      "block_id": "wrist_warmup",
+      "template_id": "general_warmup",
       "required": true,
       "priority": 100,
-      "module_role": "general_warmup",
+      "module_role": "general_warmup"
+    },
+    {
+      "block_id": "wrist_warmup",
+      "required": true,
+      "priority": 90,
+      "module_role": "activation",
       "notes": "Wrist circles, wrist extension/flexion on floor, light shoulder CARs.",
       "selection": {
         "primary": {
@@ -46,9 +52,25 @@
     {
       "block_id": "handstand_drills",
       "required": true,
-      "priority": 90,
+      "priority": 80,
       "module_role": "primary",
       "notes": "Wall handstand hold, wall walk-up, shoulder taps, or freestanding practice. Select based on level.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "domain": ["handstand_skill"],
+            "role": ["accessory"],
+            "pattern": ["handstand"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "handstand_secondary",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "Second handstand skill block — different drill from primary (walk-up if hold selected, freestanding if wall selected).",
       "selection": {
         "primary": {
           "filters": {

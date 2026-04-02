@@ -1,7 +1,7 @@
 {
   "id": "flexibility_full",
   "name": "Full Flexibility Session (Rest Day)",
-  "version": "1.0",
+  "version": "1.1",
   "intent": {
     "primary_goal": "flexibility",
     "secondary_goals": [
@@ -22,8 +22,8 @@
     "location": "home"
   },
   "time_budget": {
-    "target_duration_min": 35,
-    "hard_cap_min": 45
+    "target_duration_min": 40,
+    "hard_cap_min": 50
   },
   "modules": [
     {
@@ -42,11 +42,79 @@
       }
     },
     {
-      "block_id": "stretch_main",
+      "block_id": "stretch_lower_passive",
       "required": true,
       "priority": 90,
       "module_role": "primary",
-      "notes": "Full body stretch flow + hip opener + shoulder stretch. Hold positions 60s+.",
+      "notes": "Hip and lower body passive stretch — hip opener, pigeon, frog. Hold positions 60s+.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility"],
+            "pattern": ["flexibility_passive"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "stretch_lower_active",
+      "required": true,
+      "priority": 80,
+      "module_role": "secondary",
+      "notes": "Active flexibility — cossack squat, 90/90 switch, active leg raise. Controlled movement through range.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["flexibility"],
+            "pattern": ["flexibility_active"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "stretch_thoracic",
+      "required": false,
+      "priority": 70,
+      "module_role": "accessory",
+      "notes": "Thoracic and shoulder mobility — shoulder stretch flow, lat stretch, spinal twist.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility", "mobility"],
+            "pattern": ["flexibility_passive"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "stretch_hip_flexor",
+      "required": false,
+      "priority": 60,
+      "module_role": "accessory",
+      "notes": "Hip flexor and quad — couch stretch, psoas stretch. Important for climbers with hip flexor tightness.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["cooldown"],
+            "domain": ["flexibility"],
+            "pattern": ["flexibility_passive"],
+            "intensity_max": "low"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "stretch_full_body",
+      "required": false,
+      "priority": 50,
+      "module_role": "cooldown",
+      "notes": "Full body stretch flow or forearm/wrist stretch to close the session.",
       "selection": {
         "primary": {
           "filters": {

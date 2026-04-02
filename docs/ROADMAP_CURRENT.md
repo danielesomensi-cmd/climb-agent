@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-01 (GTM-02: onboarding quick fixes from dry-run — 9 items done)
+> Last updated: 2026-04-02 (B184: session quality sweep — 6 sessions enriched, 6 time_budget stale values fixed)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -63,6 +63,8 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 - ✅ **B171** — ExerciseTimer fixes from D169 audit: F1 `emom_bouldering` work_seconds 30→60 (full EMOM interval); F2 `one_on_one_off_intervals` rest moved to set_rest; F3a 29 exercises marked `alt_sides=true` (catalog field, separate from loading-pin `unilateral`); F3b ExerciseTimer `unilateral` prop — RIGHT/LEFT badge, doubled internal sets, displaySet/totalSets logic. (2026-03-30)
 - ✅ **A180** — Outdoor routes list: aggregate climbs by route name + spot across sessions. Shows total attempts, session count, best style badge (onsight/flash/sent/projecting), sent checkmark, grade. Collapsible card, sorted by most recent. Frontend-only, zero backend changes. (2026-03-31)
 - ✅ **B183** — Lower body session quality + alt_sides audit + duration estimate: (1) `lower_body_gym` enriched with 2 new required blocks (`accessory_lunge`, `accessory_calf`); `reverse_lunge` added to catalog; session now resolves 4 leg exercises; time_budget updated 50→60 min. (2) Full alt_sides audit: 6 exercises fixed (`split_squat`, `pistol_squat_progression`, `campus_bumps`, `side_plank`, `one_arm_hang_assisted`, `single_leg_calf_raise`); `lunge`/`calf_raise` added to vocabulary. (3) `hip_flexor_strengthening` cues rewritten for clarity. (4) Duration estimate: `target_duration_min` exposed from resolver output; `~XX min` badge shown on planned session cards. (2026-04-02)
+- ✅ **B184** — Session quality sweep (B183 follow-up): (1) `turkish_getup`/`farmers_carry` equipment fixed (`equipment_required: []` + `equipment_required_any` with canonical tokens). (2) `legs_strength` v1.1: replaced broken warmup with `general_warmup` template, split squat/hinge blocks, added lunge + calf blocks, time_budget 30→45. (3) `upper_body_weights` v1.1: added `general_warmup` template, `antagonist_prehab` → module_role "activation", time_budget 30→40. (4) `flexibility_full` v1.1: added 4 stretch blocks (`stretch_lower_passive`, `stretch_lower_active`, `stretch_thoracic`, `stretch_hip_flexor`, `stretch_full_body`) — session now resolves 5-6 exercises instead of 2. time_budget 35→40. (5) `handstand_practice` v1.1: added `general_warmup` template, second handstand drill block, time_budget 25→30. (6) `complementary_conditioning` v1.1: added `conditioning_secondary` block (carry/locomotion). (7) 4 stale time_budget values fixed: `lower_body_gym` 60→75, `heavy_conditioning_gym` 70→80, `core_training` 25→40, `prehab_maintenance` 18→20. (2026-04-02)
+- **B185** — Finger session template fix: `finger_strength_endurance` + `finger_aerobic_endurance` use legacy block format (role/domain only, no `selection.primary.filters`) → resolver falls back to archer_pullup/dip instead of hangboard exercises. P1 bug, requires separate brief. Open.
 
 ---
 

@@ -5221,9 +5221,8 @@
       "intensity_level": "medium",
       "fatigue_cost": 5,
       "recency_group": "conditioning_tgu",
-      "equipment_required": [
-        "weight"
-      ],
+      "equipment_required": [],
+      "equipment_required_any": ["dumbbell", "barbell", "kettlebell"],
       "location_allowed": [
         "home",
         "gym"
@@ -5274,9 +5273,8 @@
       "intensity_level": "medium",
       "fatigue_cost": 4,
       "recency_group": "conditioning_carries",
-      "equipment_required": [
-        "weight"
-      ],
+      "equipment_required": [],
+      "equipment_required_any": ["dumbbell", "barbell", "kettlebell"],
       "location_allowed": [
         "home",
         "gym"

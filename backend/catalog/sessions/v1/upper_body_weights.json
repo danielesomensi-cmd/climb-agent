@@ -1,7 +1,7 @@
 {
   "id": "upper_body_weights",
   "name": "Upper Body Antagonist (Push)",
-  "version": "1.0",
+  "version": "1.1",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
@@ -17,20 +17,26 @@
     "location": "home"
   },
   "time_budget": {
-    "target_duration_min": 30,
-    "hard_cap_min": 40
+    "target_duration_min": 40,
+    "hard_cap_min": 50
   },
   "modules": [
     {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 110,
+      "module_role": "general_warmup"
+    },
+    {
       "template_id": "antagonist_prehab",
       "required": true,
-      "priority": 100,
-      "module_role": "general_warmup"
+      "priority": 90,
+      "module_role": "activation"
     },
     {
       "block_id": "push_main",
       "required": true,
-      "priority": 90,
+      "priority": 80,
       "module_role": "primary",
       "notes": "Primary push movement. Prefers bench_press if weights available, ring_pushup if rings, otherwise pushup.",
       "selection": {

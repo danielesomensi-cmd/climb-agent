@@ -23,7 +23,7 @@
     "location": "home"
   },
   "time_budget": {
-    "target_duration_min": 18,
+    "target_duration_min": 20,
     "hard_cap_min": 25
   },
   "modules": [

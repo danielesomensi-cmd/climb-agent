@@ -17,8 +17,8 @@
     "location": "gym"
   },
   "time_budget": {
-    "target_duration_min": 70,
-    "hard_cap_min": 85
+    "target_duration_min": 80,
+    "hard_cap_min": 95
   },
   "modules": [
     {

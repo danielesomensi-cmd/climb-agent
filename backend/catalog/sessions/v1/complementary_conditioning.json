@@ -1,7 +1,7 @@
 {
   "id": "complementary_conditioning",
   "name": "Complementary Conditioning (Carries + Crawls + TGU)",
-  "version": "1.0",
+  "version": "1.1",
   "intent": {
     "primary_goal": "strength_general",
     "secondary_goals": [
@@ -38,13 +38,30 @@
       "required": true,
       "priority": 90,
       "module_role": "primary",
-      "notes": "Turkish get-up + farmer's carry + bear crawl. Circuit style or sequential.",
+      "notes": "Turkish get-up (rotation) or farmer's carry (carry). Picks best match for available equipment.",
       "selection": {
         "primary": {
           "filters": {
             "role": ["accessory", "conditioning"],
             "domain": ["strength_general", "core"],
             "pattern": ["rotation", "carry"],
+            "intensity_max": "medium"
+          }
+        }
+      }
+    },
+    {
+      "block_id": "conditioning_secondary",
+      "required": false,
+      "priority": 75,
+      "module_role": "secondary",
+      "notes": "Second conditioning exercise — carry or locomotion. Recency ensures different from primary.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["conditioning"],
+            "domain": ["strength_general", "core"],
+            "pattern": ["carry", "locomotion"],
             "intensity_max": "medium"
           }
         }

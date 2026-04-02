@@ -1,7 +1,7 @@
 {
   "id": "legs_strength",
   "name": "Legs Strength (Unilateral Focus)",
-  "version": "1.0",
+  "version": "1.1",
   "supplementary": true,
   "intent": {
     "primary_goal": "strength_general",
@@ -17,54 +17,76 @@
     "location": "home"
   },
   "time_budget": {
-    "target_duration_min": 30,
-    "hard_cap_min": 40
+    "target_duration_min": 45,
+    "hard_cap_min": 55
   },
   "modules": [
     {
-      "block_id": "leg_warmup",
+      "template_id": "general_warmup",
       "required": true,
       "priority": 100,
-      "module_role": "general_warmup",
-      "notes": "Leg swings, hip circles, bodyweight squats — 5 min.",
-      "selection": {
-        "primary": {
-          "filters": {
-            "role": ["warmup", "accessory"],
-            "domain": ["flexibility", "strength_general"],
-            "pattern": ["squat", "hinge", "static_stretch"]
-          }
-        }
-      }
+      "module_role": "general_warmup"
     },
     {
       "block_id": "unilateral_main",
       "required": true,
       "priority": 90,
       "module_role": "primary",
-      "notes": "Primary unilateral leg exercise. Prefers split_squat, then pistol_squat_progression, then romanian_deadlift.",
+      "notes": "Primary unilateral squat pattern. Prefers split_squat, then pistol_squat_progression, then goblet_squat.",
       "selection": {
         "primary": {
           "filters": {
             "role": ["accessory"],
             "domain": ["strength_general"],
-            "pattern": ["squat", "hinge"]
+            "pattern": ["squat"]
           }
         }
       }
     },
     {
       "block_id": "leg_secondary",
-      "required": false,
-      "priority": 70,
+      "required": true,
+      "priority": 80,
       "module_role": "secondary",
-      "notes": "Secondary leg exercise — different pattern from main. Goblet squat, glute bridge, or cossack squat.",
+      "notes": "Hinge pattern — romanian_deadlift or glute_bridge.",
       "selection": {
         "primary": {
           "filters": {
             "role": ["accessory"],
             "domain": ["strength_general"],
-            "pattern": ["squat", "hinge"]
+            "pattern": ["hinge"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "accessory_lunge",
+      "required": false,
+      "priority": 60,
+      "module_role": "accessory",
+      "notes": "Lunge pattern — reverse_lunge. Complements squat main with knee-dominant unilateral volume.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["lunge"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "accessory_calf",
+      "required": false,
+      "priority": 50,
+      "module_role": "accessory",
+      "notes": "Calf work — single_leg_calf_raise for ankle stability and high-stepping power.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["strength_general"],
+            "pattern": ["calf_raise"]
           }
         }
       }
