@@ -164,15 +164,21 @@ class TestPullingStrengthGym(unittest.TestCase):
         result = self._resolve_pulling()
         self.assertEqual(result["resolution_status"], "success")
 
-    def test_contains_weighted_pullup(self):
+    def test_contains_three_pull_vertical_exercises(self):
+        """pulling_strength_compound now uses P0 — must resolve 3 distinct pull_vertical exercises."""
+        import json
+        ex_data = json.load(open("backend/catalog/exercises/v1/exercises.json"))
+        pull_vertical_ids = {
+            e["id"] for e in ex_data["exercises"]
+            if "pull_vertical" in ([e.get("pattern")] if isinstance(e.get("pattern"), str) else (e.get("pattern") or []))
+            and "strength_general" in (e.get("domain") or [])
+        }
         result = self._resolve_pulling()
         ids = [e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]]
-        self.assertIn("weighted_pullup", ids)
-
-    def test_contains_lock_off_isometric(self):
-        result = self._resolve_pulling()
-        ids = [e["exercise_id"] for e in result["resolved_session"]["exercise_instances"]]
-        self.assertIn("lock_off_isometric", ids)
+        pull_selected = [eid for eid in ids if eid in pull_vertical_ids]
+        self.assertGreaterEqual(len(pull_selected), 3, f"Expected ≥3 pull_vertical exercises, got: {pull_selected}")
+        # All 3 must be unique (rotation working)
+        self.assertEqual(len(pull_selected), len(set(pull_selected)), f"Duplicate pull exercises: {pull_selected}")
 
     def test_has_load_score(self):
         result = self._resolve_pulling()

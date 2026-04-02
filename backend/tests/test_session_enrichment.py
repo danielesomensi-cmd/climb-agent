@@ -73,9 +73,6 @@ REQUIRED_EXERCISE_FIELDS = [
 NEW_TEMPLATE_IDS = [
     "warmup_climbing",
     "warmup_strength",
-    "warmup_recovery",
-    "pulling_strength",
-    "pulling_endurance",
     "antagonist_prehab",
     "core_standard",
     "cooldown_stretch",

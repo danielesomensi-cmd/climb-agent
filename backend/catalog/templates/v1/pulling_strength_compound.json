@@ -1,7 +1,7 @@
 {
   "id": "pulling_strength_compound",
   "name": "Pulling Strength Compound (Module)",
-  "version": "1.0",
+  "version": "1.1",
   "category": "strength",
   "sport": "climbing",
 
@@ -16,34 +16,40 @@
     {
       "block_id": "weighted_pullup_main",
       "type": "main_set",
-      "exercise_id": "weighted_pullup",
+      "role": ["main"],
+      "domain": ["strength_general"],
+      "pattern": ["pull_vertical"],
       "prescription": {
         "sets": 4,
         "reps": 4,
         "rest_between_sets_seconds": 150,
-        "notes": "Heavy weighted pull-ups. Primary pulling stimulus. Full rest between sets."
+        "notes": "Heavy pulling variation. Primary stimulus. Full rest between sets."
       }
     },
     {
       "block_id": "lock_off_hold",
       "type": "main_set",
-      "exercise_id": "lock_off_isometric",
+      "role": ["main"],
+      "domain": ["strength_general"],
+      "pattern": ["pull_vertical"],
       "prescription": {
         "sets": 3,
         "reps": 3,
         "rest_between_sets_seconds": 120,
-        "notes": "Lock-off holds at multiple angles. Builds isometric pulling strength for lock-offs on the wall."
+        "notes": "Second pulling variation. Controlled, quality reps."
       }
     },
     {
       "block_id": "typewriter_unilateral",
       "type": "main_set",
-      "exercise_id": "typewriter_pullup",
+      "role": ["main"],
+      "domain": ["strength_general"],
+      "pattern": ["pull_vertical"],
       "prescription": {
         "sets": 3,
         "reps": 5,
         "rest_between_sets_seconds": 120,
-        "notes": "Typewriter pull-ups for unilateral pulling power. Optional if fatigued."
+        "notes": "Third pulling variation. Optional if fatigued."
       }
     }
   ]

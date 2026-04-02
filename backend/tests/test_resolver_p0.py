@@ -68,15 +68,23 @@ def make_session_file(
     }
 
 
-def make_gym_power_bouldering_session_file(*, session_id: str, context_gym_id: str | None):
-    return {
-        "id": session_id,
-        "version": "1.0",
-        "context": {"location": "gym", "gym_id": context_gym_id},
-        "modules": [
-            {"template_id": "gym_power_bouldering", "version": "v1", "required": True}
-        ],
-    }
+def resolve_limit_boulder_with_equipment(base_user_state: dict, equipment: list[str]):
+    """Resolve the real limit_boulder_gym session with a given gym equipment list."""
+    us = make_user_state(
+        base_user_state,
+        location="gym",
+        gym_id="blocx",
+        gym_equipment_override={"blocx": equipment},
+    )
+    return resolve_session(
+        repo_root=REPO_ROOT,
+        session_path="backend/catalog/sessions/v1/limit_boulder_gym.json",
+        templates_dir="backend/catalog/templates",
+        exercises_path="backend/catalog/exercises/v1/exercises.json",
+        out_path="output/__test_limit_boulder_out.json",
+        user_state_override=us,
+        write_output=False,
+    )
 
 
 class TestResolverP0Determinism(unittest.TestCase):
@@ -221,27 +229,17 @@ class TestResolverP0Determinism(unittest.TestCase):
         self.assert_filter_trace_present(out)
 
 
-    def _resolve_gym_power_with_equipment(self, equipment: list[str], session_id: str):
-        us = make_user_state(
-            self.base_user_state,
-            location="gym",
-            gym_id="blocx",
-            gym_equipment_override={"blocx": equipment},
-        )
-        sess = make_gym_power_bouldering_session_file(session_id=session_id, context_gym_id="blocx")
-        return self.run_resolve(us, sess)
-
-    def _main_block(self, out: dict) -> dict:
-        return next(b for b in out["resolved_session"]["blocks"] if b.get("block_uid") == "gym_power_bouldering.main")
+    def _limit_projecting_block(self, out: dict) -> dict:
+        return next(b for b in out["resolved_session"]["blocks"] if b.get("block_uid") == "inline.limit_projecting")
 
     def test_gym_limit_bouldering_selected_with_spraywall(self):
-        out = self._resolve_gym_power_with_equipment(["spraywall"], "gym_spraywall")
+        out = resolve_limit_boulder_with_equipment(self.base_user_state, ["spraywall"])
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
         self.assertIn("limit_bouldering", ids)
 
     def test_gym_limit_bouldering_selected_with_board_kilter(self):
-        out = self._resolve_gym_power_with_equipment(["board_kilter"], "gym_board_kilter")
+        out = resolve_limit_boulder_with_equipment(self.base_user_state, ["board_kilter"])
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
         self.assertTrue(
@@ -250,21 +248,21 @@ class TestResolverP0Determinism(unittest.TestCase):
         )
 
     def test_gym_limit_bouldering_selected_with_gym_boulder(self):
-        out = self._resolve_gym_power_with_equipment(["gym_boulder"], "gym_gym_boulder")
+        out = resolve_limit_boulder_with_equipment(self.base_user_state, ["gym_boulder"])
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
         self.assertIn("limit_bouldering", ids)
 
     def test_gym_limit_bouldering_skipped_without_required_any_equipment(self):
-        out = self._resolve_gym_power_with_equipment(["hangboard"], "gym_no_limit_tools")
+        out = resolve_limit_boulder_with_equipment(self.base_user_state, ["hangboard"])
         self.assertEqual(out["resolution_status"], "success")
         ids = [x["exercise_id"] for x in out["resolved_session"]["exercise_instances"]]
         self.assertNotIn("limit_bouldering", ids)
         # power_pullups_explosive is now strength_general (not "power"), so it must NOT appear
         # in the limit_projecting block — it belongs in supplementary_pulling
         self.assertNotIn("power_pullups_explosive", ids)
-        # The main block still resolves to something (all domain/pattern filters drop — expected)
-        main_block = self._main_block(out)
+        # The inline limit_projecting block still resolves to something (filters drop — expected)
+        main_block = self._limit_projecting_block(out)
         self.assertEqual(main_block.get("status"), "selected")
 
 

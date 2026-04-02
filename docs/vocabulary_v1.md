@@ -203,6 +203,9 @@ Allowed `pattern` values:
 - `mobility_flow` *(dynamic mobility sequences)*
 - `technique_drill`
 - `campus_ladder` *(campus board movement patterns)*
+- `isometric_explosive` *(overcoming isometric pulls — max force against fixed resistance; hangboard fallback for campus)*
+- `explosive_brief` *(very short explosive pulls targeting RFD; hangboard fallback for campus)*
+- `explosive_touch` *(explosive deadpoint/power slap drills on boulder wall)*
 - `handstand` *(inversions, overhead push)*
 - `compression` *(pike, L-sit to pike, toes-to-bar, hanging leg raise)*
 - `flexibility_passive` *(static stretching, yin yoga)*

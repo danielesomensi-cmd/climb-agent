@@ -51,13 +51,14 @@
       "required": false,
       "priority": 80,
       "module_role": "secondary",
-      "notes": "Campus laddering or bumps. Only if energy remains and campus board available.",
+      "notes": "Campus laddering or bumps. Fallback to overcoming isometrics or power slap when campus board unavailable.",
       "selection": {
         "primary": {
           "filters": {
             "role": ["main"],
             "domain": ["contact_strength"],
-            "pattern": ["campus_ladder"]
+            "pattern": ["campus_ladder", "isometric_explosive", "explosive_brief", "explosive_touch"],
+            "equipment": ["campus_board"]
           }
         }
       }

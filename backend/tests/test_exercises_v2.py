@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 186  # B183: +1 reverse_lunge
+    assert len(exercise_list) == 189  # B186: +3 contact strength exercises
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
