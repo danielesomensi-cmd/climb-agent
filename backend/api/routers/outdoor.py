@@ -15,6 +15,7 @@ from backend.engine.outdoor_log import (
     compute_outdoor_load_score,
     compute_outdoor_stats,
     load_outdoor_sessions,
+    remove_outdoor_session,
     update_outdoor_session,
 )
 
@@ -154,6 +155,32 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
     save_state(state, user_id)
 
     return {"status": "ok", "load_score": compute_outdoor_load_score(entry)}
+
+
+@router.delete("/log/{date}")
+def delete_outdoor_log(date: str, user_id: Optional[str] = Depends(get_user_id)):
+    """Delete the outdoor session for a given date."""
+    try:
+        removed = remove_outdoor_session(user_id, date)
+    except ValueError as e:
+        detail = str(e)
+        if "authenticated user_id" in detail:
+            raise HTTPException(status_code=401, detail="Authentication required to delete outdoor session")
+        raise HTTPException(status_code=404, detail=f"No outdoor session found for date {date}")
+    except OSError as e:
+        logger.error("Failed to delete outdoor log: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to delete outdoor log. Please try again.")
+
+    if removed == 0:
+        raise HTTPException(status_code=404, detail=f"No outdoor session found for date {date}")
+
+    # Remove from state.outdoor_log[]
+    state = load_state(user_id)
+    outdoor_log = state.get("outdoor_log", [])
+    state["outdoor_log"] = [ol for ol in outdoor_log if ol.get("date") != date]
+    save_state(state, user_id)
+
+    return {"status": "ok", "date": date}
 
 
 @router.get("/sessions")

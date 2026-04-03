@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
-import { getOutdoorSessions, getOutdoorStats } from "@/lib/api";
-import type { OutdoorSession, OutdoorStats } from "@/lib/types";
+import { getOutdoorSessions, getOutdoorStats, getOutdoorSpots, getOutdoorLogByDate, deleteOutdoorLog } from "@/lib/api";
+import type { OutdoorSession, OutdoorStats, OutdoorSpot } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, ArrowUpRight, ChevronDown } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Check, ArrowUpRight, ChevronDown, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserState } from "@/lib/hooks/use-state";
 import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
+import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 
 // ---------------------------------------------------------------------------
 // Route aggregation (A180)
@@ -95,13 +97,21 @@ export default function OutdoorPage() {
   const { isLoaded: authReady } = useAuth();
   const { state: userState } = useUserState(authReady);
   const gradeSystem: BoulderGradeSystem = ((userState as Record<string, unknown>)?.preferences as Record<string, unknown>)?.grade_system_boulder as BoulderGradeSystem || "font";
-  const outdoorSpots = ((userState as Record<string, unknown>)?.outdoor_spots as Array<{ name: string; discipline: string }>) || [];
+  const outdoorSpots = ((userState as Record<string, unknown>)?.outdoor_spots as Array<{ name: string; discipline: "lead" | "boulder" | "both" }>) || [];
   const hasSpots = outdoorSpots.length > 0;
   const today = new Date().toISOString().split("T")[0];
   const [sessions, setSessions] = useState<(OutdoorSession & { load_score?: number })[]>([]);
   const [stats, setStats] = useState<OutdoorStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Log dialog state
+  const [showLogDialog, setShowLogDialog] = useState(false);
+  const [logSpots, setLogSpots] = useState<OutdoorSpot[]>([]);
+  const [editData, setEditData] = useState<OutdoorSession | null>(null);
+  const [ctaLoading, setCtaLoading] = useState(false);
+  const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null);
+  const [deletingDate, setDeletingDate] = useState<string | null>(null);
 
   // B155: gate on Clerk readiness
   useEffect(() => {
@@ -117,6 +127,57 @@ export default function OutdoorPage() {
       })
       .finally(() => setLoading(false));
   }, [authReady]);
+
+  const reloadData = useCallback(() => {
+    Promise.all([getOutdoorSessions(), getOutdoorStats()])
+      .then(([sessData, statsData]) => {
+        setSessions(sessData.sessions as (OutdoorSession & { load_score?: number })[]);
+        setStats(statsData);
+      })
+      .catch(console.error);
+  }, []);
+
+  // Issue 1+3: open log dialog, check for existing session today
+  const handleStartSession = useCallback(async () => {
+    setCtaLoading(true);
+    try {
+      const spotsData = await getOutdoorSpots();
+      setLogSpots(spotsData.spots);
+      try {
+        const existing = await getOutdoorLogByDate(today);
+        setEditData(existing.session);
+      } catch {
+        // 404 = no session today
+        setEditData(null);
+      }
+      setShowLogDialog(true);
+    } catch {
+      setError("Could not load spots. Please try again.");
+    } finally {
+      setCtaLoading(false);
+    }
+  }, [today]);
+
+  const handleLogSuccess = useCallback(() => {
+    setShowLogDialog(false);
+    setEditData(null);
+    reloadData();
+  }, [reloadData]);
+
+  // Issue 4: delete session
+  const handleDeleteSession = useCallback(async (date: string) => {
+    setDeletingDate(date);
+    setConfirmDeleteDate(null);
+    try {
+      await deleteOutdoorLog(date);
+      setSessions((prev) => prev.filter((s) => s.date !== date));
+      getOutdoorStats().then(setStats).catch(console.error);
+    } catch {
+      setError("Could not delete session. Please try again.");
+    } finally {
+      setDeletingDate(null);
+    }
+  }, []);
 
   const [routesExpanded, setRoutesExpanded] = useState(true);
 
@@ -139,14 +200,15 @@ export default function OutdoorPage() {
         {/* Intro + CTA */}
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            Track your outdoor sessions. Log routes and projects to see your progression over time.
+            Every route you log becomes part of your training profile. Climb Agent tracks your projects, attempts, and sends — and uses that data to calibrate your indoor sessions. The more you log, the smarter your training gets.
           </p>
           {hasSpots ? (
             <button
-              onClick={() => router.push(`/free-session?context=standalone&date=${today}`)}
-              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:opacity-80"
+              onClick={handleStartSession}
+              disabled={ctaLoading}
+              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-60"
             >
-              Start Outdoor Session
+              {ctaLoading ? "Loading..." : "Start Outdoor Session"}
             </button>
           ) : (
             <button
@@ -322,40 +384,67 @@ export default function OutdoorPage() {
                       .sort()
                       .pop();
 
+                    const isConfirming = confirmDeleteDate === s.date;
+                    const isDeleting = deletingDate === s.date;
+
                     return (
                       <div
                         key={`${s.date}-${idx}`}
-                        className="flex items-center justify-between rounded-md border px-3 py-2"
+                        className="rounded-md border px-3 py-2 space-y-2"
                       >
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium">
-                              {new Date(s.date + "T00:00:00").toLocaleDateString(
-                                "en-US",
-                                {
-                                  day: "numeric",
-                                  month: "short",
-                                },
-                              )}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {s.spot_name}
-                            </span>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">
+                                {new Date(s.date + "T00:00:00").toLocaleDateString(
+                                  "en-US",
+                                  { day: "numeric", month: "short" },
+                                )}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {s.spot_name}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Badge variant="outline" className="text-[10px]">
+                                {s.discipline}
+                              </Badge>
+                              <span>{s.routes?.length || 0} routes</span>
+                              {topGrade && <span>top: {displayBoulderGrade(topGrade, gradeSystem)}</span>}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Badge variant="outline" className="text-[10px]">
-                              {s.discipline}
-                            </Badge>
-                            <span>{s.routes?.length || 0} routes</span>
-                            {topGrade && <span>top: {displayBoulderGrade(topGrade, gradeSystem)}</span>}
+                          <div className="flex items-center gap-3">
+                            {s.load_score != null && (
+                              <div className="text-right">
+                                <p className="text-sm font-semibold">{s.load_score}</p>
+                                <p className="text-[10px] text-muted-foreground">load</p>
+                              </div>
+                            )}
+                            <button
+                              onClick={() => setConfirmDeleteDate(isConfirming ? null : s.date)}
+                              disabled={isDeleting}
+                              className="text-muted-foreground/50 hover:text-destructive disabled:opacity-30"
+                              aria-label="Delete session"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
                           </div>
                         </div>
-                        {s.load_score != null && (
-                          <div className="text-right">
-                            <p className="text-sm font-semibold">{s.load_score}</p>
-                            <p className="text-[10px] text-muted-foreground">
-                              load
-                            </p>
+                        {isConfirming && (
+                          <div className="flex items-center gap-2 pt-1 border-t">
+                            <span className="flex-1 text-xs text-muted-foreground">Delete this session?</span>
+                            <button
+                              onClick={() => setConfirmDeleteDate(null)}
+                              className="rounded border px-2 py-1 text-xs"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSession(s.date)}
+                              className="rounded bg-destructive px-2 py-1 text-xs text-destructive-foreground"
+                            >
+                              Delete
+                            </button>
                           </div>
                         )}
                       </div>
@@ -407,6 +496,28 @@ export default function OutdoorPage() {
           </>
         )}
       </main>
+
+      {/* Log / Edit dialog */}
+      <Dialog open={showLogDialog} onOpenChange={(v) => { if (!v) { setShowLogDialog(false); setEditData(null); } }}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editData ? "Edit Today's Session" : "Log Outdoor Session"}</DialogTitle>
+            {editData && (
+              <p className="text-xs text-amber-400 mt-1">
+                You already have a session logged today — editing it.
+              </p>
+            )}
+          </DialogHeader>
+          <OutdoorLogForm
+            spots={logSpots}
+            defaultDate={today}
+            defaultSpotName={outdoorSpots[0]?.name}
+            defaultDiscipline={outdoorSpots[0]?.discipline}
+            initialData={editData ?? undefined}
+            onSuccess={handleLogSuccess}
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

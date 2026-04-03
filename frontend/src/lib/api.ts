@@ -264,6 +264,11 @@ export const putOutdoorLog = (session: Omit<OutdoorSession, "log_version">) =>
     body: JSON.stringify(session),
   });
 
+export const deleteOutdoorLog = (date: string) =>
+  request<{ status: string; date: string }>(`/api/outdoor/log/${date}`, {
+    method: "DELETE",
+  });
+
 export const getOutdoorSessions = (since?: string) =>
   request<{ sessions: OutdoorSession[]; count: number }>(
     `/api/outdoor/sessions${since ? `?since=${since}` : ""}`
