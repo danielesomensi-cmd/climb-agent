@@ -45,8 +45,9 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     : FONT_BOULDER_GRADES;
   const initialGrade = defaultGrade && gradeList.includes(defaultGrade) ? defaultGrade : "6a";
 
+  // Issue 1: append at bottom
   const addRoute = () => {
-    setRoutes([{ name: "", grade: initialGrade, attempts: [{ result: "sent" }] }, ...routes]);
+    setRoutes([...routes, { name: "", grade: initialGrade, attempts: [{ result: "sent" }] }]);
   };
 
   const updateRoute = (idx: number, field: keyof OutdoorRoute, value: string) => {
@@ -55,15 +56,23 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     setRoutes(updated);
   };
 
-  const updateAttemptResult = (rIdx: number, aIdx: number, result: OutdoorAttempt["result"]) => {
+  // Issue 4: cycle attempt through sent → fell → removed
+  const cycleAttempt = (rIdx: number, aIdx: number) => {
     const updated = [...routes];
-    updated[rIdx].attempts[aIdx] = { ...updated[rIdx].attempts[aIdx], result };
-    // B181: auto-fill style when user marks first send and style is empty
-    if (result === "sent" && !updated[rIdx].style) {
-      const isFirstAttempt = !updated[rIdx].attempts.slice(0, aIdx).some((a) => a.result === "sent");
-      if (isFirstAttempt) {
-        (updated[rIdx] as unknown as Record<string, unknown>).style = aIdx === 0 ? "flash" : "redpoint";
+    const attempt = updated[rIdx].attempts[aIdx];
+    if (attempt.result === "sent") {
+      updated[rIdx].attempts[aIdx] = { ...attempt, result: "fell" };
+      // Clear auto-filled style when un-sending
+      const anySent = updated[rIdx].attempts.some((a, i) => i !== aIdx && a.result === "sent");
+      if (!anySent) {
+        delete (updated[rIdx] as unknown as Record<string, unknown>).style;
       }
+    } else if (attempt.result === "fell") {
+      // Remove this attempt entirely
+      updated[rIdx].attempts = updated[rIdx].attempts.filter((_, i) => i !== aIdx);
+    } else {
+      // Any other state → sent
+      updated[rIdx].attempts[aIdx] = { ...attempt, result: "sent" };
     }
     setRoutes(updated);
   };
@@ -71,6 +80,17 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   const addAttempt = (rIdx: number) => {
     const updated = [...routes];
     updated[rIdx].attempts.push({ result: "fell" });
+    // B181: auto-fill style when user marks first send and style is empty
+    setRoutes(updated);
+  };
+
+  const updateStyle = (rIdx: number, value: string) => {
+    const updated = [...routes];
+    if (value) {
+      (updated[rIdx] as unknown as Record<string, unknown>).style = value;
+    } else {
+      delete (updated[rIdx] as unknown as Record<string, unknown>).style;
+    }
     setRoutes(updated);
   };
 
@@ -179,90 +199,87 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
         />
       </div>
 
-      {/* Routes */}
+      {/* Routes — Issue 2: 2-row layout per card */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium">Routes / Problems</label>
-          <button
-            onClick={addRoute}
-            className="text-sm text-primary hover:underline"
-          >
-            + Add route
-          </button>
-        </div>
-        {routes.map((route, rIdx) => (
-          <div key={rIdx} className="mb-3 rounded-lg border p-3 space-y-2">
-            <div className="flex gap-2">
-              <input
-                placeholder="Name"
-                value={route.name}
-                onChange={e => updateRoute(rIdx, "name", e.target.value)}
-                className="flex-1 rounded-md border bg-background px-2 py-1 text-sm"
-              />
-              <select
-                value={route.grade}
-                onChange={e => updateRoute(rIdx, "grade", e.target.value)}
-                className="w-20 rounded-md border bg-background px-2 py-1 text-sm"
-              >
-                {gradeList.map(g => (
-                  <option key={g} value={g}>{g}</option>
-                ))}
-              </select>
-              <select
-                value={route.style || ""}
-                onChange={e => {
-                  const updated = [...routes];
-                  if (e.target.value) {
-                    (updated[rIdx] as unknown as Record<string, unknown>).style = e.target.value;
-                  } else {
-                    delete (updated[rIdx] as unknown as Record<string, unknown>).style;
-                  }
-                  setRoutes(updated);
-                }}
-                className="w-16 rounded-md border bg-background px-1 py-1 text-xs"
-              >
-                <option value="">Style</option>
-                <option value="onsight">🟢 OS</option>
-                <option value="flash">🟡 FL</option>
-                <option value="redpoint">🔴 RP</option>
-                <option value="project">⚪ PRJ</option>
-              </select>
-              <button
-                onClick={() => removeRoute(rIdx)}
-                className="text-destructive text-sm"
-              >
-                x
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {route.attempts.map((a, aIdx) => (
-                <button
-                  key={aIdx}
-                  onClick={() =>
-                    updateAttemptResult(
-                      rIdx,
-                      aIdx,
-                      a.result === "sent" ? "fell" : "sent"
-                    )
-                  }
-                  className={`rounded px-2 py-0.5 text-xs ${
-                    a.result === "sent"
-                      ? "bg-green-600 text-white"
-                      : "bg-red-600 text-white"
-                  }`}
+        <label className="text-sm font-medium">Routes / Problems</label>
+
+        <div className="mt-2 space-y-2">
+          {routes.map((route, rIdx) => (
+            <div key={rIdx} className="rounded-lg border p-3 space-y-2">
+              {/* Row 1: Name + Grade + Delete */}
+              <div className="flex gap-2">
+                <input
+                  placeholder="Name"
+                  value={route.name}
+                  onChange={e => updateRoute(rIdx, "name", e.target.value)}
+                  className="min-w-0 flex-1 rounded-md border bg-background px-2 py-1.5 text-sm"
+                />
+                <select
+                  value={route.grade}
+                  onChange={e => updateRoute(rIdx, "grade", e.target.value)}
+                  className="w-[72px] shrink-0 rounded-md border bg-background px-2 py-1.5 text-sm"
                 >
-                  {a.result === "sent" ? "Sent" : "Fell"}
+                  {gradeList.map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => removeRoute(rIdx)}
+                  className="shrink-0 rounded-md border px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10"
+                  aria-label="Remove route"
+                >
+                  ✕
                 </button>
-              ))}
-              <button
-                onClick={() => addAttempt(rIdx)}
-                className="rounded px-2 py-0.5 text-xs border"
-              >
-                +
-              </button>
+              </div>
+
+              {/* Row 2: Style + attempt badges + add attempt */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <select
+                  value={route.style || ""}
+                  onChange={e => updateStyle(rIdx, e.target.value)}
+                  className="rounded-md border bg-background px-2 py-1 text-xs"
+                >
+                  <option value="">Style</option>
+                  <option value="onsight">🟢 OS</option>
+                  <option value="flash">🟡 FL</option>
+                  <option value="redpoint">🔴 RP</option>
+                  <option value="project">⚪ PRJ</option>
+                </select>
+
+                {/* Issue 4: tap cycles sent→fell→removed */}
+                {route.attempts.map((a, aIdx) => (
+                  <button
+                    key={aIdx}
+                    onClick={() => cycleAttempt(rIdx, aIdx)}
+                    className={`rounded px-2.5 py-1 text-xs font-medium ${
+                      a.result === "sent"
+                        ? "bg-green-600 text-white"
+                        : "bg-red-600 text-white"
+                    }`}
+                    title="Tap: Sent → Fell → Remove"
+                  >
+                    {a.result === "sent" ? "Sent" : "Fell"}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() => addAttempt(rIdx)}
+                  className="rounded border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Issue 3: "+ Add route" below last card, left-aligned */}
+        <button
+          onClick={addRoute}
+          className="mt-2 text-sm text-primary hover:underline"
+        >
+          + Add route
+        </button>
       </div>
 
       {/* Notes */}
