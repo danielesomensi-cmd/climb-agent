@@ -79,8 +79,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
 
   const addAttempt = (rIdx: number) => {
     const updated = [...routes];
-    updated[rIdx].attempts.push({ result: "fell" });
-    // B181: auto-fill style when user marks first send and style is empty
+    updated[rIdx].attempts.push({ result: "sent" });
     setRoutes(updated);
   };
 
@@ -202,6 +201,9 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       {/* Routes — Issue 2: 2-row layout per card */}
       <div>
         <label className="text-sm font-medium">Routes / Problems</label>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Log your routes and attempts — tap + to add tries, tap a badge to cycle: Sent → Fell → remove. Climb Agent tracks your history and adapts your training based on what you climb outdoors.
+        </p>
 
         <div className="mt-2 space-y-2">
           {routes.map((route, rIdx) => (
