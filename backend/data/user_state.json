@@ -53,7 +53,7 @@
   "baselines": {
     "hangboard": [
       {
-        "estimated_at": "2026-04-02",
+        "estimated_at": "2026-04-03",
         "grade_used": "7a",
         "max_total_load_kg": 75.0,
         "source": "estimated_from_grade"
@@ -104,7 +104,7 @@
       "technique": 60
     },
     "end_date": "2026-06-28",
-    "generated_at": "2026-04-02T21:30:46",
+    "generated_at": "2026-04-03T19:51:20",
     "goal_snapshot": {
       "current_grade": "7a",
       "deadline": "2026-09-01",
