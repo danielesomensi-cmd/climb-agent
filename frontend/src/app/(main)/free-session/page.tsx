@@ -22,6 +22,7 @@ import { CircuitTimer, type CircuitResult } from "@/components/circuit/CircuitTi
 import { CircuitCompletion } from "@/components/circuit/CircuitCompletion";
 import { useUserState } from "@/lib/hooks/use-state";
 import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
+import { findPendingDraft, clearDraft, type FreeSessionDraft } from "@/lib/free-session-utils";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -153,6 +154,9 @@ function FreeSessionContent() {
   const [sessionClimbs, setSessionClimbs] = useState<LoggedClimb[]>([]);
   const [sessionStartedAt, setSessionStartedAt] = useState<number>(Date.now());
 
+  // Pending draft (resume banner)
+  const [pendingDraft, setPendingDraft] = useState<FreeSessionDraft | null>(null);
+
   // Circuit state
   const [circuitConfig, setCircuitConfig] = useState<CircuitConfig | null>(null);
   const [circuitResult, setCircuitResult] = useState<CircuitResult | null>(null);
@@ -165,6 +169,30 @@ function FreeSessionContent() {
       .then((data) => setGyms(data.gyms))
       .catch((err) => { console.error("Failed to load gym list:", err); });
   }, [authReady]);
+
+  // Check for pending draft on mount — offer resume if found
+  useEffect(() => {
+    const draft = findPendingDraft();
+    if (draft) setPendingDraft(draft);
+  }, []);
+
+  // Resume a pending draft: skip selection steps and go straight to active
+  const handleResumeDraft = useCallback((draft: FreeSessionDraft) => {
+    setActiveSession({
+      sessionId: draft.sessionId,
+      surface: draft.surface,
+      mode: draft.sessionMode,
+      presetName: draft.presetName,
+      gymName: draft.gymName,
+      targetGrade: draft.targetGrade,
+      restSeconds: draft.restSeconds,
+      tip: draft.tip,
+      targetClimbs: draft.targetClimbs,
+    });
+    setSessionStartedAt(draft.startedAt);
+    setPendingDraft(null);
+    setStep("active");
+  }, []);
 
   // ── Handlers ───────────────────────────────────────────────────────
 
@@ -434,6 +462,35 @@ function FreeSessionContent() {
         {/* STEP: Surface selection */}
         {step === "surface" && !loading && (
           <div className="flex flex-col gap-3 px-4">
+            {/* Resume pending draft banner */}
+            {pendingDraft && (
+              <div className="flex items-center justify-between rounded-xl border border-primary/30 bg-primary/10 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-primary">Resume previous session?</p>
+                  <p className="text-xs text-muted-foreground">
+                    {pendingDraft.loggedClimbs.length} {pendingDraft.surface === "gym_routes" ? "routes" : "boulders"} logged
+                    {pendingDraft.gymName ? ` · ${pendingDraft.gymName}` : ""}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => { clearDraft(pendingDraft.sessionId); setPendingDraft(null); }}
+                    className="text-xs"
+                  >
+                    Discard
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleResumeDraft(pendingDraft)}
+                    className="text-xs"
+                  >
+                    Resume
+                  </Button>
+                </div>
+              </div>
+            )}
             <h2 className="mb-2 text-center text-lg font-semibold">Choose your activity</h2>
             {ALL_SURFACES.map((s) => (
               <button

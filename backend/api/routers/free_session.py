@@ -350,6 +350,30 @@ def get_history(
     return {"sessions": result}
 
 
+@router.delete("/{session_id}/climb/{climb_index}")
+def delete_climb(
+    session_id: str,
+    climb_index: int,
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Delete a single climb from an active free session by its index."""
+    state = load_state(user_id)
+    session = _find_session(state, session_id)
+
+    if session.get("finished_at") is not None:
+        raise HTTPException(status_code=400, detail="Session already finished")
+
+    climbs = session.get("climbs", [])
+    new_climbs = [c for c in climbs if c.get("index") != climb_index]
+
+    if len(new_climbs) == len(climbs):
+        raise HTTPException(status_code=404, detail=f"Climb {climb_index} not found in session")
+
+    session["climbs"] = new_climbs
+    save_state(state, user_id)
+    return {"status": "ok", "climbs_remaining": len(new_climbs)}
+
+
 @router.delete("/{session_id}")
 def delete_session(
     session_id: str,

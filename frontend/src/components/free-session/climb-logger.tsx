@@ -1,23 +1,18 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Zap, Check, X, Plus, Minus } from "lucide-react";
+import { Zap, Check, X, Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GradePicker } from "./grade-picker";
 import { RestTimer } from "./rest-timer";
-import { logFreeClimb } from "@/lib/api";
+import { logFreeClimb, deleteFreeClimb } from "@/lib/api";
 import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
-
-interface Climb {
-  index: number;
-  grade: string;
-  status: string;
-  attempts: number;
-  style?: string;
-  topped?: boolean;
-  notes?: string;
-  logged_at: string;
-}
+import {
+  saveDraft,
+  loadDraft,
+  clearDraft,
+  type FreeSessionDraft,
+} from "@/lib/free-session-utils";
 
 export interface LoggedClimb {
   index: number;
@@ -73,16 +68,48 @@ export function ClimbLogger({
   const [showNotes, setShowNotes] = useState(false);
 
   // Session state
-  const [climbs, setClimbs] = useState<Climb[]>([]);
+  const [climbs, setClimbs] = useState<LoggedClimb[]>([]);
   const [isLogging, setIsLogging] = useState(false);
+  const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
   const [restKey, setRestKey] = useState(0);
   const [showRest, setShowRest] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [resumed, setResumed] = useState(false);
   const startedAt = useRef(Date.now());
   const [elapsedSecs, setElapsedSecs] = useState(0);
 
-  // Elapsed timer — update every second, wall-clock based
+  // Refs for history scroll (scroll to bottom on new climb)
+  const historyRef = useRef<HTMLDivElement>(null);
+  const draftSavedRef = useRef(false);
+
+  // ── Restore draft on mount ──────────────────────────────────────────────
+  useEffect(() => {
+    const draft = loadDraft(sessionId);
+    if (!draft) return;
+
+    setGrade(draft.currentGrade);
+    setStatus(draft.currentStatus);
+    setAttempts(draft.currentAttempts);
+    if (draft.currentStyle !== undefined) setStyle(draft.currentStyle);
+    if (draft.currentTopped !== undefined) setTopped(draft.currentTopped);
+    setNotes(draft.currentNotes);
+    if (draft.loggedClimbs.length > 0) {
+      setClimbs(draft.loggedClimbs);
+      startedAt.current = draft.startedAt;
+      setResumed(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]);
+
+  // Hide resume banner after 4s
+  useEffect(() => {
+    if (!resumed) return;
+    const id = setTimeout(() => setResumed(false), 4000);
+    return () => clearTimeout(id);
+  }, [resumed]);
+
+  // ── Elapsed timer ──────────────────────────────────────────────────────
   useEffect(() => {
     const id = setInterval(() => {
       setElapsedSecs(Math.floor((Date.now() - startedAt.current) / 1000));
@@ -93,14 +120,14 @@ export function ClimbLogger({
   const elapsedMin = Math.floor(elapsedSecs / 60);
   const elapsedSec = elapsedSecs % 60;
 
-  // Auto-set attempts based on status
+  // ── Auto-set attempts based on status ──────────────────────────────────
   useEffect(() => {
     if (status === "flash") setAttempts(1);
     else if (status === "sent" && attempts < 2) setAttempts(2);
     else if (status === "attempted" && attempts < 1) setAttempts(1);
   }, [status, attempts]);
 
-  // Lead style → auto attempts
+  // ── Lead style → auto attempts ─────────────────────────────────────────
   useEffect(() => {
     if (isLead(surface)) {
       if (style === "onsight" || style === "flash") {
@@ -115,6 +142,56 @@ export function ClimbLogger({
     }
   }, [style, surface, attempts]);
 
+  // ── Draft persistence: save on every form state change ─────────────────
+  useEffect(() => {
+    // Skip the very first render before mount-restore completes
+    if (!draftSavedRef.current && climbs.length === 0) {
+      draftSavedRef.current = true;
+      return;
+    }
+    draftSavedRef.current = true;
+
+    const draft: FreeSessionDraft = {
+      version: 1,
+      sessionId,
+      surface,
+      sessionMode,
+      presetName,
+      gymName,
+      targetGrade,
+      restSeconds,
+      tip,
+      targetClimbs,
+      currentGrade: grade,
+      currentStatus: status,
+      currentAttempts: attempts,
+      currentStyle: style,
+      currentTopped: topped,
+      currentNotes: notes,
+      loggedClimbs: climbs,
+      startedAt: startedAt.current,
+    };
+    saveDraft(draft);
+  }, [
+    grade, status, attempts, style, topped, notes, climbs,
+    sessionId, surface, sessionMode, presetName, gymName,
+    targetGrade, restSeconds, tip, targetClimbs,
+  ]);
+
+  // ── beforeunload warning ───────────────────────────────────────────────
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (climbs.length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [climbs.length]);
+
+  // ── Handlers ───────────────────────────────────────────────────────────
+
   const handleLog = useCallback(async () => {
     if (isLogging) return;
     setIsLogging(true);
@@ -128,7 +205,7 @@ export function ClimbLogger({
         notes: notes || undefined,
       });
 
-      const newClimb: Climb = {
+      const newClimb: LoggedClimb = {
         index: result.index,
         grade,
         status,
@@ -139,8 +216,14 @@ export function ClimbLogger({
         logged_at: result.logged_at,
       };
 
-      setClimbs((prev) => [newClimb, ...prev]);
+      // Issue 3: append at bottom (chronological order)
+      setClimbs((prev) => [...prev, newClimb]);
       onClimbLogged?.(newClimb);
+
+      // Scroll history to bottom
+      setTimeout(() => {
+        historyRef.current?.scrollTo({ top: historyRef.current.scrollHeight, behavior: "smooth" });
+      }, 50);
 
       // Reset form
       setStatus("flash");
@@ -163,8 +246,41 @@ export function ClimbLogger({
     }
   }, [sessionId, grade, status, attempts, style, topped, notes, surface, sessionMode, restSeconds, isLogging]);
 
+  const handleDeleteClimb = useCallback(async (climbIndex: number) => {
+    // Optimistic remove
+    const removed = climbs.find((c) => c.index === climbIndex);
+    if (!removed) return;
+    setDeletingIndex(climbIndex);
+    setClimbs((prev) => prev.filter((c) => c.index !== climbIndex));
+    try {
+      await deleteFreeClimb(sessionId, climbIndex);
+    } catch {
+      // Rollback on failure
+      setClimbs((prev) => {
+        const restored = [...prev, removed].sort((a, b) => a.index - b.index);
+        return restored;
+      });
+    } finally {
+      setDeletingIndex(null);
+    }
+  }, [sessionId, climbs]);
+
+  const handleFinish = useCallback(() => {
+    clearDraft(sessionId);
+    onFinish();
+  }, [sessionId, onFinish]);
+
+  const handleCancel = useCallback(() => {
+    clearDraft(sessionId);
+    onCancel?.();
+  }, [sessionId, onCancel]);
+
   const targetMax = targetClimbs ? parseInt(targetClimbs.split("-")[1] || "0") : 0;
-  const statusIcons = { flash: <Zap className="size-4" />, sent: <Check className="size-4" />, attempted: <X className="size-4" /> };
+  const statusIcons = {
+    flash: <Zap className="size-4" />,
+    sent: <Check className="size-4" />,
+    attempted: <X className="size-4" />,
+  };
   const statusColors = {
     flash: "bg-amber-500/20 text-amber-400 border-amber-500/40",
     sent: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
@@ -190,6 +306,18 @@ export function ClimbLogger({
           </p>
         )}
       </div>
+
+      {/* Resume banner */}
+      {resumed && (
+        <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm">
+          <span className="text-primary font-medium">
+            Session resumed — {climbs.length} {isLead(surface) ? "routes" : "boulders"} restored
+          </span>
+          <button onClick={() => setResumed(false)} className="ml-2 text-primary/60 hover:text-primary">
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Phase tip */}
       {tip && (
@@ -267,26 +395,30 @@ export function ClimbLogger({
           </div>
         )}
 
-        {/* Attempts picker (visible for sent/attempted boulder, redpoint/project lead) */}
+        {/* Attempts picker — Issue 4: better label */}
         {(((!isLead(surface) && status !== "flash") ||
           (isLead(surface) && (style === "redpoint" || style === "project"))) && (
-          <div className="mb-4 flex items-center justify-center gap-4">
-            <span className="text-sm text-muted-foreground">Attempts:</span>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={() => setAttempts(Math.max(status === "sent" ? 2 : 1, attempts - 1))}
-            >
-              <Minus className="size-4" />
-            </Button>
-            <span className="min-w-[32px] text-center text-xl font-bold tabular-nums">{attempts}</span>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={() => setAttempts(Math.min(20, attempts + 1))}
-            >
-              <Plus className="size-4" />
-            </Button>
+          <div className="mb-4">
+            <p className="mb-2 text-center text-xs text-muted-foreground">
+              {status === "sent" ? `${attempts} attempt${attempts !== 1 ? "s" : ""} to send` : `${attempts} attempt${attempts !== 1 ? "s" : ""} — didn't send`}
+            </p>
+            <div className="flex items-center justify-center gap-4">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => setAttempts(Math.max(status === "sent" ? 2 : 1, attempts - 1))}
+              >
+                <Minus className="size-4" />
+              </Button>
+              <span className="min-w-[32px] text-center text-xl font-bold tabular-nums">{attempts}</span>
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={() => setAttempts(Math.min(20, attempts + 1))}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
           </div>
         ))}
 
@@ -331,7 +463,7 @@ export function ClimbLogger({
         <RestTimer initialSeconds={180} autoStart={false} />
       ) : null}
 
-      {/* Climb history */}
+      {/* Climb history — Issue 1: scrollable container, Issue 3: chronological (append order), Issue 5: delete button */}
       {climbs.length > 0 && (
         <div className="rounded-xl border bg-card p-4">
           <div className="mb-2 flex items-center justify-between">
@@ -340,12 +472,13 @@ export function ClimbLogger({
               {climbs.length}{targetMax > 0 ? `/${targetMax}` : ""} {isLead(surface) ? "routes" : "boulders"}
             </span>
           </div>
-          <div className="flex flex-col gap-1.5">
+          {/* Issue 1: max-height + scroll */}
+          <div ref={historyRef} className="flex max-h-[240px] flex-col gap-1.5 overflow-y-auto">
             {climbs.map((c) => (
-              <div key={c.index} className="flex items-center gap-2 text-sm">
-                <span className="w-6 text-right text-xs text-muted-foreground">#{c.index}</span>
+              <div key={c.index} className="group flex items-center gap-2 text-sm">
+                <span className="w-6 shrink-0 text-right text-xs text-muted-foreground">#{c.index}</span>
                 <span className="font-medium">{isLead(surface) ? c.grade : displayBoulderGrade(c.grade, gradeSystem)}</span>
-                <span className={`flex items-center gap-0.5 ${
+                <span className={`flex shrink-0 items-center gap-0.5 ${
                   c.status === "flash" ? "text-amber-400" :
                   c.status === "sent" ? "text-emerald-400" : "text-red-400"
                 }`}>
@@ -356,7 +489,16 @@ export function ClimbLogger({
                 {isLead(surface) && c.style && (
                   <span className="text-xs text-muted-foreground uppercase">{c.style}</span>
                 )}
-                {c.notes && <span className="truncate text-xs text-muted-foreground">{c.notes}</span>}
+                {c.notes && <span className="min-w-0 truncate text-xs text-muted-foreground">{c.notes}</span>}
+                {/* Issue 5: delete button */}
+                <button
+                  onClick={() => handleDeleteClimb(c.index)}
+                  disabled={deletingIndex === c.index}
+                  className="ml-auto shrink-0 text-muted-foreground/40 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100 disabled:opacity-50"
+                  aria-label={`Delete climb #${c.index}`}
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
               </div>
             ))}
           </div>
@@ -404,7 +546,7 @@ export function ClimbLogger({
             <Button variant="outline" onClick={() => setShowConfirm(false)} className="flex-1">
               Keep climbing
             </Button>
-            <Button onClick={onFinish} className="flex-1">
+            <Button onClick={handleFinish} className="flex-1">
               Finish
             </Button>
           </div>
@@ -421,7 +563,7 @@ export function ClimbLogger({
             <Button variant="outline" onClick={() => setShowCancelConfirm(false)} className="flex-1">
               Keep climbing
             </Button>
-            <Button variant="destructive" onClick={onCancel} className="flex-1">
+            <Button variant="destructive" onClick={handleCancel} className="flex-1">
               Cancel session
             </Button>
           </div>

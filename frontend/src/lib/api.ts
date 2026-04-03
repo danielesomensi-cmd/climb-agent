@@ -386,6 +386,12 @@ export const logFreeClimb = (sessionId: string, data: {
     { method: "POST", body: JSON.stringify(data) }
   );
 
+export const deleteFreeClimb = (sessionId: string, climbIndex: number) =>
+  request<{ status: string; climbs_remaining: number }>(
+    `/api/free-session/${sessionId}/climb/${climbIndex}`,
+    { method: "DELETE" }
+  );
+
 export const finishFreeSession = (sessionId: string, data: {
   overall_feel?: string;
   notes?: string;
