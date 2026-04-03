@@ -526,6 +526,32 @@ Depends on: B122 pattern. Supabase migration ✅ complete.
 
 ---
 
+## Priority 2.75 — Architecture
+
+### D168 — Outdoor / Week Plan Unification Audit
+
+**Priority:** P2 | **Status:** Open | **Type:** D (architecture audit) | **Effort:** L
+
+Outdoor sessions and week plan are two separate systems that don't communicate:
+- Outdoor: JSONL storage, `/api/outdoor/*` endpoints, `OutdoorLogForm` component
+- Week plan: `user_state.week_plans`, `/api/week/*` endpoints, week/today views
+
+Problems caused by this split:
+- Today/Week views don't show outdoor sessions logged via /outdoor
+- Multiple entry points create sessions in different backends
+- Delete mechanisms are inconsistent (week plan removal vs JSONL deletion)
+- Same-day conflict checks need to be duplicated everywhere
+
+Audit should:
+1. Map all data flows and entry points
+2. Propose single source of truth for daily sessions
+3. Design unified view: Today/Week shows ALL sessions (planned + outdoor + free)
+4. Migration path from current split to unified model
+
+Depends on: B186 (immediate fixes). Must be done before further outdoor features.
+
+---
+
 ## Priority 3 — UI polish
 
 | ID | Title | Effort | Notes |

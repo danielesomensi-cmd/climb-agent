@@ -546,10 +546,19 @@ export default function WeekPage() {
     }
   }
 
-  /** Open outdoor log form */
-  function handleLogOutdoor(date: string) {
-    setOutdoorLogDate(date);
-    getOutdoorSpots().then((data) => setOutdoorSpots(data.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
+  /** Open outdoor log form — check for existing session first (B186) */
+  async function handleLogOutdoor(date: string) {
+    const spotsData = await getOutdoorSpots().catch(() => ({ spots: [] }));
+    setOutdoorSpots(spotsData.spots);
+    try {
+      const existing = await getOutdoorLogByDate(date);
+      // Session already exists for this date → open edit dialog
+      setOutdoorEditData(existing.session);
+      setOutdoorEditDate(date);
+    } catch {
+      // No session yet → open new log dialog
+      setOutdoorLogDate(date);
+    }
   }
 
   /** After outdoor log, verify data persisted, then mark complete (D134) */

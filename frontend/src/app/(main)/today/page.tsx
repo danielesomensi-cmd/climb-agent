@@ -615,10 +615,19 @@ function TodayContent() {
     }
   }
 
-  /** Open the outdoor log form for a day */
-  function handleLogOutdoor(date: string) {
-    setOutdoorLogDate(date);
-    getOutdoorSpots().then((data) => setOutdoorSpots(data.spots)).catch((err) => { console.error("Failed to load outdoor spots:", err); });
+  /** Open outdoor log form — check for existing session first (B186) */
+  async function handleLogOutdoor(date: string) {
+    const spotsData = await getOutdoorSpots().catch(() => ({ spots: [] }));
+    setOutdoorSpots(spotsData.spots);
+    try {
+      const existing = await getOutdoorLogByDate(date);
+      // Session already exists for this date → open edit dialog
+      setOutdoorEditData(existing.session);
+      setOutdoorEditDate(date);
+    } catch {
+      // No session yet → open new log dialog
+      setOutdoorLogDate(date);
+    }
   }
 
   /** After outdoor routes are logged, verify data persisted, then mark complete (D134) */

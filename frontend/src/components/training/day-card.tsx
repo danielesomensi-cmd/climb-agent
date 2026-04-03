@@ -157,6 +157,7 @@ export function DayCard({
   const [feedbackPicking, setFeedbackPicking] = useState(false);
   const [otherDurationStr, setOtherDurationStr] = useState("60");
   const [editingOther, setEditingOther] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [editName, setEditName] = useState("");
   const [editFeedback, setEditFeedback] = useState("");
   const [editDuration, setEditDuration] = useState("");
@@ -462,16 +463,27 @@ export function DayCard({
                           Log routes
                         </Button>
                       )}
-                      {onRemoveOutdoor && (
+                      {onRemoveOutdoor && !confirmRemove && (
                         <Button
                           size="sm"
                           variant="ghost"
                           className="text-xs text-muted-foreground"
-                          onClick={() => onRemoveOutdoor(day.date)}
+                          onClick={() => setConfirmRemove(true)}
                         >
                           <X className="size-3 mr-1" />
                           Remove
                         </Button>
+                      )}
+                      {onRemoveOutdoor && confirmRemove && (
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-muted-foreground">Remove from plan?</span>
+                          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => setConfirmRemove(false)}>
+                            Cancel
+                          </Button>
+                          <Button size="sm" variant="destructive" className="h-6 px-2 text-xs" onClick={() => { setConfirmRemove(false); onRemoveOutdoor(day.date); }}>
+                            Remove
+                          </Button>
+                        </div>
                       )}
                     </>
                   )}
