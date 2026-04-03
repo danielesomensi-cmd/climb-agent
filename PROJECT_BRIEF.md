@@ -29,7 +29,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 
 **Current phase:** Open beta — free access for ~6-10 real users. Stripe paused intentionally (STRIPE_SECRET_KEY removed from Railway). Re-enable with sk_live keys after usage validation (target: 6+ users at 3x/week for 2 consecutive weeks).
 
-**Persistence:** Supabase JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions).
+**Persistence:** Supabase JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions). RLS enabled on all 6 tables (no policies, service role key bypasses).
 
 **Pricing at launch:** EUR 14.99/month, 14-day trial, monthly-only. Founding Climber offer: first 50 paid users locked at EUR 9.99/month lifetime.
 
