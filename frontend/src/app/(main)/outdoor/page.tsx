@@ -8,6 +8,7 @@ import type { OutdoorSession, OutdoorStats } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Check, ArrowUpRight, ChevronDown } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useUserState } from "@/lib/hooks/use-state";
 import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 
@@ -90,9 +91,13 @@ function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
 }
 
 export default function OutdoorPage() {
+  const router = useRouter();
   const { isLoaded: authReady } = useAuth();
   const { state: userState } = useUserState(authReady);
   const gradeSystem: BoulderGradeSystem = ((userState as Record<string, unknown>)?.preferences as Record<string, unknown>)?.grade_system_boulder as BoulderGradeSystem || "font";
+  const outdoorSpots = ((userState as Record<string, unknown>)?.outdoor_spots as Array<{ name: string; discipline: string }>) || [];
+  const hasSpots = outdoorSpots.length > 0;
+  const today = new Date().toISOString().split("T")[0];
   const [sessions, setSessions] = useState<(OutdoorSession & { load_score?: number })[]>([]);
   const [stats, setStats] = useState<OutdoorStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,6 +136,28 @@ export default function OutdoorPage() {
       <TopBar title="Outdoor History" />
 
       <main className="mx-auto max-w-2xl space-y-6 p-4">
+        {/* Intro + CTA */}
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Track your outdoor sessions. Log routes and projects to see your progression over time.
+          </p>
+          {hasSpots ? (
+            <button
+              onClick={() => router.push(`/free-session?context=standalone&date=${today}`)}
+              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:opacity-80"
+            >
+              Start Outdoor Session
+            </button>
+          ) : (
+            <button
+              onClick={() => router.push("/settings")}
+              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:opacity-80"
+            >
+              Add your first spot
+            </button>
+          )}
+        </div>
+
         {loading && (
           <div className="flex items-center justify-center py-12">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
