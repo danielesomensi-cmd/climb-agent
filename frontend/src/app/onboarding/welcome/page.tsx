@@ -48,7 +48,7 @@ export default function WelcomePage() {
       </Card>
 
       <div className="flex flex-col items-end gap-3">
-        <Button onClick={() => router.push("/onboarding/profile")}>
+        <Button onClick={() => router.push("/onboarding/install")}>
           Let&apos;s start
         </Button>
         <button

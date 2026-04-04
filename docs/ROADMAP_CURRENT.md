@@ -203,6 +203,7 @@ Same 5 axes, different display labels per discipline. RadarChart now accepts `di
 | GTM-01 | **Onboarding dry-run** — Daniele completes full flow as unknown user (clean account, no founder help). Document every friction point. | D | S | ✅ Done | Completed 2026-04-01. 13 pages reviewed. 0 blockers, 3 P2, 5 P3. |
 | GTM-02 | **Fix onboarding blockers** — 9 quick fixes from dry-run (copy, CSS, info boxes) | B | S | ✅ Done | Welcome copy, discipline subtitle, goals helpers + weeks display, weakness padding, test labels, limitations copy, availability info box, trips skip. (2026-04-01) |
 | GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Vato, Alexis on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay €14.99/mo. |
+| A-GTM-08 | **PWA Install Guide in onboarding** — new step 2 (after welcome, before profile) with iPhone/Android tabs teaching home screen install | A | S | ✅ Done | Two-tab layout, 3 numbered steps per platform, custom iOS share icon SVG. 34 pages total. (2026-04-04) |
 
 ### Phase 1 — Pricing + Stripe go-live (week 2-3)
 

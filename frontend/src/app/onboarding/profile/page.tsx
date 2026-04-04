@@ -107,7 +107,7 @@ export default function ProfilePage() {
       <div className="flex justify-between">
         <Button
           variant="outline"
-          onClick={() => router.push("/onboarding/welcome")}
+          onClick={() => router.push("/onboarding/install")}
         >
           Back
         </Button>
