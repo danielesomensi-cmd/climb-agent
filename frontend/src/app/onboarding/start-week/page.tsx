@@ -39,9 +39,9 @@ export default function StartWeekPage() {
       if (offset > 0) {
         await setStartWeek(offset);
       }
-      router.push("/today"); // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
+      router.push("/plan"); // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
     } catch {
-      router.push("/today"); // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
+      router.push("/plan"); // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
     } finally {
       setLoading(false);
     }
