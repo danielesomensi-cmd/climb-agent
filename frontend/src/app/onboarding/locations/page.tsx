@@ -219,6 +219,13 @@ export default function LocationsPage() {
                     {name}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  className="rounded-full border border-dashed px-3 py-1 text-xs font-medium transition-colors hover:bg-accent text-muted-foreground"
+                  onClick={() => applyPreset(gymIndex, gymEquipment.map((item) => item.id))}
+                >
+                  All
+                </button>
               </div>
 
               {loadingDefaults ? (

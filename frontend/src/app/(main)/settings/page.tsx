@@ -674,12 +674,12 @@ export default function SettingsPage() {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Rimuovere questo spot?</AlertDialogTitle>
-                          <AlertDialogDescription>Questa azione non può essere annullata.</AlertDialogDescription>
+                          <AlertDialogTitle>Remove this spot?</AlertDialogTitle>
+                          <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Annulla</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteSpot(spot.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Rimuovi</AlertDialogAction>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteSpot(spot.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove</AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
@@ -895,11 +895,11 @@ export default function SettingsPage() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Importare dati?</AlertDialogTitle>
-                        <AlertDialogDescription>L&apos;importazione sovrascriverà tutti i tuoi dati attuali. Assicurati di avere un backup.</AlertDialogDescription>
+                        <AlertDialogTitle>Import data?</AlertDialogTitle>
+                        <AlertDialogDescription>Importing will overwrite all your current data. Make sure you have a backup.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Annulla</AlertDialogCancel>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => {
                       const input = document.createElement("input");
                       input.type = "file";

@@ -141,7 +141,7 @@ export default function ReviewPage() {
       }, 1500);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        setError("La generazione sta impiegando troppo. Riprova.");
+        setError("Generation is taking too long. Please try again.");
       } else {
         setError(err instanceof Error ? err.message : "Error generating the plan");
       }
@@ -165,7 +165,7 @@ export default function ReviewPage() {
       }, 1500);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
-        setError("La generazione sta impiegando troppo. Riprova.");
+        setError("Generation is taking too long. Please try again.");
       } else {
         setError(err instanceof Error ? err.message : "Error generating the plan");
       }

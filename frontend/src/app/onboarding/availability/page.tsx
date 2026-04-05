@@ -105,6 +105,11 @@ export default function AvailabilityPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {gyms.length === 0 && (
+            <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-200">
+              <strong>Want to train at a gym?</strong> Go back to the Locations step and add at least one gym. Even a generic gym with all equipment selected will work — you can refine it later.
+            </div>
+          )}
           <div className="rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-200">
             Set your typical training week. The planner will build sessions around your schedule, matching each slot to the right location and equipment. You can adjust this anytime — and each weekend you&apos;ll review and confirm next week&apos;s plan.
             {gyms.length > 1 && (
@@ -164,10 +169,13 @@ export default function AvailabilityPage() {
                             </button>
                             <button
                               type="button"
+                              disabled={gyms.length === 0}
                               className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
-                                s.preferred_location === "gym"
-                                  ? "border-primary bg-primary/10 text-primary"
-                                  : "border-muted text-muted-foreground"
+                                gyms.length === 0
+                                  ? "border-muted text-muted-foreground/40 cursor-not-allowed"
+                                  : s.preferred_location === "gym"
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-muted text-muted-foreground"
                               }`}
                               onClick={() => setLocation(day.key, slot.key, "gym")}
                             >
@@ -186,9 +194,7 @@ export default function AvailabilityPage() {
                             </button>
                           </div>
 
-                          {s.preferred_location === "gym" && gyms.length === 0 && (
-                            <p className="text-[10px] text-red-500">Aggiungi una palestra in Locations</p>
-                          )}
+                          {/* gym selector or nothing — no-gym banner is shown at page level */}
                           {s.preferred_location === "gym" && gyms.length > 0 && (
                             <Select
                               value={s.gym_id ?? ""}
@@ -312,8 +318,8 @@ export default function AvailabilityPage() {
           Back
         </Button>
         <Button
-          disabled={gyms.length === 0 && Object.values(availability).some(day =>
-            day && Object.values(day).some((s: SlotData) => s.available && s.preferred_location === "gym")
+          disabled={!Object.values(availability).some(day =>
+            day && Object.values(day).some((s: SlotData) => s.available || s.preferred_location === "other_sport")
           )}
           onClick={() => router.push("/onboarding/trips")}
         >
