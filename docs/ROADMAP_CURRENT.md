@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-02 (B186: pulling rotation, 3 contact exercises, 8 dead templates archived)
+> Last updated: 2026-04-05 (B188: bypass subscribe, B187: English strings + gym UX, D170: outdoor audit, A-GTM-08: PWA install guide)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -204,6 +204,8 @@ Same 5 axes, different display labels per discipline. RadarChart now accepts `di
 | GTM-02 | **Fix onboarding blockers** — 9 quick fixes from dry-run (copy, CSS, info boxes) | B | S | ✅ Done | Welcome copy, discipline subtitle, goals helpers + weeks display, weakness padding, test labels, limitations copy, availability info box, trips skip. (2026-04-01) |
 | GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Vato, Alexis on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay €14.99/mo. |
 | A-GTM-08 | **PWA Install Guide in onboarding** — new step 2 (after welcome, before profile) with iPhone/Android tabs teaching home screen install | A | S | ✅ Done | Two-tab layout, 3 numbered steps per platform, custom iOS share icon SVG. 34 pages total. (2026-04-04) |
+| B187 | **English strings + gym UX guards** — replace 11 hardcoded Italian strings, disable Gym button when no gyms, add amber banner, "All" quick-fill button, fix Next validation | B | S | ✅ Done | Triggered by beta tester Tabitha stuck on availability page. (2026-04-05) |
+| B188 | **Bypass subscribe page** — route onboarding start-week to `/plan` instead of `/subscribe` while Stripe disabled | B | XS | ✅ Done | Beta testers hit 503 on subscribe page. TODO marker for GTM-04 re-enable. (2026-04-05) |
 
 ### Phase 1 — Pricing + Stripe go-live (week 2-3)
 
@@ -531,7 +533,7 @@ Depends on: B122 pattern. Supabase migration ✅ complete.
 
 ### D168 — Outdoor / Week Plan Unification Audit
 
-**Priority:** P2 | **Status:** Open | **Type:** D (architecture audit) | **Effort:** L
+**Priority:** P2 | **Status:** Audit done (D170) — implementation open | **Type:** D (architecture audit) | **Effort:** L
 
 Outdoor sessions and week plan are two separate systems that don't communicate:
 - Outdoor: JSONL storage, `/api/outdoor/*` endpoints, `OutdoorLogForm` component
@@ -550,6 +552,8 @@ Audit should:
 4. Migration path from current split to unified model
 
 Depends on: B186 (immediate fixes). Must be done before further outdoor features.
+
+Audit deliverable: `docs/outdoor_audit_D170.md` (2026-04-04) — 13 findings (2 P1, 5 P2, 6 P3), 5 redesign recommendations. Root cause of outdoor+indoor coexistence bug identified (F1: `add_outdoor` doesn't clear sessions).
 
 ---
 
