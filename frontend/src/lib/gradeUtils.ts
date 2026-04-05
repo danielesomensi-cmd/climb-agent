@@ -2,11 +2,29 @@
 
 const FONT_TO_V: Record<string, string> = {
   "4A": "V0", "4B": "V0", "4C": "V1",
-  "5A": "V2", "5B": "V2", "5C": "V3",
-  "6A": "V4", "6A+": "V4", "6B": "V4", "6B+": "V5", "6C": "V5", "6C+": "V6",
-  "7A": "V6", "7A+": "V7", "7B": "V8", "7B+": "V8", "7C": "V9", "7C+": "V10",
+  "5A": "V2", "5A+": "V2", "5B": "V3", "5B+": "V3", "5C": "V3", "5C+": "V4",
+  "6A": "V4", "6A+": "V4", "6B": "V5", "6B+": "V5", "6C": "V6", "6C+": "V6",
+  "7A": "V7", "7A+": "V7", "7B": "V8", "7B+": "V9", "7C": "V9", "7C+": "V10",
   "8A": "V11", "8A+": "V12", "8B": "V13", "8B+": "V14", "8C": "V15", "8C+": "V16",
 };
+
+/** V-scale grades with their canonical Fontainebleau storage values */
+const V_TO_FONT: Record<string, string> = {
+  "V0": "4A", "V1": "4C", "V2": "5A", "V3": "5B", "V4": "6A",
+  "V5": "6B", "V6": "6C", "V7": "7A", "V8": "7B", "V9": "7B+",
+  "V10": "7C+", "V11": "8A", "V12": "8A+", "V13": "8B", "V14": "8B+",
+  "V15": "8C", "V16": "8C+",
+};
+
+export const V_SCALE_GRADES = [
+  "V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7",
+  "V8", "V9", "V10", "V11", "V12", "V13", "V14", "V15",
+];
+
+/** Convert a V-scale grade to its canonical Fontainebleau storage value */
+export function vScaleToFont(vGrade: string): string {
+  return V_TO_FONT[vGrade] ?? vGrade;
+}
 
 export type BoulderGradeSystem = "font" | "v_scale";
 

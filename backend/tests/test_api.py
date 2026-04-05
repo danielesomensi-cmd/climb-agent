@@ -1062,13 +1062,13 @@ class TestStartWeek:
         expected = (datetime.strptime(original_start, "%Y-%m-%d") - timedelta(days=14)).strftime("%Y-%m-%d")
         assert data["start_date"] == expected
 
-    def test_start_week_clamps_to_first_phase(self):
+    def test_start_week_clamps_to_total_weeks(self):
         mc = self._setup()
-        first_dur = mc["phases"][0]["duration_weeks"]
+        total_weeks = sum(p.get("duration_weeks", 1) for p in mc["phases"])
         r = client.post("/api/onboarding/start-week", json={"offset_weeks": 99})
         assert r.status_code == 200
         data = r.json()
-        assert data["offset_applied"] == first_dur - 1
+        assert data["offset_applied"] == total_weeks - 1
 
     def test_start_week_no_macrocycle(self):
         client.delete("/api/state")

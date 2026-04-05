@@ -410,8 +410,8 @@ def onboarding_start_week(body: StartWeekRequest, user_id: Optional[str] = Depen
     if not mc or not mc.get("phases"):
         raise HTTPException(status_code=422, detail="No macrocycle found — complete onboarding first")
 
-    first_phase_dur = mc["phases"][0].get("duration_weeks", 1)
-    offset = min(body.offset_weeks, first_phase_dur - 1)
+    total_weeks = sum(p.get("duration_weeks", 1) for p in mc["phases"])
+    offset = min(body.offset_weeks, total_weeks - 1)
 
     if offset > 0:
         old_start = datetime.strptime(mc["start_date"], "%Y-%m-%d").date()

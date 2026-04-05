@@ -19,7 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
+import { displayBoulderGrade, V_SCALE_GRADES, vScaleToFont, type BoulderGradeSystem } from "@/lib/gradeUtils";
 
 const LEAD_GRADES = [
   "5a","5a+","5b","5b+","5c","5c+",
@@ -93,6 +93,19 @@ export default function GradesPage() {
     [gradeSystem],
   );
 
+  // When using V-scale, show clean V-grade list and convert to Font on save
+  const isVScale = gradeSystem === "v_scale";
+  const boulderOptions = isVScale ? V_SCALE_GRADES : BOULDER_GRADES;
+  const setBoulder = (field: keyof typeof grades, value: string) => {
+    set(field, isVScale ? vScaleToFont(value) : value);
+  };
+  // For V-scale: convert stored Font value back to V for the select
+  const boulderValue = (field: keyof typeof grades) => {
+    const stored = grades[field] ?? "";
+    if (!isVScale || !stored) return stored as string;
+    return displayBoulderGrade(stored as string, "v_scale");
+  };
+
   // Validation: required fields must be filled
   const leadValid = !leadRequired || (grades.lead_max_rp !== "" && grades.lead_max_os !== "");
   const boulderValid = !boulderRequired || ((grades.boulder_max_rp ?? "") !== "" && (grades.boulder_max_os ?? "") !== "");
@@ -161,11 +174,10 @@ export default function GradesPage() {
                 Your maximum boulder grade
               </p>
               <GradeSelect
-                value={grades.boulder_max_rp ?? ""}
-                onChange={(v) => set("boulder_max_rp", v)}
-                options={BOULDER_GRADES}
+                value={boulderValue("boulder_max_rp")}
+                onChange={(v) => setBoulder("boulder_max_rp", v)}
+                options={boulderOptions}
                 placeholder="Select grade"
-                formatter={formatBoulder}
               />
             </div>
             <div className="space-y-2">
@@ -174,11 +186,10 @@ export default function GradesPage() {
                 Your boulder onsight or flash grade
               </p>
               <GradeSelect
-                value={grades.boulder_max_os ?? ""}
-                onChange={(v) => set("boulder_max_os", v)}
-                options={BOULDER_GRADES}
+                value={boulderValue("boulder_max_os")}
+                onChange={(v) => setBoulder("boulder_max_os", v)}
+                options={boulderOptions}
                 placeholder="Select grade"
-                formatter={formatBoulder}
               />
             </div>
           </CardContent>
@@ -207,21 +218,19 @@ export default function GradesPage() {
                       </button>
                     </div>
                     <GradeSelect
-                      value={grades.boulder_max_rp ?? ""}
-                      onChange={(v) => set("boulder_max_rp", v)}
-                      options={BOULDER_GRADES}
+                      value={boulderValue("boulder_max_rp")}
+                      onChange={(v) => setBoulder("boulder_max_rp", v)}
+                      options={boulderOptions}
                       placeholder="Select grade (optional)"
-                      formatter={formatBoulder}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>Boulder Onsight / Flash</Label>
                     <GradeSelect
-                      value={grades.boulder_max_os ?? ""}
-                      onChange={(v) => set("boulder_max_os", v)}
-                      options={BOULDER_GRADES}
+                      value={boulderValue("boulder_max_os")}
+                      onChange={(v) => setBoulder("boulder_max_os", v)}
+                      options={boulderOptions}
                       placeholder="Select grade (optional)"
-                      formatter={formatBoulder}
                     />
                   </div>
                 </>

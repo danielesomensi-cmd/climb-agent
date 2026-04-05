@@ -218,6 +218,10 @@ export interface OnboardingData {
     hip_flexibility_cm?: number;
     lp_max_lift_5s_right_kg?: number;
     lp_max_lift_5s_left_kg?: number;
+    lp_repeater_7_3_right_reps?: number;
+    lp_repeater_7_3_left_reps?: number;
+    lp_duration_20mm_right_seconds?: number;
+    lp_duration_20mm_left_seconds?: number;
     last_test_date?: string;
   };
   limitations: Array<{

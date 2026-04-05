@@ -207,13 +207,13 @@ export default function LocationsPage() {
               </div>
 
               {/* Quick-fill presets */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs text-muted-foreground">Quick-fill:</span>
                 {Object.entries(GYM_PRESETS).map(([name, preset]) => (
                   <button
                     key={name}
                     type="button"
-                    className="rounded-full border px-3 py-1 text-xs font-medium transition-colors hover:bg-accent"
+                    className="rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-accent"
                     onClick={() => applyPreset(gymIndex, preset)}
                   >
                     {name}
@@ -221,7 +221,7 @@ export default function LocationsPage() {
                 ))}
                 <button
                   type="button"
-                  className="rounded-full border border-dashed px-3 py-1 text-xs font-medium transition-colors hover:bg-accent text-muted-foreground"
+                  className="rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors hover:bg-accent"
                   onClick={() => applyPreset(gymIndex, gymEquipment.map((item) => item.id))}
                 >
                   All

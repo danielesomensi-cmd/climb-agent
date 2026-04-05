@@ -74,26 +74,56 @@ function buildTestSections(device: "hangboard" | "loading_pin"): TestSection[] {
       example: "E.g.: weigh 77kg + 45kg = 122kg total",
       unit: "kg",
     },
-    {
-      key: "repeater",
-      title: "Repeater 7/3 (20mm edge)",
-      description:
-        "Hang 7s, rest 3s, repeat to failure at 60% of max hang.",
-      fieldKey: "repeater_7_3_max_sets_20mm",
-      fieldLabel: "Repetitions",
-      example: "E.g.: 24 reps",
-      unit: "reps",
-    },
-    {
-      key: "hang_duration",
-      title: "Max Hang Duration (20mm)",
-      description:
-        "Hang bodyweight-only on a 20mm edge, half crimp, as long as possible. Stop when you drop.",
-      fieldKey: "max_hang_duration_20mm_seconds",
-      fieldLabel: "Duration (seconds)",
-      example: "E.g.: 65 seconds. Moderate ~45s, advanced 60-90s, elite ~120s",
-      unit: "seconds",
-    },
+    device === "loading_pin"
+      ? {
+          key: "repeater",
+          title: "Repeater 7/3 (20mm edge)",
+          description:
+            "Hang 7s, rest 3s, repeat to failure at 60% of max lift. Test each hand separately.",
+          fieldKey: "lp_repeater_7_3_right_reps",
+          fieldLabel: "Repetitions",
+          example: "E.g.: 24 reps right, 22 reps left",
+          unit: "reps",
+          device: "loading_pin",
+          dualHand: true,
+          fieldKeyRight: "lp_repeater_7_3_right_reps",
+          fieldKeyLeft: "lp_repeater_7_3_left_reps",
+        }
+      : {
+          key: "repeater",
+          title: "Repeater 7/3 (20mm edge)",
+          description:
+            "Hang 7s, rest 3s, repeat to failure at 60% of max hang.",
+          fieldKey: "repeater_7_3_max_sets_20mm",
+          fieldLabel: "Repetitions",
+          example: "E.g.: 24 reps",
+          unit: "reps",
+        },
+    device === "loading_pin"
+      ? {
+          key: "hang_duration",
+          title: "Max Hang Duration (20mm)",
+          description:
+            "Hang on a 20mm edge block as long as possible with each hand. Stop when you drop.",
+          fieldKey: "lp_duration_20mm_right_seconds",
+          fieldLabel: "Duration (seconds)",
+          example: "E.g.: 55s right, 50s left",
+          unit: "seconds",
+          device: "loading_pin",
+          dualHand: true,
+          fieldKeyRight: "lp_duration_20mm_right_seconds",
+          fieldKeyLeft: "lp_duration_20mm_left_seconds",
+        }
+      : {
+          key: "hang_duration",
+          title: "Max Hang Duration (20mm)",
+          description:
+            "Hang bodyweight-only on a 20mm edge, half crimp, as long as possible. Stop when you drop.",
+          fieldKey: "max_hang_duration_20mm_seconds",
+          fieldLabel: "Duration (seconds)",
+          example: "E.g.: 65 seconds. Moderate ~45s, advanced 60-90s, elite ~120s",
+          unit: "seconds",
+        },
     {
       key: "l_sit",
       title: "L-sit Hold",
@@ -171,9 +201,15 @@ export default function TestsPage() {
     if (dev === "loading_pin") {
       cleared.max_hang_20mm_7s_total_kg = undefined;
       cleared.max_hang_20mm_5s_total_kg = undefined;
+      cleared.repeater_7_3_max_sets_20mm = undefined;
+      cleared.max_hang_duration_20mm_seconds = undefined;
     } else {
       cleared.lp_max_lift_5s_right_kg = undefined;
       cleared.lp_max_lift_5s_left_kg = undefined;
+      cleared.lp_repeater_7_3_right_reps = undefined;
+      cleared.lp_repeater_7_3_left_reps = undefined;
+      cleared.lp_duration_20mm_right_seconds = undefined;
+      cleared.lp_duration_20mm_left_seconds = undefined;
     }
     update("tests", cleared);
     // Reset enabled states for finger-strength tests
@@ -267,30 +303,28 @@ export default function TestsPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor={`field-${section.key}-right`}>
-                          Right hand (kg)
+                          Right ({section.unit})
                         </Label>
                         <Input
                           id={`field-${section.key}-right`}
                           type="number"
                           min={0}
-                          step={0.5}
+                          step={section.unit === "kg" ? 0.5 : 1}
                           value={tests[section.fieldKeyRight as keyof typeof tests] ?? ""}
                           onChange={(e) => setField(section.fieldKeyRight!, e.target.value)}
-                          placeholder="e.g. 45"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor={`field-${section.key}-left`}>
-                          Left hand (kg)
+                          Left ({section.unit})
                         </Label>
                         <Input
                           id={`field-${section.key}-left`}
                           type="number"
                           min={0}
-                          step={0.5}
+                          step={section.unit === "kg" ? 0.5 : 1}
                           value={tests[section.fieldKeyLeft as keyof typeof tests] ?? ""}
                           onChange={(e) => setField(section.fieldKeyLeft!, e.target.value)}
-                          placeholder="e.g. 42"
                         />
                       </div>
                     </div>

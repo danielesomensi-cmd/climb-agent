@@ -13,11 +13,37 @@ import {
 } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import type { Phase } from "@/lib/types";
+
+interface PhaseOption {
+  offset: number;
+  label: string;
+}
+
+function buildPhaseOptions(phases: Phase[]): PhaseOption[] {
+  const options: PhaseOption[] = [];
+  let cumulativeWeeks = 0;
+  for (const phase of phases) {
+    if (phase.phase_id === "deload") {
+      cumulativeWeeks += phase.duration_weeks;
+      continue; // skip deload — not a useful start point
+    }
+    options.push({
+      offset: cumulativeWeeks,
+      label:
+        cumulativeWeeks === 0
+          ? `Start fresh — Week 1 (${phase.phase_name})`
+          : `Skip to ${phase.phase_name} — Week ${cumulativeWeeks + 1}`,
+    });
+    cumulativeWeeks += phase.duration_weeks;
+  }
+  return options;
+}
 
 export default function StartWeekPage() {
   const router = useRouter();
   const { isLoaded: authReady } = useAuth();
-  const [maxOffset, setMaxOffset] = useState(0);
+  const [options, setOptions] = useState<PhaseOption[]>([]);
   const [selected, setSelected] = useState("0");
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
@@ -26,8 +52,12 @@ export default function StartWeekPage() {
   useEffect(() => {
     if (!authReady) return;
     getState().then((state) => {
-      const dur = state.macrocycle?.phases?.[0]?.duration_weeks ?? 1;
-      setMaxOffset(Math.min(dur - 1, 3));
+      const phases = state.macrocycle?.phases ?? [];
+      if (phases.length > 0) {
+        setOptions(buildPhaseOptions(phases));
+      } else {
+        setOptions([{ offset: 0, label: "Start fresh — Week 1" }]);
+      }
       setReady(true);
     });
   }, [authReady]);
@@ -58,15 +88,15 @@ export default function StartWeekPage() {
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             If you&apos;ve already been following a structured training plan, you can
-            skip ahead and start from a later week.
+            skip ahead and start from a later phase.
           </p>
 
           <RadioGroup value={selected} onValueChange={setSelected}>
-            {Array.from({ length: maxOffset + 1 }, (_, i) => (
-              <div key={i} className="flex items-center space-x-3 py-2">
-                <RadioGroupItem value={String(i)} id={`week-${i}`} />
-                <Label htmlFor={`week-${i}`} className="cursor-pointer">
-                  {i === 0 ? "Start fresh — Week 1" : `Week ${i + 1}`}
+            {options.map((opt) => (
+              <div key={opt.offset} className="flex items-center space-x-3 py-2">
+                <RadioGroupItem value={String(opt.offset)} id={`phase-${opt.offset}`} />
+                <Label htmlFor={`phase-${opt.offset}`} className="cursor-pointer">
+                  {opt.label}
                 </Label>
               </div>
             ))}
@@ -78,7 +108,7 @@ export default function StartWeekPage() {
         <Button
           variant="outline"
           disabled={loading}
-          onClick={() => router.push("/today")} // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
+          onClick={() => router.push("/plan")} // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
         >
           Skip
         </Button>
