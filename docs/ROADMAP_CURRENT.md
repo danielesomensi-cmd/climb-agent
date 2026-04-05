@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-05 (B188: bypass subscribe, B187: English strings + gym UX, D170: outdoor audit, A-GTM-08: PWA install guide)
+> Last updated: 2026-04-05 (A-ROADMAP-BATCH: v2+ deferred decisions, v3 LLM Coach, superseded notes, D15 fix)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -821,6 +821,7 @@ Higher pulley injury rate, shoulder impingement from steep terrain, fall injurie
 | D69 | ACWR-based load monitoring | L | Needs 4+ weeks accumulated data. Overlaps Load Model v2 section. |
 | D70 | Overtraining detection heuristics | M | 5-flag system. **⚠️ KB: Ch. 12 adds central fatigue timeline — nerve cell 7× slower recovery than muscle (Bompa 1983). If "off" after several rest days → 2-10 more days needed.** |
 | D71 | <10% weekly volume increase cap | S | Guard on planner output. Needs historical volume baseline. |
+| D15 | Progressive ARC duration | XS | Confirmed by D44 + D45. ARC duration increases progressively within Base phase. Covered by current implementation (4wk base with floor=2wk). |
 
 **Warm-Up & Recovery (mega brief Sessions 4, 7)**
 
@@ -902,6 +903,68 @@ Implementation approach:
 **Scope:** catalog schema change + closed-loop extension. Generic solution (not dip-specific).
 **Depends on:** nothing. Natural fit alongside LLM Coach closed-loop work (Phase 3.5).
 **Origin:** beta feedback (Daniele, 2026-03-31)
+
+### Superseded Decisions
+
+| ID | Superseded by | Reason |
+|----|---------------|--------|
+| D16 | → D47 | Replace 4×4 entirely, not tweak |
+| D18 | → D33 | Absorbed into full warm-up protocol |
+| D28 | → D75 | Upgraded to structured route preview |
+
+---
+
+## v2+ Deferred Decisions (Decision Consolidation)
+
+> Origin: Decision consolidation cross-check (D-ROADMAP-XCHECK, 2026-04-05)
+> Source docs: `decision_consolidation_D01_D83.md` + `claude_code_mega_brief_v1.md`
+> Intentionally excluded: D25 (microcycle types), D27 (reverse periodization), D40 (VBT), D46 (BFR) — too niche for target audience.
+
+### Assessment Expansion
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D03/R-01 | Flexibility axis (6th assessment dimension) | L | Requires radar UI redesign, domain weight rebalancing. Real gap for many climbers. |
+| D08/R-02 | Test bank concept (optional tests beyond defaults) | M | Natural extension of current test framework. Low priority. |
+| D13 | Open hand grip strength test | S | Tyler Nelson protocol. Depends on D72 (grip_type field). |
+| R-03 | Technique assessment improvement | M | Current technique axis is weakest (onsight/redpoint gap + self-eval only). May need LLM Coach for video analysis → could slip to v3. |
+
+### Periodization
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D22 | Competition taper protocol | S | Deload variant with competition-specific timing. Niche but differentiating for competitive climbers. |
+| D23 | Seasonal multi-macrocycle planning | L | Already listed in "Future" section as "Multi-macrocycle periodization" — this is the formal decision ID. |
+| D24 | ATR as alternative macrocycle model | L | Accumulation-Transmutation-Realization. Practically a second engine. **Recommend v3.** |
+
+### Female-Specific
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D82 | Menstrual cycle tracking with light algorithm | M | **Upgraded from original "no algorithmic rules" scope.** v2 scope: optional cycle input (last period date + avg duration), light algorithmic adjustment on planner (follicular → favor intensity, luteal → favor volume/recovery), educational tips per phase. LLM Coach layer: expert mode for personalized cycle-aware coaching. Opt-in, privacy-first. Positive beta feedback received. Differentiates from all climbing training competitors. |
+
+### Conditioning & Mobility
+
+| ID | Title | Effort | Notes |
+|----|-------|--------|-------|
+| D61 | VO2 max benchmark + optional HIIT sessions | S | Useful for endurance/multipitch focus. Supplementary session, not core. Low priority. |
+| D62 | Separate mobility into ROM vs postural categories | S | Catalog refinement. Improves prescription accuracy. Not user-visible. |
+| D63 | PNF stretching protocols | S | Linked to D62. Add PNF as method once ROM/postural distinction exists. Can be bundled with D62. |
+
+---
+
+## v3 — LLM Coach & Advanced Assessment
+
+> These decisions require the LLM Coach layer (Phase 3.5) or specialized hardware.
+
+| ID | Title | Category | Effort | Notes |
+|----|-------|----------|--------|-------|
+| D04/R-04 | Mental/tactical assessment via AI conversation | Assessment | L | Perfect LLM Coach use case. Qualitative assessment through dialogue. |
+| D05/R-05 | Contact strength / RFD axis | Assessment | L | Requires force plate or similar hardware. Linked to D42. |
+| D06/R-06 | Critical Force test (full protocol) | Assessment | M | D89 (v2) is the simplified 2-point version. D06 is the complete protocol. |
+| D31 | Route preview coaching | Coaching | M | AI-guided route reading. Potential photo input. High differentiation. |
+| D32 | Fear assessment protocol | Coaching | M | Sensitive topic, needs LLM Coach for nuance. Very differentiating if done well. |
+| D42 | Levernier & Laffaye one-arm hang for RFD | Exercise DB | S | Depends on D05 (RFD axis). Specific test protocol. |
 
 ---
 
