@@ -206,6 +206,7 @@ Same 5 axes, different display labels per discipline. RadarChart now accepts `di
 | A-GTM-08 | **PWA Install Guide in onboarding** — new step 2 (after welcome, before profile) with iPhone/Android tabs teaching home screen install | A | S | ✅ Done | Two-tab layout, 3 numbered steps per platform, custom iOS share icon SVG. 34 pages total. (2026-04-04) |
 | B187 | **English strings + gym UX guards** — replace 11 hardcoded Italian strings, disable Gym button when no gyms, add amber banner, "All" quick-fill button, fix Next validation | B | S | ✅ Done | Triggered by beta tester Tabitha stuck on availability page. (2026-04-05) |
 | B188 | **Bypass subscribe page** — route onboarding start-week to `/plan` instead of `/subscribe` while Stripe disabled | B | XS | ✅ Done | Beta testers hit 503 on subscribe page. TODO marker for GTM-04 re-enable. (2026-04-05) |
+| B189 | **Outdoor route dots = per-attempt sent/fell** — replace single style-colored dot + ×N with individual green (sent/topped_out) / red (fell) circular dots, one per attempt, in expanded outdoor route view (day-card) | B | S | ✅ Done | Removed unused `STYLE_BADGE` constant. 1571 tests pass. (2026-04-06) |
 
 ### Phase 1 — Pricing + Stripe go-live (week 2-3)
 

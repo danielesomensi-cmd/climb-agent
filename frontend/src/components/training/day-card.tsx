@@ -95,15 +95,6 @@ const GRADE_ORDER = [
   "9a", "9a+",
 ];
 
-/** Style badge mapping for outdoor routes */
-const STYLE_BADGE: Record<string, { emoji: string; label: string }> = {
-  onsight: { emoji: "🟢", label: "Onsight" },
-  flash: { emoji: "🟡", label: "Flash" },
-  redpoint: { emoji: "🔴", label: "Redpoint" },
-  project: { emoji: "⚪", label: "Project" },
-  repeat: { emoji: "🔵", label: "Repeat" },
-};
-
 /** Check whether a date string (YYYY-MM-DD) corresponds to today */
 function isToday(dateStr: string): boolean {
   const today = new Date();
@@ -492,16 +483,26 @@ export function DayCard({
                 {outdoorExpanded && hasExpandableOutdoor && (
                   <div className="space-y-1.5 rounded-lg border border-green-500/20 bg-green-500/5 p-3">
                     {outdoorRoutes!.map((route, idx) => {
-                      const style = route.style || (route.attempts.some(a => a.result === "sent") ? "redpoint" : "project");
-                      const badge = STYLE_BADGE[style];
-                      const totalAttempts = route.attempts.length;
                       const hasNotes = route.attempts.some(a => a.notes);
                       return (
                         <div key={idx} className="flex items-center gap-1.5 text-xs">
                           <span className="font-mono font-medium w-10 shrink-0">{route.grade}</span>
                           <span className="truncate flex-1 text-muted-foreground">{route.name}</span>
-                          {badge && <span title={badge.label}>{badge.emoji}</span>}
-                          {totalAttempts > 1 && <span className="text-muted-foreground">×{totalAttempts}</span>}
+                          <div className="flex flex-wrap items-center gap-1 justify-end">
+                            {route.attempts.map((a, ai) => {
+                              const isSend = a.result === "sent" || a.result === "topped_out";
+                              return (
+                                <span
+                                  key={ai}
+                                  title={isSend ? "Sent" : "Fell"}
+                                  className={cn(
+                                    "inline-block size-2 rounded-full",
+                                    isSend ? "bg-green-500" : "bg-red-500"
+                                  )}
+                                />
+                              );
+                            })}
+                          </div>
                           {hasNotes && (
                             <span title={route.attempts.filter(a => a.notes).map(a => a.notes).join("; ")}>💬</span>
                           )}
