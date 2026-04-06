@@ -31,6 +31,8 @@ HEADER_PATTERNS = re.compile(
 SEPARATOR_RE = re.compile(r"^\|[\s\-:|]+\|")
 SECTION_RE = re.compile(r"^## .+")
 COMPLETED_RE = re.compile(r"^\|[^|]*~~[^|]*\|")
+# Brief ID matcher used for v2-archival verification (D188)
+BRIEF_ID_RE = re.compile(r"\b([ABCD])(\d+)(?![\w-])")
 
 
 def is_table_row(line: str) -> bool:
@@ -136,7 +138,13 @@ def trim_roadmap(
         "savings_kb": round((original_size - new_size) / 1024, 1),
     }
 
+    # D188 safety: extract brief IDs from rows being removed, for post-archival verification
+    removed_ids = set()
+    for row in completed_rows:
+        removed_ids.update(BRIEF_ID_RE.findall(row))
+
     if dry_run:
+        summary["removed_ids"] = sorted(removed_ids)
         return summary
 
     if not completed_rows:
@@ -157,6 +165,22 @@ def trim_roadmap(
             f"# Roadmap Archive\n\n{archive_block}", encoding="utf-8"
         )
 
+    # D188 safety: verify every removed ID is now present in the archive file.
+    # This catches silent data loss if the archive write path ever changes.
+    if removed_ids:
+        archive_text = archive_path.read_text(encoding="utf-8")
+        archive_ids = set(BRIEF_ID_RE.findall(archive_text))
+        missing = sorted(removed_ids - archive_ids)
+        if missing:
+            tokens = [f"{t}{n}" for t, n in missing]
+            print(
+                f"WARNING: {len(missing)} IDs removed from CURRENT but NOT found in "
+                f"{archive_path.name}: {', '.join(tokens)}",
+                file=sys.stderr,
+            )
+            summary["warning_missing_in_archive"] = tokens
+
+    summary["removed_ids"] = sorted(removed_ids)
     return summary
 
 

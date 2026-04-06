@@ -301,6 +301,8 @@ Key location: `.env` in repo root (gitignored, never commit).
 
 - After closing a B/A/UI item, run `python scripts/trim_roadmap.py --dry-run` to check roadmap bloat
 - When completed items exceed 20, run `python scripts/trim_roadmap.py` to archive them
+- After `trim_roadmap.py`: the script now verifies every removed ID lands in `ROADMAP_v2.md` and prints a WARNING if not. If you see the warning, investigate before continuing — do not force-push over it.
+- **Sync/counter commits must NOT carry brief IDs in the subject line.** Avoid patterns like `sync: update test count [B178]` or `C170: sync counters` — they pollute the git-log ↔ roadmap reconciliation used by `scripts/next_brief.py`. Put the reference in the commit body or omit it.
 - Standing rule: `python scripts/sync_status.py` at end of every brief (already enforced)
 
 ## Workflow rules

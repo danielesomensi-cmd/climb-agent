@@ -68,6 +68,31 @@ New P1 items identified by D163 + D164 audits — tracked below in Audit Remedia
 - ✅ **B185b** — Post-fix: `power_pullups_explosive` domain changed from `["power"]` to `["strength_general"]`. Root cause: soft pattern filter dropped when `gym_boulder` unavailable → exercise selected in `limit_projecting`/`limit_bouldering` blocks. Fix moves it to `supplementary_pulling` (correct block). 1572 tests pass. (2026-04-02)
 - ✅ **B186** — Pulling rotation fix + 3 contact strength exercises + archive dead templates: (1) `pulling_strength_compound` v1.0→v1.1: 3 hardcoded blocks converted to P0 `strength_general + pull_vertical` — 9 candidates in `pullup_variants` recency_group ensure unique triplette each session. (2) 3 new contact_strength exercises: `overcoming_isometric_pull` + `rfd_explosive_pulls` (hangboard) + `power_slap_drill` (gym_boulder) as campus board fallbacks. (3) `campus_power` block: pattern widened + `equipment: ["campus_board"]` soft preference — `dip` bug eliminated, hangboard/boulder fallbacks confirmed. (4) 8 dead templates archived to `_archive/`. (5) 2 P3 roadmap items added. 189 exercises, 19 templates, 1571 tests pass. (2026-04-02)
 
+### Recovered briefs (D188 audit, 2026-04-06)
+
+The following briefs were shipped but never tracked in ROADMAP_CURRENT or ROADMAP_v2 — recovered from git log during D188 reconciliation. Listed in chronological order, each with the original commit hash. All are ✅ Done.
+
+- ✅ **B161** — Cross-week `hard_gap` and `finger_gap` enforcement. Planner now respects recovery gaps across week boundaries, not just within a single week. 3 files. (`4001708`, 2026-03-25)
+- ✅ **D161** — Audit snapshot script + workflow doc + production user state reader. Foundation for repeatable audit workflow. 4 files, +526 lines. (`566acda`, 2026-03-26)
+- ✅ **B162** — Route projecting session + phase pool rebalance for lead climbers. New session type + macrocycle pool adjustments. 11 files, +143 lines. (`f1482b2`, 2026-03-27)
+- ✅ **A165** — Exercise phase coloring + session context card. 5 files, +190 lines. Note: partially reverted the same day by B165 (`aa7c34f`) which kept phase coloring and removed the context card — both entries preserved for history. (`255678c`, 2026-03-28)
+- ✅ **B164** — Replace stale `total_load` with frozen `planned_load`. Load accounting uses plan snapshot values instead of live catalog, preventing drift after catalog edits. 11 files, +190 lines. Distinct from `B164-trimmed` (frontend P2 fixes) already tracked above. (`35260d6`, 2026-03-28)
+- ✅ **B165** (parent) — Clerk user lookup docs in CLAUDE.md + exercise phase coloring revert + week progress bar (removed A165 context card). Parent brief that spawned sub-items B165a-e already tracked. (`bf0eb74` + `aa7c34f`, 2026-03-28)
+- ✅ **D162** — `docs/lessons.md` system + `/audit-module` + `/sync-check` slash commands. Introduced the structured lessons-learned workflow. 3 files. (`9c7d7b6`, 2026-03-28)
+- ✅ **B166** — Remove redundant "View day" button from Week day cards + add model switching convention to CLAUDE.md. (`a36f56b` + `da945a8`, 2026-03-29)
+- ✅ **C170** — Exercise catalog fixes: 3 critical corrections, 9 `unilateral` flag additions, clarity rewrites for confusion-pair exercises. 1 file, +75 / −51. (`594b59a`, 2026-03-30)
+- ✅ **C169** — Tyler Twist exercise cues and description improvements. 1 file. (`75975f6`, 2026-03-31)
+- ✅ **D175** — Meta: add D170/D172 audit findings to roadmap (Priority 1.26 section). Self-referential closure. (`04752c7`, 2026-03-31)
+- ✅ **B177** — 📝 Logged (known issue, not fixed): intermittent guided session scroll+timer bug. Reproduction conditions unclear — tracking only. (`bc23627`, 2026-03-31)
+- ✅ **B178** — `alt_sides` catalog updates, set counter clamp fix, FAB "start session" button on day cards. 6 files, +52. (`3ba8acf`, 2026-03-31)
+- ✅ **B180** — Tyler Twist equipment: `weight` OR `resistance_band` (was `weight` only, blocked home users). 1 file. (`5827b6d`, 2026-03-31)
+- ✅ **A181** — Strategic Advisory Council: 5 parallel subagents + `/council` + `/council-launch` slash commands + `admin_dashboard.py` CLI for user overview. 10 files, +833 lines. (`cf82562` + `697b7d5`, 2026-04-01)
+- ✅ **B181** — Resume in-progress session from Today page after iOS background kill. 3 files, +150. (`6593b53`, 2026-04-01)
+- ✅ **B182** — `/brief` command diagnosis + roadmap alignment fix + rename "Log extra session" → "Log Free Session". 6 files. (`e4472b1` + `d82179f`, 2026-04-01)
+- ✅ **D186** — Document Supabase RLS enablement on all 6 tables (CLAUDE.md deployment section). 2 files. (`ce6bd15`, 2026-04-03)
+
+> **Note on B179**: no dedicated brief — the commit `c42e302` was a 1-line append to `lessons.md` from another session's debugging work. Not tracked as a brief. Reserved as used to prevent renumber collision.
+
 ---
 
 ## Priority 1.25 — Audit Remediation (D163 + D164)
