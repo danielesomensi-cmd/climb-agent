@@ -315,7 +315,7 @@ Key location: `.env` in repo root (gitignored, never commit).
 - **Audit finding alignment rule:** Individual audit findings listed in the roadmap ARE roadmap items. When a remediation brief closes findings, each closed finding MUST be removed from the P1/P2 list (not just the brief row marked ✅). The P1 list must always reflect ground truth — if `/brief` reads it, it must be accurate. Leaving closed findings in the P1 list causes phantom bug reports and wasted re-investigation.
 - Pre-push hook runs `sync_status.py` automatically. If counters are stale, the push is blocked — commit the sync changes first.
 - Repo hygiene check: every ~2 weeks or ~10 briefs (whichever first), run `python scripts/repo_hygiene.py`. Archive completed brief docs, delete temp files, verify core docs are current. Last full audit: D156 (2026-03-25).
-- Brief types: A = new feature, B = bugfix, C = catalog/content, D = audit/documentation (read-only). Briefs are numbered sequentially across all types. Never reuse a number.
+- Brief types: A = new feature, B = bugfix, C = catalog/content, D = audit/documentation (read-only). Briefs are numbered sequentially across all types. Never reuse a number. **Before assigning a new brief number, ALWAYS run `python scripts/next_brief.py` — it scans both ROADMAP_CURRENT.md and `git log --all` (commit messages can reference briefs never added to the roadmap, causing silent collisions). Do NOT guess the next number from the roadmap alone.**
 - Push at end of session: `git add -A && git commit -m 'description' && git push`
 
 ## Lessons learned
