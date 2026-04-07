@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import date as date_type
 from typing import Optional
 
@@ -30,7 +31,17 @@ router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 @limiter.limit("30/minute")
 def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Apply session feedback: progression updates + closed-loop state changes."""
+    # B193: timing instrumentation — locate post_feedback bottleneck (~20s observed)
+    _t0 = time.perf_counter()
+    _step = _t0
+    def _mark(label: str) -> None:
+        nonlocal _step
+        now = time.perf_counter()
+        logger.info("post_feedback timing: %s=%.3fs (total=%.3fs)", label, now - _step, now - _t0)
+        _step = now
+
     state = load_state(user_id)
+    _mark("load_state")
 
     # 1. Apply progression feedback (updates working loads)
     try:
@@ -38,6 +49,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     except Exception as e:
         logger.error("Feedback application failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Feedback application failed. Please try again.")
+    _mark("apply_feedback")
 
     # 2. Apply closed-loop state update (stimulus recency, fatigue proxy)
     if req.resolved_day:
@@ -50,10 +62,12 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
         except Exception as e:
             logger.error("Closed-loop update failed: %s", e, exc_info=True)
             raise HTTPException(status_code=500, detail="Closed-loop update failed. Please try again.")
+    _mark("apply_day_result")
 
     # 3. Append to feedback log (B25)
     exercises_by_id = load_exercises_by_id()
     append_feedback_log(state, req.log_entry, req.resolved_day, exercises_by_id)
+    _mark("append_feedback_log")
 
     # B156: sanitize exercise-level notes (max 500 chars)
     _fb_items = (req.log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
@@ -122,6 +136,8 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                     f"Exercise IDs not found in current session plan: {sorted(_stale_ids)}"
                 )
 
+    _mark("persist_actual_exercises")
+
     # 4. Check adaptive replanning (B25)
     plan = state.get("current_week_plan")
     if plan and plan.get("weeks"):
@@ -137,6 +153,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                 if "week_plans" not in state:
                     state["week_plans"] = {}
                 state["week_plans"][start_key] = updated_plan
+    _mark("adaptive_replan")
 
     # 5. Limitation severity suggestions (B38)
     limitation_suggestions = []
@@ -177,7 +194,12 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                     entry["session_duration_seconds"] = duration
                 break
 
+    _mark("limitation_+_completion_log")
+
     save_state(state, user_id)
+    _mark("save_state")
+
+    logger.info("post_feedback timing: TOTAL=%.3fs", time.perf_counter() - _t0)
     response: dict = {"status": "ok"}
     if limitation_suggestions:
         response["limitation_suggestions"] = limitation_suggestions

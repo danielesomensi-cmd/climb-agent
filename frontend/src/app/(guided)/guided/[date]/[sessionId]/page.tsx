@@ -10,7 +10,7 @@ import { GuidedProgressBar } from "@/components/guided/guided-progress-bar";
 import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GuidedSummary } from "@/components/guided/guided-summary";
 import { applyEvents, postFeedback, getWeek, getState } from "@/lib/api";
-import { invalidateWeekPlans } from "@/lib/invalidation";
+import { queryKeys } from "@/lib/query-keys";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
@@ -469,9 +469,17 @@ export default function GuidedSessionPage() {
           status: "done",
         });
 
-        // Success — clean up localStorage + invalidate week/state caches
+        // Success — clean up localStorage
         removeState(state.date, state.sessionId);
-        invalidateWeekPlans(qc);
+        // B193 / Bug 2: refetch the affected week BEFORE navigating so /today shows
+        // "Completed" instantly instead of stale "Planned" → fresh transition.
+        // Force-refetch (not just invalidate) because there are no active observers
+        // on this page; invalidate alone would only mark stale, leaving /today to
+        // refetch on mount and briefly render the old badge.
+        await Promise.all([
+          qc.refetchQueries({ queryKey: queryKeys.week(weekNum) }),
+          qc.invalidateQueries({ queryKey: queryKeys.state }),
+        ]);
       } catch {
         // Feedback POST failed — save for retry
         setState((prev) => prev ? { ...prev, submitStatus: "feedback_pending" } : prev);
