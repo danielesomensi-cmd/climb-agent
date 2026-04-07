@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { useUserState } from "@/lib/hooks/use-state";
 import { computeAssessment, generateMacrocycle, deleteState, putState, getWeek, getOutdoorSpots, addOutdoorSpot, deleteOutdoorSpot, exportUserState, importUserState, createBillingPortal } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { UserButton, useAuth } from "@clerk/nextjs";
 import {
@@ -51,7 +53,13 @@ export default function SettingsPage() {
   const { isLoaded: authReady } = useAuth();
   // B151: delay fetch until Clerk auth is ready — prevents empty-template flash
   const { state, loading, error, refresh } = useUserState(authReady);
+  const qc = useQueryClient();
   const router = useRouter();
+  // A187: any settings mutation that triggers backend plan regen must
+  // invalidate the React Query week cache so /today and /week show fresh data.
+  const invalidateWeek = useCallback(() => {
+    qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+  }, [qc]);
   const { status: subStatus, isActive: subActive, isTrialing, trialDaysRemaining } = useSubscription();
   const [portalLoading, setPortalLoading] = useState(false);
 
@@ -102,6 +110,7 @@ export default function SettingsPage() {
       setNewSpotName("");
       setAddingSpot(false);
       await loadSpots();
+      qc.invalidateQueries({ queryKey: queryKeys.outdoorSpots });
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to add spot");
     }
@@ -111,6 +120,7 @@ export default function SettingsPage() {
     try {
       await deleteOutdoorSpot(spotId);
       await loadSpots();
+      qc.invalidateQueries({ queryKey: queryKeys.outdoorSpots });
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to delete spot");
     }
@@ -153,6 +163,7 @@ export default function SettingsPage() {
       await putState({ availability: fullAvailability, planning_prefs: newPrefs });
       await getWeek(0, true);
       await refresh();
+      invalidateWeek();
       setEditingAvailability(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to save availability");
@@ -165,6 +176,7 @@ export default function SettingsPage() {
     try {
       await putState({ limitations: newLimitations });
       await refresh();
+      invalidateWeek();
       setEditingLimitations(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to save limitations");
@@ -194,6 +206,7 @@ export default function SettingsPage() {
     try {
       await putState({ equipment: newEquipment });
       await refresh();
+      invalidateWeek();
       setEditingEquipment(false);
       setEquipmentSavedOpen(true);
     } catch (e) {
@@ -228,6 +241,7 @@ export default function SettingsPage() {
       await putState({ assessment: patch });
       await computeAssessment({ ...state?.assessment, ...patch }, state?.goal);
       await refresh();
+      invalidateWeek();
       setProfileEditorOpen(false);
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to update profile");
@@ -268,6 +282,7 @@ export default function SettingsPage() {
       await generateMacrocycle(undefined, 12, fromPhase);
       await getWeek(0, true, preserveBefore);
       await refresh();
+      invalidateWeek();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Regeneration failed");
     } finally {
@@ -283,6 +298,7 @@ export default function SettingsPage() {
     setActionError(null);
     try {
       await deleteState();
+      qc.clear();
       router.push("/onboarding/welcome");
     } catch (e) {
       setActionError(
@@ -914,6 +930,7 @@ export default function SettingsPage() {
                           const data = JSON.parse(text);
                           await importUserState(data);
                           setBackupMsg({ type: "ok", text: "Data restored successfully" });
+                          qc.clear();
                           refresh();
                         } catch (e) {
                           const msg = e instanceof Error ? e.message : "Import failed";

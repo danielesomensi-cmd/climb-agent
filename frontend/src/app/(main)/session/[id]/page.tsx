@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import { useQuery } from "@tanstack/react-query";
 import { TopBar } from "@/components/layout/top-bar";
 import { ExerciseCard } from "@/components/training/exercise-card";
 import { resolveSession } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -37,34 +37,23 @@ function SessionPageInner() {
   const sessionId = typeof params.id === "string" ? params.id : "";
   const date = searchParams.get("date") || new Date().toISOString().slice(0, 10);
 
-  const [resolved, setResolved] = useState<ResolvedSession | null>(null);
-  const [rawInstances, setRawInstances] = useState<Record<string, unknown>[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchSession = useCallback(async () => {
-    if (!sessionId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await resolveSession(sessionId);
-      setResolved(data.resolved);
-      // Keep raw exercise instances for detail sheet
-      const raw = data as unknown as Record<string, unknown>;
-      const rs = (raw.resolved as Record<string, unknown> | undefined)?.resolved_session as Record<string, unknown> | undefined;
-      setRawInstances((rs?.exercise_instances ?? []) as Record<string, unknown>[]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load data");
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId]);
-
-  // B155: gate on Clerk readiness
-  useEffect(() => {
-    if (!authReady) return;
-    fetchSession();
-  }, [fetchSession, authReady]);
+  // A187: cache resolveSession by sessionId — deterministic per session_id,
+  // safe to cache for the session lifetime so back/forward navigation is instant.
+  const sessionQuery = useQuery({
+    queryKey: ["session", "resolve", sessionId],
+    queryFn: () => resolveSession(sessionId),
+    enabled: authReady && !!sessionId,
+    staleTime: 5 * 60_000,
+  });
+  const resolved = (sessionQuery.data?.resolved as ResolvedSession | undefined) ?? null;
+  const rawInstances = useMemo<Record<string, unknown>[]>(() => {
+    const raw = sessionQuery.data as unknown as Record<string, unknown> | undefined;
+    const rs = (raw?.resolved as Record<string, unknown> | undefined)?.resolved_session as Record<string, unknown> | undefined;
+    return (rs?.exercise_instances ?? []) as Record<string, unknown>[];
+  }, [sessionQuery.data]);
+  const loading = sessionQuery.isLoading;
+  const error = sessionQuery.error ? (sessionQuery.error instanceof Error ? sessionQuery.error.message : "Failed to load data") : null;
+  const fetchSession = () => sessionQuery.refetch();
 
   const displayName = (resolved as unknown as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(sessionId);
 

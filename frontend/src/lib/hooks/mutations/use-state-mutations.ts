@@ -59,7 +59,7 @@ export function useAssessmentCompute() {
     }) => computeAssessment(assessment, goal),
     onSuccess: (response) => {
       // merge profile into cached state
-      qc.setQueryData(queryKeys.state, (old: any) =>
+      qc.setQueryData(queryKeys.state, (old: UserState | undefined) =>
         old
           ? {
               ...old,
@@ -84,7 +84,7 @@ export function useGenerateMacrocycle() {
       fromPhase?: string;
     }) => generateMacrocycle(startDate, totalWeeks, fromPhase),
     onSuccess: (response) => {
-      qc.setQueryData(queryKeys.state, (old: any) =>
+      qc.setQueryData(queryKeys.state, (old: UserState | undefined) =>
         old ? { ...old, macrocycle: response.macrocycle } : old,
       );
       // every week plan is regenerated server-side

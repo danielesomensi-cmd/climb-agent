@@ -545,9 +545,9 @@ Depends on: B122 pattern. Supabase migration ✅ complete.
 **Status:** Open | Spezzare in package `replanner/` + estrarre `_SESSION_META` in modulo condiviso.
 **Rischio:** ALTO — mandatory analysis phase
 
-### R144 — Frontend API Layer Refactor
+### R144 — Frontend API Layer Refactor ✅
 
-**Status:** Open | TanStack Query + refactor `api.ts` (590 righe).
+**Status:** ✅ Closed (A187, 2026-04-07) | TanStack Query integrato con cache condivisa per `state`, `week/{n}`, outdoor, free-session surfaces; mutations centralizzate in `lib/hooks/mutations/`; invalidation map (D176) implementata in `lib/invalidation.ts`; prefetch settimane adiacenti su `useWeekPlan`. `api.ts` resta come thin layer sui fetch — il refactor di splitting è rimandato.
 **Rischio:** MEDIO
 
 ### R145 — Spezzare pagine componente grandi

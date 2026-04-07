@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import { TopBar } from "@/components/layout/top-bar";
-import { getOutdoorSessions, getOutdoorStats, getOutdoorSpots, getOutdoorLogByDate, deleteOutdoorLog } from "@/lib/api";
-import type { OutdoorSession, OutdoorStats, OutdoorSpot } from "@/lib/types";
+import { getOutdoorSpots, getOutdoorLogByDate, deleteOutdoorLog } from "@/lib/api";
+import type { OutdoorSession, OutdoorSpot } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Check, ArrowUpRight, ChevronDown, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserState } from "@/lib/hooks/use-state";
+import { useOutdoorSessions, useOutdoorStats } from "@/lib/hooks/queries/use-outdoor";
+import { invalidateOutdoor } from "@/lib/invalidation";
 import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 
@@ -100,9 +103,13 @@ export default function OutdoorPage() {
   const outdoorSpots = ((userState as Record<string, unknown>)?.outdoor_spots as Array<{ name: string; discipline: "lead" | "boulder" | "both" }>) || [];
   const hasSpots = outdoorSpots.length > 0;
   const today = new Date().toISOString().split("T")[0];
-  const [sessions, setSessions] = useState<(OutdoorSession & { load_score?: number })[]>([]);
-  const [stats, setStats] = useState<OutdoorStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const sessionsQuery = useOutdoorSessions(undefined, authReady);
+  const statsQuery = useOutdoorStats(undefined, authReady);
+  const sessions = (sessionsQuery.data?.sessions ?? []) as (OutdoorSession & { load_score?: number })[];
+  const stats = statsQuery.data ?? null;
+  const loading = sessionsQuery.isLoading || statsQuery.isLoading;
+  const queryError = sessionsQuery.error || statsQuery.error;
   const [error, setError] = useState<string | null>(null);
 
   // Log dialog state
@@ -113,29 +120,9 @@ export default function OutdoorPage() {
   const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null);
   const [deletingDate, setDeletingDate] = useState<string | null>(null);
 
-  // B155: gate on Clerk readiness
-  useEffect(() => {
-    if (!authReady) return;
-    Promise.all([getOutdoorSessions(), getOutdoorStats()])
-      .then(([sessData, statsData]) => {
-        setSessions(sessData.sessions as (OutdoorSession & { load_score?: number })[]);
-        setStats(statsData);
-      })
-      .catch((err) => {
-        console.error("Failed to load outdoor data:", err);
-        setError("Could not load outdoor history. Please try again.");
-      })
-      .finally(() => setLoading(false));
-  }, [authReady]);
-
   const reloadData = useCallback(() => {
-    Promise.all([getOutdoorSessions(), getOutdoorStats()])
-      .then(([sessData, statsData]) => {
-        setSessions(sessData.sessions as (OutdoorSession & { load_score?: number })[]);
-        setStats(statsData);
-      })
-      .catch(console.error);
-  }, []);
+    invalidateOutdoor(qc);
+  }, [qc]);
 
   // Issue 1+3: open log dialog, check for existing session today
   const handleStartSession = useCallback(async () => {
@@ -170,14 +157,13 @@ export default function OutdoorPage() {
     setConfirmDeleteDate(null);
     try {
       await deleteOutdoorLog(date);
-      setSessions((prev) => prev.filter((s) => s.date !== date));
-      getOutdoorStats().then(setStats).catch(console.error);
+      invalidateOutdoor(qc);
     } catch {
       setError("Could not delete session. Please try again.");
     } finally {
       setDeletingDate(null);
     }
-  }, []);
+  }, [qc]);
 
   const [routesExpanded, setRoutesExpanded] = useState(true);
 
@@ -226,13 +212,13 @@ export default function OutdoorPage() {
           </div>
         )}
 
-        {!loading && error && (
+        {!loading && (error || queryError) && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive">{error ?? (queryError instanceof Error ? queryError.message : "Could not load outdoor history. Please try again.")}</p>
           </div>
         )}
 
-        {!loading && !error && sessions.length === 0 && (
+        {!loading && !error && !queryError && sessions.length === 0 && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-sm text-muted-foreground">
               No outdoor sessions logged yet.
@@ -243,7 +229,7 @@ export default function OutdoorPage() {
           </div>
         )}
 
-        {!loading && !error && stats && sessions.length > 0 && (
+        {!loading && !error && !queryError && stats && sessions.length > 0 && (
           <>
             {/* Stats cards */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

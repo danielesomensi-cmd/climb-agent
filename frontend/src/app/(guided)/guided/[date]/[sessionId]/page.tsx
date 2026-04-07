@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SessionTimer } from "@/components/guided/session-timer";
@@ -9,6 +10,7 @@ import { GuidedProgressBar } from "@/components/guided/guided-progress-bar";
 import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GuidedSummary } from "@/components/guided/guided-summary";
 import { applyEvents, postFeedback, getWeek, getState } from "@/lib/api";
+import { invalidateWeekPlans } from "@/lib/invalidation";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
@@ -61,6 +63,7 @@ export default function GuidedSessionPage() {
   const router = useRouter();
   const date = params.date as string;
   const sessionId = params.sessionId as string;
+  const qc = useQueryClient();
   const { canInteract, loading: subLoading } = useSubscription();
 
   // Gate: redirect expired users to subscribe page
@@ -466,8 +469,9 @@ export default function GuidedSessionPage() {
           status: "done",
         });
 
-        // Success — clean up localStorage
+        // Success — clean up localStorage + invalidate week/state caches
         removeState(state.date, state.sessionId);
+        invalidateWeekPlans(qc);
       } catch {
         // Feedback POST failed — save for retry
         setState((prev) => prev ? { ...prev, submitStatus: "feedback_pending" } : prev);
@@ -480,7 +484,7 @@ export default function GuidedSessionPage() {
       setError(e instanceof Error ? e.message : "Failed to submit. Your progress is saved locally.");
       setSubmitting(false);
     }
-  }, [state, router]);
+  }, [state, router, qc]);
 
   const handleSetChange = useCallback(
     (completedSets: number) => {

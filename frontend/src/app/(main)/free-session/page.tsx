@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useState, useCallback, useEffect } from "react";
+import { Suspense, useState, useCallback, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Layers, Target, Repeat, Eye, ArrowLeft,
   Smartphone, Moon, Box, Route, Flame,
@@ -12,11 +13,12 @@ import { Button } from "@/components/ui/button";
 import { ClimbLogger, type LoggedClimb } from "@/components/free-session/climb-logger";
 import { SessionSummary } from "@/components/free-session/session-summary";
 import {
-  getFreeSessionSurfaces,
   getFreeSessionPresets,
   startFreeSession,
   finishFreeSession,
 } from "@/lib/api";
+import { useFreeSessionSurfaces } from "@/lib/hooks/queries/use-free-session";
+import { invalidateFreeSessionHistory } from "@/lib/invalidation";
 import { CircuitSetup, type CircuitConfig } from "@/components/circuit/CircuitSetup";
 import { CircuitTimer, type CircuitResult } from "@/components/circuit/CircuitTimer";
 import { CircuitCompletion } from "@/components/circuit/CircuitCompletion";
@@ -132,11 +134,16 @@ function FreeSessionContent() {
   const searchParams = useSearchParams();
   const { isLoaded: authReady } = useAuth();
   const { state: userState } = useUserState(authReady);
+  const qc = useQueryClient();
   const gradeSystem: BoulderGradeSystem = ((userState as Record<string, unknown>)?.preferences as Record<string, unknown>)?.grade_system_boulder as BoulderGradeSystem || "font";
   const paramContext = searchParams.get("context") || "standalone";
   const paramDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
   const [step, setStep] = useState<Step>("surface");
-  const [gyms, setGyms] = useState<Gym[]>([]);
+  const surfacesQuery = useFreeSessionSurfaces(authReady);
+  const gyms: Gym[] = useMemo(
+    () => (surfacesQuery.data?.gyms ?? []) as Gym[],
+    [surfacesQuery.data],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -161,14 +168,6 @@ function FreeSessionContent() {
   const [circuitConfig, setCircuitConfig] = useState<CircuitConfig | null>(null);
   const [circuitResult, setCircuitResult] = useState<CircuitResult | null>(null);
   const [circuitSessionId, setCircuitSessionId] = useState<string | null>(null);
-
-  // B155: gate on Clerk readiness
-  useEffect(() => {
-    if (!authReady) return;
-    getFreeSessionSurfaces()
-      .then((data) => setGyms(data.gyms))
-      .catch((err) => { console.error("Failed to load gym list:", err); });
-  }, [authReady]);
 
   // Check for pending draft on mount — offer resume if found
   useEffect(() => {
@@ -347,11 +346,12 @@ function FreeSessionContent() {
         durationMinutes: result.duration_minutes,
         loadScore: result.load_score,
       });
+      invalidateFreeSessionHistory(qc);
     } catch {
       // Session might already be finished — non-critical
     }
     router.push("/today");
-  }, [activeSession, router]);
+  }, [activeSession, router, qc]);
 
   // ── Circuit handlers ──────────────────────────────────────────────
 
@@ -399,11 +399,12 @@ function FreeSessionContent() {
           exercises_performed: circuitResult.exercisesPerformed,
         },
       });
+      invalidateFreeSessionHistory(qc);
     } catch {
       // Non-critical
     }
     router.push("/today");
-  }, [circuitSessionId, circuitResult, router]);
+  }, [circuitSessionId, circuitResult, router, qc]);
 
   const handleCircuitRestart = useCallback(() => {
     // Keep same config, go back to running with new session
