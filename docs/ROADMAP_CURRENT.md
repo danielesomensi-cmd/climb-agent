@@ -705,6 +705,8 @@ Depends on: D69 (ACWR) design, beta tester data.
 
 | ID | Title | Notes |
 |----|-------|-------|
+| ✅ B191 | Phase-aware retest scheduling + Christie fixes | Fixed 4 bugs: dashboard phase display (duration_weeks key), hangboard freshness (estimated_at fallback), repeater freshness (onboarding users), Pass 3 phase-blind scheduling. `_PHASE_TEST_MAP` added. `skipped_tests` in week plan. 1580 tests. |
+| P3 | Data-driven phase→axis mapping | Replace hardcoded `_PHASE_TEST_MAP` with `stimulated_axes` metadata on phase definitions in `macrocycle_v1.py` (KB Decision D92) |
 | ARCH-3 | Generic timer from prescription | Frontend timer derives behavior from `work_seconds` + `reps` + `rest_*` fields |
 | — | Override intensity cap warning | Warn when user overrides above phase intensity cap |
 | — | P1 ranking in resolver | Recency, intensity, fatigue-based exercise prioritization |
