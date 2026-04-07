@@ -338,6 +338,18 @@ Logging aggiunto a 6 moduli engine, 5 `except:pass` silenziosi sostituiti con `l
 
 **Rischio:** BASSO — estrazione costanti
 
+### B192 — Undo session: clear stale feedback artifacts
+
+**Priority:** P2 | **Status:** Open | **Type:** B (bugfix) | **Discovered:** A187 STOP 2 (2026-04-07)
+
+Pre-existing bug (NOT caused by A187, verified via `git log --all -S exercise_feedback -- backend/engine/replanner_v1.py` → no matches). When a user clicks Undo on a completed session, the backend `apply_events` branch `mark_planned` (`replanner_v1.py:870`) only clears `s["status"]` but leaves `actual_exercises`, `exercise_feedback`, `feedback_summary`, `session_duration_seconds`, `duration_source`, `session_load_score` populated. The frontend `session-card.tsx:847-848` renders per-exercise OK badges from `session.exercise_feedback[...]` and `actual_exercises` unconditionally (no `isDone` gate), so the badges persist after undo.
+
+**Fix (backend only):** extend `mark_planned` to pop all feedback-derived fields on the matched session. Leave the JSONL feedback log intact (append-only historical record). Closed-loop progression mutations on `user_state` are not reverted (accepted trade-off — undo is rare, and a full rollback would be complex and risky).
+
+**High-risk module:** touches `replanner_v1.py` → must follow STOP-for-OK protocol per CLAUDE.md.
+
+**Rischio:** BASSO — single branch in `apply_events`, guarded by `_session_matches`.
+
 ---
 
 ## Priority 2.5 — Session Quality (post-launch)
