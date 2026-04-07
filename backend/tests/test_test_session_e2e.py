@@ -113,6 +113,73 @@ class TestMaxHangUpdatesFingerstrengtBaseline:
         baseline = result["baselines"]["hangboard"][0]
         assert baseline["updated_at"] == "2026-03-03"
 
+    # B-HORST-INTENSITY: protocol fields must be populated on baseline write,
+    # otherwise _pick_hangboard_baseline cannot match and falls back with WARNING.
+    def test_hangboard_baseline_has_hang_seconds(self):
+        result = self._run()
+        baseline = result["baselines"]["hangboard"][0]
+        assert baseline.get("hang_seconds") == 5
+
+    def test_hangboard_baseline_has_edge_mm(self):
+        result = self._run()
+        baseline = result["baselines"]["hangboard"][0]
+        assert baseline.get("edge_mm") == 20
+
+    def test_hangboard_baseline_has_grip(self):
+        result = self._run()
+        baseline = result["baselines"]["hangboard"][0]
+        assert baseline.get("grip") == "half_crimp"
+
+
+# ---------------------------------------------------------------------------
+# Test 1b — Max hang 7s test session must register complete baseline
+# ---------------------------------------------------------------------------
+
+
+class TestMaxHang7sRegistersCompleteBaseline:
+    """B-HORST-INTENSITY regression: User completes test_max_hang_7s.
+    Baseline must include hang_seconds=7, edge_mm=20, grip=half_crimp from
+    the exercise catalog, not just max_total_load_kg."""
+
+    def _run(self) -> dict:
+        state = _base_state(77.0)
+        log = _test_session_log(
+            "2026-03-17",
+            "test_max_hang_7s",
+            [
+                {
+                    "exercise_id": "max_hang_7s",
+                    "used_total_load_kg": 120.0,
+                    "feedback_label": "ok",
+                }
+            ],
+        )
+        return apply_feedback(log, state)
+
+    def test_max_total_load_kg(self):
+        baseline = self._run()["baselines"]["hangboard"][0]
+        assert baseline["max_total_load_kg"] == 120.0
+
+    def test_source_is_test(self):
+        baseline = self._run()["baselines"]["hangboard"][0]
+        assert baseline["source"] == "test"
+
+    def test_updated_at(self):
+        baseline = self._run()["baselines"]["hangboard"][0]
+        assert baseline["updated_at"] == "2026-03-17"
+
+    def test_hang_seconds_is_7(self):
+        baseline = self._run()["baselines"]["hangboard"][0]
+        assert baseline.get("hang_seconds") == 7
+
+    def test_edge_mm_is_20(self):
+        baseline = self._run()["baselines"]["hangboard"][0]
+        assert baseline.get("edge_mm") == 20
+
+    def test_grip_is_half_crimp(self):
+        baseline = self._run()["baselines"]["hangboard"][0]
+        assert baseline.get("grip") == "half_crimp"
+
 
 # ---------------------------------------------------------------------------
 # Test 2 — Repeater updates PE scalar + append-only history

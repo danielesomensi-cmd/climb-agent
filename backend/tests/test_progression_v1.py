@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from backend.engine.progression_v1 import apply_feedback, inject_targets, normalize_font_grade, step_grade
+from backend.engine.progression_v1 import (
+    HANGBOARD_DEFAULT_INTENSITY_PCT,
+    apply_feedback,
+    inject_targets,
+    normalize_font_grade,
+    step_grade,
+)
 from backend.engine.resolve_session import resolve_session
 
 
@@ -52,6 +58,13 @@ def _resolved_day_for_progression() -> dict:
             }
         ],
     }
+
+
+def test_horst_7_53_intensity_is_max_strength():
+    """Hörst 7-53 is a max strength protocol (90-95% MVC per catalog notes
+    and Hörst/López literature), not a repeater. Regression guard for
+    B-HORST-INTENSITY: previously set to 0.70 (repeater level)."""
+    assert HANGBOARD_DEFAULT_INTENSITY_PCT["horst_7_53"] >= 0.88
 
 
 def test_inject_targets_deterministic():

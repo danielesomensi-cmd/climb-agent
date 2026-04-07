@@ -131,7 +131,7 @@ GRADE_TO_HANG_OFFSET: Dict[str, float] = {
 HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
     "density_hangs": 0.75,
     "hangboard_moving_hangs": 0.55,
-    "horst_7_53": 0.70,
+    "horst_7_53": 0.90,  # Max strength protocol, 90% MVC (Hörst, López). Catalog notes: "90-95% intensity".
     "long_duration_hang": 0.55,
     "lopez_subhangs": 0.75,
     "max_hang_10s": 0.85,
@@ -713,10 +713,16 @@ def _estimate_hangboard_baseline(user_state: Dict[str, Any]) -> None:
     estimated = _round_half_step(estimated)
     today = datetime.now().strftime("%Y-%m-%d")
 
+    # B-HORST-INTENSITY: populate protocol fields so downstream
+    # _pick_hangboard_baseline can match without fallback. Defaults match
+    # primary test protocol (max_hang_7s on 20mm half_crimp).
     new_entry: Dict[str, Any] = {
         "max_total_load_kg": estimated,
         "source": source,
         "estimated_at": today,
+        "hang_seconds": 7,
+        "edge_mm": 20,
+        "grip": "half_crimp",
     }
     if grade_used:
         new_entry["grade_used"] = grade_used
@@ -1081,12 +1087,17 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             }
             max_strength.append(entry)
             max_strength.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
+            # B-HORST-INTENSITY: write full protocol fields so _pick_hangboard_baseline
+            # can match without falling back + warning. Catalog max_hang_7s.attributes:
+            # edge_mm=20, grip=half_crimp.
             baselines = updated.setdefault("baselines", {}).setdefault("hangboard", [{"max_total_load_kg": total}])
             if baselines:
                 baselines[0]["max_total_load_kg"] = total
                 baselines[0]["source"] = "test"
                 baselines[0]["updated_at"] = date_str
                 baselines[0]["hang_seconds"] = 7
+                baselines[0]["edge_mm"] = 20
+                baselines[0]["grip"] = "half_crimp"
             # Write scalar to assessment.tests (both keys for compat)
             at["max_hang_20mm_7s_total_kg"] = total
             at["max_hang_20mm_5s_total_kg"] = total  # legacy compat: assessment_v1 reads this key
@@ -1113,11 +1124,17 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             }
             max_strength.append(entry)
             max_strength.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
+            # B-HORST-INTENSITY: write full protocol fields (legacy 5s branch
+            # previously omitted even hang_seconds). Catalog max_hang_5s.attributes:
+            # edge_mm=20, grip=half_crimp.
             baselines = updated.setdefault("baselines", {}).setdefault("hangboard", [{"max_total_load_kg": total}])
             if baselines:
                 baselines[0]["max_total_load_kg"] = total
                 baselines[0]["source"] = "test"
                 baselines[0]["updated_at"] = date_str
+                baselines[0]["hang_seconds"] = 5
+                baselines[0]["edge_mm"] = 20
+                baselines[0]["grip"] = "half_crimp"
             # Write scalar to assessment.tests (legacy key)
             at["max_hang_20mm_5s_total_kg"] = total
 
