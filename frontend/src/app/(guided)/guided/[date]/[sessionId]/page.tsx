@@ -471,15 +471,20 @@ export default function GuidedSessionPage() {
 
         // Success — clean up localStorage
         removeState(state.date, state.sessionId);
-        // B193 / Bug 2: refetch the affected week BEFORE navigating so /today shows
-        // "Completed" instantly instead of stale "Planned" → fresh transition.
-        // Force-refetch (not just invalidate) because there are no active observers
-        // on this page; invalidate alone would only mark stale, leaving /today to
-        // refetch on mount and briefly render the old badge.
+        // B193 / Bug 2 (v2): refetch ALL cached weeks before navigating.
+        // Previous fix targeted queryKeys.week(weekNum) where weekNum is the
+        // 1-based macrocycle week (e.g. 5), but /today reads useWeekPlan(0) →
+        // cache key ['week', 0] — a key mismatch that left /today on stale data.
+        // refetchQueries with prefix ['week'] matches every ['week', *] entry,
+        // so both ['week', 0] (current) and ['week', weekNum] are forced to
+        // refetch. We await so navigation only happens after the cache is
+        // populated, guaranteeing /today renders fresh on first paint.
+        console.log("[guided] feedback OK, refetching week cache before navigate");
         await Promise.all([
-          qc.refetchQueries({ queryKey: queryKeys.week(weekNum) }),
+          qc.refetchQueries({ queryKey: queryKeys.weekAll }),
           qc.invalidateQueries({ queryKey: queryKeys.state }),
         ]);
+        console.log("[guided] week cache refetched, navigating to /today");
       } catch {
         // Feedback POST failed — save for retry
         setState((prev) => prev ? { ...prev, submitStatus: "feedback_pending" } : prev);
