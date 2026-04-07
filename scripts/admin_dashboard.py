@@ -208,7 +208,7 @@ def analyze_state(state: dict, days: int) -> dict:
             phases = mc.get("phases") or []
             week_cursor = 1
             for ph in phases:
-                ph_weeks = ph.get("weeks") or 1
+                ph_weeks = ph.get("duration_weeks") or ph.get("weeks") or 1
                 if week_cursor <= current_week_num < week_cursor + ph_weeks:
                     result["current_phase"] = ph.get("phase_id") or ph.get("phase")
                     break

@@ -392,7 +392,7 @@ class TestPlannerV2TestSessions(unittest.TestCase):
     """Tests for test session scheduling (NEW-F3a)."""
 
     def test_last_week_base_has_test_sessions(self):
-        """Last week of base phase should include test_max_hang_5s and test_repeater_7_3."""
+        """Last week of base: only repeater (endurance axis) — finger/pulling gated (B191/D92)."""
         # Use 7-day availability: the expanded base pool (6 primaries) needs more room
         # for pass 3 to inject test sessions without violating finger/hard spacing.
         full_avail = {wd: {"evening": {"available": True, "locations": ["gym", "home"]}}
@@ -402,8 +402,10 @@ class TestPlannerV2TestSessions(unittest.TestCase):
             planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 5}))
         all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
         session_ids = {s["session_id"] for s in all_sessions}
-        self.assertIn("test_max_hang_5s", session_ids,
-                       "Last week of base phase should have test_max_hang_5s")
+        # B191/D92: finger not stimulated by Base → NOT scheduled
+        self.assertNotIn("test_max_hang_5s", session_ids,
+                          "Base phase must NOT schedule finger strength test (D92)")
+        # Repeater IS stimulated by Base (ARC/endurance volume) → scheduled
         self.assertIn("test_repeater_7_3", session_ids,
                        "Last week of base phase should have test_repeater_7_3")
 
@@ -518,30 +520,33 @@ class TestPlannerV2TestFreshness(unittest.TestCase):
                        "Repeater test is stale — should be scheduled")
 
     def test_no_recent_dates_all_tests_scheduled(self):
-        """No recent_test_dates (None) → all tests scheduled normally."""
+        """No recent_test_dates (None) → repeater scheduled; finger gated by phase (B191/D92)."""
         plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
             recent_test_dates=None))
         sids = self._session_ids(plan)
-        self.assertIn("test_max_hang_5s", sids)
+        self.assertNotIn("test_max_hang_5s", sids,
+                          "Base phase must NOT schedule finger strength test (D92)")
         self.assertIn("test_repeater_7_3", sids)
 
     def test_empty_recent_dates_all_tests_scheduled(self):
-        """Empty dict → all tests scheduled (no completion data = never done)."""
+        """Empty dict → repeater scheduled; finger gated by phase (B191/D92)."""
         plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
             recent_test_dates={}))
         sids = self._session_ids(plan)
-        self.assertIn("test_max_hang_5s", sids)
+        self.assertNotIn("test_max_hang_5s", sids,
+                          "Base phase must NOT schedule finger strength test (D92)")
         self.assertIn("test_repeater_7_3", sids)
 
     def test_scheduled_but_not_completed_reschedules(self):
         """Test was scheduled but NOT completed — no date in baselines/tests.
-        Only pulling has a date, finger and repeater have no entry → must be rescheduled."""
+        Only pulling has a date; repeater has no entry → must be rescheduled.
+        Finger has no date but Base phase doesn't target it → still gated (B191/D92)."""
         recent = {"pulling": "2026-02-25"}  # finger and repeater: no entry
         plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
             recent_test_dates=recent))
         sids = self._session_ids(plan)
-        self.assertIn("test_max_hang_5s", sids,
-                       "Finger test has no completion date — must be rescheduled")
+        self.assertNotIn("test_max_hang_5s", sids,
+                          "Finger test gated by Base phase (D92) even without completion date")
         self.assertIn("test_repeater_7_3", sids,
                        "Repeater test has no completion date — must be rescheduled")
 
@@ -563,16 +568,17 @@ class TestPlannerV2TestFreshness(unittest.TestCase):
                          f"Tests completed 7 days ago in 2-week phase — should be skipped, got {test_sids}")
 
     def test_stale_at_exactly_42_days(self):
-        """B138: Test completed exactly 42 days before week start → stale, should be rescheduled."""
+        """B138: Test completed exactly 42 days before week start — stale.
+        In Base phase: repeater (stale) → rescheduled; finger (gated) → not scheduled (B191/D92)."""
         # 2026-03-02 minus 42 days = 2026-01-19
         recent = {"finger": "2026-01-19", "repeater": "2026-01-19", "pulling": "2026-01-19"}
         plan = generate_phase_week(**_make_kwargs("base", **self._test_kwargs,
             recent_test_dates=recent))
         sids = self._session_ids(plan)
-        self.assertIn("test_max_hang_5s", sids,
-                       "Exactly 42 days old — should be rescheduled")
+        self.assertNotIn("test_max_hang_5s", sids,
+                          "Finger gated by Base phase (D92) regardless of freshness")
         self.assertIn("test_repeater_7_3", sids,
-                       "Exactly 42 days old — should be rescheduled")
+                       "Repeater exactly 42 days old in Base phase — should be rescheduled")
 
     def test_fresh_at_41_days(self):
         """B138: Test completed 41 days before week start → still fresh, should be skipped."""
@@ -597,6 +603,108 @@ class TestPlannerV2TestFreshness(unittest.TestCase):
         test_sids = {s for s in sids if s.startswith("test_")}
         self.assertEqual(test_sids, set(),
                          f"inject_tests=True but all fresh — should skip, got {test_sids}")
+
+
+class TestPlannerV2PhaseAwareGating(unittest.TestCase):
+    """B191/D92: phase-aware test scheduling — only tests stimulated by the phase are scheduled."""
+
+    _full_avail = {wd: {"evening": {"available": True, "locations": ["gym", "home"]}}
+                   for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+    _common = dict(
+        is_last_week_of_phase=True,
+        hard_cap_per_week=5,
+        availability=_full_avail,
+        planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 5},
+        recent_test_dates=None,
+    )
+
+    def _session_ids(self, plan):
+        return {s["session_id"] for d in plan["weeks"][0]["days"] for s in d["sessions"]}
+
+    def _skipped(self, plan):
+        return plan.get("skipped_tests", [])
+
+    def test_base_phase_only_repeater(self):
+        """Base last week: only repeater scheduled; finger + pulling gated."""
+        plan = generate_phase_week(**_make_kwargs("base", **self._common))
+        sids = self._session_ids(plan)
+        self.assertNotIn("test_max_hang_5s", sids,
+                          "Base phase must NOT schedule finger test (axis not stimulated)")
+        self.assertIn("test_repeater_7_3", sids,
+                       "Base phase MUST schedule repeater test (endurance axis stimulated)")
+        self.assertNotIn("test_max_weighted_pullup", sids)
+        self.assertNotIn("test_pullup_bw", sids)
+
+    def test_strength_power_all_three_tests(self):
+        """Strength_power last week: all three tests scheduled."""
+        plan = generate_phase_week(**_make_kwargs("strength_power", **self._common))
+        sids = self._session_ids(plan)
+        self.assertIn("test_max_hang_5s", sids,
+                       "Strength_power must schedule finger test")
+        self.assertIn("test_repeater_7_3", sids,
+                       "Strength_power must schedule repeater test")
+
+    def test_power_endurance_no_tests(self):
+        """Power_endurance last week: no tests (Pass 3 only fires for base/strength_power)."""
+        plan = generate_phase_week(**_make_kwargs("power_endurance", **self._common))
+        sids = self._session_ids(plan)
+        test_sids = {s for s in sids if s.startswith("test_")}
+        self.assertEqual(test_sids, set(),
+                         f"PE phase doesn't trigger Pass 3 — no tests expected, got {test_sids}")
+
+    def test_performance_no_tests(self):
+        """Performance last week: no tests (Pass 3 doesn't run for performance phase)."""
+        plan = generate_phase_week(**_make_kwargs("performance", **self._common))
+        sids = self._session_ids(plan)
+        test_sids = {s for s in sids if s.startswith("test_")}
+        self.assertEqual(test_sids, set(),
+                         f"Performance phase should have no tests, got {test_sids}")
+
+    def test_skipped_tests_populated_base(self):
+        """skipped_tests contains finger + pulling entries for base phase."""
+        plan = generate_phase_week(**_make_kwargs("base", **self._common))
+        skipped = self._skipped(plan)
+        axes = {e["axis"] for e in skipped}
+        self.assertIn("finger", axes,
+                       "skipped_tests must contain finger entry for base phase")
+        self.assertIn("pulling", axes,
+                       "skipped_tests must contain pulling entry for base phase")
+        self.assertNotIn("repeater", axes,
+                          "repeater must NOT be in skipped_tests for base phase")
+
+    def test_skipped_tests_empty_non_pass3(self):
+        """skipped_tests is empty when Pass 3 doesn't run (non-last week)."""
+        plan = generate_phase_week(**_make_kwargs("base", is_last_week_of_phase=False))
+        self.assertEqual(plan.get("skipped_tests", []), [],
+                         "skipped_tests must be empty when Pass 3 doesn't run")
+
+    def test_skipped_tests_reason_contains_d92(self):
+        """Each skipped entry has a reason string referencing D92."""
+        plan = generate_phase_week(**_make_kwargs("base", **self._common))
+        for entry in plan.get("skipped_tests", []):
+            self.assertIn("D92", entry["reason"],
+                           f"skipped entry {entry['axis']} missing D92 reference")
+
+    def test_maintenance_cap_12_weeks(self):
+        """Axis untested for 12+ weeks in base phase → maintenance retest fires."""
+        # finger untested since >12 weeks before 2026-03-02
+        old_date = "2025-12-01"  # ~13 weeks before 2026-03-02
+        common_no_recent = {k: v for k, v in self._common.items() if k != "recent_test_dates"}
+        plan = generate_phase_week(**_make_kwargs("base", **common_no_recent,
+            recent_test_dates={"finger": old_date, "repeater": old_date, "pulling": old_date}))
+        sids = self._session_ids(plan)
+        self.assertIn("test_max_hang_5s", sids,
+                       "Finger untested 12+ weeks → maintenance retest must fire even in base phase")
+
+    def test_under_maintenance_cap_still_gated(self):
+        """Axis untested for 8 weeks in base phase → still gated (under 12-week cap)."""
+        # 8 weeks = 56 days before 2026-03-02 → 2026-01-05
+        common_no_recent = {k: v for k, v in self._common.items() if k != "recent_test_dates"}
+        plan = generate_phase_week(**_make_kwargs("base", **common_no_recent,
+            recent_test_dates={"finger": "2026-01-05"}))
+        sids = self._session_ids(plan)
+        self.assertNotIn("test_max_hang_5s", sids,
+                          "8 weeks untested in base — still under cap, must remain gated")
 
 
 class TestPlannerV2LoadScore(unittest.TestCase):

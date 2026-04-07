@@ -73,6 +73,39 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
 }
 
 
+# B191/D92: phase-aware test gating — only schedule tests for axes the current phase stimulates.
+# Avoids scientifically indefensible retests (e.g. max finger strength test after a Base/ARC phase).
+# Safety cap: axes untested for 12+ weeks get a maintenance retest regardless of phase.
+_PHASE_TEST_MAP: Dict[str, Dict[str, bool]] = {
+    "base": {
+        "finger": False,    # Base phase targets endurance, not max finger strength
+        "repeater": True,   # ARC/volume stimulus → endurance retest appropriate
+        "pulling": False,   # No pulling strength stimulus in Base
+    },
+    "strength_power": {
+        "finger": True,
+        "repeater": True,
+        "pulling": True,
+    },
+    "power_endurance": {
+        "finger": False,    # PE phase targets lactate tolerance, not max force
+        "repeater": True,   # PE stimulus → endurance retest appropriate
+        "pulling": False,
+    },
+    "performance": {
+        "finger": False,
+        "repeater": False,
+        "pulling": False,
+    },
+    "deload": {
+        "finger": False,
+        "repeater": False,
+        "pulling": False,
+    },
+}
+MAX_WEEKS_UNTESTED = 12  # Force maintenance retest if axis untested for 12+ weeks
+
+
 def _validate_session_meta_equipment() -> None:
     """D172-17: warn if _SESSION_META.required_equipment differs from session JSON files."""
     import os as _os
@@ -1186,6 +1219,7 @@ def generate_phase_week(
 
     # ── PASS 3 (optional): Inject test sessions ──
     # Triggers on: last week of base/strength_power, OR explicitly via inject_tests
+    skipped_tests: list = []  # B191: populated by phase-gating logic below
     _run_pass3 = inject_tests or (is_last_week_of_phase and phase_id in ("base", "strength_power"))
     if _run_pass3:
         # B128/B138: freshness check — skip tests completed within TEST_FRESHNESS_DAYS
@@ -1211,10 +1245,36 @@ def generate_phase_week(
             (_pulling_test_sid, False),
         ]
 
-        # B128: filter out recently completed tests
+        # B191/D92+B128: phase-aware gating then freshness check
+        # inject_tests=True means explicit baseline assessment (initial or manual) — bypass phase gate
+        _phase_map = _PHASE_TEST_MAP.get(phase_id, {}) if not inject_tests else {}
         _filtered_schedule = []
+        skipped_tests: list = []
         for test_sid, _required in _test_schedule:
             test_type = _test_type_map.get(test_sid)
+
+            # 1. Phase-aware gate (D92): skip axes not stimulated by this phase,
+            #    unless inject_tests=True (explicit assessment) or axis untested 12+ weeks.
+            phase_allows = _phase_map.get(test_type, True) if test_type else True
+            if not phase_allows:
+                last_date_str = _recent.get(test_type) if test_type else None
+                weeks_since: float | None = None
+                if last_date_str:
+                    try:
+                        weeks_since = (_week_start - _parse_date(last_date_str)).days / 7
+                    except (ValueError, TypeError):
+                        pass
+                if weeks_since is None or weeks_since < MAX_WEEKS_UNTESTED:
+                    skipped_tests.append({
+                        "test_id": test_sid,
+                        "axis": test_type,
+                        "reason": f"Phase '{phase_id}' does not target {test_type} axis (D92/B191)",
+                        "weeks_since_last": round(weeks_since, 1) if weeks_since is not None else None,
+                    })
+                    continue  # Skip — phase doesn't target this axis
+                # Fall through: axis untested for 12+ weeks → maintenance retest
+
+            # 2. Freshness check (B128): skip if tested within 42 days
             last_date_str = _recent.get(test_type) if test_type else None
             if last_date_str:
                 try:
@@ -1365,6 +1425,7 @@ def generate_phase_week(
                 "days": plan_days,
             }
         ],
+        "skipped_tests": skipped_tests,  # B191: tests gated by phase (D92); empty if Pass 3 didn't run
     }
 
     if phase_id == "deload":

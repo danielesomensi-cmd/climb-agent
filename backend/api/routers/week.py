@@ -321,11 +321,20 @@ def get_week(
             # B128: extract recent test completion dates for freshness check
             _recent_test_dates: dict[str, str] = {}
             _hb_baselines = (state.get("baselines") or {}).get("hangboard") or []
-            if _hb_baselines and _hb_baselines[0].get("updated_at"):
-                _recent_test_dates["finger"] = _hb_baselines[0]["updated_at"]
+            if _hb_baselines:
+                # B191/Finding-A: check updated_at (real test) then estimated_at (onboarding estimate)
+                _hb_ts = _hb_baselines[0].get("updated_at") or _hb_baselines[0].get("estimated_at")
+                if _hb_ts:
+                    _recent_test_dates["finger"] = _hb_ts
             _rep_history = (state.get("tests") or {}).get("repeater_strength_endurance") or []
             if _rep_history:
                 _recent_test_dates["repeater"] = _rep_history[-1].get("date", "")
+            elif (state.get("assessment") or {}).get("tests", {}).get("repeater_7_3_max_sets_20mm") is not None:
+                # B191/Finding-B: onboarding-only users have no in-app repeater history;
+                # use macrocycle start_date as proxy (test was baseline-assessed at onboarding)
+                _mc_start = (state.get("macrocycle") or {}).get("start_date")
+                if _mc_start:
+                    _recent_test_dates["repeater"] = _mc_start
             _pulling_bl = (state.get("baselines") or {}).get("pulling") or {}
             if _pulling_bl.get("updated_at"):
                 _recent_test_dates["pulling"] = _pulling_bl["updated_at"]
