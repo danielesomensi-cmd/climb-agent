@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import { TopBar } from "@/components/layout/top-bar";
 import { WeekGrid } from "@/components/training/week-grid";
 import { DayCard } from "@/components/training/day-card";
@@ -15,7 +16,10 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide-react";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
 import { useRouter } from "next/navigation";
-import { getWeek, getState, applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
+import { applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
+import { useUserState } from "@/lib/hooks/queries/use-user-state";
+import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
+import { queryKeys } from "@/lib/query-keys";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -44,17 +48,45 @@ function todayISO(): string {
 
 export default function WeekPage() {
   const { isLoaded: authReady } = useAuth();
-  const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);
-  const [phaseId, setPhaseId] = useState<string | null>(null);
-  const [weekNum, setWeekNum] = useState(0); // 0 = current week
-  const [displayWeekNum, setDisplayWeekNum] = useState(1);
-  const [macrocycle, setMacrocycle] = useState<Macrocycle | null>(null);
-  const [gyms, setGyms] = useState<
-    Array<{ gym_id?: string; name: string; equipment: string[] }>
-  >([]);
-  const [homeEquipment, setHomeEquipment] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
+  const [weekNum, setWeekNum] = useState(0); // 0 = current week (also the cache key)
+  const stateQuery = useUserState(authReady);
+  const weekQuery = useWeekPlan(weekNum, authReady);
+  const weekPlan = weekQuery.data?.week_plan ?? null;
+  const phaseId = weekQuery.data?.phase_id ?? null;
+  const displayWeekNum = weekQuery.data?.week_num ?? 1;
+  const macrocycle = (stateQuery.data?.macrocycle as Macrocycle | undefined) ?? null;
+  const gyms = useMemo<Array<{ gym_id?: string; name: string; equipment: string[] }>>(() => {
+    const eq = stateQuery.data?.equipment as Record<string, unknown> | undefined;
+    return (eq?.gyms as Array<{ gym_id?: string; name: string; equipment: string[] }>) ?? [];
+  }, [stateQuery.data]);
+  const homeEquipment = useMemo<string[]>(() => {
+    const eq = stateQuery.data?.equipment as Record<string, unknown> | undefined;
+    return (eq?.home as string[]) ?? [];
+  }, [stateQuery.data]);
+  const currentGrade = useMemo<string | null>(() => {
+    const goal = stateQuery.data?.goal as { current_grade?: string } | undefined;
+    return goal?.current_grade ?? null;
+  }, [stateQuery.data]);
+  const loading = (stateQuery.isLoading || weekQuery.isLoading) && authReady;
+  const queryError = stateQuery.error || weekQuery.error;
   const [error, setError] = useState<string | null>(null);
+
+  /** Update the cached week plan after a mutation. */
+  const updateWeekCache = useCallback(
+    (newWeekPlan: WeekPlan) => {
+      qc.setQueryData(queryKeys.week(weekNum), (old: { week_num: number; phase_id?: string | null; week_plan: WeekPlan } | undefined) =>
+        old ? { ...old, week_plan: newWeekPlan } : { week_num: weekNum, week_plan: newWeekPlan },
+      );
+    },
+    [qc, weekNum],
+  );
+
+  /** Force refetch of state + current week. */
+  const refetchAll = useCallback(() => {
+    qc.invalidateQueries({ queryKey: queryKeys.state });
+    qc.invalidateQueries({ queryKey: queryKeys.week(weekNum) });
+  }, [qc, weekNum]);
   const [replanDate, setReplanDate] = useState<string | null>(null);
   const [replanSessionIndex, setReplanSessionIndex] = useState<number | undefined>(undefined);
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
@@ -70,14 +102,12 @@ export default function WeekPage() {
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
   const [outdoorEditDate, setOutdoorEditDate] = useState<string | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
-  const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
   const [freeSessionsByDate, setFreeSessionsByDate] = useState<Record<string, Array<Record<string, unknown>>>>({});
   const [freeSessionsLoaded, setFreeSessionsLoaded] = useState(false);
   const weekRouter = useRouter();
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const fetchWeekGenRef = useRef(0);
 
   const handleDayClick = useCallback((date: string) => {
     dayRefs.current[date]?.scrollIntoView({
@@ -86,55 +116,8 @@ export default function WeekPage() {
     });
   }, []);
 
-  const fetchWeek = useCallback(async (wn: number) => {
-    const gen = ++fetchWeekGenRef.current;
-    setLoading(true);
-    setError(null);
-    try {
-      const weekData = await getWeek(wn);
-      if (gen !== fetchWeekGenRef.current) return; // stale — newer request in flight
-      setWeekPlan(weekData.week_plan);
-      setPhaseId(weekData.phase_id);
-      setDisplayWeekNum(weekData.week_num);
-    } catch (e) {
-      if (gen !== fetchWeekGenRef.current) return;
-      setError(e instanceof Error ? e.message : "Failed to load data");
-    } finally {
-      if (gen === fetchWeekGenRef.current) setLoading(false);
-    }
-  }, []);
-
-  const fetchInitial = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [weekData, stateData] = await Promise.all([
-        getWeek(0),
-        getState(),
-      ]);
-      setWeekPlan(weekData.week_plan);
-      setPhaseId(weekData.phase_id);
-      setDisplayWeekNum(weekData.week_num);
-      setMacrocycle(stateData.macrocycle ?? null);
-      const goal = stateData.goal as { current_grade?: string } | undefined;
-      if (goal?.current_grade) setCurrentGrade(goal.current_grade);
-      const eq = stateData.equipment as Record<string, unknown> | undefined;
-      setGyms(
-        (eq?.gyms as Array<{ gym_id?: string; name: string; equipment: string[] }>) ?? []
-      );
-      setHomeEquipment((eq?.home as string[]) ?? []);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load data");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // B155: gate on Clerk readiness to avoid 422 race on first load
-  useEffect(() => {
-    if (!authReady) return;
-    fetchInitial();
-  }, [fetchInitial, authReady]);
+  // React Query handles fetching via useUserState + useWeekPlan(weekNum).
+  // Changing weekNum swaps the cache key; RQ shows cached data instantly and refetches in background.
 
   // Fetch outdoor session routes for days marked "done"
   useEffect(() => {
@@ -198,26 +181,21 @@ export default function WeekPage() {
     return result;
   })();
 
-  /** Navigate directly to a specific week */
+  /** Navigate directly to a specific week (React Query handles the fetch via cache key swap). */
   const handleGoToWeek = (wn: number) => {
     setWeekPickerOpen(false);
     if (wn === displayWeekNum) return;
     setWeekNum(wn);
-    fetchWeek(wn);
   };
 
   const handlePrevWeek = () => {
     if (displayWeekNum <= 1) return;
-    const newWn = displayWeekNum - 1;
-    setWeekNum(newWn);
-    fetchWeek(newWn);
+    setWeekNum(displayWeekNum - 1);
   };
 
   const handleNextWeek = () => {
     if (totalWeeks > 0 && displayWeekNum >= totalWeeks) return;
-    const newWn = displayWeekNum + 1;
-    setWeekNum(newWn);
-    fetchWeek(newWn);
+    setWeekNum(displayWeekNum + 1);
   };
 
   /** Handle replan: call override API and update week plan */
@@ -240,7 +218,7 @@ export default function WeekPage() {
         week_plan: weekPlan,
         session_index: rdata.session_index,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update plan");
     } finally {
@@ -268,7 +246,7 @@ export default function WeekPage() {
         phase_id: phaseId ?? undefined,
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
       if (result.warnings?.length > 0) {
         setError(result.warnings.join("; "));
       }
@@ -301,7 +279,7 @@ export default function WeekPage() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to move session");
     } finally {
@@ -320,7 +298,7 @@ export default function WeekPage() {
         events: [ev],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete activity");
     }
@@ -335,7 +313,7 @@ export default function WeekPage() {
         events: [{ event_type: "edit_other_activity", date, ...fields }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to edit activity");
     }
@@ -350,7 +328,7 @@ export default function WeekPage() {
         events: [{ event_type: "undo_other_activity", date }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo");
     }
@@ -365,7 +343,7 @@ export default function WeekPage() {
         events: [{ event_type: "remove_other_activity", date }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove activity");
     }
@@ -380,7 +358,7 @@ export default function WeekPage() {
         events: [{ event_type: "mark_done", date, session_ref: sessionId }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
       setFeedbackSessionId(sessionId);
       setFeedbackDate(date);
       setFeedbackOpen(true);
@@ -398,7 +376,7 @@ export default function WeekPage() {
         events: [{ event_type: "mark_skipped", date, session_ref: sessionId }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     }
@@ -413,7 +391,7 @@ export default function WeekPage() {
         events: [{ event_type: "mark_planned", date, session_ref: sessionId }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo");
     }
@@ -428,7 +406,7 @@ export default function WeekPage() {
         events: [{ event_type: "remove_session", date, session_ref: sessionId }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove session");
     }
@@ -455,9 +433,8 @@ export default function WeekPage() {
         },
         status: "done",
       });
-      // Re-fetch week plan so feedback_summary badges appear
-      const weekData = await getWeek(displayWeekNum);
-      setWeekPlan(weekData.week_plan);
+      // Re-fetch week plan so feedback_summary badges appear (cascade from progression)
+      qc.invalidateQueries({ queryKey: queryKeys.weekAll });
     } catch {
       // Non-critical
     } finally {
@@ -486,7 +463,7 @@ export default function WeekPage() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to change location");
     } finally {
@@ -515,7 +492,7 @@ export default function WeekPage() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add outdoor session");
     } finally {
@@ -538,7 +515,7 @@ export default function WeekPage() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add activity");
     } finally {
@@ -576,7 +553,7 @@ export default function WeekPage() {
         events: [{ event_type: "complete_outdoor", date: outdoorLogDate }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to mark outdoor as done");
     } finally {
@@ -592,7 +569,7 @@ export default function WeekPage() {
         events: [{ event_type: "undo_outdoor", date }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo outdoor");
     }
@@ -606,7 +583,7 @@ export default function WeekPage() {
         events: [{ event_type: "remove_outdoor", date }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove outdoor session");
     }
@@ -630,7 +607,7 @@ export default function WeekPage() {
     setOutdoorEditDate(null);
     setOutdoorEditData(null);
     // Refresh outdoor routes map
-    await fetchWeek(displayWeekNum);
+    refetchAll();
   }
 
   const today = todayISO();
@@ -731,11 +708,11 @@ export default function WeekPage() {
         )}
 
         {/* Error state */}
-        {error && !loading && (
+        {(error || queryError) && !loading && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive">{error ?? (queryError instanceof Error ? queryError.message : "Failed to load data")}</p>
             <button
-              onClick={fetchInitial}
+              onClick={refetchAll}
               className="mt-2 text-sm font-medium text-primary underline"
             >
               Retry
@@ -788,7 +765,7 @@ export default function WeekPage() {
                   outdoorDurationMinutes={outdoorDurationMap[day.date]}
                   weekPlan={weekPlan}
                   onSessionUpdated={(updatedPlan) => {
-                    if (updatedPlan) { setWeekPlan(updatedPlan); } else { fetchWeek(displayWeekNum); }
+                    if (updatedPlan) { updateWeekCache(updatedPlan); } else { refetchAll(); }
                   }}
                   showActions
                   onMarkDone={(sessionId) => handleMarkDone(sessionId, day.date)}

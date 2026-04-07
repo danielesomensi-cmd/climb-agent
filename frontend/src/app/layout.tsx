@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
+import { Providers } from "./providers";
 import "./globals.css";
 
 const inter = Inter({
@@ -54,8 +55,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className="dark" suppressHydrationWarning>
         <body className={`${inter.variable} font-sans antialiased`}>
-          <div className="mx-auto min-h-screen max-w-3xl">{children}</div>
-          <Toaster richColors position="top-center" />
+          <Providers>
+            <div className="mx-auto min-h-screen max-w-3xl">{children}</div>
+            <Toaster richColors position="top-center" />
+          </Providers>
           <script
             dangerouslySetInnerHTML={{
               __html: `if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"))`,

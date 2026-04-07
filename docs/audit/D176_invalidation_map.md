@@ -40,7 +40,7 @@
 | `POST /api/replanner/events` | POST | today/page.tsx, week/page.tsx | Mark done, mark skipped, move session, change gym, remove session, complete other activity, undo events | `week_plans[current_week]` — stato sessioni |
 | `POST /api/replanner/override` | POST | today/page.tsx, week/page.tsx | Dialog "Replan" — cambia location/intent per uno slot | `week_plans[current_week]` — sostituisce sessione |
 | `POST /api/replanner/quick-add` | POST | quick-add-dialog.tsx | Dialog "Aggiungi sessione" — sceglie sessione + slot | `week_plans[current_week]` — aggiunge slot |
-| `POST /api/outdoor/convert-slot` | POST | today/page.tsx, week/page.tsx | Converte slot indoor in outdoor | `week_plans[current_week]` — slot type change |
+| ~~`POST /api/outdoor/convert-slot`~~ | POST | today/page.tsx, week/page.tsx | "Converte" slot indoor in outdoor | **Nessuna mutazione**: ritorna solo `{date, new_location, suggestions}`. È una query mascherata da POST. La vera mutation arriva quando l'utente sceglie una suggestion → `quick-add` o `override`. **Verificato in A187 Phase 0** |
 | `POST /api/session/add-exercise` | POST | session/[id] page | Aggiunge esercizio a sessione esistente | `week_plans[current_week]` — esercizi slot |
 | `POST /api/session/remove-exercise` | POST | session/[id] page | Rimuove esercizio da sessione | `week_plans[current_week]` — esercizi slot |
 | `POST /api/session/resolve` | POST | session/[id] page | Apertura/refresh sessione guidata | Risolve template → esercizi concreti (no state change) |
@@ -117,7 +117,7 @@
 | `POST /api/replanner/events` | — | ✅ `setQueryData(['week',n])` con `week_plan` ritornato | — | — | Ritorna `week_plan` completo |
 | `POST /api/replanner/override` | — | ✅ `setQueryData(['week',n])` | — | — | Ritorna `week_plan` completo |
 | `POST /api/replanner/quick-add` | — | ✅ `setQueryData(['week',n])` | — | — | Ritorna `week_plan` + `warnings[]` |
-| `POST /api/outdoor/convert-slot` | — | ✅ `setQueryData(['week',n])` | — | — | Ritorna suggestions ma week_plan cambia via side-effect → ⚡ `invalidateQueries` |
+| ~~`POST /api/outdoor/convert-slot`~~ | — | — | — | — | **Nessuna invalidazione** — è una query mascherata da POST, non modifica state lato server. Verifica A187 Phase 0 |
 | `POST /api/session/add-exercise` | — | ✅ `setQueryData(['week',n])` | — | — | Ritorna `week_plan` |
 | `POST /api/session/remove-exercise` | — | ✅ `setQueryData(['week',n])` | — | — | Ritorna `week_plan` |
 | `POST /api/feedback` | — | ⚡ `invalidateQueries(['week',n])` | — | — | **NON** ritorna week_plan. Trigga progression → cambia load next week |

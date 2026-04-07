@@ -1,8 +1,9 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
@@ -13,8 +14,10 @@ import { MoveSessionDialog } from "@/components/training/move-session-dialog";
 import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
-import { getWeek, getState, applyEvents, postFeedback, getDailyQuote, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
+import { applyEvents, postFeedback, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
 import { useSubscription } from "@/lib/hooks/use-subscription";
+import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
+import { queryKeys } from "@/lib/query-keys";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   Dialog,
@@ -23,7 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getInProgressSession, clearSavedSession, type InProgressSession } from "@/lib/guided-session-utils";
-import type { WeekPlan, DayPlan, Quote, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
+import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
 
 /** Full weekday names */
 const WEEKDAY_FULL: Record<number, string> = {
@@ -86,19 +89,51 @@ function TodayContent() {
   const isViewingToday = targetDate === todayISO();
   const checkoutSuccess = searchParams.get("checkout") === "success";
 
-  const [weekPlan, setWeekPlan] = useState<WeekPlan | null>(null);
-  const [gyms, setGyms] = useState<
-    Array<{ gym_id?: string; name: string; equipment: string[] }>
-  >([]);
-  const [homeEquipment, setHomeEquipment] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  // A187 — React Query hooks for cached reads
+  const qc = useQueryClient();
+  const stateQuery = useUserState(authReady);
+  const weekQuery = useWeekPlan(0, authReady);
+
+  const weekPlan: WeekPlan | null = weekQuery.data?.week_plan ?? null;
+  const phaseId: string | null = weekQuery.data?.phase_id ?? null;
+
+  // Derived from /api/state — memoised to avoid re-renders
+  const gyms = useMemo<Array<{ gym_id?: string; name: string; equipment: string[] }>>(() => {
+    const eq = stateQuery.data?.equipment as Record<string, unknown> | undefined;
+    return (eq?.gyms as Array<{ gym_id?: string; name: string; equipment: string[] }>) ?? [];
+  }, [stateQuery.data]);
+
+  const homeEquipment = useMemo<string[]>(() => {
+    const eq = stateQuery.data?.equipment as Record<string, unknown> | undefined;
+    return (eq?.home as string[]) ?? [];
+  }, [stateQuery.data]);
+
+  const currentGrade = useMemo<string | null>(() => {
+    const goal = stateQuery.data?.goal as { current_grade?: string } | undefined;
+    return goal?.current_grade ?? null;
+  }, [stateQuery.data]);
+
+  const loading = stateQuery.isLoading || weekQuery.isLoading;
+  const queryError = stateQuery.error || weekQuery.error;
+
+  /** Helper: write a fresh week_plan into the React Query cache (instant UI update) */
+  const updateWeekCache = useCallback((newWeekPlan: WeekPlan) => {
+    qc.setQueryData(queryKeys.week(0), (old: { week_num?: number; phase_id?: string; week_plan: WeekPlan } | undefined) =>
+      old ? { ...old, week_plan: newWeekPlan } : { week_num: 0, week_plan: newWeekPlan },
+    );
+  }, [qc]);
+
+  /** Helper: refetch state + week (used by retry button and weekly check-in callback) */
+  const refetchAll = useCallback(() => {
+    qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+    qc.invalidateQueries({ queryKey: queryKeys.state });
+  }, [qc]);
+
   const [error, setError] = useState<string | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackSessionId, setFeedbackSessionId] = useState<string | null>(
     null
   );
-  const [quote, setQuote] = useState<Quote | null>(null);
-  const [phaseId, setPhaseId] = useState<string | null>(null);
   const [replanDate, setReplanDate] = useState<string | null>(null);
   const [replanSessionIndex, setReplanSessionIndex] = useState<number | undefined>(undefined);
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
@@ -112,7 +147,6 @@ function TodayContent() {
   const [outdoorEditDate, setOutdoorEditDate] = useState<string | null>(null);
   const [outdoorEditData, setOutdoorEditData] = useState<OutdoorSession | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
-  const [currentGrade, setCurrentGrade] = useState<string | null>(null);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
   const [freeSessions, setFreeSessions] = useState<Array<Record<string, unknown>>>([]);
@@ -125,110 +159,77 @@ function TodayContent() {
     setResumeSession(getInProgressSession());
   }, []);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [weekData, stateData] = await Promise.all([
-        getWeek(0),
-        getState(),
-      ]);
-      setWeekPlan(weekData.week_plan);
-      setPhaseId(weekData.phase_id ?? null);
-      const goal = stateData.goal as { current_grade?: string } | undefined;
-      if (goal?.current_grade) setCurrentGrade(goal.current_grade);
-      const eq = stateData.equipment as Record<string, unknown> | undefined;
-      setGyms(
-        (eq?.gyms as Array<{ gym_id?: string; name: string; equipment: string[] }>) ?? []
-      );
-      setHomeEquipment((eq?.home as string[]) ?? []);
+  // B127/B128: retry pending guided-session feedback from localStorage on mount.
+  // Stays outside React Query — this is recovery of pending writes, not a fetch.
+  useEffect(() => {
+    if (!authReady || typeof window === "undefined") return;
+    const userId = window.Clerk?.session ? "clerk" : "";
+    const prefix = `guided_session_${userId}_`;
+    const now = Date.now();
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(prefix)) continue;
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const saved = JSON.parse(raw) as { startedAt?: string; submitStatus?: string; date?: string; sessionId?: string; exercises?: Array<Record<string, unknown>> };
 
-      // Retry pending guided session feedback + cleanup old sessions
-      if (typeof window !== "undefined") {
-        const userId = window.Clerk?.session ? "clerk" : "";
-        const prefix = `guided_session_${userId}_`;
-        const now = Date.now();
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (!key || !key.startsWith(prefix)) continue;
-          try {
-            const raw = localStorage.getItem(key);
-            if (!raw) continue;
-            const saved = JSON.parse(raw) as { startedAt?: string; submitStatus?: string; date?: string; sessionId?: string; exercises?: Array<Record<string, unknown>> };
-
-            // Cleanup sessions older than 24h that are completed
-            if (saved.startedAt) {
-              const age = now - new Date(saved.startedAt).getTime();
-              if (age > 24 * 60 * 60 * 1000 && saved.submitStatus !== "feedback_pending") {
-                localStorage.removeItem(key);
-                continue;
-              }
-            }
-
-            // Retry pending feedback
-            if (saved.submitStatus === "feedback_pending" && saved.exercises) {
-              const feedbackItems = saved.exercises.map((ex: Record<string, unknown>) => {
-                const item: Record<string, unknown> = {
-                  exercise_id: ex.exerciseId,
-                  feedback_label: ex.feedbackLabel,
-                  completed: ex.status === "done",
-                };
-                if (ex.usedLoadKg != null) item.used_external_load_kg = ex.usedLoadKg;
-                if (ex.usedGrade) item.used_grade = ex.usedGrade;
-                return item;
-              });
-              await postFeedback({
-                log_entry: {
-                  date: saved.date ?? "",
-                  session_id: saved.sessionId ?? "",
-                  actual: { exercise_feedback_v1: feedbackItems },
-                },
-                status: "done",
-              }).then(() => {
-                localStorage.removeItem(key);
-              }).catch((err) => {
-                console.error("Failed to retry pending feedback submission:", err);
-                // Leave in localStorage for next retry
-              });
-            }
-          } catch {
-            // Ignore malformed localStorage entries
+        // Cleanup sessions older than 24h that are completed
+        if (saved.startedAt) {
+          const age = now - new Date(saved.startedAt).getTime();
+          if (age > 24 * 60 * 60 * 1000 && saved.submitStatus !== "feedback_pending") {
+            localStorage.removeItem(key);
+            continue;
           }
         }
+
+        // Retry pending feedback
+        if (saved.submitStatus === "feedback_pending" && saved.exercises) {
+          const feedbackItems = saved.exercises.map((ex: Record<string, unknown>) => {
+            const item: Record<string, unknown> = {
+              exercise_id: ex.exerciseId,
+              feedback_label: ex.feedbackLabel,
+              completed: ex.status === "done",
+            };
+            if (ex.usedLoadKg != null) item.used_external_load_kg = ex.usedLoadKg;
+            if (ex.usedGrade) item.used_grade = ex.usedGrade;
+            return item;
+          });
+          postFeedback({
+            log_entry: {
+              date: saved.date ?? "",
+              session_id: saved.sessionId ?? "",
+              actual: { exercise_feedback_v1: feedbackItems },
+            },
+            status: "done",
+          }).then(() => {
+            localStorage.removeItem(key);
+            // refresh week plan so feedback badges appear
+            qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+          }).catch((err) => {
+            console.error("Failed to retry pending feedback submission:", err);
+            // Leave in localStorage for next retry
+          });
+        }
+      } catch {
+        // Ignore malformed localStorage entries
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load data");
-    } finally {
-      setLoading(false);
     }
-  }, []);
+  }, [authReady, qc]);
 
-  // B155: gate on Clerk readiness to avoid 422 race on first load
-  useEffect(() => {
-    if (!authReady) return;
-    fetchData();
-  }, [fetchData, authReady]);
-
-  // Fetch daily quote once the week plan is loaded
-  useEffect(() => {
-    if (!weekPlan) return;
-    const phaseId = (weekPlan.profile_snapshot as Record<string, unknown> | undefined)?.phase_id as string | undefined;
-    const sessionIds = dayPlan?.sessions.map((s) => s.session_id) ?? [];
-
-    let context = "general";
-    if (phaseId === "deload") {
-      context = "deload";
-    } else if (
-      sessionIds.some((id) =>
-        ["strength_long", "power_contact", "finger_strength"].some((kw) => id.includes(kw))
-      )
-    ) {
-      context = "hard_day";
+  // Daily quote — context derived from current week plan
+  const quoteContext = useMemo(() => {
+    if (!weekPlan) return "";
+    const phase = (weekPlan.profile_snapshot as Record<string, unknown> | undefined)?.phase_id as string | undefined;
+    const day = weekPlan.weeks.flatMap((w) => w.days).find((d) => d.date === targetDate);
+    const sessionIds = day?.sessions.map((s) => s.session_id) ?? [];
+    if (phase === "deload") return "deload";
+    if (sessionIds.some((id) => ["strength_long", "power_contact", "finger_strength"].some((kw) => id.includes(kw)))) {
+      return "hard_day";
     }
-
-    getDailyQuote(context).then(setQuote).catch((err) => { console.error("Failed to load daily quote:", err); });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weekPlan]);
+    return "general";
+  }, [weekPlan, targetDate]);
+  const { data: quote } = useDailyQuote(quoteContext);
 
   // Fetch outdoor session routes for days marked "done"
   useEffect(() => {
@@ -309,7 +310,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
 
       // Open feedback dialog
       setFeedbackSessionId(sessionId);
@@ -334,7 +335,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     }
@@ -354,7 +355,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo");
     }
@@ -374,7 +375,7 @@ function TodayContent() {
         events: [ev],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete activity");
     }
@@ -388,7 +389,7 @@ function TodayContent() {
         events: [{ event_type: "edit_other_activity", date, ...fields }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to edit activity");
     }
@@ -407,7 +408,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo");
     }
@@ -421,7 +422,7 @@ function TodayContent() {
         events: [{ event_type: "remove_other_activity", date }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove activity");
     }
@@ -441,7 +442,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove session");
     }
@@ -467,7 +468,7 @@ function TodayContent() {
         week_plan: weekPlan,
         session_index: rdata.session_index,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update plan");
     } finally {
@@ -495,7 +496,7 @@ function TodayContent() {
         phase_id: phaseId ?? undefined,
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
       if (result.warnings?.length > 0) {
         setError(result.warnings.join("; "));
       }
@@ -528,7 +529,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to move session");
     } finally {
@@ -555,7 +556,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to change location");
     } finally {
@@ -584,7 +585,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add outdoor session");
     } finally {
@@ -607,7 +608,7 @@ function TodayContent() {
         ],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add activity");
     } finally {
@@ -645,7 +646,7 @@ function TodayContent() {
         events: [{ event_type: "complete_outdoor", date: outdoorLogDate }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to mark outdoor as done");
     } finally {
@@ -661,7 +662,7 @@ function TodayContent() {
         events: [{ event_type: "undo_outdoor", date }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo outdoor");
     }
@@ -675,7 +676,7 @@ function TodayContent() {
         events: [{ event_type: "remove_outdoor", date }],
         week_plan: weekPlan,
       });
-      setWeekPlan(result.week_plan);
+      updateWeekCache(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove outdoor session");
     }
@@ -696,7 +697,7 @@ function TodayContent() {
   async function handleEditOutdoorSuccess() {
     setOutdoorEditDate(null);
     setOutdoorEditData(null);
-    await fetchData();
+    refetchAll();
   }
 
   /** Submit session feedback (B127: always includes duration) */
@@ -723,7 +724,7 @@ function TodayContent() {
         status: "done",
       });
       // Re-fetch week plan so feedback_summary badges appear immediately
-      await fetchData();
+      refetchAll();
     } catch {
       // Non-critical feedback, don't block the UX
     } finally {
@@ -837,11 +838,11 @@ function TodayContent() {
         )}
 
         {/* Error state */}
-        {error && !loading && (
+        {(error || queryError) && !loading && (
           <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center">
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-sm text-destructive">{error ?? (queryError instanceof Error ? queryError.message : "Failed to load data")}</p>
             <button
-              onClick={fetchData}
+              onClick={refetchAll}
               className="mt-2 text-sm font-medium text-primary underline"
             >
               Retry
@@ -873,7 +874,7 @@ function TodayContent() {
 
         {/* Weekly check-in card (Sunday / Monday morning grace) */}
         {!loading && !error && isViewingToday && (
-          <WeeklyCheckinCard onPlanUpdated={fetchData} />
+          <WeeklyCheckinCard onPlanUpdated={refetchAll} />
         )}
 
         {/* Day plan */}
@@ -887,7 +888,7 @@ function TodayContent() {
             weekPlan={weekPlan}
             onSessionUpdated={(updatedPlan) => {
               // B153d: use response data when available to avoid 422 reload race
-              if (updatedPlan) { setWeekPlan(updatedPlan); } else { fetchData(); }
+              if (updatedPlan) { updateWeekCache(updatedPlan); } else { refetchAll(); }
             }}
             onMarkDone={handleMarkDone}
             onMarkSkipped={handleMarkSkipped}
