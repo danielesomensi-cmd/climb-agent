@@ -1,5 +1,5 @@
 // Service worker — cache-first for static assets, network-first for API
-const CACHE_NAME = "climb-agent-v1";
+const CACHE_NAME = "climb-agent-v2";
 const STATIC_ASSETS = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
