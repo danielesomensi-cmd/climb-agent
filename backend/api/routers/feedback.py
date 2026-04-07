@@ -37,7 +37,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     def _mark(label: str) -> None:
         nonlocal _step
         now = time.perf_counter()
-        logger.info("post_feedback timing: %s=%.3fs (total=%.3fs)", label, now - _step, now - _t0)
+        logger.warning("post_feedback timing: %s=%.3fs (total=%.3fs)", label, now - _step, now - _t0)
         _step = now
 
     state = load_state(user_id)
@@ -199,7 +199,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     save_state(state, user_id)
     _mark("save_state")
 
-    logger.info("post_feedback timing: TOTAL=%.3fs", time.perf_counter() - _t0)
+    logger.warning("post_feedback timing: TOTAL=%.3fs", time.perf_counter() - _t0)
     response: dict = {"status": "ok"}
     if limitation_suggestions:
         response["limitation_suggestions"] = limitation_suggestions
