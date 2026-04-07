@@ -48,7 +48,7 @@ def _load_exercises_catalog() -> dict:
 
 def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
     """Save modified plan to per-week cache and (if current) to legacy cache."""
-    from backend.api.routers.replanner import _persist_week_plan as _replanner_persist
+    from backend.api.routers.replanner import persist_week_plan as _replanner_persist
     _replanner_persist(updated, state, user_id)
 
 

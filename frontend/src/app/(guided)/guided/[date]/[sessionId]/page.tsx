@@ -9,7 +9,7 @@ import { SessionTimer } from "@/components/guided/session-timer";
 import { GuidedProgressBar } from "@/components/guided/guided-progress-bar";
 import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GuidedSummary } from "@/components/guided/guided-summary";
-import { applyEvents, postFeedback, getWeek, getState } from "@/lib/api";
+import { postFeedback, getState } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
@@ -322,43 +322,11 @@ export default function GuidedSessionPage() {
         return ex;
       });
 
-      // 1. Fetch fresh week plan for the session's date (not always week 0)
-      // B157: calculate correct week_num from session date vs macrocycle start
-      let weekNum = 0;
-      try {
-        const userState = await getState();
-        const mcStart = userState.macrocycle?.start_date;
-        if (mcStart && state.date) {
-          const mcMonday = new Date(mcStart + "T00:00:00");
-          const sessionDate = new Date(state.date + "T00:00:00");
-          // Session's Monday (ISO week: Monday = 1)
-          const sessionDay = sessionDate.getDay();
-          const sessionMonday = new Date(sessionDate);
-          sessionMonday.setDate(sessionDate.getDate() - ((sessionDay + 6) % 7));
-          const diffMs = sessionMonday.getTime() - mcMonday.getTime();
-          const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
-          weekNum = diffWeeks + 1; // 1-based
-          if (weekNum < 1) weekNum = 0; // fallback to current
-        }
-      } catch {
-        // Fallback: use week 0 (current) if state fetch fails
-        weekNum = 0;
-      }
-      const weekData = await getWeek(weekNum);
-      const weekPlan: WeekPlan = weekData.week_plan;
+      // A194: the backend now handles mark_done inline as part of POST
+      // /api/feedback and returns the updated week_plan. No prelude
+      // getState/getWeek/applyEvents round-trips needed.
 
-      await applyEvents({
-        events: [
-          {
-            event_type: "mark_done",
-            date: state.date,
-            session_ref: state.sessionId,
-          },
-        ],
-        week_plan: weekPlan,
-      });
-
-      // 2. Build and send feedback (exclude instruction-only blocks)
+      // Build and send feedback (exclude instruction-only blocks)
       const exerciseFeedback: Record<string, unknown>[] = [];
       for (const ex of finalExercises) {
         if (ex.isInstructionOnly) continue;
@@ -464,27 +432,31 @@ export default function GuidedSessionPage() {
             exercise_instances: [],
           }];
         }
-        await postFeedback({
+        const response = await postFeedback({
           log_entry: logEntry,
           status: "done",
         });
 
         // Success — clean up localStorage
         removeState(state.date, state.sessionId);
-        // B193 / Bug 2 (v2): refetch ALL cached weeks before navigating.
-        // Previous fix targeted queryKeys.week(weekNum) where weekNum is the
-        // 1-based macrocycle week (e.g. 5), but /today reads useWeekPlan(0) →
-        // cache key ['week', 0] — a key mismatch that left /today on stale data.
-        // refetchQueries with prefix ['week'] matches every ['week', *] entry,
-        // so both ['week', 0] (current) and ['week', weekNum] are forced to
-        // refetch. We await so navigation only happens after the cache is
-        // populated, guaranteeing /today renders fresh on first paint.
-        console.log("[guided] feedback OK, refetching week cache before navigate");
-        await Promise.all([
-          qc.refetchQueries({ queryKey: queryKeys.weekAll }),
-          qc.invalidateQueries({ queryKey: queryKeys.state }),
-        ]);
-        console.log("[guided] week cache refetched, navigating to /today");
+
+        // A194: the backend returned the updated week_plan inline. Write it
+        // directly into the ['week', 0] cache so /today renders fresh on first
+        // paint — no refetch round-trip needed. State cache is invalidated so
+        // progression working_loads get picked up on next read.
+        if (response.week_plan) {
+          qc.setQueryData<{
+            week_num: number;
+            phase_id: string;
+            week_plan: WeekPlan;
+          }>(queryKeys.week(0), (old) =>
+            old ? { ...old, week_plan: response.week_plan as WeekPlan } : old,
+          );
+        } else {
+          // Fallback: force a refetch if the backend could not return a plan
+          await qc.refetchQueries({ queryKey: queryKeys.weekAll });
+        }
+        qc.invalidateQueries({ queryKey: queryKeys.state });
       } catch {
         // Feedback POST failed — save for retry
         setState((prev) => prev ? { ...prev, submitStatus: "feedback_pending" } : prev);

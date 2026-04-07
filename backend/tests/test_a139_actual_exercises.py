@@ -1,17 +1,44 @@
-"""A139: Verify actual_exercises persistence in session slot after feedback."""
+"""A139: Verify actual_exercises persistence in session slot after feedback.
+
+A194: rewritten to use TestClient against the real POST /api/feedback endpoint
+instead of a hand-rolled inline simulation.
+"""
 
 from __future__ import annotations
 
-import copy
-from unittest.mock import patch
+import json
+import shutil
+from copy import deepcopy
+from pathlib import Path
 
 import pytest
+from fastapi.testclient import TestClient
 
-from backend.api.routers.feedback import router  # noqa: F401 — ensure import works
+from backend.api import deps
+from backend.api.main import app
+
+client = TestClient(app)
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+REAL_STATE_PATH = REPO_ROOT / "backend" / "tests" / "fixtures" / "test_user_state.json"
+
+
+@pytest.fixture(autouse=True)
+def isolate_state(tmp_path, monkeypatch):
+    """Copy real state to tmp and monkeypatch STATE_PATH so tests are isolated."""
+    tmp_state = tmp_path / "user_state.json"
+    if REAL_STATE_PATH.exists():
+        shutil.copy2(REAL_STATE_PATH, tmp_state)
+    else:
+        tmp_state.write_text(json.dumps(deps.EMPTY_TEMPLATE, indent=2))
+    from backend.engine import storage
+    monkeypatch.setattr(storage, "STATE_PATH", tmp_state)
+    monkeypatch.setattr(deps, "STATE_PATH", tmp_state)
+    yield tmp_state
 
 
 def _make_week_plan(date: str = "2026-03-16", session_id: str = "strength_long") -> dict:
-    """Minimal week plan with one completed session."""
+    """Minimal week plan with one session (planned — feedback will mark it done)."""
     return {
         "start_date": date,
         "weeks": [{
@@ -22,7 +49,6 @@ def _make_week_plan(date: str = "2026-03-16", session_id: str = "strength_long")
                 "sessions": [{
                     "session_id": session_id,
                     "slot": "evening",
-                    "status": "done",
                     "resolved": {"resolved_session": {"exercise_instances": []}},
                 }],
             }],
@@ -30,52 +56,21 @@ def _make_week_plan(date: str = "2026-03-16", session_id: str = "strength_long")
     }
 
 
-def _make_state(week_plan: dict | None = None) -> dict:
-    """Minimal user state with a current_week_plan."""
-    wp = week_plan or _make_week_plan()
-    return {
-        "current_week_plan": wp,
-        "week_plans": {wp["start_date"]: wp} if wp else {},
-        "session_completion_log": [],
-        "feedback_log": [],
-        "working_loads": {"entries": [], "rules": {}},
-        "tests": {},
-        "baselines": {},
-        "assessment": {"profile": {}, "tests": {}},
-        "body": {"weight_kg": 75},
-    }
+def _seed(wp: dict | None = None) -> None:
+    """Seed the isolated state with a current_week_plan via deps."""
+    wp = wp or _make_week_plan()
+    state = deps.load_state(None)
+    state["current_week_plan"] = deepcopy(wp)
+    state["week_plans"] = {wp["start_date"]: deepcopy(wp)}
+    state["session_completion_log"] = []
+    deps.save_state(state, None)
 
 
-def _post_feedback(state: dict, log_entry: dict, status: str = "done") -> dict:
-    """Simulate POST /api/feedback by calling the handler's core logic inline.
-
-    We replicate the relevant steps from feedback.py to avoid needing a running server,
-    while still testing the actual_exercises persistence logic.
-    """
-    from backend.engine.progression_v1 import apply_feedback as _apply_feedback
-    from backend.engine.adaptive_replan import append_feedback_log, load_exercises_by_id
-
-    state = _apply_feedback(log_entry, state)
-
-    exercises_by_id = load_exercises_by_id()
-    append_feedback_log(state, log_entry, None, exercises_by_id)
-
-    # A139: Persist raw actual exercise data in session slot (mirrors feedback.py)
-    fb_items = (log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
-    if fb_items:
-        target_date = log_entry.get("date")
-        target_sid = log_entry.get("session_id")
-        wp = state.get("current_week_plan") or {}
-        for week_block in wp.get("weeks", []):
-            for day_entry in week_block.get("days", []):
-                if day_entry.get("date") != target_date:
-                    continue
-                for sess in day_entry.get("sessions", []):
-                    if sess.get("session_id") == target_sid:
-                        sess["actual_exercises"] = fb_items
-                        break
-
-    return state
+def _post_feedback(log_entry: dict) -> dict:
+    """POST /api/feedback via TestClient and return the post-request state."""
+    r = client.post("/api/feedback", json={"log_entry": log_entry})
+    assert r.status_code == 200, r.text
+    return deps.load_state(None)
 
 
 class TestA139ActualExercises:
@@ -83,7 +78,7 @@ class TestA139ActualExercises:
 
     def test_rich_feedback_persisted(self):
         """Guided session feedback with load data → actual_exercises stored."""
-        state = _make_state()
+        _seed()
         log_entry = {
             "date": "2026-03-16",
             "session_id": "strength_long",
@@ -107,7 +102,7 @@ class TestA139ActualExercises:
             },
         }
 
-        state = _post_feedback(state, log_entry)
+        state = _post_feedback(log_entry)
 
         session = state["current_week_plan"]["weeks"][0]["days"][0]["sessions"][0]
         assert "actual_exercises" in session
@@ -119,21 +114,21 @@ class TestA139ActualExercises:
 
     def test_empty_feedback_no_actual_exercises(self):
         """Empty exercise_feedback_v1 → actual_exercises NOT added."""
-        state = _make_state()
+        _seed()
         log_entry = {
             "date": "2026-03-16",
             "session_id": "strength_long",
             "actual": {"exercise_feedback_v1": []},
         }
 
-        state = _post_feedback(state, log_entry)
+        state = _post_feedback(log_entry)
 
         session = state["current_week_plan"]["weeks"][0]["days"][0]["sessions"][0]
         assert "actual_exercises" not in session
 
     def test_label_only_feedback_persisted(self):
         """FeedbackDialog flow: only labels → actual_exercises stored with labels only."""
-        state = _make_state()
+        _seed()
         log_entry = {
             "date": "2026-03-16",
             "session_id": "strength_long",
@@ -145,7 +140,7 @@ class TestA139ActualExercises:
             },
         }
 
-        state = _post_feedback(state, log_entry)
+        state = _post_feedback(log_entry)
 
         session = state["current_week_plan"]["weeks"][0]["days"][0]["sessions"][0]
         assert "actual_exercises" in session
@@ -156,7 +151,7 @@ class TestA139ActualExercises:
 
     def test_survives_in_week_plans_cache(self):
         """actual_exercises written via current_week_plan reference also exists in week_plans{}."""
-        state = _make_state()
+        _seed()
         log_entry = {
             "date": "2026-03-16",
             "session_id": "strength_long",
@@ -168,7 +163,7 @@ class TestA139ActualExercises:
             },
         }
 
-        state = _post_feedback(state, log_entry)
+        state = _post_feedback(log_entry)
 
         # current_week_plan and week_plans["2026-03-16"] should be the same reference
         cached = state["week_plans"]["2026-03-16"]
@@ -178,7 +173,7 @@ class TestA139ActualExercises:
 
     def test_session_not_found_no_crash(self):
         """Feedback for a session_id not in week plan → no crash, no actual_exercises."""
-        state = _make_state()
+        _seed()
         log_entry = {
             "date": "2026-03-16",
             "session_id": "nonexistent_session",
@@ -189,7 +184,7 @@ class TestA139ActualExercises:
             },
         }
 
-        state = _post_feedback(state, log_entry)
+        state = _post_feedback(log_entry)
 
         # Original session should be untouched
         session = state["current_week_plan"]["weeks"][0]["days"][0]["sessions"][0]
@@ -197,7 +192,7 @@ class TestA139ActualExercises:
 
     def test_date_not_found_no_crash(self):
         """Feedback for a date not in week plan → no crash."""
-        state = _make_state()
+        _seed()
         log_entry = {
             "date": "2099-01-01",
             "session_id": "strength_long",
@@ -208,7 +203,7 @@ class TestA139ActualExercises:
             },
         }
 
-        state = _post_feedback(state, log_entry)
+        state = _post_feedback(log_entry)
 
         session = state["current_week_plan"]["weeks"][0]["days"][0]["sessions"][0]
         assert "actual_exercises" not in session

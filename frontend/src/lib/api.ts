@@ -223,7 +223,12 @@ export const postFeedback = (data: {
   resolved_day?: Record<string, unknown>;
   status?: string;
 }) =>
-  request<{ status: string; limitation_suggestions?: unknown[]; warning?: string }>("/api/feedback", {
+  request<{
+    status: string;
+    week_plan?: WeekPlan;
+    limitation_suggestions?: unknown[];
+    warning?: string;
+  }>("/api/feedback", {
     method: "POST",
     body: JSON.stringify(data),
   });

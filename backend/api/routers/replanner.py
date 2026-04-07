@@ -69,8 +69,11 @@ def _get_supplementary_sessions(location: str) -> list:
     return results
 
 
-def _persist_week_plan(updated: dict, state: dict, user_id) -> None:
-    """Save modified plan to per-week cache and (if current) to legacy cache."""
+def persist_week_plan(updated: dict, state: dict, user_id) -> None:
+    """Save modified plan to per-week cache and (if current) to legacy cache.
+
+    Public helper: reused by backend/api/routers/feedback.py (A194).
+    """
     start_key = updated.get("start_date", "")
     if not start_key:
         return
@@ -187,7 +190,7 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
         logger.error("Override failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Override failed. Please try again.")
 
-    _persist_week_plan(updated, state, user_id)
+    persist_week_plan(updated, state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state, user_id)
@@ -273,7 +276,7 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
         logger.error("Quick-add failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail="Quick-add failed. Please try again.")
 
-    _persist_week_plan(updated, state, user_id)
+    persist_week_plan(updated, state, user_id)
 
     _auto_resolve(updated, state, user_id)
 
@@ -375,7 +378,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             ]
             completion_log = state["session_completion_log"]
 
-    _persist_week_plan(updated, state, user_id)
+    persist_week_plan(updated, state, user_id)
 
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state, user_id)
