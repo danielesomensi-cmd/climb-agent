@@ -1,21 +1,39 @@
-// Service worker — cache-first for static assets, network-first for API
-const CACHE_NAME = "climb-agent-v2";
+// Service worker — cache-first for static assets, network-first for API.
+// CACHE_NAME is injected at build time from VERCEL_GIT_COMMIT_SHA / git rev,
+// so every deploy produces a different sw.js → browser triggers install of
+// the new SW → activate event purges all old caches. Without this versioning
+// (B196), PWA users were stuck with stale JS bundles after every deploy.
+const CACHE_NAME = "climb-agent-__BUILD_ID__";
 const STATIC_ASSETS = ["/", "/manifest.json"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   );
+  // Activate the new SW immediately instead of waiting for all PWA tabs to close.
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    (async () => {
+      // Purge every cache that doesn't match the current build — this handles
+      // both stale climb-agent-* caches and any leftover from previous schemes.
+      const keys = await caches.keys();
+      await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)));
+      // Take control of all open PWA clients without requiring a reload.
+      await self.clients.claim();
+    })()
   );
-  self.clients.claim();
+});
+
+// Allow the page to force-activate a waiting SW via postMessage({type:"SKIP_WAITING"}).
+// Used by the "new version available" update banner so the user can refresh
+// without quitting the PWA from the iOS app switcher.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {

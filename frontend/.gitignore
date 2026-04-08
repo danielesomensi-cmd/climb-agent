@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# B196: sw.js is generated from sw.template.js by scripts/build-sw.js
+# (CACHE_NAME injected per-build for PWA cache invalidation).
+/public/sw.js
