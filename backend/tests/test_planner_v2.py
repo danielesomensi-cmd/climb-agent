@@ -863,7 +863,7 @@ class TestEquipmentAwarePlacement(unittest.TestCase):
             allowed_locations=["gym", "home"],
             gyms=self._full_gym(),
             default_gym_id="test_gym",
-            home_equipment=["hangboard", "band", "dumbbell"],  # NO pullup_bar
+            home_equipment=["band", "dumbbell"],  # NO pullup_bar (A193: hangboard would imply pullup_bar)
             pulling_baseline={"max_total_load_kg": 100},
         )
         for day in plan["weeks"][0]["days"]:

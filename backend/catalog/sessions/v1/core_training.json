@@ -1,11 +1,11 @@
 {
   "id": "core_training",
   "name": "Core Training (Climbing-Specific)",
-  "version": "1.0",
+  "version": "1.1",
   "intent": {
     "primary_goal": "core",
     "secondary_goals": ["body_tension"],
-    "notes": "Core for climbing — body tension, compression, anti-extension. Direct transfer to steep terrain and heel hooks. All bodyweight, no equipment needed."
+    "notes": "Core for climbing — body tension, compression, anti-extension, anti-rotation, anti-lateral-flexion. Direct transfer to steep terrain, heel hooks and asymmetric body positions. Bodyweight by default; optional load block uses pullup bar or dumbbell/kettlebell when available."
   },
   "compatibility": {
     "slot": ["short"],
@@ -16,16 +16,22 @@
     "location": "home"
   },
   "time_budget": {
-    "target_duration_min": 40,
-    "hard_cap_min": 50
+    "target_duration_min": 35,
+    "hard_cap_min": 45
   },
   "modules": [
+    {
+      "template_id": "general_warmup",
+      "required": true,
+      "priority": 100,
+      "module_role": "general_warmup"
+    },
     {
       "block_id": "anti_extension",
       "required": true,
       "priority": 90,
       "module_role": "primary",
-      "notes": "Anti-extension: hollow hold or plank. Builds body tension for steep climbing.",
+      "notes": "Anti-extension: hollow hold, plank, ab wheel, dead bug. Builds body tension for steep climbing.",
       "selection": {
         "primary": {
           "filters": {
@@ -38,10 +44,10 @@
     },
     {
       "block_id": "compression",
-      "required": false,
-      "priority": 80,
-      "module_role": "secondary",
-      "notes": "Compression: toes-to-bar or L-sit. Hip flexor and deep core strength.",
+      "required": true,
+      "priority": 85,
+      "module_role": "primary",
+      "notes": "Compression: hanging leg raise, knees-to-elbows, toes-to-bar or L-sit. Hip flexor and deep core strength.",
       "selection": {
         "primary": {
           "filters": {
@@ -53,17 +59,49 @@
       }
     },
     {
-      "block_id": "rotation_lateral",
-      "required": false,
-      "priority": 60,
+      "block_id": "anti_rotation",
+      "required": true,
+      "priority": 80,
       "module_role": "secondary",
-      "notes": "Rotation or lateral core — windshield wipers, side plank, pallof press.",
+      "notes": "Anti-rotation: pallof press, copenhagen plank. Resists torso rotation — direct transfer to single-arm moves.",
       "selection": {
         "primary": {
           "filters": {
             "role": ["accessory"],
             "domain": ["core"],
-            "pattern": ["anti_rotation", "anti_lateral_flexion"]
+            "pattern": ["anti_rotation"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "anti_lateral_flexion",
+      "required": true,
+      "priority": 75,
+      "module_role": "secondary",
+      "notes": "Anti-lateral-flexion: side plank, suitcase carry. Resists lateral torso collapse — direct transfer to flagging and side-pulls.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory"],
+            "domain": ["core"],
+            "pattern": ["anti_lateral_flexion"]
+          }
+        }
+      }
+    },
+    {
+      "block_id": "isometric_hold_or_rotation",
+      "required": false,
+      "priority": 60,
+      "module_role": "secondary",
+      "notes": "Optional finisher: front lever progressions (isometric_hold) or turkish_getup (rotation).",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": ["accessory", "conditioning"],
+            "domain": ["core"],
+            "pattern": ["isometric_hold", "rotation"]
           }
         }
       }
@@ -71,7 +109,7 @@
     {
       "template_id": "cooldown_stretch",
       "required": false,
-      "priority": 30,
+      "priority": 40,
       "module_role": "cooldown"
     }
   ]

@@ -29,8 +29,8 @@ An exercise with no equipment requirement uses `equipment_required: []`.
 
 Allowed `equipment` values:
 
-- `hangboard` *(generic hangboard — any edge depth)*
-- `hangboard_20mm` *(20mm edge variant used for standardised testing; subset of hangboard)*
+- `hangboard` *(generic hangboard — any edge depth; A193: implies `pullup_bar` — a hangboard is always mounted on a bar)*
+- `hangboard_20mm` *(20mm edge variant used for standardised testing; subset of hangboard; A193: implies `pullup_bar`)*
 - `pullup_bar`
 - `band`
 - `weight` *(canonical generic weight: counterweight, dumbbells, kettlebells, barbells)*

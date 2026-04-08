@@ -3217,6 +3217,107 @@
       "load_model": "external_load"
     },
     {
+      "id": "front_lever_one_leg",
+      "name": "Front Lever (One Leg Extended)",
+      "category": "core",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "isometric_hold",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Tuck one knee, extend the other leg fully. Alternate legs between sets. Progress to straddle when you hold 15s clean both sides."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Intermediate front lever progression. Tucking one knee and extending the other leg increases the lever arm relative to full tuck, scaling the challenge toward straddle and full front lever. Trains lat-core integration for body tension on overhangs. (climbing.com; heavyweightcali.com; Horst)",
+      "cues": [
+        "Tuck one knee to the chest, extend the other leg fully and straight",
+        "Hips level with shoulders — no sagging or piking",
+        "Scapulae depressed and retracted. Lats are the engine, not the biceps",
+        "Squeeze glutes and brace deep core to prevent lower-back arch",
+        "Alternate extended leg between sets to balance the loading"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "alt_sides": true
+    },
+    {
+      "id": "front_lever_straddle",
+      "name": "Front Lever (Straddle)",
+      "category": "core",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "isometric_hold",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "core_front_lever",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 12,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Legs wide and straight. Final progression before full front lever. Rest 2+ minutes — near-maximal isometric."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Advanced front lever progression. Straddling the legs shortens the effective lever versus full front lever while still demanding near-maximal lat and core output. Final stepping stone before full FL. Regress to one-leg extended if hips sag. (climbing.com; heavyweightcali.com; Horst)",
+      "cues": [
+        "Legs wide and completely straight — active flexion of the quads",
+        "Hips level with shoulders. If hips drop, regress to one-leg extended immediately",
+        "Depress scapulae hard. Arms fully locked out — any bend collapses the position",
+        "Hollow body: glutes squeezed, ribs tucked, deep core braced",
+        "Stop 1-2s before form breaks — distribute effort across all sets"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
       "id": "front_lever_tuck",
       "name": "Front Lever (Tuck Progression)",
       "category": "core",
@@ -3460,6 +3561,58 @@
       "alt_sides": true
     },
     {
+      "id": "suitcase_carry",
+      "name": "Suitcase Carry",
+      "category": "core",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_lateral_flexion",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_anti_lateral_flexion",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "dumbbell",
+        "kettlebell"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Heavy weight in one hand. Walk tall. Alternate sides each set."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Loaded unilateral carry training anti-lateral-flexion under asymmetric load. The offset weight forces the obliques and quadratus lumborum to work hard to keep the torso upright — direct transfer to flagging, side-pulls and asymmetric body positions on rock. (Horst; Lattice core guide)",
+      "cues": [
+        "One weight in one hand — walk tall, no leaning toward or away from the load",
+        "Ribs down, deep brace. Imagine a line from ear to ankle staying perfectly vertical",
+        "Alternate sides each set to balance the loading",
+        "Heavy enough that staying upright is a genuine fight — increase load if easy",
+        "Shoulder packed down on the loaded side — do not let it shrug up"
+      ],
+      "video_url": null,
+      "load_model": "total_load",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
       "id": "dead_bug",
       "name": "Dead Bug",
       "category": "core",
@@ -3508,6 +3661,55 @@
       "load_model": "bodyweight_only"
     },
     {
+      "id": "kneeling_superman",
+      "name": "Bird-Dog (Kneeling Superman)",
+      "category": "core",
+      "time_min": 5,
+      "role": [
+        "accessory",
+        "warmup"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "core_anti_extension",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Each side. 2s pause at full extension. Slow and controlled."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Quadruped anti-extension and anti-rotation drill training contralateral coordination with a neutral spine. Low-stakes entry exercise for core activation and lumbar stability — excellent as a warmup primer or a regression for dead bug. (McGill big three; inSPIRE Rock)",
+      "cues": [
+        "Opposite arm and leg extend together — keep hips square, no rotation",
+        "Imagine balancing a tennis ball on the lower back throughout the rep",
+        "Full extension with a 2-second pause before returning",
+        "Exhale on the extension, brace deep core to resist rotation",
+        "Regression: arm only, then leg only, before full contralateral"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "alt_sides": true
+    },
+    {
       "id": "windshield_wipers",
       "name": "Windshield Wipers (Hanging)",
       "category": "core",
@@ -3544,6 +3746,7 @@
         "cns": "medium",
         "skin": "none"
       },
+      "safety_notes": "KB review: combined spinal flexion + rotation flagged as risky (Kapandji). Consider deprecating in favor of pallof press / turkish_getup.",
       "description": "Advanced rotational core exercise. From a dead hang, legs rotate side to side demanding high body tension, rotational control and grip endurance. Do not attempt before achieving 10+ clean toes-to-bar. (Horst; alpinetrek.co.uk core guide)",
       "cues": [
         "Keep legs straight and pressed together throughout the rotation",
@@ -3601,6 +3804,104 @@
         "If too hard: progress from hanging knee raises → straight-leg raises → toes to bar"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "knees_to_elbows",
+      "name": "Knees to Elbows (Hanging)",
+      "category": "core",
+      "time_min": 7,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "core_compression",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Strict form. Knees touch elbows. No swinging. Progression step before toes_to_bar."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Mid-range hanging compression progression sitting between hanging knee raises and toes-to-bar. Bringing the knees up to touch the elbows demands scapular depression, lat engagement and deep core compression without the full hamstring flexibility requirement of toes-to-bar. (UKC core guide; inSPIRE Rock)",
+      "cues": [
+        "Dead hang with scapulae depressed and lats engaged before initiating",
+        "Drive knees up to touch the elbows — do not stop short",
+        "Control the descent: 2-3 second eccentric — no swinging or kipping",
+        "Brace deep core throughout to prevent the body from swinging forward",
+        "Progress to toes_to_bar when you can do 3x10 clean reps"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "v_up",
+      "name": "V-Up",
+      "category": "core",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_compression",
+      "equipment_required": [],
+      "equipment_required_any": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Slow and controlled. Simultaneous torso and leg lift, meeting at the top."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Bodyweight compression drill. Simultaneous hip and torso flexion creates a full-body V shape at the top, training the compression chain needed for bat hangs, steep-terrain heel hooks and dynamic core recruitment. Floor-based alternative to hanging knee raises for users without a pullup bar. (UKC core guide; Horst)",
+      "cues": [
+        "Lie flat, arms extended overhead. Lift legs and torso simultaneously to touch toes at the top",
+        "Control the descent — no slamming back down",
+        "Keep legs straight if possible. Bend knees slightly as a regression",
+        "Lower back stays in contact at the bottom of each rep — no arching",
+        "Exhale on the way up, inhale on the way down"
+      ],
+      "video_url": null,
       "load_model": "bodyweight_only"
     },
     {
@@ -6870,9 +7171,7 @@
       "intensity_level": "medium",
       "fatigue_cost": 4,
       "recency_group": "core_anti_rotation",
-      "equipment_required": [
-        "bench"
-      ],
+      "equipment_required": [],
       "equipment_required_any": [],
       "location_allowed": [
         "home",
@@ -6887,7 +7186,7 @@
         "work_seconds": 20,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 45,
-        "notes": "Each side. Regress: bottom knee bent on bench. Progress: dynamic dips from position."
+        "notes": "Each side. Regress: bottom knee bent on raised surface. Progress: dynamic dips from position."
       },
       "stress_tags": {
         "elbow": "none",
@@ -6895,9 +7194,10 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "Lateral plank with top foot on a bench, targeting adductors, obliques and lateral hip stabilizers. One of the most effective exercises for the inner thigh/hip complex needed for high-steps, knee-drops and heel hooks on steep terrain. Underused by climbers. (Lattice S&C conditioning; climbing physio literature)",
+      "description": "Lateral plank with top foot on a raised surface, targeting adductors, obliques and lateral hip stabilizers. One of the most effective exercises for the inner thigh/hip complex needed for high-steps, knee-drops and heel hooks on steep terrain. Underused by climbers. (Lattice S&C conditioning; climbing physio literature)",
       "cues": [
-        "Top foot rests on bench, bottom leg hangs freely — maintain full lateral body line",
+        "Use a chair, bench, sofa, or any knee-height raised surface for the top foot",
+        "Top foot rests on the raised surface, bottom leg hangs freely — maintain full lateral body line",
         "Drive top hip up to maintain plank position — do not let hips sag",
         "Ear, shoulder, hip, ankle in line when viewed from the side",
         "Feel the adductor of the top leg working actively to maintain position",
@@ -6906,6 +7206,54 @@
       "video_url": null,
       "load_model": "bodyweight_only",
       "alt_sides": true
+    },
+    {
+      "id": "plank_shoulder_tap",
+      "name": "Plank Shoulder Tap",
+      "category": "core",
+      "time_min": 5,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_rotation",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "core_anti_rotation",
+      "equipment_required": [],
+      "equipment_required_any": [],
+      "location_allowed": [
+        "home",
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Alternating taps within the set — each arm = 1 rep. 10 total taps per set."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Bodyweight anti-rotation drill. From a high plank, lifting one hand to tap the opposite shoulder forces the torso to resist rotation under asymmetric load. Direct transfer to single-arm moves and locking off on one side without body twist. Floor-based alternative to pallof press for users without a resistance band. (inSPIRE Rock; Horst core series)",
+      "cues": [
+        "High plank position, hands under shoulders, body in a straight line",
+        "Tap the opposite shoulder with each hand, alternating",
+        "Keep hips dead still — no rocking or rotating the torso",
+        "Wider foot stance makes it easier, narrower stance makes it harder",
+        "Brace deep core and glutes throughout — the goal is anti-rotation, not speed"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     },
     {
       "id": "hangboard_moving_hangs",

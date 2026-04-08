@@ -30,6 +30,15 @@ WEIGHT_SUBTYPES: frozenset[str] = frozenset({
     "barbell",
 })
 
+# Any of these implies "pullup_bar" is available. A hangboard is always mounted
+# on either a doorframe pullup bar or a dedicated bar — the two cannot be
+# separated in practice. loading_pin is NOT included: it is a ground-based
+# weight alternative that does not require a bar.
+PULLUP_BAR_IMPLIERS: frozenset[str] = frozenset({
+    "hangboard",
+    "hangboard_20mm",
+})
+
 KNOWN_EQUIPMENT_KEYS: frozenset[str] = frozenset({
     # climbing surfaces
     "gym_boulder", "gym_routes", "spraywall",
@@ -49,8 +58,9 @@ def expand_equipment(equipment: Collection[str]) -> List[str]:
     """Apply all equipment implication rules and return an expanded list.
 
     Rules:
-    - If any BOULDER_SURFACE is present → implies "gym_boulder".
-    - If any WEIGHT_SUBTYPE is present  → implies "weight".
+    - If any BOULDER_SURFACE is present    → implies "gym_boulder".
+    - If any WEIGHT_SUBTYPE is present     → implies "weight".
+    - If any PULLUP_BAR_IMPLIER is present → implies "pullup_bar".
     """
     eq: List[str] = list(equipment)
     for k in eq:
@@ -63,5 +73,8 @@ def expand_equipment(equipment: Collection[str]) -> List[str]:
 
     if eq_set & WEIGHT_SUBTYPES and "weight" not in eq_set:
         eq.append("weight")
+
+    if eq_set & PULLUP_BAR_IMPLIERS and "pullup_bar" not in eq_set:
+        eq.append("pullup_bar")
 
     return eq
