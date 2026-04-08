@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 196  # A193: +7 core exercises (front_lever_one_leg, front_lever_straddle, suitcase_carry, kneeling_superman, knees_to_elbows, v_up, plank_shoulder_tap)
+    assert len(exercise_list) == 198  # C164: +2 capacity_hangboard exercises (intermittent_dead_hangs, long_interval_repeaters)
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):

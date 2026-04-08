@@ -9886,6 +9886,114 @@
       }
     },
     {
+      "id": "intermittent_dead_hangs",
+      "name": "Intermittent Dead Hangs",
+      "category": "endurance",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_aerobic_endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "finger_endurance_repeater_sub_max",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive",
+        "finger_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 8,
+        "work_seconds": 10,
+        "rest_between_reps_seconds": 5,
+        "rest_between_sets_seconds": 180,
+        "notes": "Large edge (20-25mm). 10s on / 5s off × 8 reps at 55-65% MVC. More reps than standard repeaters — aerobic focus."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Higher-rep intermittent hangs for finger aerobic capacity. 10s on / 5s off × 8 reps at 55-65% MVC builds oxidative endurance through volume. A step up from sub-max protocols, still well below the max strength zone. (López-Rivera & González-Badillo 2018: intermittent protocols at 50-60% MVC maximise aerobic adaptation; Tyler Nelson: volume-based sub-max protocols for tendon remodelling)",
+      "cues": [
+        "Use 55-65% of your max hang load — sustainable but you'll feel it by rep 6",
+        "10 seconds on, 5 seconds off — stay consistent through all 8 reps",
+        "Rest 2-3 min between sets — aerobic recovery, not neural",
+        "Slight bend in elbow throughout — protect passive structures"
+      ],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 22,
+        "grip": "half_crimp"
+      }
+    },
+    {
+      "id": "long_interval_repeaters",
+      "name": "Long-Interval Repeaters",
+      "category": "endurance",
+      "time_min": 20,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "finger_aerobic_endurance"
+      ],
+      "pattern": "repeater_hang",
+      "intensity_level": "low",
+      "fatigue_cost": 4,
+      "recency_group": "finger_endurance_sub_max",
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive",
+        "finger_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 5,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": 10,
+        "rest_between_sets_seconds": 120,
+        "notes": "Large edge (25-35mm). 20s on / 10s off × 5 reps at 45-55% MVC. Longer hang duration targets tissue loading and tendon health."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Long-interval repeaters for finger aerobic endurance. 20s on / 10s off × 5 reps at 45-55% MVC increases time-under-tension per rep compared to standard 7-3 repeaters, training the aerobic system and supporting connective tissue adaptation. (Hörst Ch.9: longer sub-max intervals develop aerobic finger base; López-Rivera: extended duration intermittent protocols improve force-endurance at sub-max intensities)",
+      "cues": [
+        "20 seconds on, 10 seconds off — long enough to feel the aerobic demand",
+        "Keep intensity at 45-55% MVC — if you can't complete 20s, reduce weight",
+        "Large edge (25-35mm) or sloper to reduce injury risk",
+        "Focus on consistent effort across all 5 reps per set"
+      ],
+      "video_url": null,
+      "load_model": "total_load",
+      "attributes": {
+        "edge_mm": 28,
+        "grip": "half_crimp"
+      }
+    },
+    {
       "id": "reverse_lunge",
       "name": "Reverse Lunge",
       "category": "strength_accessory",
