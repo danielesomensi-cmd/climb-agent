@@ -325,6 +325,17 @@ Key location: `.env` in repo root (gitignored, never commit).
 - Brief types: A = new feature, B = bugfix, C = catalog/content, D = audit/documentation (read-only). Briefs are numbered sequentially across all types. Never reuse a number. **Before assigning a new brief number, ALWAYS run `python scripts/next_brief.py` — it scans both ROADMAP_CURRENT.md and `git log --all` (commit messages can reference briefs never added to the roadmap, causing silent collisions). Do NOT guess the next number from the roadmap alone.**
 - Push at end of session: `git add -A && git commit -m 'description' && git push`
 
+## Branch workflow
+
+Regola obbligatoria per evitare di intrappolare gli utenti PWA su una build rotta:
+
+- **Backend-only briefs** (nessun file `frontend/` toccato): commit + push diretto a `main`. Railway redeploya in 1-2 min.
+- **Briefs che toccano `frontend/`** (anche un solo file): MUST sviluppare su un branch `brief/B<n>-<slug>`, far buildare la preview Vercel, **testare la preview URL** (sia desktop sia PWA installata su iPhone se rilevante), e ottenere OK esplicito di Daniele PRIMA del merge in `main`.
+  - Mai pushare frontend changes direttamente a `main` senza preview verification — gli utenti PWA su iPhone restano bloccati sul vecchio Service Worker finché la nuova build non è validata.
+  - Il CORS regex per i preview URL Vercel (`https://climb-agent(-[a-z0-9-]+)?\.vercel\.app`) è già live in produzione (B196-CORS), quindi le preview branch chiamano il backend prod senza configurazione extra.
+  - Il Service Worker (`frontend/public/sw.template.js`) viene rigenerato per build via `frontend/scripts/build-sw.js`, che inietta `VERCEL_GIT_COMMIT_SHA` in `CACHE_NAME`. Non committare `public/sw.js` (gitignored), non bumpare `CACHE_NAME` a mano.
+- **Brief misti** (backend + frontend): tratta come frontend → branch + preview obbligatori.
+
 ## Lessons learned
 
 After completing a task, if you encountered unexpected behavior, made a mistake
