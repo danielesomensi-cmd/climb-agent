@@ -408,7 +408,7 @@ All 30 core circuit exercises have images. Generated via Gemini AI, renamed and 
 
 ### C164 — Catalog expansion: Category B exercise pools
 
-**Priority:** P2.5b | **Status:** Open | **Type:** C (catalog) | **Effort:** M
+**Priority:** P2.5b | **Status:** ✅ Done (C164, 2026-04-08) | **Type:** C (catalog) | **Effort:** M
 
 **Problem:** Phase 0 of Brief B (resolver scoring, 2026-03-28) diagnosed 4 template blocks
 where exercise variety is impossible regardless of scoring tuning, because the P0 filter
