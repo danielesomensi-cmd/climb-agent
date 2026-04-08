@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-54 endpoints total (52 router + 2 app-level: health check + stripe webhook).
+56 endpoints total (54 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -178,6 +178,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/outdoor/log` | Log outdoor session |
 | GET | `/api/outdoor/log/{date}` | Get outdoor session by date |
 | PUT | `/api/outdoor/log` | Update outdoor session |
+| DELETE | `/api/outdoor/log/{date}` | Delete outdoor session by date |
 | GET | `/api/outdoor/sessions` | List outdoor sessions |
 | GET | `/api/outdoor/stats` | Outdoor statistics |
 | POST | `/api/outdoor/convert-slot` | Convert outdoor slot to gym/home |
@@ -197,6 +198,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/free-session/{session_id}/log-climb` | Log a climb to active session |
 | POST | `/api/free-session/{session_id}/finish` | Finish session (summary + load) |
 | GET | `/api/free-session/history` | Free sessions for a date |
+| DELETE | `/api/free-session/{session_id}/climb/{climb_index}` | Delete a climb from active session |
 | DELETE | `/api/free-session/{session_id}` | Delete a free session |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
