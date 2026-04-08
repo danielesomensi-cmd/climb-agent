@@ -112,17 +112,38 @@ def append_feedback_log(
             exercise_feedback[eid] = label
 
     feedback_log: List[Dict[str, Any]] = state.setdefault("feedback_log", [])
-    entry: Dict[str, Any] = {
-        "date": date,
-        "session_id": session_id,
-        "difficulty": difficulty,
-    }
-    if exercise_feedback:
-        entry["exercise_feedback"] = exercise_feedback
     duration = log_entry.get("session_duration_seconds")
-    if duration is not None:
-        entry["session_duration_seconds"] = duration
-    feedback_log.append(entry)
+
+    # B197 Bug 1: dedup by (date, session_id). On resubmit, merge the new
+    # payload into the existing entry instead of appending. Duration is kept
+    # as max() so a short re-submit (e.g. fresh `startedAt` after a /today
+    # render race) cannot clobber the real training duration.
+    existing = None
+    for candidate in feedback_log:
+        if str(candidate.get("date") or "") == date and candidate.get("session_id") == session_id:
+            existing = candidate
+            break
+
+    if existing is not None:
+        existing["difficulty"] = difficulty
+        if exercise_feedback:
+            existing["exercise_feedback"] = exercise_feedback
+        if duration is not None:
+            prev = existing.get("session_duration_seconds")
+            existing["session_duration_seconds"] = (
+                max(prev, duration) if isinstance(prev, (int, float)) else duration
+            )
+    else:
+        entry: Dict[str, Any] = {
+            "date": date,
+            "session_id": session_id,
+            "difficulty": difficulty,
+        }
+        if exercise_feedback:
+            entry["exercise_feedback"] = exercise_feedback
+        if duration is not None:
+            entry["session_duration_seconds"] = duration
+        feedback_log.append(entry)
 
     # Trim to last 7 entries by date descending
     feedback_log.sort(key=lambda x: str(x.get("date") or ""), reverse=True)

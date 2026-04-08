@@ -254,6 +254,51 @@ function buildGuidedState(
   };
 }
 
+// B197 Bug 1: shared "Start session" handler. Guards against re-starting an
+// already-done session and preserves any pre-existing `startedAt` in localStorage
+// so the wall-clock duration survives a /today render race / accidental restart.
+function handleStartGuided(
+  session: SessionSlot,
+  date: string,
+  router: ReturnType<typeof useRouter>,
+): void {
+  // Don't allow restarting a server-side completed session — the duration
+  // would otherwise be reset and clobber the real value via the resubmit path.
+  if (session.status === "done" || session.status === "skipped") {
+    return;
+  }
+
+  // B181: don't overwrite saved progress — resume instead.
+  if (hasSavedProgress(date, session.session_id)) {
+    router.push(`/guided/${date}/${session.session_id}`);
+    return;
+  }
+
+  const guidedState = buildGuidedState(session, date);
+  if (!guidedState) return;
+
+  const userId = window.Clerk?.session ? "clerk" : "";
+  const key = `guided_session_${userId}_${date}_${session.session_id}`;
+
+  // B197: if any prior state exists for this slot (even one without
+  // visible progress that hasSavedProgress would skip), preserve its
+  // startedAt so the duration measured at submit time isn't reset.
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const prior = JSON.parse(raw) as GuidedSessionState;
+      if (prior?.startedAt) {
+        guidedState.startedAt = prior.startedAt;
+      }
+    }
+  } catch {
+    /* ignore — fall through to fresh startedAt */
+  }
+
+  localStorage.setItem(key, JSON.stringify(guidedState));
+  router.push(`/guided/${date}/${session.session_id}`);
+}
+
 // Equipment expansion + compatibility logic extracted to @/lib/equipment-filter
 
 // ─── Add Exercise Dialog ─────────────────────────────────────────────
@@ -898,17 +943,7 @@ export function SessionCard({
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
-                      // B181: don't overwrite saved progress — resume instead
-                      if (hasSavedProgress(date, session.session_id)) {
-                        router.push(`/guided/${date}/${session.session_id}`);
-                        return;
-                      }
-                      const guidedState = buildGuidedState(session, date);
-                      if (!guidedState) return;
-                      const userId = window.Clerk?.session ? "clerk" : "";
-                      const key = `guided_session_${userId}_${date}_${session.session_id}`;
-                      localStorage.setItem(key, JSON.stringify(guidedState));
-                      router.push(`/guided/${date}/${session.session_id}`);
+                      handleStartGuided(session, date, router);
                     }}
                   >
                     <Play className="size-3.5 mr-1" />
@@ -962,17 +997,7 @@ export function SessionCard({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            // B181: don't overwrite saved progress — resume instead
-            if (hasSavedProgress(date, session.session_id)) {
-              router.push(`/guided/${date}/${session.session_id}`);
-              return;
-            }
-            const guidedState = buildGuidedState(session, date);
-            if (!guidedState) return;
-            const userId = window.Clerk?.session ? "clerk" : "";
-            const key = `guided_session_${userId}_${date}_${session.session_id}`;
-            localStorage.setItem(key, JSON.stringify(guidedState));
-            router.push(`/guided/${date}/${session.session_id}`);
+            handleStartGuided(session, date, router);
           }}
           className="absolute bottom-[-16px] right-4 z-10 w-11 h-11 rounded-full bg-green-500 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
           aria-label="Start session"

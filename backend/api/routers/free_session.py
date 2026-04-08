@@ -345,6 +345,10 @@ def get_history(
             "started_at": s.get("started_at"),
             "finished_at": s.get("finished_at"),
             "load_score": s.get("load_score"),
+            # B197 Bug 2: circuit-mode sessions need this so the frontend
+            # day-card can show `circuit.completed_exercises`. Without it
+            # the count renders as "0 exercises".
+            "circuit": s.get("circuit"),
         })
 
     return {"sessions": result}

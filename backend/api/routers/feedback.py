@@ -248,7 +248,14 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                 entry["exercise_count"] = len(fb_items)
                 duration = req.log_entry.get("session_duration_seconds")
                 if duration is not None:
-                    entry["session_duration_seconds"] = duration
+                    # B197 Bug 1: on resubmit, keep the longest duration seen.
+                    # Frontend re-runs (e.g. after a /today render race) reset
+                    # `startedAt` and submit tiny durations (~30s); without max()
+                    # they clobber the real training duration.
+                    prev = entry.get("session_duration_seconds")
+                    entry["session_duration_seconds"] = (
+                        max(prev, duration) if isinstance(prev, (int, float)) else duration
+                    )
                 break
 
     # 8. A194: Persist via persist_week_plan when we have a current plan —
