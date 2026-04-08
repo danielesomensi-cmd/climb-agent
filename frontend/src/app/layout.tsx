@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Toaster } from "sonner";
 import { Providers } from "./providers";
+import { SwUpdateBanner } from "@/components/sw-update-banner";
 import "./globals.css";
 
 const inter = Inter({
@@ -58,6 +59,7 @@ export default function RootLayout({
           <Providers>
             <div className="mx-auto min-h-screen max-w-3xl">{children}</div>
             <Toaster richColors position="top-center" />
+            <SwUpdateBanner />
           </Providers>
           <script
             dangerouslySetInnerHTML={{

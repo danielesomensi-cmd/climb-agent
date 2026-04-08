@@ -237,6 +237,11 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
 - **Deploy**: `git push` to main → both services update within 2-3 minutes.
 
+- **Deploy workflow rules (B196):**
+  - **Backend-only briefs** (no `frontend/` files touched): push directly to main is OK.
+  - **Briefs that touch `frontend/`**: MUST be developed on a branch named `brief/B<n>-<slug>` and tested on the Vercel preview URL before merging to main. Daniele must explicitly approve the preview before merge. Never push frontend changes directly to main without preview verification — PWA users on iPhone are trapped on the previous SW until the new build is verified.
+  - The Service Worker (`frontend/public/sw.template.js`) generates `public/sw.js` per-build via `frontend/scripts/build-sw.js` (prebuild hook), injecting `VERCEL_GIT_COMMIT_SHA` into `CACHE_NAME`. Do NOT commit `public/sw.js` (gitignored). Do NOT bump CACHE_NAME manually.
+
 - **Stripe**: sk_test keys configured in Railway. Currently **DISABLED** (STRIPE_SECRET_KEY removed) for open beta validation phase. Re-enable with sk_live when ready for paid launch. Pricing at launch: EUR 14.99/month, 14-day trial, monthly-only. Founding Climber offer: first 50 users at EUR 9.99 lifetime (Stripe discount code).
 
 - **Auth**: Clerk (Next.js native). Backend resolves `clerk_id` → internal `user_id` (UUID). Supabase `users` table with `clerk_id` column. In-memory LRU cache for `clerk_id → user_id` mapping. Without Clerk header → fallback to legacy UUID system (local dev only).
