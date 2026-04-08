@@ -104,6 +104,7 @@ export default function WeekPage() {
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
+  const [outdoorLoadMap, setOutdoorLoadMap] = useState<Record<string, number>>({});
   const [freeSessionsByDate, setFreeSessionsByDate] = useState<Record<string, Array<Record<string, unknown>>>>({});
   const [freeSessionsLoaded, setFreeSessionsLoaded] = useState(false);
   const weekRouter = useRouter();
@@ -135,14 +136,17 @@ export default function WeekPage() {
       .then(({ sessions }) => {
         const map: Record<string, OutdoorRoute[]> = {};
         const durMap: Record<string, number> = {};
+        const loadMap: Record<string, number> = {};
         for (const s of sessions) {
           if (doneDates.includes(s.date)) {
             map[s.date] = [...(map[s.date] || []), ...s.routes];
             if (s.duration_minutes) durMap[s.date] = (durMap[s.date] ?? 0) + s.duration_minutes;
+            if (s.load_score) loadMap[s.date] = (loadMap[s.date] ?? 0) + s.load_score;
           }
         }
         setOutdoorRoutesMap(map);
         setOutdoorDurationMap(durMap);
+        setOutdoorLoadMap(loadMap);
       })
       .catch((err) => { console.error("Failed to load outdoor sessions:", err); });
   }, [weekPlan]);
@@ -681,7 +685,8 @@ export default function WeekPage() {
                             .filter((s) => s.status === "done")
                             .reduce((acc, s) => acc + (s.session_load_score ?? s.estimated_load_score ?? 0), 0)
                         + (d.other_activity_load ?? 0)
-                        + ((freeSessionsByDate[d.date] ?? []).reduce((a, fs) => a + ((fs.load_score as number) ?? 0), 0)),
+                        + ((freeSessionsByDate[d.date] ?? []).reduce((a, fs) => a + ((fs.load_score as number) ?? 0), 0))
+                        + (outdoorLoadMap[d.date] ?? 0),
                         0,
                       )
                     : "—"}
@@ -763,6 +768,7 @@ export default function WeekPage() {
                   homeEquipment={homeEquipment}
                   outdoorRoutes={outdoorRoutesMap[day.date]}
                   outdoorDurationMinutes={outdoorDurationMap[day.date]}
+                  outdoorLoadScore={outdoorLoadMap[day.date]}
                   weekPlan={weekPlan}
                   onSessionUpdated={(updatedPlan) => {
                     if (updatedPlan) { updateWeekCache(updatedPlan); } else { refetchAll(); }

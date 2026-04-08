@@ -81,6 +81,7 @@ export interface DayPlan {
   other_activity_load?: number;
   other_activity_duration_minutes?: number;
   prev_other_activity_reduce?: boolean;
+  outdoor_load_score?: number;
 }
 
 export interface WeekPlan {
@@ -304,6 +305,7 @@ export interface OutdoorSession {
   notes?: string;
   energy_level?: string;
   overall_feeling?: string;
+  load_score?: number;
 }
 
 export interface OutdoorStats {

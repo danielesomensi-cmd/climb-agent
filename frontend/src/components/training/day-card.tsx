@@ -38,6 +38,7 @@ interface DayCardProps {
   onRemoveOutdoor?: (date: string) => void;
   outdoorRoutes?: OutdoorRoute[];
   outdoorDurationMinutes?: number;
+  outdoorLoadScore?: number;
   freeSessions?: Array<{
     id: string;
     surface: string;
@@ -139,6 +140,7 @@ export function DayCard({
   onRemoveOutdoor,
   outdoorRoutes,
   outdoorDurationMinutes,
+  outdoorLoadScore,
   freeSessions,
   onDeleteFreeSession,
   showActions = false,
@@ -418,6 +420,11 @@ export function DayCard({
                           <span className="text-zinc-300"> · ~120 min</span>
                         )}
                       </Badge>
+                      {outdoorLoadScore != null && outdoorLoadScore > 0 && (
+                        <Badge variant="outline" className="text-[10px]">
+                          Load: {outdoorLoadScore}
+                        </Badge>
+                      )}
                       {onEditOutdoor && (
                         <Button
                           size="sm"
