@@ -134,8 +134,8 @@ HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
     "horst_7_53": 0.90,  # Max strength protocol, 90% MVC (Hörst, López). Catalog notes: "90-95% intensity".
     "long_duration_hang": 0.55,
     "lopez_subhangs": 0.75,
-    "max_hang_10s": 0.85,
-    "max_hang_7s": 0.88,
+    # max_hang_10s removed (TD-HORST-3): exercise deactivated, no session catalog file.
+    # max_hang_7s removed (TD-HORST-2): excluded from _hangboard_suggested call path (line 933).
     "max_hang_ladder": 0.80,
     "one_arm_hang_assisted": 0.85,
     "repeater_15_15": 0.65,

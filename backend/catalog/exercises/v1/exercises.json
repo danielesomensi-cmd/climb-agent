@@ -5522,7 +5522,11 @@
       "fatigue_cost": 5,
       "recency_group": "conditioning_tgu",
       "equipment_required": [],
-      "equipment_required_any": ["dumbbell", "barbell", "kettlebell"],
+      "equipment_required_any": [
+        "dumbbell",
+        "barbell",
+        "kettlebell"
+      ],
       "location_allowed": [
         "home",
         "gym"
@@ -5574,7 +5578,11 @@
       "fatigue_cost": 4,
       "recency_group": "conditioning_carries",
       "equipment_required": [],
-      "equipment_required_any": ["dumbbell", "barbell", "kettlebell"],
+      "equipment_required_any": [
+        "dumbbell",
+        "barbell",
+        "kettlebell"
+      ],
       "location_allowed": [
         "home",
         "gym"
@@ -6291,7 +6299,8 @@
         "Body completely still — no swinging or kipping",
         "3-minute rest between sets for full phosphocreatine recovery"
       ],
-      "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/"
+      "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/",
+      "active": false
     },
     {
       "id": "campus_touches",
@@ -9880,16 +9889,25 @@
       "id": "reverse_lunge",
       "name": "Reverse Lunge",
       "category": "strength_accessory",
-      "role": ["accessory"],
-      "domain": ["strength_general"],
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
       "pattern": "lunge",
       "intensity_level": "moderate",
       "fatigue_cost": 4,
       "recency_group": "lunge",
       "equipment_required": [],
       "equipment_required_any": [],
-      "location_allowed": ["home", "gym"],
-      "contraindications": ["knee_injury"],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
       "load_model": "bodyweight_only",
       "unilateral": true,
       "alt_sides": true,
@@ -9900,7 +9918,11 @@
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 90
       },
-      "stress_tags": {"fingers": "none", "elbow": "none", "cns": "low"},
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low"
+      },
       "cues": [
         "Stand tall, feet hip-width apart — step one foot back and lower until both knees are at 90°",
         "Front knee tracks over 2nd–3rd toe, never collapses inward",
@@ -9917,20 +9939,34 @@
       "name": "Overcoming Isometric Pull",
       "category": "main_strength",
       "time_min": 15,
-      "role": ["main"],
-      "domain": ["contact_strength"],
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength"
+      ],
       "pattern": "isometric_explosive",
       "intensity_level": "max",
       "fatigue_cost": 7,
       "recency_group": "contact_power",
-      "equipment_required": ["hangboard"],
-      "location_allowed": ["home", "gym"],
-      "contraindications": ["finger_sensitive"],
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
       "load_model": "bodyweight_only",
       "unilateral": false,
       "alt_sides": false,
       "experience_minimum_years": 2,
-      "attributes": {"edge_mm": 20, "grip": "half_crimp"},
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
+      },
       "prescription_defaults": {
         "sets": 4,
         "reps": 3,
@@ -9939,7 +9975,11 @@
         "rest_between_sets_seconds": 300,
         "notes": "Pull AGAINST a fixed strap at max effort. Each pull 3-5s at RPE 10. Full neural recovery between sets."
       },
-      "stress_tags": {"fingers": "high", "elbow": "medium", "cns": "high"},
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "medium",
+        "cns": "high"
+      },
       "cues": [
         "Half-crimp on 20mm edge — pull AGAINST a fixed strap or pin at max effort",
         "Each pull: 3-5 seconds at RPE 10 — you control the force, no sudden failure risk",
@@ -9955,20 +9995,35 @@
       "name": "RFD Explosive Finger Pulls",
       "category": "main_strength",
       "time_min": 12,
-      "role": ["main"],
-      "domain": ["contact_strength"],
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength"
+      ],
       "pattern": "explosive_brief",
       "intensity_level": "max",
       "fatigue_cost": 6,
       "recency_group": "contact_power",
-      "equipment_required": ["hangboard"],
-      "location_allowed": ["home", "gym"],
-      "contraindications": ["finger_sensitive", "elbow_sensitive"],
+      "equipment_required": [
+        "hangboard"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive",
+        "elbow_sensitive"
+      ],
       "load_model": "bodyweight_only",
       "unilateral": false,
       "alt_sides": false,
       "experience_minimum_years": 2,
-      "attributes": {"edge_mm": 20, "grip": "half_crimp"},
+      "attributes": {
+        "edge_mm": 20,
+        "grip": "half_crimp"
+      },
       "prescription_defaults": {
         "sets": 4,
         "reps": 5,
@@ -9977,7 +10032,11 @@
         "rest_between_sets_seconds": 240,
         "notes": "Explosive 1-2s pull at maximum rate of force development. Goal is SPEED, not duration."
       },
-      "stress_tags": {"fingers": "high", "elbow": "low", "cns": "high"},
+      "stress_tags": {
+        "fingers": "high",
+        "elbow": "low",
+        "cns": "high"
+      },
       "cues": [
         "Half-crimp on 20mm edge — explosive 1-2 second pull at maximum rate of force development",
         "Goal is SPEED of force generation, not duration — pull as hard as possible as fast as possible",
@@ -9993,15 +10052,25 @@
       "name": "Power Slap / Deadpoint Drill",
       "category": "main_strength",
       "time_min": 12,
-      "role": ["main"],
-      "domain": ["contact_strength"],
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "contact_strength"
+      ],
       "pattern": "explosive_touch",
       "intensity_level": "high",
       "fatigue_cost": 6,
       "recency_group": "contact_power",
-      "equipment_required": ["gym_boulder"],
-      "location_allowed": ["gym"],
-      "contraindications": ["finger_sensitive"],
+      "equipment_required": [
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_sensitive"
+      ],
       "load_model": "bodyweight_only",
       "unilateral": false,
       "alt_sides": false,
@@ -10015,7 +10084,11 @@
         "rest_between_sets_seconds": 180,
         "notes": "Single explosive pull to reach highest hold from stable jug. Grab at dead-point."
       },
-      "stress_tags": {"fingers": "medium", "elbow": "low", "cns": "high"},
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "high"
+      },
       "cues": [
         "From stable jug position, single explosive pull to reach the highest possible hold",
         "Focus on timing: grab the target hold at the dead-point (zero velocity moment)",
