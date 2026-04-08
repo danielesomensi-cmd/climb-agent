@@ -24,7 +24,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Templates | 19 |
 | API endpoints | 56 |
 | Frontend pages | 35 |
-| Frontend components | 60 |
+| Frontend components | 61 |
 <!-- STATUS_TABLE_END -->
 
 **Current phase:** Open beta — free access for ~6-10 real users. Stripe paused intentionally (STRIPE_SECRET_KEY removed from Railway). Re-enable with sk_live keys after usage validation (target: 6+ users at 3x/week for 2 consecutive weeks).
