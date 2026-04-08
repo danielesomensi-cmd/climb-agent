@@ -81,13 +81,17 @@ app = FastAPI(title="climb-agent", version="0.1.0", lifespan=lifespan)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS — allow Next.js dev server + Vercel production
+# CORS — allow Next.js dev server + Vercel production + Vercel preview branches.
+# B196-CORS: regex matches any preview deployment under the climb-agent project
+# (e.g. climb-agent-git-brief-foo-account.vercel.app, climb-agent-abc123-account.vercel.app)
+# without opening the door to unrelated *.vercel.app sites.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "https://climb-agent.vercel.app",
     ],
+    allow_origin_regex=r"https://climb-agent(-[a-z0-9-]+)?\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
