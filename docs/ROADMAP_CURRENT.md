@@ -164,8 +164,8 @@ All 16 P1 findings from D163 + D164 audits verified fixed in code. See remediati
 |----|-------|------|--------|-------|
 | **B176** | D172 consolidated remediation — 21 remaining findings (P2+P3) | B | L | 5 groups: type safety (D172-05,11,12), equipment validation (D172-07,08,22), event/input validation (D172-09,13,14,25), logging (D172-10,15,17-20,23,24), structural/deferred (D172-16,21). Supabase migration already complete — no longer a prerequisite. |
 | **TD-HORST-1** | `_update_test_from_log` writes to both `updated["tests"]` (top-level) and `updated["assessment"]["tests"]` — investigate if double-write is intentional or a bug | D | S | Surfaced during B195 audit. Lines `progression_v1.py:1057` (assessment.tests) and `:1069` (top-level tests). Possible refactor target. P3+. |
-| **TD-HORST-2** | Hangboard intensity double source of truth: `progression_v1.py:138` has `max_hang_7s: 0.88` while `exercises.json:341` has `intensity_pct: 0.9`. Production path uses catalog (0.9), so the 0.88 constant is a stale fallback | B | XS | Surfaced during B195 audit. Either delete the constant fallback or align to 0.9. P3+. |
-| **TD-HORST-3** | `max_hang_10s` exists in `HANGBOARD_DEFAULT_INTENSITY_PCT` (0.85) and in `exercises.json` but no test session catalog file (`test_max_hang_10s.json`) exists. Either dead code or missing session | C | XS | Surfaced during B195 audit. Decide: add session or remove constant + exercise. P3+. |
+| **TD-HORST-2** | ✅ Done (B199, 2026-04-08) — `max_hang_7s: 0.88` removed from `HANGBOARD_DEFAULT_INTENSITY_PCT`. Dead code: `_hangboard_suggested` explicitly excludes `max_hang_7s` in call path. |
+| **TD-HORST-3** | ✅ Done (B199, 2026-04-08) — `max_hang_10s: 0.85` removed from `HANGBOARD_DEFAULT_INTENSITY_PCT`; `active: false` set in exercises.json. No session catalog file exists; constant was unreachable. |
 
 ### Deferred from B173 (need API refactoring)
 
