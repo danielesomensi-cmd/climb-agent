@@ -138,7 +138,119 @@ const DEMO_BLOCKS: DemoBlock[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 2. 4×4 Bouldering (~20 min)
+  // 2. Max Hangs — Finger STRENGTH (~10 min)
+  // -------------------------------------------------------------------------
+  {
+    id: "max_hangs",
+    label: "Finger Strength — Max Hangs",
+    moduleRole: "main_set",
+    durationLabel: "~10 min",
+    exercises: [
+      {
+        card: {
+          exercise_id: "max_hangs",
+          name: "Max hangs",
+          sets: 5,
+          reps: "10s hang",
+          rest_s: 180,
+          notes: "Half crimp, largest comfortable edge. 5 sets × 10s hang, 3 min rest. Add weight or reduce edge size until 10s is genuinely hard.",
+        },
+        cues: [
+          "Your fingers are fresh — this is when you train max finger strength.",
+          "Pick an edge where 10 seconds is HARD. If you can hang 15s comfortably, add weight or go smaller.",
+          "Half crimp: fingers bent ~90° at the second knuckle. No full crimp.",
+          "Full 3 minutes rest between sets — this is strength work, not endurance.",
+          "No hangboard? Use a door frame or pull-up bar with the first two finger pads over the top.",
+          "Use a resistance band to offload bodyweight if needed — banded max hangs are real training.",
+          "Stop immediately if you feel sharp pain in a finger pulley.",
+        ],
+        timer: {
+          workSeconds: 10,
+          restBetweenRepsSeconds: 0,
+          restBetweenSetsSeconds: 180,
+          sets: 5,
+          reps: 1,
+        },
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 3. Weighted Pull-ups — Pulling STRENGTH (~10 min)
+  // -------------------------------------------------------------------------
+  {
+    id: "pull_ups",
+    label: "Weighted Pull-ups",
+    moduleRole: "main_set",
+    durationLabel: "~10 min",
+    exercises: [
+      {
+        card: {
+          exercise_id: "weighted_pull_ups",
+          name: "Weighted pull-ups",
+          sets: 4,
+          reps: "5",
+          rest_s: 180,
+          notes: "Add weight so the last rep is hard but controlled. 4 sets × 5 reps, 3 min rest.",
+        },
+        cues: [
+          "Still fresh from the hangboard. Add a weight belt, hold a dumbbell between your feet, or use a weighted backpack.",
+          "No weight available? Do slow pull-ups: 3 seconds up, 3 seconds down.",
+          "Full range of motion: start from a dead hang, chin clears the bar at the top.",
+          "If you have weight, add enough so rep 5 is genuinely hard but controlled.",
+          "Keep your core engaged — no kipping or swinging.",
+          "3 minutes rest between sets.",
+        ],
+        timer: {
+          workSeconds: 0,
+          restBetweenRepsSeconds: 0,
+          restBetweenSetsSeconds: 180,
+          sets: 4,
+          reps: 5,
+        },
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 4. Projecting — structured limit bouldering (~20 min)
+  // -------------------------------------------------------------------------
+  {
+    id: "projecting",
+    label: "Projecting — Limit Bouldering",
+    moduleRole: "main_set",
+    durationLabel: "~20 min",
+    exercises: [
+      {
+        card: {
+          exercise_id: "projecting",
+          name: "Limit boulder projecting",
+          sets: 4,
+          reps: "3 attempts",
+          rest_s: 180,
+          notes: "Pick 4 boulder problems at your limit (hardest grade you can try). 3 attempts per problem, 3 min rest between attempts.",
+        },
+        cues: [
+          "This is NOT volume climbing. Pick problems you CAN'T do yet.",
+          "Try hard, rest fully. One bad attempt is fine — learn from it and reset.",
+          "Spray walls, Kilter Board, and Tension Board are perfect for this.",
+          "3 attempts per problem, then move on — don't grind yourself into the ground on one move.",
+          "3 full minutes of rest between attempts. Sit down, breathe, visualize.",
+          "Power and skill both come from attempts at your limit — this is the most important block for progress.",
+        ],
+        timer: {
+          workSeconds: 0,
+          restBetweenRepsSeconds: 180,
+          restBetweenSetsSeconds: 180,
+          sets: 4,
+          reps: 3,
+        },
+      },
+    ],
+  },
+
+  // -------------------------------------------------------------------------
+  // 5. 4×4 Bouldering — power endurance (~20 min)
   // -------------------------------------------------------------------------
   {
     id: "main_4x4",
@@ -153,11 +265,11 @@ const DEMO_BLOCKS: DemoBlock[] = [
           sets: 4,
           reps: "4 problems",
           rest_s: 240,
-          notes: "Pick 4 problems 1–2 grades below your flash level. Climb all 4 without rest, then rest 4 min. Repeat 4 times.",
+          notes: "Pick 4 problems 1–2 grades below your max. Climb all 4 back-to-back without rest, then rest 4 min. Repeat 4 times.",
         },
         cues: [
-          "Choose 4 problems you can flash or nearly flash.",
-          "Spray walls, Kilter Board, and Tension Board are perfect for this.",
+          "Pick 4 problems 1–2 grades below your max — flash-1 level.",
+          "Kilter Board and Tension Board work great for this.",
           "Climb all 4 back-to-back without stopping — falls are fine, keep moving.",
           "4 full minutes of rest between rounds: sit down, breathe, shake out.",
           "Focus on moving well on all 4 rounds — not just the first two.",
@@ -175,78 +287,7 @@ const DEMO_BLOCKS: DemoBlock[] = [
   },
 
   // -------------------------------------------------------------------------
-  // 3. Free Climbing / Exploration (~20 min)
-  // -------------------------------------------------------------------------
-  {
-    id: "free_climbing",
-    label: "Free Climbing / Exploration",
-    moduleRole: "main_set",
-    durationLabel: "~20 min",
-    exercises: [
-      {
-        card: {
-          exercise_id: "free_climbing",
-          name: "Open bouldering at flash level",
-          sets: 1,
-          reps: "20 min",
-          notes: "Try new problems, explore different styles. No structure — just climb what looks fun.",
-        },
-        cues: [
-          "Pick problems at or slightly above your flash level.",
-          "Try things that look different from what you usually do — slopers, compression, heel hooks.",
-          "This is your playground time — have fun, but stay intentional.",
-          "If you find something you can't do, spend 5 min on it before moving on.",
-          "Stop 5 minutes before the timer ends and shake out before the next block.",
-        ],
-        timer: {
-          workSeconds: 1200,
-          restBetweenRepsSeconds: 0,
-          restBetweenSetsSeconds: 0,
-          sets: 1,
-          reps: 1,
-        },
-      },
-    ],
-  },
-
-  // -------------------------------------------------------------------------
-  // 4. Weighted Pull-ups (~10 min)
-  // -------------------------------------------------------------------------
-  {
-    id: "pull_ups",
-    label: "Weighted Pull-ups",
-    moduleRole: "main_set",
-    durationLabel: "~10 min",
-    exercises: [
-      {
-        card: {
-          exercise_id: "weighted_pull_ups",
-          name: "Weighted pull-ups",
-          sets: 4,
-          reps: "5",
-          rest_s: 120,
-          notes: "Add weight so the last rep is hard but controlled. No weight? Do slow pull-ups (3s up, 3s down).",
-        },
-        cues: [
-          "Full range of motion: start from a dead hang, chin clears the bar at the top.",
-          "No weight available? Slow pull-ups: 3 seconds up, 1 second hold, 3 seconds down.",
-          "If you have a weight belt or vest, add enough so rep 5 is genuinely hard.",
-          "Keep your core engaged — no kipping or swinging.",
-          "2 minutes rest between sets.",
-        ],
-        timer: {
-          workSeconds: 0,
-          restBetweenRepsSeconds: 0,
-          restBetweenSetsSeconds: 120,
-          sets: 4,
-          reps: 5,
-        },
-      },
-    ],
-  },
-
-  // -------------------------------------------------------------------------
-  // 5. Core Circuit (~10 min)
+  // 6. Core Circuit (~10 min)
   // -------------------------------------------------------------------------
   {
     id: "core",
@@ -276,44 +317,6 @@ const DEMO_BLOCKS: DemoBlock[] = [
           restBetweenSetsSeconds: 60,
           sets: 3,
           reps: 3,
-        },
-      },
-    ],
-  },
-
-  // -------------------------------------------------------------------------
-  // 6. Hangboard Repeaters (~10 min)
-  // -------------------------------------------------------------------------
-  {
-    id: "hangboard",
-    label: "Finger Strength — Hangboard",
-    moduleRole: "main_set",
-    durationLabel: "~10 min",
-    exercises: [
-      {
-        card: {
-          exercise_id: "hangboard_repeaters",
-          name: "Hangboard repeaters",
-          sets: 3,
-          reps: "6 reps × 7s on / 3s off",
-          rest_s: 120,
-          notes: "Half crimp. Use the largest edge where you feel tension but no pain.",
-        },
-        cues: [
-          "Half crimp: fingers bent ~90° at the second knuckle. Never full crimp when tired.",
-          "7 seconds on the hold — keep tension throughout, don't let it go slack.",
-          "3 seconds off — release the hold but stay close. Don't sit down between reps.",
-          "6 reps = 1 set. 2 minutes full rest between sets.",
-          "No hangboard? Use a door frame or pull-up bar with two fingers over the top.",
-          "Using a resistance band to reduce weight is real training — don't skip the exercise.",
-          "Stop immediately if you feel sharp pain in a finger pulley.",
-        ],
-        timer: {
-          workSeconds: 7,
-          restBetweenRepsSeconds: 3,
-          restBetweenSetsSeconds: 120,
-          sets: 3,
-          reps: 6,
         },
       },
     ],
@@ -646,7 +649,7 @@ export default function DemoPage() {
           <BlockSection
             key={block.id}
             block={block}
-            showCtaAfter={block.id === "hangboard"}
+            showCtaAfter={block.id === "projecting"}
           />
         ))}
 
