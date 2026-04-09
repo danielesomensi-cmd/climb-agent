@@ -1045,6 +1045,30 @@ def _enqueue_test(user_state: Dict[str, Any], *, test_id: str, date_value: str, 
 
 
 def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bodyweight: float) -> None:
+    """Extract test results from a session log and persist them to user_state.
+
+    Two-tier storage design (NOT a double-write — verified B200 / TD-HORST-1):
+
+    1. ``updated["assessment"]["tests"]`` — flat dict of LATEST SCALARS
+       (e.g. ``max_hang_20mm_7s_total_kg: 100.0``). Overwritten on every new
+       test result. Consumed by ``assessment_v1.compute_assessment_profile``
+       to recompute the 5-axis profile, and by baseline fillers
+       (``_get_pulling_baseline``, B121).
+
+    2. ``updated["tests"]`` (top-level) — append-only HISTORY LOG keyed by
+       category (``max_strength``, ``repeater_strength_endurance``,
+       ``pulling_strength``). Each entry carries metadata: date, bodyweight,
+       freshness_policy, confidence, setup. Used for progression tracking
+       over time (e.g. ``week.py`` reads ``repeater_strength_endurance``
+       history for hangboard protocol decisions).
+
+    The two tiers are complementary, not redundant:
+    ``assessment.tests`` answers "what is the athlete's current level?",
+    ``tests`` answers "how has the athlete progressed?". Only tests with
+    rich metadata needs (max_hang, repeater, weighted_pullup) write to both
+    tiers; simple measurements (hip_flexibility, l_sit_hold, etc.) write
+    only the scalar — intentional, do not uniform without a dedicated brief.
+    """
     planned_sessions = log_entry.get("planned") or []
     feedback_items = ((log_entry.get("actual") or {}).get("exercise_feedback_v1") or [])
     test_sessions = [s for s in planned_sessions if str(s.get("session_id") or "").startswith("test_") or bool((s.get("tags") or {}).get("test"))]

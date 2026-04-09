@@ -163,7 +163,7 @@ All 16 P1 findings from D163 + D164 audits verified fixed in code. See remediati
 | ID | Title | Type | Effort | Notes |
 |----|-------|------|--------|-------|
 | **B176** | D172 consolidated remediation — 21 remaining findings (P2+P3) | B | L | 5 groups: type safety (D172-05,11,12), equipment validation (D172-07,08,22), event/input validation (D172-09,13,14,25), logging (D172-10,15,17-20,23,24), structural/deferred (D172-16,21). Supabase migration already complete — no longer a prerequisite. |
-| **TD-HORST-1** | `_update_test_from_log` writes to both `updated["tests"]` (top-level) and `updated["assessment"]["tests"]` — investigate if double-write is intentional or a bug | D | S | Surfaced during B195 audit. Lines `progression_v1.py:1057` (assessment.tests) and `:1069` (top-level tests). Possible refactor target. P3+. |
+| **TD-HORST-1** | ✅ Done (B200, 2026-04-09) — Non-bug. Two-tier design verified: `assessment.tests` = latest scalars for profile compute; top-level `tests` = append-only history log with metadata (date, freshness_policy, confidence). Complementary, not redundant. Docstring added to `_update_test_from_log` to prevent re-investigation. |
 | **TD-HORST-2** | ✅ Done (B199, 2026-04-08) — `max_hang_7s: 0.88` removed from `HANGBOARD_DEFAULT_INTENSITY_PCT`. Dead code: `_hangboard_suggested` explicitly excludes `max_hang_7s` in call path. |
 | **TD-HORST-3** | ✅ Done (B199, 2026-04-08) — `max_hang_10s: 0.85` removed from `HANGBOARD_DEFAULT_INTENSITY_PCT`; `active: false` set in exercises.json. No session catalog file exists; constant was unreachable. |
 
