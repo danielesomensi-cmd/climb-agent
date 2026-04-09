@@ -210,9 +210,17 @@ class MonthlyReportRequest(BaseModel):
 # --------------------------------------------------------------------------- #
 
 class FreeSessionStartRequest(BaseModel):
-    """Body for POST /api/free-session/start."""
+    """Body for POST /api/free-session/start.
+
+    Gym fields (B201): ``gym_id`` identifies a saved gym from the user's
+    ``equipment.gyms`` list — validated server-side, 422 if not found.
+    ``gym_name`` is reserved for a free-text custom gym that the user has
+    NOT saved. When both are provided, ``gym_id`` wins and ``gym_name`` is
+    overwritten by the canonical name resolved from the lookup.
+    """
     date: str
     surface: str  # gym_boulder | board_kilter | board_moonboard | board_other | gym_routes
+    gym_id: Optional[str] = None
     gym_name: Optional[str] = None
     session_mode: str  # template | free
     preset_id: Optional[str] = None

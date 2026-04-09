@@ -1101,6 +1101,117 @@ class TestPlannerV2B84GymSelection(unittest.TestCase):
         # The test still passes as long as NO route session ended up at cheap_gym
 
 
+class TestPlannerV2B201PreferredGymRouting(unittest.TestCase):
+    """B201 — power_endurance_gym is a soft preference for gyms with gym_routes.
+
+    PE session has required_equipment=[gym_boulder] and
+    preferred_equipment=[gym_routes]. Both gyms satisfy required, only one
+    satisfies preferred → planner must pick the route-gym (without dropping
+    sessions when no gym has routes).
+    """
+
+    def _gym_avail(self):
+        return {
+            "mon": {"evening": {"available": True, "preferred_location": "gym", "gym_id": ""}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym", "gym_id": ""}},
+            "fri": {"evening": {"available": True, "preferred_location": "gym", "gym_id": ""}},
+            "sat": {"morning": {"available": True, "preferred_location": "gym", "gym_id": ""}},
+        }
+
+    def test_pe_prefers_gym_with_routes_when_multiple_gyms(self):
+        """BKL (priority 1, boulder only) vs Melloblocco (priority 2, boulder + routes).
+        Both satisfy required_equipment=gym_boulder for PE; only Melloblocco satisfies
+        preferred_equipment=gym_routes → PE must be assigned to Melloblocco even
+        though BKL has higher priority."""
+        gyms = [
+            {"gym_id": "bkl", "priority": 1,
+             "equipment": ["gym_boulder", "hangboard", "pullup_bar"]},
+            {"gym_id": "melloblocco", "priority": 2,
+             "equipment": ["gym_boulder", "gym_routes", "hangboard", "pullup_bar"]},
+        ]
+        pool = ["power_endurance_gym", "technique_focus_gym",
+                "prehab_maintenance", "flexibility_full"]
+        plan = generate_phase_week(
+            phase_id="power_endurance",
+            domain_weights={"power_endurance": 0.6, "technique": 0.2, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-02",
+            availability=self._gym_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=gyms,
+        )
+        days = plan["weeks"][0]["days"]
+        pe_sessions = [
+            s for d in days for s in d["sessions"]
+            if s["session_id"] == "power_endurance_gym"
+        ]
+        self.assertGreater(len(pe_sessions), 0,
+                           "PE session must be placed when both gyms can host it")
+        for s in pe_sessions:
+            self.assertEqual(
+                s["gym_id"], "melloblocco",
+                f"PE session must prefer the route-gym (got {s['gym_id']})",
+            )
+
+    def test_pe_still_placed_when_no_gym_has_routes(self):
+        """When no gym has gym_routes, PE must still be placed on the
+        boulder-only gym (soft preference, never drops the session)."""
+        gyms = [
+            {"gym_id": "bkl", "priority": 1,
+             "equipment": ["gym_boulder", "hangboard", "pullup_bar"]},
+        ]
+        pool = ["power_endurance_gym", "technique_focus_gym",
+                "prehab_maintenance", "flexibility_full"]
+        plan = generate_phase_week(
+            phase_id="power_endurance",
+            domain_weights={"power_endurance": 0.6, "technique": 0.2, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-02",
+            availability=self._gym_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=gyms,
+        )
+        days = plan["weeks"][0]["days"]
+        pe_sessions = [
+            s for d in days for s in d["sessions"]
+            if s["session_id"] == "power_endurance_gym"
+        ]
+        self.assertGreater(len(pe_sessions), 0,
+                           "PE session must still be placed when no gym has routes (soft preference)")
+        for s in pe_sessions:
+            self.assertEqual(s["gym_id"], "bkl")
+
+    def test_preferred_equipment_no_effect_with_single_gym(self):
+        """Single gym with routes → PE assigned to it (baseline check, no regression)."""
+        gyms = [
+            {"gym_id": "only_gym", "priority": 1,
+             "equipment": ["gym_boulder", "gym_routes", "hangboard", "pullup_bar"]},
+        ]
+        pool = ["power_endurance_gym", "technique_focus_gym", "prehab_maintenance"]
+        plan = generate_phase_week(
+            phase_id="power_endurance",
+            domain_weights={"power_endurance": 0.6, "technique": 0.2, "finger_strength": 0.2},
+            session_pool=pool,
+            start_date="2026-03-02",
+            availability=self._gym_avail(),
+            allowed_locations=["gym"],
+            hard_cap_per_week=3,
+            planning_prefs={"target_training_days_per_week": 4, "hard_day_cap_per_week": 3},
+            gyms=gyms,
+        )
+        pe_sessions = [
+            s for d in plan["weeks"][0]["days"] for s in d["sessions"]
+            if s["session_id"] == "power_endurance_gym"
+        ]
+        self.assertGreater(len(pe_sessions), 0)
+        for s in pe_sessions:
+            self.assertEqual(s["gym_id"], "only_gym")
+
+
 class TestPlannerV2B84ClimbingFallback(unittest.TestCase):
     """B84 — Bug B: fallback to gym_boulder climbing when pool sessions all require gym_routes."""
 

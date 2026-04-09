@@ -148,8 +148,11 @@ function FreeSessionContent() {
   const [error, setError] = useState<string | null>(null);
 
   // Selections
+  // B201: selectedGymId holds the gym_id of a SAVED gym (from user's list).
+  // customGym holds a free-text custom gym name not in the saved list.
+  // They are mutually exclusive; "" means "no saved gym selected".
   const [selectedSurface, setSelectedSurface] = useState<string>("");
-  const [selectedGym, setSelectedGym] = useState<string>("");
+  const [selectedGymId, setSelectedGymId] = useState<string>("");
   const [customGym, setCustomGym] = useState("");
   const [presets, setPresets] = useState<Preset[]>([]);
   const [freeModeTip, setFreeModeTip] = useState("");
@@ -209,9 +212,10 @@ function FreeSessionContent() {
 
     // Pre-select gym if only one
     if (gyms.length === 1) {
-      setSelectedGym(gyms[0].name);
+      setSelectedGymId(gyms[0].gym_id);
+      setCustomGym("");
     } else {
-      setSelectedGym("");
+      setSelectedGymId("");
     }
 
     // Load presets
@@ -224,7 +228,10 @@ function FreeSessionContent() {
 
       // Skip gym step if 0 or 1 gym
       if (gyms.length <= 1) {
-        if (gyms.length === 1) setSelectedGym(gyms[0].name);
+        if (gyms.length === 1) {
+          setSelectedGymId(gyms[0].gym_id);
+          setCustomGym("");
+        }
         setStep("mode");
       } else {
         setStep("gym");
@@ -236,8 +243,15 @@ function FreeSessionContent() {
     }
   }, [gyms]);
 
-  const handleGymSelect = useCallback((gymName: string) => {
-    setSelectedGym(gymName);
+  const handleGymSelect = useCallback((gymId: string) => {
+    setSelectedGymId(gymId);
+    setCustomGym("");
+    setStep("mode");
+  }, []);
+
+  const handleCustomGymSelect = useCallback((name: string) => {
+    setSelectedGymId("");
+    setCustomGym(name);
     setStep("mode");
   }, []);
 
@@ -251,11 +265,15 @@ function FreeSessionContent() {
     setLoading(true);
     setError(null);
     try {
-      const gymName = selectedGym || customGym || undefined;
+      const savedGym = selectedGymId ? gyms.find((g) => g.gym_id === selectedGymId) : undefined;
+      const gymIdPayload = savedGym ? savedGym.gym_id : undefined;
+      const gymNamePayload = savedGym ? undefined : (customGym || undefined);
+      const displayName = savedGym?.name ?? customGym ?? undefined;
       const result = await startFreeSession({
         date: paramDate,
         surface: selectedSurface,
-        gym_name: gymName,
+        gym_id: gymIdPayload,
+        gym_name: gymNamePayload,
         session_mode: "free",
         context: paramContext,
       });
@@ -264,7 +282,7 @@ function FreeSessionContent() {
         sessionId: result.session_id,
         surface: selectedSurface,
         mode: "free",
-        gymName,
+        gymName: displayName,
         tip: result.tip || freeModeTip,
       });
       setSessionStartedAt(Date.now());
@@ -274,17 +292,21 @@ function FreeSessionContent() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSurface, selectedGym, customGym, freeModeTip]);
+  }, [selectedSurface, selectedGymId, customGym, gyms, freeModeTip, paramDate, paramContext]);
 
   const handlePresetSelect = useCallback(async (preset: Preset) => {
     setLoading(true);
     setError(null);
     try {
-      const gymName = selectedGym || customGym || undefined;
+      const savedGym = selectedGymId ? gyms.find((g) => g.gym_id === selectedGymId) : undefined;
+      const gymIdPayload = savedGym ? savedGym.gym_id : undefined;
+      const gymNamePayload = savedGym ? undefined : (customGym || undefined);
+      const displayName = savedGym?.name ?? customGym ?? undefined;
       const result = await startFreeSession({
         date: paramDate,
         surface: selectedSurface,
-        gym_name: gymName,
+        gym_id: gymIdPayload,
+        gym_name: gymNamePayload,
         session_mode: "template",
         preset_id: preset.id,
         context: paramContext,
@@ -295,7 +317,7 @@ function FreeSessionContent() {
         surface: selectedSurface,
         mode: "template",
         presetName: preset.name,
-        gymName,
+        gymName: displayName,
         targetGrade: result.target_grade || undefined,
         restSeconds: result.rest_seconds || undefined,
         tip: result.tip || preset.phase_tip,
@@ -308,7 +330,7 @@ function FreeSessionContent() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSurface, selectedGym, customGym]);
+  }, [selectedSurface, selectedGymId, customGym, gyms, paramDate, paramContext]);
 
   const handleCancel = useCallback(async () => {
     if (!activeSession) return;
@@ -536,7 +558,7 @@ function FreeSessionContent() {
             {gyms.map((g) => (
               <button
                 key={g.gym_id}
-                onClick={() => handleGymSelect(g.name)}
+                onClick={() => handleGymSelect(g.gym_id)}
                 className="rounded-xl border bg-card p-4 text-left font-medium transition-all hover:border-primary/30"
               >
                 {g.name}
@@ -553,14 +575,14 @@ function FreeSessionContent() {
               {customGym && (
                 <Button
                   variant="outline"
-                  onClick={() => handleGymSelect(customGym)}
+                  onClick={() => handleCustomGymSelect(customGym)}
                   className="mt-2 w-full"
                 >
                   Continue with &quot;{customGym}&quot;
                 </Button>
               )}
             </div>
-            <Button variant="ghost" onClick={() => { setSelectedGym(""); setStep("mode"); }} className="text-sm">
+            <Button variant="ghost" onClick={() => { setSelectedGymId(""); setCustomGym(""); setStep("mode"); }} className="text-sm">
               Skip — no gym
             </Button>
           </div>

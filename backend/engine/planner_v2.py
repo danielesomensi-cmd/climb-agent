@@ -401,12 +401,22 @@ def _select_gym_id(
     default_gym_id: Optional[str],
     gyms: Sequence[Dict[str, Any]],
     required_equipment: Optional[List[str]] = None,
+    preferred_equipment: Optional[List[str]] = None,
 ) -> Optional[str]:
     """Return the gym_id to assign to a session.
 
-    When no specific gym is requested and required_equipment is given,
-    picks the first gym by priority that satisfies all required equipment (Bug A fix).
-    Falls back to first-by-priority gym if none fully satisfies requirements.
+    Selection order:
+      1. slot_info.gym_id if explicitly set
+      2. default_gym_id if set
+      3. B201: first gym by priority satisfying BOTH required AND preferred
+         equipment (soft bonus — applies only when the user has multiple gyms
+         and one of them has the preferred equipment)
+      4. first gym by priority satisfying required_equipment (Bug A fix)
+      5. fallback: first gym by priority
+
+    ``preferred_equipment`` is a SOFT preference. If no gym has it, this
+    step is skipped silently and step 4 handles placement — sessions are
+    never dropped due to a missing preferred equipment.
     """
     slot_gym = slot_info.get("gym_id")
     if slot_gym:
@@ -415,12 +425,24 @@ def _select_gym_id(
         return default_gym_id
     if gyms:
         sorted_gyms = sorted(gyms, key=lambda g: (g.get("priority", 999), g.get("gym_id", "")))
+
+        def _satisfies(gym: Dict[str, Any], eq_list: List[str]) -> bool:
+            equip = list(gym.get("equipment", []))
+            if "pullup_bar" not in equip:
+                equip.append("pullup_bar")
+            return all(eq in equip for eq in eq_list)
+
+        # B201: soft bonus for gyms that also satisfy preferred_equipment.
+        # Example: PE session (required=gym_boulder, preferred=gym_routes) →
+        # prefer a route-gym over a boulder-only gym when both are available.
+        if required_equipment and preferred_equipment:
+            for g in sorted_gyms:
+                if _satisfies(g, required_equipment) and _satisfies(g, preferred_equipment):
+                    return g.get("gym_id")
+
         if required_equipment:
             for g in sorted_gyms:
-                equip = list(g.get("equipment", []))
-                if "pullup_bar" not in equip:
-                    equip.append("pullup_bar")
-                if all(eq in equip for eq in required_equipment):
+                if _satisfies(g, required_equipment):
                     return g.get("gym_id")
         return sorted_gyms[0].get("gym_id")
     return None
@@ -502,7 +524,11 @@ def _make_session_entry(
     )
     gym_id = None
     if location == "gym":
-        gym_id = _select_gym_id(slot_info, default_gym_id, gyms, required_equipment=req_equip)
+        gym_id = _select_gym_id(
+            slot_info, default_gym_id, gyms,
+            required_equipment=req_equip,
+            preferred_equipment=meta.get("preferred_equipment"),
+        )
 
     return {
         "slot": slot,

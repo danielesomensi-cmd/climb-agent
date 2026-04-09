@@ -485,6 +485,68 @@ class TestStartEndpoint:
         })
         assert r.status_code == 200
 
+    # B201 — gym_id validation tests ─────────────────────────────────────
+    def test_start_with_valid_gym_id(self, client, _seed_state):
+        """Valid gym_id resolves and denormalizes canonical name into session."""
+        r = client.post("/api/free-session/start", json={
+            "date": "2026-03-20",
+            "surface": "gym_boulder",
+            "gym_id": "bkl",
+            "session_mode": "free",
+            "context": "standalone",
+        })
+        assert r.status_code == 200
+        # History should surface both gym_id and gym_name
+        hist = client.get("/api/free-session/history?date=2026-03-20").json()
+        assert len(hist["sessions"]) == 1
+        sess = hist["sessions"][0]
+        assert sess["gym_id"] == "bkl"
+        assert sess["gym_name"] == "BKL"
+
+    def test_start_with_invalid_gym_id_rejected(self, client, _seed_state):
+        """Unknown gym_id returns 422."""
+        r = client.post("/api/free-session/start", json={
+            "date": "2026-03-20",
+            "surface": "gym_boulder",
+            "gym_id": "nonexistent_gym",
+            "session_mode": "free",
+            "context": "standalone",
+        })
+        assert r.status_code == 422
+        assert "gym_id" in r.json()["detail"]
+
+    def test_start_with_custom_gym_name_only(self, client, _seed_state):
+        """Free-text gym_name (no gym_id) still works as legacy path."""
+        r = client.post("/api/free-session/start", json={
+            "date": "2026-03-20",
+            "surface": "gym_boulder",
+            "gym_name": "Random Outdoor Crag Gym",
+            "session_mode": "free",
+            "context": "standalone",
+        })
+        assert r.status_code == 200
+        hist = client.get("/api/free-session/history?date=2026-03-20").json()
+        sess = hist["sessions"][0]
+        assert sess["gym_id"] is None
+        assert sess["gym_name"] == "Random Outdoor Crag Gym"
+
+    def test_gym_id_wins_when_both_provided(self, client, _seed_state):
+        """When both gym_id and gym_name are sent, gym_id takes precedence
+        and gym_name is overwritten by the canonical lookup name."""
+        r = client.post("/api/free-session/start", json={
+            "date": "2026-03-20",
+            "surface": "gym_boulder",
+            "gym_id": "bkl",
+            "gym_name": "typo-here",
+            "session_mode": "free",
+            "context": "standalone",
+        })
+        assert r.status_code == 200
+        hist = client.get("/api/free-session/history?date=2026-03-20").json()
+        sess = hist["sessions"][0]
+        assert sess["gym_id"] == "bkl"
+        assert sess["gym_name"] == "BKL"  # canonical, not "typo-here"
+
 
 class TestLogClimbEndpoint:
     def _start_session(self, client):

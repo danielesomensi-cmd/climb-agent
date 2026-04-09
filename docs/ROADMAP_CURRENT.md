@@ -171,7 +171,7 @@ All 16 P1 findings from D163 + D164 audits verified fixed in code. See remediati
 
 | Title | Priority | Effort | Notes |
 |-------|----------|--------|-------|
-| `free-session/page.tsx` sends `gym_name` not `gym_id` (D170 P2-04) | P3 | S | Needs API contract change (`startFreeSession` + backend). Low impact — free session doesn't use resolver. |
+| `free-session/page.tsx` sends `gym_name` not `gym_id` (D170 P2-04) | P3 | S | ✅ Done (B201, 2026-04-09) — added `gym_id` to `FreeSessionStartRequest`, validated server-side (422 if not in user gyms), denormalized canonical name. `gym_name` reserved for free-text custom gym. Frontend updated, gym_id wins when both sent. |
 | `apply_day_add` doesn't receive `gyms` parameter (D170 P1-04) | P3 | M | Needs signature refactoring. Frontend fix in B173 covers the main user-facing path. |
 
 ---
@@ -378,9 +378,9 @@ After Pass 1 (primary) and Pass 2 (complementary), add a Pass 3 that fills remai
 
 ### Gym-aware PE routing
 
-**Status:** Open | **Effort:** S
+**Status:** ✅ Done (B201, 2026-04-09) | **Effort:** S
 
-PE sessions should prefer gyms with gym_routes over boulder-only gyms when both are available. Currently the planner picks the first gym day regardless of equipment fit. Cosmetic improvement — PE on routes at Cocque is better training than PE on boulders at BKL. Depends on: nothing.
+PE sessions now prefer gyms with `gym_routes` over boulder-only gyms when both are available. `_select_gym_id` accepts a `preferred_equipment` parameter and applies a soft bonus (Pass 1: required + preferred; Pass 2: required only; Pass 3: first by priority). Soft preference — never drops sessions when no gym has routes. `power_endurance_gym` already had `preferred_equipment=["gym_routes"]` in `_SESSION_META` (B160d infrastructure); B201 wired it through to the in-day gym selection. 3 unit tests added (`TestPlannerV2B201PreferredGymRouting`).
 
 ---
 

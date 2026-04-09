@@ -367,6 +367,7 @@ export const getFreeSessionPresets = (surface: string) =>
 export const startFreeSession = (data: {
   date: string;
   surface: string;
+  gym_id?: string;
   gym_name?: string;
   session_mode: string;
   preset_id?: string;

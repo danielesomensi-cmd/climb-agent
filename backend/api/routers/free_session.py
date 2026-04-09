@@ -145,6 +145,23 @@ def start_session(
         raise HTTPException(status_code=400, detail="circuit mode requires circuit_core surface")
 
     state = load_state(user_id)
+
+    # B201: resolve gym_id → canonical name; 422 if gym_id not in user's saved gyms.
+    # gym_id wins over gym_name when both provided. gym_name is reserved for
+    # free-text custom gyms not in the user's saved list.
+    resolved_gym_id: Optional[str] = None
+    resolved_gym_name: Optional[str] = req.gym_name
+    if req.gym_id:
+        saved = get_user_gyms(state)
+        match = next((g for g in saved if g.get("gym_id") == req.gym_id), None)
+        if match is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"gym_id '{req.gym_id}' not found in user's saved gyms",
+            )
+        resolved_gym_id = req.gym_id
+        resolved_gym_name = match.get("name") or req.gym_name
+
     free_sessions = state.setdefault("free_sessions", [])
 
     # Generate session ID
@@ -189,7 +206,8 @@ def start_session(
         "session_mode": req.session_mode,
         "preset_id": req.preset_id,
         "surface": req.surface,
-        "gym_name": req.gym_name,
+        "gym_id": resolved_gym_id,
+        "gym_name": resolved_gym_name,
         "phase_at_time": phase_id,
         "started_at": now,
         "finished_at": None,
@@ -335,6 +353,7 @@ def get_history(
         result.append({
             "id": s["id"],
             "surface": s.get("surface"),
+            "gym_id": s.get("gym_id"),
             "gym_name": s.get("gym_name"),
             "context": s.get("context"),
             "session_mode": s.get("session_mode"),
