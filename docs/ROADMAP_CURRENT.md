@@ -310,9 +310,23 @@ Three new session definitions: `board_limit_session` (6-10 problems at max, 3-5 
 
 ### A-B9 — Process cues and phase tips for boulder
 
-**Priority:** P2 | **Status:** Open | **Type:** C (content) | **Effort:** S
+**Priority:** P2 | **Status:** ✅ Done (C203, 2026-04-09) | **Type:** C (content) | **Effort:** S
 
-Add boulder-tagged process cues: "Read the whole problem before you pull on", "One attempt at full intensity, then rest completely", etc. Phase tips for boulder discipline (base: movement vocabulary, S&P: limit projects, PE: work capacity, performance: project sends, deload: easy + fun).
+10 new boulder-tagged process cues (cue_026..cue_035) added to
+`backend/catalog/cues/v1/process_cues.json`, reusing the A141 rotation
+infrastructure (one deterministic cue per session per day). Intent→template
+mapping: limit→`limit_boulder_gym`, power→`power_contact_gym`,
+volume→`boulder_circuit_gym`. Cues 032 (progressive warm-up) and 035
+(no static forearm stretching) also tag `route_projecting_gym` and
+`power_endurance_gym` since the principle is discipline-agnostic. Sources:
+Seifert 2017, Hörst (Ch.6/Ch.12), Draper 2006, Watts 2000, López,
+Ondra/Bachar. 5 phase tips stored in
+`frontend/src/lib/boulder-phase-tips.ts` (static frontend constants, no
+backend endpoint), rendered as a dismissible banner in `/today` when
+`goal.discipline === "boulder"`. Dismissal persisted per-phase in
+`localStorage` under `boulder_phase_tip_dismissed_${phaseId}` so the
+banner reappears on phase transitions. 1624 tests pass; all existing cue
+coverage tests (`test_process_cues.py`) still green.
 
 ---
 

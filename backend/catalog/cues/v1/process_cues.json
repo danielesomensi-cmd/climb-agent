@@ -148,5 +148,65 @@
     "text": "Breathe. Exhale on the hardest part of each move. Holding your breath increases blood pressure and wastes energy.",
     "session_types": ["boulder_circuit_gym", "power_contact_gym", "limit_boulder_gym", "route_endurance_gym", "power_endurance_gym", "route_projecting_gym"],
     "source": "D78"
+  },
+  {
+    "id": "cue_026",
+    "text": "Read the entire problem before you start. Where are the holds, where is the crux, where can you rest?",
+    "session_types": ["limit_boulder_gym", "power_contact_gym", "boulder_circuit_gym"],
+    "source": "Seifert 2017 (preview improves fluency; experts use sequence-of-blocks strategy)"
+  },
+  {
+    "id": "cue_027",
+    "text": "One full-intensity attempt, then rest completely. Neural recovery between limit attempts needs 3-5 minutes.",
+    "session_types": ["limit_boulder_gym"],
+    "source": "Hörst (neural recovery)"
+  },
+  {
+    "id": "cue_028",
+    "text": "Walk between attempts \u2014 don't sit down. Active rest accelerates lactate clearance by ~35%.",
+    "session_types": ["limit_boulder_gym", "power_contact_gym", "boulder_circuit_gym"],
+    "source": "Draper 2006 + Watts 2000"
+  },
+  {
+    "id": "cue_029",
+    "text": "Visualize the full sequence before each attempt \u2014 include the effort sensation, not just positions. Watch your mental movie at least 3 times as often as you climb.",
+    "session_types": ["limit_boulder_gym", "power_contact_gym"],
+    "source": "Hörst (mental movie)"
+  },
+  {
+    "id": "cue_030",
+    "text": "Focus on the process, not the grade. Movement quality reduces anxiety and improves motor learning.",
+    "session_types": ["limit_boulder_gym", "power_contact_gym", "boulder_circuit_gym"],
+    "source": "Ondra/Bachar"
+  },
+  {
+    "id": "cue_031",
+    "text": "If your foot cuts, ask why \u2014 body tension or placement? Distinguishing the error type guides your next correction.",
+    "session_types": ["limit_boulder_gym", "boulder_circuit_gym"],
+    "source": "Self-eval axis"
+  },
+  {
+    "id": "cue_032",
+    "text": "Scale the warm-up: 15-20 minutes progressive, never a cold start. Flash pump prevention requires a gradual ramp.",
+    "session_types": ["limit_boulder_gym", "power_contact_gym", "boulder_circuit_gym", "route_projecting_gym", "power_endurance_gym"],
+    "source": "Hörst Ch.12 + López"
+  },
+  {
+    "id": "cue_033",
+    "text": "After 5 attempts on the same boulder, switch problems. Diminishing neural returns and tendon overuse risk \u2014 come back next session with fresh fingers.",
+    "session_types": ["limit_boulder_gym"],
+    "source": "Hörst (diminishing returns + tendon load)"
+  },
+  {
+    "id": "cue_034",
+    "text": "In volume sessions, stay 2-3 grades below your max \u2014 seek flow, not fight. Volume is a technical-metabolic stimulus, not a neural one.",
+    "session_types": ["boulder_circuit_gym"],
+    "source": "Hörst (grade offset for volume blocks)"
+  },
+  {
+    "id": "cue_035",
+    "text": "No heavy static forearm stretching before climbing \u2014 it can reduce grip strength for up to an hour. Light stretching and Armaid are fine.",
+    "session_types": ["limit_boulder_gym", "power_contact_gym", "boulder_circuit_gym", "route_projecting_gym", "power_endurance_gym"],
+    "source": "Hörst Ch.6 (CUE-02)"
   }
 ]

@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getInProgressSession, clearSavedSession, type InProgressSession } from "@/lib/guided-session-utils";
+import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
 import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
 
 /** Full weekday names */
@@ -113,6 +114,17 @@ function TodayContent() {
     return goal?.current_grade ?? null;
   }, [stateQuery.data]);
 
+  // C203: boulder phase tip — shown only when goal discipline is "boulder"
+  const discipline = useMemo<string | null>(() => {
+    const goal = stateQuery.data?.goal as { discipline?: string } | undefined;
+    return goal?.discipline ?? null;
+  }, [stateQuery.data]);
+
+  const boulderPhaseTip = useMemo<string | null>(() => {
+    if (discipline !== "boulder") return null;
+    return getBoulderPhaseTip(phaseId);
+  }, [discipline, phaseId]);
+
   const loading = stateQuery.isLoading || weekQuery.isLoading;
   const queryError = stateQuery.error || weekQuery.error;
 
@@ -156,6 +168,9 @@ function TodayContent() {
 
   // A202: feedback education banner — shown after ≥1 done session, dismissible.
   const [feedbackEduDismissed, setFeedbackEduDismissed] = useState(true);
+  // C203: boulder phase tip banner — dismissed per-phase so it reappears on
+  // phase transitions. Initialized to true and hydrated from localStorage.
+  const [phaseTipDismissed, setPhaseTipDismissed] = useState(true);
 
   // Check for in-progress session on mount
   useEffect(() => {
@@ -166,6 +181,13 @@ function TodayContent() {
       );
     }
   }, []);
+
+  // Hydrate phase-tip dismissal when the phase id becomes known or changes.
+  useEffect(() => {
+    if (typeof window === "undefined" || !phaseId) return;
+    const key = `boulder_phase_tip_dismissed_${phaseId}`;
+    setPhaseTipDismissed(window.localStorage.getItem(key) === "1");
+  }, [phaseId]);
 
   const hasDoneSession = useMemo<boolean>(() => {
     if (!weekPlan) return false;
@@ -185,6 +207,13 @@ function TodayContent() {
       window.localStorage.setItem("feedback_education_dismissed", "1");
     }
   }, []);
+
+  const dismissPhaseTip = useCallback(() => {
+    setPhaseTipDismissed(true);
+    if (typeof window !== "undefined" && phaseId) {
+      window.localStorage.setItem(`boulder_phase_tip_dismissed_${phaseId}`, "1");
+    }
+  }, [phaseId]);
 
   // B127/B128: retry pending guided-session feedback from localStorage on mount.
   // Stays outside React Query — this is recovery of pending writes, not a fetch.
@@ -902,6 +931,26 @@ function TodayContent() {
         {/* Weekly check-in card (Sunday / Monday morning grace) */}
         {!loading && !error && isViewingToday && (
           <WeeklyCheckinCard onPlanUpdated={refetchAll} />
+        )}
+
+        {/* C203: boulder phase tip — discipline-gated, dismissible per-phase */}
+        {!loading && !error && dayPlan && boulderPhaseTip && !phaseTipDismissed && (
+          <div className="relative rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 pr-10 text-sm">
+            <p className="font-medium text-sky-300 capitalize">
+              {phaseId?.replace(/_/g, " ")} phase
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {boulderPhaseTip}
+            </p>
+            <button
+              type="button"
+              onClick={dismissPhaseTip}
+              aria-label="Dismiss"
+              className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              ×
+            </button>
+          </div>
         )}
 
         {/* A202: feedback loop education banner */}
