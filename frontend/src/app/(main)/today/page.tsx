@@ -908,10 +908,10 @@ function TodayContent() {
         {!loading && !error && dayPlan && hasDoneSession && !feedbackEduDismissed && (
           <div className="relative rounded-lg border border-primary/30 bg-primary/5 p-3 pr-10 text-sm">
             <p className="font-medium text-primary">
-              Il tuo feedback adatta i carichi
+              Your feedback adapts your training
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Dopo ogni esercizio, il tuo giudizio (facile/ok/difficile) regola automaticamente peso e volume delle sessioni future. Più feedback dai, più il piano diventa preciso.
+              After each exercise, your rating (easy/ok/hard) automatically adjusts weight and volume in future sessions. The more feedback you give, the more precise your plan becomes.
             </p>
             <button
               type="button"
