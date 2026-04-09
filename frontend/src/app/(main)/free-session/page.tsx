@@ -6,7 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Layers, Target, Repeat, Eye, ArrowLeft,
-  Smartphone, Moon, Box, Route, Flame,
+  Smartphone, Moon, Box, Route, Flame, Mountain, ChevronDown,
 } from "lucide-react";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
@@ -144,6 +144,23 @@ function FreeSessionContent() {
     () => (surfacesQuery.data?.gyms ?? []) as Gym[],
     [surfacesQuery.data],
   );
+
+  // A202: derive climbing surfaces actually available to the user from their
+  // equipment (union of all gyms + home). Fallback to ALL_SURFACES if we cannot
+  // determine equipment yet, so the picker is never empty during initial load.
+  const availableClimbingSurfaces: Surface[] = useMemo(() => {
+    const eq = (userState as Record<string, unknown> | null)?.equipment as
+      | { gyms?: Array<{ equipment?: string[] }>; home?: string[] }
+      | undefined;
+    if (!eq) return ALL_SURFACES;
+    const owned = new Set<string>();
+    for (const g of eq.gyms ?? []) {
+      for (const id of g.equipment ?? []) owned.add(id);
+    }
+    for (const id of eq.home ?? []) owned.add(id);
+    const filtered = ALL_SURFACES.filter((s) => owned.has(s.id));
+    return filtered.length > 0 ? filtered : ALL_SURFACES;
+  }, [userState]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,6 +171,8 @@ function FreeSessionContent() {
   const [selectedSurface, setSelectedSurface] = useState<string>("");
   const [selectedGymId, setSelectedGymId] = useState<string>("");
   const [customGym, setCustomGym] = useState("");
+  // A202: collapsible climbing card — auto-expanded when >1 available surface.
+  const [climbingExpanded, setClimbingExpanded] = useState<boolean>(false);
   const [presets, setPresets] = useState<Preset[]>([]);
   const [freeModeTip, setFreeModeTip] = useState("");
   const [phaseId, setPhaseId] = useState("");
@@ -515,18 +534,52 @@ function FreeSessionContent() {
               </div>
             )}
             <h2 className="mb-2 text-center text-lg font-semibold">Choose your activity</h2>
-            {ALL_SURFACES.map((s) => (
+
+            {/* A202: grouped climbing card — collapsible. Single-surface shortcut
+                goes directly to handleSurfaceSelect without expanding. */}
+            {availableClimbingSurfaces.length === 1 ? (
               <button
-                key={s.id}
-                onClick={() => handleSurfaceSelect(s.id)}
-                className={`flex items-center gap-4 rounded-xl border bg-gradient-to-r p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${SURFACE_COLORS[s.id]}`}
+                onClick={() => handleSurfaceSelect(availableClimbingSurfaces[0].id)}
+                className={`flex items-center gap-4 rounded-xl border bg-gradient-to-r p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${SURFACE_COLORS[availableClimbingSurfaces[0].id]}`}
               >
-                <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 ${SURFACE_ICON_COLORS[s.id]}`}>
-                  {SURFACE_ICONS[s.id]}
+                <div className={`flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 ${SURFACE_ICON_COLORS[availableClimbingSurfaces[0].id]}`}>
+                  {SURFACE_ICONS[availableClimbingSurfaces[0].id]}
                 </div>
-                <div className="font-semibold">{s.name}</div>
+                <div className="font-semibold">{availableClimbingSurfaces[0].name}</div>
               </button>
-            ))}
+            ) : (
+              <div className="rounded-xl border bg-gradient-to-r from-sky-500/20 to-sky-600/5 border-sky-500/30 overflow-hidden">
+                <button
+                  onClick={() => setClimbingExpanded((v) => !v)}
+                  className="flex w-full items-center gap-4 p-4 text-left transition-all active:scale-[0.99]"
+                  aria-expanded={climbingExpanded}
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 text-sky-400">
+                    <Mountain className="size-6" />
+                  </div>
+                  <div className="flex-1 font-semibold">Climbing</div>
+                  <ChevronDown
+                    className={`size-5 text-muted-foreground transition-transform ${climbingExpanded ? "rotate-180" : ""}`}
+                  />
+                </button>
+                {climbingExpanded && (
+                  <div className="flex flex-col gap-2 border-t border-sky-500/20 bg-black/10 p-3">
+                    {availableClimbingSurfaces.map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleSurfaceSelect(s.id)}
+                        className={`flex items-center gap-3 rounded-lg border bg-gradient-to-r p-3 text-left transition-all hover:scale-[1.01] active:scale-[0.99] ${SURFACE_COLORS[s.id]}`}
+                      >
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-black/20 ${SURFACE_ICON_COLORS[s.id]}`}>
+                          {SURFACE_ICONS[s.id]}
+                        </div>
+                        <div className="font-medium text-sm">{s.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Add-ons divider */}
             <div className="flex items-center gap-3 pt-2">

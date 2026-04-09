@@ -396,9 +396,9 @@ PE sessions now prefer gyms with `gym_routes` over boulder-only gyms when both a
 
 ### Free Session UI grouping — collapse climbing surfaces
 
-**Priority:** P2.5 | **Status:** Open | **Type:** A (frontend only) | **Effort:** S
+**Priority:** P2.5 | **Status:** ✅ Done (A202, 2026-04-09) | **Type:** A (frontend only) | **Effort:** S
 
-Single "Climbing" card with tap-to-expand, showing 5 surfaces. Add-ons section below.
+Single "Climbing" card with tap-to-expand, showing available surfaces. Add-ons section below. Surfaces filtered by user equipment (gyms ∪ home); falls back to all 5 when equipment unknown. Single-surface shortcut skips the expand and selects directly. Collapsed by default.
 
 ### Core Circuit exercise images — Gemini AI generation
 
@@ -624,12 +624,15 @@ Same architecture for pre-session dynamic warmup (30s work / 10s transition).
 
 ### Feedback Loop Education Copy
 
-**Status:** Open | **Effort:** XS
-User-facing copy explaining that feedback drives plan adaptation. Two touchpoints:
-1. **Onboarding:** Dedicated step or callout explaining the closed-loop: "Your feedback after each session calibrates your next plan — the more you share, the smarter your training gets."
-2. **Main UI (today/session pages):** Persistent slogan/banner near feedback controls, e.g. "Every rating fine-tunes your next session."
+**Status:** ✅ Done (A202, 2026-04-09) — main UI touchpoint | **Effort:** XS
 
-Messaging should hint at written feedback value ("Your comments help us understand how you're feeling") without explicitly promising text analysis — that capability arrives with the LLM Coach layer (Phase 3.5).
+Dismissible education banner added above the day card in `/today`, shown only
+after ≥1 completed session. Copy: "Il tuo feedback adatta i carichi — Dopo
+ogni esercizio, il tuo giudizio (facile/ok/difficile) regola automaticamente
+peso e volume delle sessioni future. Più feedback dai, più il piano diventa
+preciso." Dismissal persisted in `localStorage` under
+`feedback_education_dismissed`. Onboarding touchpoint deferred (lower priority
+per brief).
 
 Related: D77 (SDT principles), D79 ("Train better, not more" personality), Educational content (methodology explanations).
 

@@ -154,9 +154,36 @@ function TodayContent() {
   const [weekFreeSessionsLoaded, setWeekFreeSessionsLoaded] = useState(false);
   const [resumeSession, setResumeSession] = useState<InProgressSession | null>(null);
 
+  // A202: feedback education banner — shown after ≥1 done session, dismissible.
+  const [feedbackEduDismissed, setFeedbackEduDismissed] = useState(true);
+
   // Check for in-progress session on mount
   useEffect(() => {
     setResumeSession(getInProgressSession());
+    if (typeof window !== "undefined") {
+      setFeedbackEduDismissed(
+        window.localStorage.getItem("feedback_education_dismissed") === "1",
+      );
+    }
+  }, []);
+
+  const hasDoneSession = useMemo<boolean>(() => {
+    if (!weekPlan) return false;
+    for (const w of weekPlan.weeks) {
+      for (const d of w.days) {
+        for (const s of d.sessions) {
+          if (s.status === "done") return true;
+        }
+      }
+    }
+    return false;
+  }, [weekPlan]);
+
+  const dismissFeedbackEdu = useCallback(() => {
+    setFeedbackEduDismissed(true);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("feedback_education_dismissed", "1");
+    }
   }, []);
 
   // B127/B128: retry pending guided-session feedback from localStorage on mount.
@@ -875,6 +902,26 @@ function TodayContent() {
         {/* Weekly check-in card (Sunday / Monday morning grace) */}
         {!loading && !error && isViewingToday && (
           <WeeklyCheckinCard onPlanUpdated={refetchAll} />
+        )}
+
+        {/* A202: feedback loop education banner */}
+        {!loading && !error && dayPlan && hasDoneSession && !feedbackEduDismissed && (
+          <div className="relative rounded-lg border border-primary/30 bg-primary/5 p-3 pr-10 text-sm">
+            <p className="font-medium text-primary">
+              Il tuo feedback adatta i carichi
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Dopo ogni esercizio, il tuo giudizio (facile/ok/difficile) regola automaticamente peso e volume delle sessioni future. Più feedback dai, più il piano diventa preciso.
+            </p>
+            <button
+              type="button"
+              onClick={dismissFeedbackEdu}
+              aria-label="Dismiss"
+              className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              ×
+            </button>
+          </div>
         )}
 
         {/* Day plan */}
