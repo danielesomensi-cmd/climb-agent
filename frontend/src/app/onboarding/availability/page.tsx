@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { Button } from "@/components/ui/button";
@@ -94,6 +94,31 @@ export default function AvailabilityPage() {
   ) => {
     update("planning_prefs", { ...planningPrefs, [field]: value });
   };
+
+  // Count unique days with at least one training slot (excludes other_sport)
+  const availableDays = WEEKDAYS.filter((day) =>
+    SLOTS.some((slot) => {
+      const s = getSlot(day.key, slot.key);
+      return s.available && s.preferred_location !== "other_sport";
+    })
+  ).length;
+
+  const trainingDaysMax = Math.max(1, availableDays);
+  const hardDaysMax = Math.max(1, planningPrefs.target_training_days_per_week);
+
+  // Auto-clamp sliders when caps shrink
+  useEffect(() => {
+    if (availableDays > 0 && planningPrefs.target_training_days_per_week > availableDays) {
+      setPlanningPref("target_training_days_per_week", availableDays);
+    }
+  }, [availableDays]);
+
+  useEffect(() => {
+    const max = planningPrefs.target_training_days_per_week;
+    if (max > 0 && planningPrefs.hard_day_cap_per_week > max) {
+      setPlanningPref("hard_day_cap_per_week", max);
+    }
+  }, [planningPrefs.target_training_days_per_week]);
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -250,6 +275,10 @@ export default function AvailabilityPage() {
             </div>
           ))}
 
+          <p className="text-sm font-medium text-center text-muted-foreground">
+            {availableDays} {availableDays === 1 ? "day" : "days"} with availability
+          </p>
+
           <div className="space-y-1 text-xs text-muted-foreground">
             <p><strong>Other</strong> — other activities (sports, circus, etc.) block this slot from climbing training and help calculate your total weekly training load.</p>
             <p><strong>Reduce next day</strong> — enable if this activity is physically demanding. We&apos;ll lower the intensity of your next climbing session.</p>
@@ -276,7 +305,7 @@ export default function AvailabilityPage() {
             </div>
             <Slider
               min={1}
-              max={7}
+              max={trainingDaysMax}
               step={1}
               value={[planningPrefs.target_training_days_per_week]}
               onValueChange={([v]) =>
@@ -298,8 +327,8 @@ export default function AvailabilityPage() {
               </span>
             </div>
             <Slider
-              min={2}
-              max={4}
+              min={1}
+              max={hardDaysMax}
               step={1}
               value={[planningPrefs.hard_day_cap_per_week]}
               onValueChange={([v]) =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -128,6 +128,31 @@ export function AvailabilityEditor({
     const current = getSlot(day, slot);
     updateSlot(day, slot, { ...current, gym_id: gymId });
   };
+
+  // Count unique days with at least one training slot (excludes other_sport)
+  const availableDays = WEEKDAYS.filter((day) =>
+    SLOTS.some((slot) => {
+      const s = getSlot(day.key, slot.key);
+      return s.available && s.preferred_location !== "other_sport";
+    })
+  ).length;
+
+  const trainingDaysMax = Math.max(1, availableDays);
+  const hardDaysMax = Math.max(1, planningPrefs.target_training_days_per_week);
+
+  // Auto-clamp sliders when caps shrink
+  useEffect(() => {
+    if (availableDays > 0 && planningPrefs.target_training_days_per_week > availableDays) {
+      setPlanningPrefs((p) => ({ ...p, target_training_days_per_week: availableDays }));
+    }
+  }, [availableDays]);
+
+  useEffect(() => {
+    const max = planningPrefs.target_training_days_per_week;
+    if (max > 0 && planningPrefs.hard_day_cap_per_week > max) {
+      setPlanningPrefs((p) => ({ ...p, hard_day_cap_per_week: max }));
+    }
+  }, [planningPrefs.target_training_days_per_week]);
 
   const handleSave = () => {
     // D150: Only include days that have at least one configured slot.
@@ -281,6 +306,9 @@ export function AvailabilityEditor({
               </div>
             </div>
           ))}
+          <p className="text-sm font-medium text-center text-muted-foreground">
+            {availableDays} {availableDays === 1 ? "day" : "days"} with availability
+          </p>
         </CardContent>
       </Card>
 
@@ -302,7 +330,7 @@ export function AvailabilityEditor({
             </div>
             <Slider
               min={1}
-              max={7}
+              max={trainingDaysMax}
               step={1}
               value={[planningPrefs.target_training_days_per_week]}
               onValueChange={([v]) =>
@@ -319,8 +347,8 @@ export function AvailabilityEditor({
               </span>
             </div>
             <Slider
-              min={2}
-              max={4}
+              min={1}
+              max={hardDaysMax}
               step={1}
               value={[planningPrefs.hard_day_cap_per_week]}
               onValueChange={([v]) =>
