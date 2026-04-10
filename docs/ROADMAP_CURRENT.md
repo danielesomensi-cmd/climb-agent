@@ -6,117 +6,11 @@
 
 ---
 
-## Mega Brief v1 — ARCHIVED (2026-03-26)
-
-> Source: `docs/claude_code_mega_brief_v1.md` (57 v1 decisions, 10 sessions)
-> Status: **Archived.** ~80% implemented. Remaining decisions migrated to backlog below.
-> Triage report: D160 (claude.ai, 2026-03-26)
-> Codebase verification: D160 Phase 0 (Claude Code, 2026-03-26)
-
-| Session | Status | Implemented | Deferred to v2 |
-|---------|--------|-------------|-----------------|
-| 1: Assessment & Onboarding | ✅ Done | D01, D38, D68, D80, D81, D83 | — |
-| 1b: Test Protocol Revision | ✅ Done | D84, D84b, D85, D86, D88, D90 | D87b, D89, D91 |
-| 2: Exercise DB — Strength | ✅ Closed | D11, D12, D39 | D10, D50, D72 |
-| 3: Exercise DB — Conditioning | ✅ Closed | D43, D55*, D56, D57, D60, D76 | D37 |
-| 4: Warm-Up | ✅ Closed | (warmup via template) | D33, D36, D74 |
-| 5: Intensity System (EL) | ✅ Closed | — (entire session deferred) | D34, D52, D14 |
-| 6: Hangboard Logic | ✅ Closed | D35 | D49 |
-| 7: Endurance & Intervals | ✅ Closed | D48 (A141) | D47, D53 |
-| 8: Conditioning & Ratio | ✅ Closed | D54, D58*, D78 (A141) | D51, D59, D73 |
-| 9: Periodization & Load | ✅ Closed | D21, D44* | D19, D20, D45, D69, D70, D71 |
-| 10: Coaching & UX | ✅ Closed | D17, D30, D64, D75* (A141) | D29, D41, D65, D66, D67, D77, D79 |
-
-*D55: de facto safe (exercises not in catalog) but no formal blacklist guard — v2.
-*D58: 4/5 postural exercises done, YTW missing — v2.
-*D44: code has base=4wk/floor=2wk, not ≥6wk — intentional trade-off, v2 via D19.
-*D75: cue_008 + timed_route_preview exercise exist — sufficient for launch.
-
----
-
-## Priority 1 — Stability and bug fixes
-
-Previous P1 items completed (30+ items). See archived history in `docs/ROADMAP_v2.md`.
-New P1 items identified by D163 + D164 audits — tracked below in Audit Remediation section.
-
-- ✅ **B157** — Orphan exercise leak: `critical_force_test` removed from catalog (deferred to v2/D89), role filter added to `easy_climbing_post_finger` block, 4 catalog validation tests added (2026-03-26)
-- ✅ **B158** — Change Plan + Quick-Add dialog Confirm button hidden on Android: split DialogContent into scrollable body + sticky footer, added `viewport-fit: cover` + `safe-area-inset-bottom` padding, switched to `75dvh` (2026-03-26)
-- ✅ **D158** — `finger_strength_home` template selecting Grip Transitions instead of MaxHangs: resolver now reads `pattern` from template blocks, `grip_transitions` role→activation + pattern→grip_transition, `finger_max_strength` main block filters by `isometric_hang` (2026-03-26)
-- ✅ **B159** — What's Next page: renamed to "Roadmap & Support", flagged Add Exercise + Injury Tracking as implemented, added "Coming soon" badge to Kilter integration (2026-03-26)
-- ✅ **B159a** — Campus gate + selection quality: added `experience_minimum_years`, `age_minimum: 16`, `difficulty_tier`, and `contraindications` to all 10 campus exercises. Added generic `experience_minimum_years` gate (Stage 2f) in resolver. Beginners now get tier-appropriate exercises (2026-03-26)
-- ✅ **B159b** — Exercise rotation: `load_recent_exercise_ids()` now reads from `week_plans` (status=done, lookback 3 weeks). Added `recency_group` penalty (-15) in `score_exercise`. All templates now produce 3/3 unique weeks instead of 1/3 (2026-03-26)
-- ✅ **B160** — Circuit timer: off-by-one fix (exercise mismatch REST→WORK), added "Rest" voice cue, 3-2-1 beep edge case (skip if phase ≤ 3s), image-first layout redesign with always-visible controls (2026-03-26)
-- ✅ **B160b** — Circuit timer hotfix: full description (line-clamp-4), arrows advance one phase at a time (work→rest→work), STOP+EXIT buttons visible, compact bottom bar layout (2026-03-26)
-- ✅ **B160c** — Circuit timer layout: timer ring + controls side-by-side (no more hidden buttons), ring 144px, image max-h-140, full description no truncation, EXIT in header (2026-03-26)
-- ✅ **B160g** — Template gap fix: added `core_standard` and/or `antagonist_prehab` modules to 7 gym session definitions (boulder_circuit, route_endurance, limit_boulder, pulling_strength, finger_maintenance, heavy_conditioning, easy_climbing_deload). All gym sessions now resolve with complete tail blocks. Updated duration estimates. Zero engine code changes (2026-03-27)
-- ✅ **B167** — Sync safety net: `sync_status.py` now aborts with warning if non-sync files are uncommitted (SYNC_FILES whitelist = PROJECT_BRIEF.md + README.md). CLAUDE.md rule added: commit before sync. (2026-03-29)
-- ✅ **B164-trimmed** — Frontend P2 fixes: rest timer placeholder removed, very_easy/easy feedback badge distinction, outdoor spot delete confirmation dialog, import data confirmation dialog (2026-03-30)
-- ✅ **B168** — Fix boulder onboarding flow: boulder-to-lead grade mapping for assessment benchmarks (P0 fix), discipline step before grades, conditional grade fields per discipline, Font/V toggle in grades page, weakness labels in review page (2026-03-30)
-- ✅ **B169** — Radar label truncation fix (boulder labels shortened), boulder base phase floor raised to min 2 weeks. Planner diagnostic: 2/3 hard sessions is correct (finger spacing blocks Tue/Thu), not a bug. (2026-03-30)
-- ✅ **B168c** — Onboarding copy polish: discipline page "What do you want to improve?" + goal-focused descriptions, review page hides empty grade fields for boulder-only users (2026-03-30)
-- ✅ **B165b-fix** — `_recovery_multiplier_for_age()` thresholds corrected: 1.0× under 50 (was 40), 1.25× at 50-59, 1.5× at 60+. Removed 1.75× tier. Replanner spacing now uses `_recovery_gap()` from plan snapshot. (2026-03-30)
-- ✅ **A-B4b** — Radar chart axis tooltips: (i) icon on each legend axis, tap shows discipline-aware description + "low score means" popover. (2026-03-30)
-- ✅ **B170** — Undo button UX clarity: label now context-dependent ("Undo completion" / "Undo skip"). Remove session dialog improved. (2026-03-30)
-- ✅ **B172** — Post-deploy verification: altSides badge visible in idle; unilateral/altSides separated in GuidedExercise (test form no longer triggers on prehab exercises in test sessions); cooldown_forearm_wrist_stretch sets 2→4; cooldown_shoulder_chest work_seconds 20→30; cooldown_hip_pigeon work_seconds 30→60. (2026-03-31)
-- ✅ **B172b** — Catalog hotfix: `active_hip_mobility` alt_sides removed (non-bilateral exercise); `archer_pullup` corrected unilateral→alt_sides. (2026-03-31)
-- ✅ **B173** — Systematic gym_id + silent fallback remediation (D170 audit). Frontend: `replan-dialog`, `gym-picker-dialog`, `quick-add-dialog`, `availability` always send gym_id UUID (not name). Backend: `logger.warning` on gym_id miss in resolver, replanner (change_gym, apply_day_override, suggest_sessions), `logger.warning` on hangboard baseline mismatch in progression_v1, `logger.error` on session resolution failure in routers. 9 new caplog tests. (2026-03-31)
-- ✅ **B171** — ExerciseTimer fixes from D169 audit: F1 `emom_bouldering` work_seconds 30→60 (full EMOM interval); F2 `one_on_one_off_intervals` rest moved to set_rest; F3a 29 exercises marked `alt_sides=true` (catalog field, separate from loading-pin `unilateral`); F3b ExerciseTimer `unilateral` prop — RIGHT/LEFT badge, doubled internal sets, displaySet/totalSets logic. (2026-03-30)
-- ✅ **A180** — Outdoor routes list: aggregate climbs by route name + spot across sessions. Shows total attempts, session count, best style badge (onsight/flash/sent/projecting), sent checkmark, grade. Collapsible card, sorted by most recent. Frontend-only, zero backend changes. (2026-03-31)
-- ✅ **B183** — Lower body session quality + alt_sides audit + duration estimate: (1) `lower_body_gym` enriched with 2 new required blocks (`accessory_lunge`, `accessory_calf`); `reverse_lunge` added to catalog; session now resolves 4 leg exercises; time_budget updated 50→60 min. (2) Full alt_sides audit: 6 exercises fixed (`split_squat`, `pistol_squat_progression`, `campus_bumps`, `side_plank`, `one_arm_hang_assisted`, `single_leg_calf_raise`); `lunge`/`calf_raise` added to vocabulary. (3) `hip_flexor_strengthening` cues rewritten for clarity. (4) Duration estimate: `target_duration_min` exposed from resolver output; `~XX min` badge shown on planned session cards. (2026-04-02)
-- ✅ **B184** — Session quality sweep (B183 follow-up): (1) `turkish_getup`/`farmers_carry` equipment fixed (`equipment_required: []` + `equipment_required_any` with canonical tokens). (2) `legs_strength` v1.1: replaced broken warmup with `general_warmup` template, split squat/hinge blocks, added lunge + calf blocks, time_budget 30→45. (3) `upper_body_weights` v1.1: added `general_warmup` template, `antagonist_prehab` → module_role "activation", time_budget 30→40. (4) `flexibility_full` v1.1: added 4 stretch blocks (`stretch_lower_passive`, `stretch_lower_active`, `stretch_thoracic`, `stretch_hip_flexor`, `stretch_full_body`) — session now resolves 5-6 exercises instead of 2. time_budget 35→40. (5) `handstand_practice` v1.1: added `general_warmup` template, second handstand drill block, time_budget 25→30. (6) `complementary_conditioning` v1.1: added `conditioning_secondary` block (carry/locomotion). (7) 4 stale time_budget values fixed: `lower_body_gym` 60→75, `heavy_conditioning_gym` 70→80, `core_training` 25→40, `prehab_maintenance` 18→20. (2026-04-02)
-- ✅ **B185** — Template filter audit + 5 KB-validated bug fixes: Phase 1 audited all 27 templates + 35 session inline blocks. Phase 2 fixed 5 real bugs: (1) `pulling_strength.pull_compound`: added `pattern: ["pull_vertical","pull_horizontal"]` — excluded `dip` (push) from compound pull block. (2) `gym_power_bouldering.main`: added `pattern: ["climbing_limit_boulder","campus_ladder"]` — excluded `power_pullups_explosive` from limit bouldering block. (3) `gym_aerobic_endurance.main`: added `pattern: ["climbing_continuous"]` — excluded interval exercises and hangboard from ARC block. (4) `handstand_shoulder_taps`: removed `"core"` from domain (skill exercise, not anti-gravity core) — no longer selectable in core blocks. (5) `finger_extensor_prehab` inline block in `finger_strength_home` + `finger_maintenance_home`: added `pattern: ["wrist_extension"]` — excluded `wrist_curl` (flexor) from extensor prehab block. All 35 sessions resolve successfully, 1572 tests pass. (2026-04-02)
-- ✅ **B185b** — Post-fix: `power_pullups_explosive` domain changed from `["power"]` to `["strength_general"]`. Root cause: soft pattern filter dropped when `gym_boulder` unavailable → exercise selected in `limit_projecting`/`limit_bouldering` blocks. Fix moves it to `supplementary_pulling` (correct block). 1572 tests pass. (2026-04-02)
-- ✅ **B186** — Pulling rotation fix + 3 contact strength exercises + archive dead templates: (1) `pulling_strength_compound` v1.0→v1.1: 3 hardcoded blocks converted to P0 `strength_general + pull_vertical` — 9 candidates in `pullup_variants` recency_group ensure unique triplette each session. (2) 3 new contact_strength exercises: `overcoming_isometric_pull` + `rfd_explosive_pulls` (hangboard) + `power_slap_drill` (gym_boulder) as campus board fallbacks. (3) `campus_power` block: pattern widened + `equipment: ["campus_board"]` soft preference — `dip` bug eliminated, hangboard/boulder fallbacks confirmed. (4) 8 dead templates archived to `_archive/`. (5) 2 P3 roadmap items added. 189 exercises, 19 templates, 1571 tests pass. (2026-04-02)
-
-### Recovered briefs (D188 audit, 2026-04-06)
-
-The following briefs were shipped but never tracked in ROADMAP_CURRENT or ROADMAP_v2 — recovered from git log during D188 reconciliation. Listed in chronological order, each with the original commit hash. All are ✅ Done.
-
-- ✅ **B161** — Cross-week `hard_gap` and `finger_gap` enforcement. Planner now respects recovery gaps across week boundaries, not just within a single week. 3 files. (`4001708`, 2026-03-25)
-- ✅ **D161** — Audit snapshot script + workflow doc + production user state reader. Foundation for repeatable audit workflow. 4 files, +526 lines. (`566acda`, 2026-03-26)
-- ✅ **B162** — Route projecting session + phase pool rebalance for lead climbers. New session type + macrocycle pool adjustments. 11 files, +143 lines. (`f1482b2`, 2026-03-27)
-- ✅ **A165** — Exercise phase coloring + session context card. 5 files, +190 lines. Note: partially reverted the same day by B165 (`aa7c34f`) which kept phase coloring and removed the context card — both entries preserved for history. (`255678c`, 2026-03-28)
-- ✅ **B164** — Replace stale `total_load` with frozen `planned_load`. Load accounting uses plan snapshot values instead of live catalog, preventing drift after catalog edits. 11 files, +190 lines. Distinct from `B164-trimmed` (frontend P2 fixes) already tracked above. (`35260d6`, 2026-03-28)
-- ✅ **B165** (parent) — Clerk user lookup docs in CLAUDE.md + exercise phase coloring revert + week progress bar (removed A165 context card). Parent brief that spawned sub-items B165a-e already tracked. (`bf0eb74` + `aa7c34f`, 2026-03-28)
-- ✅ **D162** — `docs/lessons.md` system + `/audit-module` + `/sync-check` slash commands. Introduced the structured lessons-learned workflow. 3 files. (`9c7d7b6`, 2026-03-28)
-- ✅ **B166** — Remove redundant "View day" button from Week day cards + add model switching convention to CLAUDE.md. (`a36f56b` + `da945a8`, 2026-03-29)
-- ✅ **C170** — Exercise catalog fixes: 3 critical corrections, 9 `unilateral` flag additions, clarity rewrites for confusion-pair exercises. 1 file, +75 / −51. (`594b59a`, 2026-03-30)
-- ✅ **C169** — Tyler Twist exercise cues and description improvements. 1 file. (`75975f6`, 2026-03-31)
-- ✅ **D175** — Meta: add D170/D172 audit findings to roadmap (Priority 1.26 section). Self-referential closure. (`04752c7`, 2026-03-31)
-- ✅ **B177** — 📝 Logged (known issue, not fixed): intermittent guided session scroll+timer bug. Reproduction conditions unclear — tracking only. (`bc23627`, 2026-03-31)
-- ✅ **B178** — `alt_sides` catalog updates, set counter clamp fix, FAB "start session" button on day cards. 6 files, +52. (`3ba8acf`, 2026-03-31)
-- ✅ **B180** — Tyler Twist equipment: `weight` OR `resistance_band` (was `weight` only, blocked home users). 1 file. (`5827b6d`, 2026-03-31)
-- ✅ **A181** — Strategic Advisory Council: 5 parallel subagents + `/council` + `/council-launch` slash commands + `admin_dashboard.py` CLI for user overview. 10 files, +833 lines. (`cf82562` + `697b7d5`, 2026-04-01)
-- ✅ **B181** — Resume in-progress session from Today page after iOS background kill. 3 files, +150. (`6593b53`, 2026-04-01)
-- ✅ **B182** — `/brief` command diagnosis + roadmap alignment fix + rename "Log extra session" → "Log Free Session". 6 files. (`e4472b1` + `d82179f`, 2026-04-01)
-- ✅ **D186** — Document Supabase RLS enablement on all 6 tables (CLAUDE.md deployment section). 2 files. (`ce6bd15`, 2026-04-03)
-
-> **Note on B179**: no dedicated brief — the commit `c42e302` was a 1-line append to `lessons.md` from another session's debugging work. Not tracked as a brief. Reserved as used to prevent renumber collision.
-
----
-
 ## Priority 1.25 — Audit Remediation (D163 + D164)
 
 > Full reports: `docs/audit/D164/` (138 findings) and `docs/audit/D163_frontend_audit.md` (67 findings)
 > Date: 2026-03-28
 > Combined: 205 findings (20 P1, 71 P2, 102 P3, 12 P4)
-
-### P1 findings — ✅ All closed (B165a-e, 2026-03-29 to 2026-03-31)
-
-All 16 P1 findings from D163 + D164 audits verified fixed in code. See remediation briefs below for details.
-
-**Remaining (moved to post-launch):**
-- F3-P1-009 — Replanner hardcodes finger/hard spacing to 1-day gaps, ignoring `recovery_multiplier` for 50+ users (replanner_v1.py). Age threshold shifted to 50 in B165b. Remaining: replanner hardcoded spacing — impacts only users ≥50. Post-launch.
-
-### Remediation briefs
-
-| Brief | Scope | Effort | Status |
-|-------|-------|--------|--------|
-| B165a | Quick P1 wins — profanity, Suspense, vocabulary sync, equipment editor 0-locations guard, histogram NaN, RP≥OS validation, onboarding timeout, trip dates, availability 0-gyms guard, limitations empty array, guided double-tap, recovery code tests, finger_warmup_generic description | S | ✅ Done (2026-03-29) |
-| B165b | Replanner recovery_multiplier fix + age threshold shift to 50 (high-risk: replanner_v1.py, STOP gate required) | M | ✅ Done (2026-03-30) |
-| B165c | Frontend error handling sweep — replace ~20 `.catch(() => {})` with error states/toasts (subsumes R141) | M | ✅ Done (2026-03-31) |
-| B165d | Security hardening — atomic file writes, rate limiting, `secrets` for recovery codes, error response sanitization, `PUT /api/state` key whitelist | M | ✅ Done (2026-03-31) |
-| B165e | Catalog cleanup — `easy_climbing_deload` + `deload_recovery` schema normalization, video_url + contraindication tests, placeholder URLs→null, `finger_warmup_generic` description/cues, `age_under_16`→`age_minimum:16` on 10 campus exercises | S | ✅ Done (2026-03-31) |
 
 ### P2 highlights (not individually tracked — see full reports)
 
@@ -142,71 +36,17 @@ All 16 P1 findings from D163 + D164 audits verified fixed in code. See remediati
 > Audits: D170 (gym_id propagation, 24 findings, 2026-03-31), D172 (all other fields: session_id / template_id / equipment / slot / phase / API validation, 25 findings, 2026-03-31)
 > Combined: 49 findings — 13 fixed in B173, 2 P1 hotfixes pending (B174/B175), 21 deferred to B176
 
-### Completed
-
-| ID | Title | Date |
-|----|-------|------|
-| B169 (quick-add) | Quick-add location mismatch — frontend sent `gym.name` instead of `gym_id` UUID | 2026-03-31 |
-| D170 | Silent fallback audit — 5 agents, 24 findings (gym_id propagation) | 2026-03-31 |
-| B173 | Systematic gym_id + silent fallback remediation (D170 findings) — 13 findings fixed, +9 tests | 2026-03-31 |
-| D172 | Field propagation audit — 6 agents, 25 findings (session_id, template_id, equipment, slot, phase, API validation) | 2026-03-31 |
-
-### Ready to implement (P1 — pre-launch blockers)
-
-| ID | Title | Type | Effort | Notes |
-|----|-------|------|--------|-------|
-| **B174** | `_resolve_inline_block` ignores explicit `exercise_id` → wrong exercises in sessions with inline blocks (D172-01) | B | S | ✅ Done (implemented, tracking missed) |
-| **B175** | Input validation hardening: 500→422 on bad dict keys (D172-02), `ensure_monday` crash (D172-03), stale session guard (D172-04), boulder `domain_weights` in `set_availability` (D172-06) | B | M | ✅ Done (implemented, tracking missed) |
-
 ### Post-launch (P2)
 
 | ID | Title | Type | Effort | Notes |
 |----|-------|------|--------|-------|
 | **B176** | D172 consolidated remediation — 21 remaining findings (P2+P3) | B | L | 5 groups: type safety (D172-05,11,12), equipment validation (D172-07,08,22), event/input validation (D172-09,13,14,25), logging (D172-10,15,17-20,23,24), structural/deferred (D172-16,21). Supabase migration already complete — no longer a prerequisite. |
-| **TD-HORST-1** | ✅ Done (B200, 2026-04-09) — Non-bug. Two-tier design verified: `assessment.tests` = latest scalars for profile compute; top-level `tests` = append-only history log with metadata (date, freshness_policy, confidence). Complementary, not redundant. Docstring added to `_update_test_from_log` to prevent re-investigation. |
-| **TD-HORST-2** | ✅ Done (B199, 2026-04-08) — `max_hang_7s: 0.88` removed from `HANGBOARD_DEFAULT_INTENSITY_PCT`. Dead code: `_hangboard_suggested` explicitly excludes `max_hang_7s` in call path. |
-| **TD-HORST-3** | ✅ Done (B199, 2026-04-08) — `max_hang_10s: 0.85` removed from `HANGBOARD_DEFAULT_INTENSITY_PCT`; `active: false` set in exercises.json. No session catalog file exists; constant was unreachable. |
 
 ### Deferred from B173 (need API refactoring)
 
 | Title | Priority | Effort | Notes |
 |-------|----------|--------|-------|
-| `free-session/page.tsx` sends `gym_name` not `gym_id` (D170 P2-04) | P3 | S | ✅ Done (B201, 2026-04-09) — added `gym_id` to `FreeSessionStartRequest`, validated server-side (422 if not in user gyms), denormalized canonical name. `gym_name` reserved for free-text custom gym. Frontend updated, gym_id wins when both sent. |
 | `apply_day_add` doesn't receive `gyms` parameter (D170 P1-04) | P3 | M | Needs signature refactoring. Frontend fix in B173 covers the main user-facing path. |
-
----
-
-## Priority 1.5 — Boulder & Discipline Support (pre-launch)
-
-> Origin: Strategic analysis (claude.ai, 2026-03-28)
-> Full reference doc: `_archive/docs/roadmap_boulder_support.md`
-> Design decisions: DD-B1 (discipline model), DD-B2 (grade display), DD-B3 (Both = lead macrocycle)
-
-### A-B1 — Discipline selection in onboarding
-
-**Priority:** P1.5 | **Status:** ✅ Done | **Type:** A (feature) | **Effort:** M
-
-Discipline selector (Lead/Boulder/Both) in onboarding goals page. `boulder_grade` activates `_SESSION_POOL_BOULDER` + `_BASE_DURATIONS_BOULDER` (10-week cycle). `all_round` uses lead durations + merged lead/boulder session pool. Frontend: conditional target_style (hidden for boulder), dual grade pickers for Both, discipline-filtered weakness options. Settings page shows discipline + boulder target. Backward-compatible: missing `discipline` defaults to lead. 22 new tests. (2026-03-29)
-
-**Depends on:** ~~A-B2~~ ✅, ~~A-B3~~ ✅
-
-### A-B2 — Grade display preference (Font / V-scale)
-
-**Priority:** P1.5 | **Status:** ✅ Done | **Type:** A (feature) | **Effort:** S
-
-New user preference `grade_system_boulder: "font" | "v_scale"` (default: font). Engine internals unchanged (always Fontainebleau). Frontend utility `displayBoulderGrade(fontGrade, pref)` converts at render time. Settings toggle added. Applied to: GradePicker, ClimbLogger, SessionSummary, outdoor page, free-session presets. 14 unit tests. (2026-03-29)
-
-### A-B3 — Self-eval weakness options per discipline
-
-**Priority:** P1.5 | **Status:** ✅ Done | **Type:** A (feature) | **Effort:** S
-
-4 boulder-specific weakness values added (poor_body_tension, poor_dynamic_movement, weak_on_slopers, poor_problem_reading) with axis mappings in assessment_v1.py. Onboarding defaults API returns grouped weakness options by discipline scope. Frontend weakness page filters by selected discipline. Vocabulary updated. 18 new tests. (2026-03-29)
-
-### A-B4 — Assessment radar discipline-aware labels
-
-**Priority:** P1.5 | **Status:** ✅ Done | **Type:** A (frontend) | **Effort:** XS
-
-Same 5 axes, different display labels per discipline. RadarChart now accepts `discipline` prop, labels switch between lead/boulder/all_round. `getDiscipline()` infers from goal_type. 5 unit tests. (2026-03-29)
 
 ---
 
@@ -228,20 +68,7 @@ Same 5 axes, different display labels per discipline. RadarChart now accepts `di
 
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
-| GTM-01 | **Onboarding dry-run** — Daniele completes full flow as unknown user (clean account, no founder help). Document every friction point. | D | S | ✅ Done | Completed 2026-04-01. 13 pages reviewed. 0 blockers, 3 P2, 5 P3. |
-| GTM-02 | **Fix onboarding blockers** — 9 quick fixes from dry-run (copy, CSS, info boxes) | B | S | ✅ Done | Welcome copy, discipline subtitle, goals helpers + weeks display, weakness padding, test labels, limitations copy, availability info box, trips skip. (2026-04-01) |
 | GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Vato, Alexis on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay €14.99/mo. |
-| A-GTM-08 | **PWA Install Guide in onboarding** — new step 2 (after welcome, before profile) with iPhone/Android tabs teaching home screen install | A | S | ✅ Done | Two-tab layout, 3 numbered steps per platform, custom iOS share icon SVG. 34 pages total. (2026-04-04) |
-| B187 | **English strings + gym UX guards** — replace 11 hardcoded Italian strings, disable Gym button when no gyms, add amber banner, "All" quick-fill button, fix Next validation | B | S | ✅ Done | Triggered by beta tester Tabitha stuck on availability page. (2026-04-05) |
-| B188 | **Bypass subscribe page** — route onboarding start-week to `/plan` instead of `/subscribe` while Stripe disabled | B | XS | ✅ Done | Beta testers hit 503 on subscribe page. TODO marker for GTM-04 re-enable. (2026-04-05) |
-| B189 | **Outdoor route dots = per-attempt sent/fell** — replace single style-colored dot + ×N with individual green (sent/topped_out) / red (fell) circular dots, one per attempt, in expanded outdoor route view (day-card) | B | S | ✅ Done | Removed unused `STYLE_BADGE` constant. 1571 tests pass. (2026-04-06) |
-| B193 | **Guided submit cache refetch + post_feedback timing logs** — guided session submit was leaving /today on stale "Planned" badge (`invalidateQueries` was fire-and-forget with no active observers); replaced with `await refetchQueries(week(weekNum))` so /today renders fresh on first paint. Also added per-step `time.perf_counter` logs in `post_feedback` to locate the ~20s bottleneck observed in production (load_state, apply_feedback, apply_day_result, append_feedback_log, persist_actual, adaptive_replan, save_state). | B | S | ✅ Done | Bug 2 (cache) fixed. Timing logs revealed backend is 3.1s (load_state 1.3s + save_state 1.7s) — the 20s user-perceived latency was from 5 sequential round-trips in guided submit, not backend. Closed by A194 which collapses to 1 round-trip and removes B193 instrumentation. (2026-04-07) |
-| B196 | **Service Worker versioning + update banner + branch workflow** — `frontend/public/sw.js` had a hardcoded `CACHE_NAME = "climb-agent-v2"` that never changed across deploys, so PWA users on iPhone kept serving stale JS bundles after every push (root cause of "exercise-timer doesn't start" report). Renamed to `sw.template.js` with `__BUILD_ID__` placeholder; new `frontend/scripts/build-sw.js` runs as `prebuild`, injecting `VERCEL_GIT_COMMIT_SHA` (or local git rev) so every deploy ships a unique sw.js → browser triggers `install` → `activate` purges every cache that doesn't match current build. Added `<SwUpdateBanner />` (mounted in `app/layout.tsx`) that detects `installing → installed` with an existing controller, prompts the user to reload, and posts `SKIP_WAITING` to the waiting worker. SW now also handles `SKIP_WAITING` postMessage and uses `clients.claim()` inside an awaited activate handler. New convention: every brief that touches `frontend/` MUST be developed on a `brief/B<n>-<slug>` branch and tested via the Vercel preview URL before merge to main. | B | S | ✅ Done | Merged to main via `e793ab0` after Vercel preview verification. Effect: PWA cache invalidation now automatic per-deploy. (2026-04-08) |
-| B195 | **Hörst 7-53 intensity + hangboard baseline writers** — `HANGBOARD_DEFAULT_INTENSITY_PCT["horst_7_53"]` corrected `0.70 → 0.90` (was repeater-level, catalog notes specify 90-95% MVC per Hörst/López). Both `max_hang_5s` and `max_hang_7s` test session writers in `_update_test_from_log` now populate full protocol fields (`hang_seconds`, `edge_mm=20`, `grip=half_crimp`) on `baselines.hangboard[0]`; previously the 5s branch wrote nothing beyond `max_total_load_kg` and the 7s branch wrote only `hang_seconds=7`, causing `_pick_hangboard_baseline` to fall back with WARNING on every session resolution. `_estimate_hangboard_baseline` (grade/pullup-derived stims) also now populates the same defaults. One-off migration script `scripts/migrate_baseline_fields.py` patched Daniele's incomplete production baseline. | B | S | ✅ Done | +9 e2e tests in `test_test_session_e2e.py` (red→green), +1 regression guard in `test_progression_v1.py`. 1596 tests pass. Effect for Daniele: Hörst 7-53 now suggests +31 kg (was +7 kg). 3 tech debt items spawned: TD-HORST-1/2/3. (2026-04-07) |
-| A194 | **Feedback submit atomic — 5 round-trip → 1** — collapsed guided session submit from 5 sequential backend round-trips (getState → getWeek → applyEvents → postFeedback → refetchQueries) down to a single POST /api/feedback. The endpoint now applies `mark_done` inline via `apply_events()` on `current_week_plan`, appends to `session_completion_log` with dedup guard, and returns the updated `week_plan` so the frontend can `setQueryData(['week', 0], …)` instead of issuing a separate refetch. B193 timing instrumentation removed in the same brief. | A | M | ✅ Done | Backend: `persist_week_plan` exposed as public helper from `replanner.py`; new `test_a194_feedback_atomic.py` (6 cases) using TestClient; `test_a139_actual_exercises.py` rewritten to use TestClient against the real endpoint (R4). Scope: only `current_week_plan` — past/future sessions continue through legacy flow (R6). Dedup: skip completion_log append if entry with same date+session_id+status already exists (R3). Frontend: `use-feedback.ts` onSuccess now does `setQueryData`; guided page handleSubmit reduced from ~170 lines of prelude+refetch to a single `postFeedback` call. 1586 tests pass. (2026-04-07) |
-| A193 | **Core Training v1.1 + 7 new core exercises + hangboard→pullup_bar equipment rule** — D189 audit found `core_training.json` resolved only 3 exercises (~15 min real) against a `time_budget` of 40 min, and the anti_lateral_flexion pool had only 1 exercise making variety impossible. Session restructured to v1.1: `general_warmup` template added, `compression` + `anti_rotation` + `anti_lateral_flexion` promoted to `required`, optional `isometric_hold_or_rotation` finisher block, time_budget corrected 40→35 / 50→45. 7 new catalog exercises (189→196): `front_lever_one_leg`, `front_lever_straddle`, `kneeling_superman`, `knees_to_elbows`, `suitcase_carry`, plus bodyweight fallbacks `v_up` (compression) and `plank_shoulder_tap` (anti_rotation) so home-only users without pullup_bar still get full pattern coverage. `copenhagen_plank` equipment fixed (`["bench"]` → `[]`, cue updated to "chair/bench/sofa/any raised surface"). `windshield_wipers` marked with `safety_notes` (KB Kapandji flag: combined spinal flexion + rotation). Equipment engine: `expand_equipment()` now applies `hangboard`/`hangboard_20mm` → implies `pullup_bar` (a hangboard is always mounted on a bar — the two cannot be separated in practice; `loading_pin` intentionally excluded as it's a ground-based alternative). Rule is centralised so planner/resolver/replanner all honour it. | A+C | M | ✅ Done | +8 tests in `test_a193_hangboard_implies_pullup_bar.py` (6 unit on `expand_equipment` + 2 integration via `pick_best_exercise_p0`). Collateral: `test_planner_v2.py::test_pullup_test_at_gym_when_home_lacks_pullup_bar` updated — dropped `hangboard` from the home_equipment fixture since under the new rule it would imply `pullup_bar`. Vocabulary updated. Resolution check against Daniele's real state returns 11 exercises / ~43 min duration with all 4 required blocks matching their pattern. 1617 tests pass. (2026-04-08) |
-| B198 | **Outdoor load score in Week view** — `load_score` computed by backend on `GET /api/outdoor/sessions` was not displayed in Week view. Added `outdoor_load_score` field to `DayPlan` and `OutdoorSession` TS types; extracted load per date from `getOutdoorSessions()` into `outdoorLoadMap`; passed as `outdoorLoadScore` prop to `DayCard` which now shows a `Load: N` badge on completed outdoor sessions alongside the green "Completed" badge; included outdoor load in the weekly "Done" load total calculation. | B | XS | ✅ Done | No backend changes needed — `/api/outdoor/sessions` already returns `load_score`. (2026-04-08) |
-| B197 | **Feedback resubmit dedup + duration preserve + circuit history** — two prod bugs from Daniele's 2026-04-07 session. (Bug 1) Guided session "Finger Strength" showed "Completed · 1 min" instead of ~30 min: the user re-ran the flow (likely after a /today render race post-A194), each rerun resetting `state.startedAt = Date.now()` in `buildGuidedState`; backend `feedback.py` section 7 then last-write-wins clobbered the real `session_duration_seconds` on the completion log entry, and `append_feedback_log` had no dedup so prod state had 5 entries for the same (date, session_id). (Bug 2) Core Circuit free session showed "0 exercises" — `GET /api/free-session/history` returned a lightweight view that omitted the `circuit` field, so `fs.circuit?.completed_exercises ?? 0` rendered 0. Fix bundle: backend completion log keeps `max(prev, new)` duration; `append_feedback_log` dedups by (date, session_id) and merges with max-duration; `free_session.get_history` now returns `circuit`; frontend `session-card.tsx` extracts a `handleStartGuided` helper that (a) refuses to re-start when `session.status === "done"/"skipped"`, (b) preserves any pre-existing `startedAt` from localStorage even when `hasSavedProgress` says false. | B | S | ✅ Done | +7 tests in `test_b197_feedback_dedup.py` (3 completion log + 3 feedback_log dedup + 1 history.circuit). 1609 tests pass. (2026-04-08) |
 
 ### Phase 1 — Pricing + Stripe go-live (week 2-3)
 
@@ -284,23 +111,11 @@ Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Currently in op
   - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)
   - SQL migration: `docs/migrations/subscriptions_table.sql` — ✅ run in Supabase (confirmed 2026-03-31)
 
-### A-B5 — Phase labels and messaging per discipline
-
-**Priority:** P2 | **Status:** ✅ Done (2026-03-31) | **Type:** A (frontend + backend) | **Effort:** S
-
-Phase display names adapt: base → "Movement & Volume Base" (boulder), strength_power → "Max Strength & Power" (boulder), power_endurance → "Work Capacity" (boulder), performance → "Projecting & Peak" (boulder). Centralized in `lib/phase-labels.ts` (frontend) and `PHASE_NAMES_BOULDER` (backend). 7 frontend + 3 backend tests.
-
 ### A-B6 — Session pool boulder audit & completion
 
 **Priority:** P2 | **Status:** Open | **Type:** D + A (audit + feature) | **Effort:** M
 
 Audit `_SESSION_POOL_BOULDER`: verify ≥3 primary sessions per phase, limit_boulder exists, board session templates exist (board_limit, board_volume), PE sessions adapted (boulder_circuit, linked_boulders), climbing_routes excluded from boulder pool, technique sessions adapted, all_round pool = union of lead + boulder.
-
-### A-B7 — Boulder target in guided sessions
-
-**Priority:** P2 | **Status:** ✅ Done (2026-03-31) | **Type:** A (backend + frontend) | **Effort:** S
-
-`_boulder_target_info()` returns grade range (offset_high/offset_low) + attempt/rest guidance per session intent. Guided session shows target grade range and guidance tips. 5 backend tests.
 
 ### A-B8 — Board session templates (guided)
 
@@ -308,50 +123,9 @@ Audit `_SESSION_POOL_BOULDER`: verify ≥3 primary sessions per phase, limit_bou
 
 Three new session definitions: `board_limit_session` (6-10 problems at max, 3-5 min rest), `board_volume_session` (15-20 problems 2-3 below max, 1-2 min rest), `board_pe_session` (4x4 format, 3-4 below max). Equipment: board_kilter/board_moonboard/board_other. No board API integration.
 
-### A-B9 — Process cues and phase tips for boulder
-
-**Priority:** P2 | **Status:** ✅ Done (C203, 2026-04-09) | **Type:** C (content) | **Effort:** S
-
-10 new boulder-tagged process cues (cue_026..cue_035) added to
-`backend/catalog/cues/v1/process_cues.json`, reusing the A141 rotation
-infrastructure (one deterministic cue per session per day). Intent→template
-mapping: limit→`limit_boulder_gym`, power→`power_contact_gym`,
-volume→`boulder_circuit_gym`. Cues 032 (progressive warm-up) and 035
-(no static forearm stretching) also tag `route_projecting_gym` and
-`power_endurance_gym` since the principle is discipline-agnostic. Sources:
-Seifert 2017, Hörst (Ch.6/Ch.12), Draper 2006, Watts 2000, López,
-Ondra/Bachar. 5 phase tips stored in
-`frontend/src/lib/boulder-phase-tips.ts` (static frontend constants, no
-backend endpoint), rendered as a dismissible banner in `/today` when
-`goal.discipline === "boulder"`. Dismissal persisted per-phase in
-`localStorage` under `boulder_phase_tip_dismissed_${phaseId}` so the
-banner reappears on phase transitions. 1624 tests pass; all existing cue
-coverage tests (`test_process_cues.py`) still green.
-
----
-
 ## Priority 2.25 — Code Quality & Hardening
 
 > Origin: Full codebase audit con Agent Teams (2026-03-21)
-
-### R140 — Backend Error Handling Hardening ✅
-
-**Priority:** P2.25 | **Status:** Closed (2026-03-26) | **Type:** R (refactor)
-
-Logging aggiunto a 6 moduli engine, 5 `except:pass` silenziosi sostituiti con `logger.warning`, cache globali mutabili (`_required_equipment_cache`, `_cached_quotes`) sostituite con `@lru_cache`, validazione input su `generate_phase_week`, `generate_macrocycle`, `resolve_session`, `suggest_sessions`, `apply_day_add`.
-
-### R141 — Frontend Error Handling Hardening
-
-**Priority:** P2.25 | **Status:** ✅ Closed (B165c, 2026-03-31) | **Type:** R (refactor)
-
-- Sostituire `.catch(() => {})` silenziosi (~20 istanze) con error toast
-- Validazione Zod su `JSON.parse` del localStorage nella guided session
-- `AbortController` sulla navigazione week
-- Stati loading/error consistenti su `today/`, `plan/`, `outdoor/`
-
-> Note: D163 + D164 audits confirmed ~20+ instances. Will be addressed as part of B165c.
-
-**Rischio:** BASSO — cambiamenti UX difensivi
 
 ### R142 — Magic Numbers Extraction
 
@@ -378,25 +152,11 @@ Pre-existing bug (NOT caused by A187, verified via `git log --all -S exercise_fe
 
 ## Priority 2.5 — Session Quality (post-launch)
 
-### Combo sessions (climbing + conditioning tail)
-
-**Status:** ✅ Resolved by B160g | **Effort:** M
-
-~~Sessions with a primary climbing block (60-70 min) + secondary conditioning block (15-20 min core/prehab/antagonists).~~ **Resolved:** B160g added core_standard + antagonist_prehab tail blocks to all gym sessions that were missing them. Every gym session now follows the strength_long pattern: warmup → main → core → antagonist → cooldown.
-
 ### Flex/rest auto-fill (Pass 3)
 
 **Status:** Open | **Effort:** S
 
 After Pass 1 (primary) and Pass 2 (complementary), add a Pass 3 that fills remaining empty days with flex/rest/mobility sessions. Currently empty days stay empty. Especially needed in deload phase (3 sessions on 7 days). Depends on: nothing.
-
-### Gym-aware PE routing
-
-**Status:** ✅ Done (B201, 2026-04-09) | **Effort:** S
-
-PE sessions now prefer gyms with `gym_routes` over boulder-only gyms when both are available. `_select_gym_id` accepts a `preferred_equipment` parameter and applies a soft bonus (Pass 1: required + preferred; Pass 2: required only; Pass 3: first by priority). Soft preference — never drops sessions when no gym has routes. `power_endurance_gym` already had `preferred_equipment=["gym_routes"]` in `_SESSION_META` (B160d infrastructure); B201 wired it through to the in-day gym selection. 3 unit tests added (`TestPlannerV2B201PreferredGymRouting`).
-
----
 
 ## Priority 2.5b — Catalog & Polish
 
@@ -407,46 +167,6 @@ PE sessions now prefer gyms with `gym_routes` over boulder-only gyms when both a
 **Completato:** Audit 178 esercizi, 5 intensity mismatch corretti, 4 session filter corretti, 9 sessioni orfane triagate.
 
 **Ancora aperto:** ~33 pattern/domain borderline cases (multi-domain exercises, vocabulary gaps) — richiedono decisione design.
-
-### Free Session UI grouping — collapse climbing surfaces
-
-**Priority:** P2.5 | **Status:** ✅ Done (A202, 2026-04-09) | **Type:** A (frontend only) | **Effort:** S
-
-Single "Climbing" card with tap-to-expand, showing available surfaces. Add-ons section below. Surfaces filtered by user equipment (gyms ∪ home); falls back to all 5 when equipment unknown. Single-surface shortcut skips the expand and selects directly. Collapsed by default.
-
-### Core Circuit exercise images — Gemini AI generation
-
-**Priority:** P2.5 | **Status:** ✅ Done — 30/30 | **Type:** C (content)
-
-All 30 core circuit exercises have images. Generated via Gemini AI, renamed and linked in `circuit-exercises.ts`.
-
-### C164 — Catalog expansion: Category B exercise pools
-
-**Priority:** P2.5b | **Status:** ✅ Done (C164, 2026-04-08) | **Type:** C (catalog) | **Effort:** M
-
-**Problem:** Phase 0 of Brief B (resolver scoring, 2026-03-28) diagnosed 4 template blocks
-where exercise variety is impossible regardless of scoring tuning, because the P0 filter
-pipeline leaves ≤2 candidates. No amount of recency rebalancing can fix a pool of 1-2.
-
-**Affected blocks (from production P0 analysis on Daniele's S&P weeks):**
-
-| Block | Session(s) | P0 survivors | Gap |
-|-------|-----------|-------------|-----|
-| `limit_projecting` | `limit_boulder_gym` | 2 (`board_limit_boulders`, `limit_bouldering`) | Need 2-3 more limit boulder variants (spray wall problems, system board limit, moonboard limit) |
-| `limit_bouldering` | `power_contact_gym` | 2 (same pool) | Same gap — shared role/domain/pattern filters |
-| `threshold_main` | `route_endurance_gym` | 1 (`threshold_climbing`) | Need 2-3 threshold route variants (linked laps, route on-the-minute, threshold circuit) |
-| `capacity_hangboard` | `endurance_aerobic_gym` | 1 (`long_duration_hang`) | Need 2-3 long finger endurance variants (density hangs, intermittent dead hangs, sub-max long hangs) |
-
-**Why this matters:** These blocks appear in sessions that run 1-2×/week in S&P and Performance
-phases. Users see the exact same exercise every single week for 4-6 weeks straight. This is the
-#1 visible monotony issue in the app.
-
-**Approach:** One C-type brief per block group. Each exercise needs: full JSON entry in
-`exercises.json`, correct `role`/`domain`/`pattern`/`recency_group` tags, `load_model` +
-`prescription_defaults`, literature-backed protocol parameters.
-
-**Depends on:** Nothing. Can be done independently of Brief B (scoring rebalance).
-**Cross-ref:** Engine Audit v3 finding F8, Brief B Phase 0 diagnosis.
 
 ### A-B10 — Board benchmark tracking
 
@@ -505,22 +225,6 @@ Add spraywall to location_any for relevant session templates: limit bouldering, 
 > **⚠️ RULE: Before implementing any deferred decision from the backlog below, open the KB project and check
 > `_archive/docs/horst_integration_audit.md` for enrichment material. Many deferred decisions have ready-to-use content.**
 
-### Hörst "Training for Climbing" (3rd ed.) — Status
-
-7 of 13 chapters synthesized into structured MD files. 0 conflicts with existing D01-D83 decisions. 14 confirmations. 6 new coaching cues proposed.
-
-| Ch. | File | Status | Enriches Decisions |
-|-----|------|--------|--------------------|
-| 2 | `horst_ch2_self_assessment_synthesis.md` | ✅ | D01 (context) |
-| 3 | `horst_ch3_mental_training_synthesis.md` | ✅ | D29, D30 (context) |
-| 4 | `horst_ch4_technique_skill_synthesis.md` | ✅ | D73, D76 (context) |
-| 6 | `horst_ch6_mobility_synthesis.md` | ✅ | **D33, D58, D60 — 38 exercises ready** |
-| 11 | `horst_ch11_nutrition_synthesis.md` | ✅ | D65, D66, D67 (enrichment) |
-| 12 | `horst_ch12_recovery_synthesis.md` | ✅ | **D17, D70 — quantified recovery data** |
-| 13 | `horst_ch13_injury_synthesis.md` | ✅ | D68-D72 (context) |
-
-**Key audit finding — CUE-02 (v1, affects D33):** Excessive forearm flexor static stretching before climbing reduces grip strength for up to 1 hour. The warm-up generator (D33) must not prescribe heavy forearm flexor stretches before performance sessions.
-
 ### Open KB Research Items
 
 | Item | Status | Where |
@@ -568,11 +272,6 @@ Depends on: B122 pattern. Supabase migration ✅ complete.
 
 **Status:** Open | Spezzare in package `replanner/` + estrarre `_SESSION_META` in modulo condiviso.
 **Rischio:** ALTO — mandatory analysis phase
-
-### R144 — Frontend API Layer Refactor ✅
-
-**Status:** ✅ Closed (A187, 2026-04-07) | TanStack Query integrato con cache condivisa per `state`, `week/{n}`, outdoor, free-session surfaces; mutations centralizzate in `lib/hooks/mutations/`; invalidation map (D176) implementata in `lib/invalidation.ts`; prefetch settimane adiacenti su `useWeekPlan`. `api.ts` resta come thin layer sui fetch — il refactor di splitting è rimandato.
-**Rischio:** MEDIO
 
 ### R145 — Spezzare pagine componente grandi
 
@@ -635,20 +334,6 @@ Same architecture as Core Circuit for post-session static stretching (30-60s hol
 
 **Status:** Open — design pending | **Effort:** M
 Same architecture for pre-session dynamic warmup (30s work / 10s transition).
-
-### Feedback Loop Education Copy
-
-**Status:** ✅ Done (A202, 2026-04-09) — main UI touchpoint | **Effort:** XS
-
-Dismissible education banner added above the day card in `/today`, shown only
-after ≥1 completed session. Copy: "Il tuo feedback adatta i carichi — Dopo
-ogni esercizio, il tuo giudizio (facile/ok/difficile) regola automaticamente
-peso e volume delle sessioni future. Più feedback dai, più il piano diventa
-preciso." Dismissal persisted in `localStorage` under
-`feedback_education_dismissed`. Onboarding touchpoint deferred (lower priority
-per brief).
-
-Related: D77 (SDT principles), D79 ("Train better, not more" personality), Educational content (methodology explanations).
 
 ### Smart planner availability suggestions
 
@@ -744,7 +429,6 @@ Depends on: D69 (ACWR) design, beta tester data.
 
 | ID | Title | Notes |
 |----|-------|-------|
-| ✅ B191 | Phase-aware retest scheduling + Christie fixes | Fixed 4 bugs: dashboard phase display (duration_weeks key), hangboard freshness (estimated_at fallback), repeater freshness (onboarding users), Pass 3 phase-blind scheduling. `_PHASE_TEST_MAP` added. `skipped_tests` in week plan. 1580 tests. |
 | P3 | Data-driven phase→axis mapping | Replace hardcoded `_PHASE_TEST_MAP` with `stimulated_axes` metadata on phase definitions in `macrocycle_v1.py` (KB Decision D92) |
 | ARCH-3 | Generic timer from prescription | Frontend timer derives behavior from `work_seconds` + `reps` + `rest_*` fields |
 | — | Override intensity cap warning | Warn when user overrides above phase intensity cap |
