@@ -69,6 +69,8 @@
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
 | GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Vato, Alexis on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay €14.99/mo. |
+| A-DEMO-01 | **Demo session page** — `/demo` public route with timers, full ~100 min session walkthrough + CTA | A | S | ✅ Done | A182 + B190 (2026-04-08) |
+| B-DEMO-02 | **Demo session restructure** — strength-first exercise order, English copy | B | XS | ✅ Done | 2d7feca (2026-04-08) |
 
 ### Phase 1 — Pricing + Stripe go-live (week 2-3)
 
