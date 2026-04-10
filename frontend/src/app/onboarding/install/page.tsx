@@ -42,13 +42,19 @@ type Platform = "iphone" | "android";
 const IPHONE_STEPS = [
   {
     icon: <Compass className="h-6 w-6" />,
-    title: "Open this page in Safari",
-    text: "Make sure you're using Safari — this won't work from other browsers.",
+    title: "Open this page in Safari or Chrome",
+    text: "Safari is recommended. Chrome also works on iOS 16.4+.",
   },
   {
     icon: <IosShareIcon className="h-6 w-6" />,
     title: "Tap the Share button",
-    text: "Tap the share icon in the bottom toolbar.",
+    text: (
+      <>
+        <strong>Safari:</strong> tap the share icon in the bottom toolbar.
+        <br />
+        <strong>Chrome:</strong> tap the share icon in the top-right corner.
+      </>
+    ),
   },
   {
     icon: (
@@ -58,15 +64,18 @@ const IPHONE_STEPS = [
         <PlusCircle className="h-6 w-6" />
       </div>
     ),
-    title: 'Tap More, then "Add to Home Screen"',
+    title: 'Tap "Add to Home Screen"',
     text: (
       <>
-        Scroll down and tap{" "}
+        <strong>Safari:</strong> scroll down, tap{" "}
         <span className="inline-flex items-center gap-1 rounded border border-muted-foreground/30 px-1.5 py-0.5 text-xs font-medium">
           <MoreHorizontal className="h-3.5 w-3.5" /> More
         </span>
         , then tap <strong>&quot;Add to Home Screen&quot;</strong>. If you
         don&apos;t see it, tap &quot;Edit Actions&quot; at the bottom to add it.
+        <br />
+        <strong>Chrome:</strong> tap <strong>&quot;Add to Home Screen&quot;</strong> directly
+        from the share menu.
       </>
     ),
   },
