@@ -9771,7 +9771,10 @@
         "Set a timer: start a route every 4-5 minutes (adjust to route length)",
         "Routes at 1-2 grades below onsight max",
         "Rest only the time remaining after finishing each route",
-        "Stop the set if you fall twice on consecutive routes — recovery is failing"
+        "Stop the set if you fall twice on consecutive routes — recovery is failing",
+        "Pump should reach 5-6/10 by end of each set — if higher, lower the grade",
+        "Must recover to 2-3/10 pump before starting next set — if not recovering, extend rest or drop a grade",
+        "Stop the session if you start a set already pumped from the previous one — recovery is failing"
       ],
       "video_url": null,
       "load_model": "grade_relative"
