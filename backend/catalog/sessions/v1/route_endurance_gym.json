@@ -12,6 +12,7 @@
     "sports": ["climbing"]
   },
   "required_equipment": ["gym_routes"],
+  "boulder_fallback": "boulder_circuit_gym",
   "context": {
     "location": "gym"
   },

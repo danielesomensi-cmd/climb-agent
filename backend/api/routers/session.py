@@ -75,6 +75,7 @@ def resolve(req: SessionResolveRequest, user_id: Optional[str] = Depends(get_use
             user_state_override=state,
             write_output=False,
             user_id=user_id,
+            equipment_override=req.equipment_override,
         )
     except Exception as e:
         logger.error("Session resolution failed: %s", e, exc_info=True)

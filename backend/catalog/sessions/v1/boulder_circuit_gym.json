@@ -12,6 +12,7 @@
     "sports": ["climbing"]
   },
   "required_equipment": ["gym_boulder"],
+  "boulder_fallback": null,
   "context": {
     "location": "gym"
   },

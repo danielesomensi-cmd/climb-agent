@@ -19,6 +19,7 @@
     ]
   },
   "required_equipment": ["hangboard"],
+  "boulder_fallback": null,
   "context": {
     "location": "home"
   },

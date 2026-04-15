@@ -602,6 +602,10 @@ Sessions live in `backend/catalog/sessions/v1/`. Each produces a full resolved s
 - `upper_body_weights` *(strength_general, home)*
 - `yoga_recovery` *(flexibility, home)*
 
+#### Session-level optional fields
+
+- `boulder_fallback`: `string | null` (default `null`). Session_id of a boulder-discipline equivalent session, used when the user triggers the ephemeral "Boulder only" override (A210) on a rope-dependent session. Allowed values: any valid session_id in the boulder pool, or `null`. Only non-null for sessions whose core block requires `gym_routes` (currently: `endurance_aerobic_gym` → `boulder_circuit_gym`, `route_endurance_gym` → `boulder_circuit_gym`, `route_projecting_gym` → `limit_boulder_gym`).
+
 ### Canonical module template_ids (27)
 
 Module templates live in `backend/catalog/templates/v1/`. These are reusable blocks composed into session templates.

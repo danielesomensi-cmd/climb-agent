@@ -16,6 +16,7 @@
     "sports": ["climbing"]
   },
   "required_equipment": ["gym_routes"],
+  "boulder_fallback": "limit_boulder_gym",
   "context": {
     "location": "gym"
   },
