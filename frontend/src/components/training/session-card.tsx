@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { hasSavedProgress } from "@/lib/guided-session-utils";
-import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw } from "lucide-react";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
-import { getExercises, addExerciseToSession, removeExerciseFromSession } from "@/lib/api";
+import { getExercises, addExerciseToSession, removeExerciseFromSession, resolveSession } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 
@@ -633,14 +633,20 @@ export function SessionCard({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
   const [exerciseToRemove, setExerciseToRemove] = useState<{ index: number; name: string } | null>(null);
+  // A210: ephemeral "Boulder only" override (React state only, never persisted)
+  const [boulderOverride, setBoulderOverride] = useState<Record<string, unknown> | null>(null);
+  const [boulderOverrideLoading, setBoulderOverrideLoading] = useState(false);
+  const [boulderOverrideError, setBoulderOverrideError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Exercise instances from resolved session
+  // A210: effective resolved session — override takes precedence over the planned one
+  const effectiveResolved = (boulderOverride ?? session.resolved) as Record<string, unknown> | undefined;
+
+  // Exercise instances from effective resolved session
   const exerciseInstances = useMemo(() => {
-    const r = session.resolved as Record<string, unknown> | undefined;
-    const rs = r?.resolved_session as Record<string, unknown> | undefined;
+    const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
     return (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
-  }, [session.resolved]);
+  }, [effectiveResolved]);
 
   const handleRemoveExercise = useCallback(async (exerciseIndex: number) => {
     if (!weekPlan) return;
@@ -678,20 +684,96 @@ export function SessionCard({
   const isFinalized = isDone || isSkipped;
   const locationLabel = getLocationLabel(session, gyms);
   const hasExercises = (() => {
-    const r = session.resolved as Record<string, unknown> | undefined;
-    const rs = r?.resolved_session as Record<string, unknown> | undefined;
+    const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
     return ((rs?.exercise_instances ?? []) as unknown[]).length > 0;
   })();
   const hasLoadingPin = (() => {
-    const r = session.resolved as Record<string, unknown> | undefined;
-    const rs = r?.resolved_session as Record<string, unknown> | undefined;
+    const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
     const instances = (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
     return instances.some((i) => String(i.exercise_id ?? "").startsWith("lp_"));
   })();
 
+  // A210: trigger detection — based on the ORIGINAL resolved session, not the override.
+  // Button shows iff a rope-dependent exercise was scheduled for this planned session.
+  const originalResolved = session.resolved as Record<string, unknown> | undefined;
+  const originalSessionMeta = originalResolved?.session as Record<string, unknown> | undefined;
+  const boulderFallbackId = (originalSessionMeta?.boulder_fallback as string | null | undefined) ?? null;
+  const originalSessionId = (originalSessionMeta?.session_id as string | undefined) ?? session.session_id;
+  const hasRopeExercise = useMemo(() => {
+    const rs = originalResolved?.resolved_session as Record<string, unknown> | undefined;
+    const instances = (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
+    return instances.some((ex) => {
+      const eq = (ex.equipment_required ?? []) as string[];
+      return Array.isArray(eq) && eq.includes("gym_routes");
+    });
+  }, [originalResolved]);
+  const canSwitchToBoulder =
+    boulderOverride === null &&
+    !isFinalized &&
+    hasRopeExercise &&
+    (boulderFallbackId !== null || !!availableEquipment);
+
+  const handleBoulderOnly = useCallback(async () => {
+    setBoulderOverrideLoading(true);
+    setBoulderOverrideError(null);
+    try {
+      if (boulderFallbackId) {
+        // Mechanism A: session_id swap to dedicated boulder session
+        const result = await resolveSession(boulderFallbackId);
+        setBoulderOverride(result.resolved as unknown as Record<string, unknown>);
+      } else {
+        // Mechanism B: equipment override — same session_id, strip gym_routes
+        const override = availableEquipment
+          ? Array.from(availableEquipment).filter((e) => e !== "gym_routes")
+          : [];
+        const result = await resolveSession(originalSessionId, undefined, override);
+        setBoulderOverride(result.resolved as unknown as Record<string, unknown>);
+      }
+    } catch (err) {
+      console.error("[A210] boulder override failed:", err);
+      setBoulderOverrideError("Could not adapt this session. Try again.");
+    } finally {
+      setBoulderOverrideLoading(false);
+    }
+  }, [boulderFallbackId, availableEquipment, originalSessionId]);
+
+  const handleUndoBoulderOverride = useCallback(() => {
+    setBoulderOverride(null);
+    setBoulderOverrideError(null);
+  }, []);
+
+  // A210: copy variant — route_projecting → limit_boulder is an equivalent stimulus,
+  // aerobic/endurance swaps trade aerobic capacity for volume bouldering.
+  const boulderCopyVariant: "equivalent" | "volume_swap" =
+    originalSessionId === "route_projecting_gym" ? "equivalent" : "volume_swap";
+
   return (
     <>
       <div className="relative">
+      {boulderOverride !== null && (
+        <div className="mb-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 flex items-start gap-2">
+          <Mountain className="size-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-medium">Boulder only — session adapted for today.</p>
+            {boulderCopyVariant === "volume_swap" && (
+              <p className="mt-0.5 text-amber-200/70">
+                Volume climbing replaces aerobic endurance. Aerobic stimulus is not replicable without rope.
+              </p>
+            )}
+          </div>
+          <button
+            className="text-amber-200 hover:text-white underline text-xs shrink-0"
+            onClick={handleUndoBoulderOverride}
+          >
+            Undo
+          </button>
+        </div>
+      )}
+      {boulderOverrideError && (
+        <div className="mb-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+          {boulderOverrideError}
+        </div>
+      )}
       <Card className="gap-0 py-0 overflow-hidden">
         {/* Header — clickable to expand */}
         <CardHeader
@@ -699,8 +781,16 @@ export function SessionCard({
           onClick={() => setExpanded((prev) => !prev)}
         >
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-sm">
-              {(session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id)}
+            <CardTitle className="text-sm flex items-center gap-1.5">
+              <span>
+                {(session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id)}
+              </span>
+              {boulderOverride !== null && (
+                <Badge className="bg-amber-600 hover:bg-amber-600 text-white text-[10px] gap-1 px-1.5 py-0">
+                  <Mountain className="size-2.5" />
+                  Boulder
+                </Badge>
+              )}
             </CardTitle>
             <div className="flex items-center gap-1.5">
               {/* Edit actions button */}
@@ -749,7 +839,7 @@ export function SessionCard({
               </Badge>
             )}
             {!isDone && !isSkipped && (() => {
-              const targetMin = (session.resolved as Record<string, Record<string, unknown>> | undefined)?.session?.target_duration_min as number | undefined;
+              const targetMin = (effectiveResolved as Record<string, Record<string, unknown>> | undefined)?.session?.target_duration_min as number | undefined;
               if (!targetMin) return null;
               return (
                 <Badge variant="outline" className="text-[10px] text-slate-400">
@@ -820,9 +910,7 @@ export function SessionCard({
           <CardContent className="pt-0 pb-3 space-y-3">
             {/* Exercise list from resolved session (with instruction blocks) */}
             {(() => {
-              const rs = (
-                session.resolved as Record<string, unknown> | undefined
-              )?.resolved_session as Record<string, unknown> | undefined;
+              const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
               const allBlocks = (rs?.blocks ?? []) as Array<Record<string, unknown>>;
 
               const allInstances = exerciseInstances;
@@ -1042,6 +1130,25 @@ export function SessionCard({
                 >
                   <RefreshCw className="size-5 text-muted-foreground" />
                   <span className="text-sm">Modify session</span>
+                </button>
+              </DrawerClose>
+            )}
+
+            {/* A210: Boulder only — ephemeral override, planned only, rope-dependent session only */}
+            {canSwitchToBoulder && (
+              <DrawerClose asChild>
+                <button
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left disabled:opacity-50"
+                  disabled={boulderOverrideLoading}
+                  onClick={() => {
+                    setDrawerOpen(false);
+                    setTimeout(() => {
+                      void handleBoulderOnly();
+                    }, 150);
+                  }}
+                >
+                  <Mountain className="size-5 text-muted-foreground" />
+                  <span className="text-sm">Boulder only (today)</span>
                 </button>
               </DrawerClose>
             )}

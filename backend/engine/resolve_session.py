@@ -1054,6 +1054,7 @@ def _resolve_inline_block(
             "variant": {},
             "prescription": merged,
             "attributes": ex_attrs,
+            "equipment_required": list(selected_ex.get("equipment_required") or []),
             "load_model": selected_ex.get("load_model"),
             "unilateral": bool(selected_ex.get("unilateral")),
             "alt_sides": bool(selected_ex.get("alt_sides")),
@@ -1201,6 +1202,7 @@ def resolve_session(
     write_output: bool = True,
     user_id: Optional[str] = None,
     phase: Optional[str] = None,
+    equipment_override: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     # --- Input validation ---
     if not session_path:
@@ -1239,6 +1241,11 @@ def resolve_session(
 
     # context: location/equipment
     location, available_equipment = get_location_equipment(user_state, session)
+    # A210: caller can force an equipment override (e.g. "Boulder only" toggle
+    # re-resolves the same session without gym_routes). Override replaces the
+    # user's equipment list but preserves the resolved location.
+    if equipment_override is not None:
+        available_equipment = list(equipment_override)
     # Remove implicit/obvious equipment
     available_equipment = [e for e in available_equipment if norm_str(e) != "floor"]
 
@@ -1496,6 +1503,7 @@ def resolve_session(
                     "variant": variant,
                     "prescription": merged,
                     "attributes": ex_attrs,
+                    "equipment_required": list(selected_ex.get("equipment_required") or []),
                     "load_model": selected_ex.get("load_model"),
                     "unilateral": bool(selected_ex.get("unilateral")),
                     "alt_sides": bool(selected_ex.get("alt_sides")),
@@ -1564,7 +1572,8 @@ def resolve_session(
             "session_name": session_name,
             "session_version": session_version,
             "source_path": session_path,
-            "target_duration_min": (session.get("time_budget") or {}).get("target_duration_min")
+            "target_duration_min": (session.get("time_budget") or {}).get("target_duration_min"),
+            "boulder_fallback": session.get("boulder_fallback"),
         },
         "resolved_session": {
             "resolver_version": "0.2",

@@ -129,10 +129,18 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
 };
 
 // Session
-export const resolveSession = (sessionId: string, context?: Record<string, unknown>) =>
+export const resolveSession = (
+  sessionId: string,
+  context?: Record<string, unknown>,
+  equipmentOverride?: string[] | null,
+) =>
   request<{ resolved: ResolvedSession }>("/api/session/resolve", {
     method: "POST",
-    body: JSON.stringify({ session_id: sessionId, context }),
+    body: JSON.stringify({
+      session_id: sessionId,
+      context,
+      equipment_override: equipmentOverride ?? undefined,
+    }),
   });
 
 export const addExerciseToSession = (data: {

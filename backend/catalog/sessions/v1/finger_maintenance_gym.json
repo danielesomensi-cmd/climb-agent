@@ -11,6 +11,7 @@
     "notes": "Submaximal finger maintenance in gym context. Repeaters at 70-80% of max followed by easy climbing for volume. Medium intensity."
   },
   "required_equipment": ["hangboard"],
+  "boulder_fallback": null,
   "compatibility": {
     "slot": [
       "short",

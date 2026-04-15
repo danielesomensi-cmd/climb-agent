@@ -12,6 +12,7 @@
   "required_equipment": [
     "gym_boulder"
   ],
+  "boulder_fallback": null,
   "description": "Light climbing session for deload weeks. Focus on movement quality and enjoyment at easy grades. No projecting or limit moves.",
   "modules": [
     {

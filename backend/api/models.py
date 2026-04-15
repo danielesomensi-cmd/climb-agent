@@ -45,6 +45,11 @@ class SessionResolveRequest(BaseModel):
     """Body for POST /api/session/resolve."""
     session_id: str
     context: Optional[Dict[str, Any]] = None
+    # A210: ephemeral equipment override for "Boulder only" toggle.
+    # When set, replaces the user's available equipment for this resolve only.
+    # Used for sessions whose core block is gym_routes-optional (e.g. power_endurance_gym
+    # re-resolved with equipment_override = user_eq - {"gym_routes"}).
+    equipment_override: Optional[List[str]] = None
 
 
 class AddExerciseRequest(BaseModel):
