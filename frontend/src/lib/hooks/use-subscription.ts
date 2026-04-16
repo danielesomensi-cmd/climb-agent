@@ -23,6 +23,15 @@ const _ALLOW: UseSubscriptionResult = {
   loading: false,
 };
 
+const _DENY: UseSubscriptionResult = {
+  status: "none",
+  isActive: false,
+  isTrialing: false,
+  trialDaysRemaining: null,
+  canInteract: false,
+  loading: false,
+};
+
 function mapResponse(data: SubscriptionStatus): UseSubscriptionResult {
   return {
     status: data.status,
@@ -36,7 +45,7 @@ function mapResponse(data: SubscriptionStatus): UseSubscriptionResult {
 
 export function useSubscription(): UseSubscriptionResult {
   const [result, setResult] = useState<UseSubscriptionResult>({
-    ..._ALLOW,
+    ..._DENY,
     loading: true,
   });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -46,8 +55,8 @@ export function useSubscription(): UseSubscriptionResult {
       const data = await getSubscriptionStatus();
       setResult(mapResponse(data));
     } catch {
-      // On error (e.g. network), default to allowing access — don't block on infra issues
-      setResult(_ALLOW);
+      // On error (e.g. network), deny access — fail-closed (B202)
+      setResult(_DENY);
     }
   }, []);
 

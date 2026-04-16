@@ -3,7 +3,7 @@
 Design:
 - If STRIPE_SECRET_KEY is not set → bypass all checks (dev/test mode).
 - If STORAGE_BACKEND != 'supabase' → bypass (pytest uses file backend).
-- If no subscription row in DB → user hasn't checked out yet → allow.
+- If no subscription row in DB + Stripe configured → deny (fail-closed).
 - status trialing/active → allow full access.
 - status past_due/canceled/expired → block interactive actions (402).
 """
@@ -117,31 +117,39 @@ _ALLOW_ALL: Dict[str, Any] = {
     "can_interact": True,
 }
 
+_DENY_ALL: Dict[str, Any] = {
+    "status": "none",
+    "is_active": False,
+    "trial_days_remaining": None,
+    "can_interact": False,
+}
+
 
 def check_subscription(user_id: Optional[str]) -> Dict[str, Any]:
     """Return subscription status for a user.
 
     Returns a dict:
-        status               str — 'trialing'|'active'|'past_due'|'canceled'|'expired'
+        status               str — 'none'|'trialing'|'active'|'past_due'|'canceled'|'expired'
         is_active            bool — status in (trialing, active)
         trial_days_remaining int|None — days left if trialing
         can_interact         bool — same as is_active
 
-    Bypass cases (returns ALLOW_ALL):
+    Bypass cases (returns ALLOW_ALL) — only when Stripe is NOT configured:
     - Stripe not configured (dev/test)
     - STORAGE_BACKEND != 'supabase' (pytest)
     - user_id is None (unauthenticated dev request)
-    - No subscription row (user hasn't completed checkout yet = still onboarding)
+
+    Fail-closed (returns DENY_ALL) — when Stripe IS configured:
+    - No subscription row in DB → user must subscribe
     """
     if not _stripe_enabled() or not _supabase_enabled() or not user_id:
         return _ALLOW_ALL.copy()
 
     row = get_subscription_row(user_id)
     if row is None:
-        # No row = not onboarded yet = full access
-        return _ALLOW_ALL.copy()
+        return _DENY_ALL.copy()
 
-    status = row.get("status", "active")
+    status = row.get("status", "none")
     is_active = status in _ACTIVE_STATUSES
 
     trial_days_remaining: Optional[int] = None

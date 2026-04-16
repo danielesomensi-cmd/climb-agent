@@ -761,7 +761,9 @@ export default function SettingsPage() {
                             ? "Canceled"
                             : subStatus === "pending_checkout"
                               ? "Pending"
-                              : "—"}
+                              : subStatus === "none"
+                                ? "Not subscribed"
+                                : "—"}
                   </span>
                 </div>
                 {!subActive ? (
@@ -771,7 +773,7 @@ export default function SettingsPage() {
                     className="w-full"
                     onClick={() => router.push("/subscribe")}
                   >
-                    Subscribe — €9.99/mo
+                    Subscribe
                   </Button>
                 ) : (
                   <Button

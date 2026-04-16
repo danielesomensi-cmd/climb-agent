@@ -95,8 +95,8 @@ class TestCheckSubscription:
         # Allow 6 or 7 days depending on sub-second execution timing
         assert result["trial_days_remaining"] in (6, 7)
 
-    def test_no_subscription_row_allows_access(self):
-        """No row in DB → user not onboarded yet → full access."""
+    def test_no_subscription_row_denies_when_stripe_configured(self):
+        """No row in DB + Stripe configured → fail-closed (B202)."""
         from backend.engine.subscription_guard import check_subscription
 
         with patch(
@@ -111,8 +111,38 @@ class TestCheckSubscription:
         ):
             result = check_subscription("u1")
 
+        assert result["is_active"] is False
+        assert result["can_interact"] is False
+        assert result["status"] == "none"
+
+    def test_no_subscription_row_allows_when_stripe_not_configured(self):
+        """No row in DB + Stripe NOT configured → fail-open (dev/test)."""
+        from backend.engine.subscription_guard import check_subscription
+        # Default test env: no STRIPE_SECRET_KEY, STORAGE_BACKEND=file
+        result = check_subscription("u1")
         assert result["is_active"] is True
         assert result["can_interact"] is True
+
+    def test_unknown_status_denies_interaction(self):
+        """Unknown status string in DB → fail-closed."""
+        from backend.engine.subscription_guard import check_subscription
+
+        row = {"user_id": "u1", "status": "bogus_status", "trial_end": None}
+
+        with patch(
+            "backend.engine.subscription_guard.get_subscription_row",
+            return_value=row,
+        ), patch(
+            "backend.engine.subscription_guard._stripe_enabled",
+            return_value=True,
+        ), patch(
+            "backend.engine.subscription_guard._supabase_enabled",
+            return_value=True,
+        ):
+            result = check_subscription("u1")
+
+        assert result["is_active"] is False
+        assert result["can_interact"] is False
 
     def test_past_due_blocks_interaction(self):
         """status=past_due → can_interact=False."""
