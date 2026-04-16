@@ -79,6 +79,10 @@
 | GTM-03 | **Pricing decision** — choose final price point and model | — | — | ✅ Done | Decided: $9.99/mo standard + $4.99/mo Founding Climber (first 20 users, locked forever), 15-day trial, USD. |
 | GTM-04 | **Stripe go-live** — two-tier pricing, B188 revert, subscribe page update | B | S | ✅ Done | Test mode verificato 2026-04-16. $4.99 Founding Climber + $9.99 Standard, trial 15gg, USD. Fix difensivo per stale customer_id incluso. Prossimo step: switch sk_test → sk_live per go-live pagamenti reali. |
 | B-stripe-recovery | **Stripe stale customer_id recovery** — handle deleted/invalid Stripe customers gracefully | B | XS | ✅ Done | Auto-recovery when Stripe customer no longer exists (e.g. manually deleted from Dashboard after currency change). Part of GTM-04 hardening. |
+| D205 | **Subscription status leak & webhook robustness audit** | D | S | ✅ Done | Root cause: fail-open check_subscription(). Webhook gap: customer.deleted not handled. Report: `docs/audit/D205_subscription_audit_2026_04_16.md`. |
+| B202 | **Fix fail-open → fail-closed subscription check** | B | S | ✅ Done | check_subscription() returns deny when no row + Stripe configured. Frontend use-subscription.ts defaults to canInteract=false. 3 new tests. |
+| B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | Proposed in D205. customer.deleted not handled; all webhook errors swallowed with 200. |
+| B204 | **Manage subscription button error handling** | B | XS | Open | Proposed in D205. Depends on B202. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. Measure: how many complete onboarding in 48h. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
