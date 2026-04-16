@@ -116,6 +116,24 @@ def create_checkout_session(
 
     try:
         session = client.checkout.sessions.create(checkout_params)
+    except stripe.InvalidRequestError as exc:
+        if "No such customer" in str(exc) and existing_customer_id:
+            logger.warning(
+                "Stale stripe_customer_id %s for user %s — clearing and retrying",
+                existing_customer_id, user_id,
+            )
+            upsert_subscription(user_id, {"stripe_customer_id": None})
+            del checkout_params["customer"]
+            if not req.email:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Stripe customer was deleted and no email available to create a new one. "
+                           "Please retry from a page where your email is available.",
+                )
+            checkout_params["customer_email"] = req.email
+            session = client.checkout.sessions.create(checkout_params)
+        else:
+            raise HTTPException(status_code=502, detail=f"Stripe error: {exc.user_message}")
     except stripe.StripeError as exc:
         raise HTTPException(status_code=502, detail=f"Stripe error: {exc.user_message}")
 
@@ -153,6 +171,18 @@ def create_billing_portal(user_id: Optional[str] = Depends(get_user_id)):
                 "return_url": f"{_FRONTEND_BASE}/settings",
             }
         )
+    except stripe.InvalidRequestError as exc:
+        if "No such customer" in str(exc):
+            logger.warning(
+                "Stale stripe_customer_id %s for user %s in portal — clearing",
+                customer_id, user_id,
+            )
+            upsert_subscription(user_id, {"stripe_customer_id": None})
+            raise HTTPException(
+                status_code=404,
+                detail="Subscription not found. The linked Stripe customer no longer exists.",
+            )
+        raise HTTPException(status_code=502, detail=f"Stripe error: {exc.user_message}")
     except stripe.StripeError as exc:
         raise HTTPException(status_code=502, detail=f"Stripe error: {exc.user_message}")
 
