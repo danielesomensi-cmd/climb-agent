@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from typing import Optional
 
@@ -16,11 +17,16 @@ from backend.engine.subscription_guard import (
     upsert_subscription,
 )
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/subscription", tags=["subscription"])
 
 _STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-_STRIPE_PRICE_ID = os.environ.get("STRIPE_PRICE_ID", "")
+_STRIPE_PRICE_ID_STANDARD = os.environ.get("STRIPE_PRICE_ID_STANDARD", "")
+_STRIPE_PRICE_ID_FOUNDER = os.environ.get("STRIPE_PRICE_ID_FOUNDER", "")
 _STRIPE_PORTAL_ENABLED = os.environ.get("STRIPE_PORTAL_ENABLED", "true").lower() == "true"
+
+_ALLOWED_PRICE_IDS = {pid for pid in (_STRIPE_PRICE_ID_STANDARD, _STRIPE_PRICE_ID_FOUNDER) if pid}
 
 _FRONTEND_BASE = os.environ.get(
     "FRONTEND_BASE_URL", "https://climb-agent.vercel.app"
@@ -53,6 +59,7 @@ def get_subscription_status(user_id: Optional[str] = Depends(get_user_id)):
 
 class CheckoutRequest(BaseModel):
     email: Optional[str] = None  # prefill Stripe Checkout; frontend passes Clerk email
+    price_id: Optional[str] = None  # frontend sends the selected tier's price ID
 
 
 @router.post("/checkout")
@@ -63,13 +70,20 @@ def create_checkout_session(
     """Create a Stripe Checkout Session and return the hosted URL.
 
     - mode: subscription
-    - 14-day trial (card required upfront)
+    - 15-day trial (card required upfront)
     - Redirects back to /today on success/cancel
     """
     if not user_id:
         raise HTTPException(status_code=401, detail="Authentication required")
-    if not _STRIPE_PRICE_ID:
+    if not _STRIPE_PRICE_ID_STANDARD:
         raise HTTPException(status_code=503, detail="Stripe price not configured")
+
+    # Validate price_id — only allow known prices, fallback to standard
+    price_id = req.price_id
+    if not price_id or price_id not in _ALLOWED_PRICE_IDS:
+        if price_id:
+            logger.warning("Unknown price_id received: %s — falling back to standard", price_id)
+        price_id = _STRIPE_PRICE_ID_STANDARD
 
     client = _stripe_client()
 
@@ -79,9 +93,9 @@ def create_checkout_session(
 
     checkout_params: dict = {
         "mode": "subscription",
-        "line_items": [{"price": _STRIPE_PRICE_ID, "quantity": 1}],
+        "line_items": [{"price": price_id, "quantity": 1}],
         "subscription_data": {
-            "trial_period_days": 14,
+            "trial_period_days": 15,
             # Propagated to the Subscription object — survives race conditions
             # where invoice events arrive before checkout.session.completed.
             "metadata": {"user_id": user_id},

@@ -471,10 +471,10 @@ export type SubscriptionStatus = {
 export const getSubscriptionStatus = () =>
   request<SubscriptionStatus>("/api/subscription/status");
 
-export const createCheckoutSession = (email?: string) =>
+export const createCheckoutSession = (email?: string, priceId?: string) =>
   request<{ checkout_url: string }>("/api/subscription/checkout", {
     method: "POST",
-    body: JSON.stringify({ email: email ?? null }),
+    body: JSON.stringify({ email: email ?? null, price_id: priceId ?? null }),
   });
 
 export const createBillingPortal = () =>

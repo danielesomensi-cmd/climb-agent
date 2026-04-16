@@ -76,8 +76,8 @@
 
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
-| GTM-03 | **Pricing decision** — choose final price point and model | — | — | Open | Options: (A) €14.99/mo standard, (B) €9.99/mo Founding Climber lock-in for first 20-30 + €14.99 standard, (C) keep €9.99/mo. Council consensus: don't go below €9.99. **Decision needed from Daniele after beta feedback.** |
-| GTM-04 | **Stripe go-live** — switch from test to live keys, verify webhook, enable subscription guard | B | S | Open | A159 infra is already built. This is config change + smoke test. Depends on GTM-03. |
+| GTM-03 | **Pricing decision** — choose final price point and model | — | — | ✅ Done | Decided: $9.99/mo standard + $4.99/mo Founding Climber (first 20 users, locked forever), 15-day trial, USD. |
+| GTM-04 | **Stripe go-live** — two-tier pricing, B188 revert, subscribe page update | B | S | In Progress | Code on branch `brief/GTM04-stripe-golive`. Preview test pending. Phase 3 (live keys) after preview OK. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. Measure: how many complete onboarding in 48h. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
@@ -107,7 +107,7 @@
 Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Currently in open beta with Stripe paused.
 
 - **Supabase migration** ✅ — JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions)
-- **A159 — Stripe subscriptions** ✅ — Code complete, sk_test verified, **temporarily disabled** (STRIPE_SECRET_KEY removed from Railway for open beta validation phase). Go-live tracked as GTM-04.
+- **A159 — Stripe subscriptions** ✅ — Code complete, sk_test verified, **temporarily disabled** (STRIPE_SECRET_KEY removed from Railway for open beta validation phase). Two-tier pricing ($9.99 standard + $4.99 Founding Climber) added in GTM-04. Go-live tracked as GTM-04 Phase 3.
   - Backend: `subscription_guard.py`, 4 endpoints (status/checkout/portal/webhook), guards on 10 POST endpoints
   - Frontend: `useSubscription()` hook, `TrialBanner`, `/subscribe` page, settings portal link, guided session gate
   - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)

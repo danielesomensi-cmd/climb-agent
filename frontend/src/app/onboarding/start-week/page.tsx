@@ -69,9 +69,9 @@ export default function StartWeekPage() {
       if (offset > 0) {
         await setStartWeek(offset);
       }
-      router.push("/plan"); // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
+      router.push("/subscribe");
     } catch {
-      router.push("/plan"); // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
+      router.push("/subscribe");
     } finally {
       setLoading(false);
     }
@@ -108,7 +108,7 @@ export default function StartWeekPage() {
         <Button
           variant="outline"
           disabled={loading}
-          onClick={() => router.push("/plan")} // TODO: restore "/subscribe" when Stripe is re-enabled (GTM-04)
+          onClick={() => router.push("/subscribe")}
         >
           Skip
         </Button>

@@ -31,7 +31,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 
 **Persistence:** Supabase JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions). RLS enabled on all 6 tables (no policies, service role key bypasses).
 
-**Pricing at launch:** EUR 14.99/month, 14-day trial, monthly-only. Founding Climber offer: first 50 paid users locked at EUR 9.99/month lifetime.
+**Pricing at launch:** USD 9.99/month standard + USD 4.99/month Founding Climber (first 20 users, locked forever), 15-day free trial.
 
 ---
 
