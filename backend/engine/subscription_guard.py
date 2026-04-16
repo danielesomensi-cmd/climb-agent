@@ -18,6 +18,15 @@ _STRIPE_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 _STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND", "file")
 
 
+def _load_bypass_user_ids() -> set[str]:
+    """Load user IDs that bypass subscription checks (founder, beta testers)."""
+    raw = os.environ.get("BYPASS_USER_IDS", "")
+    return {uid.strip() for uid in raw.split(",") if uid.strip()}
+
+
+_BYPASS_USER_IDS: set[str] = _load_bypass_user_ids()
+
+
 def _stripe_enabled() -> bool:
     return bool(_STRIPE_KEY)
 
@@ -143,6 +152,10 @@ def check_subscription(user_id: Optional[str]) -> Dict[str, Any]:
     - No subscription row in DB → user must subscribe
     """
     if not _stripe_enabled() or not _supabase_enabled() or not user_id:
+        return _ALLOW_ALL.copy()
+
+    # Founder / beta bypass — managed via BYPASS_USER_IDS env var
+    if user_id in _BYPASS_USER_IDS:
         return _ALLOW_ALL.copy()
 
     row = get_subscription_row(user_id)

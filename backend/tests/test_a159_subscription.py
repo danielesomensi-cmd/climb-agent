@@ -61,6 +61,67 @@ class TestCheckSubscription:
         for status in ("past_due", "canceled", "expired"):
             assert status not in _ACTIVE_STATUSES
 
+    def test_bypass_user_id_skips_stripe_check(self, monkeypatch):
+        """User in BYPASS_USER_IDS → ALLOW_ALL even with Stripe+Supabase active."""
+        monkeypatch.setenv("BYPASS_USER_IDS", "founder-uuid-1234")
+        from importlib import reload
+        import backend.engine.subscription_guard as guard_mod
+        reload(guard_mod)
+
+        with patch(
+            "backend.engine.subscription_guard._stripe_enabled",
+            return_value=True,
+        ), patch(
+            "backend.engine.subscription_guard._supabase_enabled",
+            return_value=True,
+        ):
+            result = guard_mod.check_subscription("founder-uuid-1234")
+
+        assert result["is_active"] is True
+        assert result["can_interact"] is True
+        assert result["status"] == "active"
+
+        # Cleanup
+        monkeypatch.delenv("BYPASS_USER_IDS", raising=False)
+        reload(guard_mod)
+
+    def test_non_bypass_user_hits_stripe(self, monkeypatch):
+        """User NOT in BYPASS_USER_IDS → normal flow (deny if no row)."""
+        monkeypatch.setenv("BYPASS_USER_IDS", "other-uuid")
+        from importlib import reload
+        import backend.engine.subscription_guard as guard_mod
+        reload(guard_mod)
+
+        with patch(
+            "backend.engine.subscription_guard._stripe_enabled",
+            return_value=True,
+        ), patch(
+            "backend.engine.subscription_guard._supabase_enabled",
+            return_value=True,
+        ), patch(
+            "backend.engine.subscription_guard.get_subscription_row",
+            return_value=None,
+        ):
+            result = guard_mod.check_subscription("not-in-bypass-uuid")
+
+        assert result["is_active"] is False
+        assert result["can_interact"] is False
+
+        monkeypatch.delenv("BYPASS_USER_IDS", raising=False)
+        reload(guard_mod)
+
+    def test_empty_bypass_env_var(self, monkeypatch):
+        """BYPASS_USER_IDS="" → no one bypassed, backward compatible."""
+        monkeypatch.setenv("BYPASS_USER_IDS", "")
+        from importlib import reload
+        import backend.engine.subscription_guard as guard_mod
+        reload(guard_mod)
+
+        assert guard_mod._BYPASS_USER_IDS == set()
+
+        monkeypatch.delenv("BYPASS_USER_IDS", raising=False)
+        reload(guard_mod)
+
     def test_trial_days_remaining_calculation(self):
         """trial_days_remaining computed correctly from trial_end."""
         from backend.engine.subscription_guard import check_subscription
