@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-05 (A-ROADMAP-BATCH: v2+ deferred decisions, v3 LLM Coach, superseded notes, D15 fix)
+> Last updated: 2026-04-16 (roadmap alignment: added A210, D204, B-stripe-recovery)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -78,6 +78,7 @@
 |----|-------|------|--------|--------|-------|
 | GTM-03 | **Pricing decision** — choose final price point and model | — | — | ✅ Done | Decided: $9.99/mo standard + $4.99/mo Founding Climber (first 20 users, locked forever), 15-day trial, USD. |
 | GTM-04 | **Stripe go-live** — two-tier pricing, B188 revert, subscribe page update | B | S | ✅ Done | Test mode verificato 2026-04-16. $4.99 Founding Climber + $9.99 Standard, trial 15gg, USD. Fix difensivo per stale customer_id incluso. Prossimo step: switch sk_test → sk_live per go-live pagamenti reali. |
+| B-stripe-recovery | **Stripe stale customer_id recovery** — handle deleted/invalid Stripe customers gracefully | B | XS | ✅ Done | Auto-recovery when Stripe customer no longer exists (e.g. manually deleted from Dashboard after currency change). Part of GTM-04 hardening. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. Measure: how many complete onboarding in 48h. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
@@ -726,6 +727,8 @@ Implementation approach:
 | ID | Title | Priority | Type | Effort | Status | Notes |
 |----|-------|----------|------|--------|--------|-------|
 | A205 | **Session Builder** — backend CRUD + data model | P3 | A | S | ✅ Done | Backend: CRUD API (`/api/custom-session`), exercise listing with search/filter, warmup/cooldown blocks, load score + duration computation. Data in `user_state.custom_sessions[]`. 27 tests. Frontend builder page is A206 (separate brief). |
+| D204 | **Session Builder audit** — pre-implementation audit of A205 design | P3 | D | XS | ✅ Done | `docs/audit/D204_session_builder_audit.md`. Covered: data model, CRUD API, exercise catalog, load scoring, warmup/cooldown blocks. |
+| A210 | **Boulder only ephemeral override** — boulder_fallback field + equipment_override | P3 | A | S | ✅ Done | `boulder_fallback` field in session instances, `equipment_required` in instances, `equipment_override` param in resolve. SessionCard UI for toggle. |
 | — | **Free session expansion** — standalone non-structured activities | P3.5 | A | M | Open | Standalone hangboard cycle, mobility routine, core circuit. "Tap and go" — no resolver, no structured prescription. Complements Session Builder. Core/mobility partially exist in free session surfaces. |
 | — | **Quick-add equipment guard**: `suggest_sessions` and `apply_day_add` don't validate `required_equipment` — user can quick-add `limit_boulder_gym` without gym_boulder | P3 | B | S | Open | Touches replanner_v1.py — needs analysis brief (STOP gate). Origin: B185 verification. |
 | — | **Warmup/cooldown P0 rotation**: convert hardcoded warmup/cooldown blocks to P0 selection for exercise variety | P3 | A | M | Open | Low priority — warmup sequences are standard. 11 hardcoded warmup blocks (warmup_climbing ×4, warmup_strength ×3, general_warmup ×2, cooldown_stretch ×2). Origin: B185 catalog audit. |
