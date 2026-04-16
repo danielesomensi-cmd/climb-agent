@@ -110,9 +110,9 @@ from backend.engine.planner_v1 import generate_week_plan
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (17 routers)
+  api/               # FastAPI REST API (18 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-56 endpoints total (54 router + 2 app-level: health check + stripe webhook).
+63 endpoints total (61 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -200,6 +200,13 @@ user_state.assessment + user_state.goal
 | GET | `/api/free-session/history` | Free sessions for a date |
 | DELETE | `/api/free-session/{session_id}/climb/{climb_index}` | Delete a climb from active session |
 | DELETE | `/api/free-session/{session_id}` | Delete a free session |
+| GET | `/api/custom-session/list` | List user's custom sessions (summary) |
+| GET | `/api/custom-session/exercises` | Exercise catalog for builder picker (search/filter) |
+| GET | `/api/custom-session/blocks` | Resolved warmup/cooldown blocks |
+| GET | `/api/custom-session/{session_id}` | Get full custom session detail |
+| POST | `/api/custom-session` | Create custom session |
+| PUT | `/api/custom-session/{session_id}` | Update custom session |
+| DELETE | `/api/custom-session/{session_id}` | Delete custom session |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 | GET | `/api/subscription/status` | Current subscription status + trial days remaining |

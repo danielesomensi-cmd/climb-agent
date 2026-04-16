@@ -17,6 +17,7 @@ from backend.api.routers import (
     admin,
     assessment,
     catalog,
+    custom_session,
     feedback,
     free_session,
     macrocycle,
@@ -125,6 +126,7 @@ app.include_router(user.router)
 app.include_router(weekly_override.router)
 app.include_router(admin.router)
 app.include_router(subscription.router)
+app.include_router(custom_session.router)
 
 # Stripe webhook — registered directly to preserve raw body for signature verification
 app.add_api_route(

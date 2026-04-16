@@ -247,3 +247,33 @@ class FreeSessionFinishRequest(BaseModel):
     overall_feel: Optional[str] = None  # easy | good | hard
     notes: Optional[str] = None
     circuit: Optional[Dict[str, Any]] = None  # circuit session data
+
+
+# --------------------------------------------------------------------------- #
+# Custom Session (A205)
+# --------------------------------------------------------------------------- #
+
+class CustomSessionExerciseEntry(BaseModel):
+    """Single exercise inside a custom session."""
+    exercise_id: str
+    sets: int = Field(ge=1, le=20)
+    reps: Optional[int] = Field(default=None, ge=1, le=100)
+    work_seconds: Optional[int] = Field(default=None, ge=1, le=600)
+    rest_between_sets_seconds: Optional[int] = Field(default=None, ge=0, le=600)
+    rest_between_reps_seconds: Optional[int] = Field(default=None, ge=0, le=300)
+    load_kg: Optional[float] = Field(default=0, ge=0, le=200)
+    notes: Optional[str] = Field(default=None, max_length=200)
+
+
+class CustomSessionCreateRequest(BaseModel):
+    """Body for POST /api/custom-session."""
+    name: str = Field(min_length=1, max_length=100)
+    tags: List[str] = Field(default_factory=list, max_length=5)
+    exercises: List[CustomSessionExerciseEntry] = Field(min_length=1, max_length=30)
+
+
+class CustomSessionUpdateRequest(BaseModel):
+    """Body for PUT /api/custom-session/{session_id}."""
+    name: str = Field(min_length=1, max_length=100)
+    tags: List[str] = Field(default_factory=list, max_length=5)
+    exercises: List[CustomSessionExerciseEntry] = Field(min_length=1, max_length=30)
