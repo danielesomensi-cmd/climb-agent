@@ -1,7 +1,5 @@
 import re
 import json
-import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -89,51 +87,6 @@ def test_replanner_override_updates_tomorrow_and_ripple():
     day3 = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-08")
     for day in (day2, day3):
         assert all(not s["tags"]["hard"] for s in day["sessions"])
-
-
-def test_plan_week_uses_user_state_availability_and_default_gym_id(tmp_path: Path):
-    user_state = {
-        "availability": {
-            "mon": {
-                "lunch": {
-                    "available": True,
-                    "locations": ["gym", "home"],
-                    "preferred_location": "gym",
-                    "gym_id": "work_gym",
-                },
-                "evening": {"available": False},
-                "morning": {"available": False},
-            }
-        },
-        "planning_prefs": {"hard_day_cap_per_week": 3, "default_gym_id": "blocx"},
-        "equipment": {"gyms": [{"gym_id": "work_gym"}, {"gym_id": "blocx"}]},
-    }
-    us_path = tmp_path / "user_state.json"
-    out_path = tmp_path / "plan.json"
-    us_path.write_text(json.dumps(user_state), encoding="utf-8")
-
-    repo_root = str(Path(__file__).resolve().parents[2])
-    subprocess.run(
-        [
-            sys.executable,
-            str(Path(repo_root) / "_archive/scripts_legacy/scripts/plan_week.py"),
-            "--start-date",
-            "2026-01-05",
-            "--mode",
-            "balanced",
-            "--user-state",
-            str(us_path),
-            "--out",
-            str(out_path),
-        ],
-        check=True,
-    )
-
-    plan = json.loads(out_path.read_text(encoding="utf-8"))
-    monday = next(day for day in plan["weeks"][0]["days"] if day["date"] == "2026-01-05")
-    assert monday["sessions"][0]["slot"] == "lunch"
-    assert monday["sessions"][0]["location"] == "gym"
-    assert monday["sessions"][0]["gym_id"] == "work_gym"
 
 
 def test_no_planned_gym_session_has_null_gym_id_and_no_gym_prefixed_session_id():
