@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-16 (roadmap alignment: added A210, D204, B-stripe-recovery)
+> Last updated: 2026-04-16 (roadmap alignment: added D-MAINT-01, A198, A199, C204, D209)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -82,6 +82,11 @@
 | B-BYPASS-DANIELE | **Founder subscription bypass** — env var `BYPASS_USER_IDS` skips Stripe check for founder | B | XS | ✅ Done | `subscription_guard.py` reads comma-separated UUIDs from env var. No Stripe customer created for founder. Railway env var set. |
 | D205 | **Subscription status leak & webhook robustness audit** | D | S | ✅ Done | Report: `docs/audit/D205_subscription_audit_2026_04_16.md`. Fail-open bug (H3), unhandled customer.deleted, portal button failure. Spawned B202/B203/B204/B205. |
 | B202 | **Fix fail-open → fail-closed subscription check** | B | S | ✅ Done | check_subscription() returns deny when no row + Stripe configured. Frontend defaults to canInteract=false on error. 1651 tests pass. |
+| D-MAINT-01 | **Fix endpoint table in CLAUDE.md** — correct count 54→56 | D | XS | ✅ Done | Doc-only fix. |
+| A198 | **Repo cleanup per D197 audit** — delete 24 obsolete docs/scripts, archive council reports | A | S | ✅ Done | Hygiene sweep. |
+| A199 | **Dynamic slider capping on availability page** | A | XS | ✅ Done | Frontend-only UX improvement. |
+| C204 | **Pump-management cues to route_on_the_minute** | C | XS | ✅ Done | Catalog content addition. |
+| D209 | **Next.js version audit** — rename middleware→proxy, update docs 14→16 | D | XS | ✅ Done | Doc + rename only. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
 | B204 | **Subscription guard 402 UX + cancel status display** | B | S | Open | Global 402 interceptor → redirect to /subscribe (not raw JSON). Portal 404 handling. cancel_at_period_end display. Depends on B202 ✅. |
 | B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
