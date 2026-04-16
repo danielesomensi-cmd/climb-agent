@@ -77,7 +77,7 @@
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
 | GTM-03 | **Pricing decision** — choose final price point and model | — | — | ✅ Done | Decided: $9.99/mo standard + $4.99/mo Founding Climber (first 20 users, locked forever), 15-day trial, USD. |
-| GTM-04 | **Stripe go-live** — two-tier pricing, B188 revert, subscribe page update | B | S | In Progress | Code on branch `brief/GTM04-stripe-golive`. Preview test pending. Phase 3 (live keys) after preview OK. |
+| GTM-04 | **Stripe go-live** — two-tier pricing, B188 revert, subscribe page update | B | S | ✅ Done | Test mode verificato 2026-04-16. $4.99 Founding Climber + $9.99 Standard, trial 15gg, USD. Fix difensivo per stale customer_id incluso. Prossimo step: switch sk_test → sk_live per go-live pagamenti reali. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. Measure: how many complete onboarding in 48h. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
