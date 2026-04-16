@@ -251,7 +251,7 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
   - **Briefs that touch `frontend/`**: MUST be developed on a branch named `brief/B<n>-<slug>` and tested on the Vercel preview URL before merging to main. Daniele must explicitly approve the preview before merge. Never push frontend changes directly to main without preview verification — PWA users on iPhone are trapped on the previous SW until the new build is verified.
   - The Service Worker (`frontend/public/sw.template.js`) generates `public/sw.js` per-build via `frontend/scripts/build-sw.js` (prebuild hook), injecting `VERCEL_GIT_COMMIT_SHA` into `CACHE_NAME`. Do NOT commit `public/sw.js` (gitignored). Do NOT bump CACHE_NAME manually.
 
-- **Stripe**: sk_test keys configured in Railway. Currently **DISABLED** (STRIPE_SECRET_KEY removed) for open beta validation phase. Re-enable with sk_live when ready for paid launch. Pricing: USD 9.99/month standard, USD 4.99/month Founding Climber (first 20 users, locked forever), 15-day free trial. Two separate Stripe Price objects (no coupon). Backend validates price_id server-side against allowed set.
+- **Stripe**: sk_live keys configured in Railway + Vercel. **LIVE** since 2026-04-16. Pricing: USD $9.99/month Standard (15-day free trial) + USD $4.99/month Founding Climber (locked forever, first 20 users — two separate Stripe Price objects, not coupon). Customer Portal configured. B202 fail-closed guard active. Webhook handles: checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, invoice.payment_succeeded, invoice.payment_failed. Known gap: customer.deleted not handled (B203).
 
 - **Auth**: Clerk (Next.js native). Backend resolves `clerk_id` → internal `user_id` (UUID). Supabase `users` table with `clerk_id` column. In-memory LRU cache for `clerk_id → user_id` mapping. Without Clerk header → fallback to legacy UUID system (local dev only).
 
@@ -264,7 +264,7 @@ Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
   | SUPABASE_URL | Supabase project URL |
   | SUPABASE_SERVICE_KEY | Supabase service role key (never commit) |
   | CLERK_SECRET_KEY | Clerk backend secret (never commit) |
-  | STRIPE_SECRET_KEY | Stripe secret key — `sk_test_*` or `sk_live_*` (never commit) |
+  | STRIPE_SECRET_KEY | Stripe secret key — `sk_live_*` in prod (never commit) |
   | STRIPE_WEBHOOK_SECRET | Stripe webhook signing secret — `whsec_*` (never commit) |
   | STRIPE_PRICE_ID_STANDARD | Stripe Price ID for standard plan ($9.99/mo) |
   | STRIPE_PRICE_ID_FOUNDER | Stripe Price ID for Founding Climber plan ($4.99/mo) |

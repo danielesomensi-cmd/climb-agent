@@ -76,14 +76,16 @@
 
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
-| GTM-03 | **Pricing decision** — choose final price point and model | — | — | ✅ Done | Decided: $9.99/mo standard + $4.99/mo Founding Climber (first 20 users, locked forever), 15-day trial, USD. |
-| GTM-04 | **Stripe go-live** — two-tier pricing, B188 revert, subscribe page update | B | S | ✅ Done | Test mode verificato 2026-04-16. $4.99 Founding Climber + $9.99 Standard, trial 15gg, USD. Fix difensivo per stale customer_id incluso. Prossimo step: switch sk_test → sk_live per go-live pagamenti reali. |
-| B-stripe-recovery | **Stripe stale customer_id recovery** — handle deleted/invalid Stripe customers gracefully | B | XS | ✅ Done | Auto-recovery when Stripe customer no longer exists (e.g. manually deleted from Dashboard after currency change). Part of GTM-04 hardening. |
-| D205 | **Subscription status leak & webhook robustness audit** | D | S | ✅ Done | Root cause: fail-open check_subscription(). Webhook gap: customer.deleted not handled. Report: `docs/audit/D205_subscription_audit_2026_04_16.md`. |
-| B202 | **Fix fail-open → fail-closed subscription check** | B | S | ✅ Done | check_subscription() returns deny when no row + Stripe configured. Frontend use-subscription.ts defaults to canInteract=false. 3 new tests. |
-| B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | Proposed in D205. customer.deleted not handled; all webhook errors swallowed with 200. |
-| B204 | **Manage subscription button error handling** | B | XS | Open | Proposed in D205. Depends on B202. |
-| GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. Measure: how many complete onboarding in 48h. |
+| GTM-03 | **Pricing decision** — choose final price point and model | — | — | ✅ Done | USD pricing. $9.99/mo Standard + $4.99/mo Founding Climber (first 20, locked forever), 15-day trial. Two Stripe Price objects, not coupon. Product: `prod_ULXc8O7pmuA2`. |
+| GTM-04 | **Stripe go-live** — two-tier pricing, B188 revert, subscribe page update | B | S | ✅ Done | Live keys deployed 2026-04-16. Full E2E tested: checkout → access → portal → cancel at period end. D205 audit + B202 fix shipped same day. |
+| B-stripe-recovery | **Stripe stale customer_id recovery** — handle deleted/invalid Stripe customers gracefully | B | XS | ✅ Done | Auto-recovery when Stripe customer no longer exists. Part of GTM-04 hardening. |
+| D205 | **Subscription status leak & webhook robustness audit** | D | S | ✅ Done | Report: `docs/audit/D205_subscription_audit_2026_04_16.md`. Fail-open bug (H3), unhandled customer.deleted, portal button failure. Spawned B202/B203/B204/B205. |
+| B202 | **Fix fail-open → fail-closed subscription check** | B | S | ✅ Done | check_subscription() returns deny when no row + Stripe configured. Frontend defaults to canInteract=false on error. 1651 tests pass. |
+| B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
+| B204 | **Subscription guard 402 UX + cancel status display** | B | S | Open | Global 402 interceptor → redirect to /subscribe (not raw JSON). Portal 404 handling. cancel_at_period_end display. Depends on B202 ✅. |
+| B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
+| GTM-STRIPE-TAX | **Stripe Tax registration** | Config | XS | Open | Register tax ID for EU VAT. Dashboard config, not code. |
+| GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
 
@@ -109,10 +111,10 @@
 
 ## Priority 2 — Auth + Payments + DB (go-to-market blockers)
 
-Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Currently in open beta with Stripe paused.
+Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Stripe LIVE since 2026-04-16.
 
 - **Supabase migration** ✅ — JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions)
-- **A159 — Stripe subscriptions** ✅ — Code complete, sk_test verified, **temporarily disabled** (STRIPE_SECRET_KEY removed from Railway for open beta validation phase). Two-tier pricing ($9.99 standard + $4.99 Founding Climber) added in GTM-04. Go-live tracked as GTM-04 Phase 3.
+- **A159 — Stripe subscriptions** ✅ — **LIVE** (sk_live keys on Railway + Vercel). Two-tier pricing ($9.99 Standard + $4.99 Founding Climber). B202 fail-closed guard active. Known gap: customer.deleted webhook not handled (B203).
   - Backend: `subscription_guard.py`, 4 endpoints (status/checkout/portal/webhook), guards on 10 POST endpoints
   - Frontend: `useSubscription()` hook, `TrialBanner`, `/subscribe` page, settings portal link, guided session gate
   - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)

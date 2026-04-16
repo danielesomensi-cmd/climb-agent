@@ -27,11 +27,11 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Frontend components | 61 |
 <!-- STATUS_TABLE_END -->
 
-**Current phase:** Open beta — free access for ~6-10 real users. Stripe paused intentionally (STRIPE_SECRET_KEY removed from Railway). Re-enable with sk_live keys after usage validation (target: 6+ users at 3x/week for 2 consecutive weeks).
+**Current phase:** Paid launch prep. Stripe LIVE (sk_live keys on Railway + Vercel). B202 fail-closed subscription guard deployed. Founding Climber ($4.99/mo) and Standard ($9.99/mo) plans active. 4 beta testers (Christie, Cesar, Paolo, Agustin) — will need to subscribe after B202.
 
 **Persistence:** Supabase JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions). RLS enabled on all 6 tables (no policies, service role key bypasses).
 
-**Pricing at launch:** USD 9.99/month standard + USD 4.99/month Founding Climber (first 20 users, locked forever), 15-day free trial.
+**Pricing at launch:** USD $9.99/month Standard (15-day free trial) + USD $4.99/month Founding Climber (locked forever, first 20 users). Stripe LIVE.
 
 ---
 
