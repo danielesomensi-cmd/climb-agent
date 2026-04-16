@@ -431,7 +431,7 @@ L'LLM è l'interfaccia umana, non il cervello.
 | Decisione | Scelta | Motivazione |
 |-----------|--------|-------------|
 | **Persistenza** | Supabase Postgres + JSONB (prod), JSON files (dev/test) | Migrazione completata. `STORAGE_BACKEND=supabase` in produzione, `file` per pytest/dev |
-| **Frontend** | Next.js 14 + React + Tailwind + shadcn/ui (PWA) | Mobile-first, Claude Code lo genera bene, PWA si installa su telefono, shadcn/ui + Recharts per UI/grafici |
+| **Frontend** | Next.js 16 + React + Tailwind + shadcn/ui (PWA, Turbopack) | Mobile-first, Claude Code lo genera bene, PWA si installa su telefono, shadcn/ui + Recharts per UI/grafici |
 | **Assessment** | Ogni 6 settimane | Mini-test integrati in sessioni normali, non invasivo |
 | **Periodizzazione** | Hörst 4-3-2-1 con DUP | Concurrent training dentro ogni fase, pesi personalizzati da profilo debolezze |
 | **Deload** | Misto: programmato + adattivo + pre-trip | 3 trigger diversi per massima sicurezza (§5) |

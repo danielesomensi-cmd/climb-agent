@@ -32,7 +32,7 @@ Assessment (5 dimensions → radar profile 0-100)
 ## Tech stack
 
 - **Backend:** Python / FastAPI on Railway
-- **Frontend:** Next.js 14 PWA (React + Tailwind + shadcn/ui) on Vercel
+- **Frontend:** Next.js 16 PWA (React + Tailwind + shadcn/ui) on Vercel
 - **Auth:** Clerk
 - **Persistence:** Supabase Postgres + JSONB (production), JSON files (dev/test)
 - **Methodology:** Hörst 4-3-2-1 with DUP concurrent training
@@ -45,7 +45,7 @@ backend/
   api/          # FastAPI REST API
   catalog/      # JSON: exercises, sessions, templates
   tests/        # pytest suite
-frontend/       # Next.js 14 PWA
+frontend/       # Next.js 16 PWA
 docs/           # Design docs, vocabulary, roadmap
 scripts/        # Automation (sync_status.py)
 ```

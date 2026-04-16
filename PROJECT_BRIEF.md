@@ -65,7 +65,7 @@ compute_assessment_profile()    [assessment_v1]
 | Runtime logic | Pure Python, deterministic, no LLM |
 | Persistence | Supabase Postgres + JSONB (production), JSON files (dev/test) |
 | Auth | Clerk (Next.js native + backend verification) |
-| Frontend | Next.js 14 + React + Tailwind CSS + shadcn/ui (PWA mobile-first) |
+| Frontend | Next.js 16 + React + Tailwind CSS + shadcn/ui (PWA mobile-first, Turbopack) |
 | Periodization | Hörst 4-3-2-1 with DUP concurrent training |
 | Assessment | 5-axis profile, benchmarks by target grade, periodic retesting |
 | Deload | Mixed: programmed + adaptive + pre-trip |

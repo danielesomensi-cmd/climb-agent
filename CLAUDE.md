@@ -116,7 +116,7 @@ backend/
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
-frontend/            # Next.js 14 PWA (React, Tailwind, shadcn/ui)
+frontend/            # Next.js 16 PWA (React, Tailwind, shadcn/ui)
   src/app/           # Pages: main views + onboarding wizard + guided session
   src/components/    # layout, onboarding, training, guided, settings, whats-next, ui
   src/lib/           # api.ts, types.ts, hooks/
@@ -216,7 +216,7 @@ user_state.assessment + user_state.goal
 
 ## Frontend
 
-Next.js 14 App Router + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
+Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
 **Pages (35):** 12 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
 
