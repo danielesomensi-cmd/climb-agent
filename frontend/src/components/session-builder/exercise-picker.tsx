@@ -32,7 +32,7 @@ function exerciseToDefaults(ex: BuilderExercise): CustomSessionExercise {
     rest_between_sets_seconds: d.rest_between_sets_seconds ?? null,
     rest_between_reps_seconds: d.rest_between_reps_seconds ?? null,
     load_kg: 0,
-    notes: d.notes ?? "",
+    notes: "",
   };
 }
 

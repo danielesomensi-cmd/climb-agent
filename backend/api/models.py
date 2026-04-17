@@ -258,11 +258,11 @@ class CustomSessionExerciseEntry(BaseModel):
     exercise_id: str
     sets: int = Field(ge=1, le=20)
     reps: Optional[int] = Field(default=None, ge=1, le=100)
-    work_seconds: Optional[int] = Field(default=None, ge=1, le=600)
+    work_seconds: Optional[int] = Field(default=None, ge=1, le=3600)
     rest_between_sets_seconds: Optional[int] = Field(default=None, ge=0, le=600)
     rest_between_reps_seconds: Optional[int] = Field(default=None, ge=0, le=300)
     load_kg: Optional[float] = Field(default=0, ge=0, le=200)
-    notes: Optional[str] = Field(default=None, max_length=200)
+    notes: Optional[str] = Field(default=None, max_length=1000)
 
 
 class CustomSessionCreateRequest(BaseModel):

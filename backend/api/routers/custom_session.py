@@ -220,7 +220,7 @@ def get_blocks(user_id: Optional[str] = Depends(get_user_id)):
                 "rest_between_sets_seconds": prescription.get("rest_between_sets_seconds", 0),
                 "rest_between_reps_seconds": prescription.get("rest_between_reps_seconds"),
                 "load_kg": 0,
-                "notes": prescription.get("notes", ""),
+                "notes": "",
             })
 
         if exercises:
