@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { getState, setStartWeek } from "@/lib/api";
+import { useSubscription } from "@/lib/hooks/use-subscription";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,10 +44,19 @@ function buildPhaseOptions(phases: Phase[]): PhaseOption[] {
 export default function StartWeekPage() {
   const router = useRouter();
   const { isLoaded: authReady } = useAuth();
+  const { canInteract, loading: subLoading } = useSubscription();
   const [options, setOptions] = useState<PhaseOption[]>([]);
   const [selected, setSelected] = useState("0");
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+
+  // A-ACTIVATION-TIMING: route to /today if already trialing/active,
+  // /subscribe otherwise. Previous unconditional /subscribe redirect
+  // trapped paying users re-entering the onboarding flow.
+  const routeNext = () => {
+    if (subLoading) return;
+    router.push(canInteract ? "/today" : "/subscribe");
+  };
 
   // B155: gate on Clerk readiness
   useEffect(() => {
@@ -69,9 +79,9 @@ export default function StartWeekPage() {
       if (offset > 0) {
         await setStartWeek(offset);
       }
-      router.push("/subscribe");
+      routeNext();
     } catch {
-      router.push("/subscribe");
+      routeNext();
     } finally {
       setLoading(false);
     }
@@ -108,7 +118,7 @@ export default function StartWeekPage() {
         <Button
           variant="outline"
           disabled={loading}
-          onClick={() => router.push("/subscribe")}
+          onClick={routeNext}
         >
           Skip
         </Button>

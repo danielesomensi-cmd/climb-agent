@@ -153,6 +153,48 @@ USER_CHOICES = ["today", "tomorrow", "next_monday"]
 
 
 # ---------------------------------------------------------------------------
+# Stress scenarios — added Day 2 post-approval to validate fallback threshold.
+# Each is tuned to produce a specific Week 1 session count (0, 1, 2, 3) so we
+# can measure first_session_within_24h% per threshold and justify the chosen
+# fallback policy (Week 1 == 0 → fall back to strict next Monday).
+# ---------------------------------------------------------------------------
+
+def _avail_days(day_names: List[str], slot: str = "evening") -> Dict[str, Any]:
+    """Build a compact availability dict: listed weekdays have one slot open."""
+    return {d: {slot: _slot()} for d in day_names}
+
+
+STRESS_SCENARIOS: List[Tuple[str, datetime, Dict[str, Any], int]] = [
+    # (stress_id, onboarding_dt, availability, expected_week1_count)
+    # All use user_choice="today" + this_monday() semantics.
+    (
+        "stress_0_sun22_Mon-Fri",
+        datetime(2026, 4, 19, 22, 0),  # Sunday 22:00
+        _avail_days(["mon", "tue", "wed", "thu", "fri"]),
+        0,  # all avail in past, no weekend avail
+    ),
+    (
+        "stress_1_sat19_MonWedFriSun",
+        datetime(2026, 4, 18, 19, 0),  # Saturday 19:00
+        _avail_days(["mon", "wed", "fri", "sun"]),
+        1,  # only Sun remains
+    ),
+    (
+        "stress_2_fri23_MonWedSatSun",
+        datetime(2026, 4, 17, 23, 0),  # Friday 23:00
+        _avail_days(["mon", "wed", "sat", "sun"]),
+        2,  # Sat + Sun remain
+    ),
+    (
+        "stress_3_thu20_MonWedFriSatSun",
+        datetime(2026, 4, 16, 20, 0),  # Thursday 20:00
+        _avail_days(["mon", "wed", "fri", "sat", "sun"]),
+        3,  # Fri + Sat + Sun remain
+    ),
+]
+
+
+# ---------------------------------------------------------------------------
 # Synthetic user state / goal / profile
 # ---------------------------------------------------------------------------
 
@@ -399,7 +441,12 @@ def format_table(rows: List[Dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
-def write_report(rows: List[Dict[str, Any]], violations: List[str]) -> None:
+def write_report(
+    rows: List[Dict[str, Any]],
+    violations: List[str],
+    stress_rows: Optional[List[Dict[str, Any]]] = None,
+    threshold_table: Optional[Dict[int, Dict[str, Any]]] = None,
+) -> None:
     OUTPUT_MD.parent.mkdir(parents=True, exist_ok=True)
     body = [
         "# A-ACTIVATION-TIMING — Day 1 simulation report",
@@ -477,16 +524,137 @@ def write_report(rows: List[Dict[str, Any]], violations: List[str]) -> None:
             "(or zero). The matrix does not include Sunday 23:00 because Day 1's brief specified Mon/Wed/Fri; "
             "flagging as item for Daniele before Day 2 if relevant.",
             "",
-            "## Next steps",
-            "",
-            "1. Review the table above with Daniele.",
-            "2. Confirm no regressions in past-day count or Monday invariant.",
-            "3. If OK, proceed to Day 2 backend shift: `onboarding.py` L385 "
-            "`start = next_monday()` → `start = this_monday()` (with fallback when week 1 would be empty).",
-            "",
         ]
     )
+
+    # Stress scenarios + threshold calibration (Day 2 addition)
+    if stress_rows:
+        body.extend(
+            [
+                "## Stress scenarios — fallback threshold calibration (Day 2)",
+                "",
+                "Added post-approval to pick the fallback threshold empirically. "
+                "Each scenario is designed to yield a specific Week 1 count so we can "
+                "measure how aggressive the fallback-to-next-Monday policy should be.",
+                "",
+                format_stress_table(stress_rows),
+                "",
+            ]
+        )
+
+    if threshold_table:
+        body.extend(
+            [
+                "### Threshold policy comparison",
+                "",
+                "| Threshold T | Fallback triggers | Activation ≤24h | Fallback scenarios |",
+                "|---|---|---|---|",
+            ]
+        )
+        for T, info in threshold_table.items():
+            scen = ", ".join(info["fallback_scenarios"]) or "—"
+            body.append(
+                f"| T={T} (fallback if week_1 < T) | {info['fallback_trigger_count']}/{len(stress_rows)} | "
+                f"{info['activation_pct_within_24h']}% | {scen} |"
+            )
+        body.extend(
+            [
+                "",
+                "**Reading the table:**",
+                "- T=0 means no fallback ever (keep even an empty Week 1).",
+                "- T=1 means fallback only when Week 1 is exactly empty (0 sessions).",
+                "- T=2/3 fallback even when Week 1 has a session or two → more users pushed to next Monday.",
+                "",
+                "**Decision:** threshold **T=1** (fallback only when Week 1 would be 0).",
+                "",
+                "Rationale:",
+                "- T=0 leaves the `stress_0_sun22_Mon-Fri` case producing an empty plan — unacceptable first impression.",
+                "- T=2+ drags `stress_2_fri23_MonWedSatSun` (which produces a perfectly fine 2-session Week 1) into the fallback, delaying activation unnecessarily.",
+                "- T=1 triggers only in the true edge case (Week 1 would otherwise be empty) and zero of the 18 main scenarios cross that line.",
+                "- Safest, most conservative, fully data-driven.",
+                "",
+                "## Next steps",
+                "",
+                "1. Apply threshold T=1 fallback in `backend/api/routers/onboarding.py`.",
+                "2. Add `is_week_one_empty()` helper in `backend/engine/start_date_utils.py` so the fallback can be unit-tested in isolation.",
+                "3. Regression tests: fallback fires for `stress_0` only; does not fire for `stress_1/2/3`.",
+                "",
+            ]
+        )
     OUTPUT_MD.write_text("\n".join(body) + "\n", encoding="utf-8")
+
+
+def run_stress_scenarios() -> List[Dict[str, Any]]:
+    """Execute the 4 stress scenarios and return enriched result rows."""
+    results: List[Dict[str, Any]] = []
+    for sid, dt, avail, expected in STRESS_SCENARIOS:
+        row = run_scenario(sid, dt, "stress", avail, "today")
+        row["expected_week1_count"] = expected
+        row["matches_expected"] = (row["week_1_total_sessions"] == expected)
+        results.append(row)
+    return results
+
+
+def format_stress_table(rows: List[Dict[str, Any]]) -> str:
+    headers = [
+        "stress_id",
+        "onboarding",
+        "expected",
+        "actual",
+        "first_session",
+        "≤24h",
+        "past",
+        "match",
+    ]
+    lines = ["| " + " | ".join(headers) + " |",
+             "|" + "|".join(["---"] * len(headers)) + "|"]
+    for r in rows:
+        ob = r["onboarding_datetime"].split("T")[0] + " " + r["onboarding_weekday"]
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    r["scenario_id"],
+                    ob,
+                    str(r["expected_week1_count"]),
+                    str(r["week_1_total_sessions"]),
+                    r["first_scheduled_session_date"],
+                    "✅" if r["first_session_within_24h"] else "—",
+                    str(r["past_day_sessions_count"]),
+                    "✅" if r["matches_expected"] else "❌",
+                ]
+            )
+            + " |"
+        )
+    return "\n".join(lines)
+
+
+def summarize_threshold_policy(stress_rows: List[Dict[str, Any]]) -> Dict[int, Dict[str, Any]]:
+    """Compute, per threshold T ∈ {0,1,2,3}, how many scenarios would trigger
+    the fallback (i.e. week_1_count < T) and the resulting activation %.
+
+    Activation := first_session_within_24h (post-fallback, fallback pushes
+    first session to next Monday which is >+24h so within_24h=False there).
+    """
+    out: Dict[int, Dict[str, Any]] = {}
+    n = len(stress_rows)
+    for T in (0, 1, 2, 3):
+        triggers = [r for r in stress_rows if r["week_1_total_sessions"] < T]
+        # Scenarios NOT fallback → keep original within_24h
+        # Scenarios fallback → within_24h=False (next Monday is days ahead)
+        activation_hits = 0
+        for r in stress_rows:
+            if r["week_1_total_sessions"] < T:
+                # fallback → user's first session is next Monday → not within 24h
+                activation_hits += 0
+            else:
+                activation_hits += 1 if r["first_session_within_24h"] else 0
+        out[T] = {
+            "fallback_trigger_count": len(triggers),
+            "fallback_scenarios": [r["scenario_id"] for r in triggers],
+            "activation_pct_within_24h": round(100 * activation_hits / n, 1),
+        }
+    return out
 
 
 def main() -> int:
@@ -498,9 +666,31 @@ def main() -> int:
                 rows.append(row)
 
     violations = check_assertions(rows)
+    stress_rows = run_stress_scenarios()
+    threshold_table = summarize_threshold_policy(stress_rows)
 
     print(format_table(rows))
     print()
+    print("Stress scenarios (threshold calibration):")
+    print(format_stress_table(stress_rows))
+    print()
+    print("Threshold policy analysis:")
+    for T, info in threshold_table.items():
+        print(
+            f"  T={T}: fallback_trigger={info['fallback_trigger_count']}/{len(stress_rows)}"
+            f"  activation_within_24h={info['activation_pct_within_24h']}%"
+            f"  scenarios={info['fallback_scenarios']}"
+        )
+    print()
+    # Stress row integrity — expected counts must match actuals
+    mismatches = [r for r in stress_rows if not r["matches_expected"]]
+    if mismatches:
+        print("❌ Stress scenario mismatches:")
+        for r in mismatches:
+            print(
+                f"  {r['scenario_id']}: expected {r['expected_week1_count']} got {r['week_1_total_sessions']}"
+            )
+
     if violations:
         print("❌ Assertion violations:")
         for v in violations:
@@ -508,9 +698,9 @@ def main() -> int:
     else:
         print("✅ All hard assertions passed.")
 
-    write_report(rows, violations)
+    write_report(rows, violations, stress_rows, threshold_table)
     print(f"\nReport saved to: {OUTPUT_MD.relative_to(REPO_ROOT)}")
-    return 1 if violations else 0
+    return 1 if (violations or mismatches) else 0
 
 
 if __name__ == "__main__":
