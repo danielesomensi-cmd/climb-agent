@@ -2483,9 +2483,9 @@
         "work_seconds": 60,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Climb route sections with timed rest. Grade 1-2 below onsight. Focus sustained effort.",
+        "notes": "Climb route sections with timed rest. Grade 1 below onsight (~80% max). Focus sustained effort.",
         "grade_ref": "lead_max_os",
-        "grade_offset": -2
+        "grade_offset": -1
       },
       "stress_tags": {
         "fingers": "medium",

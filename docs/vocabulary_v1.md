@@ -398,8 +398,8 @@ Reference values (from literature):
 | offset | meaning | typical exercises |
 |--------|---------|-------------------|
 | 0 | at limit | limit bouldering |
-| -1 | one grade below | threshold, OTM |
-| -2 | two grades below | 4x4, route intervals, technique drills |
+| -1 | one grade below | threshold, OTM, route intervals |
+| -2 | two grades below | 4x4, technique drills |
 | -3 | three grades below | linked circuits, moderate volume |
 | -4 | four grades below | continuity, progressive ARC |
 | -5 | five grades below | ARC, regeneration — trivially easy |
