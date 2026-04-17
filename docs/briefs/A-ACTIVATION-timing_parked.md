@@ -64,3 +64,76 @@ only unconditional `router.push("/subscribe")` was in
 
 **Conclusion:** audit clean. No follow-up needed. Noted here to prevent
 re-investigation in a future brief.
+
+## 4. `/week?date=X` scroll-to-date parameter
+
+**Context:** Day 3 hero "Preview first session" CTA for pre-start users
+navigates to `/week?date=<first_session_date>`. Inspection of
+`frontend/src/app/(main)/week/page.tsx` shows the page does NOT read
+`?date=` — it always renders `weekNum=0` (the current/first macrocycle
+week).
+
+**Day 4 decision:** PARKED, not needed. For pre-start users the
+macrocycle's Week 1 IS the week of the first session, so the default
+`weekNum=0` view already shows the first session in the grid without
+any scroll. The `?date=` param is harmless (ignored) but the link works
+as intended.
+
+**Future consideration:** if we ever support navigating to arbitrary
+dates from the hero (e.g. a "mid-cycle pre-start" scenario), wire
+`useSearchParams()` in `/week/page.tsx` to derive `weekNum` from the
+ISO date. Low priority — no current UX need.
+
+## 5. `/dev/today-states` flash of "Not available"
+
+**Symptom:** On first paint the dev page briefly shows nothing
+(`allowed === null`), then either renders the harness or "Not
+available." The gate runs in `useEffect`, so there's a one-frame flash
+on Vercel preview.
+
+**Day 3 decision:** Accepted. The dev page is not user-facing; a
+one-frame flash during Vercel preview QA is not worth hardening. If we
+later need a true server-side block, add a check in
+`frontend/src/middleware.ts` (or `proxy.ts` — B-NEXT16 rename) to
+redirect `/dev/*` on production hostname.
+
+## 6. `/guided` preview mode for pre-start users
+
+**Context:** The pre-start hero offers "Preview first session" which
+links to `/week?date=…`. There is currently no way for a pre-start
+user to open the guided-session flow in "preview/read-only" mode — the
+guided session page assumes `status = planned` and expects to mutate
+state.
+
+**Parked.** Not a regression (pre-Day-3 users had no preview either),
+but a pre-start user might reasonably want to click through the full
+guided flow to set expectations. Would require a `?preview=true` flag
+that disables all writes + a visual "Preview" banner. Future A-class
+brief if user feedback surfaces the need.
+
+## 7. Email infra for retrofit / onboarding nudges
+
+**Context:** Day 4 brief originally considered emailing the 2 retrofit
+users ("your plan has been shifted"). Deferred because climb-agent
+has no transactional email infrastructure today (no SendGrid, no
+Clerk-templated emails for custom events, no cron runner).
+
+**Parked.** If we ever add in-app notifications or email infra, the
+retrofit script could be extended to emit a notification event. Until
+then, the retrofit is silent — acceptable for a 2-user one-shot. For
+any future retrofit touching >10 users, build notification infra
+first.
+
+## 8. `diagnose_dropoff.py` latency metrics
+
+**Context:** `scripts/diagnose_dropoff.py` currently reports stage
+drop-off counts but not time-to-first-session distribution or median
+gap between onboarding and first completed session. Would help
+validate that A-ACTIVATION-TIMING actually reduced the gap (not just
+the count).
+
+**Parked.** Post-retrofit, re-run `diagnose_dropoff.py` after ≥20
+post-Stripe users to get a new baseline. If the drop-off stays high,
+add latency metrics (onboarding_completed_at → first
+session_completion_log entry). Not worth building before the baseline
+exists.
