@@ -237,15 +237,15 @@ def test_e2e_turkish_getup_loop():
 # ─── B5: grade-relative (route_intervals) ────────────────────────────────────
 
 def test_e2e_grade_relative_loop():
-    """route_intervals: grade_ref + grade_offset resolves correctly."""
+    """route_intervals: grade_ref + grade_offset -1 resolves correctly."""
     us = _make_user_state(grades={"lead_max_os": "7c"})
 
-    day = _day_with_instance("route_intervals", {"grade_ref": "lead_max_os", "grade_offset": -2})
+    day = _day_with_instance("route_intervals", {"grade_ref": "lead_max_os", "grade_offset": -1})
     day = inject_targets(day, us)
     s = day["sessions"][0]["exercise_instances"][0]["suggested"]
     print(f"Suggested grade: {s.get('suggested_grade')}")
-    # "7c" → upper "7C" → step_grade("7C", -2) → "7A"
-    assert s["suggested_grade"] == "7A"
+    # "7c" → upper "7C" → step_grade("7C", -1) → "7B"
+    assert s["suggested_grade"] == "7B"
 
 
 # ─── B6: ARC training grade ──────────────────────────────────────────────────
@@ -279,10 +279,76 @@ def test_e2e_grade_ref_with_plus():
     """step_grade strips '+' before applying offset."""
     us = _make_user_state(grades={"lead_max_os": "7c+"})
 
-    day = _day_with_instance("route_intervals", {"grade_ref": "lead_max_os", "grade_offset": -2})
+    day = _day_with_instance("route_intervals", {"grade_ref": "lead_max_os", "grade_offset": -1})
     day = inject_targets(day, us)
     s = day["sessions"][0]["exercise_instances"][0]["suggested"]
     print(f"Suggested grade: {s.get('suggested_grade')}")
-    # "7c+" → upper "7C+" → step_grade strips "+" → "7C", offset -2 → "7A"
-    assert s["suggested_grade"] == "7A"
+    # "7c+" → upper "7C+" → step_grade strips "+" → "7C", offset -1 → "7B"
+    assert s["suggested_grade"] == "7B"
     assert "+" not in s["suggested_grade"]
+
+
+# ─── D93/D94: route_intervals offset correctness ────────────────────────────
+
+import json
+import os
+import pytest
+
+_EXERCISES_PATH = os.path.join(
+    os.path.dirname(__file__), os.pardir, os.pardir,
+    "backend", "catalog", "exercises", "v1", "exercises.json",
+)
+
+
+def _load_exercise(exercise_id: str) -> dict:
+    """Load a single exercise from the real catalog."""
+    with open(_EXERCISES_PATH) as f:
+        catalog = json.load(f)
+    exercises = catalog if isinstance(catalog, list) else catalog.get("exercises", catalog)
+    for ex in exercises:
+        if ex["id"] == exercise_id:
+            return ex
+    raise KeyError(f"{exercise_id} not found in catalog")
+
+
+def test_route_intervals_offset_matches_catalog():
+    """D93 test gap: verify suggested_grade from real catalog (not hand-built fixture).
+
+    Reads grade_offset from the actual exercise catalog and asserts the
+    resolved target grade is consistent. This test catches catalog drift.
+    """
+    ex = _load_exercise("route_intervals")
+    catalog_offset = ex["prescription_defaults"]["grade_offset"]
+    catalog_ref = ex["prescription_defaults"]["grade_ref"]
+
+    us = _make_user_state(grades={"lead_max_os": "7a"})
+    day = _day_with_instance(
+        "route_intervals",
+        {"grade_ref": catalog_ref, "grade_offset": catalog_offset},
+    )
+    day = inject_targets(day, us)
+    s = day["sessions"][0]["exercise_instances"][0]["suggested"]
+
+    # 7a → 7A (idx=6), offset from catalog → step_grade result
+    expected = step_grade("7A", catalog_offset)
+    assert s["suggested_grade"] == expected
+    # With current catalog (offset=-1): 7A - 1 = 6C
+    assert s["suggested_grade"] == "6C"
+
+
+@pytest.mark.parametrize("lead_max_os, expected_grade", [
+    ("8a", "7C"),
+    ("7a", "6C"),
+    ("6b", "6A"),
+    ("6a", "5C"),   # clamp edge: 6A(idx=3) - 1 = idx 2 = 5C
+])
+def test_route_intervals_grade_cases(lead_max_os, expected_grade):
+    """D94: route_intervals offset -1 across multiple user levels."""
+    us = _make_user_state(grades={"lead_max_os": lead_max_os})
+    day = _day_with_instance(
+        "route_intervals",
+        {"grade_ref": "lead_max_os", "grade_offset": -1},
+    )
+    day = inject_targets(day, us)
+    s = day["sessions"][0]["exercise_instances"][0]["suggested"]
+    assert s["suggested_grade"] == expected_grade
