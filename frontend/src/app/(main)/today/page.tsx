@@ -19,6 +19,7 @@ import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
 import { queryKeys } from "@/lib/query-keys";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
+import { TodayHeroCTA, type NextSessionInfo } from "@/components/training/today-hero-cta";
 import {
   Dialog,
   DialogContent,
@@ -350,6 +351,56 @@ function TodayContent() {
   const nextTrainingDay: DayPlan | undefined = weekPlan?.weeks
     .flatMap((w) => w.days)
     .find((d) => d.date > targetDate && d.sessions.length > 0);
+
+  /** A-ACTIVATION-TIMING Day 3: hero empty-state decision.
+   *
+   * pre_start   : today < macrocycle.start_date (fallback fired, plan is future)
+   * offday      : dayPlan exists but has 0 sessions AND there IS a next training day
+   * empty_week  : dayPlan empty (or missing) AND no next training day this week
+   * session     : dayPlan has sessions → DayCard renders, no hero
+   *
+   * pre_start supersedes offday/empty_week when today is before start_date.
+   */
+  const macrocycleStart: string | undefined =
+    (stateQuery.data?.macrocycle as { start_date?: string } | null | undefined)?.start_date;
+
+  const isPreStart = !!(
+    isViewingToday && macrocycleStart && targetDate < macrocycleStart
+  );
+
+  /** First session across the entire week_plan (used for pre_start preview) */
+  const firstSessionDay: DayPlan | undefined = weekPlan?.weeks
+    .flatMap((w) => w.days)
+    .find((d) => d.sessions.length > 0);
+
+  /** Derive NextSessionInfo for offday / pre_start hero preview */
+  const nextSessionInfo: NextSessionInfo | undefined = (() => {
+    const source = isPreStart ? firstSessionDay : nextTrainingDay;
+    if (!source || source.sessions.length === 0) return undefined;
+    const s = source.sessions[0];
+    const resolved = s.resolved as Record<string, unknown> | undefined;
+    const sessionMeta = resolved?.session as Record<string, unknown> | undefined;
+    const sessionName =
+      (sessionMeta?.session_name as string | undefined) ??
+      s.session_id
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+    return {
+      date: source.date,
+      weekday: source.weekday,
+      session_name: sessionName,
+      slot: s.slot,
+      location: s.location,
+    };
+  })();
+
+  const heroState: "pre_start" | "offday" | "empty_week" | null = (() => {
+    if (!isViewingToday || !weekPlan) return null;
+    if (isPreStart) return "pre_start";
+    const dayEmpty = !dayPlan || dayPlan.sessions.length === 0;
+    if (!dayEmpty) return null; // DayCard handles it
+    return nextTrainingDay ? "offday" : "empty_week";
+  })();
 
   /** Mark a session as completed */
   async function handleMarkDone(sessionId: string) {
@@ -1014,45 +1065,38 @@ function TodayContent() {
           />
         )}
 
-        {/* No sessions (rest day) */}
-        {!loading && !error && dayPlan && dayPlan.sessions.length === 0 && (
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <p className="text-muted-foreground">
-              No sessions {isViewingToday ? "today" : "on this day"}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Enjoy the rest and recover for the next session.
-            </p>
-            {nextTrainingDay && (
-              <Link
-                href={`/today?date=${nextTrainingDay.date}`}
-                className="mt-3 inline-block text-sm font-medium text-primary underline"
-              >
-                Preview next training day ({nextTrainingDay.weekday})
-              </Link>
-            )}
-          </div>
+        {/* A-ACTIVATION-TIMING Day 3: empty-state hero (today-viewing only) */}
+        {!loading && !error && heroState && (
+          <TodayHeroCTA
+            state={heroState}
+            nextSession={nextSessionInfo}
+            startDate={macrocycleStart}
+            onPreviewNextSession={
+              nextSessionInfo
+                ? () => router.push(`/today?date=${nextSessionInfo.date}`)
+                : undefined
+            }
+            onPreviewFirstSession={
+              nextSessionInfo
+                ? () => router.push(`/week?date=${nextSessionInfo.date}`)
+                : undefined
+            }
+            onChangeStartDate={() => router.push("/onboarding/start-week")}
+          />
         )}
 
-        {/* Weekly plan not found for this date */}
-        {!loading && !error && !dayPlan && weekPlan && (
-          <div className="rounded-lg border border-dashed p-8 text-center">
-            <p className="text-muted-foreground">
-              No sessions {isViewingToday ? "today" : "on this day"}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              No plan found for this date.
-            </p>
-            {nextTrainingDay && (
-              <Link
-                href={`/today?date=${nextTrainingDay.date}`}
-                className="mt-3 inline-block text-sm font-medium text-primary underline"
-              >
-                Preview next training day ({nextTrainingDay.weekday})
-              </Link>
-            )}
-          </div>
-        )}
+        {/* Non-today navigation with empty/missing day → minimal fallback */}
+        {!loading && !error && !heroState && weekPlan && !isViewingToday &&
+          (!dayPlan || dayPlan.sessions.length === 0) && (
+            <div className="rounded-lg border border-dashed p-8 text-center">
+              <p className="text-muted-foreground">No sessions on this day</p>
+              {dayPlan && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Enjoy the rest and recover for the next session.
+                </p>
+              )}
+            </div>
+          )}
 
         {/* Daily motivational quote */}
         {quote && !loading && (
