@@ -199,26 +199,29 @@ def get_blocks(user_id: Optional[str] = Depends(get_user_id)):
         else:
             continue
 
-        # Resolve template exercises to builder format
+        # Resolve template exercises to builder format.
+        # Template blocks have exercise_id at block level (not nested array).
+        # Blocks with mode=select_one or no exercise_id are dynamic — skip them.
         exercises: List[Dict[str, Any]] = []
         for block in template.get("blocks", []):
-            for ex_ref in block.get("exercises", []):
-                ex_id = ex_ref.get("exercise_id") or ex_ref.get("id", "")
-                ex_cat = catalog.get(ex_id, {})
-                defaults = ex_cat.get("prescription_defaults", {})
-                # Merge template-level overrides
-                prescription = {**defaults, **ex_ref.get("prescription", {})}
-                exercises.append({
-                    "exercise_id": ex_id,
-                    "name": ex_cat.get("name", ex_id),
-                    "sets": prescription.get("sets", 1),
-                    "reps": prescription.get("reps"),
-                    "work_seconds": prescription.get("work_seconds"),
-                    "rest_between_sets_seconds": prescription.get("rest_between_sets_seconds", 0),
-                    "rest_between_reps_seconds": prescription.get("rest_between_reps_seconds"),
-                    "load_kg": 0,
-                    "notes": prescription.get("notes", ""),
-                })
+            ex_id = block.get("exercise_id", "")
+            if not ex_id or ex_id not in catalog:
+                continue
+            ex_cat = catalog[ex_id]
+            defaults = ex_cat.get("prescription_defaults", {})
+            block_prescription = block.get("prescription", {})
+            prescription = {**defaults, **(block_prescription if isinstance(block_prescription, dict) else {})}
+            exercises.append({
+                "exercise_id": ex_id,
+                "name": ex_cat.get("name", ex_id),
+                "sets": prescription.get("sets", 1),
+                "reps": prescription.get("reps"),
+                "work_seconds": prescription.get("work_seconds"),
+                "rest_between_sets_seconds": prescription.get("rest_between_sets_seconds", 0),
+                "rest_between_reps_seconds": prescription.get("rest_between_reps_seconds"),
+                "load_kg": 0,
+                "notes": prescription.get("notes", ""),
+            })
 
         if exercises:
             result[block_type].append({

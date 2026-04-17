@@ -5,7 +5,6 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useBuilderExercises } from "@/lib/hooks/queries";
 import type { BuilderExercise, CustomSessionExercise } from "@/lib/types";
 import { Plus, Search, X } from "lucide-react";
@@ -116,8 +115,7 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
         </div>
 
         {/* Exercise list */}
-        <ScrollArea className="flex-1 max-h-[55vh]">
-          <div className="px-4 pb-4 space-y-1">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 space-y-1" style={{ maxHeight: "55vh" }}>
             {isLoading && (
               <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
             )}
@@ -165,7 +163,6 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
               );
             })}
           </div>
-        </ScrollArea>
       </DrawerContent>
     </Drawer>
   );

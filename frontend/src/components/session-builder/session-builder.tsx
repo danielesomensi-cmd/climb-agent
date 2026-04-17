@@ -87,6 +87,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [nameError, setNameError] = useState("");
+  const [saveError, setSaveError] = useState("");
 
   // Initialize from existing session in edit mode
   useEffect(() => {
@@ -184,19 +185,30 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
     const payload = {
       name: trimmedName,
       tags: [] as string[],
-      exercises: entries.map((e) => e.exercise),
+      exercises: entries.map((e) => ({
+        exercise_id: e.exercise.exercise_id,
+        sets: e.exercise.sets,
+        reps: e.exercise.reps ?? undefined,
+        work_seconds: e.exercise.work_seconds ?? undefined,
+        rest_between_sets_seconds: e.exercise.rest_between_sets_seconds ?? undefined,
+        rest_between_reps_seconds: e.exercise.rest_between_reps_seconds ?? undefined,
+        load_kg: e.exercise.load_kg || undefined,
+        notes: e.exercise.notes || undefined,
+      })),
     };
 
+    setSaveError("");
     try {
       if (isEditMode && sessionId) {
-        await updateMutation.mutateAsync({ id: sessionId, data: payload });
+        await updateMutation.mutateAsync({ id: sessionId, data: payload as Parameters<typeof updateMutation.mutateAsync>[0]["data"] });
       } else {
-        await createMutation.mutateAsync(payload);
+        await createMutation.mutateAsync(payload as Parameters<typeof createMutation.mutateAsync>[0]);
       }
       setIsDirty(false);
       router.push("/free-session");
-    } catch {
-      // Error is handled by TanStack Query
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setSaveError(msg);
     }
   };
 
@@ -206,8 +218,9 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
       await deleteMutation.mutateAsync(sessionId);
       setIsDirty(false);
       router.push("/free-session");
-    } catch {
-      // Error handled by TanStack Query
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Delete failed";
+      setSaveError(msg);
     }
   };
 
@@ -319,8 +332,15 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
       {entries.length > 0 && (
         <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground py-2">
           <span>Load: <strong className="text-foreground">{loadScore}</strong></span>
-          <span>\u00b7</span>
+          <span>&middot;</span>
           <span>~<strong className="text-foreground">{duration}</strong> min</span>
+        </div>
+      )}
+
+      {/* Error display */}
+      {saveError && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+          {saveError}
         </div>
       )}
 

@@ -71,7 +71,7 @@ export default function SessionViewPage() {
           </span>
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">
-              Load {session.estimated_load_score} \u00b7 ~{session.estimated_duration_minutes} min
+              Load {session.estimated_load_score} · ~{session.estimated_duration_minutes} min
             </span>
           </div>
         </div>
