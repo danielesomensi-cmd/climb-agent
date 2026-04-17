@@ -777,6 +777,8 @@ function FreeSessionContent() {
           workSeconds={circuitConfig.workSeconds}
           restSeconds={circuitConfig.restSeconds}
           totalExercises={circuitConfig.totalExercises}
+          difficulty={circuitConfig.difficulty}
+          hasBar={circuitConfig.hasBar}
           onComplete={handleCircuitComplete}
           onStop={handleCircuitStop}
           onExit={() => setStep("surface")}

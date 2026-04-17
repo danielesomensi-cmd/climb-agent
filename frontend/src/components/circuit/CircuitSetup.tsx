@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Flame } from "lucide-react";
+import type { Difficulty } from "./circuit-exercises";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -168,6 +169,8 @@ export interface CircuitConfig {
   workSeconds: number;
   restSeconds: number;
   totalExercises: number;
+  difficulty: Difficulty;
+  hasBar: boolean;
 }
 
 interface CircuitSetupProps {
@@ -175,8 +178,23 @@ interface CircuitSetupProps {
   onCancel: () => void;
 }
 
+const LS_DIFFICULTY_KEY = "circuit_difficulty";
+const LS_BAR_KEY = "circuit_has_bar";
+
 export function CircuitSetup({ onStart, onCancel }: CircuitSetupProps) {
   const [values, setValues] = useState<ParamValues>(getDefaults);
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => {
+    if (typeof window === "undefined") return "hard";
+    const stored = localStorage.getItem(LS_DIFFICULTY_KEY);
+    return stored === "easy" ? "easy" : "hard";
+  });
+  const [hasBar, setHasBar] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem(LS_BAR_KEY) === "true";
+  });
+
+  useEffect(() => { localStorage.setItem(LS_DIFFICULTY_KEY, difficulty); }, [difficulty]);
+  useEffect(() => { localStorage.setItem(LS_BAR_KEY, String(hasBar)); }, [hasBar]);
 
   const update = useCallback((key: string, val: number) => {
     setValues((prev) => ({ ...prev, [key]: val }));
@@ -217,6 +235,50 @@ export function CircuitSetup({ onStart, onCancel }: CircuitSetupProps) {
         ))}
       </div>
 
+      {/* Difficulty + Bar toggles */}
+      <div className="rounded-2xl border border-border bg-card/50 px-3 py-3 flex flex-col gap-3">
+        {/* Difficulty toggle */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-foreground">Difficulty</span>
+          <div className="flex rounded-lg border border-border bg-muted/50 p-0.5">
+            {(["easy", "hard"] as const).map((d) => (
+              <button
+                key={d}
+                onClick={() => setDifficulty(d)}
+                className={`rounded-md px-4 py-1.5 text-sm font-semibold capitalize transition-all ${
+                  difficulty === d
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {d === "easy" ? "Easy" : "Hard"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-border/50" />
+
+        {/* Pull-up bar checkbox */}
+        <label className="flex items-center justify-between cursor-pointer">
+          <span className="text-sm font-medium text-foreground">Pull-up bar available</span>
+          <button
+            role="switch"
+            aria-checked={hasBar}
+            onClick={() => setHasBar((v) => !v)}
+            className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors ${
+              hasBar ? "bg-emerald-600" : "bg-muted"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                hasBar ? "translate-x-5" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </label>
+      </div>
+
       {/* Computed summary */}
       <div className="text-center">
         <span className="text-lg font-bold tabular-nums">{totalExercises} exercises</span>
@@ -228,7 +290,7 @@ export function CircuitSetup({ onStart, onCancel }: CircuitSetupProps) {
 
       {/* Start */}
       <button
-        onClick={() => onStart({ durationMin: duration, workSeconds: work, restSeconds: rest, totalExercises })}
+        onClick={() => onStart({ durationMin: duration, workSeconds: work, restSeconds: rest, totalExercises, difficulty, hasBar })}
         disabled={totalExercises < 1}
         className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 text-lg font-bold text-white shadow-lg shadow-emerald-600/25 transition-all active:scale-[0.98] disabled:opacity-50"
       >

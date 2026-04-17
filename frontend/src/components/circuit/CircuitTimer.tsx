@@ -6,6 +6,7 @@ import { getAudioContext, unlockAudio } from "@/lib/audio-unlock";
 import { speakPhaseTransition } from "@/lib/voice-cues";
 import {
   type CircuitExercise,
+  type Difficulty,
   CORE_EXERCISES,
   generateCircuitSequence,
 } from "./circuit-exercises";
@@ -92,6 +93,8 @@ interface CircuitTimerProps {
   workSeconds: number;
   restSeconds: number;
   totalExercises: number;
+  difficulty: Difficulty;
+  hasBar: boolean;
   onComplete: (result: CircuitResult) => void;
   onStop: (result: CircuitResult) => void;
   onExit: () => void;
@@ -101,13 +104,15 @@ export function CircuitTimer({
   workSeconds,
   restSeconds,
   totalExercises,
+  difficulty,
+  hasBar,
   onComplete,
   onStop,
   onExit,
 }: CircuitTimerProps) {
   // Generate exercise sequence once on mount
   const [sequence] = useState<CircuitExercise[]>(() =>
-    generateCircuitSequence(CORE_EXERCISES, totalExercises)
+    generateCircuitSequence(CORE_EXERCISES, totalExercises, { difficulty, hasBar })
   );
 
   const [phase, setPhase] = useState<CircuitPhase>("prepare");
