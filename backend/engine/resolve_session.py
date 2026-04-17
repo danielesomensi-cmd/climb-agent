@@ -597,22 +597,39 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
     """
     Determines where the session happens and what equipment is available there.
 
-    Priority:
-    1) session["context"]["location"] (or "place") if present
-    2) user_state default location: user_state["defaults"]["location"] (optional)
-    3) fallback: "home"
+    Priority (B206 — single source of truth: runtime state, then planner metadata):
+    1) user_state["context"]["location"] — injected by API routers from ss.location
+    2) session["context"]["location"] (or "place") — legacy template hint (catalog cleanup removed most)
+    3) _SESSION_META[session_id]["location"] — viable locations from planner (use if unique)
+    4) user_state["defaults"]["location"]
+    5) fallback: "home"
 
     Equipment comes from user_state["equipment"]["home"] or matching gym.
     """
-    location = "home"
-    if isinstance(session.get("context"), dict):
-        location = session["context"].get("location") or session["context"].get("place") or location
+    location: Optional[str] = None
 
-    if user_state and location == "home":
-        defaults = user_state.get("defaults") or {}
-        location = defaults.get("location") or location
+    user_ctx = user_state.get("context") if isinstance(user_state, dict) else None
+    if isinstance(user_ctx, dict):
+        location = norm_str(user_ctx.get("location")) or None
 
-    location = norm_str(location) or "home"
+    if not location and isinstance(session.get("context"), dict):
+        location = norm_str(session["context"].get("location") or session["context"].get("place")) or None
+
+    if not location:
+        session_id = norm_str(session.get("id"))
+        if session_id:
+            # Late import to avoid circular dep at module load
+            from backend.engine.planner_v2 import _SESSION_META
+            meta = _SESSION_META.get(session_id)
+            if meta:
+                viable = tuple(meta.get("location") or ())
+                if len(viable) == 1:
+                    location = viable[0]
+
+    if not location and user_state:
+        location = norm_str((user_state.get("defaults") or {}).get("location")) or None
+
+    location = location or "home"
 
     equipment: List[str] = []
     if user_state:
@@ -1191,6 +1208,13 @@ def _inject_prehab_for_limitations(
 # ---------------------------
 # Resolve session (B + fallback)
 # ---------------------------
+
+# B206: hook for renaming legacy session IDs without changing caller paths.
+# Key = incoming session_id (filename stem), value = target session_id.
+# Empty for now — extension point for future catalog consolidation briefs.
+LEGACY_SESSION_ALIASES: Dict[str, str] = {}
+
+
 def resolve_session(
     repo_root: str,
     session_path: str,
@@ -1207,6 +1231,13 @@ def resolve_session(
     # --- Input validation ---
     if not session_path:
         raise ValueError("resolve_session: session_path must be a non-empty string")
+
+    # B206: resolve legacy session aliases
+    session_id = os.path.splitext(os.path.basename(session_path))[0]
+    if session_id in LEGACY_SESSION_ALIASES:
+        target = LEGACY_SESSION_ALIASES[session_id]
+        session_path = os.path.join(os.path.dirname(session_path), f"{target}.json")
+
     full_session_path = os.path.join(repo_root, session_path)
     if not os.path.isfile(full_session_path):
         raise ValueError(f"resolve_session: session file not found: {full_session_path}")

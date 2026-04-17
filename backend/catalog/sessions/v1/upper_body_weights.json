@@ -13,9 +13,6 @@
     "sports": ["climbing"]
   },
   "required_equipment": [],
-  "context": {
-    "location": "home"
-  },
   "time_budget": {
     "target_duration_min": 40,
     "hard_cap_min": 50

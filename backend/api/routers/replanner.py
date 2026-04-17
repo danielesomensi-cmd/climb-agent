@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from backend.api.deps import REPO_ROOT, current_phase_and_week, get_user_id, load_state, require_active_subscription, save_state
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
+from backend.engine.planner_v2 import _SESSION_META
 from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
 from backend.engine.resolve_session import resolve_session
 
@@ -42,7 +43,11 @@ def _session_display_name(session_id: str) -> str:
 
 
 def _get_supplementary_sessions(location: str) -> list:
-    """Scan session catalog for supplementary sessions compatible with *location*."""
+    """Scan session catalog for supplementary sessions compatible with *location*.
+
+    B206: location viability comes from _SESSION_META (source of truth), not from
+    the session JSON's (now removed) context.location hint.
+    """
     results = []
     sessions_dir = REPO_ROOT / SESSIONS_DIR
     if not sessions_dir.is_dir():
@@ -54,14 +59,13 @@ def _get_supplementary_sessions(location: str) -> list:
             continue
         if not data.get("supplementary"):
             continue
-        # Filter by location compatibility
-        ctx_location = (data.get("context") or {}).get("location", "")
-        if location == "home" and ctx_location not in ("home", "both", "any"):
-            continue
-        if location == "gym" and ctx_location not in ("gym", "both", "any"):
+        session_id = data.get("id") or path.stem
+        meta = _SESSION_META.get(session_id)
+        viable_locs = set(meta.get("location") or ()) if meta else set()
+        if viable_locs and location not in viable_locs:
             continue
         results.append({
-            "session_id": data.get("id", path.stem),
+            "session_id": session_id,
             "session_name": data.get("name", path.stem.replace("_", " ").title()),
             "required_equipment": data.get("required_equipment", []),
             "time_budget": data.get("time_budget", ""),

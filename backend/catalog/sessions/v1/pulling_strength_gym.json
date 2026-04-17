@@ -16,9 +16,6 @@
     "sports": ["climbing"]
   },
   "required_equipment": ["pullup_bar"],
-  "context": {
-    "location": "gym"
-  },
   "time_budget": {
     "target_duration_min": 80,
     "hard_cap_min": 100

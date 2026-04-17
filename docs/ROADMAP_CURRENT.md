@@ -87,6 +87,7 @@
 | A199 | **Dynamic slider capping on availability page** | A | XS | ✅ Done | Frontend-only UX improvement. |
 | C204 | **Pump-management cues to route_on_the_minute** | C | XS | ✅ Done | Catalog content addition. |
 | D209 | **Next.js version audit** — rename middleware→proxy, update docs 14→16 | D | XS | ✅ Done | Doc + rename only. |
+| B206 | **Single source of truth for session location** — invert resolver precedence (runtime > template) + strip `context.location` from 28 catalog JSONs + derive location from `_SESSION_META` | B | M | ✅ Done | Fixes Daniele 2026-04-17: `aerobic_pyramid_intervals` resolved for `finger_maintenance_gym` on home slot. Added `LEGACY_SESSION_ALIASES` extension point. |
 | D93 | **Grade offset catalog audit** — full-catalog review of all 31 `grade_offset` exercises | D | M | ✅ Done | Audit report: `docs/audit/audit_route_intervals_offset_D93.md`. Found `route_intervals` misclassified at -2 (should be -1). |
 | B94 | **Fix `route_intervals.grade_offset` -2 → -1** + test gap fix + vocab sync | B | S | ✅ Done | Catalog patch, 5 new tests (1 catalog e2e + 4 parametrized), vocabulary synced. `emom_bouldering` deferred to D95. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |

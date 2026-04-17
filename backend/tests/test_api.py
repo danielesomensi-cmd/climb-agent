@@ -150,21 +150,25 @@ class TestCatalog:
         assert all("id" in s for s in data["sessions"])
 
     def test_sessions_location_and_name_extraction(self):
-        """B30/B31: catalog returns correct name, type, location for all session formats."""
+        """B30/B31/B206: catalog returns correct name, type, location for all session formats.
+
+        B206: location is derived from _SESSION_META (planner viable locations),
+        not from the removed context.location template hint.
+        """
         r = client.get("/api/catalog/sessions")
         data = r.json()
         by_id = {s["id"]: s for s in data["sessions"]}
 
-        # New-style session (easy_climbing_deload) should use top-level fields
+        # Single-location session → "gym"
         deload = by_id["easy_climbing_deload"]
         assert deload["name"] == "Easy Climbing — Deload"
         assert deload["type"] == "climbing"
         assert deload["location"] == "gym"
 
-        # Old-style session (strength_long) should extract from nested context.location
+        # Multi-location session (strength_long viable at gym + home) → "both"
         strength = by_id["strength_long"]
-        assert strength["name"] != "strength_long"  # should use the name field
-        assert strength["location"] == "gym"  # from context.location
+        assert strength["name"] != "strength_long"
+        assert strength["location"] == "both"
 
 
 # -----------------------------------------------------------------------

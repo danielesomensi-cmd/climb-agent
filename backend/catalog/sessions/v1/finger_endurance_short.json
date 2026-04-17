@@ -5,9 +5,6 @@
   "required_equipment": [
     "hangboard"
   ],
-  "context": {
-    "location": "home"
-  },
   "time_budget": {
     "target_duration_min": 40,
     "hard_cap_min": 50

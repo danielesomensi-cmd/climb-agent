@@ -17,9 +17,6 @@
   },
   "required_equipment": ["gym_routes"],
   "boulder_fallback": "limit_boulder_gym",
-  "context": {
-    "location": "gym"
-  },
   "time_budget": {
     "target_duration_min": 100,
     "hard_cap_min": 120

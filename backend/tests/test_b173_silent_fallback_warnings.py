@@ -56,6 +56,8 @@ def test_get_location_equipment_warns_on_unknown_gym_id(caplog):
     from backend.engine.resolve_session import get_location_equipment
 
     user_state = {
+        # B206: location now comes from user_state.context first; session.context is legacy hint.
+        "context": {"location": "gym", "gym_id": "UNKNOWN_ID"},
         "equipment": {
             "gyms": GYMS,
             "home": [],

@@ -17,8 +17,17 @@ SUPPLEMENTARY_IDS = {
     "pulling_strength_gym",
 }
 
+# B206: location viability now reflects _SESSION_META (single source of truth):
+# upper_body_weights + legs_strength are viable at ("gym", "home") so they
+# appear in BOTH pools, not home-only as the old context.location hint claimed.
 HOME_SUPPLEMENTARY = {"upper_body_weights", "legs_strength"}
-GYM_SUPPLEMENTARY = {"lower_body_gym", "heavy_conditioning_gym", "pulling_strength_gym"}
+GYM_SUPPLEMENTARY = {
+    "lower_body_gym",
+    "heavy_conditioning_gym",
+    "pulling_strength_gym",
+    "upper_body_weights",
+    "legs_strength",
+}
 
 
 # ---------- Catalog flag ----------

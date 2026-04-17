@@ -19,9 +19,6 @@
     ]
   },
   "required_equipment": ["hangboard"],
-  "context": {
-    "location": "home"
-  },
   "time_budget": {
     "target_duration_min": 35,
     "hard_cap_min": 45

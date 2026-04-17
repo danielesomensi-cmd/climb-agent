@@ -13,9 +13,6 @@
     "sports": ["climbing"]
   },
   "required_equipment": ["dumbbell"],
-  "context": {
-    "location": "gym"
-  },
   "time_budget": {
     "target_duration_min": 80,
     "hard_cap_min": 95
