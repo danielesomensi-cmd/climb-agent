@@ -12,6 +12,7 @@ from pydantic import BaseModel
 
 from backend.api.deps import get_user_id
 from backend.engine.subscription_guard import (
+    _ACTIVE_STATUSES,
     check_subscription,
     get_subscription_row,
     upsert_subscription,
@@ -89,6 +90,19 @@ def create_checkout_session(
 
     # Check if user already has a stripe_customer_id
     row = get_subscription_row(user_id)
+
+    # B212: short-circuit if user is already trialing/active.  Prevents the
+    # incondizional "pending_checkout" upsert below from clobbering a live
+    # trial/subscription when the frontend re-hits /checkout (e.g. after
+    # Reset & Restart or a misrouted /subscribe tap).  Users with past_due
+    # or canceled can still proceed to checkout.
+    if row and row.get("status") in _ACTIVE_STATUSES:
+        return {
+            "already_active": True,
+            "status": row.get("status"),
+            "redirect_url": "/today",
+        }
+
     existing_customer_id: Optional[str] = row.get("stripe_customer_id") if row else None
 
     checkout_params: dict = {

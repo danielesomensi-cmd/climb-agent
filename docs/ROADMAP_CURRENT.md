@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-17 (B206 resolver fix + D210 verification + B208 planner root-cause fix)
+> Last updated: 2026-04-17 (B212 checkout-guard against overwriting active subscription)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -82,6 +82,7 @@
 | B-BYPASS-DANIELE | **Founder subscription bypass** — env var `BYPASS_USER_IDS` skips Stripe check for founder | B | XS | ✅ Done | `subscription_guard.py` reads comma-separated UUIDs from env var. No Stripe customer created for founder. Railway env var set. |
 | D205 | **Subscription status leak & webhook robustness audit** | D | S | ✅ Done | Report: `docs/audit/D205_subscription_audit_2026_04_16.md`. Fail-open bug (H3), unhandled customer.deleted, portal button failure. Spawned B202/B203/B204/B205. |
 | B202 | **Fix fail-open → fail-closed subscription check** | B | S | ✅ Done | check_subscription() returns deny when no row + Stripe configured. Frontend defaults to canInteract=false on error. 1651 tests pass. |
+| B212 | **Guard checkout endpoint against overwriting active/trialing subscription** | B | XS | ✅ Done | Short-circuit in `POST /api/subscription/checkout` when existing row status ∈ `_ACTIVE_STATUSES`. Returns `{already_active, status, redirect_url}` instead of creating a second Checkout Session + writing `pending_checkout`. Frontend redirects to `/today` when `already_active=true`. 4 new tests in `test_b212_checkout_guard.py`. Fixes Daniele 2026-04-17 (trial Stripe `trialing` clobbered a `pending_checkout` dopo Reset + re-onboarding). |
 | D-MAINT-01 | **Fix endpoint table in CLAUDE.md** — correct count 54→56 | D | XS | ✅ Done | Doc-only fix. |
 | A198 | **Repo cleanup per D197 audit** — delete 24 obsolete docs/scripts, archive council reports | A | S | ✅ Done | Hygiene sweep. |
 | A199 | **Dynamic slider capping on availability page** | A | XS | ✅ Done | Frontend-only UX improvement. |

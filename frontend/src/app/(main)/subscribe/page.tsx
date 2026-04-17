@@ -21,8 +21,17 @@ export default function SubscribePage() {
     setError(null);
     try {
       const email = user?.primaryEmailAddress?.emailAddress;
-      const { checkout_url } = await createCheckoutSession(email, priceId);
-      window.location.href = checkout_url;
+      const res = await createCheckoutSession(email, priceId);
+      // B212: backend short-circuits when the user is already trialing/active.
+      // Redirect to /today instead of attempting a second checkout.
+      if (res.already_active) {
+        window.location.href = res.redirect_url ?? "/today";
+        return;
+      }
+      if (!res.checkout_url) {
+        throw new Error("Checkout URL missing from response.");
+      }
+      window.location.href = res.checkout_url;
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Could not start checkout. Try again.",

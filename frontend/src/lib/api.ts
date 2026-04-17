@@ -476,8 +476,15 @@ export type SubscriptionStatus = {
 export const getSubscriptionStatus = () =>
   request<SubscriptionStatus>("/api/subscription/status");
 
+export type CheckoutResponse = {
+  checkout_url?: string;
+  already_active?: boolean;
+  status?: string;
+  redirect_url?: string;
+};
+
 export const createCheckoutSession = (email?: string, priceId?: string) =>
-  request<{ checkout_url: string }>("/api/subscription/checkout", {
+  request<CheckoutResponse>("/api/subscription/checkout", {
     method: "POST",
     body: JSON.stringify({ email: email ?? null, price_id: priceId ?? null }),
   });
