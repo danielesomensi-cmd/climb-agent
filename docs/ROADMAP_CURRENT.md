@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-17 (B206 single-source-of-truth location + D210 verification)
+> Last updated: 2026-04-17 (B206 resolver fix + D210 verification + B208 planner root-cause fix)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -91,7 +91,7 @@
 | D210 | **B206 verification audit** — before/after comparison against pre-B206 worktree (5 scenarios + Daniele prod regression) | D | S | ✅ Done | Report: `docs/audit/D210_b206_verification.md`. Zero gym regressions, Daniele real-incompat 2→1. Surfaced residual B207 (warmup_easy_boulders bypass). |
 | D93 | **Grade offset catalog audit** — full-catalog review of all 31 `grade_offset` exercises | D | M | ✅ Done | Audit report: `docs/audit/audit_route_intervals_offset_D93.md`. Found `route_intervals` misclassified at -2 (should be -1). |
 | B94 | **Fix `route_intervals.grade_offset` -2 → -1** + test gap fix + vocab sync | B | S | ✅ Done | Catalog patch, 5 new tests (1 catalog e2e + 4 parametrized), vocabulary synced. `emom_bouldering` deferred to D95. |
-| B208 | **Eliminate `_expand_session_locations` — planner equipment-only** | B | M | Open **P1** | Upstream cause of B206 bug class. Planner Pass 2.5 silently routes `*_gym` sessions to home when home has required equipment, contradicting explicit session intent. Was Phase 1 design follow-up brief B2. Requires STOP-gate (touches `planner_v2.py`). |
+| B208 | **Narrow `_expand_session_locations` to wall-surface sessions** (Option A) | B | S | ✅ Done | Root-cause fix upstream of B206. Planner now only re-routes to home when session requires a wall surface (gym_boulder/spraywall/board_*/homewall/gym_routes) AND home has a wall equivalent. Hangboard-/weight-only gym sessions stay at their declared location. 2 regression tests added. Proposal: `docs/briefs/B208_proposal.md`. |
 | B207 | **Harden `warmup_climbing` template — fallback for no-wall home** | B | S | Open **P2** | Residual from D210. `warmup_easy_boulders` referenced by explicit `exercise_id`, bypasses P0 equipment gate. Options: (a) filter-based selection with equipment gate, or (b) add `warmup_general_mobility` fallback. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
 | B204 | **Subscription guard 402 UX + cancel status display** | B | S | Open | Global 402 interceptor → redirect to /subscribe (not raw JSON). Portal 404 handling. cancel_at_period_end display. Depends on B202 ✅. |

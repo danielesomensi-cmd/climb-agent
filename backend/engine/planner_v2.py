@@ -21,7 +21,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
-from backend.engine.equipment_utils import expand_equipment
+from backend.engine.equipment_utils import BOULDER_SURFACES, expand_equipment
 from backend.engine.macrocycle_v1 import (
     PHASE_INTENSITY_CAP,
     PHASE_ORDER,
@@ -142,6 +142,13 @@ _INTENSITY_TO_LOAD: Dict[str, int] = {"low": 20, "medium": 40, "high": 65, "max"
 _CLIMBING_FALLBACKS: Tuple[str, ...] = ("technique_focus_gym", "easy_climbing_deload")
 
 
+# B208: a session is expanded to "home" only when it requires a wall surface
+# AND the user has a wall-equivalent at home. This preserves the B137/B159
+# homewall/board case without re-routing hangboard- or weights-only gym
+# sessions to home (which produced the Daniele 2026-04-17 bug).
+_WALL_SURFACES_REQUIRING_HOME_EXPANSION: frozenset[str] = BOULDER_SURFACES | {"gym_routes"}
+
+
 def _expand_session_locations(
     session_locations: Tuple[str, ...],
     required_equipment: Optional[List[str]],
@@ -150,11 +157,16 @@ def _expand_session_locations(
     """Expand session locations when home equipment satisfies gym requirements.
 
     B137: homewall → gym_boulder.  B159: generalised via expand_equipment.
+    B208: scoped to wall-surface requirements only — sessions requiring just
+    hangboard/pullup_bar/dumbbell are NOT re-routed to home (the planner must
+    respect the catalog's explicit gym intent for non-wall sessions).
     """
     if "home" in session_locations:
         return session_locations  # already home-compatible
     if not home_equipment or not required_equipment:
         return session_locations
+    if not set(required_equipment) & _WALL_SURFACES_REQUIRING_HOME_EXPANSION:
+        return session_locations  # B208: non-wall sessions stay at declared locations
     home_eq = set(expand_equipment(home_equipment))
     if all(eq in home_eq for eq in required_equipment):
         return tuple(session_locations) + ("home",)

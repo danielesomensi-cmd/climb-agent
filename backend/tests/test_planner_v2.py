@@ -1023,6 +1023,70 @@ class TestPlannerV2HomewallExpansion(unittest.TestCase):
                          f"Route sessions should never appear at home. Got: {route_sids}")
 
 
+class TestPlannerV2B208NarrowExpansion(unittest.TestCase):
+    """B208: _expand_session_locations only triggers for wall-surface sessions.
+
+    Reproduces Daniele 2026-04-17: finger_maintenance_gym (req=["hangboard"])
+    was silently re-routed to a home slot because every required_equipment
+    item existed at home, even though the session is authored as gym-only and
+    its warmup template assumes a gym wall surface.
+    """
+
+    def test_finger_maintenance_gym_with_hangboard_at_home_stays_at_gym(self):
+        """User has a gym AND hangboard at home: finger_maintenance_gym must
+        be placed at the gym slot, never at the home slot."""
+        # Both gym and home days available; home day prefers home.
+        availability = {
+            "mon": {"evening": {"available": True, "preferred_location": "gym",
+                                "gym_id": "blocx"}},
+            "wed": {"evening": {"available": True, "preferred_location": "gym",
+                                "gym_id": "blocx"}},
+            "fri": {"evening": {"available": True, "preferred_location": "home"}},
+            "sat": {"morning": {"available": True, "preferred_location": "gym",
+                                "gym_id": "blocx"}},
+        }
+        plan = generate_phase_week(**_make_kwargs(
+            "power_endurance",
+            availability=availability,
+            home_equipment=["hangboard", "pullup_bar", "band", "dumbbell"],
+            gyms=[{"gym_id": "blocx", "priority": 1,
+                   "equipment": ["gym_boulder", "gym_routes", "hangboard",
+                                 "pullup_bar", "dumbbell"]}],
+            default_gym_id="blocx",
+        ))
+        for day in plan["weeks"][0]["days"]:
+            for ss in day.get("sessions", []):
+                if ss["session_id"] == "finger_maintenance_gym":
+                    self.assertEqual(ss["location"], "gym",
+                                     f"finger_maintenance_gym must stay at gym "
+                                     f"when home has only hangboard (no wall). "
+                                     f"Got: {ss['location']} on {day['date']}")
+
+    def test_hangboard_only_user_no_gym_does_not_get_finger_maintenance_gym_at_home(self):
+        """User has hangboard at home and no gym: finger_maintenance_gym is NOT
+        re-routed to home; only finger_maintenance_home is scheduled (or no
+        finger-maintenance session at all)."""
+        availability = {wd: {"evening": {"available": True,
+                                         "preferred_location": "home"}}
+                        for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+        plan = generate_phase_week(**_make_kwargs(
+            "power_endurance",
+            availability=availability,
+            home_equipment=["hangboard", "pullup_bar", "band"],
+            gyms=[],
+            default_gym_id=None,
+        ))
+        session_ids = [
+            ss["session_id"]
+            for day in plan["weeks"][0]["days"]
+            for ss in day.get("sessions", [])
+        ]
+        self.assertNotIn("finger_maintenance_gym", session_ids,
+                         "finger_maintenance_gym must never be scheduled "
+                         "when the user has no wall at home and no gym. "
+                         f"Got: {session_ids}")
+
+
 class TestPlannerV2B84GymSelection(unittest.TestCase):
     """B84 — Bug A: gym selection iterates all gyms by priority until one has equipment."""
 
