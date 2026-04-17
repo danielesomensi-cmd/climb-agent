@@ -430,13 +430,24 @@ export const CORE_EXERCISES: CircuitExercise[] = [
   },
 ];
 
+export interface CircuitSelectionConfig {
+  difficulty: Difficulty;
+  hasBar: boolean;
+}
+
 /**
- * Generate a randomized circuit sequence using Fisher-Yates shuffle.
- * Guarantees no two consecutive exercises are the same when pool is exhausted and reshuffled.
+ * Generate a randomized circuit sequence with difficulty-based 80/20 split.
+ *
+ * 1. Filter out bar exercises if !hasBar
+ * 2. Split into easy/hard pools
+ * 3. Allocate 80% from chosen difficulty, 20% from the other
+ * 4. Cap to available pool sizes, fill remainder from the other pool
+ * 5. Shuffle and merge
  */
 export function generateCircuitSequence(
   pool: CircuitExercise[],
-  count: number
+  count: number,
+  config?: CircuitSelectionConfig
 ): CircuitExercise[] {
   if (pool.length === 0 || count <= 0) return [];
 
@@ -449,22 +460,50 @@ export function generateCircuitSequence(
     return a;
   };
 
-  const shuffled = fisherYates(pool);
-
-  if (count <= pool.length) {
-    return shuffled.slice(0, count);
+  // If no config provided, use legacy behavior (full pool, no filtering)
+  if (!config) {
+    const shuffled = fisherYates(pool);
+    return shuffled.slice(0, Math.min(count, pool.length));
   }
 
-  // If count > pool size, cycle through reshuffled pool
-  // Guarantee: no two consecutive exercises are the same
-  const sequence = [...shuffled];
-  while (sequence.length < count) {
-    const reshuffled = fisherYates(pool);
-    // Avoid last exercise of previous batch === first of new batch
-    if (reshuffled[0].id === sequence[sequence.length - 1].id && reshuffled.length > 1) {
-      [reshuffled[0], reshuffled[1]] = [reshuffled[1], reshuffled[0]];
-    }
-    sequence.push(...reshuffled);
+  // Step 1: filter bar exercises
+  const filtered = config.hasBar ? pool : pool.filter((e) => !e.requires_bar);
+  if (filtered.length === 0) return [];
+
+  // Step 2: split by difficulty
+  const easyPool = filtered.filter((e) => e.difficulty === "easy");
+  const hardPool = filtered.filter((e) => e.difficulty === "hard");
+
+  // Step 3: allocate 80/20
+  let primaryCount: number;
+  let secondaryCount: number;
+  let primaryPool: CircuitExercise[];
+  let secondaryPool: CircuitExercise[];
+
+  if (config.difficulty === "hard") {
+    primaryPool = hardPool;
+    secondaryPool = easyPool;
+  } else {
+    primaryPool = easyPool;
+    secondaryPool = hardPool;
   }
-  return sequence.slice(0, count);
+
+  primaryCount = Math.round(count * 0.8);
+  secondaryCount = count - primaryCount;
+
+  // Step 4: cap to available pool sizes
+  if (primaryCount > primaryPool.length) {
+    primaryCount = primaryPool.length;
+    secondaryCount = Math.min(count - primaryCount, secondaryPool.length);
+  } else if (secondaryCount > secondaryPool.length) {
+    secondaryCount = secondaryPool.length;
+    primaryCount = Math.min(count - secondaryCount, primaryPool.length);
+  }
+
+  // Step 5: shuffle each pool and pick
+  const pickedPrimary = fisherYates(primaryPool).slice(0, primaryCount);
+  const pickedSecondary = fisherYates(secondaryPool).slice(0, secondaryCount);
+
+  // Step 6: merge and shuffle
+  return fisherYates([...pickedPrimary, ...pickedSecondary]);
 }
