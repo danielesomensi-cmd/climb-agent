@@ -19,7 +19,7 @@ import { BuilderExerciseCard } from "./builder-exercise-card";
 import { ExercisePicker } from "./exercise-picker";
 import { ExerciseParamsEditor } from "./exercise-params-editor";
 import { WarmupCooldownPicker } from "./warmup-cooldown-picker";
-import { useCustomSession } from "@/lib/hooks/queries";
+import { useCustomSession, useBuilderExercises } from "@/lib/hooks/queries";
 import {
   useCreateCustomSession,
   useUpdateCustomSession,
@@ -66,6 +66,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
 
   // Queries
   const { data: existingSession, isLoading: loadingSession } = useCustomSession(sessionId);
+  const { data: catalogData } = useBuilderExercises("", "");
 
   // Mutations
   const createMutation = useCreateCustomSession();
@@ -89,14 +90,23 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
   const [nameError, setNameError] = useState("");
   const [saveError, setSaveError] = useState("");
 
-  // Initialize from existing session in edit mode
+  // Catalog name lookup: exercise_id → display name
+  const catalogNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ex of catalogData?.exercises ?? []) {
+      map.set(ex.id, ex.name);
+    }
+    return map;
+  }, [catalogData]);
+
+  // Initialize from existing session in edit mode (wait for catalog to resolve names)
   useEffect(() => {
-    if (isEditMode && existingSession && !initialized) {
+    if (isEditMode && existingSession && catalogNameMap.size > 0 && !initialized) {
       setName(existingSession.name);
       setEntries(
         existingSession.exercises.map((ex) => ({
           exercise: ex,
-          name: ex.exercise_id, // will be resolved when catalog loads
+          name: catalogNameMap.get(ex.exercise_id) ?? ex.exercise_id,
         }))
       );
       setInitialized(true);
@@ -104,7 +114,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
     if (!isEditMode && !initialized) {
       setInitialized(true);
     }
-  }, [isEditMode, existingSession, initialized]);
+  }, [isEditMode, existingSession, initialized, catalogNameMap]);
 
   // Track dirty state
   useEffect(() => {

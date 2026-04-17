@@ -133,7 +133,7 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-medium truncate">{ex.name}</p>
                       {isAdded && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 shrink-0">
+                        <Badge variant="outline" className="text-xs px-2 py-0.5 shrink-0 bg-green-500/20 text-green-400 border-green-500/30">
                           Added
                         </Badge>
                       )}

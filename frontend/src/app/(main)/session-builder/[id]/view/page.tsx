@@ -5,8 +5,8 @@ import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useCustomSession } from "@/lib/hooks/queries";
-import { useState } from "react";
+import { useCustomSession, useBuilderExercises } from "@/lib/hooks/queries";
+import { useState, useMemo } from "react";
 import { Pencil } from "lucide-react";
 
 function formatPrescription(ex: { sets: number; reps: number | null; work_seconds: number | null; load_kg: number; rest_between_sets_seconds: number | null }): string {
@@ -24,7 +24,16 @@ export default function SessionViewPage() {
   const router = useRouter();
   const id = params.id as string;
   const { data: session, isLoading } = useCustomSession(id);
+  const { data: catalogData } = useBuilderExercises("", "");
   const [checked, setChecked] = useState<Set<number>>(new Set());
+
+  const catalogNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ex of catalogData?.exercises ?? []) {
+      map.set(ex.id, ex.name);
+    }
+    return map;
+  }, [catalogData]);
 
   const toggleCheck = (index: number) => {
     setChecked((prev) => {
@@ -100,7 +109,7 @@ export default function SessionViewPage() {
                 <Checkbox checked={isDone} className="mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-medium ${isDone ? "line-through text-muted-foreground" : ""}`}>
-                    {ex.exercise_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                    {catalogNameMap.get(ex.exercise_id) ?? ex.exercise_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {formatPrescription(ex)}
