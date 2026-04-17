@@ -14,6 +14,11 @@ import type {
   WeeklyReport,
   MonthlyReport,
   Quote,
+  CustomSession,
+  CustomSessionSummary,
+  CustomSessionExercise,
+  BuilderExercise,
+  WarmupCooldownBlock,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -481,3 +486,50 @@ export const createBillingPortal = () =>
   request<{ portal_url: string }>("/api/subscription/portal", {
     method: "POST",
   });
+
+// Custom Sessions (A206)
+export const getCustomSessions = () =>
+  request<{ sessions: CustomSessionSummary[]; count: number }>("/api/custom-session/list");
+
+export const getCustomSession = (id: string) =>
+  request<CustomSession>(`/api/custom-session/${id}`);
+
+export const createCustomSession = (data: {
+  name: string;
+  tags: string[];
+  exercises: CustomSessionExercise[];
+}) =>
+  request<CustomSession>("/api/custom-session", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const updateCustomSession = (id: string, data: {
+  name: string;
+  tags: string[];
+  exercises: CustomSessionExercise[];
+}) =>
+  request<CustomSession>(`/api/custom-session/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+
+export const deleteCustomSession = (id: string) =>
+  request<{ deleted: string }>(`/api/custom-session/${id}`, {
+    method: "DELETE",
+  });
+
+export const getBuilderExercises = (params?: { q?: string; domain?: string }) => {
+  const sp = new URLSearchParams();
+  if (params?.q) sp.set("q", params.q);
+  if (params?.domain) sp.set("domain", params.domain);
+  const qs = sp.toString();
+  return request<{ exercises: BuilderExercise[]; count: number }>(
+    `/api/custom-session/exercises${qs ? `?${qs}` : ""}`
+  );
+};
+
+export const getBuilderBlocks = () =>
+  request<{ warmup: WarmupCooldownBlock[]; cooldown: WarmupCooldownBlock[] }>(
+    "/api/custom-session/blocks"
+  );

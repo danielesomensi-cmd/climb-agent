@@ -55,4 +55,11 @@ export const queryKeys = {
 
   // Weekly override
   weeklyOverride: (weekStart: string) => ["weekly-override", weekStart] as const,
+
+  // Custom sessions (A206)
+  customSessions: ["custom-session", "list"] as const,
+  customSession: (id: string) => ["custom-session", "detail", id] as const,
+  customSessionAll: ["custom-session"] as const, // prefix
+  builderExercises: (q: string, domain: string) => ["custom-session", "exercises", q, domain] as const,
+  builderBlocks: ["custom-session", "blocks"] as const,
 } as const;

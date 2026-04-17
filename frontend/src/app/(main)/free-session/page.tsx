@@ -22,6 +22,7 @@ import { invalidateFreeSessionHistory } from "@/lib/invalidation";
 import { CircuitSetup, type CircuitConfig } from "@/components/circuit/CircuitSetup";
 import { CircuitTimer, type CircuitResult } from "@/components/circuit/CircuitTimer";
 import { CircuitCompletion } from "@/components/circuit/CircuitCompletion";
+import { MySessionsSection } from "@/components/session-builder/my-sessions-section";
 import { useUserState } from "@/lib/hooks/use-state";
 import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 import { findPendingDraft, clearDraft, type FreeSessionDraft } from "@/lib/free-session-utils";
@@ -601,6 +602,9 @@ function FreeSessionContent() {
                 <div className="text-xs text-muted-foreground">Guided bodyweight core workout with timer</div>
               </div>
             </button>
+
+            {/* A206: My Sessions */}
+            <MySessionsSection enabled={authReady} />
           </div>
         )}
 

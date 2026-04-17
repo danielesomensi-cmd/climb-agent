@@ -605,6 +605,77 @@ export interface GuidedSessionState {
 }
 
 // -----------------------------------------------------------------------
+// Session Builder (A206)
+// -----------------------------------------------------------------------
+
+export interface CustomSessionExercise {
+  exercise_id: string;
+  sets: number;
+  reps: number | null;
+  work_seconds: number | null;
+  rest_between_sets_seconds: number | null;
+  rest_between_reps_seconds: number | null;
+  load_kg: number;
+  notes: string;
+}
+
+export interface CustomSession {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+  tags: string[];
+  exercises: CustomSessionExercise[];
+  estimated_load_score: number;
+  estimated_duration_minutes: number;
+}
+
+export interface CustomSessionSummary {
+  id: string;
+  name: string;
+  tags: string[];
+  exercise_count: number;
+  estimated_load_score: number;
+  estimated_duration_minutes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BuilderExercise {
+  id: string;
+  name: string;
+  description: string;
+  domain: string[];
+  equipment_required: string[];
+  prescription_defaults: {
+    sets?: number;
+    reps?: number;
+    work_seconds?: number;
+    rest_between_sets_seconds?: number;
+    rest_between_reps_seconds?: number;
+    notes?: string;
+  };
+  fatigue_cost: number;
+  load_model: string;
+}
+
+export interface WarmupCooldownBlock {
+  template_id: string;
+  label: string;
+  exercises: Array<{
+    exercise_id: string;
+    name: string;
+    sets: number;
+    reps: number | null;
+    work_seconds: number | null;
+    rest_between_sets_seconds: number | null;
+    rest_between_reps_seconds: number | null;
+    load_kg: number;
+    notes: string;
+  }>;
+}
+
+// -----------------------------------------------------------------------
 // User state (simplified — backend may have more keys)
 // -----------------------------------------------------------------------
 

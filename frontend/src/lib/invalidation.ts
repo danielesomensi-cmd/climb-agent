@@ -28,3 +28,8 @@ export function invalidateOutdoor(qc: QueryClient) {
 export function invalidateFreeSessionHistory(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: queryKeys.freeSessionHistoryAll });
 }
+
+/** Custom session write: refresh list + detail caches. */
+export function invalidateCustomSessions(qc: QueryClient) {
+  qc.invalidateQueries({ queryKey: queryKeys.customSessionAll });
+}
