@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-16 (roadmap alignment: added D-MAINT-01, A198, A199, C204, D209)
+> Last updated: 2026-04-17 (D93 audit + B94 route_intervals offset fix)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -87,6 +87,8 @@
 | A199 | **Dynamic slider capping on availability page** | A | XS | ✅ Done | Frontend-only UX improvement. |
 | C204 | **Pump-management cues to route_on_the_minute** | C | XS | ✅ Done | Catalog content addition. |
 | D209 | **Next.js version audit** — rename middleware→proxy, update docs 14→16 | D | XS | ✅ Done | Doc + rename only. |
+| D93 | **Grade offset catalog audit** — full-catalog review of all 31 `grade_offset` exercises | D | M | ✅ Done | Audit report: `docs/audit/audit_route_intervals_offset_D93.md`. Found `route_intervals` misclassified at -2 (should be -1). |
+| B94 | **Fix `route_intervals.grade_offset` -2 → -1** + test gap fix + vocab sync | B | S | ✅ Done | Catalog patch, 5 new tests (1 catalog e2e + 4 parametrized), vocabulary synced. `emom_bouldering` deferred to D95. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
 | B204 | **Subscription guard 402 UX + cancel status display** | B | S | Open | Global 402 interceptor → redirect to /subscribe (not raw JSON). Portal 404 handling. cancel_at_period_end display. Depends on B202 ✅. |
 | B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
