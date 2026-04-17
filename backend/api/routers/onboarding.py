@@ -17,6 +17,11 @@ from backend.api.models import OnboardingData, StartWeekRequest
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
 from backend.engine.macrocycle_v1 import generate_macrocycle
 from backend.engine.progression_v1 import estimate_missing_baselines
+from backend.engine.start_date_utils import (
+    is_week_one_empty,
+    strict_next_monday,
+    this_monday as _engine_this_monday,
+)
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
@@ -380,15 +385,33 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
     if data.test_week_requested:
         state["initial_tests_requested"] = True
 
-    # 5. Always generate macrocycle (start = next Monday)
+    # 5. Generate macrocycle.
+    #
+    # A-ACTIVATION-TIMING: default start_date is this_monday() so the user
+    # can start their first session today or later this week (instead of
+    # waiting up to 7 days for next Monday). The planner's B95 guard
+    # prevents past-day session placement even when start_date is before
+    # today. Threshold-1 fallback: if Week 1 would have zero placeable
+    # sessions (e.g. late-Sunday onboarding with only weekday availability),
+    # fall back to strict_next_monday so the user gets a proper first week.
+    from datetime import date as _date
     try:
-        start = next_monday()
+        today = _date.today()
+        start = ensure_monday(_engine_this_monday(today))
         default_weeks = 10 if discipline == "boulder" else 12
         total_weeks = goal.get("total_weeks", default_weeks)
         # Clamp to valid range (engine requires >= 5 for boulder, >= 9 for lead)
         min_weeks = 5 if discipline == "boulder" else 9
         total_weeks = max(min_weeks, min(total_weeks, 52))
         macrocycle = generate_macrocycle(goal, profile, state, start, total_weeks)
+
+        if is_week_one_empty(state, macrocycle, today):
+            logger.info(
+                "Onboarding fallback: Week 1 would be empty for user_id=%s, "
+                "falling back to strict next Monday.", user_id,
+            )
+            start = ensure_monday(strict_next_monday(today))
+            macrocycle = generate_macrocycle(goal, profile, state, start, total_weeks)
     except Exception as e:
         save_state(state, user_id)
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
