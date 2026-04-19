@@ -322,8 +322,8 @@ def get_week(
             _recent_test_dates: dict[str, str] = {}
             _hb_baselines = (state.get("baselines") or {}).get("hangboard") or []
             if _hb_baselines:
-                # B191/Finding-A: check updated_at (real test) then estimated_at (onboarding estimate)
-                _hb_ts = _hb_baselines[0].get("updated_at") or _hb_baselines[0].get("estimated_at")
+                # B210: drop estimated_at fallback — onboarding estimate is not a real test
+                _hb_ts = _hb_baselines[0].get("updated_at")
                 if _hb_ts:
                     _recent_test_dates["finger"] = _hb_ts
             _rep_history = (state.get("tests") or {}).get("repeater_strength_endurance") or []

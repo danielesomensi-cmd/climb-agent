@@ -1315,7 +1315,7 @@ def generate_phase_week(
 
             # 2. Freshness check (B128): skip if tested within 42 days
             last_date_str = _recent.get(test_type) if test_type else None
-            if last_date_str:
+            if last_date_str and not inject_tests:  # B210: explicit user intent overrides freshness window
                 try:
                     days_ago = (_week_start - _parse_date(last_date_str)).days
                     if 0 <= days_ago < TEST_FRESHNESS_DAYS:

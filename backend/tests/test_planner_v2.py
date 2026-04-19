@@ -591,8 +591,8 @@ class TestPlannerV2TestFreshness(unittest.TestCase):
         self.assertEqual(test_sids, set(),
                          f"Tests completed 13 days ago — should be skipped, got {test_sids}")
 
-    def test_inject_tests_explicit_also_respects_freshness(self):
-        """inject_tests=True (initial tests) should also respect freshness."""
+    def test_inject_tests_explicit_bypasses_freshness(self):
+        """B210: inject_tests=True (explicit user intent) bypasses the freshness window."""
         recent = {"finger": "2026-02-25", "repeater": "2026-02-25", "pulling": "2026-02-25"}
         plan = generate_phase_week(**_make_kwargs("base",
             is_last_week_of_phase=False, inject_tests=True,
@@ -601,8 +601,8 @@ class TestPlannerV2TestFreshness(unittest.TestCase):
             recent_test_dates=recent))
         sids = self._session_ids(plan)
         test_sids = {s for s in sids if s.startswith("test_")}
-        self.assertEqual(test_sids, set(),
-                         f"inject_tests=True but all fresh — should skip, got {test_sids}")
+        self.assertNotEqual(test_sids, set(),
+                            "B210: inject_tests=True must schedule tests even when all recently tested")
 
 
 class TestPlannerV2PhaseAwareGating(unittest.TestCase):
@@ -1989,6 +1989,49 @@ class TestB209MaxHang7sInjection(unittest.TestCase):
                       "B209: planner must schedule test_max_hang_7s (D85 design authority)")
         self.assertNotIn("test_max_hang_5s", session_ids,
                          "B209: legacy 5s session must NOT be scheduled by the planner")
+
+
+class TestB210Freshness(unittest.TestCase):
+    """B210: freshness check must not block new-user finger tests."""
+
+    @staticmethod
+    def _full_avail():
+        return {wd: {"evening": {"available": True, "locations": ["gym", "home"]}}
+                for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+
+    def test_b210_finger_freshness_ignores_estimated_at(self):
+        """Onboarding estimate must not feed recent_test_dates — planner schedules finger test."""
+        # week.py (B210 Change 1) no longer passes estimated_at into recent_test_dates,
+        # so a new user with only an onboarding estimate reaches the planner with no finger entry.
+        plan = generate_phase_week(**_make_kwargs(
+            "base",
+            inject_tests=True,
+            is_last_week_of_phase=True,
+            availability=self._full_avail(),
+            hard_cap_per_week=5,
+            planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 5},
+            recent_test_dates={},  # new user — no real test yet
+        ))
+        session_ids = {s["session_id"] for d in plan["weeks"][0]["days"] for s in d["sessions"]}
+        self.assertIn("test_max_hang_7s", session_ids,
+                      "B210: new user with only onboarding estimate must get finger test scheduled")
+
+    def test_b210_inject_tests_bypasses_freshness_window(self):
+        """inject_tests=True must bypass the 42-day freshness window (explicit user intent)."""
+        seven_days_ago = (datetime.strptime("2026-03-02", "%Y-%m-%d").toordinal() - 7)
+        recent_finger = datetime.fromordinal(seven_days_ago).strftime("%Y-%m-%d")
+        plan = generate_phase_week(**_make_kwargs(
+            "base",
+            inject_tests=True,
+            is_last_week_of_phase=True,
+            availability=self._full_avail(),
+            hard_cap_per_week=5,
+            planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 5},
+            recent_test_dates={"finger": recent_finger},  # within 42-day window
+        ))
+        session_ids = {s["session_id"] for d in plan["weeks"][0]["days"] for s in d["sessions"]}
+        self.assertIn("test_max_hang_7s", session_ids,
+                      "B210: inject_tests=True must override freshness window for finger test")
 
 
 if __name__ == "__main__":
