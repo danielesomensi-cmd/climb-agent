@@ -60,6 +60,13 @@ export interface SessionSlot {
   session_duration_seconds?: number;
   actual_exercises?: ActualExercise[];
   process_cue?: { id: string; text: string } | null;
+  // A207: custom (user-built) session fields — inline-resolved, no catalog lookup.
+  is_custom?: boolean;
+  name?: string;
+  custom_session_id?: string;
+  session_mode?: string;
+  exercises?: CustomSessionExercise[];
+  target_duration_min?: number;
 }
 
 export interface DayPlan {

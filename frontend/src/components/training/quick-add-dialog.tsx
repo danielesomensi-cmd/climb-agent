@@ -11,9 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Mountain, ArrowLeft, Dumbbell, Grip } from "lucide-react";
-import { getSuggestedSessions, getSessions, getOutdoorSpots, addOutdoorSpot } from "@/lib/api";
-import type { SessionMeta, OutdoorSpot } from "@/lib/types";
+import { Mountain, ArrowLeft, Dumbbell, Grip, Wrench } from "lucide-react";
+import { getSuggestedSessions, getSessions, getOutdoorSpots, addOutdoorSpot, getCustomSessions } from "@/lib/api";
+import type { SessionMeta, OutdoorSpot, CustomSessionSummary } from "@/lib/types";
 
 interface Gym {
   gym_id?: string;
@@ -42,6 +42,12 @@ interface QuickAddDialogProps {
     slot: string;
   }) => void;
   onApplyFreeClimbing?: () => void;
+  onApplyCustom?: (data: {
+    custom_session_id: string;
+    slot: string;
+    location: string;
+    gym_id?: string;
+  }) => void;
 }
 
 const SLOT_OPTIONS = [
@@ -79,11 +85,15 @@ export function QuickAddDialog({
   onApplyOutdoor,
   onApplyOtherSport,
   onApplyFreeClimbing,
+  onApplyCustom,
 }: QuickAddDialogProps) {
   // Indoor state
   const [slot, setSlot] = useState("evening");
   const [location, setLocation] = useState<string>("gym");
   const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  // A207: distinguish catalog vs custom selection (mutually exclusive).
+  const [selectedKind, setSelectedKind] = useState<"catalog" | "custom">("catalog");
+  const [customSessions, setCustomSessions] = useState<CustomSessionSummary[]>([]);
   const [suggestions, setSuggestions] = useState<
     Array<{ session_id: string; session_name?: string; intensity: string; estimated_load_score: number; reason: string; required_equipment?: string[] }>
   >([]);
@@ -113,6 +123,7 @@ export function QuickAddDialog({
       setSlot("evening");
       setLocation("gym");
       setSelectedSession(null);
+      setSelectedKind("catalog");
       setSuggestions([]);
       setSupplementary([]);
       setAllSessions(null);
@@ -149,6 +160,14 @@ export function QuickAddDialog({
       .catch(() => setSpots([]));
   }, [mode]);
 
+  // A207: fetch user's custom sessions when dialog opens in indoor mode.
+  useEffect(() => {
+    if (!open || mode !== "indoor" || !onApplyCustom) return;
+    getCustomSessions()
+      .then((data) => setCustomSessions(data.sessions))
+      .catch(() => setCustomSessions([]));
+  }, [open, mode, onApplyCustom]);
+
   const handleBrowseAll = async () => {
     if (allSessions) {
       setShowAll(!showAll);
@@ -175,10 +194,20 @@ export function QuickAddDialog({
     const resolvedGymId = selectedGym
       ? selectedGym.gym_id
       : undefined;
+    const resolvedLoc = isGym ? "gym" : "home";
+    if (selectedKind === "custom" && onApplyCustom) {
+      onApplyCustom({
+        custom_session_id: selectedSession,
+        slot,
+        location: resolvedLoc,
+        gym_id: resolvedGymId,
+      });
+      return;
+    }
     onApply({
       session_id: selectedSession,
       slot,
-      location: isGym ? "gym" : "home",
+      location: resolvedLoc,
       gym_id: resolvedGymId,
     });
   };
@@ -570,7 +599,7 @@ export function QuickAddDialog({
                             ? "border-primary bg-primary/10 text-primary"
                             : "border-muted text-muted-foreground hover:border-primary/40"
                         }`}
-                        onClick={() => setSelectedSession(s.session_id)}
+                        onClick={() => { setSelectedSession(s.session_id); setSelectedKind("catalog"); }}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium">
@@ -596,6 +625,42 @@ export function QuickAddDialog({
                 )}
               </div>
 
+              {/* My Sessions (A207) — user-built custom sessions */}
+              {onApplyCustom && customSessions.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Wrench className="size-3.5 text-primary" />
+                    My Sessions
+                  </Label>
+                  <div className="space-y-1.5">
+                    {customSessions.map((cs) => (
+                      <button
+                        key={cs.id}
+                        type="button"
+                        className={`w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                          selectedKind === "custom" && selectedSession === cs.id
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-muted text-muted-foreground hover:border-primary/40"
+                        }`}
+                        onClick={() => { setSelectedSession(cs.id); setSelectedKind("custom"); }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">{cs.name}</span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            ~{cs.estimated_duration_minutes} min · load {cs.estimated_load_score}
+                          </span>
+                        </div>
+                        {cs.tags.length > 0 && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {cs.tags.slice(0, 4).join(" · ")}
+                          </p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Supplementary training */}
               {filteredSupplementary.length > 0 && (
                 <div className="space-y-2">
@@ -613,7 +678,7 @@ export function QuickAddDialog({
                             ? "border-blue-500 bg-blue-500/10 text-blue-400"
                             : "border-muted text-muted-foreground hover:border-blue-500/40"
                         }`}
-                        onClick={() => setSelectedSession(s.session_id)}
+                        onClick={() => { setSelectedSession(s.session_id); setSelectedKind("catalog"); }}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium">{s.session_name}</span>
@@ -649,7 +714,7 @@ export function QuickAddDialog({
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-muted text-muted-foreground hover:border-primary/40"
                       }`}
-                      onClick={() => setSelectedSession(s.id)}
+                      onClick={() => { setSelectedSession(s.id); setSelectedKind("catalog"); }}
                     >
                       <span className="font-medium">{s.name}</span>
                       {s.type && s.type !== "unknown" && (

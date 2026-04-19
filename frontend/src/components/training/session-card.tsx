@@ -268,6 +268,12 @@ function handleStartGuided(
     return;
   }
 
+  // A207: custom sessions have no guided runtime — route to the read-only view.
+  if (session.is_custom && session.custom_session_id) {
+    router.push(`/session-builder/${session.custom_session_id}/view`);
+    return;
+  }
+
   // B181: don't overwrite saved progress — resume instead.
   if (hasSavedProgress(date, session.session_id)) {
     router.push(`/guided/${date}/${session.session_id}`);
@@ -684,6 +690,7 @@ export function SessionCard({
   const isFinalized = isDone || isSkipped;
   const locationLabel = getLocationLabel(session, gyms);
   const hasExercises = (() => {
+    if (session.is_custom) return (session.exercises ?? []).length > 0;
     const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
     return ((rs?.exercise_instances ?? []) as unknown[]).length > 0;
   })();
@@ -783,8 +790,15 @@ export function SessionCard({
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-sm flex items-center gap-1.5">
               <span>
-                {(session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id)}
+                {session.is_custom
+                  ? (session.name || formatSessionName(session.session_id))
+                  : ((session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id))}
               </span>
+              {session.is_custom && (
+                <Badge className="bg-primary/20 text-primary border-primary/40 text-[10px]">
+                  Custom
+                </Badge>
+              )}
               {boulderOverride !== null && (
                 <Badge className="bg-amber-600 hover:bg-amber-600 text-white text-[10px] gap-1 px-1.5 py-0">
                   <Mountain className="size-2.5" />
@@ -908,8 +922,40 @@ export function SessionCard({
         {/* Expanded content */}
         {expanded && (
           <CardContent className="pt-0 pb-3 space-y-3">
-            {/* Exercise list from resolved session (with instruction blocks) */}
-            {(() => {
+            {/* A207: custom sessions have exercises inline — no resolved blocks to render. */}
+            {session.is_custom ? (
+              (session.exercises ?? []).length === 0 ? (
+                <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
+                  No exercises
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {(session.exercises ?? []).map((ex, i) => {
+                    const prescription: string[] = [];
+                    if (ex.reps != null) prescription.push(`${ex.sets}\u00d7${ex.reps}`);
+                    else if (ex.work_seconds != null) prescription.push(`${ex.sets}\u00d7${ex.work_seconds}s`);
+                    else prescription.push(`${ex.sets} sets`);
+                    if (ex.load_kg > 0) prescription.push(`${ex.load_kg}kg`);
+                    if (ex.rest_between_sets_seconds != null) prescription.push(`rest ${ex.rest_between_sets_seconds}s`);
+                    return (
+                      <div key={`${ex.exercise_id}-${i}`} className="rounded-md border px-3 py-2 text-sm">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium">
+                            {ex.exercise_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground shrink-0">
+                            {prescription.join(" \u00b7 ")}
+                          </span>
+                        </div>
+                        {ex.notes && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{ex.notes}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            ) : (() => {
               const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
               const allBlocks = (rs?.blocks ?? []) as Array<Record<string, unknown>>;
 
@@ -1099,14 +1145,14 @@ export function SessionCard({
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>{(session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id)}</DrawerTitle>
+            <DrawerTitle>{session.is_custom ? (session.name || formatSessionName(session.session_id)) : ((session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id))}</DrawerTitle>
             <DrawerDescription>
               {isDone ? `Completed · ${session.session_duration_seconds != null && session.session_duration_seconds > 0 ? `${Math.round(session.session_duration_seconds / 60)} min` : `~${({lunch:35,morning:60,evening:90} as Record<string,number>)[session.slot] ?? 60} min`}` : isSkipped ? "Skipped" : "Planned"} · {locationLabel} · {formatSlot(session.slot)}
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-6 space-y-1">
-            {/* Add Exercise — both planned and done */}
-            {weekPlan && (
+            {/* Add Exercise — not supported for custom (user-owned, edit via builder) */}
+            {weekPlan && !session.is_custom && (
               <DrawerClose asChild>
                 <button
                   className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"
@@ -1121,8 +1167,8 @@ export function SessionCard({
               </DrawerClose>
             )}
 
-            {/* Modify session — indoor, planned only */}
-            {!isFinalized && onReplan && (
+            {/* Modify session — indoor, planned only (bypassed for custom: no replanner) */}
+            {!isFinalized && !session.is_custom && onReplan && (
               <DrawerClose asChild>
                 <button
                   className="flex items-center gap-3 w-full px-3 py-3 rounded-md hover:bg-accent transition-colors text-left"

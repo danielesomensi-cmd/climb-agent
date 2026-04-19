@@ -419,6 +419,10 @@ function TodayContent() {
       });
       updateWeekCache(result.week_plan);
 
+      // A207: custom sessions don't feed closed-loop/progression — skip feedback dialog.
+      const markedSession = dayPlan?.sessions.find((s) => s.session_id === sessionId);
+      if (markedSession?.is_custom) return;
+
       // Open feedback dialog
       setFeedbackSessionId(sessionId);
       setFeedbackOpen(true);
@@ -609,6 +613,42 @@ function TodayContent() {
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to add session";
+      if (msg.includes("already occupied")) {
+        setError("That time slot is already taken. Try a different slot or day.");
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setQuickAddDate(null);
+    }
+  }
+
+  /** A207: quick-add a user-built custom session via apply_events. */
+  async function handleQuickAddCustomApply(rdata: {
+    custom_session_id: string;
+    slot: string;
+    location: string;
+    gym_id?: string;
+  }) {
+    if (!weekPlan || !quickAddDate) return;
+    setError(null);
+    try {
+      const result = await applyEvents({
+        events: [
+          {
+            event_type: "add_custom_session",
+            custom_session_id: rdata.custom_session_id,
+            target_date: quickAddDate,
+            slot: rdata.slot,
+            location: rdata.location,
+            gym_id: rdata.gym_id,
+          },
+        ],
+        week_plan: weekPlan,
+      });
+      updateWeekCache(result.week_plan);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to add custom session";
       if (msg.includes("already occupied")) {
         setError("That time slot is already taken. Try a different slot or day.");
       } else {
@@ -1146,6 +1186,7 @@ function TodayContent() {
           setQuickAddDate(null);
           router.push(`/free-session?context=standalone&date=${quickAddDate || targetDate}`);
         }}
+        onApplyCustom={handleQuickAddCustomApply}
       />
 
       {/* Move session dialog */}
