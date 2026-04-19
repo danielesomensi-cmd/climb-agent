@@ -69,34 +69,13 @@
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
 | GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Vato, Alexis on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay €14.99/mo. |
-| A-DEMO-01 | **Demo session page** — `/demo` public route with timers, full ~100 min session walkthrough + CTA | A | S | ✅ Done | A182 + B190 (2026-04-08) |
-| B-DEMO-02 | **Demo session restructure** — strength-first exercise order, English copy | B | XS | ✅ Done | 2d7feca (2026-04-08) |
 
 ### Phase 1 — Pricing + Stripe go-live (week 2-3)
 
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
-| GTM-03 | **Pricing decision** — choose final price point and model | — | — | ✅ Done | USD pricing. $9.99/mo Standard + $4.99/mo Founding Climber (first 20, locked forever), 15-day trial. Two Stripe Price objects, not coupon. Product: `prod_ULXc8O7pmuA2`. |
-| GTM-04 | **Stripe go-live** — two-tier pricing, B188 revert, subscribe page update | B | S | ✅ Done | Live keys deployed 2026-04-16. Full E2E tested: checkout → access → portal → cancel at period end. D205 audit + B202 fix shipped same day. |
-| B-stripe-recovery | **Stripe stale customer_id recovery** — handle deleted/invalid Stripe customers gracefully | B | XS | ✅ Done | Auto-recovery when Stripe customer no longer exists. Part of GTM-04 hardening. |
-| B-BYPASS-DANIELE | **Founder subscription bypass** — env var `BYPASS_USER_IDS` skips Stripe check for founder | B | XS | ✅ Done | `subscription_guard.py` reads comma-separated UUIDs from env var. No Stripe customer created for founder. Railway env var set. |
-| D205 | **Subscription status leak & webhook robustness audit** | D | S | ✅ Done | Report: `docs/audit/D205_subscription_audit_2026_04_16.md`. Fail-open bug (H3), unhandled customer.deleted, portal button failure. Spawned B202/B203/B204/B205. |
-| B202 | **Fix fail-open → fail-closed subscription check** | B | S | ✅ Done | check_subscription() returns deny when no row + Stripe configured. Frontend defaults to canInteract=false on error. 1651 tests pass. |
-| B212 | **Guard checkout endpoint against overwriting active/trialing subscription** | B | XS | ✅ Done | Short-circuit in `POST /api/subscription/checkout` when existing row status ∈ `_ACTIVE_STATUSES`. Returns `{already_active, status, redirect_url}` instead of creating a second Checkout Session + writing `pending_checkout`. Frontend redirects to `/today` when `already_active=true`. 4 new tests in `test_b212_checkout_guard.py`. Fixes Daniele 2026-04-17 (trial Stripe `trialing` clobbered a `pending_checkout` dopo Reset + re-onboarding). |
-| D-MAINT-01 | **Fix endpoint table in CLAUDE.md** — correct count 54→56 | D | XS | ✅ Done | Doc-only fix. |
-| A198 | **Repo cleanup per D197 audit** — delete 24 obsolete docs/scripts, archive council reports | A | S | ✅ Done | Hygiene sweep. |
-| A199 | **Dynamic slider capping on availability page** | A | XS | ✅ Done | Frontend-only UX improvement. |
-| C204 | **Pump-management cues to route_on_the_minute** | C | XS | ✅ Done | Catalog content addition. |
-| D209 | **Next.js version audit** — rename middleware→proxy, update docs 14→16 | D | XS | ✅ Done | Doc + rename only. |
-| B206 | **Single source of truth for session location** — invert resolver precedence (runtime > template) + strip `context.location` from 28 catalog JSONs + derive location from `_SESSION_META` | B | M | ✅ Done | Fixes Daniele 2026-04-17: `aerobic_pyramid_intervals` resolved for `finger_maintenance_gym` on home slot. Added `LEGACY_SESSION_ALIASES` extension point. Downstream symptom fix — upstream cause tracked in B208. |
-| D210 | **B206 verification audit** — before/after comparison against pre-B206 worktree (5 scenarios + Daniele prod regression) | D | S | ✅ Done | Report: `docs/audit/D210_b206_verification.md`. Zero gym regressions, Daniele real-incompat 2→1. Surfaced residual B207 (warmup_easy_boulders bypass). |
-| D93 | **Grade offset catalog audit** — full-catalog review of all 31 `grade_offset` exercises | D | M | ✅ Done | Audit report: `docs/audit/audit_route_intervals_offset_D93.md`. Found `route_intervals` misclassified at -2 (should be -1). |
-| B94 | **Fix `route_intervals.grade_offset` -2 → -1** + test gap fix + vocab sync | B | S | ✅ Done | Catalog patch, 5 new tests (1 catalog e2e + 4 parametrized), vocabulary synced. `emom_bouldering` deferred to D95. |
-| B208 | **Narrow `_expand_session_locations` to wall-surface sessions** (Option A) | B | S | ✅ Done | Root-cause fix upstream of B206. Planner now only re-routes to home when session requires a wall surface (gym_boulder/spraywall/board_*/homewall/gym_routes) AND home has a wall equivalent. Hangboard-/weight-only gym sessions stay at their declared location. 2 regression tests added. Proposal: `docs/briefs/B208_proposal.md`. |
-| A-ACTIVATION-TIMING | **First-session activation fix** — shift start_date to this_monday() + Today hero CTA + cold-start retrofit | A | M | ✅ Done | Addresses 75% stage-4 drop-off from D-ANALYTICS-DROPOFF. Branch: `brief/A-ACTIVATION-timing`. Day 1 onboarding shift + Day 2 fallback + Day 3 /today hero (4 states) + Day 4 retrofit script. Retrofit: run `scripts/retrofit_coldstart_users.py` after merge. |
 | B207 | **Harden `warmup_climbing` template — fallback for no-wall home** | B | S | Open **P2** | Residual from D210. `warmup_easy_boulders` referenced by explicit `exercise_id`, bypasses P0 equipment gate. Options: (a) filter-based selection with equipment gate, or (b) add `warmup_general_mobility` fallback. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
-| B204 | **Subscription guard 402 UX + cancel status display** | B | S | Open | Global 402 interceptor → redirect to /subscribe (not raw JSON). Portal 404 handling. cancel_at_period_end display. Depends on B202 ✅. |
 | B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
 | GTM-STRIPE-TAX | **Stripe Tax registration** | Config | XS | Open | Register tax ID for EU VAT. Dashboard config, not code. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
@@ -746,10 +725,6 @@ Implementation approach:
 
 | ID | Title | Priority | Type | Effort | Status | Notes |
 |----|-------|----------|------|--------|--------|-------|
-| A205 | **Session Builder** — backend CRUD + data model | P3 | A | S | ✅ Done | Backend: CRUD API (`/api/custom-session`), exercise listing with search/filter, warmup/cooldown blocks, load score + duration computation. Data in `user_state.custom_sessions[]`. 27 tests. Frontend builder page is A206 (separate brief). |
-| A206 | **Session Builder** — frontend builder page | P3 | A | M | ✅ Done | "My Sessions" collapsible section on Free Session page, builder with exercise picker + domain chips, params editor, warmup/cooldown template picker, drag reorder, save/edit/delete. View mode with exercise checklist + progress bar. 15 new files, 38 pages, 67 components. |
-| D204 | **Session Builder audit** — pre-implementation audit of A205 design | P3 | D | XS | ✅ Done | `docs/audit/D204_session_builder_audit.md`. Covered: data model, CRUD API, exercise catalog, load scoring, warmup/cooldown blocks. |
-| A210 | **Boulder only ephemeral override** — boulder_fallback field + equipment_override | P3 | A | S | ✅ Done | `boulder_fallback` field in session instances, `equipment_required` in instances, `equipment_override` param in resolve. SessionCard UI for toggle. |
 | — | **Free session expansion** — standalone non-structured activities | P3.5 | A | M | Open | Standalone hangboard cycle, mobility routine, core circuit. "Tap and go" — no resolver, no structured prescription. Complements Session Builder. Core/mobility partially exist in free session surfaces. |
 | — | **Quick-add equipment guard**: `suggest_sessions` and `apply_day_add` don't validate `required_equipment` — user can quick-add `limit_boulder_gym` without gym_boulder | P3 | B | S | Open | Touches replanner_v1.py — needs analysis brief (STOP gate). Origin: B185 verification. |
 | — | **Warmup/cooldown P0 rotation**: convert hardcoded warmup/cooldown blocks to P0 selection for exercise variety | P3 | A | M | Open | Low priority — warmup sequences are standard. 11 hardcoded warmup blocks (warmup_climbing ×4, warmup_strength ×3, general_warmup ×2, cooldown_stretch ×2). Origin: B185 catalog audit. |
