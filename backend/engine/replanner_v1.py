@@ -798,6 +798,7 @@ def apply_events(
     availability: Optional[Dict[str, Any]] = None,
     planning_prefs: Optional[Dict[str, Any]] = None,
     gyms: Optional[List[Dict[str, Any]]] = None,
+    custom_sessions: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     updated = deepcopy(plan)
     updated.setdefault("adaptations", [])
@@ -1147,6 +1148,75 @@ def apply_events(
                 )
                 updated["weeks"] = regenerated["weeks"]
                 updated["profile_snapshot"] = regenerated["profile_snapshot"]
+
+        elif event_type == "add_custom_session":
+            # A207: add a user-defined custom session to a day. Custom sessions
+            # bypass the replanner entirely (no ripple, no spacing checks) and
+            # never feed closed-loop / progression. The custom session pool is
+            # passed as kwarg from the router (source of truth: user_state).
+            cs_id = event.get("custom_session_id")
+            target_date = event.get("target_date")
+            slot = event.get("slot") or "evening"
+            location = event.get("location") or "home"
+            gym_id = event.get("gym_id")
+            if not cs_id or not target_date:
+                logger.warning(
+                    "add_custom_session: missing custom_session_id or target_date — skipped"
+                )
+                continue
+            cs = next(
+                (s for s in (custom_sessions or []) if s.get("id") == cs_id),
+                None,
+            )
+            if not cs:
+                logger.warning(
+                    "add_custom_session: custom_session_id %r not found — skipped", cs_id
+                )
+                continue
+            try:
+                day = _find_day(updated, target_date)
+            except ValueError:
+                logger.warning(
+                    "add_custom_session: target_date %r not in plan — skipped", target_date
+                )
+                continue
+            # Slot conflict check (consistent with apply_day_add behaviour)
+            for existing in day.get("sessions", []):
+                if existing.get("slot") == slot:
+                    raise ValueError(
+                        f"Slot '{slot}' already occupied on {target_date}"
+                    )
+            if day.get("other_activity_slot") == slot:
+                raise ValueError(
+                    f"Slot '{slot}' already occupied by other activity on {target_date}"
+                )
+
+            new_session = {
+                "slot": slot,
+                "session_id": f"custom_{cs_id}",
+                "custom_session_id": cs_id,
+                "session_mode": "custom_build",
+                "is_custom": True,
+                "name": cs.get("name", "Custom session"),
+                "location": location,
+                "gym_id": gym_id if location == "gym" else None,
+                "status": "planned",
+                "intensity": "medium",
+                "estimated_load_score": cs.get("estimated_load_score", 0),
+                "target_duration_min": cs.get("estimated_duration_minutes", 0),
+                "exercises": cs.get("exercises", []),
+                "tags": {"hard": False, "finger": False},
+                "constraints_applied": ["custom_add"],
+                "explain": ["user-added custom session", f"custom_session_id={cs_id}"],
+            }
+            day.setdefault("sessions", []).append(new_session)
+            day["sessions"].sort(
+                key=lambda s: (
+                    SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"),
+                    s.get("priority", 99),
+                    s.get("session_id", ""),
+                )
+            )
 
         else:
             if event_type is not None:

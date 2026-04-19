@@ -112,6 +112,11 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
     for week_block in week_plan.get("weeks", []):
         for day_entry in week_block.get("days", []):
             for session_entry in day_entry.get("sessions", []):
+                # A207: custom sessions carry their own exercises inline and
+                # do not use the catalog resolver — skip to avoid log noise.
+                if session_entry.get("is_custom"):
+                    continue
+
                 # B120: never re-resolve completed sessions with cached data
                 # B153b: never re-resolve sessions the user explicitly edited
                 if (
@@ -302,6 +307,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     availability = state.get("availability")
     planning_prefs = state.get("planning_prefs")
     gyms = (state.get("equipment") or {}).get("gyms")
+    custom_sessions = state.get("custom_sessions") or []
 
     # For complete_outdoor events, compute outdoor load score from JSONL log
     for ev in req.events:
@@ -318,6 +324,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             availability=availability,
             planning_prefs=planning_prefs,
             gyms=gyms,
+            custom_sessions=custom_sessions,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
