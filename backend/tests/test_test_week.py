@@ -57,7 +57,7 @@ class TestGenerateTestWeekBasic:
         assert len(test_sessions) == 3
         session_ids = {s[1] for s in test_sessions}
         # B128: without pulling_baseline, pulling test defaults to BW-only
-        assert session_ids == {"test_max_hang_5s", "test_pullup_bw", "test_repeater_7_3"}
+        assert session_ids == {"test_max_hang_7s", "test_pullup_bw", "test_repeater_7_3"}
 
 
 class TestFingerSpacing:
@@ -71,7 +71,7 @@ class TestFingerSpacing:
         finger_days = []
         for i, day in enumerate(plan["weeks"][0]["days"]):
             for s in day["sessions"]:
-                if s["session_id"] in ("test_max_hang_5s", "test_repeater_7_3"):
+                if s["session_id"] in ("test_max_hang_7s", "test_repeater_7_3"):
                     finger_days.append(i)
 
         assert len(finger_days) == 2

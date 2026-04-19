@@ -51,6 +51,7 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "regeneration_easy": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym", "outdoor")},
     "finger_maintenance_home": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",), "required_equipment": ["hangboard"]},
     "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
+    "test_max_hang_7s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
     "test_lp_max_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
     "test_repeater_7_3": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
     "test_lp_repeater": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
@@ -1264,7 +1265,7 @@ def generate_phase_week(
         # 42 days = 6 weeks minimum between retests (Hörst, Lattice, Eva López)
         TEST_FRESHNESS_DAYS = 42
         _test_type_map = {
-            "test_max_hang_5s": "finger", "test_lp_max_5s": "finger",
+            "test_max_hang_5s": "finger", "test_max_hang_7s": "finger", "test_lp_max_5s": "finger",
             "test_repeater_7_3": "repeater", "test_lp_repeater": "repeater",
             "test_max_weighted_pullup": "pulling", "test_pullup_bw": "pulling",
         }
@@ -1273,7 +1274,7 @@ def generate_phase_week(
 
         # Required tests first, then optional
         # Finger test depends on device preference (A120)
-        _finger_test_sid = "test_lp_max_5s" if finger_device == "loading_pin" else "test_max_hang_5s"
+        _finger_test_sid = "test_lp_max_5s" if finger_device == "loading_pin" else "test_max_hang_7s"
         _repeater_test_sid = "test_lp_repeater" if finger_device == "loading_pin" else "test_repeater_7_3"
         # Pulling test routing — skip BW gate for users with pulling baseline
         _pulling_test_sid = _pick_pulling_test_session(pulling_baseline, max_pullups_bw)
@@ -1493,7 +1494,7 @@ def generate_phase_week(
 # Test schedule: (session_id, is_finger).  Finger tests need 48h spacing.
 # B128: pulling test session is resolved dynamically via _pick_pulling_test_session()
 _TEST_SESSIONS_TEMPLATE = [
-    ("test_max_hang_5s", True),   # finger test — day 1
+    ("test_max_hang_7s", True),   # finger test — day 1
     (None, False),                # pulling test — day 2 (resolved at runtime)
     ("test_repeater_7_3", True),  # finger test — day 3 (48h gap from max_hang)
 ]
@@ -1513,7 +1514,7 @@ def generate_test_week(
 ) -> Dict[str, Any]:
     """Create a 1-week assessment plan with 3 test sessions on non-consecutive days.
 
-    Places test_max_hang_5s and test_repeater_7_3 (both finger) with at least a
+    Places test_max_hang_7s and test_repeater_7_3 (both finger) with at least a
     48-hour gap.  The pulling test is placed between them (not a finger test).
     B128: pulling test is routed based on user state (BW-only vs weighted 2RM).
     Remaining available days get prehab/flexibility filler sessions.
@@ -1548,11 +1549,11 @@ def generate_test_week(
     # then next available ≥2 days after max_hang for repeater
     placed: Dict[int, str] = {}  # offset → session_id
 
-    # Place max_hang_5s (finger)
+    # Place max_hang_7s (finger)
     hang_offset = None
     for off in available_offsets:
         hang_offset = off
-        placed[off] = "test_max_hang_5s"
+        placed[off] = "test_max_hang_7s"
         break
 
     # Place pulling test (non-finger) on next available day after hang

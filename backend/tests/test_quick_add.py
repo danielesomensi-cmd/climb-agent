@@ -406,14 +406,14 @@ def test_quick_add_test_session_has_test_tag():
 
     updated, _ = apply_day_add(
         plan,
-        session_id="test_max_hang_5s",
+        session_id="test_max_hang_7s",
         target_date=rest_day["date"],
         slot="evening",
         location="home",
     )
     updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == rest_day["date"])
-    test_sessions = [s for s in updated_day["sessions"] if s["session_id"] == "test_max_hang_5s"]
-    assert len(test_sessions) == 1, "test_max_hang_5s should have been added"
+    test_sessions = [s for s in updated_day["sessions"] if s["session_id"] == "test_max_hang_7s"]
+    assert len(test_sessions) == 1, "test_max_hang_7s should have been added"
     assert test_sessions[0]["tags"].get("test") is True, "Quick-add test session must have tags.test=True"
 
 

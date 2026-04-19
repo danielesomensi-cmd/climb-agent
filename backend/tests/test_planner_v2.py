@@ -403,7 +403,7 @@ class TestPlannerV2TestSessions(unittest.TestCase):
         all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
         session_ids = {s["session_id"] for s in all_sessions}
         # B191/D92: finger not stimulated by Base → NOT scheduled
-        self.assertNotIn("test_max_hang_5s", session_ids,
+        self.assertNotIn("test_max_hang_7s", session_ids,
                           "Base phase must NOT schedule finger strength test (D92)")
         # Repeater IS stimulated by Base (ARC/endurance volume) → scheduled
         self.assertIn("test_repeater_7_3", session_ids,
@@ -416,8 +416,8 @@ class TestPlannerV2TestSessions(unittest.TestCase):
             planning_prefs={"target_training_days_per_week": 6, "hard_day_cap_per_week": 5}))
         all_sessions = [s for d in plan["weeks"][0]["days"] for s in d["sessions"]]
         session_ids = {s["session_id"] for s in all_sessions}
-        self.assertIn("test_max_hang_5s", session_ids,
-                       "Last week of strength_power should have test_max_hang_5s")
+        self.assertIn("test_max_hang_7s", session_ids,
+                       "Last week of strength_power should have test_max_hang_7s")
 
     def test_non_last_week_no_test_session(self):
         """Non-last weeks should NOT have test sessions."""
@@ -639,7 +639,7 @@ class TestPlannerV2PhaseAwareGating(unittest.TestCase):
         """Strength_power last week: all three tests scheduled."""
         plan = generate_phase_week(**_make_kwargs("strength_power", **self._common))
         sids = self._session_ids(plan)
-        self.assertIn("test_max_hang_5s", sids,
+        self.assertIn("test_max_hang_7s", sids,
                        "Strength_power must schedule finger test")
         self.assertIn("test_repeater_7_3", sids,
                        "Strength_power must schedule repeater test")
@@ -693,7 +693,7 @@ class TestPlannerV2PhaseAwareGating(unittest.TestCase):
         plan = generate_phase_week(**_make_kwargs("base", **common_no_recent,
             recent_test_dates={"finger": old_date, "repeater": old_date, "pulling": old_date}))
         sids = self._session_ids(plan)
-        self.assertIn("test_max_hang_5s", sids,
+        self.assertIn("test_max_hang_7s", sids,
                        "Finger untested 12+ weeks → maintenance retest must fire even in base phase")
 
     def test_under_maintenance_cap_still_gated(self):
@@ -1969,6 +1969,26 @@ class TestB161CrossWeekGap(unittest.TestCase):
         """Passing prev_week_plan=None should not change existing behavior."""
         plan = generate_phase_week(**_make_kwargs("base", prev_week_plan=None))
         self.assertEqual(plan["plan_version"], "planner.v2")
+
+
+class TestB209MaxHang7sInjection(unittest.TestCase):
+    def test_b209_new_user_test_week_schedules_7s(self):
+        """B209: onboarding 'Do a test week first' must schedule test_max_hang_7s, not 5s."""
+        full_avail = {wd: {"evening": {"available": True, "locations": ["gym", "home"]}}
+                      for wd in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")}
+        plan = generate_phase_week(**_make_kwargs(
+            "base",
+            inject_tests=True,
+            is_last_week_of_phase=True,
+            availability=full_avail,
+            hard_cap_per_week=5,
+            planning_prefs={"target_training_days_per_week": 7, "hard_day_cap_per_week": 5},
+        ))
+        session_ids = {s["session_id"] for d in plan["weeks"][0]["days"] for s in d["sessions"]}
+        self.assertIn("test_max_hang_7s", session_ids,
+                      "B209: planner must schedule test_max_hang_7s (D85 design authority)")
+        self.assertNotIn("test_max_hang_5s", session_ids,
+                         "B209: legacy 5s session must NOT be scheduled by the planner")
 
 
 if __name__ == "__main__":

@@ -606,7 +606,7 @@ class TestLPPlannerPass3:
             for d in plan["weeks"][0]["days"]
             for s in d.get("sessions", [])
         ]
-        assert "test_max_hang_5s" in all_sids, f"Expected test_max_hang_5s in {all_sids}"
+        assert "test_max_hang_7s" in all_sids, f"Expected test_max_hang_7s in {all_sids}"
         assert "test_lp_max_5s" not in all_sids
         assert "test_repeater_7_3" in all_sids, f"Expected test_repeater_7_3 in {all_sids}"
         assert "test_lp_repeater" not in all_sids
@@ -630,7 +630,7 @@ class TestLPPlannerPass3:
             for d in plan["weeks"][0]["days"]
             for s in d.get("sessions", [])
         ]
-        assert "test_max_hang_5s" in all_sids
+        assert "test_max_hang_7s" in all_sids
 
 
 # ── B120: Past session immutability ──────────────────────────────────────────

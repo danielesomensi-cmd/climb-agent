@@ -38,7 +38,7 @@ class TestResolvedSessionLoadScore(unittest.TestCase):
 
     def test_test_session_has_load_score(self):
         """Test sessions must also have session_load_score."""
-        result = self._resolve("test_max_hang_5s")
+        result = self._resolve("test_max_hang_7s")
         self.assertIn("session_load_score", result)
         self.assertIsInstance(result["session_load_score"], int)
 

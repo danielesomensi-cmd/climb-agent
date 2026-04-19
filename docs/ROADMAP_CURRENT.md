@@ -74,6 +74,7 @@
 
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
+| B209 | **Wire test_max_hang_7s into planner (RC1)** | B | S | ✅ Done | D85 catalog file was orphan — planner hardcoded 5s. Now schedules 7s per design. |
 | B207 | **Harden `warmup_climbing` template — fallback for no-wall home** | B | S | Open **P2** | Residual from D210. `warmup_easy_boulders` referenced by explicit `exercise_id`, bypasses P0 equipment gate. Options: (a) filter-based selection with equipment gate, or (b) add `warmup_general_mobility` fallback. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
 | B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
