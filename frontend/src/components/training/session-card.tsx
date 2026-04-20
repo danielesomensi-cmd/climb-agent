@@ -268,9 +268,11 @@ function handleStartGuided(
     return;
   }
 
-  // A207: custom sessions have no guided runtime — route to the read-only view.
+  // A211: custom sessions have a dedicated playback page with timer.
   if (session.is_custom && session.custom_session_id) {
-    router.push(`/session-builder/${session.custom_session_id}/view`);
+    router.push(
+      `/session-builder/${session.custom_session_id}/play?date=${encodeURIComponent(date)}`,
+    );
     return;
   }
 
