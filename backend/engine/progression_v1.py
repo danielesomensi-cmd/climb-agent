@@ -803,6 +803,12 @@ def _estimate_hangboard_baseline(user_state: Dict[str, Any]) -> None:
 def _estimate_pulling_baseline(user_state: Dict[str, Any]) -> None:
     """Fill baselines.pulling from assessment.tests.weighted_pullup_1rm_total_kg (B121).
 
+    B215: source-gated on tests_source to mirror _estimate_hangboard_baseline
+    Priority 0. When the scalar is user-measured, stamp source="test" +
+    updated_at (real test semantics). When estimated or unmarked (legacy
+    default), stamp source="estimated_from_assessment" + estimated_at so
+    downstream readers can gate on baseline source alone.
+
     Never overwrites a baseline whose source == "test" or "test_session".
     """
     pulling = (user_state.get("baselines") or {}).get("pulling") or {}
@@ -814,6 +820,7 @@ def _estimate_pulling_baseline(user_state: Dict[str, Any]) -> None:
         return
 
     tests_data = ((user_state.get("assessment") or {}).get("tests") or {})
+    tests_src = ((user_state.get("assessment") or {}).get("tests_source") or {})
     # D84: prefer estimated 1RM from 2RM, fall back to legacy direct 1RM
     pullup_1rm_total = (
         tests_data.get("weighted_pullup_1rm_estimated_kg")
@@ -826,13 +833,25 @@ def _estimate_pulling_baseline(user_state: Dict[str, Any]) -> None:
     max_external = _round_half_step(pullup_1rm_total - bodyweight)
     today = datetime.now().strftime("%Y-%m-%d")
 
+    # B215: mirror hangboard Priority 0 — measured 1RM at onboarding promotes
+    # the baseline to source="test" so future readers can gate on source alone.
+    measured_1rm = (
+        tests_src.get("weighted_pullup_1rm_estimated_kg") == "measured"
+        or tests_src.get("weighted_pullup_1rm_total_kg") == "measured"
+        or tests_src.get("weighted_pullup_2rm_total_kg") == "measured"
+    )
+
     new_pulling: Dict[str, Any] = {
         "weighted_pullup_1rm_total_kg": _round_half_step(pullup_1rm_total),
         "bodyweight_kg": bodyweight,
         "max_external_load_kg": max_external,
-        "source": "assessment",
-        "updated_at": today,
     }
+    if measured_1rm:
+        new_pulling["source"] = "test"
+        new_pulling["updated_at"] = today
+    else:
+        new_pulling["source"] = "estimated_from_assessment"
+        new_pulling["estimated_at"] = today
 
     if not user_state.get("baselines"):
         user_state["baselines"] = {}

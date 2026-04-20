@@ -93,7 +93,13 @@ class TestPullingBaselineCreation:
     """Unit: baselines.pulling creation from assessment test results."""
 
     def test_pulling_baseline_created_from_1rm(self):
-        """Onboarding with pullup 1RM → baselines.pulling is populated."""
+        """Onboarding with pullup 1RM → baselines.pulling is populated.
+
+        B215: fixture has no `tests_source` entry for the 1RM, so the value
+        falls through the Priority 0 source gate and lands in the estimated
+        path (source="estimated_from_assessment", estimated_at). The measured
+        path is covered in test_estimate_pulling_baseline.py.
+        """
         state = _user_state_with_pullup_1rm(bodyweight=77.0, pullup_1rm_total=130.0)
         estimate_missing_baselines(state)
 
@@ -101,8 +107,9 @@ class TestPullingBaselineCreation:
         assert pulling["weighted_pullup_1rm_total_kg"] == 130.0
         assert pulling["bodyweight_kg"] == 77.0
         assert pulling["max_external_load_kg"] == 53.0
-        assert pulling["source"] == "assessment"
-        assert "updated_at" in pulling
+        assert pulling["source"] == "estimated_from_assessment"
+        assert "estimated_at" in pulling
+        assert "updated_at" not in pulling
 
     def test_pulling_baseline_not_created_without_1rm(self):
         """Onboarding without pullup 1RM → baselines.pulling not created."""
