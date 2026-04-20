@@ -152,7 +152,13 @@ def _cache_completed_resolved(
 
 
 def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
-    """Attach feedback_summary + exercise_feedback from feedback_log to matching sessions (B32/B35)."""
+    """Attach feedback_summary + exercise_feedback from feedback_log to matching sessions (B32/B35).
+
+    B192: only attach to sessions with status=='done'. feedback_log is genuinely
+    append-only, so without this gate an undone session (status cleared by
+    mark_planned) would silently re-hydrate feedback_summary / exercise_feedback /
+    session_duration_seconds on the next GET, defeating the pop in mark_planned.
+    """
     if not feedback_log:
         return
     # Index by (date, session_id) for O(1) lookup
@@ -161,6 +167,8 @@ def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
         for day_entry in week_block.get("days", []):
             day_date = day_entry.get("date", "")
             for session_entry in day_entry.get("sessions", []):
+                if session_entry.get("status") != "done":
+                    continue
                 key = (day_date, session_entry.get("session_id", ""))
                 fb = fb_index.get(key)
                 if fb:

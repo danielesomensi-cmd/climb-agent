@@ -869,11 +869,34 @@ def apply_events(
             _recompute_day_status(day)
 
         elif event_type == "mark_planned":
+            # B192: undo must clear ALL feedback-derived fields on the session,
+            # not just `status`. Leaving `actual_exercises`, `feedback_summary`,
+            # `exercise_feedback`, `session_duration_seconds` populated caused
+            # ghost "OK" pills + "Completed · ~NN min" text after undo.
+            #
+            # NOT reverted on purpose: working_loads mutations from
+            # progression_v1.apply_feedback (closed-loop adaptation). Reversing
+            # closed-loop is complex and undo is rare — trade-off accepted.
+            # Append-only logs (feedback_log) also stay intact.
             day = _find_day(updated, event["date"])
+            matched = False
             for s in day.get("sessions") or []:
                 if _session_matches(s, session_ref=event.get("session_ref"), slot=event.get("slot")):
                     s.pop("status", None)
+                    for _k in (
+                        "actual_exercises",
+                        "feedback_summary",
+                        "exercise_feedback",
+                        "session_duration_seconds",
+                    ):
+                        s.pop(_k, None)
+                    matched = True
                     break
+            if not matched:
+                logger.warning(
+                    "mark_planned no-op: session not found (date=%r, session_ref=%r, slot=%r)",
+                    event.get("date"), event.get("session_ref"), event.get("slot"),
+                )
             # If any session is no longer done/skipped, clear day-level status
             if not all(s.get("status") in ("done", "skipped") for s in day.get("sessions") or []):
                 day.pop("status", None)

@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-20 (D215 audit + B216 rollover fix — founder-account feedback-vanish incident closed)
+> Last updated: 2026-04-20 (D215 audit + B216 rollover fix + B192 undo-session cleanup — founder-account feedback-vanish + ghost-undo incidents closed)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -165,17 +165,25 @@ Three new session definitions: `board_limit_session` (6-10 problems at max, 3-5 
 
 **Rischio:** BASSO — estrazione costanti
 
-### B192 — Undo session: clear stale feedback artifacts
+### B192 — Undo session: clear stale feedback artifacts ✅ Done (2026-04-20)
 
-**Priority:** P2 | **Status:** Open | **Type:** B (bugfix) | **Discovered:** A187 STOP 2 (2026-04-07)
+**Priority:** P1 (elevated from P2 after 2026-04-20 post-B216 QA) | **Status:** ✅ Done | **Type:** B (bugfix) | **Discovered:** A187 STOP 2 (2026-04-07), confirmed via founder-account reproduction 2026-04-20
 
-Pre-existing bug (NOT caused by A187, verified via `git log --all -S exercise_feedback -- backend/engine/replanner_v1.py` → no matches). When a user clicks Undo on a completed session, the backend `apply_events` branch `mark_planned` (`replanner_v1.py:870`) only clears `s["status"]` but leaves `actual_exercises`, `exercise_feedback`, `feedback_summary`, `session_duration_seconds`, `duration_source`, `session_load_score` populated. The frontend `session-card.tsx:847-848` renders per-exercise OK badges from `session.exercise_feedback[...]` and `actual_exercises` unconditionally (no `isDone` gate), so the badges persist after undo.
+Pre-existing bug. When a user clicks Undo on a completed session, the backend `apply_events` branch `mark_planned` (`replanner_v1.py:871`) only cleared `s["status"]` but left 4 feedback-derived fields populated: `actual_exercises`, `feedback_summary`, `exercise_feedback`, `session_duration_seconds`. The frontend `session-card.tsx:1005,1026` renders per-exercise OK badges from `session.exercise_feedback[...]` and `actual_exercises` unconditionally (no `isDone` gate), so the badges persisted after undo.
 
-**Fix (backend only):** extend `mark_planned` to pop all feedback-derived fields on the matched session. Leave the JSONL feedback log intact (append-only historical record). Closed-loop progression mutations on `user_state` are not reverted (accepted trade-off — undo is rare, and a full rollback would be complex and risky).
+**Scope correction during Phase 1:** roadmap originally listed 6 fields including `duration_source` and `session_load_score`. Verified at HEAD: `duration_source` is never written onto the session (only into `session_completion_log` entries); `session_load_score` lives inside `resolved.resolved_session` as a deterministic pre-feedback field from `resolve_session.py:1690`. True feedback-derived leak = **4 fields**, not 6.
 
-**High-risk module:** touches `replanner_v1.py` → must follow STOP-for-OK protocol per CLAUDE.md.
+**Fix (backend only, 2 files):**
+1. `replanner_v1.py:871-879` — `mark_planned` now pops the 4 feedback-derived fields on the matched session, and logs `WARNING` on no-op (session not found) for traceability (B216 lesson: never silent-swallow).
+2. `week.py:154-171` — `_attach_feedback` gates on `session.status == "done"`. Without this, `feedback_log` (genuinely append-only) would re-hydrate 3 of 4 fields on every `GET /api/week`, defeating the pop.
 
-**Rischio:** BASSO — single branch in `apply_events`, guarded by `_session_matches`.
+**NOT reverted (trade-off accepted):** closed-loop progression mutations on `working_loads.entries[*].next_external_load_kg`. Reversing closed-loop is complex and undo is rare.
+
+**Documentation drift noted (§5bis of Phase 1 analysis):** roadmap claimed `session_completion_log` is append-only. Code at `replanner.py:383-390` actively removes the matching entry on `mark_planned` (confirmed by `test_mark_planned_removes_from_completion_log`). Only `feedback_log` and `working_loads` are genuinely append-only. See `docs/lessons.md` entry 2026-04-20 B192.
+
+**Tests:** 7 in `backend/tests/test_undo_session_B192.py` (T1 pop, T2 end-to-end 2-fetch round-trip, T3 feedback_log preserved, T4 working_loads preserved, T5 no ghost on undo→redo, T6 session-level idempotence, T7 no-op+warning on unknown session).
+
+**Rischio:** BASSO — single branch in `apply_events` + reader-side gate. Sibling branches (`mark_skipped`, `apply_day_override`, `move_session`, `remove_session`) audited clean in Phase 1.
 
 ---
 
