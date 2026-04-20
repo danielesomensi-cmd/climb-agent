@@ -508,6 +508,54 @@ If these fields are missing, `apply_feedback` does a silent skip (no crash, no u
 
 ---
 
+### 2.10.3 Test source taxonomy (`assessment.tests_source`)
+
+Every scalar in `assessment.tests.*` has a companion entry in `assessment.tests_source` recording whether the value came from a real measurement or an estimate. The sidecar shape is parallel to `assessment.tests`: same keys, one of two string values.
+
+Allowed values:
+
+- `measured` — scalar came from a real test (in-app test session, or user-entered value at onboarding).
+- `estimated` — scalar was derived from a grade table, pullup 1RM conversion, or another proxy. Also the silent default when the key is absent.
+
+Default policy: readers MUST treat missing keys as `estimated`. No migration is run — legacy state without `assessment.tests_source` behaves exactly as if every key were `estimated`. Writers only mark the specific key they touch; unrelated keys are left alone.
+
+Example state blob:
+
+```json
+"assessment": {
+  "tests": {
+    "max_hang_20mm_7s_total_kg": 150.0,
+    "max_hang_20mm_5s_total_kg": 150.0,
+    "repeater_7_3_max_sets_20mm": 20
+  },
+  "tests_source": {
+    "max_hang_20mm_7s_total_kg": "measured",
+    "max_hang_20mm_5s_total_kg": "measured",
+    "repeater_7_3_max_sets_20mm": "measured"
+  }
+}
+```
+
+Writer sites:
+
+- `onboarding.py::_build_tests_source` — marks every user-entered scalar at onboarding; dual-writes the 7s/5s hang sibling (they share a single input in the form).
+- `progression_v1.py::_update_test_from_log` — every branch that writes a scalar to `assessment.tests` calls `_mark_measured(key, ...)` alongside it.
+
+Reader sites that gate on source:
+
+- `progression_v1.py::_estimate_hangboard_baseline` Priority 0 — if `tests_source["max_hang_20mm_7s_total_kg"] == "measured"`, use the scalar as baseline directly (stamping `source="test"` + `updated_at`). Otherwise fall back to grade / pullup estimate (writing `source="estimated_from_*"` + `estimated_at`).
+- `week.py::get_week` freshness map — `_recent_test_dates` is populated for finger / repeater / pulling axes only when the corresponding `tests_source` entry is `"measured"`. Estimated scalars never suppress legitimate retests.
+
+Reader sites intentionally source-agnostic:
+
+- `assessment_v1.compute_assessment_profile` (all 5 axes) — radar math stays source-blind. An estimated scalar is better than `None` for UI.
+- `resolve_session.suggest_max_hang_load` fallback — builds a baseline-shaped dict when `baselines.hangboard` is empty. Gating would downgrade UX (no suggestion at all); keep source-blind.
+- `planner_v2._pick_pulling_test_session` — uses `max_pullups_bw` presence as a routing signal (BW vs weighted pull-up), not a freshness signal.
+
+Origin: D214 / D-TESTUSER-VERIFY §5 (F1 + F3 closure).
+
+---
+
 ### 2.11 Category
 
 `category` is a coarse grouping for UI display and reporting. It is NOT used for selection filtering.

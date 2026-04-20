@@ -50,6 +50,25 @@
 
 ---
 
+## Priority 1.27 — Audit Remediation (D211 / D-TESTUSER-VERIFY residuals)
+
+> Origin: `docs/audit/D-TESTUSER-VERIFY_report.md` §5 (2026-04-19)
+> F1 (HIGH) + F3 (HIGH) closed by D214 (`assessment.tests_source` sidecar). Residuals below parked post-launch.
+
+### Post-launch (P2/P3)
+
+| ID | Title | Severity | Priority | Type | Effort | Notes |
+|----|-------|----------|----------|------|--------|-------|
+| F2 | **Onboarding input validation** — no bounds on BW/height/age/test inputs (BW=33 kg, height=33 cm, age=3, max_hang=3.5× BW accepted silently; radar saturates to 100). | MEDIUM | P2 | B | S | Add range checks at onboarding: BW 35–150 kg, height 120–220 cm, age 10–80, max_hang ≤ 3× BW (soft-warn). |
+| F4 | **Stale cached week plan across deploys** — no regeneration trigger on deploy; users onboarded within ~5 min of a push keep pre-push output. | LOW | P3 | B | XS | Accept (deploy-window artifact). Users can force-regenerate via Settings. Document in user guide. |
+| F5 | **`goal.primary_weakness`/`secondary_weakness` are absent** — actual storage at `assessment.self_eval.*`. Consumers reading `goal.*` see `None`. | LOW | P3 | D+B | XS | Grep consumers; if any read `goal.*` for weaknesses, fix read site (not write). Spec-drift only. |
+| F6 | **`macrocycle.phases[].weeks` is `null`** — consumers iterating `phases[].weeks` see `null`; sum via `start_week` deltas works. | LOW | P3 | D+B | XS | Audit consumers; drop the field from schema if all compute from `start_week` deltas, else populate at generation. |
+| F7 | **`goal.deadline` empty while `total_weeks=12`** — onboarding writes `deadline=""` when deadline is derived from `total_weeks`. | LOW | P3 | B | XS | Cosmetic. Compute ISO date from `total_weeks + start_date`, or drop the field. |
+| F8 | **`assessment.tests.last_test_date = 2026-04-16`** (3 days before macrocycle start) — writer not traced in D211. | COSMETIC | P3 | D | XS | Grep writer site; likely legacy path in `progression_v1.py`. |
+| F9 | **Pass 3 test placement requires non-empty day** (`planner_v2.py:1360`: `if not day_sessions[offset]: continue`). Tests can only replace existing sessions — users with few available days silently lose tests. | MEDIUM | P2 | B | S | Loosen empty-day rule for test sessions, or order `required=True` first across axes. |
+
+---
+
 ## Priority 1.75 — Go-to-Market Sprint
 
 > Origin: Strategic Advisory Council (2× runs, 5 advisors each, 2026-04-01)
@@ -76,6 +95,7 @@
 |----|-------|------|--------|--------|-------|
 | B209 | **Wire test_max_hang_7s into planner (RC1)** | B | S | ✅ Done | D85 catalog file was orphan — planner hardcoded 5s. Now schedules 7s per design. |
 | B210 | **Fix freshness check RC2 — drop estimated_at + bypass on inject_tests** | B | XS | ✅ Done | New users' finger tests no longer skipped for 42 days. |
+| D214 | **Source taxonomy normalization — `assessment.tests_source` sidecar (F1+F3)** | D+B | S | ✅ Done | Measured max_hang scalar now wins over grade estimate (F1). Pulling freshness gated on source (F3). Silent `"estimated"` default on missing key = no migration. |
 | B207 | **Harden `warmup_climbing` template — fallback for no-wall home** | B | S | Open **P2** | Residual from D210. `warmup_easy_boulders` referenced by explicit `exercise_id`, bypasses P0 equipment gate. Options: (a) filter-based selection with equipment gate, or (b) add `warmup_general_mobility` fallback. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
 | B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
