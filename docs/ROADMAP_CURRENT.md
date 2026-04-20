@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-17 (B212 checkout-guard against overwriting active subscription)
+> Last updated: 2026-04-20 (D215 audit + B216 rollover fix — founder-account feedback-vanish incident closed)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -96,6 +96,8 @@
 | B209 | **Wire test_max_hang_7s into planner (RC1)** | B | S | ✅ Done | D85 catalog file was orphan — planner hardcoded 5s. Now schedules 7s per design. |
 | B210 | **Fix freshness check RC2 — drop estimated_at + bypass on inject_tests** | B | XS | ✅ Done | New users' finger tests no longer skipped for 42 days. |
 | D214 | **Source taxonomy normalization — `assessment.tests_source` sidecar (F1+F3)** | D+B | S | ✅ Done | Measured max_hang scalar now wins over grade estimate (F1). Pulling freshness gated on source (F3). Silent `"estimated"` default on missing key = no migration. |
+| D215 | **Forensic audit — 2026-04-20 rollover incident (founder account)** | D | M | ✅ Done | Founder saw UBA feedback "vanish" + apparent macrocycle shift. Root-caused to stale `current_week_plan` cache + silent `except Exception` in feedback handler. Full report + snapshot + trace: `docs/audit/D215/`. Read-only, no user-state modified. |
+| B216 | **Monday rollover fix — cache self-heal + narrow feedback except (D215 closure)** | B | S | ✅ Done | Defect A: cache-hit in `week.py` now refreshes legacy `current_week_plan` when calendar advances. Defect B: `feedback.py` narrows to `ValueError` + retries mark_done against `week_plans[target_monday]` before giving up. 6 regression tests (T1..T6). |
 | B207 | **Harden `warmup_climbing` template — fallback for no-wall home** | B | S | Open **P2** | Residual from D210. `warmup_easy_boulders` referenced by explicit `exercise_id`, bypasses P0 equipment gate. Options: (a) filter-based selection with equipment gate, or (b) add `warmup_general_mobility` fallback. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
 | B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
