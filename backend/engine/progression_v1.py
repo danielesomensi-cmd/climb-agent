@@ -679,6 +679,28 @@ def _estimate_hangboard_baseline(user_state: Dict[str, Any]) -> None:
     if existing and float(existing) > bodyweight - 10:
         return  # Valid baseline present — skip estimation
 
+    tests_data = ((user_state.get("assessment") or {}).get("tests") or {})
+    tests_src = ((user_state.get("assessment") or {}).get("tests_source") or {})
+
+    estimated: Optional[float] = None
+    grade_used: Optional[str] = None
+    source: Optional[str] = None
+
+    # D214 F1: Priority 0 — user-measured max hang scalar wins over grade estimate.
+    # Gated on tests_source == "measured" so fallback paths still fire when the
+    # scalar was only estimated at onboarding.
+    direct_hang = (
+        tests_data.get("max_hang_20mm_7s_total_kg")
+        or tests_data.get("max_hang_20mm_5s_total_kg")
+    )
+    direct_hang_src = (
+        tests_src.get("max_hang_20mm_7s_total_kg")
+        or tests_src.get("max_hang_20mm_5s_total_kg")
+    )
+    if direct_hang is not None and direct_hang_src == "measured":
+        estimated = float(direct_hang)
+        source = "test"
+
     # Priority 1: estimate from lead_max_rp grade
     lead_rp = (
         ((user_state.get("assessment") or {}).get("grades") or {})
@@ -687,17 +709,12 @@ def _estimate_hangboard_baseline(user_state: Dict[str, Any]) -> None:
     if lead_rp:
         lead_rp = lead_rp.lower()
 
-    estimated: Optional[float] = None
-    grade_used: Optional[str] = None
-    source: Optional[str] = None
-
-    if lead_rp and lead_rp in GRADE_TO_HANG_OFFSET:
+    if estimated is None and lead_rp and lead_rp in GRADE_TO_HANG_OFFSET:
         estimated = bodyweight + GRADE_TO_HANG_OFFSET[lead_rp]
         grade_used = lead_rp
         source = "estimated_from_grade"
-    else:
+    elif estimated is None:
         # Priority 2: estimate from max weighted pullup test (B121 key fix)
-        tests_data = ((user_state.get("assessment") or {}).get("tests") or {})
         # D84: prefer estimated 1RM from 2RM, fall back to legacy direct 1RM
         pullup_1rm_total = (
             tests_data.get("weighted_pullup_1rm_estimated_kg")
@@ -719,11 +736,17 @@ def _estimate_hangboard_baseline(user_state: Dict[str, Any]) -> None:
     new_entry: Dict[str, Any] = {
         "max_total_load_kg": estimated,
         "source": source,
-        "estimated_at": today,
         "hang_seconds": 7,
         "edge_mm": 20,
         "grip": "half_crimp",
     }
+    # D214 F1: when the baseline is seeded from a user-measured scalar we stamp
+    # updated_at (real test timestamp). Estimates keep estimated_at so week.py
+    # freshness gate does not treat them as real tests.
+    if source == "test":
+        new_entry["updated_at"] = today
+    else:
+        new_entry["estimated_at"] = today
     if grade_used:
         new_entry["grade_used"] = grade_used
 
@@ -1085,6 +1108,12 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
     date_str = str(log_entry.get("date") or "")
     assessment = updated.setdefault("assessment", {})
     at = assessment.setdefault("tests", {})
+    # D214: tests_source sidecar — every scalar written below is a measured result
+    at_src = assessment.setdefault("tests_source", {})
+
+    def _mark_measured(*keys: str) -> None:
+        for k in keys:
+            at_src[k] = "measured"
 
     for item in feedback_items:
         exercise_id = str(item.get("exercise_id") or "")
@@ -1125,6 +1154,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             # Write scalar to assessment.tests (both keys for compat)
             at["max_hang_20mm_7s_total_kg"] = total
             at["max_hang_20mm_5s_total_kg"] = total  # legacy compat: assessment_v1 reads this key
+            _mark_measured("max_hang_20mm_7s_total_kg", "max_hang_20mm_5s_total_kg")
 
         # --- Max hang 5s (legacy — still accepted for backward compat) ---
         elif exercise_id == "max_hang_5s":
@@ -1161,6 +1191,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 baselines[0]["grip"] = "half_crimp"
             # Write scalar to assessment.tests (legacy key)
             at["max_hang_20mm_5s_total_kg"] = total
+            _mark_measured("max_hang_20mm_5s_total_kg", "max_hang_20mm_7s_total_kg")
 
         # --- Repeater 7/3 (legacy: sets-based, new: reps to failure) ---
         elif exercise_id in ("repeater_hang_7_3", "test_repeater_7_3_to_failure"):
@@ -1183,6 +1214,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             rep_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
             # Write scalar to assessment.tests (same key for backward compat)
             at["repeater_7_3_max_sets_20mm"] = completed
+            _mark_measured("repeater_7_3_max_sets_20mm")
 
         # --- Max hang duration (BW, 20mm) ---
         elif exercise_id == "test_max_hang_duration_20mm":
@@ -1190,6 +1222,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None:
                 continue
             at["max_hang_duration_20mm_seconds"] = float(value)
+            _mark_measured("max_hang_duration_20mm_seconds")
 
         # --- L-sit hold ---
         elif exercise_id == "test_l_sit_hold":
@@ -1197,6 +1230,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None:
                 continue
             at["l_sit_hold_seconds"] = float(value)
+            _mark_measured("l_sit_hold_seconds")
 
         # --- Hip flexibility ---
         elif exercise_id == "test_hip_flexibility":
@@ -1204,6 +1238,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None:
                 continue
             at["hip_flexibility_cm"] = float(value)
+            _mark_measured("hip_flexibility_cm")
 
         # --- Weighted pull-up (D84: now 2RM protocol, derive 1RM) ---
         elif exercise_id == "weighted_pullup":
@@ -1238,6 +1273,12 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             at["pulling_ratio_pct"] = pulling_ratio
             # Legacy compat: keep 1rm field pointing to estimated value
             at["weighted_pullup_1rm_total_kg"] = estimated_1rm
+            _mark_measured(
+                "weighted_pullup_2rm_total_kg",
+                "weighted_pullup_1rm_estimated_kg",
+                "pulling_ratio_pct",
+                "weighted_pullup_1rm_total_kg",
+            )
             # B121: update baselines.pulling from test
             pulling_baselines = updated.setdefault("baselines", {})
             pulling_baselines["pulling"] = {
@@ -1258,6 +1299,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None:
                 continue
             at["max_pullups_bw"] = int(value)
+            _mark_measured("max_pullups_bw")
 
         # --- Loading pin duration test (seconds per hand) ---
         elif exercise_id == "lp_duration_test":
@@ -1266,6 +1308,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None or hand not in ("right", "left"):
                 continue
             at[f"lp_duration_test_{hand}_seconds"] = float(value)
+            _mark_measured(f"lp_duration_test_{hand}_seconds")
 
         # --- Loading pin max test 5s ---
         elif exercise_id == "lp_max_test_5s":
@@ -1293,6 +1336,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 })
             # Write scalar to assessment.tests
             at[f"lp_max_lift_5s_{hand}_kg"] = load_kg
+            _mark_measured(f"lp_max_lift_5s_{hand}_kg")
 
 
 def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:

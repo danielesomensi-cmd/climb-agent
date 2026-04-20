@@ -200,6 +200,26 @@ def _normalize_test_keys(tests: dict) -> dict:
     return result
 
 
+def _build_tests_source(tests: dict) -> dict:
+    """D214: mark every user-entered test scalar as ``measured``.
+
+    Missing keys are omitted — readers default to ``"estimated"``.
+    Dual-writes the 5s/7s hang sibling because they share a single input.
+    """
+    source: dict = {}
+    for key, value in (tests or {}).items():
+        if value is None or value == "":
+            continue
+        source[key] = "measured"
+    if (
+        "max_hang_20mm_7s_total_kg" in source
+        or "max_hang_20mm_5s_total_kg" in source
+    ):
+        source["max_hang_20mm_7s_total_kg"] = "measured"
+        source["max_hang_20mm_5s_total_kg"] = "measured"
+    return source
+
+
 def _build_planning_prefs(
     prefs: dict | None,
     age: int | None,
@@ -242,6 +262,7 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             "experience": data.experience,
             "grades": data.grades,
             "tests": _normalize_test_keys(data.tests),
+            "tests_source": _build_tests_source(_normalize_test_keys(data.tests)),
             "self_eval": data.self_eval,
             "profile": None,
         },

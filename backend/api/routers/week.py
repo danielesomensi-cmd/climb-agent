@@ -319,24 +319,41 @@ def get_week(
             if _max_pullups_bw is not None:
                 _max_pullups_bw = int(_max_pullups_bw)
             # B128: extract recent test completion dates for freshness check
+            # D214: gate every freshness entry on assessment.tests_source == "measured".
+            # Onboarding estimates (silent default "estimated") never populate
+            # _recent_test_dates, so planner schedules retests correctly.
+            _tests_src = ((state.get("assessment") or {}).get("tests_source") or {})
             _recent_test_dates: dict[str, str] = {}
             _hb_baselines = (state.get("baselines") or {}).get("hangboard") or []
-            if _hb_baselines:
-                # B210: drop estimated_at fallback — onboarding estimate is not a real test
+            _finger_measured = (
+                _tests_src.get("max_hang_20mm_7s_total_kg") == "measured"
+                or _tests_src.get("max_hang_20mm_5s_total_kg") == "measured"
+            )
+            if _hb_baselines and _finger_measured:
+                # B210 + D214: only honor updated_at when the underlying scalar was measured
                 _hb_ts = _hb_baselines[0].get("updated_at")
                 if _hb_ts:
                     _recent_test_dates["finger"] = _hb_ts
             _rep_history = (state.get("tests") or {}).get("repeater_strength_endurance") or []
+            _rep_measured = _tests_src.get("repeater_7_3_max_sets_20mm") == "measured"
             if _rep_history:
                 _recent_test_dates["repeater"] = _rep_history[-1].get("date", "")
-            elif (state.get("assessment") or {}).get("tests", {}).get("repeater_7_3_max_sets_20mm") is not None:
+            elif _rep_measured and (state.get("assessment") or {}).get("tests", {}).get("repeater_7_3_max_sets_20mm") is not None:
                 # B191/Finding-B: onboarding-only users have no in-app repeater history;
                 # use macrocycle start_date as proxy (test was baseline-assessed at onboarding)
+                # D214: only fire when the scalar is actually measured, not grade-estimated
                 _mc_start = (state.get("macrocycle") or {}).get("start_date")
                 if _mc_start:
                     _recent_test_dates["repeater"] = _mc_start
             _pulling_bl = (state.get("baselines") or {}).get("pulling") or {}
-            if _pulling_bl.get("updated_at"):
+            _pulling_measured = (
+                _tests_src.get("weighted_pullup_1rm_total_kg") == "measured"
+                or _tests_src.get("weighted_pullup_2rm_total_kg") == "measured"
+                or _tests_src.get("weighted_pullup_1rm_estimated_kg") == "measured"
+            )
+            if _pulling_bl.get("updated_at") and _pulling_measured:
+                # D214 F3: estimated pulling baseline (_estimate_pulling_baseline
+                # stamps updated_at=today) no longer masks need for retest.
                 _recent_test_dates["pulling"] = _pulling_bl["updated_at"]
             # B161: look up previous week's plan for cross-week spacing
             _prev_week_plan = None
