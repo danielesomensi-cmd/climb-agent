@@ -17,7 +17,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 interface FeedbackDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (feedback: Record<string, string>, durationMinutes: number, durationSource: "user_reported" | "estimated") => void;
+  onSubmit: (feedback: Record<string, string>, durationMinutes: number) => void;
   exercises: Array<{ exercise_id: string; name: string }>;
   /** Session slot — used to pre-fill duration estimate */
   slot?: string;
@@ -64,8 +64,10 @@ export function FeedbackDialog({
     const parsed = parseInt(durationStr, 10);
     const userEntered = !isNaN(parsed) && parsed > 0;
     const dur = userEntered ? parsed : estimatedMin;
-    const source = userEntered ? "user_reported" as const : "estimated" as const;
-    onSubmit(complete, dur, source);
+    // B217: duration_source dropped — was a Potemkin field (never persisted
+    // server-side, read only with hard-coded default). Caller signature
+    // simplified to (feedback, durationMinutes).
+    onSubmit(complete, dur);
     setFeedback({});
     setDurationStr(String(estimatedMin));
   }

@@ -157,7 +157,6 @@ def test_T2_end_to_end_undo_clears_ui_fields_across_fetches():
             "date": target_date,
             "session_id": target_sid,
             "session_duration_seconds": 5100,
-            "duration_source": "timer",
             "actual": {
                 "exercise_feedback_v1": [
                     {"exercise_id": "deadhang_20mm", "feedback": "hard"},

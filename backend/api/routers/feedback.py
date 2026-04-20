@@ -232,6 +232,41 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                                 _sess_c["actual_exercises"] = _fb_items
                                 break
 
+    # 4b-bis. B217: Persist session_duration_seconds on the session slot so
+    # the POST response carries the measured duration directly. Without this,
+    # the frontend cache after setQueryData has no duration field and falls
+    # back to the hardcoded slot-table (lunch:35/morning:60/evening:90) until
+    # the next GET /api/week refetch runs _attach_feedback. Separate from the
+    # 4b actual_exercises block because duration is session-wide, not per-ex,
+    # and the payload may omit exercise_feedback_v1.
+    _dur_new = req.log_entry.get("session_duration_seconds")
+    if _dur_new is not None and target_date and target_sid:
+        _wp_d = state.get("current_week_plan") or {}
+
+        def _apply_dur(plan: dict) -> None:
+            for wk in plan.get("weeks", []):
+                for day in wk.get("days", []):
+                    if day.get("date") != target_date:
+                        continue
+                    for sess in day.get("sessions", []):
+                        if sess.get("session_id") != target_sid:
+                            continue
+                        # B197-style guard: never regress a measured duration
+                        _prev = sess.get("session_duration_seconds")
+                        sess["session_duration_seconds"] = (
+                            max(_prev, _dur_new)
+                            if isinstance(_prev, (int, float))
+                            else _dur_new
+                        )
+                        return
+
+        _apply_dur(_wp_d)
+        _wp_d_start = _wp_d.get("start_date", "")
+        if _wp_d_start:
+            _cached_d = (state.get("week_plans") or {}).get(_wp_d_start)
+            if _cached_d and _cached_d is not _wp_d:
+                _apply_dur(_cached_d)
+
     # 4c. D172-04: Stale exercise guard — warn if feedback exercise_ids don't match
     # the resolved session (session removed from catalog or exercises changed)
     stale_exercise_warning: Optional[str] = None

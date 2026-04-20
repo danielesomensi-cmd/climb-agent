@@ -848,7 +848,7 @@ function TodayContent() {
   }
 
   /** Submit session feedback (B127: always includes duration) */
-  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes: number, durationSource: "user_reported" | "estimated") {
+  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes: number) {
     if (!feedbackSessionId) return;
     try {
       const feedbackItems = Object.entries(feedback).map(
@@ -863,7 +863,6 @@ function TodayContent() {
           date: targetDate,
           session_id: feedbackSessionId,
           session_duration_seconds: durationMinutes * 60,
-          duration_source: durationSource,
           actual: {
             exercise_feedback_v1: feedbackItems,
           },

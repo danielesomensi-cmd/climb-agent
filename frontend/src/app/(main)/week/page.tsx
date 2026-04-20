@@ -459,7 +459,7 @@ export default function WeekPage() {
   }
 
   /** Submit session feedback (B127: always includes duration) */
-  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes: number, durationSource: "user_reported" | "estimated") {
+  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes: number) {
     if (!feedbackSessionId || !feedbackDate) return;
     try {
       const feedbackItems = Object.entries(feedback).map(
@@ -474,7 +474,6 @@ export default function WeekPage() {
           date: feedbackDate,
           session_id: feedbackSessionId,
           session_duration_seconds: durationMinutes * 60,
-          duration_source: durationSource,
           actual: { exercise_feedback_v1: feedbackItems },
         },
         status: "done",

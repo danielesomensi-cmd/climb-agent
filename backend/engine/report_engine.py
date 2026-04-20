@@ -808,14 +808,16 @@ def _build_training_time(
             cl_by_key[key] = entry
 
     # 1. Engine sessions: real duration from completion_log, else template estimate
+    # B217: dropped duration_source lookup — field was never written server-side
+    # (Potemkin: sent by frontend, accepted by backend, never persisted). The
+    # default "timer" was the only value this branch ever produced.
     sessions_with_duration: set = set()
     for key, entry in cl_by_key.items():
         dur = entry.get("session_duration_seconds")
         if dur is not None:
             dur = int(dur)
             total_seconds += dur
-            src = entry.get("duration_source", "timer")
-            sources[src] = sources.get(src, 0) + dur
+            sources["timer"] = sources.get("timer", 0) + dur
             sessions_with_duration.add(key)
 
     # 1b. Fallback: "done" sessions without real duration → template estimate

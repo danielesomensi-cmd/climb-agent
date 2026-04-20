@@ -862,16 +862,15 @@ export function SessionCard({
               );
             })()}
             {isDone && (() => {
+              // B217: only show a duration when we have a measured one. No
+              // slot-table fallback — "Completed" alone is the honest signal.
               const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
-              const slotEst: Record<string, number> = { lunch: 35, morning: 60, evening: 90 };
-              const estMin = slotEst[session.slot] ?? 60;
-              const durLabel = hasReal
-                ? ` · ${Math.round(session.session_duration_seconds! / 60)} min`
-                : ` · ~${estMin} min`;
               return (
                 <Badge className="bg-green-600 text-[10px]">
                   <span className="text-white">Completed</span>
-                  <span className={hasReal ? "text-white" : "text-zinc-300"}>{durLabel}</span>
+                  {hasReal && (
+                    <span className="text-white">{` · ${Math.round(session.session_duration_seconds! / 60)} min`}</span>
+                  )}
                 </Badge>
               );
             })()}
@@ -1147,7 +1146,15 @@ export function SessionCard({
           <DrawerHeader>
             <DrawerTitle>{session.is_custom ? (session.name || formatSessionName(session.session_id)) : ((session.resolved as Record<string, Record<string, string>> | undefined)?.session?.session_name || formatSessionName(session.session_id))}</DrawerTitle>
             <DrawerDescription>
-              {isDone ? `Completed · ${session.session_duration_seconds != null && session.session_duration_seconds > 0 ? `${Math.round(session.session_duration_seconds / 60)} min` : `~${({lunch:35,morning:60,evening:90} as Record<string,number>)[session.slot] ?? 60} min`}` : isSkipped ? "Skipped" : "Planned"} · {locationLabel} · {formatSlot(session.slot)}
+              {(() => {
+                // B217: drop slot-table fallback. Show duration only when measured.
+                const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
+                const status = isDone ? "Completed" : isSkipped ? "Skipped" : "Planned";
+                const durSegment = isDone && hasReal
+                  ? ` · ${Math.round(session.session_duration_seconds! / 60)} min`
+                  : "";
+                return `${status}${durSegment} · ${locationLabel} · ${formatSlot(session.slot)}`;
+              })()}
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-6 space-y-1">
