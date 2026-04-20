@@ -284,6 +284,16 @@ def get_week(
                 and cached["weeks"][0].get("days")
             ):
                 week_plan = cached
+                # B216 Defect A: self-heal legacy current_week_plan on
+                # calendar rollover. Cache-hit confirms per-week cache is
+                # correct; if the legacy slot still points to a prior Monday,
+                # resync so downstream readers (feedback.py, free_session.py,
+                # etc.) see the right week without needing a force-regen.
+                if is_current_week:
+                    legacy = state.get("current_week_plan") or {}
+                    if legacy.get("start_date") != week_start_key:
+                        state["current_week_plan"] = cached
+                        save_state(state, user_id)
         except Exception:
             logger.warning("Failed to read cached week plan, regenerating")
             week_plan = None
