@@ -16,7 +16,7 @@
       "lead_max_os": "6b+",
       "lead_max_rp": "7a"
     },
-    "last_assessed": "2026-04-13",
+    "last_assessed": "2026-04-20",
     "profile": {
       "endurance": 40,
       "finger_strength": 40,
@@ -28,7 +28,8 @@
       "primary_weakness": "pump_too_early",
       "secondary_weakness": "fingers_give_out"
     },
-    "tests": {}
+    "tests": {},
+    "tests_source": {}
   },
   "availability": {
     "fri": {
@@ -54,7 +55,7 @@
     "hangboard": [
       {
         "edge_mm": 20,
-        "estimated_at": "2026-04-09",
+        "estimated_at": "2026-04-20",
         "grade_used": "7a",
         "grip": "half_crimp",
         "hang_seconds": 7,
@@ -106,8 +107,8 @@
       "pulling_strength": 45,
       "technique": 60
     },
-    "end_date": "2026-07-05",
-    "generated_at": "2026-04-09T16:26:16",
+    "end_date": "2026-07-12",
+    "generated_at": "2026-04-20T14:51:45",
     "goal_snapshot": {
       "current_grade": "7a",
       "deadline": "2026-09-01",
@@ -269,7 +270,7 @@
         "start_week": 12
       }
     ],
-    "start_date": "2026-04-13",
+    "start_date": "2026-04-20",
     "total_weeks": 12
   },
   "outdoor_spots": [],
