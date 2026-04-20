@@ -20,14 +20,20 @@ sessions continue through the legacy flow.
 from __future__ import annotations
 
 import logging
-from datetime import date as date_type, datetime, timezone
+from datetime import date as date_type, datetime, timedelta, timezone
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.api.deps import get_user_id, load_state, require_active_subscription, save_state
+from backend.api.deps import (
+    current_phase_and_week,
+    get_user_id,
+    load_state,
+    require_active_subscription,
+    save_state,
+)
 from backend.api.rate_limit import limiter
 from backend.api.models import FeedbackRequest
 from backend.api.routers.replanner import persist_week_plan
@@ -45,6 +51,30 @@ from backend.engine.resolve_session import normalize_limitations, _check_exercis
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 
 
+def _monday_for_date(iso_date: str) -> Optional[str]:
+    """Return the Monday (YYYY-MM-DD) of the ISO week containing *iso_date*."""
+    try:
+        d = datetime.strptime(iso_date, "%Y-%m-%d").date()
+    except (ValueError, TypeError):
+        return None
+    return (d - timedelta(days=d.weekday())).isoformat()
+
+
+def _is_current_macrocycle_monday(state: dict, candidate_monday: str) -> bool:
+    """True iff *candidate_monday* is the Monday of the current macrocycle week."""
+    mc = state.get("macrocycle") or {}
+    if not mc.get("phases") or not mc.get("start_date"):
+        return False
+    try:
+        mc_start = datetime.strptime(mc["start_date"], "%Y-%m-%d").date()
+    except ValueError:
+        return False
+    pi, wi = current_phase_and_week(mc)
+    cumulative = sum(p.get("duration_weeks", 1) for p in mc["phases"][:pi])
+    current_start = (mc_start + timedelta(weeks=cumulative + wi)).isoformat()
+    return candidate_monday == current_start
+
+
 @router.post("", dependencies=[Depends(require_active_subscription)])
 @limiter.limit("30/minute")
 def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str] = Depends(get_user_id)):
@@ -56,12 +86,12 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
 
     # 1. A194: Apply mark_done inline to current_week_plan (idempotent — safe if
     # frontend already called applyEvents separately, e.g. from /today).
+    availability = state.get("availability")
+    planning_prefs = state.get("planning_prefs")
+    gyms = (state.get("equipment") or {}).get("gyms")
     week_plan = state.get("current_week_plan")
     if week_plan and target_date and target_sid:
         try:
-            availability = state.get("availability")
-            planning_prefs = state.get("planning_prefs")
-            gyms = (state.get("equipment") or {}).get("gyms")
             week_plan = apply_events(
                 week_plan,
                 [{
@@ -79,14 +109,48 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
             start_key = week_plan.get("start_date", "")
             if start_key:
                 state.setdefault("week_plans", {})[start_key] = week_plan
-        except Exception as e:
-            # Non-fatal: apply_events may raise for edge cases (e.g. date not
-            # in plan). The legacy mark_done flow from /today already succeeded,
-            # so feedback still applies. Log and continue.
-            logger.warning(
-                "A194 mark_done inline skipped: %s (date=%r, sid=%r)",
-                e, target_date, target_sid,
-            )
+        except ValueError as e:
+            # B216 Defect B: _find_day raises ValueError when target_date is
+            # outside the plan window — typically when current_week_plan is
+            # stale at the Monday rollover and the correct plan lives in
+            # week_plans[target_monday]. Retry against the date-indexed cache
+            # before giving up so mark_done isn't silently dropped.
+            target_monday = _monday_for_date(target_date)
+            alt_plan = (state.get("week_plans") or {}).get(target_monday) if target_monday else None
+            if alt_plan:
+                try:
+                    alt_plan = apply_events(
+                        alt_plan,
+                        [{
+                            "event_type": "mark_done",
+                            "date": target_date,
+                            "session_ref": target_sid,
+                        }],
+                        availability=availability,
+                        planning_prefs=planning_prefs,
+                        gyms=gyms,
+                    )
+                    state.setdefault("week_plans", {})[target_monday] = alt_plan
+                    # If target_monday is the current macrocycle week, also
+                    # refresh legacy current_week_plan so downstream readers
+                    # (progression, adaptive_replan, persist) use it.
+                    if _is_current_macrocycle_monday(state, target_monday):
+                        state["current_week_plan"] = alt_plan
+                        week_plan = alt_plan
+                    logger.info(
+                        "B216: mark_done landed in week_plans[%s] (current_week_plan was stale)",
+                        target_monday,
+                    )
+                except ValueError as e2:
+                    logger.warning(
+                        "B216: mark_done skipped — date not in primary or alt plan: %s (date=%r, sid=%r)",
+                        e2, target_date, target_sid,
+                    )
+            else:
+                logger.warning(
+                    "A194 mark_done inline skipped: %s (date=%r, sid=%r)",
+                    e, target_date, target_sid,
+                )
     elif not week_plan:
         logger.warning("post_feedback: no current_week_plan, skipping inline mark_done")
     elif not (target_date and target_sid):
