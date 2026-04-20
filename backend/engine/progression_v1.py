@@ -161,6 +161,46 @@ DEFAULT_ADJUSTMENT_POLICY = {
 }
 
 
+# B214: central registry of assessment.tests.* scalar keys written by each
+# exercise_id branch in _update_test_from_log. Exists so every branch can call
+# _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id]) instead of hand-listing
+# keys — closes the D214 drift risk where a branch grows a new scalar write
+# without adding the matching _mark_measured call.
+#
+# Per-hand exercises (lp_duration_test, lp_max_test_5s) keep an inline
+# _mark_measured call because the key embeds the hand suffix dynamically.
+_TEST_EXERCISE_SCALARS: Dict[str, Tuple[str, ...]] = {
+    "max_hang_7s": (
+        "max_hang_20mm_7s_total_kg",
+        "max_hang_20mm_5s_total_kg",
+    ),
+    "max_hang_5s": (
+        "max_hang_20mm_5s_total_kg",
+        "max_hang_20mm_7s_total_kg",
+    ),
+    "repeater_hang_7_3": ("repeater_7_3_max_sets_20mm",),
+    "test_repeater_7_3_to_failure": ("repeater_7_3_max_sets_20mm",),
+    "test_max_hang_duration_20mm": ("max_hang_duration_20mm_seconds",),
+    "test_l_sit_hold": ("l_sit_hold_seconds",),
+    "test_hip_flexibility": ("hip_flexibility_cm",),
+    "weighted_pullup": (
+        "weighted_pullup_2rm_total_kg",
+        "weighted_pullup_1rm_estimated_kg",
+        "pulling_ratio_pct",
+        "weighted_pullup_1rm_total_kg",
+    ),
+    "test_max_pullup_bw": ("max_pullups_bw",),
+}
+
+# exercise_ids in _update_test_from_log that mark scalars inline (dynamic key
+# per hand). Listed here only so the B214 introspection test can assert
+# completeness of _TEST_EXERCISE_SCALARS ∪ _TEST_EXERCISE_PER_HAND.
+_TEST_EXERCISE_PER_HAND: Tuple[str, ...] = (
+    "lp_duration_test",
+    "lp_max_test_5s",
+)
+
+
 def estimate_1rm_from_2rm(total_load_kg: float) -> float:
     """Estimate 1RM from 2RM using average of Epley and Brzycki formulas (D84)."""
     epley = total_load_kg * (1 + 2 / 30)
@@ -1154,7 +1194,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             # Write scalar to assessment.tests (both keys for compat)
             at["max_hang_20mm_7s_total_kg"] = total
             at["max_hang_20mm_5s_total_kg"] = total  # legacy compat: assessment_v1 reads this key
-            _mark_measured("max_hang_20mm_7s_total_kg", "max_hang_20mm_5s_total_kg")
+            _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
 
         # --- Max hang 5s (legacy — still accepted for backward compat) ---
         elif exercise_id == "max_hang_5s":
@@ -1191,7 +1231,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 baselines[0]["grip"] = "half_crimp"
             # Write scalar to assessment.tests (legacy key)
             at["max_hang_20mm_5s_total_kg"] = total
-            _mark_measured("max_hang_20mm_5s_total_kg", "max_hang_20mm_7s_total_kg")
+            _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
 
         # --- Repeater 7/3 (legacy: sets-based, new: reps to failure) ---
         elif exercise_id in ("repeater_hang_7_3", "test_repeater_7_3_to_failure"):
@@ -1214,7 +1254,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             rep_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
             # Write scalar to assessment.tests (same key for backward compat)
             at["repeater_7_3_max_sets_20mm"] = completed
-            _mark_measured("repeater_7_3_max_sets_20mm")
+            _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
 
         # --- Max hang duration (BW, 20mm) ---
         elif exercise_id == "test_max_hang_duration_20mm":
@@ -1222,7 +1262,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None:
                 continue
             at["max_hang_duration_20mm_seconds"] = float(value)
-            _mark_measured("max_hang_duration_20mm_seconds")
+            _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
 
         # --- L-sit hold ---
         elif exercise_id == "test_l_sit_hold":
@@ -1230,7 +1270,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None:
                 continue
             at["l_sit_hold_seconds"] = float(value)
-            _mark_measured("l_sit_hold_seconds")
+            _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
 
         # --- Hip flexibility ---
         elif exercise_id == "test_hip_flexibility":
@@ -1238,7 +1278,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None:
                 continue
             at["hip_flexibility_cm"] = float(value)
-            _mark_measured("hip_flexibility_cm")
+            _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
 
         # --- Weighted pull-up (D84: now 2RM protocol, derive 1RM) ---
         elif exercise_id == "weighted_pullup":
@@ -1273,12 +1313,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             at["pulling_ratio_pct"] = pulling_ratio
             # Legacy compat: keep 1rm field pointing to estimated value
             at["weighted_pullup_1rm_total_kg"] = estimated_1rm
-            _mark_measured(
-                "weighted_pullup_2rm_total_kg",
-                "weighted_pullup_1rm_estimated_kg",
-                "pulling_ratio_pct",
-                "weighted_pullup_1rm_total_kg",
-            )
+            _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
             # B121: update baselines.pulling from test
             pulling_baselines = updated.setdefault("baselines", {})
             pulling_baselines["pulling"] = {
@@ -1299,7 +1334,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             if value is None:
                 continue
             at["max_pullups_bw"] = int(value)
-            _mark_measured("max_pullups_bw")
+            _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
 
         # --- Loading pin duration test (seconds per hand) ---
         elif exercise_id == "lp_duration_test":
