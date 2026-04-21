@@ -167,14 +167,21 @@ export default function LegalPage() {
           <li>Clerk (authentication)</li>
           <li>Railway / Supabase (data hosting)</li>
           <li>Vercel (frontend hosting — no user data stored)</li>
+          <li>
+            Vercel Analytics (anonymous, cookieless pageview and funnel
+            analytics — cannot identify individual users)
+          </li>
         </ul>
 
         <h3 className="mt-6 mb-2 font-medium text-foreground">
-          7. Cookies
+          7. Cookies &amp; analytics
         </h3>
         <p className="mb-4">
           We use minimal cookies for authentication (Clerk session management).
-          No analytics, tracking, or advertising cookies are used.
+          We also collect aggregated, anonymous pageview and funnel analytics
+          through Vercel Analytics. This uses no cookies, no fingerprinting,
+          and cannot identify individual users. No advertising or third-party
+          tracking cookies are used.
         </p>
 
         <h3 className="mt-6 mb-2 font-medium text-foreground">

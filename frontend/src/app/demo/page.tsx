@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ExerciseCard } from "@/components/training/exercise-card";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 import { Button } from "@/components/ui/button";
 import { Timer, ChevronDown, ChevronUp, ArrowRight } from "lucide-react";
+import { captureUtmOnMount, trackEvent } from "@/lib/analytics";
 
 // ---------------------------------------------------------------------------
 // Demo session data — English, ~100 min, generic 6b–7a gym climber
@@ -512,24 +513,34 @@ const DEMO_BLOCKS: DemoBlock[] = [
 // Sub-components
 // ---------------------------------------------------------------------------
 
-const CTA_CARD = (
-  <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-center space-y-3 my-6">
-    <p className="text-sm font-medium text-foreground">
-      Your personalized plan is different from this — calibrated to you.
-    </p>
-    <p className="text-xs text-muted-foreground">
-      Your grades, goals, available gym days, and equipment. All computed in 5 minutes.
-    </p>
-    <Link href="/onboarding/welcome">
-      <Button size="sm" className="gap-2">
-        Build your free plan
-        <ArrowRight className="size-3.5" />
-      </Button>
-    </Link>
-  </div>
-);
+function CtaCard({ onCtaClick }: { onCtaClick: () => void }) {
+  return (
+    <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-center space-y-3 my-6">
+      <p className="text-sm font-medium text-foreground">
+        Your personalized plan is different from this — calibrated to you.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Your grades, goals, available gym days, and equipment. All computed in 5 minutes.
+      </p>
+      <Link href="/onboarding/welcome" onClick={onCtaClick}>
+        <Button size="sm" className="gap-2">
+          Build your free plan
+          <ArrowRight className="size-3.5" />
+        </Button>
+      </Link>
+    </div>
+  );
+}
 
-function ExerciseRow({ ex, moduleRole }: { ex: DemoExercise; moduleRole: string }) {
+function ExerciseRow({
+  ex,
+  moduleRole,
+  onFirstEngagement,
+}: {
+  ex: DemoExercise;
+  moduleRole: string;
+  onFirstEngagement: () => void;
+}) {
   const [timerOpen, setTimerOpen] = useState(false);
   const [cuesOpen, setCuesOpen] = useState(false);
 
@@ -541,7 +552,10 @@ function ExerciseRow({ ex, moduleRole }: { ex: DemoExercise; moduleRole: string 
       {ex.cues.length > 0 && (
         <div>
           <button
-            onClick={() => setCuesOpen((o) => !o)}
+            onClick={() => {
+              setCuesOpen((o) => !o);
+              onFirstEngagement();
+            }}
             className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-1"
           >
             {cuesOpen ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
@@ -563,7 +577,10 @@ function ExerciseRow({ ex, moduleRole }: { ex: DemoExercise; moduleRole: string 
       {ex.timer && (
         <div>
           <button
-            onClick={() => setTimerOpen((o) => !o)}
+            onClick={() => {
+              setTimerOpen((o) => !o);
+              onFirstEngagement();
+            }}
             className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors px-1"
           >
             <Timer className="size-3" />
@@ -590,9 +607,13 @@ function ExerciseRow({ ex, moduleRole }: { ex: DemoExercise; moduleRole: string 
 function BlockSection({
   block,
   showCtaAfter,
+  onFirstEngagement,
+  onCtaClick,
 }: {
   block: DemoBlock;
   showCtaAfter: boolean;
+  onFirstEngagement: () => void;
+  onCtaClick: () => void;
 }) {
   return (
     <section className="space-y-4">
@@ -602,10 +623,15 @@ function BlockSection({
       </div>
       <div className="space-y-3">
         {block.exercises.map((ex) => (
-          <ExerciseRow key={ex.card.exercise_id} ex={ex} moduleRole={block.moduleRole} />
+          <ExerciseRow
+            key={ex.card.exercise_id}
+            ex={ex}
+            moduleRole={block.moduleRole}
+            onFirstEngagement={onFirstEngagement}
+          />
         ))}
       </div>
-      {showCtaAfter && CTA_CARD}
+      {showCtaAfter && <CtaCard onCtaClick={onCtaClick} />}
     </section>
   );
 }
@@ -615,6 +641,46 @@ function BlockSection({
 // ---------------------------------------------------------------------------
 
 export default function DemoPage() {
+  const engagedRef = useRef(false);
+  const endMarkerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    captureUtmOnMount();
+    trackEvent("demo_viewed");
+  }, []);
+
+  useEffect(() => {
+    const node = endMarkerRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    let fired = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (fired) return;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            fired = true;
+            trackEvent("demo_scrolled_to_end");
+            observer.disconnect();
+            return;
+          }
+        }
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleFirstEngagement = useCallback(() => {
+    if (engagedRef.current) return;
+    engagedRef.current = true;
+    trackEvent("demo_engaged");
+  }, []);
+
+  const handleCtaClick = useCallback((location: "inline" | "sticky") => {
+    trackEvent("demo_cta_clicked", { location });
+  }, []);
+
   return (
     <div className="min-h-screen bg-background pb-32">
       {/* Sticky header */}
@@ -650,11 +716,13 @@ export default function DemoPage() {
             key={block.id}
             block={block}
             showCtaAfter={block.id === "projecting"}
+            onFirstEngagement={handleFirstEngagement}
+            onCtaClick={() => handleCtaClick("inline")}
           />
         ))}
 
         {/* Final message */}
-        <div className="text-center space-y-2 pt-4 pb-2">
+        <div ref={endMarkerRef} className="text-center space-y-2 pt-4 pb-2">
           <p className="text-sm font-medium text-foreground">Session complete. Great work.</p>
           <p className="text-xs text-muted-foreground">
             Every session in your real plan includes feedback tracking, automatic load adaptation, and week-over-week progression.
@@ -668,7 +736,11 @@ export default function DemoPage() {
           <p className="text-xs text-muted-foreground leading-snug">
             Want a plan built for you?
           </p>
-          <Link href="/onboarding/welcome" className="shrink-0">
+          <Link
+            href="/onboarding/welcome"
+            className="shrink-0"
+            onClick={() => handleCtaClick("sticky")}
+          >
             <Button size="sm" className="gap-1.5">
               Start free
               <ArrowRight className="size-3.5" />

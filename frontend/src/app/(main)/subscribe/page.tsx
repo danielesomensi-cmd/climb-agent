@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { createCheckoutSession } from "@/lib/api";
+import { captureUtmOnMount, trackEvent } from "@/lib/analytics";
 
 const PRICE_ID_FOUNDER = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_FOUNDER ?? "";
 const PRICE_ID_STANDARD =
@@ -16,7 +17,13 @@ export default function SubscribePage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubscribe(priceId: string) {
+  useEffect(() => {
+    captureUtmOnMount();
+    trackEvent("subscribe_viewed");
+  }, []);
+
+  async function handleSubscribe(priceId: string, plan: "founding" | "standard") {
+    trackEvent("checkout_clicked", { plan });
     setLoading(priceId);
     setError(null);
     try {
@@ -86,7 +93,7 @@ export default function SubscribePage() {
             <Button
               className="w-full"
               size="lg"
-              onClick={() => handleSubscribe(PRICE_ID_FOUNDER)}
+              onClick={() => handleSubscribe(PRICE_ID_FOUNDER, "founding")}
               disabled={loading !== null}
             >
               {loading === PRICE_ID_FOUNDER
@@ -115,7 +122,7 @@ export default function SubscribePage() {
               className="w-full"
               variant="outline"
               size="lg"
-              onClick={() => handleSubscribe(PRICE_ID_STANDARD)}
+              onClick={() => handleSubscribe(PRICE_ID_STANDARD, "standard")}
               disabled={loading !== null}
             >
               {loading === PRICE_ID_STANDARD
