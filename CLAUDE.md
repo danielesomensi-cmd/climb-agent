@@ -110,7 +110,7 @@ from backend.engine.planner_v1 import generate_week_plan
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (18 routers)
+  api/               # FastAPI REST API (19 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week,
                      # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
@@ -218,7 +218,7 @@ user_state.assessment + user_state.goal
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (40):** 12 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
+**Pages (41):** 12 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
 
 - `/today` — Today's sessions, mark done/skipped, post-session feedback
 - `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
