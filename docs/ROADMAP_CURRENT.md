@@ -105,6 +105,7 @@
 | — | **Bundle B complete** — baseline + test-week remediation closed (B209 + B210 + D214 + B214 + B215) | — | — | ✅ | Pre-paid-launch remediation arc done. Next: B203, B205, GTM-STRIPE-TAX for launch prep. |
 | B207 | **Harden `warmup_climbing` template — fallback for no-wall home** | B | S | Open **P2** | Residual from D210. `warmup_easy_boulders` referenced by explicit `exercise_id`, bypasses P0 equipment gate. Options: (a) filter-based selection with equipment gate, or (b) add `warmup_general_mobility` fallback. |
 | B203 | **Handle customer.deleted webhook + error retry policy** | B | S | Open | D205 Gap 1+2: customer.deleted not handled; all webhook errors swallowed with 200 (no Stripe retry). |
+| B204 | **Subscription guard 402 UX + cancel status display** | B | S | Open | D205 Gap 3: backend raises 402 `{error:"subscription_required"}` ma `frontend/src/lib/api.ts` non ha interceptor → utente vede JSON raw invece di redirect pulito a `/subscribe`. Include portal 404 handling + `cancel_at_period_end` display. Depends on B202 ✅. |
 | B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
 | GTM-STRIPE-TAX | **Stripe Tax registration** | Config | XS | Open | Register tax ID for EU VAT. Dashboard config, not code. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
