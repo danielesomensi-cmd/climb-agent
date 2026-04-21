@@ -213,6 +213,7 @@ Allowed `pattern` values:
 - `locomotion` *(cardio/locomotion patterns: jump rope, bear crawl, running)*
 - `elbow_flexion` *(bicep curl / elbow flexion isolation)*
 - `shoulder_isolation` *(lateral raise / medial deltoid isolation)*
+- `hip_isolation` *(hip abduction/adduction isolation work)*
 
 - `finger_extension` *(finger extensor isolation)*
 - `isometric_hold` *(static hold — hollow, plank, L-sit)*
@@ -277,6 +278,11 @@ Format:
   - `prehab_elbow_extensors`
   - `prehab_shoulder_rotator_cuff`
   - `board_limit_boulders`
+  - `hip_abduction`
+  - `hip_adduction`
+  - `hip_flexor`
+  - `push_horizontal`
+  - `push_tricep`
 
 Rules:
 - Every exercise MUST have exactly one `recency_group`.

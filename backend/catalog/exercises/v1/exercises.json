@@ -10208,6 +10208,391 @@
       ],
       "description": "Explosive deadpoint/power slap drill on boulder wall. Trains contact timing and RFD in a climbing-specific context.",
       "video_url": null
+    },
+    {
+      "id": "side_lying_hip_abduction",
+      "name": "Side-Lying Hip Abduction",
+      "category": "strength_accessory",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hip_isolation",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "hip_abduction",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 15,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Lying on side, lift top leg straight up against gravity. Isolates gluteus medius — critical for hip stability on high-steps and drop-knees. Builds lateral hip control that prevents knee valgus in demanding boulder moves.",
+      "cues": [
+        "Lie on side with legs stacked, bottom arm under head, top hand on floor for balance",
+        "Lift top leg in a straight line toward the ceiling — do NOT rotate the hip forward",
+        "Raise to roughly 45°, pause 1 second at the top",
+        "Lower with control over 2-3 seconds — do not let the leg drop",
+        "Progress by adding an ankle weight (1-3 kg) or a resistance band around the thighs"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "alt_sides": true
+    },
+    {
+      "id": "standing_hip_adduction_band",
+      "name": "Standing Hip Adduction (Band)",
+      "category": "strength_accessory",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hip_isolation",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "hip_adduction",
+      "equipment_required": [
+        "resistance_band"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Standing with resistance band anchored laterally, pull the working leg across the midline against band tension. Isolates hip adductors — key for gastoning, heel hooks, and locking knees inside corners. Cable-machine alternative for home use.",
+      "cues": [
+        "Anchor band at ankle height to a sturdy object on your side",
+        "Loop band around working ankle, stand far enough away for moderate tension",
+        "Keep torso upright and stable — do not lean toward the anchor",
+        "Pull working leg smoothly across the midline of the body, squeeze adductors at end range",
+        "Return under control over 2-3 seconds — do not let the band snap the leg back"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "alt_sides": true
+    },
+    {
+      "id": "copenhagen_adductor_plank",
+      "name": "Copenhagen Adductor Plank",
+      "category": "strength_accessory",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "anti_lateral_flexion",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "hip_adduction",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "20s hold per side. Progress: short-lever (knee on support) → long-lever (foot on support)."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Side plank with top leg elevated onto a bench or chair, bottom leg hanging below. Heavy isometric adductor load — most effective hip-adduction strengthener supported by injury-prevention research. Scale down by bending the top knee onto the support (short-lever variant).",
+      "cues": [
+        "Position a bench or sturdy chair at knee-to-hip height next to you",
+        "Side plank stance: forearm on floor directly under the shoulder, elevate hips",
+        "Place inner ankle (long lever) or inner knee (short lever) on top of the bench",
+        "Bottom leg hangs below the bench pointing toward the floor — do not rest it",
+        "Hold a rigid line from shoulder to ankle; squeeze the inner thigh of the top leg",
+        "If the knee is sensitive, always use the short-lever variant"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "alt_sides": true
+    },
+    {
+      "id": "clamshell",
+      "name": "Clamshell",
+      "category": "strength_accessory",
+      "time_min": 5,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hip_isolation",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "hip_abduction",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 15,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Side-lying with knees bent at 45°, open the top knee like a clamshell while keeping the feet together. Targets the gluteus medius in external rotation — foundational hip-stability drill and classic prehab exercise for runners and climbers.",
+      "cues": [
+        "Lie on side with hips and knees stacked, knees bent to 45°, feet together",
+        "Keep feet in contact throughout the entire range of motion",
+        "Rotate the top knee open as far as possible without letting the pelvis roll back",
+        "Pause 1 second at the top — squeeze the side of the glute",
+        "Lower in 2-3 seconds under control",
+        "Progress by adding a mini resistance band looped above the knees"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "alt_sides": true
+    },
+    {
+      "id": "seated_leg_raise_hip_flexor",
+      "name": "Seated Leg Raise (Hip Flexor)",
+      "category": "strength_accessory",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "compression",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "hip_flexor",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Seated on the floor with legs extended, lift one straight leg a few inches off the floor and hold or pulse. Hip-flexor and quad-dominant compression drill — complements `hip_flexor_strengthening` by working in the knee-extended position for high-stepping and heel-hooking into locked terrain.",
+      "cues": [
+        "Sit tall on the floor, legs straight ahead, hands on the floor behind hips for support",
+        "Keep the working leg fully extended, toes pulled toward the shin",
+        "Lift the heel 10-15 cm off the floor without bending the knee",
+        "Hold 1-2 seconds, then lower slowly — do not touch the floor between reps on the same set",
+        "Progress by adding a light ankle weight (1-2 kg) or slowing the tempo"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "alt_sides": true
+    },
+    {
+      "id": "incline_pushup",
+      "name": "Incline Push-up",
+      "category": "strength_accessory",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "push_horizontal",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Push-up with hands elevated on a bench, chair, or step. Reduces bodyweight load relative to a floor push-up — ideal regression for beginners or climbers recovering from shoulder tweaks. Same pectoral and triceps pattern, scaled intensity.",
+      "cues": [
+        "Hands on a sturdy bench, step, or chair — shoulder-width apart",
+        "Body forms a rigid plank from shoulders to ankles — engage core and glutes",
+        "Lower chest to 1-2 cm from the surface — full range of motion",
+        "Elbows at 45° flare from the torso",
+        "Press back to full extension, protract scapulae slightly at the top",
+        "Higher surface = easier; lower surface = harder. Progress toward a floor push-up."
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "dumbbell_fly",
+      "name": "Dumbbell Fly",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "push_horizontal",
+      "equipment_required": [
+        "dumbbell"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Supine on bench or floor, arms extended out to the sides holding dumbbells, arc the weights together over the chest. Isolates the pectoralis major through a long lever — effective antagonist work for climbers accumulating pulling volume. Use conservative load because of the shoulder stress in the stretched position.",
+      "cues": [
+        "Lie supine on a bench (or floor); feet planted, mild arch in lower back",
+        "Hold dumbbells above chest with a slight elbow bend — lock that bend throughout",
+        "Lower arms out to the sides in a wide arc until you feel a chest stretch — do not let elbows drop below the bench",
+        "Bring dumbbells back together over the chest in the same arc — do not press",
+        "Keep the slight elbow bend constant; a variable bend turns this into a press",
+        "Start with 30-40% of your press load — the lever is much longer"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "overhead_tricep_extension",
+      "name": "Overhead Tricep Extension",
+      "category": "strength_accessory",
+      "time_min": 7,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "push_tricep",
+      "equipment_required": [
+        "dumbbell"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Seated or standing, hold a dumbbell overhead with both hands, lower behind the head by bending at the elbows, then extend back to overhead. Isolates the long head of the triceps in the stretched position — strong antagonist to climbing pulling patterns and a direct assist for manteling and lock-offs.",
+      "cues": [
+        "Hold one dumbbell vertically with both hands cupping the top plate",
+        "Start with arms fully extended overhead, biceps near the ears",
+        "Keep elbows tucked close — do not let them flare out wide",
+        "Lower the weight behind your head by bending only at the elbows",
+        "Go until you feel a tricep stretch, then extend back to overhead",
+        "Keep torso tall and ribs down throughout — no hyperextension in the lower back"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
     }
   ]
 }
