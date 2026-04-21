@@ -1241,6 +1241,70 @@ def apply_events(
                 )
             )
 
+        elif event_type == "add_generated_session":
+            # A213: add a session generated inline (body-part picker, etc.).
+            # Unlike add_custom_session, the payload IS the session — no
+            # custom_sessions[] lookup. Sessions added this way still carry
+            # session_mode="custom_build" + is_custom=True so the frontend
+            # renders them via the existing custom-session UI, and the
+            # closed-loop skips progression_v1.
+            session_payload = event.get("session_payload") or {}
+            target_date = event.get("target_date")
+            slot = event.get("slot") or "evening"
+            if not session_payload or not target_date:
+                logger.warning(
+                    "add_generated_session: missing session_payload or target_date — skipped"
+                )
+                continue
+            try:
+                day = _find_day(updated, target_date)
+            except ValueError:
+                logger.warning(
+                    "add_generated_session: target_date %r not in plan — skipped",
+                    target_date,
+                )
+                continue
+            for existing in day.get("sessions", []):
+                if existing.get("slot") == slot:
+                    raise ValueError(
+                        f"Slot '{slot}' already occupied on {target_date}"
+                    )
+            if day.get("other_activity_slot") == slot:
+                raise ValueError(
+                    f"Slot '{slot}' already occupied by other activity on {target_date}"
+                )
+
+            # Stable, unique session_id for downstream feedback linking
+            build_kind = session_payload.get("build_kind") or "generated"
+            session_id = session_payload.get("session_id") or (
+                f"generated_{build_kind}_{target_date}_{slot}"
+            )
+
+            new_session = {
+                **session_payload,
+                "session_id": session_id,
+                "slot": slot,
+                "session_mode": session_payload.get("session_mode", "custom_build"),
+                "is_custom": True,
+                "status": "planned",
+                "location": event.get("location") or session_payload.get("location") or "home",
+                "gym_id": event.get("gym_id") if (event.get("location") == "gym") else session_payload.get("gym_id"),
+                "constraints_applied": ["generated_add"],
+                "explain": [
+                    f"user-added generated session ({build_kind})",
+                    f"body_parts={session_payload.get('body_parts_selected')}",
+                ],
+                "target_duration_min": session_payload.get("estimated_duration_minutes", 0),
+            }
+            day.setdefault("sessions", []).append(new_session)
+            day["sessions"].sort(
+                key=lambda s: (
+                    SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"),
+                    s.get("priority", 99),
+                    s.get("session_id", ""),
+                )
+            )
+
         else:
             if event_type is not None:
                 logger.warning("apply_events: unknown event_type %r — event ignored", event_type)

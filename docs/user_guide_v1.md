@@ -316,6 +316,16 @@ When you start a Free Session, the system is context-aware:
 
 Free sessions generate a load score based on number of climbs, difficulty relative to your max, and send rate. This load feeds into your weekly total — the planner considers it when planning subsequent days.
 
+### Body Part Training
+
+When you need a strength workout instead of climbing, the **Body Part Training** card in Free Sessions lets you build a quick session in three steps:
+
+1. **Equipment** — Bodyweight, Home (uses your configured gear), a specific Gym, or Show All.
+2. **Body parts** — Tap the parts you want to train: fingers, forearms, biceps, triceps, shoulders, back, chest, core, legs, glutes, hips. Parts with no matching exercises for your equipment are greyed out. The live counter updates the estimated duration as you select.
+3. **Preview & Start** — Review the generated exercises grouped by body part (two exercises per part, with warmup and optional mobility cooldown). "Start now" inserts the session into today's plan and opens the guided runner.
+
+The session uses resolver-light prescriptions (sets, reps, rest, loads from your working loads / hangboard baseline when available). Completion updates your working loads but doesn't drive closed-loop progression — this keeps ad-hoc strength days from skewing the long-term plan.
+
 ---
 
 ## 12. Confirming Next Week's Availability

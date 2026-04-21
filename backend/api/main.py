@@ -16,6 +16,7 @@ from backend.api.deps import DATA_DIR, USERS_DIR
 from backend.api.routers import (
     admin,
     assessment,
+    body_part_picker,
     catalog,
     custom_session,
     feedback,
@@ -127,6 +128,7 @@ app.include_router(weekly_override.router)
 app.include_router(admin.router)
 app.include_router(subscription.router)
 app.include_router(custom_session.router)
+app.include_router(body_part_picker.router)
 
 # Stripe webhook — registered directly to preserve raw body for signature verification
 app.add_api_route(

@@ -605,6 +605,22 @@ function FreeSessionContent() {
 
             {/* A206: My Sessions */}
             <MySessionsSection enabled={authReady} />
+
+            {/* A213: Body Part Training */}
+            <button
+              onClick={() => router.push("/body-part-picker")}
+              className="flex items-center gap-4 rounded-xl border bg-gradient-to-r from-amber-500/20 to-amber-600/5 border-amber-500/30 p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 text-amber-400">
+                <Target className="size-6" />
+              </div>
+              <div>
+                <div className="font-semibold">Body Part Training</div>
+                <div className="text-xs text-muted-foreground">
+                  Pick body parts → strength workout with warmup & cooldown
+                </div>
+              </div>
+            </button>
           </div>
         )}
 

@@ -177,6 +177,18 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                 "completed_at": datetime.now(timezone.utc).isoformat(),
             })
 
+    # A213: detect body-part sessions so they bypass macrocycle closed-loop.
+    # apply_feedback still runs (it only updates working_loads.entries[] for
+    # non-test exercises, which is exactly what we want). apply_day_result
+    # (stimulus_recency / fatigue_proxy) is skipped — body-part sessions are
+    # ad-hoc strength work outside the phase plan.
+    _is_body_part_session = False
+    if req.resolved_day:
+        for _s in req.resolved_day.get("sessions", []):
+            if _s.get("session_id") == target_sid and _s.get("build_kind") == "body_parts":
+                _is_body_part_session = True
+                break
+
     # 2. Apply progression feedback (updates working loads)
     try:
         state = apply_feedback(req.log_entry, state)
@@ -185,7 +197,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
         raise HTTPException(status_code=500, detail="Feedback application failed. Please try again.")
 
     # 3. Apply closed-loop state update (stimulus recency, fatigue proxy)
-    if req.resolved_day:
+    if req.resolved_day and not _is_body_part_session:
         try:
             state = apply_day_result_to_user_state(
                 state,
