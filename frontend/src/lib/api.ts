@@ -540,3 +540,94 @@ export const getBuilderBlocks = () =>
   request<{ warmup: WarmupCooldownBlock[]; cooldown: WarmupCooldownBlock[] }>(
     "/api/custom-session/blocks"
   );
+
+// Body Part Picker (A213)
+export interface BodyPartOption {
+  id: string;
+  label: string;
+  description: string;
+  icon: string;
+  enabled: boolean;
+  exercise_count: number;
+  stub_duration_min: number;
+}
+
+export interface BodyPartEquipmentOption {
+  mode: "bodyweight" | "home" | "gym" | "all";
+  label: string;
+  gym_id?: string;
+}
+
+export interface BodyPartPickerOptions {
+  body_parts: BodyPartOption[];
+  equipment_options: BodyPartEquipmentOption[];
+}
+
+export interface BodyPartSession {
+  session_mode: "custom_build";
+  build_kind: "body_parts";
+  is_custom: true;
+  name: string;
+  body_parts_selected: string[];
+  equipment_mode: string;
+  gym_id?: string | null;
+  include_cooldown: boolean;
+  exercises: Array<{
+    exercise_id: string;
+    body_part: string;
+    prescription: Record<string, unknown>;
+    load_source?: string;
+    suggested_external_load_kg?: number;
+  }>;
+  estimated_duration_minutes: number;
+  estimated_load_score: number;
+  intensity: string;
+  tags: Record<string, boolean>;
+  session_id?: string;
+}
+
+export const getBodyPartPickerOptions = (equipmentMode?: string, gymId?: string) => {
+  const sp = new URLSearchParams();
+  if (equipmentMode) sp.set("equipment_mode", equipmentMode);
+  if (gymId) sp.set("gym_id", gymId);
+  const qs = sp.toString();
+  return request<BodyPartPickerOptions>(
+    `/api/body-part-picker/options${qs ? `?${qs}` : ""}`
+  );
+};
+
+export const previewBodyPartSession = (data: {
+  body_parts: string[];
+  equipment_mode: string;
+  gym_id?: string | null;
+  include_cooldown?: boolean;
+  seed?: number;
+}) =>
+  request<BodyPartSession>("/api/body-part-picker/preview", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const startBodyPartSession = (data: {
+  body_parts: string[];
+  equipment_mode: string;
+  gym_id?: string | null;
+  include_cooldown?: boolean;
+  seed?: number;
+  target_date: string;
+  slot?: string;
+  location?: string;
+}) =>
+  request<{ session: BodyPartSession; week_plan: WeekPlan }>(
+    "/api/body-part-picker/start",
+    { method: "POST", body: JSON.stringify(data) }
+  );
+
+export const getBodyPartEstimate = (bodyParts: string[], includeCooldown = true) => {
+  const sp = new URLSearchParams();
+  sp.set("body_parts", bodyParts.join(","));
+  sp.set("include_cooldown", String(includeCooldown));
+  return request<{ estimated_duration_min: number }>(
+    `/api/body-part-picker/estimate?${sp.toString()}`
+  );
+};

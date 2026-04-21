@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-21 (C209 KB-validated catalog expansion — +6 esercizi (cossack_squat, hip_90_90_switch, single_leg_glute_bridge, single_leg_rdl, bulgarian_split_squat, supinated_inverted_row). C208 ha chiuso i gap D217 hips/chest/triceps (+8). Catalogo 198 → 212. 2 test skip condizionali sistemati via seed.)
+> Last updated: 2026-04-21 (A213 Body Part Picker — nuovo strength session generator con 11 categorie, 4 endpoint, replanner event `add_generated_session`, pagina `/body-part-picker`. 54 nuovi test. Chiude D217.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -114,6 +114,7 @@
 | C208 | **Hips/chest/triceps catalog expansion — D217 gap closure (+8)** | C | S | ✅ Done | Aggiunti 5 hips (`side_lying_hip_abduction`, `standing_hip_adduction_band`, `copenhagen_adductor_plank`, `clamshell`, `seated_leg_raise_hip_flexor`), 2 chest (`incline_pushup`, `dumbbell_fly`), 1 triceps (`overhead_tricep_extension`). Vocabolario: nuovo pattern `hip_isolation` + 5 recency_group (`hip_abduction`, `hip_adduction`, `hip_flexor`, `push_horizontal`, `push_tricep`). Count 198 → 206. Nota: rinumerato da C207 per collisione (commit `38c72e7` già esistente, verificato via `scripts/next_brief.py`). |
 | C209 | **KB-validated catalog expansion — hips/glutes/legs/biceps (+6)** | C | S | ✅ Done | Aggiunti `cossack_squat`, `hip_90_90_switch`, `single_leg_glute_bridge`, `single_leg_rdl`, `bulgarian_split_squat`, `supinated_inverted_row`. Vocabolario: 2 nuovi recency_group (`squat_lateral`, `hip_rotation`). Deviazioni dal brief: 4 `*_family` proposti dirottati su gruppi esistenti per preservare anti-repeat semantics (`glute_bridge_family`→`glute_bridge`, `rdl_family`→`hip_hinge`, `split_squat_family`→`split_squat`, `row_family`→`horizontal_pull`). Count 206 → 212. Fix test collaterali: `test_total_count` (→212), `test_lower_body_gym_contains_squat` (aggiunti cossack+bulgarian). |
 | — | **test_b119: rimossi 2 skip condizionali** | — | XS | ✅ Done | `test_non_monday_corrected` + `test_explicit_non_monday_corrected` ora seedano macrocycle/goal+assessment via `PUT /api/state` prima dell'asserzione e ripristinano in `finally`. Non dipendono più dall'ordine di esecuzione. Suite: 1758 passed + 2 skipped → 1760 passed, 0 skipped. |
+| A213 | **Body Part Picker — strength session generator (D217 closure)** | A | L | ✅ Done | Nuovo motore `body_part_picker.py` con 11 categorie, resolver-light (prescription_defaults + overrides + working_loads + hangboard baseline), cross-category exclusions (biceps−forearms, forearms−fingers), deterministic seeding. 4 endpoint (`/options`, `/preview`, `/start`, `/estimate`) con subscription guard. Nuovo event `add_generated_session` nel replanner (no ripple, no closed-loop). Feedback bypass per `build_kind="body_parts"` (working_loads sì, closed-loop no). Pagina `/body-part-picker` multi-step (equipment → parts → preview). 54 nuovi test (31 unit + 15 API + 8 replanner). Suite: 1760 → 1814 passed. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
 
