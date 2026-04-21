@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-20 (D215 audit + B216 rollover fix + B192 undo-session cleanup + D216 audit + B217 session-duration fix — founder-account feedback-vanish + ghost-undo + phantom "~90 min" badge incidents closed)
+> Last updated: 2026-04-21 (A212 Vercel Analytics — funnel events + UTM persistence + privacy policy disclosure. Council-flagged observability blind spot closed before flyer/Reddit/Facebook GTM push)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -109,6 +109,7 @@
 | B205 | **Verify cancel_at_period_end grace period** | B | XS-S | Open | Unconfirmed: does cancel-at-period-end set status="canceled" immediately? If so, B202 fail-closed may deny access prematurely. Needs targeted test. |
 | GTM-STRIPE-TAX | **Stripe Tax registration** | Config | XS | Open | Register tax ID for EU VAT. Dashboard config, not code. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
+| A212 | **Vercel Analytics — channel attribution + funnel events** | A | S | ✅ Done | Council-flagged observability gap closed. `@vercel/analytics` mounted in root layout (pageviews auto-captured). UTM persistence via `localStorage` (30-day first-touch). 6 custom events: `demo_viewed`, `demo_engaged` (first interaction), `demo_scrolled_to_end` (IntersectionObserver), `demo_cta_clicked` (inline/sticky), `subscribe_viewed`, `checkout_clicked` (founding/standard). Privacy policy §6-7 updated: Vercel Analytics disclosed, cookieless+anonymous. Follow-ups: A-ANALYTICS-02 (UTM → Stripe metadata), A-ANALYTICS-03 (Posthog if insufficient), A-ANALYTICS-04 (onboarding funnel). |
 
 ### Phase 2 — Measure + iterate (week 3-6)
 
