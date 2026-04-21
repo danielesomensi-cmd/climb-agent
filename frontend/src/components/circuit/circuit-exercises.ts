@@ -114,7 +114,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: false,
-    // image: "31_dragon_flag_tuck.jpeg", // TODO: add image
+    image: "31_dragon_flag_tuck.jpeg",
   },
   {
     id: "ce_front_lever_tuck",
@@ -250,7 +250,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    // image: "34_star_side_plank_r.jpeg", // TODO: add image
+    image: "34_star_side_plank_r.jpeg",
   },
   {
     id: "ce_star_side_plank_l",
@@ -260,7 +260,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: false,
-    // image: "35_star_side_plank_l.jpeg", // TODO: add image
+    image: "35_star_side_plank_l.jpeg",
   },
 
   // ── Compression / Hip Flexion (critical for toe-hooks, overhanging body tension) ──
@@ -353,7 +353,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: true,
-    // image: "38_hanging_leg_raise.jpeg", // TODO: add image
+    image: "38_hanging_leg_raise.jpeg",
   },
 
   // ── Extension / Posterior Chain (anti-climber's-back — often neglected!) ──
@@ -416,7 +416,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: false,
-    // image: "39_nordic_curl.jpeg", // TODO: add image
+    image: "39_nordic_curl.jpeg",
   },
   {
     id: "ce_arch_body_hold",
