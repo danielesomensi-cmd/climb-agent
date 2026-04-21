@@ -283,6 +283,8 @@ Format:
   - `hip_flexor`
   - `push_horizontal`
   - `push_tricep`
+  - `squat_lateral`
+  - `hip_rotation`
 
 Rules:
 - Every exercise MUST have exactly one `recency_group`.

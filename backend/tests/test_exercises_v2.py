@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 198  # C164: +2 capacity_hangboard exercises (intermittent_dead_hangs, long_interval_repeaters)
+    assert len(exercise_list) == 212  # C209: +6 (hips/glutes/legs/biceps) on top of C208's +8 (hips/chest/triceps) on top of C164's 198
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):

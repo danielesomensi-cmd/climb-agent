@@ -10593,6 +10593,299 @@
       ],
       "video_url": null,
       "load_model": "external_load"
+    },
+    {
+      "id": "cossack_squat",
+      "name": "Cossack Squat",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "squat_lateral",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Wide-stance lateral squat. Shift the body weight to one leg while the other leg extends laterally with the heel on the floor. Torso stays upright. Direct transfer to stemming and hip turnout on the wall.",
+      "cues": [
+        "Stand with feet much wider than shoulders, toes slightly out",
+        "Shift hips back and down toward one leg — that knee tracks over the toes",
+        "Extended leg stays straight, heel on the floor, toe pointing up",
+        "Keep the torso as upright as mobility allows — reach arms forward for counterbalance",
+        "Press through the heel of the working leg to return to centre, then repeat on the other side",
+        "Descend slowly (3s), push up with control — do not bounce out of the bottom"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "hip_90_90_switch",
+      "name": "90/90 Hip Switch",
+      "category": "strength_accessory",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "rotation",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "hip_rotation",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Seated on the floor, one knee at 90° in front, the other at 90° behind. Switch sides by rotating the pelvis while keeping the torso upright. Trains internal/external hip rotation — climbing-specific for drop-knee and high-step positions.",
+      "cues": [
+        "Sit tall with one leg bent at 90° in front (shin across body), other leg bent at 90° behind",
+        "Keep both knees in contact with the floor — if they won't, prop hips on a cushion",
+        "Rotate the pelvis to switch sides — knees arc smoothly from one 90/90 to the mirror",
+        "Torso stays upright throughout — do not collapse forward",
+        "Count 1 rep per complete switch (both sides)",
+        "Progress by adding a pause + lean forward at the end-range of the front leg"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
+    },
+    {
+      "id": "single_leg_glute_bridge",
+      "name": "Single-Leg Glute Bridge",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "glute_bridge",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Supine with one foot on the floor (knee bent) and the other leg extended. Raise hips until shoulders–hips–knee align. Squeeze the glute at the top with no lumbar hyperextension. Unilateral posterior-chain strength for heel hooks and body tension.",
+      "cues": [
+        "Lie on back, one foot flat on floor (knee bent ~90°), other leg extended straight",
+        "Arms relaxed alongside the body",
+        "Drive through the grounded heel to lift hips until shoulders–hips–knee form a line",
+        "Squeeze the working glute hard at the top — hold 1-2 seconds",
+        "Do not hyperextend the lower back; stop when the line is neutral",
+        "Lower with control over 2-3 seconds — do not drop hips"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "single_leg_rdl",
+      "name": "Single-Leg Romanian Deadlift",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "hip_hinge",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Can be loaded with a dumbbell in the opposite hand once bodyweight form is solid."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Standing on one leg, hinge at the hip (not the knee). Free leg extends behind as a counterbalance, back stays neutral. Can be done bodyweight or holding a dumbbell in the opposite hand for added load. Climbing transfer: heel-hook power and body tension.",
+      "cues": [
+        "Stand on one leg, slight bend in the knee (10-15°) — keep this bend constant",
+        "Hinge at the hip: push the glutes straight back, free leg extends behind as a counterbalance",
+        "Back stays long and neutral — no rounding, no hyperextension",
+        "Lower the torso until it is roughly parallel to the floor, or to the limit of hamstring flexibility",
+        "Drive through the heel of the grounded foot to return to standing",
+        "To load: hold a dumbbell in the hand OPPOSITE the working leg"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "bulgarian_split_squat",
+      "name": "Bulgarian Split Squat",
+      "category": "strength_accessory",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "lunge",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "split_squat",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Rear foot elevated on a bench or chair, all weight on the front leg. Slight forward lean to avoid psoas compression. Lower the hips straight down, front knee tracks over the foot. Climbing transfer: high-step power and unilateral leg strength.",
+      "cues": [
+        "Bench/chair at knee height behind you; top of rear foot rests on the surface (laces down)",
+        "Front foot far enough forward that the front shin is near-vertical at the bottom",
+        "Slight forward torso lean — reduces psoas load and shifts emphasis to glute/quad",
+        "Lower hips straight down until the rear knee hovers just above the floor",
+        "Front knee tracks over the 2nd/3rd toe — do NOT let it collapse inward",
+        "Drive through the whole front foot (not just the toes) to stand up",
+        "Complete all reps on one leg before switching"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "unilateral": true,
+      "alt_sides": true
+    },
+    {
+      "id": "supinated_inverted_row",
+      "name": "Supinated Inverted Row",
+      "category": "strength_accessory",
+      "time_min": 10,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_pulling"
+      ],
+      "pattern": "pull_horizontal",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "horizontal_pull",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Under a sturdy table, low bar, or rings. Easier with feet closer to body; harder with feet elevated."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Under a sturdy table or low bar with body rigid and a supinated grip (palms toward the face). Pull the chest toward the bar, elbows close to the body. Easier with feet closer, harder with feet elevated. Bicep-focused horizontal pulling with zero dedicated equipment.",
+      "cues": [
+        "Lie under a sturdy low bar, table edge, or rings — grip supinated (palms facing you), shoulder-width",
+        "Body forms a rigid plank from heels to shoulders — engage core and glutes",
+        "Initiate by retracting scapulae before bending the elbows",
+        "Pull chest toward the bar, elbows close to the body — not flared wide",
+        "Full arm extension at the bottom of each rep",
+        "To progress: elevate feet on a bench, add a pause at the top, or move under a lower bar"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     }
   ]
 }
