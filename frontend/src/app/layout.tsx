@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import { Providers } from "./providers";
 import { SwUpdateBanner } from "@/components/sw-update-banner";
@@ -61,6 +62,7 @@ export default function RootLayout({
             <Toaster richColors position="top-center" />
             <SwUpdateBanner />
           </Providers>
+          <Analytics />
           <script
             dangerouslySetInnerHTML={{
               __html: `if("serviceWorker"in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("/sw.js"))`,
