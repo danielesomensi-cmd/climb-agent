@@ -35,6 +35,10 @@ logger = logging.getLogger(__name__)
 OVERHEAD_MIN: Dict[str, int] = {"warmup": 10, "cooldown": 5, "transition": 1}
 N_PER_BODY_PART: int = 2
 
+# B218 Bug 4: inline warmup catalog IDs (data-driven — looked up at generation
+# time, passed through the same resolver-light as the main block).
+WARMUP_EXERCISE_IDS: List[str] = ["general_pulse_raise", "dynamic_mobility_flow"]
+
 
 # Per-category definition: display metadata + classification rules.
 # Classification rules are applied in priority order:
@@ -504,6 +508,11 @@ def apply_resolver_light(
       3. If working_loads has an entry → set suggested_external_load_kg.
       4. Else if total_load + hangboard baseline → suggest_max_hang_load.
       5. Else → leave load unset.
+
+    B218 Bug 2: prescription fields are also promoted to top-level so the
+    session-card `is_custom` branch (which mirrors CustomSessionExercise A206)
+    renders sets/reps/rest correctly. ``prescription`` is kept as a sub-object
+    for consumers that expect the resolver shape.
     """
     ex_id = exercise.get("id")
     defaults = deepcopy(exercise.get("prescription_defaults") or {})
@@ -522,6 +531,16 @@ def apply_resolver_light(
         user_state=user_state,
         exercise_id=ex_id or "",
     )
+
+    # B218 Bug 2: promote to top-level (CustomSessionExercise shape).
+    p = instance["prescription"] or {}
+    instance["sets"] = int(p.get("sets") or 1)
+    instance["reps"] = p.get("reps") if p.get("reps") is not None else None
+    instance["work_seconds"] = p.get("work_seconds")
+    instance["rest_between_sets_seconds"] = p.get("rest_between_sets_seconds")
+    instance["rest_between_reps_seconds"] = p.get("rest_between_reps_seconds")
+    instance["load_kg"] = p.get("load_kg") or 0
+    instance["notes"] = p.get("notes") or ""
 
     # Step 3 — working_loads lookup
     wl_entries = (user_state.get("working_loads") or {}).get("entries") or []
@@ -637,22 +656,35 @@ def generate_body_part_session(
             already.add(ex["id"])
         blocks.append({"body_part": part, "exercises": picks})
 
-    # 2. Resolve to instances
+    # 2. Resolve to instances — prepend warmup (B218 Bug 4).
+    by_id = {e["id"]: e for e in exercises_catalog if "id" in e}
     exercise_instances: List[Dict[str, Any]] = []
+    for wid in WARMUP_EXERCISE_IDS:
+        wex = by_id.get(wid)
+        if wex is None:
+            continue
+        winst = apply_resolver_light(wex, user_state)
+        winst["module_role"] = "warmup"
+        winst["body_part"] = "warmup"
+        exercise_instances.append(winst)
+
     for block in blocks:
         for ex in block["exercises"]:
             inst = apply_resolver_light(ex, user_state)
+            inst["module_role"] = "main"
             inst["body_part"] = block["body_part"]
             exercise_instances.append(inst)
 
-    # 3. Compute duration from resolved prescriptions (more accurate than stub)
+    # 3. Compute duration from resolved prescriptions (more accurate than stub).
+    # B218 Bug 4: warmup exercises are now in exercise_instances — no flat
+    # warmup baseline added anymore (was double-counting).
     core_minutes = sum(
         _estimate_exercise_minutes(
             {"id": i.get("exercise_id")}, i.get("prescription") or {},
         )
         for i in exercise_instances
     )
-    duration = OVERHEAD_MIN["warmup"] + int(round(core_minutes))
+    duration = int(round(core_minutes))
     duration += max(0, len(body_parts) - 1) * OVERHEAD_MIN["transition"]
     if include_cooldown:
         duration += OVERHEAD_MIN["cooldown"]

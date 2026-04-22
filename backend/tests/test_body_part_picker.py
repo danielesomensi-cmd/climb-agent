@@ -310,9 +310,48 @@ def test_generate_session_has_exercises(catalog):
     s = generate_body_part_session(
         ["core", "legs"], "bodyweight", None, {}, catalog, seed=42,
     )
-    assert len(s["exercises"]) == 2 * N_PER_BODY_PART
-    body_parts_in = {e["body_part"] for e in s["exercises"]}
+    # B218 Bug 4: 2 warmup exercises prepended to body-part picks.
+    main_exercises = [e for e in s["exercises"] if e.get("body_part") != "warmup"]
+    warmup_exercises = [e for e in s["exercises"] if e.get("body_part") == "warmup"]
+    assert len(main_exercises) == 2 * N_PER_BODY_PART
+    assert len(warmup_exercises) >= 1
+    body_parts_in = {e["body_part"] for e in main_exercises}
     assert body_parts_in == {"core", "legs"}
+    # Warmup comes first so the guided flow starts with mobility work.
+    assert s["exercises"][0].get("module_role") == "warmup"
+
+
+def test_generate_session_warmup_prepended(catalog):
+    """B218 Bug 4: warmup block prepended with module_role=warmup."""
+    s = generate_body_part_session(
+        ["core"], "bodyweight", None, {}, catalog, seed=1,
+    )
+    warmup_ids = [
+        e["exercise_id"] for e in s["exercises"]
+        if e.get("module_role") == "warmup"
+    ]
+    assert "general_pulse_raise" in warmup_ids
+    assert "dynamic_mobility_flow" in warmup_ids
+    # Warmup exercises appear BEFORE any main-block exercises.
+    first_main_idx = next(
+        i for i, e in enumerate(s["exercises"]) if e.get("module_role") == "main"
+    )
+    for i in range(first_main_idx):
+        assert s["exercises"][i].get("module_role") == "warmup"
+
+
+def test_generate_session_top_level_sets_reps(catalog):
+    """B218 Bug 2: prescription fields promoted to top-level for session-card."""
+    s = generate_body_part_session(
+        ["core"], "bodyweight", None, {}, catalog, seed=1,
+    )
+    for ex in s["exercises"]:
+        # Core A206 CustomSessionExercise shape: top-level sets + notes + load_kg.
+        assert "sets" in ex and isinstance(ex["sets"], int)
+        assert "notes" in ex
+        assert "load_kg" in ex
+        # At least one of reps / work_seconds is populated at top-level.
+        assert (ex.get("reps") is not None) or (ex.get("work_seconds") is not None)
 
 
 def test_generate_session_deterministic_with_seed(catalog):

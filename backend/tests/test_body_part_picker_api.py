@@ -114,8 +114,9 @@ class TestPreview:
         assert data["build_kind"] == "body_parts"
         assert data["is_custom"] is True
         assert len(data["exercises"]) > 0
+        # B218 Bug 4: warmup is prepended in addition to the body-part picks.
         body_parts = {e["body_part"] for e in data["exercises"]}
-        assert body_parts == {"core", "legs"}
+        assert body_parts == {"warmup", "core", "legs"}
 
     def test_preview_deterministic(self):
         payload = {

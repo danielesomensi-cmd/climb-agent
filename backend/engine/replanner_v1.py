@@ -1264,11 +1264,9 @@ def apply_events(
                     target_date,
                 )
                 continue
-            for existing in day.get("sessions", []):
-                if existing.get("slot") == slot:
-                    raise ValueError(
-                        f"Slot '{slot}' already occupied on {target_date}"
-                    )
+            # B218 Bug 1: generated sessions (body-part picker etc.) stack on
+            # top of any existing planned session, same as quick-add. We only
+            # reject when the day is marked as a rest/other-activity slot.
             if day.get("other_activity_slot") == slot:
                 raise ValueError(
                     f"Slot '{slot}' already occupied by other activity on {target_date}"

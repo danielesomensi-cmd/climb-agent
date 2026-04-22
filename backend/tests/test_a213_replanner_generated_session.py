@@ -77,7 +77,8 @@ class TestAddGeneratedSessionEvent:
         assert added["constraints_applied"] == ["generated_add"]
         assert "generated_body_parts_2026-04-22_evening" in added["session_id"]
 
-    def test_add_generated_session_slot_conflict_raises(self):
+    def test_add_generated_session_appends_to_occupied_slot(self):
+        """B218 Bug 1: generated sessions stack on occupied slots instead of raising."""
         existing = {
             "session_id": "strength_long",
             "slot": "evening",
@@ -87,7 +88,30 @@ class TestAddGeneratedSessionEvent:
         }
         plan = _make_week_plan({2: [existing]})
         payload = _make_generated_payload()
-        with pytest.raises(ValueError, match="already occupied"):
+        updated = apply_events(plan, [{
+            "event_type": "add_generated_session",
+            "session_payload": payload,
+            "target_date": "2026-04-22",
+            "slot": "evening",
+            "location": "home",
+        }])
+        wed = updated["weeks"][0]["days"][2]
+        assert len(wed["sessions"]) == 2
+        # Both sessions should live on the same slot, sorted stably.
+        assert {s["slot"] for s in wed["sessions"]} == {"evening"}
+        ids = {s["session_id"] for s in wed["sessions"]}
+        assert "strength_long" in ids
+        assert any("generated_body_parts" in sid for sid in ids)
+        # Pre-existing session is untouched.
+        orig = next(s for s in wed["sessions"] if s["session_id"] == "strength_long")
+        assert orig["estimated_load_score"] == 40
+
+    def test_add_generated_session_rejects_other_activity_slot(self):
+        """B218 Bug 1: rest-day/other-activity slot still blocks insertion."""
+        plan = _make_week_plan()
+        plan["weeks"][0]["days"][2]["other_activity_slot"] = "evening"
+        payload = _make_generated_payload()
+        with pytest.raises(ValueError, match="already occupied by other activity"):
             apply_events(plan, [{
                 "event_type": "add_generated_session",
                 "session_payload": payload,

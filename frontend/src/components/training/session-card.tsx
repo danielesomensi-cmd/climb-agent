@@ -179,6 +179,60 @@ function buildInstructionStep(block: Record<string, unknown>): GuidedExercise {
   };
 }
 
+/**
+ * B218 Bug 3: build GuidedSessionState from an inline, flat-exercise session
+ * (Body Part Picker generated sessions — is_custom + session.exercises[],
+ * no saved custom_session_id). Shape matches CustomSessionExercise: sets,
+ * reps, work_seconds, rest_between_sets_seconds, load_kg, notes at top level.
+ */
+function buildGuidedStateFromInline(
+  session: SessionSlot,
+  date: string,
+): GuidedSessionState | null {
+  const exList = (session.exercises ?? []) as unknown as Array<Record<string, unknown>>;
+  if (exList.length === 0) return null;
+
+  const exercises: GuidedExercise[] = exList.map((ex) => {
+    const exerciseId = (ex.exercise_id as string) ?? "";
+    const name =
+      (ex.name as string) ??
+      exerciseId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    return {
+      exerciseId,
+      name,
+      category: (ex.category as string) ?? "",
+      blockUid: (ex.body_part as string) ?? (ex.module_role as string) ?? "",
+      loadModel: (ex.load_model as string) ?? "",
+      prescription: {
+        sets: ex.sets as number | undefined,
+        reps: ex.reps != null ? (ex.reps as string | number) : undefined,
+        workSeconds: ex.work_seconds as number | undefined,
+        restBetweenRepsSeconds: ex.rest_between_reps_seconds as number | undefined,
+        restSeconds: ex.rest_between_sets_seconds as number | undefined,
+        loadKg: ex.load_kg as number | undefined,
+        notes: ex.notes as string | undefined,
+      },
+      suggested: {
+        externalLoadKg: ex.suggested_external_load_kg as number | undefined,
+        totalLoadKg: ex.suggested_total_load_kg as number | undefined,
+        loadSource: ex.load_source as string | undefined,
+      },
+      status: "pending",
+      feedbackLabel: "ok",
+    };
+  });
+
+  return {
+    version: 1,
+    date,
+    sessionId: session.session_id,
+    sessionName: session.name || session.session_id,
+    startedAt: new Date().toISOString(),
+    currentIndex: 0,
+    exercises,
+  };
+}
+
 /** Build GuidedSessionState from a resolved session slot */
 function buildGuidedState(
   session: SessionSlot,
@@ -268,7 +322,7 @@ function handleStartGuided(
     return;
   }
 
-  // A211: custom sessions have a dedicated playback page with timer.
+  // A211: saved custom sessions have a dedicated playback page with timer.
   if (session.is_custom && session.custom_session_id) {
     router.push(
       `/session-builder/${session.custom_session_id}/play?date=${encodeURIComponent(date)}`,
@@ -282,7 +336,14 @@ function handleStartGuided(
     return;
   }
 
-  const guidedState = buildGuidedState(session, date);
+  // B218 Bug 3: inline generated sessions (A213 Body Part Picker etc.) are
+  // is_custom but have no custom_session_id — they live only inside the week
+  // plan as a flat exercises[] list. Build a guided state from that shape and
+  // reuse the /guided/[date]/[sessionId] flow via localStorage.
+  const guidedState =
+    session.is_custom && !session.custom_session_id
+      ? buildGuidedStateFromInline(session, date)
+      : buildGuidedState(session, date);
   if (!guidedState) return;
 
   const userId = window.Clerk?.session ? "clerk" : "";
