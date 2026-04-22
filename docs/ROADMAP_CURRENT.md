@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-22 (A-DEMO2-01 — nuova pagina `/demo2` in parallelo a `/demo` con redesign Editorial Dark (cream/black/orange, Archivo Narrow + JetBrains Mono + Inter). Analytics replicata con `variant="editorial_dark"` per A/B comparison. Zero tocco su `/demo` live.)
+> Last updated: 2026-04-22 (B-DEMO-05 — promosso Editorial Dark da `/demo2` a `/demo`, sovrascritta la vecchia pagina pink/navy, eliminata cartella `/demo2/` (ora 404). Rinominati CSS vars e simboli da `demo2` a `demo`. Flyer QR → `/demo` ora serve Editorial Dark.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -116,6 +116,7 @@
 | — | **test_b119: rimossi 2 skip condizionali** | — | XS | ✅ Done | `test_non_monday_corrected` + `test_explicit_non_monday_corrected` ora seedano macrocycle/goal+assessment via `PUT /api/state` prima dell'asserzione e ripristinano in `finally`. Non dipendono più dall'ordine di esecuzione. Suite: 1758 passed + 2 skipped → 1760 passed, 0 skipped. |
 | A213 | **Body Part Picker — strength session generator (D217 closure)** | A | L | ✅ Done | Nuovo motore `body_part_picker.py` con 11 categorie, resolver-light (prescription_defaults + overrides + working_loads + hangboard baseline), cross-category exclusions (biceps−forearms, forearms−fingers), deterministic seeding. 4 endpoint (`/options`, `/preview`, `/start`, `/estimate`) con subscription guard. Nuovo event `add_generated_session` nel replanner (no ripple, no closed-loop). Feedback bypass per `build_kind="body_parts"` (working_loads sì, closed-loop no). Pagina `/body-part-picker` multi-step (equipment → parts → preview). 54 nuovi test (31 unit + 15 API + 8 replanner). Suite: 1760 → 1814 passed. |
 | A-DEMO2-01 | **Editorial Dark demo page at `/demo2`** | A | M | ✅ Done | Nuova route parallela a `/demo` (che resta live per traffico flyer QR) con redesign Editorial Dark: cream (#F5F1EA) su near-black (#0A0A0A), orange (#FF4A1C) come accent esclusivo per main-work. Font self-hosted via `next/font/google` (Archivo Narrow + JetBrains Mono + Inter). Stessi contenuti di `/demo` (warmup → fingers → pull-ups → projecting → 4×4 → core → antagonist → cooldown) ma remapped con sezioni numerate 01-08, timestamp cumulativi, FIG.02 personalization aside, closure "END OF SESSION · 09". Analytics replicata con `variant="editorial_dark"` su ogni evento (demo_viewed, demo_engaged, demo_scrolled_to_end, demo_cta_clicked) per A/B comparison post-deploy. CTA → `/onboarding/welcome`. Zero tocco su `/demo`. Pages 41 → 42. |
+| B-DEMO-05 | **Promote Editorial Dark from `/demo2` → `/demo`** | B | S | ✅ Done | Swap mechanical: copiato `demo2/{layout.tsx,page.tsx,session-data.ts}` dentro `demo/`, sovrascritta la vecchia `/demo` pink/navy, eliminata intera cartella `demo2/` (ora 404, no redirect). Rinominate CSS vars `--font-demo2-*` → `--font-demo-*` e simboli `DEMO2_*` / `Demo2*` → `DEMO_*` / `Demo*`. Zero cambi visivi rispetto alla preview `/demo2`. Flyer QR (→ `/demo`) ora serve Editorial Dark. Pages 42 → 41. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
 
