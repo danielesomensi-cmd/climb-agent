@@ -624,6 +624,7 @@ export interface CustomSessionExercise {
   rest_between_reps_seconds: number | null;
   load_kg: number;
   notes: string;
+  cues?: string[];
 }
 
 export interface CustomSession {

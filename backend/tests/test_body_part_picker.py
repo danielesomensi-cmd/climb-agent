@@ -272,6 +272,31 @@ def test_resolver_light_no_baseline_graceful(by_id):
     assert inst.get("load_source") == "unset"
 
 
+def test_resolver_light_copies_cues(by_id):
+    """B221 parity: resolver-light propagates cues[] from catalog."""
+    ex = by_id.get("romanian_deadlift")
+    if not ex:
+        pytest.skip("romanian_deadlift not in catalog")
+    catalog_cues = ex.get("cues") or []
+    assert len(catalog_cues) > 0, "fixture guard: catalog entry must have cues"
+    inst = apply_resolver_light(ex, {})
+    assert inst["cues"] == catalog_cues
+
+
+def test_resolver_light_cues_empty_list_when_missing():
+    """Exercise without a cues field → instance still has cues == [] (not missing)."""
+    synthetic_ex = {
+        "id": "synthetic_no_cues",
+        "name": "Synthetic",
+        "category": "strength_accessory",
+        "load_model": "bodyweight_only",
+        "prescription_defaults": {"sets": 3, "reps": 10},
+    }
+    inst = apply_resolver_light(synthetic_ex, {})
+    assert "cues" in inst
+    assert inst["cues"] == []
+
+
 # ── Duration estimate ─────────────────────────────────────────────────────
 
 

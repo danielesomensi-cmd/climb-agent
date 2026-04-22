@@ -522,6 +522,7 @@ def apply_resolver_light(
         "category": exercise.get("category"),
         "pattern": exercise.get("pattern"),
         "load_model": exercise.get("load_model"),
+        "cues": list(exercise.get("cues") or []),
         "prescription": defaults,
     }
 

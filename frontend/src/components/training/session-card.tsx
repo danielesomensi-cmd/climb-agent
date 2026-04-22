@@ -217,6 +217,7 @@ function buildGuidedStateFromInline(
         totalLoadKg: ex.suggested_total_load_kg as number | undefined,
         loadSource: ex.load_source as string | undefined,
       },
+      cues: (ex.cues as string[] | undefined) ?? undefined,
       status: "pending",
       feedbackLabel: "ok",
     };
@@ -1011,6 +1012,16 @@ export function SessionCard({
                         </div>
                         {ex.notes && (
                           <p className="text-xs text-muted-foreground mt-0.5">{ex.notes}</p>
+                        )}
+                        {ex.cues && ex.cues.length > 0 && (
+                          <ul className="mt-1.5 space-y-0.5">
+                            {ex.cues.map((cue, ci) => (
+                              <li key={ci} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                <span className="mt-1.5 block h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
+                                <span>{cue}</span>
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </div>
                     );
