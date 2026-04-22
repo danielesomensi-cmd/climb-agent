@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>climb-agent · /demo · Editorial Dark</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; background: #191915; font-family: 'Inter', system-ui, sans-serif; color: #F5F1EA; }
+  body { min-height: 100vh; }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  /* scrollbar inside the phone body */
+  .demo-scroll::-webkit-scrollbar { width: 4px; }
+  .demo-scroll::-webkit-scrollbar-track { background: transparent; }
+  .demo-scroll::-webkit-scrollbar-thumb { background: rgba(245,241,234,0.15); border-radius: 2px; }
+
+  .stage {
+    display: flex; align-items: flex-start; justify-content: center;
+    gap: 48px; padding: 48px 24px 80px; flex-wrap: wrap;
+  }
+  .stage-title {
+    width: 100%; max-width: 920px; margin: 0 auto 8px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: rgba(245,241,234,0.55);
+  }
+  .stage-title b { color: #F5F1EA; font-weight: 600; }
+  .stage-title .accent { color: #FF4A1C; }
+
+  @media (max-width: 860px) {
+    .stage { padding: 16px 0; gap: 24px; }
+  }
+</style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="demo.jsx"></script>
+
+  <script type="text/babel" data-presets="env,react">
+    const { useState } = React;
+    function App() {
+      return (
+        <div className="stage">
+          <div className="stage-title">
+            <div><b>CLIMB-AGENT</b> · /DEMO · <span className="accent">DIRECTION A — EDITORIAL DARK</span></div>
+            <div>390 × 844 · IPHONE 15</div>
+          </div>
+          <IOSDevice width={390} height={844} dark={true}>
+            <div className="demo-scroll" style={{
+              height: '100%', overflowY: 'auto', background: '#0A0A0A',
+              WebkitOverflowScrolling: 'touch', paddingTop: 54,
+            }}>
+              <DemoPage />
+            </div>
+          </IOSDevice>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
