@@ -1,6 +1,6 @@
 export type Tier = "prep" | "main" | "support";
 
-export interface Demo2Exercise {
+export interface DemoExercise {
   id: string;
   title: string;
   dosage: string;
@@ -8,16 +8,16 @@ export interface Demo2Exercise {
   cues: string[];
 }
 
-export interface Demo2Block {
+export interface DemoBlock {
   n: string;
   title: string;
   mins: number;
   start: string;
   tier: Tier;
-  exercises: Demo2Exercise[];
+  exercises: DemoExercise[];
 }
 
-export const DEMO2_SESSION: Demo2Block[] = [
+export const DEMO_SESSION: DemoBlock[] = [
   {
     n: "01",
     title: "Warmup",
@@ -310,7 +310,7 @@ export const DEMO2_SESSION: Demo2Block[] = [
   },
 ];
 
-export const DEMO2_TOTAL_MIN = DEMO2_SESSION.reduce(
+export const DEMO_TOTAL_MIN = DEMO_SESSION.reduce(
   (acc, block) => acc + block.mins,
   0,
 );
