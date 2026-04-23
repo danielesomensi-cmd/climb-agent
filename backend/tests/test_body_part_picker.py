@@ -466,3 +466,130 @@ def test_generate_session_no_cooldown(catalog):
         include_cooldown=False, seed=1,
     )
     assert s["include_cooldown"] is False
+
+
+# ── B224: role cascade ────────────────────────────────────────────────────
+
+
+def _role_of(ex):
+    r = ex.get("role") or []
+    return [r] if isinstance(r, str) else list(r)
+
+
+def test_b224_role_main_preferred_when_abundant(catalog):
+    """Fingers + hangboard + empty prefs must only return role=main picks.
+
+    Regression for the D223 reproduction: prior to B224 the top picks included
+    finger_warmup_generic and finger_recruitment_pulls, both warmup/activation.
+    """
+    picks = select_exercises_for_part(
+        "fingers", catalog, equipment=["hangboard"], already_selected=set(),
+        user_state={}, seed=42,
+    )
+    assert len(picks) == N_PER_BODY_PART
+    ids = {p["id"] for p in picks}
+    assert "finger_warmup_generic" not in ids
+    assert "finger_recruitment_pulls" not in ids
+    for p in picks:
+        assert "main" in _role_of(p), f"{p['id']} has role {_role_of(p)} — expected main"
+
+
+def test_b224_accessory_fallback_tier2(catalog):
+    """Synthetic: 2 main + 3 accessory + 5 warmup → returns 2 main + 1 accessory."""
+    synthetic = [
+        {"id": "m1", "role": ["main"],      "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "m2", "role": ["main"],      "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "a1", "role": ["accessory"], "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "a2", "role": ["accessory"], "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "a3", "role": ["accessory"], "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w1", "role": ["warmup"],    "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w2", "role": ["warmup"],    "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w3", "role": ["warmup"],    "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w4", "role": ["warmup"],    "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w5", "role": ["warmup"],    "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+    ]
+    picks = select_exercises_for_part(
+        "legs", synthetic, equipment=[], already_selected=set(),
+        user_state={}, n=3, seed=7,
+    )
+    assert len(picks) == 3
+    roles = [_role_of(p)[0] for p in picks]
+    assert roles.count("main") == 2
+    assert roles.count("accessory") == 1
+    assert "warmup" not in roles
+
+
+def test_b224_last_resort_tier3_when_main_accessory_insufficient():
+    """Synthetic: 1 main + 0 accessory + 5 warmup → tier 3 active, never empty."""
+    synthetic = [
+        {"id": "m1", "role": ["main"],   "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w1", "role": ["warmup"], "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w2", "role": ["warmup"], "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w3", "role": ["warmup"], "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w4", "role": ["warmup"], "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+        {"id": "w5", "role": ["warmup"], "pattern": "squat",
+         "equipment_required": [], "domain": ["strength_general"]},
+    ]
+    picks = select_exercises_for_part(
+        "legs", synthetic, equipment=[], already_selected=set(),
+        user_state={}, n=3, seed=11,
+    )
+    assert len(picks) == 3
+    ids = {p["id"] for p in picks}
+    assert "m1" in ids
+    warmup_count = sum(1 for p in picks if "warmup" in _role_of(p))
+    assert warmup_count == 2
+
+
+def test_b224_never_empty_when_pool_nonempty(catalog):
+    """Every body part + home_min_hangboard returns picks when any candidate exists."""
+    from backend.engine.body_part_picker import _exercise_fits_equipment
+    from backend.engine.equipment_utils import expand_equipment
+    avail = expand_equipment([
+        "pullup_bar", "band", "foam_roller", "weight", "resistance_band", "hangboard",
+    ])
+    by_id = {e["id"]: e for e in catalog}
+    idx = build_body_part_index(catalog)
+    for bp in BODY_PART_ORDER:
+        pool = [by_id[i] for i in idx[bp] if _exercise_fits_equipment(by_id[i], avail)]
+        picks = select_exercises_for_part(
+            bp, catalog, equipment=avail, already_selected=set(),
+            user_state={}, seed=1,
+        )
+        assert len(picks) == min(N_PER_BODY_PART, len(pool)), (
+            f"{bp}: pool={len(pool)}, picks={len(picks)}, expected="
+            f"{min(N_PER_BODY_PART, len(pool))}"
+        )
+        if pool:
+            assert picks, f"{bp}: pool has {len(pool)} but picks is empty"
+
+
+def test_b224_all_body_parts_reach_n3_gym_full(catalog):
+    """Full-gym scenario: every body part yields exactly N=3 picks."""
+    from backend.engine.equipment_utils import expand_equipment
+    avail = expand_equipment([
+        "hangboard", "pullup_bar", "band", "weight", "dumbbell", "kettlebell",
+        "foam_roller", "resistance_band", "ab_wheel", "bench", "barbell",
+        "rings", "pinch_block", "cable_machine", "leg_press", "loading_pin",
+    ])
+    for bp in BODY_PART_ORDER:
+        picks = select_exercises_for_part(
+            bp, catalog, equipment=avail, already_selected=set(),
+            user_state={}, seed=1,
+        )
+        assert len(picks) == N_PER_BODY_PART, f"{bp}: got {len(picks)} picks, expected {N_PER_BODY_PART}"

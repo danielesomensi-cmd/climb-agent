@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 # ── Constants ─────────────────────────────────────────────────────────────
 
 OVERHEAD_MIN: Dict[str, int] = {"warmup": 10, "cooldown": 5, "transition": 1}
-N_PER_BODY_PART: int = 2
+N_PER_BODY_PART: int = 3
 
 # B218 Bug 4: inline warmup catalog IDs (data-driven — looked up at generation
 # time, passed through the same resolver-light as the main block).
@@ -396,6 +396,14 @@ def resolve_equipment_mode(
 def _exercise_fits_equipment(
     exercise: Dict[str, Any], equipment: Sequence[str]
 ) -> bool:
+    # TODO(equipment_any): light resolver only checks equipment_required (AND).
+    # Full resolver also honors equipment_required_any (OR) — see
+    # resolve_session.py:389-391. Current divergence: 4 exercises
+    # (suitcase_carry, elbow_eccentric_curl, turkish_getup, farmers_carry) are
+    # over-included by the light path because they have equipment_required=[].
+    # B224 role=main filter makes this inert (3 are accessory/conditioning,
+    # 1 is prehab). Revisit if future body-part selection ever picks
+    # accessory/prehab roles as primary.
     req = exercise.get("equipment_required") or []
     if isinstance(req, str):
         req = [req]
@@ -479,18 +487,51 @@ def select_exercises_for_part(
     if not candidates:
         return []
 
+    # B224: three-tier role cascade. Prefer role=main; fall back to accessory,
+    # then to everything else as a last resort. Never return an empty block when
+    # the post-equipment candidate pool is non-empty — small-muscle body parts
+    # (forearms, biceps, hips) genuinely lack dedicated main exercises and the
+    # accessory fallback is the correct real-world answer.
+    #
+    # Fill slots tier-by-tier so main is always preferred over accessory, and
+    # accessory over warmup/activation/prehab/test — scoring + jitter then ranks
+    # within each tier, so recency/preference still matter among peers.
+    def _has_role(ex: Dict[str, Any], role: str) -> bool:
+        r = ex.get("role") or []
+        if isinstance(r, str):
+            return r == role
+        return role in r
+
+    main_pool = [c for c in candidates if _has_role(c, "main")]
+    accessory_pool = [
+        c for c in candidates
+        if _has_role(c, "accessory") and c not in main_pool
+    ]
+    others_pool = [
+        c for c in candidates if c not in main_pool and c not in accessory_pool
+    ]
+
     prefs = (user_state.get("preferences") or {})
     recent_ids = _recent_exercise_ids(user_state)
     recent_groups = _recent_recency_groups(user_state)
 
     rng = random.Random(seed)
-    scored = []
-    for ex in candidates:
-        base = score_exercise(ex, prefs, recent_ids, recent_groups)
-        jitter = rng.random() * 0.1
-        scored.append((base + jitter, ex))
-    scored.sort(key=lambda t: t[0], reverse=True)
-    return [ex for _, ex in scored[:n]]
+
+    def _rank(pool: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        scored = []
+        for ex in pool:
+            base = score_exercise(ex, prefs, recent_ids, recent_groups)
+            jitter = rng.random() * 0.1
+            scored.append((base + jitter, ex))
+        scored.sort(key=lambda t: t[0], reverse=True)
+        return [ex for _, ex in scored]
+
+    ordered: List[Dict[str, Any]] = []
+    for tier in (main_pool, accessory_pool, others_pool):
+        if len(ordered) >= n:
+            break
+        ordered.extend(_rank(tier))
+    return ordered[:n]
 
 
 # ── Resolver light ─────────────────────────────────────────────────────────

@@ -10886,6 +10886,308 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only"
+    },
+    {
+      "id": "wrist_roller",
+      "name": "Wrist Roller",
+      "category": "main_strength",
+      "time_min": 8,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": [
+        "wrist_flexion",
+        "wrist_extension"
+      ],
+      "intensity_level": "medium",
+      "fatigue_cost": 5,
+      "recency_group": "forearm_wrist_roller",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "One rep = full up + down cycle. Start light (1-3kg) and progress slowly."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Weighted wrist roller — grip a bar or handle with a rope and weight, roll the weight up and then lower it controlled. Trains forearm flexors and extensors through full ROM under sustained contraction. Classic forearm builder recommended by Hörst and Lattice for general grip-aperture strength with high climbing transfer.",
+      "cues": [
+        "Use dedicated wrist roller or DIY (handle + rope + weight plate)",
+        "Keep elbows at 90° and stationary — no swinging",
+        "Roll up until weight reaches top, then lower controlled",
+        "Alternate forward/reverse rolling for full forearm coverage"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "wide_pinch_extended_wrist_hold",
+      "name": "Wide Pinch + Extended Wrist Hold",
+      "category": "main_strength",
+      "time_min": 10,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "wrist_extension",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "forearm_wrist_extension_iso",
+      "equipment_required": [
+        "pinch_block"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "wrist_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 1,
+        "work_seconds": 15,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Per Hörst: most overlooked climbing-specific extensor exercise. Start submax and build tolerance."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Isometric hold on a wide pinch block (2x4 or similar) with the wrist held actively in extension. Identified by Hörst as the single most overlooked and important position for climbing-specific forearm extensors. Targets the stabilizers used when pulling on slopers, pinches, and slopey edges.",
+      "cues": [
+        "Pinch block at roughly 50-70% of max pinch",
+        "Wrist cocked back into extension — hold posture throughout",
+        "Engage forearm extensors actively, don't collapse wrist",
+        "Breathe through the hold"
+      ],
+      "video_url": null,
+      "load_model": "total_load"
+    },
+    {
+      "id": "heavy_reverse_wrist_curl",
+      "name": "Heavy Reverse Wrist Curl",
+      "category": "main_strength",
+      "time_min": 8,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "wrist_extension",
+      "intensity_level": "high",
+      "fatigue_cost": 5,
+      "recency_group": "forearm_wrist_extension_dynamic",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "wrist_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Per Lattice: 3x8-12 for strength emphasis. Progress load when RPE < 8."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Weighted reverse wrist curl with pronated grip — forearms supported on bench or thigh, heavy loading for extensors in the strength range (as opposed to the prehab-range reverse_wrist_curl). Builds climbing-specific extensor strength needed for sloper and slab stability.",
+      "cues": [
+        "Pronated grip (palms down)",
+        "Forearms supported on bench or thigh — wrists free to move",
+        "Full range of motion — drop under control, curl up fully",
+        "Strength-range loading: heavy enough for 6-10 reps"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "weighted_chinup",
+      "name": "Weighted Chin-up",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": [
+        "pull_vertical",
+        "elbow_flexion"
+      ],
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "biceps_pull_compound",
+      "equipment_required": [
+        "pullup_bar",
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive",
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Chin-up with added weight (belt, vest, or held dumbbell). Supinated grip emphasizes biceps and brachialis alongside the lats. Core lift for building climbing-specific compound pulling strength above bodyweight thresholds (Hörst, Lattice).",
+      "cues": [
+        "Supinated grip (palms toward you), shoulder-width",
+        "Pull chin above bar, elbows driving down",
+        "Controlled eccentric (2-3 sec down)",
+        "Add weight so final rep is hard but form perfect"
+      ],
+      "video_url": null,
+      "load_model": "total_load"
+    },
+    {
+      "id": "hammer_curl",
+      "name": "Hammer Curl",
+      "category": "main_strength",
+      "time_min": 8,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "elbow_flexion",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "biceps_elbow_flexion",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Dumbbell curl with neutral grip (thumbs up). Shifts emphasis from biceps brachii to brachialis and brachioradialis — the deeper elbow flexors most important for sustained climbing pulls and lock-off strength.",
+      "cues": [
+        "Neutral grip (thumbs up) throughout the movement",
+        "Elbows pinned to sides, no swing",
+        "Full ROM — fully extended at bottom",
+        "Alternate arms or both together (both together = more control)"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "reverse_barbell_curl",
+      "name": "Reverse Barbell Curl",
+      "category": "main_strength",
+      "time_min": 8,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "elbow_flexion",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "biceps_elbow_flexion_pronated",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "wrist_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Barbell curl with pronated grip (palms down). Emphasizes brachialis and forearm extensors over biceps brachii — a climbing-balanced elbow flexion pattern that also supports antagonist strength.",
+      "cues": [
+        "Pronated grip (palms down), shoulder-width",
+        "Elbows pinned to sides — no momentum",
+        "Lighter loads than supinated curls (brachialis != biceps brachii strength)",
+        "Controlled tempo — 2 up, 2 down"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
     }
   ]
 }

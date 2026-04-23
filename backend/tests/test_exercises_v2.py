@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 212  # C209: +6 (hips/glutes/legs/biceps) on top of C208's +8 (hips/chest/triceps) on top of C164's 198
+    assert len(exercise_list) == 218  # B224: +6 (forearms/biceps main) on top of C209's 212
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
@@ -275,3 +275,94 @@ def test_b56_exercises_patterns(exercise_map):
     assert exercise_map["bicep_curl"]["pattern"] == "elbow_flexion"
     assert exercise_map["lateral_raise"]["pattern"] == "shoulder_isolation"
     assert exercise_map["dumbbell_bench_press"]["pattern"] == "push"
+
+
+# --- B224: forearms + biceps main expansion ---
+
+B224_NEW_IDS = {
+    "wrist_roller", "wide_pinch_extended_wrist_hold", "heavy_reverse_wrist_curl",
+    "weighted_chinup", "hammer_curl", "reverse_barbell_curl",
+}
+
+
+def test_b224_new_exercises_exist(exercise_map):
+    for eid in B224_NEW_IDS:
+        assert eid in exercise_map, f"B224 exercise {eid} not found in catalog"
+
+
+def test_b224_new_exercises_have_required_fields(exercise_map):
+    required = {
+        "id", "name", "description", "role", "domain", "pattern",
+        "equipment_required", "load_model", "cues", "category",
+        "intensity_level", "fatigue_cost", "recency_group",
+        "prescription_defaults", "video_url",
+    }
+    for eid in B224_NEW_IDS:
+        e = exercise_map[eid]
+        missing = required - set(e.keys())
+        assert not missing, f"{eid} missing fields: {missing}"
+
+
+def test_b224_new_exercises_vocabulary_compliance(exercise_map, exercise_list):
+    """All enum-valued fields must take values already present in the catalog."""
+    valid_roles = set()
+    valid_domains = set()
+    valid_patterns = set()
+    valid_equipment = set()
+    valid_intensity = set()
+    valid_categories = set()
+    for e in exercise_list:
+        valid_roles.update(e.get("role") or [])
+        valid_domains.update(e.get("domain") or [])
+        p = e.get("pattern")
+        if isinstance(p, list):
+            valid_patterns.update(p)
+        elif isinstance(p, str):
+            valid_patterns.add(p)
+        valid_equipment.update(e.get("equipment_required") or [])
+        valid_equipment.update(e.get("equipment_required_any") or [])
+        if e.get("intensity_level"):
+            valid_intensity.add(e["intensity_level"])
+        if e.get("category"):
+            valid_categories.add(e["category"])
+
+    for eid in B224_NEW_IDS:
+        e = exercise_map[eid]
+        for r in e["role"]:
+            assert r in valid_roles, f"{eid} role {r!r} not canonical"
+        for d in e["domain"]:
+            assert d in valid_domains, f"{eid} domain {d!r} not canonical"
+        pats = e["pattern"] if isinstance(e["pattern"], list) else [e["pattern"]]
+        for p in pats:
+            assert p in valid_patterns, f"{eid} pattern {p!r} not canonical"
+        for eq in (e.get("equipment_required") or []):
+            assert eq in valid_equipment, f"{eid} equipment {eq!r} not canonical"
+        assert e["intensity_level"] in valid_intensity, (
+            f"{eid} intensity_level {e['intensity_level']!r} not canonical"
+        )
+        assert e["category"] in valid_categories, (
+            f"{eid} category {e['category']!r} not canonical"
+        )
+        assert isinstance(e["fatigue_cost"], int) and 0 <= e["fatigue_cost"] <= 10, (
+            f"{eid} fatigue_cost out of [0,10]: {e['fatigue_cost']}"
+        )
+
+
+def test_b224_forearms_biceps_main_reach_n3_gym_full(exercise_list):
+    """After B224 catalog expansion, forearms and biceps pools have main >= 3 in gym_full."""
+    from backend.engine.body_part_picker import build_body_part_index, _exercise_fits_equipment
+    from backend.engine.equipment_utils import expand_equipment
+    by_id = {e["id"]: e for e in exercise_list}
+    index = build_body_part_index(exercise_list)
+    gym_full = expand_equipment([
+        "hangboard", "pullup_bar", "band", "weight", "dumbbell", "kettlebell",
+        "foam_roller", "resistance_band", "ab_wheel", "bench", "barbell",
+        "rings", "pinch_block", "cable_machine", "leg_press", "loading_pin",
+    ])
+    for bp in ["forearms", "biceps"]:
+        kept = [by_id[i] for i in index[bp] if _exercise_fits_equipment(by_id[i], gym_full)]
+        main_count = sum(1 for e in kept if "main" in (e.get("role") or []))
+        assert main_count >= 3, (
+            f"{bp}: only {main_count} main exercises in gym_full — "
+            f"B224 catalog expansion did not satisfy N=3 target"
+        )
