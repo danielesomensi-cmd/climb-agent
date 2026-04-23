@@ -297,6 +297,60 @@ def test_resolver_light_cues_empty_list_when_missing():
     assert inst["cues"] == []
 
 
+def test_resolver_light_copies_video_url(by_id):
+    """B221 parity: video_url propagated from catalog (matches resolve_session.py:1532)."""
+    ex = by_id.get("split_squat")
+    if not ex:
+        pytest.skip("split_squat not in catalog")
+    catalog_video = ex.get("video_url")
+    assert catalog_video, "fixture guard: split_squat must have video_url"
+    inst = apply_resolver_light(ex, {})
+    assert inst["video_url"] == catalog_video
+
+
+def test_resolver_light_copies_unilateral_and_alt_sides(by_id):
+    """B221 parity: unilateral and alt_sides propagated as bools."""
+    ex = by_id.get("split_squat")
+    if not ex:
+        pytest.skip("split_squat not in catalog")
+    assert ex.get("unilateral") is True, "fixture guard: split_squat must be unilateral"
+    assert ex.get("alt_sides") is True, "fixture guard: split_squat must have alt_sides"
+    inst = apply_resolver_light(ex, {})
+    assert inst["unilateral"] is True
+    assert inst["alt_sides"] is True
+
+
+def test_resolver_light_copies_attributes(by_id):
+    """B221 parity: attributes dict propagated verbatim (drives testField/testUnit in UI)."""
+    ex = by_id.get("max_hang_5s")
+    if not ex:
+        pytest.skip("max_hang_5s not in catalog")
+    catalog_attrs = ex.get("attributes") or {}
+    assert catalog_attrs, "fixture guard: max_hang_5s must have non-empty attributes"
+    inst = apply_resolver_light(ex, {})
+    assert inst["attributes"] == catalog_attrs
+
+
+def test_resolver_light_parity_fields_defaults_when_missing():
+    """Exercise lacking video_url/unilateral/alt_sides/attributes → explicit defaults.
+
+    Matches resolve_session.py canonical defaults:
+      video_url → None, unilateral → False, alt_sides → False, attributes → {}.
+    """
+    synthetic_ex = {
+        "id": "synthetic_bare",
+        "name": "Bare",
+        "category": "strength_accessory",
+        "load_model": "bodyweight_only",
+        "prescription_defaults": {"sets": 3, "reps": 10},
+    }
+    inst = apply_resolver_light(synthetic_ex, {})
+    assert "video_url" in inst and inst["video_url"] is None
+    assert "unilateral" in inst and inst["unilateral"] is False
+    assert "alt_sides" in inst and inst["alt_sides"] is False
+    assert "attributes" in inst and inst["attributes"] == {}
+
+
 # ── Duration estimate ─────────────────────────────────────────────────────
 
 

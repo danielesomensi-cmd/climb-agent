@@ -522,8 +522,12 @@ def apply_resolver_light(
         "category": exercise.get("category"),
         "pattern": exercise.get("pattern"),
         "load_model": exercise.get("load_model"),
+        "video_url": exercise.get("video_url") or None,
         "cues": list(exercise.get("cues") or []),
         "prescription": defaults,
+        "attributes": exercise.get("attributes") or {},
+        "unilateral": bool(exercise.get("unilateral")),
+        "alt_sides": bool(exercise.get("alt_sides")),
     }
 
     # Step 2 — overrides
