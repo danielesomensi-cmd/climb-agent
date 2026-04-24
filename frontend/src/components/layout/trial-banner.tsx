@@ -24,7 +24,7 @@ export function TrialBanner() {
       <div
         className={`flex items-center justify-between px-4 py-2 text-sm ${
           isUrgent
-            ? "bg-amber-500/10 text-amber-400 border-b border-amber-500/20"
+            ? "bg-warning/10 text-warning border-b border-warning/20"
             : "bg-primary/5 text-muted-foreground border-b border-border"
         }`}
       >
@@ -38,7 +38,7 @@ export function TrialBanner() {
         <button
           onClick={() => router.push("/subscribe")}
           className={`text-xs font-medium underline underline-offset-2 ${
-            isUrgent ? "text-amber-400" : "text-primary"
+            isUrgent ? "text-warning" : "text-primary"
           }`}
         >
           Subscribe
