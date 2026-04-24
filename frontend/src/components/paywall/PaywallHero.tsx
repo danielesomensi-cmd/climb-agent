@@ -40,11 +40,11 @@ export function PaywallHero() {
         aria-hidden="true"
       />
 
-      {/* Headline */}
+      {/* Headline — h2 so TopBar's "Subscribe" stays the page h1 */}
       <div className="absolute inset-x-0 bottom-0 p-6 pb-8">
-        <h1 className="text-3xl font-semibold leading-tight tracking-tight text-fg md:text-4xl">
+        <h2 className="text-3xl font-semibold leading-tight tracking-tight text-fg md:text-4xl">
           Train like the top 5% of climbers.
-        </h1>
+        </h2>
         <p className="mt-2 text-base text-fg-secondary md:text-lg">
           Periodized. Adaptive. Built on science.
         </p>
