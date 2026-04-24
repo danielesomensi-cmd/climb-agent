@@ -43,16 +43,6 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Climbing accent colors (legacy — removed in follow-up A214 commit) */
-  --color-hold-red: #e94560;
-  --color-hold-green: #10b981;
-  --color-hold-orange: #f59e0b;
-  --color-hold-blue: #3b82f6;
-  --color-wall-dark: #1a1a2e;
-  --color-wall-card: #0f3460;
-  --color-rock-light: #faf5f0;
-  --color-chalk: #f5f0eb;
-
   /* ---- A214 — New utility namespaces ---- */
 
   /* Surface scale */
