@@ -1,7 +1,5 @@
 "use client";
 
-import { DarkModeToggle } from "./dark-mode-toggle";
-
 interface TopBarProps {
   title: string;
   subtitle?: string;
@@ -11,7 +9,7 @@ interface TopBarProps {
 export function TopBar({ title, subtitle, backHref }: TopBarProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center px-4 py-3">
         <div className="flex items-center gap-3">
           {backHref && (
             <a href={backHref} className="min-h-[44px] min-w-[44px] flex items-center justify-center">
@@ -25,7 +23,6 @@ export function TopBar({ title, subtitle, backHref }: TopBarProps) {
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         </div>
-        <DarkModeToggle />
       </div>
     </header>
   );
