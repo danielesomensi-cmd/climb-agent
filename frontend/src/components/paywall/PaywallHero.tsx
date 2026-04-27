@@ -5,10 +5,11 @@ import Image from "next/image";
  * Until then, a `HERO_PLACEHOLDER` gray box is rendered at the target
  * dimensions so layout + gradient overlay can be verified.
  */
-const HERO_READY = false;
+const HERO_READY = true;
 
 const HERO_SRC = "/hero/paywall_hero.webp";
-const HERO_ALT = "Climber on overhanging wall at dusk";
+const HERO_ALT =
+  "Female climber on an overhanging limestone wall at sunset, alpine valley with distant city lights below";
 
 export function PaywallHero() {
   return (
