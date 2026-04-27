@@ -59,30 +59,30 @@ export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = t
     : null;
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-baseline justify-between text-sm text-slate-300">
+    <div className="space-y-1.5">
+      <div className="flex items-baseline justify-between text-sm text-fg-secondary">
         <span>
           {weekLabel && <>{weekLabel} &middot; </>}
           {phaseLabel}
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-slate-700 overflow-hidden">
+      <div className="h-2 w-full rounded-full bg-surface-inset overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${
-            isDeload ? "bg-blue-400" : "bg-emerald-500"
+            isDeload ? "bg-info" : "bg-brand"
           }`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="text-xs text-slate-400">
-        {doneSessions}/{totalSessions} sessions{allDone ? " \u2713" : ""}
+      <div className="text-xs text-fg-muted">
+        <span className="font-medium text-fg">{doneSessions}/{totalSessions}</span> sessions{allDone ? " \u2713" : ""}
         {totalLoad > 0 && (
           <>
             {" \u00B7 Load "}
             <span className={
-              doneLoad > totalLoad ? "text-emerald-400"
-              : doneLoad < totalLoad * 0.8 && doneSessions > 0 ? "text-amber-400"
-              : ""
+              doneLoad > totalLoad ? "text-success font-medium"
+              : doneLoad < totalLoad * 0.8 && doneSessions > 0 ? "text-warning font-medium"
+              : "font-medium text-fg"
             }>
               {freeSessionsLoaded ? doneLoad : "—"}
             </span>

@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
@@ -394,11 +395,25 @@ function TodayContent() {
     };
   })();
 
+  /** A217: dayPlan has non-engine content (yoga, outdoor logged, free session)
+   * — when true, prefer DayCard over hero so the user can interact with that
+   * content. Hero only fires on truly empty rest-like days.
+   */
+  const hasNonEngineContent: boolean = !!(
+    dayPlan && (
+      dayPlan.other_activity ||
+      dayPlan.outdoor_spot_name ||
+      dayPlan.outdoor_slot ||
+      freeSessions.length > 0
+    )
+  );
+
   const heroState: "pre_start" | "offday" | "empty_week" | null = (() => {
     if (!isViewingToday || !weekPlan) return null;
     if (isPreStart) return "pre_start";
     const dayEmpty = !dayPlan || dayPlan.sessions.length === 0;
     if (!dayEmpty) return null; // DayCard handles it
+    if (hasNonEngineContent) return null; // A217: defer to DayCard for non-engine days
     return nextTrainingDay ? "offday" : "empty_week";
   })();
 
@@ -914,57 +929,34 @@ function TodayContent() {
     <>
       <TopBar title={title} subtitle={subtitle} />
 
-      {/* Decorative climber illustration — fixed to bottom of viewport */}
-      <div
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-0"
-        style={{ height: "55vh" }}
-        aria-hidden="true"
-      >
-        {/* Gradient fade: transparent at bottom → background color at top */}
-        <div
-          className="absolute inset-0 z-10"
-          style={{
-            background:
-              "linear-gradient(to bottom, var(--background) 0%, transparent 40%)",
-          }}
-        />
-        {/* Image: object-position crops out the "CLIMB AGENT" text at top */}
-        <img
-          src="/daniclimb.jpg"
-          alt=""
-          className="h-full w-full object-cover opacity-20 dark:opacity-15"
-          style={{ objectPosition: "center 25%" }}
-        />
-      </div>
-
       <main className="relative z-10 mx-auto max-w-2xl space-y-4 p-4">
         {/* Checkout success banner */}
         {checkoutSuccess && (
-          <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-400">
+          <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">
             Your subscription is active. Welcome to climb-agent Pro!
           </div>
         )}
 
         {/* Resume in-progress session banner */}
         {resumeSession && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-2">
-            <p className="text-sm font-medium text-amber-300">
+          <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 space-y-2">
+            <p className="text-sm font-medium text-warning">
               You have a session in progress — exercise {resumeSession.completedCount} of {resumeSession.totalCount}
             </p>
-            <p className="text-xs text-amber-400/70">
+            <p className="text-xs text-warning/70">
               {resumeSession.state.sessionName}
             </p>
             <div className="flex gap-2">
               <button
                 type="button"
-                className="rounded-md bg-amber-500 px-3 py-1.5 text-xs font-medium text-black hover:bg-amber-400 transition-colors"
+                className="rounded-md bg-warning px-3 py-1.5 text-xs font-medium text-surface-base hover:bg-warning/90 transition-colors"
                 onClick={() => router.push(`/guided/${resumeSession.date}/${resumeSession.sessionId}`)}
               >
                 Resume
               </button>
               <button
                 type="button"
-                className="rounded-md border border-amber-500/30 px-3 py-1.5 text-xs text-amber-400 hover:bg-amber-500/10 transition-colors"
+                className="rounded-md border border-warning/30 px-3 py-1.5 text-xs text-warning hover:bg-warning/10 transition-colors"
                 onClick={() => {
                   clearSavedSession(resumeSession.date, resumeSession.sessionId);
                   setResumeSession(null);
@@ -1025,8 +1017,8 @@ function TodayContent() {
 
         {/* C203: boulder phase tip — discipline-gated, dismissible per-phase */}
         {!loading && !error && dayPlan && boulderPhaseTip && !phaseTipDismissed && (
-          <div className="relative rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 pr-10 text-sm">
-            <p className="font-medium text-sky-300 capitalize">
+          <div className="relative rounded-lg border border-info/30 bg-info/5 p-3 pr-10 text-sm">
+            <p className="font-medium text-info capitalize">
               {phaseId?.replace(/_/g, " ")} phase
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -1063,8 +1055,8 @@ function TodayContent() {
           </div>
         )}
 
-        {/* Day plan */}
-        {!loading && !error && dayPlan && (
+        {/* Day plan — suppressed when hero is active (A217 rest-day dedup) */}
+        {!loading && !error && dayPlan && !heroState && (
           <DayCard
             day={dayPlan}
             gyms={gyms}
@@ -1137,15 +1129,34 @@ function TodayContent() {
             </div>
           )}
 
-        {/* Daily motivational quote */}
+        {/* A217: daily motivational quote inside hero card */}
         {quote && !loading && (
-          <div className="pt-4 pb-2">
-            <p className="text-sm italic text-muted-foreground">
-              &ldquo;{quote.text}&rdquo;
-            </p>
-            <p className="text-xs text-muted-foreground text-right mt-1">
-              — {quote.author}
-            </p>
+          <div className="relative mt-6 overflow-hidden rounded-xl border border-border-subtle shadow-md">
+            <div className="relative aspect-[4/5] w-full">
+              <Image
+                src="/hero/today_hero.webp"
+                alt="Climber chalking up before an indoor route"
+                fill
+                sizes="(max-width: 768px) 100vw, 768px"
+                className="object-cover"
+              />
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, transparent 40%, hsl(var(--surface-base) / 0.95) 100%)",
+                }}
+                aria-hidden="true"
+              />
+              <div className="absolute inset-x-0 bottom-0 p-5">
+                <p className="text-base italic leading-relaxed text-fg">
+                  &ldquo;{quote.text}&rdquo;
+                </p>
+                <p className="mt-2 text-right text-sm text-fg-secondary">
+                  — {quote.author}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </main>
