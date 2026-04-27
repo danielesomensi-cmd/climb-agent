@@ -17,6 +17,19 @@ TRACE_RESOLVE = os.environ.get("TRACE_RESOLVE", "false").lower() == "true"
 # B159b: how many past weeks of completed sessions to scan for exercise recency
 RECENCY_LOOKBACK_WEEKS = 3
 
+# B227: ordinal mapping for intensity_max enforcement.
+# Catalog uses 7 values; drift singletons (moderate=1, very_high=1) absorbed
+# into medium/high respectively. Singleton normalization tracked in C231.
+_INTENSITY_ORDER: Dict[str, int] = {
+    "very_low": 0,
+    "low": 1,
+    "moderate": 2,
+    "medium": 2,
+    "high": 3,
+    "very_high": 3,
+    "max": 4,
+}
+
 
 # ---------------------------
 # IO helpers
@@ -344,6 +357,7 @@ def pick_best_exercise_p0(
     domain_req: Any,
     pattern_req: Any = None,
     required_equipment: Any = None,
+    intensity_max: Optional[str] = None,
     exclude_ids: Optional[set] = None,
     recent_ex_ids: Optional[List[str]] = None,
     recent_recency_groups: Optional[set] = None,
@@ -359,6 +373,8 @@ def pick_best_exercise_p0(
       - equipment_required_any has at least one available item
       - required_equipment: block-level preference (soft — falls back if no match)
       - role matches (ANY)
+      - intensity_max: HARD (zeroing) — exercises above ceiling excluded.
+        Missing intensity_level → excluded (R3 strict policy).
       - domain matches only if it doesn't zero candidates (ANY)
       - pattern matches only if it doesn't zero candidates (ANY)
     Deterministic tie-break: exercise_id
@@ -471,6 +487,28 @@ def pick_best_exercise_p0(
         if base3_dedup:  # only apply if alternatives exist
             base3 = base3_dedup
     trace["counts"]["after_dedup"] = len(base3)
+
+    # Stage 3c (B227): intensity_max — HARD ceiling, zeroing.
+    # Exercises above ceiling excluded. Missing intensity_level also excluded
+    # (R3 strict policy: defense-in-depth for future catalog additions).
+    trace["intensity_max_applied"] = False
+    if intensity_max is not None:
+        ceiling = _INTENSITY_ORDER.get(intensity_max)
+        if ceiling is None:
+            logger.warning(
+                "pick_best_exercise_p0: unknown intensity_max=%r — skipping filter",
+                intensity_max,
+            )
+        else:
+            base3 = [
+                e for e in base3
+                if e.get("intensity_level") in _INTENSITY_ORDER
+                and _INTENSITY_ORDER[e["intensity_level"]] <= ceiling
+            ]
+            trace["intensity_max_applied"] = True
+            trace["counts"]["after_intensity_max"] = len(base3)
+            if not base3:
+                return None, trace
 
     # Stage 4: domain only if it doesn't zero
     trace["domain_filter_applied"] = False
@@ -933,6 +971,7 @@ def _resolve_inline_block(
     limitation_map: Optional[Dict[str, str]] = None,
     user_age: Optional[int] = None,
     experience_years: Optional[float] = None,
+    session_id: Optional[str] = None,
 ) -> int:
     """Resolve an inline block (module with block_id + selection, no template_id).
 
@@ -953,6 +992,7 @@ def _resolve_inline_block(
     domain_req = filters.get("domain")
     pattern_req = filters.get("pattern")
     equipment_req = filters.get("equipment")
+    intensity_max_req = filters.get("intensity_max")  # B227
 
     _finger_dev = ((user_state or {}).get("preferences") or {}).get("finger_training_device")
 
@@ -980,28 +1020,66 @@ def _resolve_inline_block(
     if selected_ex is None:
         if TRACE_RESOLVE:
             logger.warning(
-                "INLINE_BLOCK_TRACE | block=%s role=%s dom=%s pat=%s equip=%s "
+                "INLINE_BLOCK_TRACE | block=%s role=%s dom=%s pat=%s equip=%s imax=%s "
                 "| location=%s avail_eq=%s finger_dev=%s exclude_count=%d",
                 block_id, role_req, domain_req, pattern_req, equipment_req,
-                location, sorted(available_equipment), _finger_dev, len(recent_ex_ids),
+                intensity_max_req, location, sorted(available_equipment),
+                _finger_dev, len(recent_ex_ids),
             )
 
-        selected_ex, trace = pick_best_exercise_p0(
-            exercises=exercises,
-            location=location,
-            available_equipment=available_equipment,
-            role_req=role_req,
-            domain_req=domain_req,
-            pattern_req=pattern_req,
-            required_equipment=equipment_req,
-            exclude_ids=set(recent_ex_ids),
-            recent_ex_ids=recent_ex_ids,
-            recent_recency_groups=recent_recency_groups,
-            limitation_map=limitation_map,
-            finger_device=_finger_dev,
-            user_age=user_age,
-            experience_years=experience_years,
-        )
+        # B227: 3-tier cascade when intensity_max is declared.
+        # Tier 1 = full constraints + ceiling.
+        # Tier 2 = drop domain/pattern, keep ceiling.
+        # Tier 3 = bump ceiling low → medium (one step), still wide pool.
+        # No tier 3 for medium/high (already wide). Skip = return None.
+        def _try_pick(imax: Optional[str], drop_domain: bool = False, drop_pattern: bool = False):
+            return pick_best_exercise_p0(
+                exercises=exercises,
+                location=location,
+                available_equipment=available_equipment,
+                role_req=role_req,
+                domain_req=None if drop_domain else domain_req,
+                pattern_req=None if drop_pattern else pattern_req,
+                required_equipment=equipment_req,
+                intensity_max=imax,
+                exclude_ids=set(recent_ex_ids),
+                recent_ex_ids=recent_ex_ids,
+                recent_recency_groups=recent_recency_groups,
+                limitation_map=limitation_map,
+                finger_device=_finger_dev,
+                user_age=user_age,
+                experience_years=experience_years,
+            )
+
+        cascade_tier: Any = 1
+        if intensity_max_req is None:
+            selected_ex, trace = _try_pick(None)
+        else:
+            selected_ex, trace = _try_pick(intensity_max_req)
+            if selected_ex is None:
+                selected_ex, trace = _try_pick(intensity_max_req, drop_domain=True, drop_pattern=True)
+                if selected_ex is not None:
+                    cascade_tier = 2
+                elif intensity_max_req == "low":
+                    selected_ex, trace = _try_pick("medium", drop_domain=True, drop_pattern=True)
+                    if selected_ex is not None:
+                        cascade_tier = 3
+
+        if intensity_max_req is not None:
+            tier_label: Any = cascade_tier if selected_ex is not None else "skip"
+            trace["cascade_tier"] = tier_label
+            log_extra = {
+                "session_id": session_id or "unknown",
+                "block_id": block_id,
+                "cascade_tier": tier_label,
+                "intensity_max": intensity_max_req,
+                "pool_size": (trace.get("counts") or {}).get("after_intensity_max", 0),
+            }
+            if selected_ex is None:
+                logger.warning("resolver.cascade_skip", extra=log_extra)
+            elif cascade_tier in (2, 3):
+                logger.info("resolver.cascade", extra=log_extra)
+
         chosen_by = "p0_inline_block"
 
     # Cooldown fallback (same logic as template blocks)
@@ -1366,6 +1444,7 @@ def resolve_session(
                 limitation_map=limitation_map,
                 user_age=user_age,
                 experience_years=experience_years,
+                session_id=session_id,
             )
             continue
 
