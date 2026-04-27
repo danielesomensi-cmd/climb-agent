@@ -43,9 +43,44 @@ Audit finding F1 **fully confirmed** with concrete reproduction.
 
 ## P0.2 — Exercise inventory: intensity distribution
 
-**Catalog: 218 exercises. Zero missing `intensity_level`** — clean dataset, no need to decide on default treatment for missing fields.
+> **CORRECTION 2026-04-27 (R3 follow-up)**: initial distribution count was incomplete. The catalog uses a **7-value enum**, not 3. Real distribution below.
 
-**Global distribution:** low=89, medium=55, high=48 (22 in test/conditioning roles excluded).
+**Catalog: 218 exercises. Zero missing `intensity_level`** — but enum is wider than `{low, medium, high}` and has 2 drift singletons.
+
+### Full intensity_level distribution
+
+| Level | Count | Notes |
+|---|---|---|
+| `very_low` | 5 | Legitimate — `regeneration_climbing`, `finger_extensor_band`, `finger_tendon_glides`, `warmup_repeaters_large`, `timed_route_preview` |
+| `low` | 89 | Standard |
+| `moderate` | **1** | **DRIFT singleton** — `reverse_lunge` (semantically `medium`) |
+| `medium` | 55 | Standard |
+| `high` | 48 | Standard |
+| `very_high` | **1** | **DRIFT singleton** — `thirty_thirty_intervals` (semantically `high`) |
+| `max` | 19 | Limit-strength: `max_hang_*`, `min_edge_hang`, `limit_bouldering`, `campus_double_dyno`, etc. **Above `high`** |
+| `<missing>` | 0 | Clean dataset — no missing values |
+
+**Implication for ordinal mapping**: B227 must order all 7 values. Proposed:
+
+```python
+_INTENSITY_ORDER = {
+    "very_low": 0, "low": 1,
+    "moderate": 2, "medium": 2,    # equate
+    "high": 3, "very_high": 3,     # equate
+    "max": 4,                      # above high
+}
+```
+
+**Effect on enforcement**:
+- `intensity_max=low` declared in JSON → pass `{very_low, low}`. Block 6 levels including 19 `max` exercises (correct: a recovery never sees `max_hang_5s`).
+- `intensity_max=medium` → pass `{very_low, low, moderate, medium}`. Block `{high, very_high, max}`.
+- Blocks without `intensity_max` (param defaults to `None`) → unchanged behavior.
+
+**Drift singleton normalization** (`moderate→medium`, `very_high→high`) → out of scope for B227, separate C-brief. Ordinal mapping above absorbs them safely.
+
+**Original (incomplete) summary kept below for context — replaced by table above.**
+
+~~Global distribution: low=89, medium=55, high=48 (22 in test/conditioning roles excluded).~~
 
 **Per-role × intensity (`role=main` is the relevant tier-2/3 cascade pool):**
 
@@ -70,7 +105,7 @@ Audit finding F1 **fully confirmed** with concrete reproduction.
 | mobility | 14 | 14 | 0 | 0 |
 | prehab_* | 16 | 16 | 0 | 0 |
 | aerobic_capacity | 10 | 10 | 0 | 0 |
-| prehab_finger | 2 | 0 | 0 | 0 (both unrated) |
+| prehab_finger | 2 | 0 | 0 | 0 (both `very_low`, see correction above) |
 
 **Tier 1 pool (Tier 1 = domain match + intensity ceiling)** — for `regeneration_easy.continuity_main` (`domain=regeneration, role=main, intensity_max=low`):
 - 3 candidates: `continuity_climbing`, `easy_route_laps`, `arc_training_progressive` (all wall-required → empty at home).
@@ -214,33 +249,55 @@ if (
 
 ---
 
-## Risks & open questions for Daniele
+## Risks & open questions for Daniele — RESOLVED
 
-### R1. Catalog parity fix scope
+### R1. Catalog parity fix scope — DECIDED: meta → JSON
 
-**Found**: `regeneration_easy` meta `[]` vs json `["gym_boulder"]`. Brief P1.2 says fix the JSON to match meta (meta canonical). But **meta is what the planner uses to decide eligibility** — meta says "this session is allowed at home/gym/outdoor with no equipment", while JSON `required_equipment=["gym_boulder"]` would gate it to gym only.
+> **2026-04-27**: Daniele chose **opzione B**: add `gym_boulder` to `_SESSION_META["regeneration_easy"].required_equipment`. Do NOT remove from JSON.
+>
+> **Rationale**: removing from JSON would let the planner schedule regen at home → resolver finds empty pool at all 3 tiers → session skipped entirely. Worse UX than the original bug (user sees regen with zero exercises). Adding to meta is the correct fix until the catalog has home-compatible regen exercises. Catalog expansion → C-brief post-B227.
+>
+> **Principle**: meta is canonical, JSON aligns to meta. When meta is incomplete, fix meta.
 
-**The mismatch is what allowed the bug to fire**: planner schedules `regeneration_easy` at home (per meta), then resolver runs at home with no climbing, falls back. **If we sync JSON → meta**, the home scheduling stays open (and the cascade fix protects intensity). **If we sync meta → JSON**, the planner stops scheduling regen at home (B227 cascade still useful as defense-in-depth).
+### R2. Test breakage acceptance — DECIDED: 3-tier policy
 
-**Question**: which way to sync? My recommendation: **JSON → meta** (drop `gym_boulder` from the JSON), trusting the cascade as defense-in-depth — because the methodology arguably allows passive stretching at home as "regeneration" too. But this is a product call.
-
-### R2. Test breakage acceptance
-
-`test_resolve_real_sessions.py` exercises all 35 sessions. If any current assertion captures the buggy resolution (e.g., expects `dip` to appear in a recovery session), it will break. Brief says: "Do not silently update fixtures: a breaking test is signal that the cascade changed an existing resolution. Daniele must validate."
-
-**Question**: do you want me to surface every breakage as a separate decision point during Phase 1, or batch-report at the end?
+> **2026-04-27**: Daniele's policy:
+>
+> - **Auto-fix without asking** if test is obviously stale (obsolete fixture, mock signature drift, import path).
+> - **Batch-report at end of Phase 1** if test reveals legitimate behavior change ("regen now picks X instead of Y"). List in chat, Daniele decides.
+> - **Immediate STOP** if test reveals invariant violation (past sessions modified, determinism broken, idempotency lost). Don't wait for end of Phase 1.
+>
+> Final report: list fixed tests with one-line changelog + list pending-decision tests.
 
 ### R3. `prehab_finger` exercises with no intensity_level
 
-Found: 2 prehab_finger exercises lack `intensity_level`. These are not in the cascade pool (role=prehab, not main), so not directly impacted. But it's a small data-quality gap.
+> **RESOLVED 2026-04-27**: original finding was incorrect. `finger_extensor_band` and `finger_tendon_glides` already declare `intensity_level="very_low"` (verified by direct catalog read). The P0.2 count "0 unrated" was an artifact of treating all non-`{low,medium,high}` values as missing.
+>
+> **No backfill needed.** Catalog is internally consistent.
+>
+> **Side discovery**: 2 drift singletons (`reverse_lunge`=`moderate`, `thirty_thirty_intervals`=`very_high`) and 19 `max`-level exercises. Ordinal mapping in P0.2 absorbs all of them. Singleton normalization → separate C-brief, post-B227.
 
-**Question**: in scope for B227 (set them to `low`), or separate C-brief?
+### R4. Telemetry / observability — DECIDED: WARNING/INFO + structured
 
-### R4. Telemetry / observability
-
-Brief P1.1.5 specifies `cascade_tier=2|3` and `cascade_skip=True` logging. Should this be at WARNING level (visible in Railway logs) or INFO (verbose only)? In production with `sk_live`, WARNING gives us a signal if a recovery session can't resolve cleanly.
-
-**My recommendation**: WARNING for cascade_skip, INFO for tier=2/3. Confirm.
+> **2026-04-27**: Daniele confirmed:
+> - WARNING for `cascade_skip`
+> - INFO for `cascade_tier=2|3`
+> - **Structured logging** (no free text), via `extra={}`:
+>
+> ```python
+> logger.info(
+>     "resolver.cascade",
+>     extra={
+>         "session_id": session_id,
+>         "block_id": block_id,
+>         "cascade_tier": tier,        # 1 | 2 | 3 | "skip"
+>         "intensity_max": intensity_max,
+>         "pool_size": len(pool),
+>     }
+> )
+> ```
+>
+> Rationale: if `cascade_tier=3` spikes in production, we know exactly where to expand the catalog.
 
 ---
 
@@ -284,22 +341,39 @@ If `selected is None`, log `cascade_skip=True` with session_id + block_id and re
 
 ### Step 2 — Add `intensity_max` parameter to `pick_best_exercise_p0`
 
-Default `None` (no filter). When set: insert filter between Stage 3 (role) and Stage 4 (domain). Filter logic:
+Default `None` (no filter). When set: insert filter between Stage 3 (role) and Stage 4 (domain). Filter logic uses the **7-value ordinal mapping** discovered in P0.2 correction:
+
 ```python
+_INTENSITY_ORDER = {
+    "very_low": 0, "low": 1,
+    "moderate": 2, "medium": 2,    # equate (drift singleton absorbed)
+    "high": 3, "very_high": 3,     # equate (drift singleton absorbed)
+    "max": 4,                      # above high
+}
+
 if intensity_max is not None:
-    order = {"low": 0, "medium": 1, "high": 2}
-    ceiling = order.get(intensity_max, 2)
-    base3 = [e for e in base3 if order.get(e.get("intensity_level") or "medium", 1) <= ceiling]
-    if not base3:
-        return None, trace  # zeroing
+    ceiling = _INTENSITY_ORDER.get(intensity_max)
+    if ceiling is None:
+        # Unknown intensity_max value in JSON — log warning, treat as no filter
+        logger.warning("Unknown intensity_max value %r — skipping filter", intensity_max)
+    else:
+        # R3 policy: missing intensity_level → exclude (more strict)
+        base3 = [
+            e for e in base3
+            if e.get("intensity_level") in _INTENSITY_ORDER
+            and _INTENSITY_ORDER[e["intensity_level"]] <= ceiling
+        ]
+        if not base3:
+            return None, trace  # zeroing
 ```
 
-Note: missing `intensity_level` defaults to `medium` (most charitable read; no exercise in catalog actually has missing). Flagged in P0.2.
+**R3 missing-policy**: exercises with no `intensity_level` are **excluded** from any pool with `intensity_max` set. Today this affects 0 exercises (clean dataset), but acts as defense-in-depth for future catalog additions.
 
-### Step 3 — Catalog parity fix (per R1 decision)
+### Step 3 — Catalog parity fix (R1 = meta → JSON)
 
-If JSON → meta: drop `"required_equipment": ["gym_boulder"]` from `regeneration_easy.json`.
-If meta → JSON: add `"required_equipment": ["gym_boulder"]` to `_SESSION_META["regeneration_easy"]`.
+Add `"required_equipment": ["gym_boulder"]` to `_SESSION_META["regeneration_easy"]` in `backend/engine/planner_v2.py:51`.
+
+Do NOT modify `backend/catalog/sessions/v1/regeneration_easy.json` (`required_equipment: ["gym_boulder"]` stays as-is — it was already correct).
 
 ### Step 4 — Tests
 
@@ -315,14 +389,17 @@ Target: 1832 → ≥1840 (8 new). Any breakage in existing tests reported indivi
 
 ---
 
-## STOP — awaiting approval
+## Phase 0 closure — APPROVED
 
-Phase 0 deliverable complete. **No code changes.** Ready for Phase 1 on Daniele's OK.
+> **2026-04-27**: Daniele approved Phase 1 with the decisions captured above (R1=meta→JSON, R2=3-tier policy, R3=no backfill needed, R4=structured logging WARNING/INFO).
+>
+> Phase 1 in progress. No code changes yet — pending second STOP gate on R3 follow-up (see chat).
 
-Specific questions to resolve before Phase 1:
-1. **R1**: catalog parity direction — JSON → meta (drop gym_boulder) or meta → JSON (add gym_boulder)?
-2. **R2**: how to handle test breakages during Phase 1 (per-decision or batched)?
-3. **R3**: include prehab_finger intensity backfill in B227 or defer?
-4. **R4**: log levels — confirm WARNING for skip, INFO for tier 2/3?
+All 4 risks resolved:
 
-When you OK, I'll proceed with Phase 1 in the order listed above.
+| | Decision |
+|---|---|
+| **R1** | meta → JSON. Add `gym_boulder` to `_SESSION_META["regeneration_easy"].required_equipment`. |
+| **R2** | 3-tier breakage policy: auto-fix stale, batch-report behavioral changes, STOP on invariant violation. |
+| **R3** | No backfill — prehab_finger already `very_low`. 7-value ordinal mapping handles drift singletons. |
+| **R4** | Structured logging via `extra={}`. WARNING on skip, INFO on tier 2/3. |
