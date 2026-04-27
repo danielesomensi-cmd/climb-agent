@@ -10,6 +10,8 @@ const STEPS = [
 
 export function StepIndicator() {
   const pathname = usePathname();
+  // A216: hide on welcome — hero takes full visual focus
+  if (pathname.endsWith("/welcome")) return null;
   const isStartWeek = pathname.includes("start-week");
   const currentStep = isStartWeek ? STEPS.length - 1 : STEPS.findIndex((s) => pathname.includes(s));
   const progress = isStartWeek ? 100 : (currentStep >= 0 ? ((currentStep + 1) / STEPS.length) * 100 : 0);

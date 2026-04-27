@@ -182,7 +182,7 @@ export default function GoalsPage() {
                 </div>
               </RadioGroup>
               <p className="text-xs text-muted-foreground">
-                Redpoint = your max grade after working the route. Onsight = climbing it clean on the first try. This changes how we prioritize your weaknesses.
+                Redpoint = max grade after working a route. Onsight = first-try clean. We bias your weakness priority by style: redpoint loads finger/power, onsight loads route-reading and endurance.
               </p>
             </div>
           )}
@@ -280,10 +280,10 @@ export default function GoalsPage() {
               Your plan ends: <strong>{endDate}</strong>
             </p>
             <p className="text-xs text-muted-foreground">
-              A well-structured periodization cycle needs at least 12 weeks to go through all training phases (base, strength, power endurance, peak, recovery). Shorter plans compress phases and reduce effectiveness.
+              A full periodization cycle is 12+ weeks: base → strength-power → power-endurance → performance → deload. Shorter plans compress phases.
             </p>
             {totalWeeks < 12 && (
-              <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+              <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
                 Short plan — some training phases will be compressed
               </div>
             )}
@@ -291,13 +291,13 @@ export default function GoalsPage() {
 
           {/* Warnings */}
           {isAmbitious && (
-            <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
-              Ambitious goal! The plan will be aggressive
+            <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+              Ambitious goal — load increases will be aggressive
             </div>
           )}
           {isTooLow && (
-            <div className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-600 dark:bg-red-950 dark:text-red-200">
-              The target is equal to or lower than your current level
+            <div className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+              Target must be above your current grade
             </div>
           )}
         </CardContent>

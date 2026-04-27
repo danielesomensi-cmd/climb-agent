@@ -34,7 +34,7 @@ export default function ExperiencePage() {
           {/* Climbing years */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>How many years have you been climbing?</Label>
+              <Label>Years climbing</Label>
               <span className="text-sm font-medium tabular-nums">
                 {exp.climbing_years}
               </span>
@@ -51,7 +51,7 @@ export default function ExperiencePage() {
           {/* Structured training years */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label>How many years of structured training?</Label>
+              <Label>Years of structured training</Label>
               <span className="text-sm font-medium tabular-nums">
                 {exp.structured_training_years}
               </span>

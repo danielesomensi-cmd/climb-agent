@@ -111,7 +111,7 @@ export default function InstallPage() {
         <CardHeader>
           <CardTitle className="text-2xl">Add to Home Screen</CardTitle>
           <CardDescription>
-            For the best experience, add Climb Agent to your home screen — it
+            For the best experience, add climb-agent to your home screen — it
             works just like a native app.
           </CardDescription>
         </CardHeader>

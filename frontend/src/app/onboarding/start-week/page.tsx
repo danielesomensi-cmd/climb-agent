@@ -93,7 +93,7 @@ export default function StartWeekPage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Where do you want to start?</CardTitle>
+          <CardTitle className="text-2xl">Where to start</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">

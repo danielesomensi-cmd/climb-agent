@@ -263,16 +263,15 @@ export default function TestsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Do you have test data? (optional but recommended)
+            Test data (optional)
           </CardTitle>
           <CardDescription>
-            If you&apos;ve done these tests, enter the results. They will significantly
-            improve the accuracy of your profile.
+            If you&apos;ve measured these benchmarks, enter results. We use them to calibrate prescriptions in week 1.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-200">
-            Accurate test data helps climb-agent build a plan tailored to your specific strengths and weaknesses. After onboarding, we&apos;ll offer a dedicated test week to establish or refresh baselines.
+          <div className="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info">
+            Accurate baselines tighten week-1 prescriptions. If you skip, we&apos;ll offer a dedicated test week to establish them.
           </div>
           {sections.map((section) => (
             <div key={section.key} className="space-y-3 rounded-lg border p-4">

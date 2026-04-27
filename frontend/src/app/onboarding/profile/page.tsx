@@ -35,7 +35,7 @@ export default function ProfilePage() {
         <CardHeader>
           <CardTitle className="text-2xl">Your profile</CardTitle>
           <CardDescription>
-            Weight is used to calculate relative loads (e.g. weight-to-finger-strength ratio)
+            Weight calibrates relative loads (e.g. body-weight + added load on hangboard)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">

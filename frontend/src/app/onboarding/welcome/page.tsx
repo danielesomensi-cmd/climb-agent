@@ -1,63 +1,86 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 
 export default function WelcomePage() {
   const router = useRouter();
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 pt-8">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Welcome to Climb Agent</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-lg font-medium text-foreground">
-            Intelligent training, built for serious climbers
+    <>
+      {/* A216 hero — full-bleed top section, headline-in-overlay */}
+      <section className="relative -mx-4 h-[55vh] overflow-hidden">
+        <Image
+          src="/hero/onboarding_hero.webp"
+          alt="Climber atop a mountain at sunrise"
+          fill
+          priority
+          sizes="(max-width: 768px) 100vw, 768px"
+          className="object-cover"
+        />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, transparent 35%, hsl(var(--surface-base) / 0.95) 100%)",
+          }}
+          aria-hidden="true"
+        />
+        <div className="absolute inset-x-0 bottom-0 p-6 pb-8">
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight text-fg md:text-4xl">
+            Periodized training.
+          </h1>
+          <p className="mt-2 text-base text-fg-secondary md:text-lg">
+            Built for the top 5%.
           </p>
+        </div>
+      </section>
 
-          <p className="text-sm text-muted-foreground">
-            Climb Agent uses AI-driven periodization to build a training plan
-            tailored to your strengths, weaknesses, and schedule. The more
-            complete your initial assessment, the better. Your plan also adapts
-            from session feedback over time.
-          </p>
+      <div className="mx-auto max-w-lg space-y-6 pt-6">
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <p className="text-sm text-muted-foreground">
+              climb-agent uses deterministic periodization based on Hörst 4-3-2-1 to build a plan from your assessment, weaknesses, and schedule. Every session you log adapts the next.
+            </p>
 
-          <ul className="space-y-2 text-sm">
-            <li className="flex items-start gap-2">
-              <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-              Maps your strengths and weaknesses across 5 performance axes
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-              Builds a periodized macrocycle matched to your goal and timeline
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-              Adapts every week based on your session feedback
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
+            <ul className="space-y-2 text-sm">
+              <li className="flex items-start gap-2">
+                <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                5-axis assessment: finger strength, pulling, power-endurance, technique, endurance
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                10–13 week macrocycle: base → strength → power-endurance → performance → deload
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                Closed-loop adaptation: every session feedback adjusts the next week
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                AI coach coming soon: conversational guidance built on your training data
+              </li>
+            </ul>
+          </CardContent>
+        </Card>
 
-      <div className="flex flex-col items-end gap-3">
-        <Button onClick={() => router.push("/onboarding/install")}>
-          Let&apos;s start
-        </Button>
-        <button
-          onClick={() => router.push("/onboarding/recover")}
-          className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-        >
-          Already have an account? Recover access
-        </button>
+        <div className="flex flex-col items-end gap-3">
+          <Button onClick={() => router.push("/onboarding/install")}>
+            Start assessment
+          </Button>
+          <button
+            onClick={() => router.push("/onboarding/recover")}
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            Already have an account? Recover access
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -103,7 +103,7 @@ export default function LimitationsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Do you have current injuries or limitations?
+            Injuries or limitations
           </CardTitle>
           <CardDescription>
             The plan will avoid exercises that aggravate your limitations and prioritize targeted prehab work to support your recovery.
@@ -116,7 +116,7 @@ export default function LimitationsPage() {
               checked={hasLimitations}
               onCheckedChange={toggleLimitations}
             />
-            <Label htmlFor="has-limitations">Yes, I have something</Label>
+            <Label htmlFor="has-limitations">Yes, I have an active limitation</Label>
           </div>
 
           {hasLimitations && (

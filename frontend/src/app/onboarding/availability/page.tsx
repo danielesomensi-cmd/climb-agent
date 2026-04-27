@@ -124,19 +124,19 @@ export default function AvailabilityPage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">When do you train?</CardTitle>
+          <CardTitle className="text-2xl">When you train</CardTitle>
           <CardDescription>
             Outdoor days can be added later in your weekly plan based on weather and season.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {gyms.length === 0 && (
-            <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-600 dark:bg-amber-950 dark:text-amber-200">
+            <div className="rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
               <strong>Want to train at a gym?</strong> Go back to the Locations step and add at least one gym. Even a generic gym with all equipment selected will work — you can refine it later.
             </div>
           )}
-          <div className="rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-200">
-            Set your typical training week. The planner will build sessions around your schedule, matching each slot to the right location and equipment. You can adjust this anytime — and each weekend you&apos;ll review and confirm next week&apos;s plan.
+          <div className="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info">
+            Set your typical training week. The planner builds sessions around your schedule and equipment. You&apos;ll confirm next week&apos;s plan every Sunday/Monday.
             {gyms.length > 1 && (
               <span className="mt-2 block">If you don&apos;t select a specific gym for a slot, the planner will choose the best one based on available equipment.</span>
             )}
@@ -210,7 +210,7 @@ export default function AvailabilityPage() {
                               type="button"
                               className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
                                 s.preferred_location === "other_sport"
-                                  ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                                  ? "border-warning bg-warning/10 text-warning"
                                   : "border-muted text-muted-foreground"
                               }`}
                               onClick={() => setLocation(day.key, slot.key, "other_sport")}
@@ -289,10 +289,9 @@ export default function AvailabilityPage() {
       {/* Planning preferences */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Training preferences</CardTitle>
+          <CardTitle className="text-lg">Training volume</CardTitle>
           <CardDescription>
-            Hard sessions include max hang, limit bouldering, power
-            training
+            Hard sessions: max hang, limit bouldering, power training, projecting
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-8">
@@ -313,7 +312,7 @@ export default function AvailabilityPage() {
               }
             />
             {planningPrefs.target_training_days_per_week === 7 && (
-              <p className="text-xs text-yellow-600 dark:text-yellow-400">
+              <p className="text-xs text-warning">
                 No rest days — not recommended
               </p>
             )}

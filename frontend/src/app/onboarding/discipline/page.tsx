@@ -14,17 +14,17 @@ const DISCIPLINES = [
   {
     value: "lead",
     title: "Lead",
-    description: "Lead — I want to send harder routes",
+    description: "Sending harder routes",
   },
   {
     value: "boulder",
     title: "Boulder",
-    description: "Boulder — I want to send harder problems",
+    description: "Sending harder boulders",
   },
   {
     value: "both",
     title: "Both",
-    description: "Both — I want to improve at everything",
+    description: "Both, balanced focus",
   },
 ] as const;
 
@@ -55,9 +55,9 @@ export default function DisciplinePage() {
     <div className="mx-auto max-w-lg space-y-6 pt-8">
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">What do you want to improve?</CardTitle>
+          <CardTitle className="text-2xl">Main discipline</CardTitle>
           <p className="text-sm text-muted-foreground">
-            This sets your main training focus. You&apos;ll still improve across all areas.
+            We&apos;ll bias the macrocycle toward this discipline. Other areas still improve.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -66,8 +66,8 @@ export default function DisciplinePage() {
               key={d.value}
               className={`cursor-pointer transition-colors ${
                 selected === d.value
-                  ? "border-primary ring-2 ring-primary/30"
-                  : "hover:border-primary/50"
+                  ? "border-brand bg-brand/5"
+                  : "hover:border-brand/50"
               }`}
               onClick={() => setDiscipline(d.value)}
             >

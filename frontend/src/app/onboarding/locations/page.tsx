@@ -113,7 +113,7 @@ export default function LocationsPage() {
       {/* Home section */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Where do you train?</CardTitle>
+          <CardTitle className="text-2xl">Where you train</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center gap-3">
@@ -168,7 +168,7 @@ export default function LocationsPage() {
                 </div>
               )}
 
-              <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+              <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
                 A hangboard is essential for finger training
               </div>
             </div>
@@ -274,7 +274,7 @@ export default function LocationsPage() {
           </Button>
 
           {equipment.gyms.some((g) => !g.name.trim()) && (
-            <p className="text-xs text-red-500">
+            <p className="text-xs text-danger">
               All gyms must have a name
             </p>
           )}

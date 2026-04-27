@@ -332,25 +332,25 @@ export default function ReviewPage() {
 
       {/* Warnings */}
       {hasGradeExperienceMismatch && (
-        <div className="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
-          Your grades suggest significant climbing experience. Please review your experience inputs.
+        <div className="rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          Your grades suggest more climbing experience than you&apos;ve reported. Double-check the experience step.
         </div>
       )}
 
       {hasNoClimbingEquipment && data.equipment.gyms.length > 0 && (
-        <div className="rounded-md border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
-          None of your gyms have climbing walls. Climbing-specific sessions will be limited. Consider adding a gym with bouldering or route areas.
+        <div className="rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
+          No gym has bouldering or route walls. Climbing-specific sessions will be skipped. Add a gym with these in the Locations step.
         </div>
       )}
 
       {error && (
-        <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-600 dark:bg-red-950 dark:text-red-200">
+        <div className="rounded-md border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
           {error}
         </div>
       )}
 
       <div className="rounded-md border border-muted px-4 py-3 text-sm text-muted-foreground">
-        A test week helps calibrate your plan with precise data. You can always start training immediately.
+        A test week calibrates your week-1 prescriptions with precise baselines. Or start immediately and self-report.
       </div>
 
       <div className="flex items-center justify-between gap-2">
@@ -376,7 +376,7 @@ export default function ReviewPage() {
             disabled={loading}
             onClick={handleTestWeek}
           >
-            {loading ? "Generating..." : "Do a test week first"}
+            {loading ? "Generating..." : "Run a test week first"}
           </Button>
         </div>
       </div>

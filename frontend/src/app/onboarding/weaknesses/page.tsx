@@ -106,10 +106,10 @@ function WeaknessCard({
     <Card
       className={`cursor-pointer transition-colors ${
         selected
-          ? "border-primary ring-2 ring-primary/30"
+          ? "border-brand bg-brand/5"
           : disabled
             ? "opacity-40 cursor-not-allowed"
-            : "hover:border-primary/50"
+            : "hover:border-brand/50"
       }`}
       onClick={() => {
         if (!disabled) onSelect();
@@ -166,7 +166,7 @@ export default function WeaknessesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            What is your main weakness?
+            Primary weakness
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -187,7 +187,7 @@ export default function WeaknessesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              And your second weakness?
+              Secondary weakness
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">

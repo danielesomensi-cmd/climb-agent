@@ -94,11 +94,10 @@ export default function TripsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            Do you have outdoor trips planned?
+            Outdoor trips
           </CardTitle>
           <CardDescription>
-            If you have a crag trip planned, the plan will automatically
-            deload the days before
+            Trips trigger an automatic deload before departure so you arrive fresh.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -157,7 +156,7 @@ export default function TripsPage() {
                     }
                   />
                   {trip.start_date && trip.end_date && trip.end_date <= trip.start_date && (
-                    <p className="text-xs text-red-500">
+                    <p className="text-xs text-danger">
                       End date must be after start date
                     </p>
                   )}
