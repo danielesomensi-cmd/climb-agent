@@ -33,6 +33,8 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 
 **Pricing at launch:** USD $9.99/month Standard (15-day free trial) + USD $4.99/month Founding Climber (locked forever, first 20 users). Stripe LIVE.
 
+- Pricing tax_behavior: **exclusive** (net prices, VAT added at Stripe Tax activation). Decision date: 2026-04-28. Locked-in for consistency at future Stripe Tax activation.
+
 ---
 
 ## Architecture: the full flow
