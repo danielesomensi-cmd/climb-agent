@@ -1012,7 +1012,7 @@ function TodayContent() {
 
         {/* Weekly check-in card (Sunday / Monday morning grace) */}
         {!loading && !error && isViewingToday && (
-          <WeeklyCheckinCard onPlanUpdated={refetchAll} />
+          <WeeklyCheckinCard weekPlan={weekPlan} onPlanUpdated={refetchAll} />
         )}
 
         {/* C203: boulder phase tip — discipline-gated, dismissible per-phase */}

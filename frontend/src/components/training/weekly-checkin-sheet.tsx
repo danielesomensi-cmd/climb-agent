@@ -60,12 +60,6 @@ interface Props {
   onPlanUpdated: () => void;
 }
 
-function formatWeekDate(dateStr: string): string {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-}
-
 function summarizeSlots(slots: EditableSlot[], gyms: Array<{ gym_id?: string; name: string }>): string {
   const gymMap: Record<string, string> = {};
   for (const g of gyms) {
@@ -263,9 +257,6 @@ export function WeeklyCheckinSheet({ open, nextWeekStart, onClose, onPlanUpdated
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader>
           <DrawerTitle>Plan your week</DrawerTitle>
-          <p className="text-sm text-muted-foreground">
-            Week of {formatWeekDate(nextWeekStart)}
-          </p>
         </DrawerHeader>
 
         <div className="overflow-y-auto px-4 pb-2">

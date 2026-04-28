@@ -340,7 +340,11 @@ Your default availability (days, locations, time slots) is set in **Settings**. 
 
 Overrides are temporary — they only apply to that specific week. Your default settings remain unchanged. The planner merges the override into your availability before generating that week's plan.
 
-**Tip**: Set your overrides for next week before Monday. The planner generates the new week plan on Monday morning based on your availability at that point.
+**Plan your week banner (Today page)**: a shortcut appears on Sundays and Mondays only.
+- **Sunday** → adjusts the **upcoming** week (Mon–Sun starting tomorrow).
+- **Monday** → adjusts the **current** week (the Monday you're on), as long as no session has been logged yet.
+- Once any session is marked done in the current week, the banner is hidden — partial-week edits go through the per-day **Replan** dialog instead.
+- Tue–Sat: the banner is hidden; use Replan for individual days.
 
 ---
 
