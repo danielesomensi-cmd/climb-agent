@@ -7,15 +7,25 @@ Events handled:
     checkout.session.completed      → link stripe_customer_id, set trialing
     customer.subscription.updated   → sync status, period dates, cancel flag
     customer.subscription.deleted   → set canceled
+    customer.deleted                → clear stripe IDs, mark canceled (B226)
     invoice.payment_succeeded       → set active, update period dates
     invoice.payment_failed          → set past_due
+
+B226 hardening:
+    - Handler exceptions return HTTP 500 → Stripe retries (was: swallowed 200).
+    - In-memory LRU dedup of event.id within ~last 1024 events (~hours of traffic).
+      Survives in-process Stripe retries; does NOT survive Railway restart.
+      Mitigated by the fact that all handlers are upsert-based (naturally idempotent).
+    - customer.deleted handled (closes B203 gap).
 """
 
 from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict
+from collections import OrderedDict
+from threading import Lock
+from typing import Any, Dict, Optional
 
 import stripe
 from fastapi import Request
@@ -31,6 +41,37 @@ logger = logging.getLogger(__name__)
 
 _STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 _STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+
+# B226: LRU dedup for Stripe event IDs. Stripe sends the same event.id on
+# retries, so we can short-circuit duplicate deliveries within the in-process
+# window. Persistence would require a Supabase table (deferred — see roadmap).
+_EVENT_LRU_MAX = 1024
+_processed_events: "OrderedDict[str, None]" = OrderedDict()
+_processed_events_lock = Lock()
+
+
+def _is_event_processed(event_id: str) -> bool:
+    """Return True if event_id was processed recently (in-process LRU)."""
+    with _processed_events_lock:
+        if event_id in _processed_events:
+            _processed_events.move_to_end(event_id)
+            return True
+        return False
+
+
+def _mark_event_processed(event_id: str) -> None:
+    """Record event_id as processed; evict oldest if cache full."""
+    with _processed_events_lock:
+        _processed_events[event_id] = None
+        _processed_events.move_to_end(event_id)
+        while len(_processed_events) > _EVENT_LRU_MAX:
+            _processed_events.popitem(last=False)
+
+
+def _reset_event_dedup_for_tests() -> None:
+    """Test-only helper to clear the dedup cache between cases."""
+    with _processed_events_lock:
+        _processed_events.clear()
 
 
 def _stripe_to_dict(obj: Any) -> Dict[str, Any]:
@@ -62,6 +103,7 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
         logger.error("Stripe webhook construct_event failed: %s", exc)
         return JSONResponse({"error": "Bad request"}, status_code=400)
 
+    event_id = event.get("id") or ""
     event_type = event["type"]
     data_object = _stripe_to_dict(event["data"]["object"])
 
@@ -73,12 +115,22 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
     _has_supabase_url = bool(_os.environ.get("SUPABASE_URL", ""))
     _has_supabase_key = bool(_os.environ.get("SUPABASE_SERVICE_KEY", ""))
     logger.info(
-        "DIAG stripe_webhook recv event_type=%s | STORAGE_BACKEND=%s stripe_key=%s "
+        "DIAG stripe_webhook recv event_id=%s event_type=%s | STORAGE_BACKEND=%s stripe_key=%s "
         "webhook_secret=%s supabase_url=%s supabase_key=%s",
-        event_type, _sb_backend, _has_stripe_key,
+        event_id, event_type, _sb_backend, _has_stripe_key,
         _has_webhook_secret, _has_supabase_url, _has_supabase_key,
     )
 
+    # B226: idempotency — short-circuit if Stripe is retrying the same event.
+    if event_id and _is_event_processed(event_id):
+        logger.info(
+            "Stripe webhook: duplicate event_id=%s type=%s — skipping (LRU hit)",
+            event_id, event_type,
+        )
+        return JSONResponse({"received": True, "duplicate": True}, status_code=200)
+
+    # B226: fail-loud — handler exceptions propagate as HTTP 500 so Stripe
+    # retries with exponential backoff (was: swallowed with 200, events lost).
     try:
         if event_type == "checkout.session.completed":
             _handle_checkout_completed(data_object)
@@ -86,6 +138,8 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
             _handle_subscription_updated(data_object)
         elif event_type == "customer.subscription.deleted":
             _handle_subscription_deleted(data_object)
+        elif event_type == "customer.deleted":
+            _handle_customer_deleted(data_object)
         elif event_type == "invoice.payment_succeeded":
             _handle_payment_succeeded(data_object)
         elif event_type == "invoice.payment_failed":
@@ -93,8 +147,18 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
         else:
             logger.info("Stripe webhook: unhandled event type %s", event_type)
     except Exception as exc:
-        logger.error("Error handling Stripe webhook %s: %s", event_type, exc, exc_info=True)
-        # Return 200 anyway — Stripe will not retry on 200
+        logger.error(
+            "Stripe webhook handler failed event_id=%s type=%s: %s",
+            event_id, event_type, exc, exc_info=True,
+        )
+        # B226: do NOT mark as processed — let Stripe retry.
+        return JSONResponse(
+            {"error": "handler_failed", "event_id": event_id, "event_type": event_type},
+            status_code=500,
+        )
+
+    if event_id:
+        _mark_event_processed(event_id)
 
     return JSONResponse({"received": True}, status_code=200)
 
@@ -215,6 +279,39 @@ def _handle_subscription_deleted(sub: Dict[str, Any]) -> None:
 
     upsert_subscription(user_id, {"status": "canceled"})
     logger.info("subscription.deleted: user_id=%s → canceled", user_id)
+
+
+def _handle_customer_deleted(customer: Dict[str, Any]) -> None:
+    """customer.deleted — clear stripe IDs and mark canceled.
+
+    Triggered when a Stripe customer is deleted (e.g., via dashboard or API).
+    Without this handler, the user would retain an active subscription row
+    pointing to a non-existent Stripe customer (B203 gap).
+    """
+    customer_id = customer.get("id")
+    if not customer_id:
+        logger.warning("customer.deleted: missing customer id")
+        return
+
+    row = find_subscription_by_stripe_customer(customer_id)
+    if row is None:
+        logger.warning(
+            "customer.deleted: no subscription row for customer=%s — nothing to update",
+            customer_id,
+        )
+        return
+
+    user_id = row["user_id"]
+    upsert_subscription(user_id, {
+        "stripe_customer_id": None,
+        "stripe_subscription_id": None,
+        "status": "canceled",
+        "cancel_at_period_end": False,
+    })
+    logger.info(
+        "customer.deleted: user_id=%s customer=%s → cleared + canceled",
+        user_id, customer_id,
+    )
 
 
 def _handle_payment_succeeded(invoice: Dict[str, Any]) -> None:
