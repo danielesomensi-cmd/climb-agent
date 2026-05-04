@@ -76,6 +76,31 @@ function formatSeconds(s: number): string {
   return String(s);
 }
 
+/**
+ * Pure decision for the 3-2-1 countdown beep — exported for unit tests (B247).
+ *
+ * Returns true iff: phase is countdown-eligible, NOT paused, remainingS is in
+ * {1, 2, 3}, AND this second value has not already been beeped this phase.
+ *
+ * Caller must set lastBeepedSec to remainingS after firing the beep, and reset
+ * to -1 on every phase transition (handled by startCountdown / handleReset).
+ *
+ * Replaces the previous useEffect([secondsLeft]) gate, which dropped beeps on
+ * iOS PWA tick drift (1s tick + 1s window had zero margin). See B-fix audit
+ * 2026-05-04.
+ */
+export function shouldFireCountdownBeep(
+  remainingS: number,
+  lastBeepedSec: number,
+  paused: boolean,
+  inActiveCountdownPhase: boolean,
+): boolean {
+  if (paused) return false;
+  if (!inActiveCountdownPhase) return false;
+  if (remainingS < 1 || remainingS > 3) return false;
+  return remainingS !== lastBeepedSec;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -101,6 +126,10 @@ export function ExerciseTimer({
   const phaseEndTimeRef = useRef<number>(0);
   const secondsLeftRef = useRef(0);
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
+  // Dedup for countdown beep — last second value beeped this phase, so multiple
+  // ticks landing in the same 1-s window only fire once. -1 = no beep yet.
+  // Reset in startCountdown (every phase transition) and handleReset (B247).
+  const lastBeepedSecRef = useRef<number>(-1);
   const onSetChangeRef = useRef(onSetChange);
   useEffect(() => { onSetChangeRef.current = onSetChange; }, [onSetChange]);
 
@@ -152,18 +181,10 @@ export function ExerciseTimer({
     }
   }, [transitionId]);
 
-  // Countdown ticks at 3 / 2 / 1 seconds
-  useEffect(() => {
-    if (secondsLeft >= 1 && secondsLeft <= 3) {
-      const p = phaseRef.current;
-      if (!pausedRef.current && p !== "idle" && p !== "complete") {
-        // No countdown ticks during manual work (no timer running)
-        if (!(p === "work" && isManual)) {
-          countdownTick();
-        }
-      }
-    }
-  }, [secondsLeft, isManual]);
+  // Countdown beep is fired inline in the tick handler below, gated by
+  // shouldFireCountdownBeep + lastBeepedSecRef dedup. Replaces the previous
+  // useEffect([secondsLeft]) pattern that dropped beeps on iOS PWA tick drift
+  // (B247 / D-audit 2026-05-04).
 
   // --- Timer management ---
 
@@ -179,6 +200,7 @@ export function ExerciseTimer({
   /** Set wall-clock end time + display value. Use for all non-tick timer updates. */
   const startCountdown = useCallback((seconds: number) => {
     phaseEndTimeRef.current = Date.now() + seconds * 1000;
+    lastBeepedSecRef.current = -1;
     setSecondsLeft(seconds);
   }, []);
 
@@ -275,9 +297,24 @@ export function ExerciseTimer({
         return;
       }
 
-      // Normal tick — update display from wall clock
-      setSecondsLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
-    }, 1000);
+      // Normal tick — update display from wall clock + idempotent countdown beep.
+      const remainingS = Math.max(0, Math.ceil(remainingMs / 1000));
+      const p = phaseRef.current;
+      const inActive =
+        p !== "idle" && p !== "complete" && !(p === "work" && isManual);
+      if (
+        shouldFireCountdownBeep(
+          remainingS,
+          lastBeepedSecRef.current,
+          pausedRef.current,
+          inActive,
+        )
+      ) {
+        lastBeepedSecRef.current = remainingS;
+        countdownTick();
+      }
+      setSecondsLeft(remainingS);
+    }, 200);
 
     return clearTimer;
   }, [phase, paused, currentSet, currentRep, sets, reps, totalSets, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, hasManualRepLoop, clearTimer, startCountdown]);
@@ -348,6 +385,7 @@ export function ExerciseTimer({
   function handleReset() {
     clearTimer();
     phaseEndTimeRef.current = 0;
+    lastBeepedSecRef.current = -1;
     setPhase("idle");
     setCurrentSet(1);
     setCurrentRep(1);
