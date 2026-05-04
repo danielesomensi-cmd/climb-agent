@@ -1343,7 +1343,12 @@ def resolve_session(
     session_ctx = session.get("context") if isinstance(session.get("context"), dict) else {}
     user_ctx = user_state.get("context") if isinstance(user_state.get("context"), dict) else {}
     gym_id = session_ctx.get("gym_id") or user_ctx.get("gym_id")
-    target_date = parse_date(session_ctx.get("target_date") or session_ctx.get("date"))
+    target_date = parse_date(
+        session_ctx.get("target_date")
+        or session_ctx.get("date")
+        or user_ctx.get("target_date")
+        or user_ctx.get("date")
+    )
 
     exercises_raw = load_json(os.path.join(repo_root, exercises_path))
     exercises = ensure_exercise_list(exercises_raw)
@@ -1698,7 +1703,13 @@ def resolve_session(
         _intent = session.get("intent") or {}
         _intent_str = _intent if isinstance(_intent, str) else (_intent.get("primary_goal") or "")
         pseudo_day = {
-            "date": session_ctx.get("target_date") or session_ctx.get("date") or "",
+            "date": (
+                session_ctx.get("target_date")
+                or session_ctx.get("date")
+                or user_ctx.get("target_date")
+                or user_ctx.get("date")
+                or ""
+            ),
             "sessions": [{
                 "session_id": session_id,
                 "intent": _intent_str,

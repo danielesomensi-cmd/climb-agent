@@ -144,6 +144,8 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
                         **resolve_state.get("context", {}),
                         "location": session_entry.get("location", "home"),
                         "gym_id": session_entry.get("gym_id"),
+                        "target_date": day_entry.get("date"),
+                        "date": day_entry.get("date"),
                     }
                     resolved = resolve_session(
                         repo_root=str(REPO_ROOT),
