@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -798,3 +798,56 @@ def should_trigger_adaptive_deload(
     hard_labels = {"very_hard"}
     last_five = recent_feedback[-5:]
     return all(fb in hard_labels for fb in last_five)
+
+
+# ---------------------------------------------------------------------------
+# Start-date computation for follow-on macrocycles (A-NEW-MACRO)
+# ---------------------------------------------------------------------------
+
+def _next_monday_on_or_after(d: date) -> date:
+    """Return the Monday on or after *d*. If *d* is a Monday, return it."""
+    days_ahead = (7 - d.weekday()) % 7  # 0 == already Monday
+    return d + timedelta(days=days_ahead)
+
+
+def compute_new_macrocycle_start_date(
+    state: Dict[str, Any],
+    today: date,
+) -> date:
+    """Resolve the Monday that a *new* follow-on macrocycle should start.
+
+    Used by ``POST /api/macrocycle/start-new-cycle`` (A-NEW-MACRO). The rule:
+
+    - If a current macrocycle exists, the new cycle starts the Monday on or
+      after ``max(current.end_date + 1 day, today)``.
+    - If no current macrocycle (or its ``end_date`` is missing), the new cycle
+      starts the Monday on or after *today* — i.e. ``today`` itself if Monday,
+      otherwise the upcoming Monday.
+
+    The function never returns a date in the past.
+
+    Args:
+        state: User state dict; ``state["macrocycle"]["end_date"]`` is read if
+            present (ISO ``YYYY-MM-DD``).
+        today: The reference date (caller passes ``date.today()`` in prod;
+            tests pass a fixed value).
+
+    Returns:
+        A ``date`` whose ``weekday() == 0`` (Monday).
+    """
+    macrocycle = state.get("macrocycle") or {}
+    end_str = macrocycle.get("end_date")
+
+    candidate = today
+    if end_str:
+        try:
+            current_end = datetime.strptime(end_str, "%Y-%m-%d").date()
+            candidate = max(today, current_end + timedelta(days=1))
+        except (ValueError, TypeError):
+            # Malformed end_date — fall back to today.
+            logger.warning(
+                "compute_new_macrocycle_start_date: malformed end_date %r, "
+                "ignoring and using today.", end_str,
+            )
+
+    return _next_monday_on_or_after(candidate)

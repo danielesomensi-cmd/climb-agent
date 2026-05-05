@@ -122,6 +122,21 @@ export const generateMacrocycle = (
     }),
   });
 
+/** A-NEW-MACRO: start a fresh macrocycle with mandatory goal review.
+ * Atomic backend flow: archive current → update goal → recompute profile →
+ * generate → set initial_tests_requested → invalidate cache. Subscription-gated.
+ */
+export const startNewMacrocycle = (
+  body: import("@/lib/types").StartNewCycleRequest,
+) =>
+  request<import("@/lib/types").StartNewCycleResponse>(
+    "/api/macrocycle/start-new-cycle",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
+
 // Week
 export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: string) => {
   const params = new URLSearchParams();

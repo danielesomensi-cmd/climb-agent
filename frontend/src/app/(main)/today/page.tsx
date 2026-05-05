@@ -1,6 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
+import { StartNewMacrocycleDialog } from "@/components/settings/start-new-macrocycle-dialog";
+import { useCanStartNewCycle } from "@/lib/hooks/use-can-start-new-cycle";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
@@ -122,6 +124,9 @@ function TodayContent() {
     return goal?.discipline ?? null;
   }, [stateQuery.data]);
 
+  // A-NEW-MACRO: end-of-cycle CTA visibility
+  const cycleStatus = useCanStartNewCycle(stateQuery.data ?? null);
+
   const boulderPhaseTip = useMemo<string | null>(() => {
     if (discipline !== "boulder") return null;
     return getBoulderPhaseTip(phaseId);
@@ -167,6 +172,8 @@ function TodayContent() {
   const [weekFreeSessions, setWeekFreeSessions] = useState<Array<Record<string, unknown>>>([]);
   const [weekFreeSessionsLoaded, setWeekFreeSessionsLoaded] = useState(false);
   const [resumeSession, setResumeSession] = useState<InProgressSession | null>(null);
+  // A-NEW-MACRO: end-of-cycle banner + dialog
+  const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
 
   // A202: feedback education banner — shown after ≥1 done session, dismissible.
   const [feedbackEduDismissed, setFeedbackEduDismissed] = useState(true);
@@ -937,6 +944,26 @@ function TodayContent() {
           </div>
         )}
 
+        {/* A-NEW-MACRO: end-of-cycle CTA — only on the live "today" view */}
+        {isViewingToday && cycleStatus.canShow && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+            <p className="text-sm font-medium">
+              {cycleStatus.isPastEndDate
+                ? "Your macrocycle is complete."
+                : "Final week — ready to plan your next cycle?"}
+            </p>
+            <button
+              type="button"
+              className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+              onClick={() => setNewCycleDialogOpen(true)}
+            >
+              {cycleStatus.isPastEndDate
+                ? "Plan your next cycle →"
+                : "Start new macrocycle →"}
+            </button>
+          </div>
+        )}
+
         {/* Resume in-progress session banner */}
         {resumeSession && (
           <div className="rounded-lg border border-warning/30 bg-warning/10 p-3 space-y-2">
@@ -1237,6 +1264,17 @@ function TodayContent() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* A-NEW-MACRO: shared Start New Macrocycle dialog */}
+      <StartNewMacrocycleDialog
+        open={newCycleDialogOpen}
+        onOpenChange={setNewCycleDialogOpen}
+        state={stateQuery.data ?? null}
+        onSuccess={() => {
+          qc.invalidateQueries({ queryKey: ["state"] });
+          qc.invalidateQueries({ queryKey: ["week"] });
+        }}
+      />
 
       {/* Outdoor edit dialog */}
       <Dialog open={outdoorEditDate !== null} onOpenChange={(v) => { if (!v) { setOutdoorEditDate(null); setOutdoorEditData(null); } }}>

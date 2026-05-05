@@ -15,6 +15,7 @@ from backend.api.deps import REPO_ROOT, ensure_monday, get_user_id, invalidate_w
 from backend.api.rate_limit import limiter
 from backend.api.models import OnboardingData, StartWeekRequest
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
+from backend.engine.grade_mapping import BOULDER_TO_LEAD
 from backend.engine.macrocycle_v1 import generate_macrocycle
 from backend.engine.progression_v1 import estimate_missing_baselines
 from backend.engine.start_date_utils import (
@@ -366,21 +367,13 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
 
     # Boulder grades (uppercase Font) must be mapped to lead equivalents
     # for assessment benchmarks which are calibrated to French lead grades.
-    _BOULDER_TO_LEAD = {
-        "4A": "5c", "4B": "6a", "4C": "6a+",
-        "5A": "6a+", "5A+": "6b", "5B": "6b", "5B+": "6b+", "5C": "6c", "5C+": "6c+",
-        "6A": "6c+", "6A+": "7a", "6B": "7a", "6B+": "7a+", "6C": "7b", "6C+": "7b+",
-        "7A": "7b+", "7A+": "7c", "7B": "7c+", "7B+": "8a",
-        "7C": "8a", "7C+": "8a+",
-        "8A": "8b", "8A+": "8b+", "8B": "8c", "8B+": "8c+",
-        "8C": "9a", "8C+": "9a+",
-    }
-
+    # A-NEW-MACRO: extracted into backend.engine.grade_mapping so PUT /api/state
+    # can apply the same mapping on discipline switch (D232 finding).
     if not goal.get("current_grade") and assessment.get("grades"):
         grades = assessment["grades"]
         if discipline == "boulder":
             boulder_current = grades.get("boulder_max_rp", "6A")
-            goal["current_grade"] = _BOULDER_TO_LEAD.get(boulder_current, "6c+")
+            goal["current_grade"] = BOULDER_TO_LEAD.get(boulder_current, "6c+")
         else:
             goal["current_grade"] = grades.get("lead_max_rp", "7a")
 
@@ -389,7 +382,7 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
         boulder_target = goal.get("target_boulder_grade") or goal.get("target_grade", "")
         if boulder_target:
             goal["target_boulder_grade"] = boulder_target  # preserve original
-            goal["target_grade"] = _BOULDER_TO_LEAD.get(boulder_target, "7a")
+            goal["target_grade"] = BOULDER_TO_LEAD.get(boulder_target, "7a")
 
     logger.info("goal before assessment: %s", goal)
 

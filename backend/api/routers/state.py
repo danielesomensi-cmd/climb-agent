@@ -14,6 +14,7 @@ from backend.api.deps import (
 )
 from backend.api.rate_limit import limiter
 from backend.engine import storage
+from backend.engine.grade_mapping import map_grade_for_discipline_change
 from backend.engine.state_checks import is_macrocycle_stale
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,42 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
     if isinstance(mc_patch, dict) and "start_date" in mc_patch:
         mc_patch["start_date"] = ensure_monday(mc_patch["start_date"])
     state = load_state(user_id)
+    # A-NEW-MACRO / D232: when goal.discipline flips, remap target_grade so the
+    # assessment + macrocycle generators see a grade in the new convention.
+    # The mapping helper is identity for unchanged disciplines.
+    goal_patch = patch.get("goal")
+    if isinstance(goal_patch, dict) and "discipline" in goal_patch:
+        old_discipline = (state.get("goal") or {}).get("discipline")
+        new_discipline = goal_patch["discipline"]
+        if old_discipline and old_discipline != new_discipline:
+            existing_target = (state.get("goal") or {}).get("target_grade")
+            patched_target = goal_patch.get("target_grade")
+            # Only remap if caller did not already supply a fresh target_grade.
+            if existing_target and "target_grade" not in goal_patch:
+                goal_patch["target_grade"] = map_grade_for_discipline_change(
+                    existing_target, old_discipline, new_discipline,
+                )
+                logger.info(
+                    "PUT /api/state: remapped target_grade %s (%s) → %s (%s)",
+                    existing_target, old_discipline,
+                    goal_patch["target_grade"], new_discipline,
+                )
+            # Same for current_grade — keeps the user level coherent post-switch.
+            existing_current = (state.get("goal") or {}).get("current_grade")
+            if existing_current and "current_grade" not in goal_patch:
+                goal_patch["current_grade"] = map_grade_for_discipline_change(
+                    existing_current, old_discipline, new_discipline,
+                )
+            # Drop a stale target_boulder_grade when leaving boulder behind.
+            if old_discipline == "boulder" and new_discipline not in ("boulder", "both"):
+                if (state.get("goal") or {}).get("target_boulder_grade"):
+                    goal_patch.setdefault("target_boulder_grade", None)
+            # When entering boulder, mirror target_grade into target_boulder_grade
+            # so onboarding-style consumers find the original boulder pick.
+            if new_discipline == "boulder" and "target_boulder_grade" not in goal_patch:
+                goal_patch["target_boulder_grade"] = goal_patch.get(
+                    "target_grade", existing_target,
+                )
     _deep_merge(state, patch)
     # B151: availability change → invalidate future week cache so they
     # regenerate with the new slots.  Current week is handled by the

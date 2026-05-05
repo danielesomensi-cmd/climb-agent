@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-63 endpoints total (61 router + 2 app-level: health check + stripe webhook).
+64 endpoints total (62 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -162,6 +162,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/onboarding/start-week` | Shift macrocycle start_date back N weeks |
 | POST | `/api/assessment/compute` | Recompute 5-axis profile |
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
+| POST | `/api/macrocycle/start-new-cycle` | Start fresh macrocycle (atomic: archive → goal review → generate → flag tests). Subscription-gated. |
 | GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
 | POST | `/api/week/test-reminder-response` | Handle periodic test reminder |
 | POST | `/api/session/resolve` | Resolve a single session to exercises |

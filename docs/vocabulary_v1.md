@@ -903,6 +903,34 @@ Allowed `phase_id` values:
 
 - `macrocycle.start_date` **MUST be a Monday** (ISO weekday 0). Enforced by `ensure_monday()` in all setters (onboarding, macrocycle generate, state PUT, start-week shift). Non-Monday values are auto-corrected to the previous Monday.
 
+### 5.5.2 Macrocycle history (A-NEW-MACRO)
+
+`state.macrocycle_history` is an append-only list populated by `POST /api/macrocycle/start-new-cycle`. Each entry is a snapshot taken at the moment the previous macrocycle was retired:
+
+```json
+{
+  "archived_at": "2026-05-05T15:30:00+00:00",
+  "macrocycle": { "...full snapshot of state.macrocycle..." },
+  "goal_at_archive": { "...snapshot of state.goal at archive time..." },
+  "weeks_completed": 11,
+  "total_weeks": 12,
+  "completion_summary": {
+    "sessions_done": 47,
+    "sessions_skipped": 8,
+    "sessions_planned": 60,
+    "tests_completed": [{"session_id": "test_max_hang_7s", "date": "2026-02-05"}],
+    "phases_completed": ["base", "strength_power", "power_endurance", "performance", "deload"]
+  }
+}
+```
+
+Invariants:
+
+- Append-only from the caller's perspective. The helper `archive_current_macrocycle(state)` is NOT idempotent — calling it twice writes two entries. The endpoint guards against this by mutating a deep-copy and committing once.
+- `goal_at_archive` may differ from `macrocycle.goal_snapshot`: the snapshot is taken at *generation* time; `goal_at_archive` at *archive* time (after any goal edits made mid-cycle without regenerating).
+- `target_grade` is auto-remapped via `BOULDER_TO_LEAD` / `LEAD_TO_BOULDER` (highest-boulder-per-lead) whenever `goal.discipline` flips via `PUT /api/state` or via `POST /api/macrocycle/start-new-cycle`. The mapping module is `backend.engine.grade_mapping`.
+- Storage cost: ~5 KB per archived cycle (~20 KB/year). No size cap in v1.
+
 ### 5.6 Outdoor spots
 
 `outdoor_spots.discipline` values:

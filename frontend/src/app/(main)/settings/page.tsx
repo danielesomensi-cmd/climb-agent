@@ -21,6 +21,8 @@ import { EquipmentEditor } from "@/components/settings/equipment-editor";
 import { GoalEditor } from "@/components/settings/goal-editor";
 import { LimitationsEditor, LimitationsSummary } from "@/components/settings/limitations-editor";
 import { ProfileAssessmentEditor } from "@/components/settings/profile-assessment-editor";
+import { StartNewMacrocycleDialog } from "@/components/settings/start-new-macrocycle-dialog";
+import { useCanStartNewCycle } from "@/lib/hooks/use-can-start-new-cycle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +93,8 @@ export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const [backupMsg, setBackupMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
+  const cycleStatus = useCanStartNewCycle(state);
 
   useEffect(() => { setVoiceCuesOn(isVoiceCuesEnabled()); }, []);
 
@@ -955,6 +959,35 @@ export default function SettingsPage() {
               </CardContent>
             </Card>
 
+            {/* ----- Plan Next Cycle (A-NEW-MACRO) ----- */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Plan Next Cycle</CardTitle>
+                  {cycleStatus.canShow && (
+                    <Badge variant="outline" className="border-green-500/50 text-green-500">
+                      Ready
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Start a new macrocycle when your current one ends, or earlier
+                  if your goals have changed. Test sessions will be scheduled in
+                  week 1 to recalibrate. All your training history is preserved.
+                </p>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setNewCycleDialogOpen(true)}
+                >
+                  Start new macrocycle →
+                </Button>
+              </CardContent>
+            </Card>
+
             <Separator />
 
             {/* ----- Danger zone ----- */}
@@ -1184,6 +1217,17 @@ export default function SettingsPage() {
         onOpenChange={setRegenSheetOpen}
         onConfirm={handleRegenSheetConfirm}
         loading={regeneratingMacro || restartingMacro}
+      />
+
+      {/* ----- Start New Macrocycle dialog (A-NEW-MACRO) ----- */}
+      <StartNewMacrocycleDialog
+        open={newCycleDialogOpen}
+        onOpenChange={setNewCycleDialogOpen}
+        state={state ?? null}
+        onSuccess={() => {
+          refresh();
+          invalidateWeek();
+        }}
       />
     </>
   );

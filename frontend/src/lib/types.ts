@@ -26,6 +26,41 @@ export interface Macrocycle {
   phases: Phase[];
   goal_snapshot: Record<string, unknown>;
   profile_snapshot: Record<string, unknown>;
+  end_date?: string;
+}
+
+// A-NEW-MACRO: types for POST /api/macrocycle/start-new-cycle
+export interface StartNewCycleGoal {
+  discipline: "lead" | "boulder" | "both" | "all_round";
+  target_grade: string;
+  target_style?: "redpoint" | "onsight";
+  deadline: string; // YYYY-MM-DD
+}
+
+export interface StartNewCycleRequest {
+  goal: StartNewCycleGoal;
+  total_weeks?: number;
+}
+
+export interface StartNewCycleResponse {
+  macrocycle: Macrocycle;
+  archived_count: number;
+  start_date: string;
+}
+
+export interface MacrocycleHistoryEntry {
+  archived_at: string;
+  macrocycle: Macrocycle;
+  goal_at_archive: Record<string, unknown>;
+  weeks_completed: number;
+  total_weeks: number;
+  completion_summary: {
+    sessions_done: number;
+    sessions_skipped: number;
+    sessions_planned: number;
+    tests_completed: Array<{ session_id: string; date: string }>;
+    phases_completed: string[];
+  };
 }
 
 /** A139: Raw actual exercise data persisted after feedback submission. */

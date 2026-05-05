@@ -129,6 +129,46 @@ class TestState:
         plans = state.get("week_plans", {})
         assert future_key in plans, "Week cache should not be touched without availability change"
 
+    def test_put_goal_discipline_switch_lead_to_boulder_remaps_target(self):
+        """A-NEW-MACRO / D232: when goal.discipline flips lead → boulder, the
+        latent target_grade ('8a' lead) must be remapped to the canonical Font
+        equivalent ('7C' boulder). Pre-fix, the lead grade persisted untouched
+        and the next macrocycle generation read a stale value."""
+        client.put("/api/state", json={
+            "goal": {"discipline": "lead", "target_grade": "8a", "current_grade": "7a"},
+        })
+        client.put("/api/state", json={"goal": {"discipline": "boulder"}})
+
+        goal = client.get("/api/state").json()["goal"]
+        assert goal["discipline"] == "boulder"
+        assert goal["target_grade"] == "7C", \
+            f"Lead 8a should remap to boulder 7C, got {goal['target_grade']!r}"
+        assert goal["current_grade"] == "6B", \
+            f"Lead 7a should remap to boulder 6B, got {goal['current_grade']!r}"
+        # When entering boulder, target_boulder_grade is mirrored from target_grade.
+        assert goal["target_boulder_grade"] == "7C"
+
+    def test_put_goal_discipline_switch_boulder_to_lead_remaps_target(self):
+        """The inverse: boulder 7B → lead 7c+ via BOULDER_TO_LEAD."""
+        client.put("/api/state", json={
+            "goal": {
+                "discipline": "boulder",
+                "target_grade": "7B",
+                "target_boulder_grade": "7B",
+                "current_grade": "6C",
+            },
+        })
+        client.put("/api/state", json={"goal": {"discipline": "lead"}})
+
+        goal = client.get("/api/state").json()["goal"]
+        assert goal["discipline"] == "lead"
+        assert goal["target_grade"] == "7c+", \
+            f"Boulder 7B should remap to lead 7c+, got {goal['target_grade']!r}"
+        assert goal["current_grade"] == "7b", \
+            f"Boulder 6C should remap to lead 7b, got {goal['current_grade']!r}"
+        # Stale target_boulder_grade is dropped when leaving boulder.
+        assert goal.get("target_boulder_grade") is None
+
 
 # -----------------------------------------------------------------------
 # Catalog

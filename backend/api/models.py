@@ -37,6 +37,25 @@ class MacrocycleRequest(BaseModel):
     from_phase: Optional[str] = None  # "current" or a phase_id for incremental regen
 
 
+class StartNewCycleGoal(BaseModel):
+    """Goal payload for POST /api/macrocycle/start-new-cycle.
+
+    Mirrors the subset of ``state["goal"]`` the user can edit during the
+    "Plan Next Cycle" flow. Other goal fields (e.g. ``current_grade``,
+    ``goal_type``) are derived server-side.
+    """
+    discipline: Literal["lead", "boulder", "both", "all_round"]
+    target_grade: str
+    target_style: Optional[Literal["redpoint", "onsight"]] = "redpoint"
+    deadline: str  # YYYY-MM-DD
+
+
+class StartNewCycleRequest(BaseModel):
+    """Body for POST /api/macrocycle/start-new-cycle (A-NEW-MACRO)."""
+    goal: StartNewCycleGoal
+    total_weeks: Optional[int] = None  # falls back to discipline default
+
+
 # --------------------------------------------------------------------------- #
 # Session
 # --------------------------------------------------------------------------- #
