@@ -3,6 +3,8 @@ import {
   displayBoulderGrade,
   getRadarLabels,
   getDiscipline,
+  vScaleToFont,
+  V_SCALE_GRADES,
 } from "@/lib/gradeUtils";
 
 // ── displayBoulderGrade ──────────────────────────────────────────────────
@@ -15,13 +17,13 @@ describe("displayBoulderGrade", () => {
 
   it("converts font to v_scale", () => {
     expect(displayBoulderGrade("7A", "v_scale")).toBe("V6");
-    expect(displayBoulderGrade("6A+", "v_scale")).toBe("V4");
+    expect(displayBoulderGrade("6A+", "v_scale")).toBe("V3");
     expect(displayBoulderGrade("8B+", "v_scale")).toBe("V14");
   });
 
   it("handles lowercase input", () => {
     expect(displayBoulderGrade("7a", "v_scale")).toBe("V6");
-    expect(displayBoulderGrade("6a+", "v_scale")).toBe("V4");
+    expect(displayBoulderGrade("6a+", "v_scale")).toBe("V3");
   });
 
   it("returns input unchanged for unknown grades", () => {
@@ -32,6 +34,48 @@ describe("displayBoulderGrade", () => {
   it("converts boundary grades correctly", () => {
     expect(displayBoulderGrade("4A", "v_scale")).toBe("V0");
     expect(displayBoulderGrade("8C+", "v_scale")).toBe("V16");
+  });
+});
+
+// ── B248: full Font→V table coverage (international standard) ──────────────
+//
+// Pre-B248, the FONT_TO_V table had a systematic +1 inflation in 5A..7A
+// (e.g. 7A → V7 instead of V6). This parametric test pins every entry of the
+// table so any future drift is caught immediately. Source: Wikipedia "Grade
+// (climbing)" + Mountain Project conversion.
+
+const FONT_TO_V_EXPECTED: Array<[string, string]> = [
+  ["4A", "V0"], ["4B", "V0"], ["4C", "V1"],
+  ["5A", "V1"], ["5A+", "V1"], ["5B", "V2"], ["5B+", "V2"], ["5C", "V2"], ["5C+", "V3"],
+  ["6A", "V3"], ["6A+", "V3"], ["6B", "V4"], ["6B+", "V4"], ["6C", "V5"], ["6C+", "V5"],
+  ["7A", "V6"], ["7A+", "V7"], ["7B", "V8"], ["7B+", "V8"], ["7C", "V9"], ["7C+", "V10"],
+  ["8A", "V11"], ["8A+", "V12"], ["8B", "V13"], ["8B+", "V14"], ["8C", "V15"], ["8C+", "V16"],
+];
+
+describe("displayBoulderGrade — full Font→V table (B248)", () => {
+  it.each(FONT_TO_V_EXPECTED)("Font %s converts to %s", (font, vExpected) => {
+    expect(displayBoulderGrade(font, "v_scale")).toBe(vExpected);
+  });
+});
+
+// ── B248: round-trip V → Font → V — onboarding picker invariant ────────────
+//
+// When a V-scale user picks Vn in onboarding, vScaleToFont(Vn) is what we
+// store. Re-displaying that stored Font as V-scale must round-trip back to
+// Vn for every supported V0..V16, otherwise the picker would silently shift
+// the user's grade between selection and review.
+
+describe("V → Font → V round-trip (B248)", () => {
+  it.each(V_SCALE_GRADES)("V-scale %s round-trips through Font", (vGrade) => {
+    const stored = vScaleToFont(vGrade);
+    expect(displayBoulderGrade(stored, "v_scale")).toBe(vGrade);
+  });
+
+  it("V-scale grades list covers V0..V15 (V_SCALE_GRADES is the picker source)", () => {
+    expect(V_SCALE_GRADES).toEqual([
+      "V0", "V1", "V2", "V3", "V4", "V5", "V6", "V7",
+      "V8", "V9", "V10", "V11", "V12", "V13", "V14", "V15",
+    ]);
   });
 });
 

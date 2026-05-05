@@ -1,17 +1,33 @@
-// ── Grade display conversion (A-B2) ─────────────────────────────────────
+// ── Grade display conversion (A-B2; B248 corrected against intl. standard) ─
 
+/**
+ * Fontainebleau → V-scale conversion.
+ *
+ * Source: Wikipedia "Grade (climbing)" comparison table + Mountain Project
+ * boulder-grade conversion (international consensus). Pre-B248, this table
+ * was inflated by +1 grade across 5A..7A (e.g. 7A → V7 instead of V6); fixed
+ * 2026-05-05 to align with the standard. 7A+..8C+ were already correct.
+ *
+ * Engine always stores Fontainebleau; this is render-only.
+ */
 const FONT_TO_V: Record<string, string> = {
   "4A": "V0", "4B": "V0", "4C": "V1",
-  "5A": "V2", "5A+": "V2", "5B": "V3", "5B+": "V3", "5C": "V3", "5C+": "V4",
-  "6A": "V4", "6A+": "V4", "6B": "V5", "6B+": "V5", "6C": "V6", "6C+": "V6",
-  "7A": "V7", "7A+": "V7", "7B": "V8", "7B+": "V9", "7C": "V9", "7C+": "V10",
+  "5A": "V1", "5A+": "V1", "5B": "V2", "5B+": "V2", "5C": "V2", "5C+": "V3",
+  "6A": "V3", "6A+": "V3", "6B": "V4", "6B+": "V4", "6C": "V5", "6C+": "V5",
+  "7A": "V6", "7A+": "V7", "7B": "V8", "7B+": "V8", "7C": "V9", "7C+": "V10",
   "8A": "V11", "8A+": "V12", "8B": "V13", "8B+": "V14", "8C": "V15", "8C+": "V16",
 };
 
-/** V-scale grades with their canonical Fontainebleau storage values */
+/**
+ * V-scale → canonical Fontainebleau storage value.
+ *
+ * Convention: pick the *lowest* Font that maps to a given V (so a user picking
+ * V5 stores 6C, not 6C+ — onboarding never inflates the stored grade).
+ * Round-trip via FONT_TO_V is preserved for every V0..V16.
+ */
 const V_TO_FONT: Record<string, string> = {
-  "V0": "4A", "V1": "4C", "V2": "5A", "V3": "5B", "V4": "6A",
-  "V5": "6B", "V6": "6C", "V7": "7A", "V8": "7B", "V9": "7B+",
+  "V0": "4A", "V1": "5A", "V2": "5B", "V3": "5C+", "V4": "6B",
+  "V5": "6C", "V6": "7A", "V7": "7A+", "V8": "7B", "V9": "7C",
   "V10": "7C+", "V11": "8A", "V12": "8A+", "V13": "8B", "V14": "8B+",
   "V15": "8C", "V16": "8C+",
 };
