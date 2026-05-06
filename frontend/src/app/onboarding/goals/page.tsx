@@ -3,10 +3,13 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import {
+  DeadlineWeeksSelector,
+  weeksToDeadlineIso,
+} from "@/components/shared/deadline-weeks-selector";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -90,13 +93,6 @@ export default function GoalsPage() {
   const currentIdx = discipline === "boulder" ? boulderCurrentIdx : leadCurrentIdx;
   const targetIdx = gradeIndex(goal.target_grade, gradeList);
   const gap = targetIdx >= 0 && currentIdx >= 0 ? targetIdx - currentIdx : 0;
-
-  // Calculated end date from weeks
-  const endDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + totalWeeks * 7);
-    return d.toISOString().split("T")[0];
-  }, [totalWeeks]);
 
   // Warnings
   const isAmbitious = gap > 8;
@@ -253,41 +249,12 @@ export default function GoalsPage() {
           )}
 
           {/* Plan duration (weeks) */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label>Plan duration (weeks) *</Label>
-              <span className="text-sm font-medium tabular-nums">
-                {totalWeeks} weeks
-              </span>
-            </div>
-            <Slider
-              min={8}
-              max={24}
-              step={1}
-              value={[totalWeeks]}
-              onValueChange={([v]) => setGoal({ total_weeks: v, deadline: (() => {
-                const d = new Date();
-                d.setDate(d.getDate() + v * 7);
-                return d.toISOString().split("T")[0];
-              })() })}
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground">
-              <span>8 wk</span>
-              <span className="font-medium text-primary">12 wk recommended</span>
-              <span>24 wk</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Your plan ends: <strong>{endDate}</strong>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              A full periodization cycle is 12+ weeks: base → strength-power → power-endurance → performance → deload. Shorter plans compress phases.
-            </p>
-            {totalWeeks < 12 && (
-              <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
-                Short plan — some training phases will be compressed
-              </div>
-            )}
-          </div>
+          <DeadlineWeeksSelector
+            weeks={totalWeeks}
+            onWeeksChange={(v) =>
+              setGoal({ total_weeks: v, deadline: weeksToDeadlineIso(v) })
+            }
+          />
 
           {/* Warnings */}
           {isAmbitious && (

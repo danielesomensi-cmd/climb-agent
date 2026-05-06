@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -32,8 +31,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DeadlineWeeksSelector,
+  deadlineIsoToWeeks,
+  weeksToDeadlineIso,
+} from "@/components/shared/deadline-weeks-selector";
 import { startNewMacrocycle } from "@/lib/api";
-import { queryKeys } from "@/lib/query-keys";
 import type { UserState } from "@/lib/types";
 
 const LEAD_GRADES = [
@@ -77,14 +80,13 @@ interface StartNewMacrocycleDialogProps {
   onSuccess?: () => void;
 }
 
+// Backend lead-cycle floor; the dialog never lets the user submit < 9 weeks.
+const MIN_WEEKS = 9;
+const MAX_WEEKS = 24;
+const DEFAULT_WEEKS = 12;
+
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function addDaysIso(iso: string, days: number): string {
-  const d = new Date(iso);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
 }
 
 function daysBetween(a: string, b: string): number {
@@ -96,6 +98,29 @@ function formatDateLong(iso: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
+}
+
+/** Map a thrown Error from `request()` to a user-facing message + console
+ * trace. Status code is parsed from the error message (`API <code>: ...`). */
+export function classifyApiError(err: unknown): {
+  userMessage: string;
+  status: number | null;
+} {
+  const raw = err instanceof Error ? err.message : String(err);
+  const match = /^API (\d+):/.exec(raw);
+  const status = match ? Number(match[1]) : null;
+  if (status === 402) {
+    return {
+      userMessage:
+        "Your subscription is required to start a new cycle. Tap Settings → Subscription to manage.",
+      status,
+    };
+  }
+  return {
+    userMessage:
+      "Couldn't start the new cycle. Please try again, or contact support if the issue persists.",
+    status,
+  };
 }
 
 export function StartNewMacrocycleDialog({
@@ -119,11 +144,16 @@ export function StartNewMacrocycleDialog({
     initialDiscipline === "boulder"
       ? ((currentGoal.target_boulder_grade as string) || (currentGoal.target_grade as string) || "")
       : ((currentGoal.target_grade as string) || "");
-  const initialDeadline = (currentGoal.deadline as string) || "";
+  const initialWeeks = deadlineIsoToWeeks(
+    currentGoal.deadline as string | undefined,
+    DEFAULT_WEEKS,
+    MIN_WEEKS,
+    MAX_WEEKS,
+  );
 
   const [discipline, setDiscipline] = useState<Discipline>(initialDiscipline);
   const [targetGrade, setTargetGrade] = useState<string>(initialTargetGrade);
-  const [deadline, setDeadline] = useState<string>(initialDeadline);
+  const [deadlineWeeks, setDeadlineWeeks] = useState<number>(initialWeeks);
 
   useEffect(() => {
     if (open) {
@@ -131,7 +161,7 @@ export function StartNewMacrocycleDialog({
       setError(null);
       setDiscipline(initialDiscipline);
       setTargetGrade(initialTargetGrade);
-      setDeadline(initialDeadline);
+      setDeadlineWeeks(initialWeeks);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -153,15 +183,18 @@ export function StartNewMacrocycleDialog({
     }
   }
 
-  const minDeadline = useMemo(() => addDaysIso(todayIso(), 7 * 9), []);
+  const computedDeadline = useMemo(
+    () => weeksToDeadlineIso(deadlineWeeks),
+    [deadlineWeeks],
+  );
 
   const validation = useMemo(() => {
     if (!targetGrade) return "Pick a target grade.";
-    if (!deadline) return "Pick a deadline.";
-    if (deadline < minDeadline)
-      return `Deadline must be at least 9 weeks from today (≥ ${minDeadline}).`;
+    if (deadlineWeeks < MIN_WEEKS) {
+      return `Plan must be at least ${MIN_WEEKS} weeks long.`;
+    }
     return null;
-  }, [targetGrade, deadline, minDeadline]);
+  }, [targetGrade, deadlineWeeks]);
 
   const gradeOptions = discipline === "boulder" ? BOULDER_GRADES : LEAD_GRADES;
 
@@ -180,8 +213,9 @@ export function StartNewMacrocycleDialog({
           discipline,
           target_grade: targetGrade,
           target_style: "redpoint",
-          deadline,
+          deadline: weeksToDeadlineIso(deadlineWeeks),
         },
+        total_weeks: deadlineWeeks,
       });
       // Invalidate every cache that depends on macrocycle / week / state.
       qc.clear();
@@ -189,9 +223,10 @@ export function StartNewMacrocycleDialog({
       onSuccess?.();
       router.push("/plan");
     } catch (e) {
+      // Keep the technical detail in the console for debugging — never user-visible.
+      console.error("[start-new-cycle] API error:", e);
       setStep("confirm");
-      const msg = e instanceof Error ? e.message : "Failed to start new cycle.";
-      setError(msg);
+      setError(classifyApiError(e).userMessage);
     }
   }
 
@@ -243,19 +278,12 @@ export function StartNewMacrocycleDialog({
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-sm">Deadline</Label>
-                <Input
-                  type="date"
-                  className="mt-2"
-                  value={deadline}
-                  min={minDeadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  At least 9 weeks from today.
-                </p>
-              </div>
+              <DeadlineWeeksSelector
+                weeks={deadlineWeeks}
+                onWeeksChange={setDeadlineWeeks}
+                min={MIN_WEEKS}
+                max={MAX_WEEKS}
+              />
 
               {validation && (
                 <p className="text-xs text-destructive">{validation}</p>
@@ -289,7 +317,7 @@ export function StartNewMacrocycleDialog({
               <div>
                 <p className="text-muted-foreground">Goal</p>
                 <p className="font-medium capitalize">
-                  {discipline} · {targetGrade} by {formatDateLong(deadline)}
+                  {discipline} · {targetGrade} by {formatDateLong(computedDeadline)}
                 </p>
               </div>
               <div>
