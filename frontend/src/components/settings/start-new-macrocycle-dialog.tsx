@@ -100,6 +100,33 @@ function formatDateLong(iso: string): string {
   return d.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 }
 
+/**
+ * Compute the mid-cycle warning shown in step 2 of the dialog.
+ *
+ * Returns null when no warning is needed (no current macrocycle, or its
+ * end_date is today/past). Otherwise returns the weeks-remaining count and
+ * the user-facing copy. B-NEWMACRO-STARTDATE-FIX: with the new strict-next-
+ * Monday semantics every click discards remaining sessions, so this fires
+ * whenever the current cycle is still in flight.
+ */
+export function buildMidCycleWarning(
+  endDateIso: string | undefined | null,
+  today: string,
+): { weeksRemaining: number; text: string } | null {
+  if (!endDateIso) return null;
+  const ms = new Date(endDateIso).getTime() - new Date(today).getTime();
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  if (days <= 0) return null;
+  const weeks = Math.ceil(days / 7);
+  return {
+    weeksRemaining: weeks,
+    text:
+      `Your current cycle isn't finished — about ${weeks} ` +
+      `${weeks === 1 ? "week" : "weeks"} of planned sessions will be skipped. ` +
+      `Sessions you've already completed remain in your history.`,
+  };
+}
+
 /** Map a thrown Error from `request()` to a user-facing message + console
  * trace. Status code is parsed from the error message (`API <code>: ...`). */
 export function classifyApiError(err: unknown): {
@@ -198,11 +225,14 @@ export function StartNewMacrocycleDialog({
 
   const gradeOptions = discipline === "boulder" ? BOULDER_GRADES : LEAD_GRADES;
 
-  const isMidCycle = useMemo(() => {
-    if (!macro?.end_date) return false;
-    const days = daysBetween(todayIso(), macro.end_date);
-    return days > 6; // strictly outside the last 7 days = mid-cycle warning territory.
-  }, [macro?.end_date]);
+  // B-NEWMACRO-STARTDATE-FIX: every "Start New Cycle" click now starts next
+  // Monday — so any current cycle whose end_date is still in the future will
+  // have remaining planned sessions skipped. The helper returns null when no
+  // warning is needed (no cycle / cycle already past).
+  const midCycleWarning = useMemo(
+    () => buildMidCycleWarning(macro?.end_date, todayIso()),
+    [macro?.end_date],
+  );
 
   async function handleConfirm() {
     setStep("loading");
@@ -334,14 +364,10 @@ export function StartNewMacrocycleDialog({
                 </p>
               </div>
 
-              {isMidCycle && (
+              {midCycleWarning && (
                 <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs">
                   <p className="font-medium">Heads up</p>
-                  <p className="mt-1">
-                    Your current cycle isn&apos;t finished. Remaining planned
-                    sessions will be discarded. Sessions you&apos;ve already
-                    completed stay in your history.
-                  </p>
+                  <p className="mt-1">{midCycleWarning.text}</p>
                 </div>
               )}
 
