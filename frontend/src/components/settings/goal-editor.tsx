@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
@@ -20,6 +19,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DeadlineWeeksSelector,
+  deadlineIsoToWeeks,
+  weeksToDeadlineIso,
+} from "@/components/shared/deadline-weeks-selector";
+
+// A218 / A-MACRO-CAPS: per-discipline floors. Slider max is universal (16).
+const MIN_WEEKS_LEAD = 11;
+const MIN_WEEKS_BOULDER = 8;
+const MAX_WEEKS = 16;
+const DEFAULT_WEEKS = 12;
 
 const LEAD_GRADES = [
   "5a","5a+","5b","5b+","5c","5c+",
@@ -61,15 +71,29 @@ export function GoalEditor({
   const [discipline, setDiscipline] = useState<string>("lead");
   const [targetStyle, setTargetStyle] = useState<string>("redpoint");
   const [targetGrade, setTargetGrade] = useState<string>("");
-  const [deadline, setDeadline] = useState<string>("");
+  const [totalWeeks, setTotalWeeks] = useState<number>(DEFAULT_WEEKS);
 
-  // Sync form state from props every time the dialog opens
+  // Sync form state from props every time the dialog opens.
+  // A218: read total_weeks from goal directly; fall back to deriving from
+  // the legacy `deadline` ISO so users with old state still see a sensible value.
   useEffect(() => {
     if (open) {
       setDiscipline((currentGoal.discipline as string) || "lead");
       setTargetStyle((currentGoal.target_style as string) || "redpoint");
       setTargetGrade((currentGoal.target_grade as string) || "");
-      setDeadline((currentGoal.deadline as string) || "");
+      const tw = currentGoal.total_weeks as number | undefined;
+      if (typeof tw === "number") {
+        setTotalWeeks(tw);
+      } else {
+        setTotalWeeks(
+          deadlineIsoToWeeks(
+            currentGoal.deadline as string | undefined,
+            DEFAULT_WEEKS,
+            MIN_WEEKS_BOULDER,
+            MAX_WEEKS,
+          ),
+        );
+      }
       setStep("form");
     }
   }, [open, currentGoal]);
@@ -91,28 +115,14 @@ export function GoalEditor({
   const targetIdx = gradeIndex(targetGrade, gradeList);
   const gap = targetIdx >= 0 && currentIdx >= 0 ? targetIdx - currentIdx : 0;
 
-  // Deadline validation
-  const today = new Date();
-  const todayISO = today.toISOString().split("T")[0];
-  const minDeadline = (() => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
-  })();
-  const isDeadlinePast = deadline !== "" && deadline <= todayISO;
-  const isDeadlineShort = (() => {
-    if (!deadline || isDeadlinePast) return false;
-    const dl = new Date(deadline);
-    const nineWeeks = new Date(today);
-    nineWeeks.setDate(nineWeeks.getDate() + 63);
-    return dl < nineWeeks;
-  })();
+  const minWeeks = discipline === "boulder" ? MIN_WEEKS_BOULDER : MIN_WEEKS_LEAD;
 
   const isAmbitious = gap > 8;
   const isTooLow =
     targetGrade !== "" && currentIdx >= 0 && targetIdx >= 0 && targetIdx <= currentIdx;
 
-  const isValid = targetGrade !== "" && deadline !== "" && !isTooLow && !isDeadlinePast;
+  const isValid =
+    targetGrade !== "" && totalWeeks >= minWeeks && totalWeeks <= MAX_WEEKS && !isTooLow;
 
   const goalType = discipline === "lead" ? "lead_grade" : "boulder_grade";
 
@@ -137,7 +147,10 @@ export function GoalEditor({
       target_style: targetStyle,
       target_grade: targetGrade,
       current_grade: currentGrade,
-      deadline,
+      // A218: total_weeks is the source of truth; deadline is a derived display
+      // string (consistent with onboarding pattern).
+      total_weeks: totalWeeks,
+      deadline: weeksToDeadlineIso(totalWeeks),
     });
   };
 
@@ -224,25 +237,14 @@ export function GoalEditor({
                 </Select>
               </div>
 
-              {/* Deadline */}
-              <div className="space-y-2">
-                <Label htmlFor="goal-deadline">Target date</Label>
-                <Input
-                  id="goal-deadline"
-                  type="date"
-                  value={deadline}
-                  min={minDeadline}
-                  onChange={(e) => setDeadline(e.target.value)}
-                />
-                {isDeadlinePast && (
-                  <p className="text-xs text-red-500">Deadline must be in the future</p>
-                )}
-                {isDeadlineShort && (
-                  <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
-                    Short timeframe. The macrocycle may be compressed.
-                  </div>
-                )}
-              </div>
+              {/* Plan duration — A218: slider replaces date picker for
+                  consistency with onboarding (D234 caveat). */}
+              <DeadlineWeeksSelector
+                weeks={totalWeeks}
+                onWeeksChange={setTotalWeeks}
+                min={minWeeks}
+                max={MAX_WEEKS}
+              />
 
               {/* Warnings */}
               {isAmbitious && (
