@@ -1,8 +1,16 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-04-28 (Session wrap-up: B227 ✅ + B226 ✅ closed earlier today. GTM-STRIPE-TAX deferred (reactivate at 10+ EU paying customers OR €5k EU revenue OR approaching €10k OSS). Pricing decision locked: $9.99/$4.99 are net/exclusive — VAT added on top at future Stripe Tax activation.)
+> Last updated: 2026-05-07 (A218 / A-MACRO-CAPS ✅ — phase duration cap rewrite: total ≤ 16, base ≤ 4, performance floor 3 for advanced lead. Closed F1, F4, F6, F7, F9 from D233; removed dead F2 functions. Slider min/max updated frontend-side. Predecessors: D233 / D234 audits. Branch: feat/macrocycle-caps.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
+
+---
+
+## Recently closed (2026-05-07)
+
+- **A218 / A-MACRO-CAPS** ✅ — Macrocycle phase duration caps (total ≤ 16 weeks, base ≤ 4, perf floor 3 for total ≥ 13). Consolidated `_compute_phase_durations` + `_compute_remaining_durations` into a single function with a `phases=` scope parameter. Side findings folded in: F1 (off-by-one 9w lead → ValueError), F4 (boulder weakness self-cancel), F6/F7 (drift between full and incremental regen paths), F9 (slider min mismatch). F2 dead functions removed (`should_extend_phase`, `should_trigger_adaptive_deload`). Frontend: slider capped at [11–16] lead / [8–16] boulder; goal-editor date picker replaced by slider. Test count: 1948 → 1984 (+36 new caps tests). Design: `docs/audit/A-MACRO-CAPS_design.md`. Predecessors: `D233_macro_durations_report.md`, `D234_macro_deadline_findings.md`.
+- **D234 / D-MACRO-DEADLINE** ✅ — Read-only audit confirming `total_weeks` and `goal.deadline` are independent inputs (Conclusion A). No deadline → total_weeks coupling exists; capping `total_weeks` is sufficient.
+- **D233 / D-MACRO-DURATIONS** ✅ — Read-only audit mapping the duration formula. Surfaced 10 findings (F1–F10); A218 closed F1, F2, F4, F6, F7, F9, F10. Remaining (F3 floor-blocked weakness, F5 all_round alias, F8 default-12 cosmetic) accepted as-is per Phase 1 sign-off.
 
 ---
 
@@ -344,6 +352,20 @@ Same architecture as Core Circuit for post-session static stretching (30-60s hol
 
 **Status:** Open — design pending | **Effort:** M
 Same architecture for pre-session dynamic warmup (30s work / 10s transition).
+
+### End-of-cycle reminder UX
+
+**Priority:** P3 (post-launch) | **Status:** Open | **Type:** A (frontend) | **Effort:** S
+**Origin:** A218 / KB Q4-d red flag — without a reminder, advanced users who lose 2-3 weeks between cycles begin detraining (Hörst, Lattice).
+
+When a macrocycle reaches its final deload week (or its `end_date` is within the next 7 days), surface a reminder card on `/today` and `/plan`: *"Your training cycle is ending. Want to start a new one?"* Links to the existing `start-new-macrocycle-dialog` flow (D-NEW-MACRO).
+
+The user does the manual re-trigger (block-stacking is intentionally not automatic in v1, per A218 design doc). The reminder bridges the gap between automatic prompt and inactive cycle.
+
+**Implementation hints:**
+- Use `current_phase_and_week()` to detect "deload phase, last week".
+- Or compare `macrocycle.end_date - today < 7d`.
+- Dismissable; remember dismissal in `state.preferences.dismissed_reminders` keyed on `macrocycle.start_date` so it doesn't re-show after the user opts out.
 
 ### Smart planner availability suggestions
 

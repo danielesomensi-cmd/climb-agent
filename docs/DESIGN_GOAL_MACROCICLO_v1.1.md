@@ -134,16 +134,31 @@ L'utente può in qualsiasi momento:
 
 ### 4.1 Il modello base (Hörst 4-3-2-1 adattato)
 
-Ciclo di 10-13 settimane (configurabile) che allena i 3 sistemi 
-energetici in sequenza, con training concurrent dentro ogni fase:
+Ciclo di **11–16 settimane** (lead) o **8–16 settimane** (boulder),
+configurabile, che allena i 3 sistemi energetici in sequenza con
+training concurrent dentro ogni fase. **Il cap di 16 settimane è
+intenzionale (KB consensus 2026-05-07): cicli più lunghi richiedono
+nuovi macrocicli concatenati via `start-new-cycle`.**
 
-| Fase | Settimane base | Energia primaria | Focus lead |
-|------|---------------|-----------------|------------|
-| **Endurance Base** | 3-4 | Aerobica | Volume climbing, ARC, base aerobica, tecnica |
-| **Strength & Power** | 2-3 | Anaerobica alattacida | Max hang, forza generale, limit boulder |
-| **Power Endurance** | 2-3 | Anaerobica lattacida | 4x4, interval climbing, vie lunghe |
-| **Performance** | 1-2 | Specifica | Climbing al limite, progetto vie, outdoor |
-| **Deload** | 1 | Recupero | Volume bassissimo, mobilità, riposo attivo |
+Default lead a 12 settimane (`4/3/2/2/1`); default boulder a 10 settimane
+(`2/4/1/2/1`). Le distribuzioni per altri totali sono determinate da
+un'allocazione con cap per fase + flex absorber sul surplus
+(A218 / A-MACRO-CAPS, vedi `docs/audit/A-MACRO-CAPS_design.md`).
+
+| Fase | Settimane lead | Settimane boulder | Cap lead | Cap boulder | Energia |
+|------|----------------|-------------------|----------|-------------|---------|
+| **Endurance Base** | 4 (locked) | 2–4 | 4 | 4 | Aerobica |
+| **Strength & Power** | 3–4 | 4–5 | 4 | 5 | Anaerobica alattacida |
+| **Power Endurance** | 2–3 | 1–3 | 3 | 3 | Anaerobica lattacida |
+| **Performance** | 2–3 | 2–3 | 3 | 3 | Specifica |
+| **Deload** | 1–2 | 1 | 2 | 2 | Recupero |
+
+A `total_weeks=16` lead la distribuzione è univoca: `4/4/3/3/2`.
+A `total_weeks=16` boulder: `4/5/3/3/1`.
+
+**Per `total_weeks > 16`, l'utente deve avviare manualmente un nuovo
+ciclo dal flusso "Plan Next Cycle" (`/api/macrocycle/start-new-cycle`).
+Questo è by design — non implementiamo block-stacking automatico in v1.**
 
 ### 4.2 Concurrent training (DUP)
 

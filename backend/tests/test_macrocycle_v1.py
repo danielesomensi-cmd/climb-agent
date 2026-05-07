@@ -6,7 +6,6 @@ from backend.engine.macrocycle_v1 import (
     PHASE_ORDER,
     PHASE_INTENSITY_CAP,
     _compute_phase_durations,
-    _compute_remaining_durations,
     _adjust_domain_weights,
     _validate_goal,
     _BASE_WEIGHTS,
@@ -15,8 +14,6 @@ from backend.engine.macrocycle_v1 import (
     generate_macrocycle,
     apply_deload_week,
     check_pretrip_deload,
-    should_extend_phase,
-    should_trigger_adaptive_deload,
 )
 from backend.engine.planner_v2 import _SESSION_META, _INTENSITY_ORDER
 
@@ -109,13 +106,18 @@ class TestGenerateMacrocycleBasic(unittest.TestCase):
         pe_strong = next(p for p in mc_strong["phases"] if p["phase_id"] == "power_endurance")
         self.assertGreaterEqual(pe_weak["duration_weeks"], pe_strong["duration_weeks"])
 
-    def test_macrocycle_finger_weakness_extends_sp_phase(self):
-        # finger_strength as weakest axis < 50 → strength_power phase extended
+    def test_macrocycle_finger_weakness_lead_is_clean_noop(self):
+        # A218 / Q2(a): for LEAD, base is locked at 4 (floor==cap). The
+        # finger_strength weakness shift wants to shrink base by 1, which
+        # violates the floor → clean no-op. Default 4/3/2/2/1 stands. The
+        # closed-loop layer adjusts domain weights via _adjust_domain_weights;
+        # phase durations don't move.
         weak_finger = _make_profile(finger_strength=20, power_endurance=60, endurance=60, technique=60)
         goal = _make_goal()
         mc = generate_macrocycle(goal, weak_finger, _make_user_state(), "2026-03-02")
-        sp = next(p for p in mc["phases"] if p["phase_id"] == "strength_power")
-        self.assertGreaterEqual(sp["duration_weeks"], 4)
+        durations = {p["phase_id"]: p["duration_weeks"] for p in mc["phases"]}
+        self.assertEqual(durations["base"], 4)
+        self.assertEqual(durations["strength_power"], 3)  # NOT extended for lead
 
     def test_macrocycle_pretrip_deload(self):
         profile = _make_profile()
@@ -225,27 +227,8 @@ class TestDeloadFunctions(unittest.TestCase):
         result = check_pretrip_deload({}, [], "2026-03-06")
         self.assertIsNone(result)
 
-    def test_should_extend_phase_hard_feedback(self):
-        self.assertTrue(should_extend_phase({}, ["hard", "very_hard"]))
-
-    def test_should_extend_phase_ok_feedback(self):
-        self.assertFalse(should_extend_phase({}, ["ok", "ok"]))
-
-    def test_should_extend_phase_too_few(self):
-        self.assertFalse(should_extend_phase({}, ["hard"]))
-
-    def test_should_trigger_adaptive_deload(self):
-        self.assertTrue(should_trigger_adaptive_deload(
-            ["very_hard", "very_hard", "very_hard", "very_hard", "very_hard"]
-        ))
-
-    def test_should_not_trigger_adaptive_deload(self):
-        self.assertFalse(should_trigger_adaptive_deload(
-            ["hard", "very_hard", "very_hard", "very_hard", "very_hard"]
-        ))
-
-    def test_should_not_trigger_adaptive_deload_short(self):
-        self.assertFalse(should_trigger_adaptive_deload(["very_hard", "very_hard"]))
+    # A218: should_extend_phase / should_trigger_adaptive_deload removed —
+    # they were never wired into production code (D233 §F2).
 
 
 class TestPhaseDurationFloors(unittest.TestCase):
@@ -259,12 +242,13 @@ class TestPhaseDurationFloors(unittest.TestCase):
                                     f"Phase {phase_id} has {durations[phase_id]} weeks, expected >= 2")
 
     def test_short_macrocycle_still_respects_floors(self):
+        # A218: lead minimum raised to 11 — total=11 is the new floor.
         profile = _make_profile()
-        durations = _compute_phase_durations(profile, 10)
-        self.assertEqual(sum(durations.values()), 10)
+        durations = _compute_phase_durations(profile, 11)
+        self.assertEqual(sum(durations.values()), 11)
         for phase_id in ("strength_power", "power_endurance", "performance"):
             self.assertGreaterEqual(durations[phase_id], 2,
-                                    f"Phase {phase_id} has {durations[phase_id]} weeks in 10w macrocycle")
+                                    f"Phase {phase_id} has {durations[phase_id]} weeks in 11w macrocycle")
 
     def test_deload_min_1_week(self):
         profile = _make_profile()
@@ -450,32 +434,32 @@ class TestIncrementalRegen(unittest.TestCase):
             self.assertEqual(mc1[key], mc2[key], f"Mismatch on {key}")
 
 
-class TestComputeRemainingDurations(unittest.TestCase):
-    """Tests for _compute_remaining_durations."""
+class TestIncrementalScopeDurations(unittest.TestCase):
+    """A218: tests for the consolidated `_compute_phase_durations` with
+    `phases=` scope (replaces the old _compute_remaining_durations)."""
 
     def test_full_set_sums_correctly(self):
         profile = _make_profile()
-        d = _compute_remaining_durations(profile, 12, list(PHASE_ORDER))
+        d = _compute_phase_durations(profile, 12, phases=list(PHASE_ORDER))
         self.assertEqual(sum(d.values()), 12)
 
     def test_last_three_phases(self):
         profile = _make_profile()
         remaining = ["power_endurance", "performance", "deload"]
-        d = _compute_remaining_durations(profile, 5, remaining)
-        self.assertEqual(sum(d.values()), 5)
+        d = _compute_phase_durations(profile, 7, phases=remaining)
+        # floor sum = 2+2+1 = 5; cap sum = 3+3+2 = 8. 7 is in range.
+        self.assertEqual(sum(d.values()), 7)
         self.assertGreaterEqual(d["power_endurance"], 2)
         self.assertGreaterEqual(d["performance"], 2)
 
-    def test_very_few_weeks_compresses(self):
+    def test_below_scope_floor_raises(self):
         profile = _make_profile()
-        remaining = ["performance", "deload"]
-        d = _compute_remaining_durations(profile, 2, remaining)
-        self.assertEqual(sum(d.values()), 2)
-        self.assertEqual(d["performance"], 2)
-        self.assertEqual(d["deload"], 0)
+        # floor sum for [perf, deload] = 2+1 = 3; total=2 should raise.
+        with self.assertRaises(ValueError):
+            _compute_phase_durations(profile, 2, phases=["performance", "deload"])
 
     def test_empty_phases(self):
-        d = _compute_remaining_durations(_make_profile(), 5, [])
+        d = _compute_phase_durations(_make_profile(), 5, phases=[])
         self.assertEqual(d, {})
 
 

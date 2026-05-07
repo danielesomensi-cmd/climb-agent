@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 
 from backend.engine.macrocycle_v1 import (
-    _MIN_TOTAL_WEEKS,
     _compute_phase_durations,
     check_pretrip_deload,
     compute_pretrip_dates,
@@ -110,20 +109,23 @@ class TestPhaseDurationValidation(unittest.TestCase):
         profile = _make_profile()
         with self.assertRaises(ValueError) as ctx:
             _compute_phase_durations(profile, 6)
-        self.assertIn("must be >= 9", str(ctx.exception))
+        # A218: lead minimum raised from 9 to 11.
+        self.assertIn("below minimum 11", str(ctx.exception))
 
     def test_total_weeks_8_raises(self):
+        # A218: 8 is below the new lead floor of 11.
         profile = _make_profile()
         with self.assertRaises(ValueError):
             _compute_phase_durations(profile, 8)
 
-    def test_total_weeks_9_all_phases_valid(self):
+    def test_total_weeks_at_lead_minimum_valid(self):
+        # A218: lead minimum is now 11 (sum of floors).
         profile = _make_profile()
-        durations = _compute_phase_durations(profile, 9)
-        self.assertEqual(sum(durations.values()), 9)
+        durations = _compute_phase_durations(profile, 11)
+        self.assertEqual(sum(durations.values()), 11)
         for phase_id in ("base", "strength_power", "power_endurance", "performance"):
-            self.assertGreaterEqual(durations[phase_id], 1,
-                                    f"Phase {phase_id} has {durations[phase_id]} weeks in 9w macrocycle")
+            self.assertGreaterEqual(durations[phase_id], 2,
+                                    f"Phase {phase_id} has {durations[phase_id]} weeks in 11w macrocycle")
         self.assertGreaterEqual(durations["deload"], 1)
 
     def test_total_weeks_12_normal_behavior(self):
@@ -136,7 +138,8 @@ class TestPhaseDurationValidation(unittest.TestCase):
 
     def test_no_negative_durations_any_profile(self):
         """No phase should ever have negative duration, regardless of profile."""
-        for total in range(9, 20):
+        # A218: range now [11, 16] for lead.
+        for total in range(11, 17):
             for pe_score in (10, 30, 50, 80):
                 profile = _make_profile(power_endurance=pe_score)
                 durations = _compute_phase_durations(profile, total)
@@ -145,7 +148,7 @@ class TestPhaseDurationValidation(unittest.TestCase):
                         f"Phase {phase_id} is negative ({weeks}) for total_weeks={total}, pe={pe_score}")
 
     def test_generate_macrocycle_rejects_short(self):
-        """generate_macrocycle should propagate the ValueError for total_weeks < 9."""
+        """generate_macrocycle should propagate the ValueError for total_weeks below floor."""
         profile = _make_profile()
         goal = {"goal_type": "lead_grade", "target_grade": "7c+", "current_grade": "7b"}
         with self.assertRaises(ValueError):

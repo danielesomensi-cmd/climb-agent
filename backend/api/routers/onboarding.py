@@ -414,9 +414,10 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
         start = ensure_monday(_engine_this_monday(today))
         default_weeks = 10 if discipline == "boulder" else 12
         total_weeks = goal.get("total_weeks", default_weeks)
-        # Clamp to valid range (engine requires >= 5 for boulder, >= 9 for lead)
-        min_weeks = 5 if discipline == "boulder" else 9
-        total_weeks = max(min_weeks, min(total_weeks, 52))
+        # A218: clamp to engine range. min_weeks raised to physical floor sums
+        # (lead=11, boulder=8). Max capped at 16 weeks (KB consensus).
+        min_weeks = 8 if discipline == "boulder" else 11
+        total_weeks = max(min_weeks, min(total_weeks, 16))
         macrocycle = generate_macrocycle(goal, profile, state, start, total_weeks)
 
         if is_week_one_empty(state, macrocycle, today):
