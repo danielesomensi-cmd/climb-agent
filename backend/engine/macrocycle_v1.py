@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 from backend.engine.assessment_v1 import _GRADE_INDEX, grade_gap
+from backend.engine.start_date_utils import strict_next_monday
 
 # ---------------------------------------------------------------------------
 # Phase definitions
@@ -801,14 +802,9 @@ def should_trigger_adaptive_deload(
 
 
 # ---------------------------------------------------------------------------
-# Start-date computation for follow-on macrocycles (A-NEW-MACRO)
+# Start-date computation for follow-on macrocycles (A-NEW-MACRO,
+# B-NEWMACRO-STARTDATE-FIX)
 # ---------------------------------------------------------------------------
-
-def _next_monday_on_or_after(d: date) -> date:
-    """Return the Monday on or after *d*. If *d* is a Monday, return it."""
-    days_ahead = (7 - d.weekday()) % 7  # 0 == already Monday
-    return d + timedelta(days=days_ahead)
-
 
 def compute_new_macrocycle_start_date(
     state: Dict[str, Any],
@@ -816,38 +812,24 @@ def compute_new_macrocycle_start_date(
 ) -> date:
     """Resolve the Monday that a *new* follow-on macrocycle should start.
 
-    Used by ``POST /api/macrocycle/start-new-cycle`` (A-NEW-MACRO). The rule:
+    Used by ``POST /api/macrocycle/start-new-cycle``.
 
-    - If a current macrocycle exists, the new cycle starts the Monday on or
-      after ``max(current.end_date + 1 day, today)``.
-    - If no current macrocycle (or its ``end_date`` is missing), the new cycle
-      starts the Monday on or after *today* — i.e. ``today`` itself if Monday,
-      otherwise the upcoming Monday.
-
-    The function never returns a date in the past.
+    Returns the Monday strictly after *today* — the new cycle never starts on
+    a Monday that is also "today" (the user gets a clean week boundary to
+    prepare). The current macrocycle's ``end_date`` is no longer consulted:
+    "Start New Cycle" abandons the current cycle now and starts fresh next
+    Monday, regardless of where the current cycle is in its timeline. The
+    archive logic in the endpoint handles continuity.
 
     Args:
-        state: User state dict; ``state["macrocycle"]["end_date"]`` is read if
-            present (ISO ``YYYY-MM-DD``).
+        state: User state dict. **Retained for signature stability — current
+            macrocycle is no longer consulted (B-NEWMACRO-STARTDATE-FIX).**
         today: The reference date (caller passes ``date.today()`` in prod;
             tests pass a fixed value).
 
     Returns:
-        A ``date`` whose ``weekday() == 0`` (Monday).
+        A ``date`` whose ``weekday() == 0`` (Monday) and which is strictly
+        greater than *today*.
     """
-    macrocycle = state.get("macrocycle") or {}
-    end_str = macrocycle.get("end_date")
-
-    candidate = today
-    if end_str:
-        try:
-            current_end = datetime.strptime(end_str, "%Y-%m-%d").date()
-            candidate = max(today, current_end + timedelta(days=1))
-        except (ValueError, TypeError):
-            # Malformed end_date — fall back to today.
-            logger.warning(
-                "compute_new_macrocycle_start_date: malformed end_date %r, "
-                "ignoring and using today.", end_str,
-            )
-
-    return _next_monday_on_or_after(candidate)
+    del state  # explicitly unused; see docstring.
+    return date.fromisoformat(strict_next_monday(today))

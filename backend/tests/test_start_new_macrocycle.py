@@ -92,14 +92,19 @@ class TestT1HappyPath:
         assert phase_ids == ["base", "strength_power", "power_endurance", "performance", "deload"]
 
     def test_state_macrocycle_replaced(self):
+        """B-NEWMACRO-STARTDATE-FIX: new_start is next Monday after today,
+        independent of the old cycle's end_date."""
         _ensure_seed_state_has_macrocycle()
         old = client.get("/api/state").json()
         old_start = old["macrocycle"]["start_date"]
+        today_iso = date.today().isoformat()
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         new_start = r.json()["start_date"]
-        assert new_start >= old["macrocycle"]["end_date"], (
-            f"New start {new_start} must be on/after old end {old['macrocycle']['end_date']}"
+        assert new_start > today_iso, (
+            f"New start {new_start} must be strictly after today {today_iso}"
         )
+        new_start_d = datetime.strptime(new_start, "%Y-%m-%d").date()
+        assert new_start_d.weekday() == 0
         assert new_start != old_start
 
         live = client.get("/api/state").json()
@@ -278,22 +283,29 @@ class TestT6StartDate:
         d = datetime.strptime(start_iso, "%Y-%m-%d").date()
         assert d.weekday() == 0, f"Expected Monday, got weekday {d.weekday()}"
 
-    def test_start_date_after_current_end_when_ongoing(self):
-        """Set the live macrocycle to end far in the future and confirm the new
-        cycle starts the Monday on or after end+1."""
+    def test_start_date_ignores_ongoing_cycle_end_date(self):
+        """B-NEWMACRO-STARTDATE-FIX regression test: an ongoing cycle ending
+        in 2099 must NOT push the new start_date to 2099. The new cycle
+        always starts the Monday after today, regardless of the current
+        cycle's end_date."""
         _ensure_seed_state_has_macrocycle()
-        # Patch the macrocycle to end in 2099 so we know "ongoing" semantics.
+        # Patch the macrocycle to end far in 2099.
         client.put("/api/state", json={
             "macrocycle": {"end_date": "2099-06-30", "start_date": "2099-04-06"},
         })
-        r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body(
-            deadline=(date(2099, 12, 31)).isoformat(),
-        ))
-        # 2099-06-30 is a Tuesday → end+1 = 2099-07-01 (Wed) → Monday on/after = 2099-07-06.
+        r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200, r.text
-        assert r.json()["start_date"] == "2099-07-06"
+        # Pre-fix this would have been "2099-07-06". Post-fix it is the
+        # Monday strictly after today — independent of the 2099 end_date.
+        new_start = datetime.strptime(r.json()["start_date"], "%Y-%m-%d").date()
+        assert new_start.weekday() == 0
+        today = date.today()
+        assert new_start > today, "Start must be strictly after today"
+        assert (new_start - today).days <= 7, (
+            f"Start must be next Monday (≤ 7 days away), got {(new_start - today).days} days"
+        )
 
-    def test_start_date_today_or_later_when_no_macrocycle(self):
+    def test_start_date_no_current_macrocycle_strict_next_monday(self):
         # Reset state, then build a minimal one without macrocycle.
         client.delete("/api/state")
         client.put("/api/state", json={
@@ -313,8 +325,10 @@ class TestT6StartDate:
         r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200, r.text
         start = datetime.strptime(r.json()["start_date"], "%Y-%m-%d").date()
-        assert start >= date.today(), "Start date must not be in the past"
+        # Strict semantics: result is strictly AFTER today (never today itself).
+        assert start > date.today(), "Start date must be strictly after today"
         assert start.weekday() == 0
+        assert (start - date.today()).days <= 7
 
 
 # ── T7: discipline switch ──────────────────────────────────────────────────
@@ -455,15 +469,19 @@ class TestT11ChainedRestarts:
 class TestT12WeekCacheInvalidation:
     def test_past_week_plans_preserved_future_dropped(self):
         """Past entries (key < new_start_date) preserved for history view.
-        Future-or-equal entries cleared so the new cycle gets fresh weeks."""
+        Future-or-equal entries cleared so the new cycle gets fresh weeks.
+
+        Post B-NEWMACRO-STARTDATE-FIX: new_start_date is the Monday strictly
+        after today, regardless of the current macrocycle's window. Test keys
+        are anchored to today so the assertions hold whenever the suite runs.
+        """
         _ensure_seed_state_has_macrocycle()
-        # Pin the live macrocycle to a known window so we can predict new_start.
-        client.put("/api/state", json={
-            "macrocycle": {"start_date": "2099-04-06", "end_date": "2099-06-29"},
-        })
-        # Seed cache: one past entry, one future entry beyond expected new_start.
-        past_key = "2099-05-04"   # past relative to the new cycle's start.
-        future_key = "2099-12-21"  # well past the expected new start.
+        today = date.today()
+        # Past key — 4 weeks before today, definitely < new_start.
+        past_key = (today - timedelta(weeks=4)).isoformat()
+        # Future key — 30 weeks ahead, definitely >= new_start.
+        future_key = (today + timedelta(weeks=30)).isoformat()
+
         client.put("/api/state", json={
             "week_plans": {
                 past_key: {"start_date": past_key, "weeks": [{"days": []}]},
@@ -471,20 +489,22 @@ class TestT12WeekCacheInvalidation:
             },
         })
 
-        r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body(
-            deadline=(date(2099, 12, 31)).isoformat(),
-        ))
+        r = client.post("/api/macrocycle/start-new-cycle", json=_valid_body())
         assert r.status_code == 200, r.text
         new_start = r.json()["start_date"]
+        # Sanity: new_start lies between the two seeded keys.
+        assert past_key < new_start <= future_key, (
+            f"Test setup invalid: expected past_key={past_key} < "
+            f"new_start={new_start} <= future_key={future_key}"
+        )
 
         plans = client.get("/api/state").json().get("week_plans", {})
         # Past entry preserved.
         assert past_key in plans, f"Past entry {past_key} should be kept (< {new_start})"
         # Future entry — the rule is: drop keys >= new_start_date.
-        if future_key >= new_start:
-            assert future_key not in plans, (
-                f"Future entry {future_key} should be dropped (>= {new_start})"
-            )
+        assert future_key not in plans, (
+            f"Future entry {future_key} should be dropped (>= {new_start})"
+        )
 
     def test_current_week_plan_legacy_cache_cleared(self):
         _ensure_seed_state_has_macrocycle()
