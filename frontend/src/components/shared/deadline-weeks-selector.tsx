@@ -3,13 +3,12 @@
 /**
  * Shared cycle-duration slider.
  *
- * Used by:
- *  - onboarding/goals/page.tsx — `min={8}`, picks the first macrocycle's length.
- *  - settings/start-new-macrocycle-dialog.tsx — `min={9}` (lead engine floor),
- *    picks the next cycle's length when starting fresh.
+ * A218: hard cap at 16 weeks (KB consensus). Per-discipline floors:
+ *   - lead / both / all_round: 11 (engine `_MIN_TOTAL_WEEKS_LEAD`)
+ *   - boulder: 8 (engine `_MIN_TOTAL_WEEKS_BOULDER`)
  *
- * UX is intentionally identical between the two contexts: same Slider shape,
- * same recommended-marker, same warning copy. Only the floor differs.
+ * Callers pass `min` per discipline. Default `min` is 11 (lead floor) since
+ * the lead path is the most common.
  */
 
 import { useMemo } from "react";
@@ -33,11 +32,14 @@ function computeEndDateIso(weeks: number): string {
 export function DeadlineWeeksSelector({
   weeks,
   onWeeksChange,
-  min = 8,
-  max = 24,
+  min = 11,
+  max = 16,
   step = 1,
 }: DeadlineWeeksSelectorProps) {
   const endDate = useMemo(() => computeEndDateIso(weeks), [weeks]);
+  // A218: "short plan" warning fires below the lead default (12 weeks).
+  // Boulder users at 8-10 weeks will also see it — that's intentional, since
+  // any cycle below the discipline default compresses phases.
   const isShortPlan = weeks < 12;
 
   return (
@@ -86,8 +88,8 @@ export function weeksToDeadlineIso(weeks: number): string {
 export function deadlineIsoToWeeks(
   deadlineIso: string | undefined,
   defaultWeeks: number,
-  min = 8,
-  max = 24,
+  min = 11,
+  max = 16,
 ): number {
   if (!deadlineIso) return defaultWeeks;
   const today = new Date();

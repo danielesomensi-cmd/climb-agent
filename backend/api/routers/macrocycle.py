@@ -106,10 +106,12 @@ def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_i
 # A-NEW-MACRO: POST /api/macrocycle/start-new-cycle
 # ---------------------------------------------------------------------------
 
-# Total-weeks bounds (engine constraints) — must match macrocycle_v1._MIN_TOTAL_WEEKS
-_TOTAL_WEEKS_MIN_LEAD = 9
-_TOTAL_WEEKS_MIN_BOULDER = 5
-_TOTAL_WEEKS_MAX = 52
+# Total-weeks bounds (engine constraints — A218 / A-MACRO-CAPS).
+# Must match macrocycle_v1._MIN_TOTAL_WEEKS_LEAD / _MIN_TOTAL_WEEKS_BOULDER /
+# _MAX_TOTAL_WEEKS.
+_TOTAL_WEEKS_MIN_LEAD = 11
+_TOTAL_WEEKS_MIN_BOULDER = 8
+_TOTAL_WEEKS_MAX = 16
 _DEFAULT_TOTAL_WEEKS_LEAD = 12
 _DEFAULT_TOTAL_WEEKS_BOULDER = 10
 
@@ -160,11 +162,17 @@ def start_new_cycle(
         raise HTTPException(status_code=400, detail="Invalid deadline: expected YYYY-MM-DD")
 
     today = date.today()
+    # Use the per-discipline minimum (boulder is the lower of the two, so any
+    # deadline that satisfies the boulder minimum also gives the user a chance
+    # to pick boulder discipline). A218: bounds raised to 11 (lead) / 8 (boulder).
     if deadline_date < today + timedelta(weeks=_TOTAL_WEEKS_MIN_BOULDER):
-        # Deadline cannot be sooner than the engine's minimum cycle length.
         raise HTTPException(
             status_code=400,
-            detail="Deadline is too soon. Choose a date at least 9 weeks from today (5 for boulder).",
+            detail=(
+                f"Deadline is too soon. Choose a date at least "
+                f"{_TOTAL_WEEKS_MIN_LEAD} weeks from today "
+                f"({_TOTAL_WEEKS_MIN_BOULDER} for boulder)."
+            ),
         )
 
     # Resolve total_weeks (caller override, or discipline default, clamped).

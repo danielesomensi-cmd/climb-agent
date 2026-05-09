@@ -80,9 +80,11 @@ interface StartNewMacrocycleDialogProps {
   onSuccess?: () => void;
 }
 
-// Backend lead-cycle floor; the dialog never lets the user submit < 9 weeks.
-const MIN_WEEKS = 9;
-const MAX_WEEKS = 24;
+// A218 / A-MACRO-CAPS: per-discipline floors. Lead is the conservative default
+// for the dialog header; the slider min flips to 8 when the user picks boulder.
+const MIN_WEEKS_LEAD = 11;
+const MIN_WEEKS_BOULDER = 8;
+const MAX_WEEKS = 16;
 const DEFAULT_WEEKS = 12;
 
 function todayIso(): string {
@@ -171,10 +173,12 @@ export function StartNewMacrocycleDialog({
     initialDiscipline === "boulder"
       ? ((currentGoal.target_boulder_grade as string) || (currentGoal.target_grade as string) || "")
       : ((currentGoal.target_grade as string) || "");
+  // Use the lower of the two minima for the seed conversion — the user can
+  // adjust afterwards and the slider re-clamps if needed.
   const initialWeeks = deadlineIsoToWeeks(
     currentGoal.deadline as string | undefined,
     DEFAULT_WEEKS,
-    MIN_WEEKS,
+    MIN_WEEKS_BOULDER,
     MAX_WEEKS,
   );
 
@@ -215,13 +219,15 @@ export function StartNewMacrocycleDialog({
     [deadlineWeeks],
   );
 
+  const minWeeks = discipline === "boulder" ? MIN_WEEKS_BOULDER : MIN_WEEKS_LEAD;
+
   const validation = useMemo(() => {
     if (!targetGrade) return "Pick a target grade.";
-    if (deadlineWeeks < MIN_WEEKS) {
-      return `Plan must be at least ${MIN_WEEKS} weeks long.`;
+    if (deadlineWeeks < minWeeks) {
+      return `Plan must be at least ${minWeeks} weeks long.`;
     }
     return null;
-  }, [targetGrade, deadlineWeeks]);
+  }, [targetGrade, deadlineWeeks, minWeeks]);
 
   const gradeOptions = discipline === "boulder" ? BOULDER_GRADES : LEAD_GRADES;
 
@@ -311,7 +317,7 @@ export function StartNewMacrocycleDialog({
               <DeadlineWeeksSelector
                 weeks={deadlineWeeks}
                 onWeeksChange={setDeadlineWeeks}
-                min={MIN_WEEKS}
+                min={minWeeks}
                 max={MAX_WEEKS}
               />
 

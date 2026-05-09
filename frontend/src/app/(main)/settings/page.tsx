@@ -281,9 +281,15 @@ export default function SettingsPage() {
     setActionError(null);
 
     try {
-      // "restart" = full regen from week 1; everything else = incremental
+      // "restart" = full regen from week 1; everything else = incremental.
+      // A218: read total_weeks from the (just-saved) goal so a goal-edit
+      // that changed cycle length flows through to the regen. Backend
+      // ignores total_weeks for incremental regen (uses old_mc value),
+      // so this only matters on "restart".
       const fromPhase = action === "restart" ? undefined : "current";
-      await generateMacrocycle(undefined, 12, fromPhase);
+      const goalWeeks =
+        (state?.goal as { total_weeks?: number } | undefined)?.total_weeks ?? 12;
+      await generateMacrocycle(undefined, goalWeeks, fromPhase);
       await getWeek(0, true, preserveBefore);
       await refresh();
       invalidateWeek();

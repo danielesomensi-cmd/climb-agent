@@ -33,7 +33,7 @@ class AssessmentRequest(BaseModel):
 class MacrocycleRequest(BaseModel):
     """Body for POST /api/macrocycle/generate."""
     start_date: Optional[str] = None
-    total_weeks: int = 12
+    total_weeks: int = 12  # A218: must satisfy [11..16] lead / [8..16] boulder
     from_phase: Optional[str] = None  # "current" or a phase_id for incremental regen
 
 

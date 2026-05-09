@@ -902,6 +902,8 @@ Allowed `phase_id` values:
 ### 5.5.1 Macrocycle invariants
 
 - `macrocycle.start_date` **MUST be a Monday** (ISO weekday 0). Enforced by `ensure_monday()` in all setters (onboarding, macrocycle generate, state PUT, start-week shift). Non-Monday values are auto-corrected to the previous Monday.
+- `macrocycle.total_weeks` is bounded by `[_MIN_TOTAL_WEEKS_*, _MAX_TOTAL_WEEKS]` per discipline: lead = `[11, 16]`, boulder = `[8, 16]`, both/all_round alias to lead. The 16-week cap is intentional (A218 / KB consensus 2026-05-07 — Hörst dose-response + Lattice + Consuegra). Longer training horizons require multiple sequential macrocycles, started manually via `POST /api/macrocycle/start-new-cycle`. Block-stacking is **not** automatic in v1.
+- Per-phase weeks respect floor/cap inequalities defined in `_PHASE_FLOORS_*` / `_PHASE_CAPS_*` (`backend/engine/macrocycle_v1.py`). Lead `base` is locked at 4 (floor==cap). The weakness adjustment can shift ±1 between two phases only when both endpoints respect the floor/cap of the new shape; otherwise it's a clean no-op.
 
 ### 5.5.2 Macrocycle history (A-NEW-MACRO)
 

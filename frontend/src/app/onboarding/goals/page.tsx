@@ -248,9 +248,11 @@ export default function GoalsPage() {
             </div>
           )}
 
-          {/* Plan duration (weeks) */}
+          {/* Plan duration (weeks) — A218: discipline-aware min */}
           <DeadlineWeeksSelector
             weeks={totalWeeks}
+            min={discipline === "boulder" ? 8 : 11}
+            max={16}
             onWeeksChange={(v) =>
               setGoal({ total_weeks: v, deadline: weeksToDeadlineIso(v) })
             }

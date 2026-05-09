@@ -139,7 +139,7 @@ user_state.assessment + user_state.goal
 
 **Key modules:**
 - `assessment_v1.py` — 5-axis profile (finger_strength, pulling_strength, power_endurance, technique, endurance), 0-100 per axis
-- `macrocycle_v1.py` — 10-13 week periodized plan, 5 phases (base → strength_power → power_endurance → performance → deload), boulder/lead variants
+- `macrocycle_v1.py` — 8–16 week periodized plan, 5 phases (base → strength_power → power_endurance → performance → deload), boulder/lead variants. Total cap: 16 weeks (KB consensus). Lead floor: 11; boulder floor: 8. Per-phase caps prevent unbounded base inflation (A218 / A-MACRO-CAPS). v1 does **not** do adaptive phase duration; per-exercise overreach is handled by the closed-loop layer.
 - `planner_v2.py` — Phase-aware weekly planner, 3-pass algorithm (primary → complementary → tests), location-aware, gym-priority scoring
 - `replanner_v1.py` — 13 indoor + 3 outdoor intents, ripple effects, equipment-aware overrides, quick-add
 - `resolve_session.py` — Resolves session templates to concrete exercises with sets/reps/load

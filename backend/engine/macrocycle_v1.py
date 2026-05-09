@@ -218,177 +218,204 @@ _SESSION_POOL_BOULDER: Dict[str, Dict[str, str]] = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# Phase duration computation (A218 / A-MACRO-CAPS)
+#
+# Hard caps and floors per discipline. The new algorithm:
+#   1. Initialize at defaults.
+#   2. Apply weakness shift, clamped to floors and caps (no silent self-cancel).
+#   3. Distribute surplus to caps in priority order, OR
+#      reduce shortfall in INVERSE priority order (never below floor).
+#
+# A single function (`_compute_phase_durations`) handles both full and
+# incremental regen via an optional `phases` scope parameter.
+# ---------------------------------------------------------------------------
+
+# Mapping from assessment profile axes to weakness adjustment phases.
+# axis → (extend_phase, shrink_phase). Unchanged from earlier versions.
+_WEAKNESS_ADJUSTMENTS: Dict[str, Tuple[str, str]] = {
+    "power_endurance":  ("power_endurance",  "strength_power"),
+    "endurance":        ("base",             "strength_power"),
+    "finger_strength":  ("strength_power",   "base"),
+    "pulling_strength": ("strength_power",   "base"),
+    "technique":        ("base",             "performance"),
+}
+
+# Lead / all_round / both
+_BASE_DURATIONS_LEAD: Dict[str, int] = {
+    "base": 4, "strength_power": 3, "power_endurance": 2,
+    "performance": 2, "deload": 1,
+}  # sum 12
+_PHASE_CAPS_LEAD: Dict[str, int] = {
+    "base": 4, "strength_power": 4, "power_endurance": 3,
+    "performance": 3, "deload": 2,
+}  # sum 16 (== _MAX_TOTAL_WEEKS)
+_PHASE_FLOORS_LEAD: Dict[str, int] = {
+    "base": 4, "strength_power": 2, "power_endurance": 2,
+    "performance": 2, "deload": 1,
+}  # sum 11
+_SURPLUS_PRIORITY_LEAD: Tuple[str, ...] = (
+    "performance", "strength_power", "power_endurance", "deload",
+)
+# base is locked at 4 (floor==cap) and intentionally not in the priority list.
+_MIN_TOTAL_WEEKS_LEAD = 11
+
+# Boulder
 _BASE_DURATIONS_BOULDER: Dict[str, int] = {
     "base": 2, "strength_power": 4, "power_endurance": 1,
     "performance": 2, "deload": 1,
-}
-
-
-# ---------------------------------------------------------------------------
-# Phase duration computation
-# ---------------------------------------------------------------------------
-
-# Mapping from assessment profile axes to relevant weakness adjustments.
-# profile key → (phase to extend, phase to shrink)
-_WEAKNESS_ADJUSTMENTS: Dict[str, Tuple[str, str]] = {
-    "power_endurance": ("power_endurance", "strength_power"),
-    "endurance": ("base", "strength_power"),
-    "finger_strength": ("strength_power", "base"),
-    "pulling_strength": ("strength_power", "base"),
-    "technique": ("base", "performance"),
-}
-
-
-_MIN_TOTAL_WEEKS = 9  # 4 non-deload phases × 2 weeks + 1 deload
-
-_BASE_DURATIONS: Dict[str, int] = {
-    "base": 4, "strength_power": 3, "power_endurance": 2,
+}  # sum 10
+_PHASE_CAPS_BOULDER: Dict[str, int] = {
+    "base": 4, "strength_power": 5, "power_endurance": 3,
+    "performance": 3, "deload": 2,
+}  # sum 17 — intentionally above 16; surplus exhausts before all caps reached
+_PHASE_FLOORS_BOULDER: Dict[str, int] = {
+    "base": 2, "strength_power": 2, "power_endurance": 1,
     "performance": 2, "deload": 1,
-}
+}  # sum 8
+_SURPLUS_PRIORITY_BOULDER: Tuple[str, ...] = (
+    "performance", "strength_power", "power_endurance", "base", "deload",
+)
+_MIN_TOTAL_WEEKS_BOULDER = 8
+
+# Both disciplines
+_MAX_TOTAL_WEEKS = 16
+
+# Backward-compat alias (some callers still reference the old name).
+_BASE_DURATIONS: Dict[str, int] = _BASE_DURATIONS_LEAD
+
+
+def _find_weakest_axis(profile: Dict[str, int]) -> Tuple[Optional[str], int]:
+    """Return (axis_name, score) for the lowest-scoring weakness-relevant axis.
+
+    Returns (None, 101) if profile has no relevant axes (treated as "no
+    weakness"). Missing axes default to 50 (neutral, never triggers shift).
+    """
+    weakest: Optional[str] = None
+    score = 101
+    for axis in ("power_endurance", "endurance", "finger_strength",
+                 "pulling_strength", "technique"):
+        v = profile.get(axis, 50)
+        if v < score:
+            score = v
+            weakest = axis
+    return weakest, score
 
 
 def _compute_phase_durations(
     profile: Dict[str, int],
     total_weeks: int = 12,
     discipline: str = "lead",
+    *,
+    phases: Optional[List[str]] = None,
 ) -> Dict[str, int]:
-    """Compute phase durations based on assessment profile.
+    """Allocate *total_weeks* across the phases listed in *phases*.
 
-    Base allocation (12 weeks lead):
-        base: 4, strength_power: 3, power_endurance: 2, performance: 2, deload: 1
+    *phases* defaults to the full PHASE_ORDER. The incremental-regen path
+    passes a subset starting from `from_phase`, with *total_weeks* set to
+    the remaining weeks of the cycle.
 
-    Boulder allocation (10 weeks):
-        base: 2, strength_power: 4, power_endurance: 1, performance: 2, deload: 1
-
-    Adjustments based on weakest axes (score < 50).
+    Algorithm:
+        1. Initialize at discipline defaults.
+        2. Apply ±1 weakness adjustment (clamped to floors and caps).
+        3. Distribute surplus / reduce shortfall against caps and floors.
 
     Raises:
-        ValueError: If total_weeks < 9 (minimum structural requirement).
+        ValueError if *total_weeks* is outside the legal range for the scope.
     """
     is_boulder = discipline == "boulder"
-    min_weeks = 5 if is_boulder else _MIN_TOTAL_WEEKS
-    if total_weeks < min_weeks:
-        raise ValueError(
-            f"total_weeks must be >= {min_weeks} "
-            f"(minimum structural requirement), got {total_weeks}"
-        )
-    base_dur = _BASE_DURATIONS_BOULDER if is_boulder else _BASE_DURATIONS
-    durations = dict(base_dur)
+    if is_boulder:
+        defaults = _BASE_DURATIONS_BOULDER
+        caps = _PHASE_CAPS_BOULDER
+        floors = _PHASE_FLOORS_BOULDER
+        priority = _SURPLUS_PRIORITY_BOULDER
+        min_full = _MIN_TOTAL_WEEKS_BOULDER
+    else:
+        defaults = _BASE_DURATIONS_LEAD
+        caps = _PHASE_CAPS_LEAD
+        floors = _PHASE_FLOORS_LEAD
+        priority = _SURPLUS_PRIORITY_LEAD
+        min_full = _MIN_TOTAL_WEEKS_LEAD
 
-    # Find the weakest axis
-    weakest_axis = None
-    weakest_score = 101
-    for axis in ("power_endurance", "endurance", "finger_strength", "pulling_strength", "technique"):
-        score = profile.get(axis, 50)
-        if score < weakest_score:
-            weakest_score = score
-            weakest_axis = axis
+    if phases is None:
+        phases = list(PHASE_ORDER)
 
-    # Apply adjustment if primary weakness is below threshold
-    shrink_floor = 1 if is_boulder else 2
-    if weakest_axis and weakest_score < 50 and weakest_axis in _WEAKNESS_ADJUSTMENTS:
-        extend_phase, shrink_phase = _WEAKNESS_ADJUSTMENTS[weakest_axis]
-        if durations[shrink_phase] > shrink_floor:
-            durations[extend_phase] += 1
-            durations[shrink_phase] -= 1
-
-    # Enforce floor: min 2 for base (all disciplines), min 1 for other boulder
-    # non-deload phases, min 2 for lead non-deload phases, min 1 for deload
-    floor = 1 if is_boulder else 2
-    durations["base"] = max(2, durations["base"])  # base always >= 2
-    for phase_id in ("strength_power", "power_endurance", "performance"):
-        durations[phase_id] = max(floor, durations[phase_id])
-    durations["deload"] = max(1, durations["deload"])
-
-    # Scale to total_weeks — flex phase absorbs surplus/deficit
-    # Boulder: strength_power is most flexible; Lead/all_round: base is most flexible
-    flex_phase = "strength_power" if is_boulder else "base"
-    current_total = sum(durations.values())
-    if current_total != total_weeks:
-        diff = total_weeks - current_total
-        durations[flex_phase] = max(floor, durations[flex_phase] + diff)
-
-    # Ensure total sums correctly — re-enforce floor after adjustment
-    actual_total = sum(durations.values())
-    if actual_total != total_weeks:
-        durations[flex_phase] = max(floor, durations[flex_phase] + (total_weeks - actual_total))
-
-    return durations
-
-
-def _compute_remaining_durations(
-    profile: Dict[str, int],
-    remaining_weeks: int,
-    remaining_phases: List[str],
-    *,
-    discipline: str = "lead",
-) -> Dict[str, int]:
-    """Allocate *remaining_weeks* among *remaining_phases*.
-
-    Same logic as :func:`_compute_phase_durations` but scoped to the
-    phases that still need to be generated (incremental regen).
-    """
-    if not remaining_phases:
+    if not phases:
         return {}
 
-    base_dur = _BASE_DURATIONS_BOULDER if discipline == "boulder" else _BASE_DURATIONS
-    durations = {p: base_dur[p] for p in remaining_phases}
+    # ── 1. Range validation (defense in depth — routers also clamp) ──────
+    is_full_cycle = set(phases) == set(PHASE_ORDER)
+    scope_min = sum(floors[p] for p in phases)
+    scope_max = sum(caps[p] for p in phases)
+    full_min = min_full if is_full_cycle else scope_min
+    if total_weeks < full_min:
+        raise ValueError(
+            f"total_weeks {total_weeks} below minimum {full_min} for "
+            f"discipline={discipline}, phases={phases}"
+        )
+    if total_weeks > _MAX_TOTAL_WEEKS:
+        raise ValueError(
+            f"total_weeks {total_weeks} exceeds max {_MAX_TOTAL_WEEKS}"
+        )
+    if total_weeks > scope_max:
+        raise ValueError(
+            f"total_weeks {total_weeks} exceeds scope cap sum {scope_max} "
+            f"for phases={phases}"
+        )
 
-    # --- weakness adjustment (only if both phases are in scope) ----------
-    weakest_axis: Optional[str] = None
-    weakest_score = 101
-    for axis in ("power_endurance", "endurance", "finger_strength",
-                 "pulling_strength", "technique"):
-        score = profile.get(axis, 50)
-        if score < weakest_score:
-            weakest_score = score
-            weakest_axis = axis
+    # ── 2. Initialize at defaults (only for phases in scope) ─────────────
+    durations = {p: defaults[p] for p in phases}
 
-    if (weakest_axis and weakest_score < 50
+    # ── 3. Weakness adjustment (clamped — no silent self-cancel) ─────────
+    weakest_axis, weakest_score = _find_weakest_axis(profile)
+    if (weakest_axis is not None
+            and weakest_score < 50
             and weakest_axis in _WEAKNESS_ADJUSTMENTS):
         ext, shr = _WEAKNESS_ADJUSTMENTS[weakest_axis]
-        if ext in durations and shr in durations and durations[shr] > 2:
+        if (ext in durations and shr in durations
+                and durations[ext] + 1 <= caps[ext]
+                and durations[shr] - 1 >= floors[shr]):
             durations[ext] += 1
             durations[shr] -= 1
+        # else: clean no-op (shift would violate floor or cap, OR phases
+        # outside scope). No silent absorption through any flex phase.
 
-    # --- floor enforcement ------------------------------------------------
-    non_deload_floor = 1 if discipline == "boulder" else 2
-    for p in remaining_phases:
-        if p == "deload":
-            fl = 1
-        elif p == "base":
-            fl = 2  # base always >= 2, all disciplines
-        else:
-            fl = non_deload_floor
-        durations[p] = max(fl, durations[p])
+    # ── 4. Surplus distribution OR shortfall reduction ───────────────────
+    diff = total_weeks - sum(durations.values())
+    if diff > 0:
+        for p in priority:
+            if p not in durations:
+                continue
+            give = min(diff, caps[p] - durations[p])
+            durations[p] += give
+            diff -= give
+            if diff == 0:
+                break
+        if diff != 0:
+            raise ValueError(
+                f"Cannot distribute surplus {diff}: scope at cap"
+            )
+    elif diff < 0:
+        shortfall = -diff
+        for p in reversed(priority):
+            if p not in durations:
+                continue
+            take = min(shortfall, durations[p] - floors[p])
+            durations[p] -= take
+            shortfall -= take
+            if shortfall == 0:
+                break
+        if shortfall != 0:
+            raise ValueError(
+                f"Cannot absorb shortfall {shortfall}: scope at floor"
+            )
 
-    min_needed = sum(1 if p == "deload" else non_deload_floor for p in remaining_phases)
-    if remaining_weeks < min_needed:
-        # Not enough weeks — give minimum to each, deload shrinks first
-        durations = {}
-        left = remaining_weeks
-        non_deload = [p for p in remaining_phases if p != "deload"]
-        for p in non_deload:
-            alloc = min(2, left)
-            durations[p] = alloc
-            left -= alloc
-        if "deload" in remaining_phases:
-            durations["deload"] = max(0, left)
-        return durations
-
-    # --- scale to remaining_weeks -----------------------------------------
-    flex = next((p for p in remaining_phases if p != "deload"), remaining_phases[0])
-    current_total = sum(durations.values())
-    if current_total != remaining_weeks:
-        floor = 1 if flex == "deload" else 2
-        durations[flex] = max(floor, durations[flex] + remaining_weeks - current_total)
-
-    # final enforcement
-    actual = sum(durations.values())
-    if actual != remaining_weeks:
-        floor = 1 if flex == "deload" else 2
-        durations[flex] = max(floor, durations[flex] + remaining_weeks - actual)
-
+    # ── 5. Postcondition (defensive — should never trip) ─────────────────
+    assert sum(durations.values()) == total_weeks, "duration math broke"
+    for p in phases:
+        assert floors[p] <= durations[p] <= caps[p], (
+            f"{p} {durations[p]} out of [{floors[p]},{caps[p]}]"
+        )
     return durations
 
 
@@ -573,9 +600,9 @@ def generate_macrocycle(
         remaining_weeks = total_weeks - weeks_used
         phases_to_gen = [pid for pid in PHASE_ORDER
                          if PHASE_ORDER.index(pid) >= from_idx]
-        durations = _compute_remaining_durations(
-            assessment_profile, remaining_weeks, phases_to_gen,
-            discipline=discipline,
+        durations = _compute_phase_durations(
+            assessment_profile, remaining_weeks,
+            discipline=discipline, phases=phases_to_gen,
         )
         current_week = weeks_used + 1
     else:
@@ -767,38 +794,6 @@ def compute_pretrip_dates(
             d += timedelta(days=1)
 
     return sorted(set(result))
-
-
-def should_extend_phase(
-    phase: Dict[str, Any],
-    weekly_feedback: List[str],
-) -> bool:
-    """Check if a phase should be extended based on feedback.
-
-    If feedback labels are still 'hard' or 'very_hard' after 2+ weeks → extend.
-    Max extension: +2 weeks (checked externally).
-    """
-    if len(weekly_feedback) < 2:
-        return False
-
-    last_two = weekly_feedback[-2:]
-    hard_labels = {"hard", "very_hard"}
-    return all(fb in hard_labels for fb in last_two)
-
-
-def should_trigger_adaptive_deload(
-    recent_feedback: List[str],
-) -> bool:
-    """Check if adaptive deload should trigger.
-
-    If 5+ consecutive days with 'very_hard' or pain flags → trigger.
-    """
-    if len(recent_feedback) < 5:
-        return False
-
-    hard_labels = {"very_hard"}
-    last_five = recent_feedback[-5:]
-    return all(fb in hard_labels for fb in last_five)
 
 
 # ---------------------------------------------------------------------------
