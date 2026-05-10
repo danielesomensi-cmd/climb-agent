@@ -7,12 +7,31 @@ Usage:
 Reads counts from the codebase and updates:
   - PROJECT_BRIEF.md  (status table between markers)
   - README.md         (status table between markers)
-  - CLAUDE.md         (endpoint total + router count inline)
+  - CLAUDE.md         (endpoint total + router count + page count, inline)
 
-Also runs validation checks and prints warnings for issues
-that cannot be auto-fixed (e.g., missing template IDs in vocabulary).
+Also runs validation checks and prints warnings for issues that cannot be
+auto-fixed (e.g., missing template IDs in vocabulary, vocab→disk orphans,
+CLAUDE.md endpoint header drift vs code).
 
 No external dependencies — stdlib only (+ pytest subprocess).
+
+## Sync limits — won't auto-update
+
+The following content is INTENTIONALLY not auto-synced. Edit by hand as part
+of the brief that introduces the change.
+
+- Tech-stack tables (PROJECT_BRIEF.md tech stack section, ~lines 71-78)
+- Pricing rows (ROADMAP_CURRENT.md Priority 4 / Future)
+- GTM Sprint status callouts (ROADMAP_CURRENT.md Priority 1.75, ~lines 85-89)
+- The CLAUDE.md endpoint TABLE rows (only the inline header gets auto-updated;
+  the table rows must be edited manually when adding/removing endpoints)
+- Any free-prose status assertion ("LIVE since YYYY-MM-DD", "TEST MODE",
+  "temporarily disabled", etc.) anywhere in the doc tree
+
+If a counter / status / table changes, update it in the same brief that
+introduces the change. The sentinel test in
+`backend/tests/test_sync_status_sentinel.py` guards the regex patterns'
+structural match against snapshot fixtures of the source docs.
 """
 
 import glob
@@ -30,6 +49,26 @@ VOCAB_PATH = os.path.join(REPO_ROOT, "docs", "vocabulary_v1.md")
 
 START_MARKER = "<!-- STATUS_TABLE_START -->"
 END_MARKER = "<!-- STATUS_TABLE_END -->"
+
+
+# ── Regex patterns (source of truth — sentinel-tested) ─────────────
+# These patterns are imported by backend/tests/test_sync_status_sentinel.py
+# to assert structural compatibility with the live docs. If a doc's wording
+# changes intentionally, update both the pattern and the snapshot fixture.
+
+ENDPOINT_HEADER_REGEX = (
+    r"\d+ endpoints total "
+    r"\(\d+ router \+ 2 app-level: health check \+ stripe webhook\)"
+)
+ROUTER_HEADER_REGEX = r"# FastAPI REST API \(\d+ routers\)"
+PAGES_HEADER_REGEX = r"\*\*Pages \(\d+\):\*\*"
+ENDPOINT_TOTAL_PARSE_REGEX = r"(\d+) endpoints? total"
+ENDPOINT_TABLE_ROW_REGEX = r"^\| (GET|POST|PUT|DELETE|PATCH) "
+VOCAB_CANONICAL_SECTION_REGEX = (
+    r"^#{2,4}\s+(?:[\d.]+\s+)?Canonical\s+(session|module)"
+    r"\s+template_ids\s*\(\d+\)\s*$"
+)
+VOCAB_CANONICAL_ENTRY_REGEX = r"^-\s+`([a-zA-Z0-9_]+)`"
 
 
 # ── Counters ────────────────────────────────────────────────────────
@@ -196,23 +235,24 @@ def update_claude(endpoints: int, routers: int, pages: int) -> bool:
 
     original = content
 
-    # Update endpoint total: "N endpoints total (M router + 1 app-level health check)"
+    # Endpoint header: "N endpoints total (M router + 2 app-level: health check + stripe webhook)"
     content = re.sub(
-        r"\d+ endpoints total \(\d+ router \+ 1 app-level health check\)",
-        f"{endpoints} endpoints total ({endpoints - 1} router + 1 app-level health check)",
+        ENDPOINT_HEADER_REGEX,
+        f"{endpoints} endpoints total "
+        f"({endpoints - 2} router + 2 app-level: health check + stripe webhook)",
         content,
     )
 
-    # Update router count in repo structure: "# FastAPI REST API (N routers)"
+    # Router count in repo structure: "# FastAPI REST API (N routers)"
     content = re.sub(
-        r"# FastAPI REST API \(\d+ routers\)",
+        ROUTER_HEADER_REGEX,
         f"# FastAPI REST API ({routers} routers)",
         content,
     )
 
-    # Update page count: "**Pages (N):**"
+    # Page count: "**Pages (N):**"
     content = re.sub(
-        r"\*\*Pages \(\d+\):\*\*",
+        PAGES_HEADER_REGEX,
         f"**Pages ({pages}):**",
         content,
     )
@@ -228,36 +268,143 @@ def update_claude(endpoints: int, routers: int, pages: int) -> bool:
     return True
 
 
+# ── Vocab parsing ───────────────────────────────────────────────────
+
+def parse_vocab_canonical_list(vocab_content: str, kind: str) -> list[str]:
+    """Extract canonical IDs for kind in {"session", "module"} from vocab §3.
+
+    Locates the section header via VOCAB_CANONICAL_SECTION_REGEX, slices the
+    body up to the next sibling-or-parent header (≤ same #-depth), then
+    collects entries via VOCAB_CANONICAL_ENTRY_REGEX.
+    """
+    if kind not in ("session", "module"):
+        raise ValueError(f"unknown kind: {kind}")
+
+    header_re = re.compile(VOCAB_CANONICAL_SECTION_REGEX, re.MULTILINE)
+    header_match = None
+    for m in header_re.finditer(vocab_content):
+        if m.group(1) == kind:
+            header_match = m
+            break
+    if header_match is None:
+        return []
+
+    leading_hashes = re.match(r"^#+", header_match.group(0)).group(0)
+    depth = len(leading_hashes)
+
+    rest = vocab_content[header_match.end():]
+    next_header_re = re.compile(rf"^#{{1,{depth}}}\s", re.MULTILINE)
+    next_m = next_header_re.search(rest)
+    section_body = rest[: next_m.start()] if next_m else rest
+
+    entry_re = re.compile(VOCAB_CANONICAL_ENTRY_REGEX, re.MULTILINE)
+    return entry_re.findall(section_body)
+
+
+# ── Pre/post-update drift checks (F-38) ────────────────────────────
+
+def parse_endpoint_header_total(claude_content: str) -> "int | None":
+    m = re.search(ENDPOINT_TOTAL_PARSE_REGEX, claude_content)
+    return int(m.group(1)) if m else None
+
+
+def diagnostic_pre_update(real_count: int) -> None:
+    """Pre-sync diagnostic: log drift between code and CLAUDE.md header.
+
+    Not a warning — drift here is normal when sync is about to fix it.
+    """
+    if not os.path.exists(CLAUDE_PATH):
+        return
+    with open(CLAUDE_PATH) as f:
+        pre = f.read()
+    pre_header = parse_endpoint_header_total(pre)
+    if pre_header is None:
+        print(
+            "  ℹ️  CLAUDE.md: cannot parse 'N endpoints total' header "
+            "(regex broken? See ENDPOINT_TOTAL_PARSE_REGEX)."
+        )
+    elif pre_header != real_count:
+        print(
+            f"  ℹ️  CLAUDE.md endpoint drift detected: "
+            f"header={pre_header}, code={real_count} (will sync)"
+        )
+
+
+def guardrail_post_update(real_count: int, warnings: list[str]) -> None:
+    """Post-sync guardrail: if drift persists after update_claude(), emit warning.
+
+    A POST-SYNC DRIFT means the auto-update did not apply — typically because
+    a regex in update_claude() does not match the live doc text (RC-1 class).
+    """
+    if not os.path.exists(CLAUDE_PATH):
+        return
+    with open(CLAUDE_PATH) as f:
+        post = f.read()
+    post_header = parse_endpoint_header_total(post)
+    if post_header is None:
+        warnings.append(
+            "CLAUDE.md: cannot parse endpoint header line. update_claude() "
+            "regex may not match current text. See ENDPOINT_HEADER_REGEX."
+        )
+    elif post_header != real_count:
+        warnings.append(
+            f"POST-SYNC DRIFT: CLAUDE.md endpoint header is {post_header} "
+            f"but code has {real_count} endpoints. update_claude() did not "
+            f"apply the fix — likely a broken regex. "
+            f"See ENDPOINT_HEADER_REGEX in scripts/sync_status.py."
+        )
+
+
 # ── Validation ─────────────────────────────────────────────────────
 
 def validate(endpoints: int) -> list[str]:
     """Run validation checks and return warnings."""
-    warnings = []
+    warnings: list[str] = []
 
-    # Check module template list in vocabulary matches filesystem
     template_files = sorted([
         os.path.splitext(os.path.basename(f))[0]
         for f in glob.glob(os.path.join(REPO_ROOT, "backend/catalog/templates/v1/*.json"))
     ])
-    if os.path.exists(VOCAB_PATH):
-        with open(VOCAB_PATH) as f:
-            vocab_content = f.read()
-        for t in template_files:
-            if f"- `{t}`" not in vocab_content:
-                warnings.append(
-                    f"vocabulary_v1.md: module template '{t}' exists on disk but not in canonical list"
-                )
-
-    # Check session template list in vocabulary matches filesystem
     session_files = sorted([
         os.path.splitext(os.path.basename(f))[0]
         for f in glob.glob(os.path.join(REPO_ROOT, "backend/catalog/sessions/v1/*.json"))
     ])
+
+    vocab_content = None
     if os.path.exists(VOCAB_PATH):
+        with open(VOCAB_PATH) as f:
+            vocab_content = f.read()
+
+    # Check disk → vocab (file exists but not listed)
+    if vocab_content is not None:
+        for t in template_files:
+            if f"- `{t}`" not in vocab_content:
+                warnings.append(
+                    f"vocabulary_v1.md: module template '{t}' exists on disk but "
+                    f"not in canonical list"
+                )
         for s in session_files:
             if f"- `{s}`" not in vocab_content:
                 warnings.append(
-                    f"vocabulary_v1.md: session template '{s}' exists on disk but not in canonical list"
+                    f"vocabulary_v1.md: session template '{s}' exists on disk but "
+                    f"not in canonical list"
+                )
+
+    # Check vocab → disk (listed but no file) — F-37
+    if vocab_content is not None:
+        disk_templates = set(template_files)
+        disk_sessions = set(session_files)
+        for tid in parse_vocab_canonical_list(vocab_content, "module"):
+            if tid not in disk_templates:
+                warnings.append(
+                    f"vocabulary_v1.md: module template '{tid}' listed in canonical "
+                    f"list but no file at backend/catalog/templates/v1/{tid}.json"
+                )
+        for sid in parse_vocab_canonical_list(vocab_content, "session"):
+            if sid not in disk_sessions:
+                warnings.append(
+                    f"vocabulary_v1.md: session template '{sid}' listed in canonical "
+                    f"list but no file at backend/catalog/sessions/v1/{sid}.json"
                 )
 
     # Check CLAUDE.md endpoint table row count matches declared total
@@ -265,9 +412,9 @@ def validate(endpoints: int) -> list[str]:
         with open(CLAUDE_PATH) as f:
             claude = f.read()
         table_rows = len(re.findall(
-            r"^\| (GET|POST|PUT|DELETE|PATCH) ", claude, re.MULTILINE
+            ENDPOINT_TABLE_ROW_REGEX, claude, re.MULTILINE
         ))
-        declared = re.search(r"(\d+) endpoints? total", claude)
+        declared = re.search(ENDPOINT_TOTAL_PARSE_REGEX, claude)
         if declared and table_rows != int(declared.group(1)):
             warnings.append(
                 f"CLAUDE.md: endpoint table has {table_rows} rows "
@@ -299,7 +446,7 @@ def check_uncommitted_work() -> None:
             dirty.append(filepath)
 
     if dirty:
-        print("\n\u26a0\ufe0f  UNCOMMITTED WORK FILES DETECTED!")
+        print("\n⚠️  UNCOMMITTED WORK FILES DETECTED!")
         print("Commit your work before running sync_status.py:\n")
         for f in dirty:
             print(f"  - {f}")
@@ -321,6 +468,10 @@ def main() -> int:
     print(f"  Routers: {routers}")
 
     print()
+    print("Pre-sync diagnostics...")
+    diagnostic_pre_update(endpoints)
+
+    print()
     print("Syncing files...")
     pages = dict(counts)["Frontend pages"]
     update_marker_file(BRIEF_PATH, counts, "PROJECT_BRIEF.md")
@@ -329,11 +480,12 @@ def main() -> int:
 
     print()
     warnings = validate(endpoints)
+    guardrail_post_update(endpoints, warnings)
     if warnings:
         for w in warnings:
-            print(f"  \u26a0\ufe0f  {w}")
+            print(f"  ⚠️  {w}")
     else:
-        print("  \u2705 All validations passed.")
+        print("  ✅ All validations passed.")
 
     print()
     print("Done.")

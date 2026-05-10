@@ -321,7 +321,6 @@ Key location: `.env` in repo root (gitignored, never commit).
 - After `trim_roadmap.py`: the script now verifies every removed ID lands in `ROADMAP_v2.md` and prints a WARNING if not. If you see the warning, investigate before continuing — do not force-push over it.
 - **Sync/counter commits must NOT carry brief IDs in the subject line.** Avoid patterns like `sync: update test count [B178]` or `C170: sync counters` — they pollute the git-log ↔ roadmap reconciliation used by `scripts/next_brief.py`. Put the reference in the commit body or omit it.
 - Standing rule: `python scripts/sync_status.py` at end of every brief (already enforced)
-- The auto-sync script does NOT touch tech-stack tables, pricing rows, status callouts, or the CLAUDE.md endpoint table rows. See the docstring of `scripts/sync_status.py` for the full list of auto-sync limits.
 
 ## Workflow rules
 
