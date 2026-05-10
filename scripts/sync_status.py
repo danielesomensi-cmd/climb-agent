@@ -289,11 +289,12 @@ def parse_vocab_canonical_list(vocab_content: str, kind: str) -> list[str]:
     if header_match is None:
         return []
 
-    leading_hashes = re.match(r"^#+", header_match.group(0)).group(0)
-    depth = len(leading_hashes)
-
     rest = vocab_content[header_match.end():]
-    next_header_re = re.compile(rf"^#{{1,{depth}}}\s", re.MULTILINE)
+    # Stop at any next header (sibling, parent, OR sub-section). Fields
+    # described inside a "#### Session-level optional fields" subsection
+    # would otherwise leak into the canonical id list (e.g. boulder_fallback
+    # is a field descriptor, not a session_id).
+    next_header_re = re.compile(r"^#+\s", re.MULTILINE)
     next_m = next_header_re.search(rest)
     section_body = rest[: next_m.start()] if next_m else rest
 
