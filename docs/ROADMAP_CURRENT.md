@@ -1,10 +1,14 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-07 (A218 / A-MACRO-CAPS ✅ — phase duration cap rewrite: total ≤ 16, base ≤ 4, performance floor 3 for advanced lead. Closed F1, F4, F6, F7, F9 from D233; removed dead F2 functions. Slider min/max updated frontend-side. Predecessors: D233 / D234 audits. Branch: feat/macrocycle-caps.)
+> Last updated: 2026-05-10 (D236 ✅ — repo + docs cleanup audit, read-only. 47 deduplicated findings (P0=6, P1=22, P2=13, P3=6) across 4 subagent reports. Remediation plan in 7 groups, Group 0 = B-SYNC-FIX prerequisite to any counter fix. Output: `docs/audit/D236/`.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
 ---
+
+## Recently closed (2026-05-10)
+
+- **D236 / D-DOCS-CLEANUP** ✅ — Read-only audit of every doc/script artifact in the repo (90 live `*.md`, 6 archived, 11 scripts). 4 parallel Sonnet subagents (consistency, obsolescence, archive refs, status drift) → Opus synthesis. 78 raw findings deduplicated to 47 unique. Surfaced 8 root causes including: `sync_status.py` regex broken since Stripe-webhook addition (silent counter sync no-op); commit `00cdc33` mislabeled deletion as archive (4 dangling ROADMAP citations to `_archive/docs/horst_integration_audit.md` — recoverable from git `70dadfa`); Stripe go-live (2026-04-16) not retro-swept (3 P0 lies in PROJECT_BRIEF + ROADMAP); A218 cap rewrite not retro-swept ("10-13 weeks" residue). Remediation plan in 7 groups: **Group 0 = B-SYNC-FIX** (prerequisite to Group 3 counter fixes), Group 1 = Stripe/pricing P0 (suggested-text included), Group 2 = other status drift, Group 3 = counter reconciliation, Group 4 = bulk archive (~30 files) + `docs/audits/` plural→singular merge, Group 5 = misplaced renames + 4 escalations, Group 6 = broken-citation fixes incl. horst restore. Execution deferred to follow-up briefs. Output: `docs/audit/D236/` (7 files, 124 KB).
 
 ## Recently closed (2026-05-07)
 
