@@ -8,7 +8,7 @@
 
 ## Recently closed (2026-05-10)
 
-- **B-SYNC-FIX** ✅ — D236 Group 0 (prerequisite to Group 3). Repaired `scripts/sync_status.py`: F-01 (ENDPOINT_HEADER_REGEX matched "1 app-level health check" while CLAUDE.md said "2 app-level: health check + stripe webhook" → silent no-op since Stripe webhook addition); F-37 (added reverse vocab→disk check via `parse_vocab_canonical_list()` — surfaces 8 orphan module template entries documented in F-13); F-38 (`diagnostic_pre_update()` + `guardrail_post_update()` detect drift between code's `count_api_endpoints()` and CLAUDE.md header before/after sync); F-39, F-40 documented as auto-sync limits in module docstring + CLAUDE.md §"Docs maintenance". Extracted 7 regex patterns as module constants (`ENDPOINT_HEADER_REGEX`, `ROUTER_HEADER_REGEX`, `PAGES_HEADER_REGEX`, `ENDPOINT_TOTAL_PARSE_REGEX`, `ENDPOINT_TABLE_ROW_REGEX`, `VOCAB_CANONICAL_SECTION_REGEX`, `VOCAB_CANONICAL_ENTRY_REGEX`). Added `backend/tests/test_sync_status_sentinel.py` with 9 sentinel tests + 4 snapshot fixtures (CLAUDE.md, PROJECT_BRIEF.md, README.md, vocabulary_v1.md) — guards structural pattern match against future doc-text restructuring; docstring documents the manual negative-test procedure. End-to-end verified: sync_status.py now correctly transitions CLAUDE.md endpoint header 64→68. Side-effect commit: `sync: counters after B-SYNC-FIX`. Test count: 1948 → 1993 (+9 sentinel + others).
+- **B-SYNC-FIX / D236 Group 0** ✅ — Riparato regex rotto in `scripts/sync_status.py:200-202` (F-01: header endpoint matchava "1 app-level health check" mentre CLAUDE.md è "2 app-level: health check + stripe webhook" da quando A159 ha aggiunto Stripe webhook → no-op silenzioso, CLAUDE.md fermo a 64 vs codice 68). Aggiunti 2 check a `validate()`: reverse vocab→disk (F-37, emette 8 orphan template warnings = ground truth di F-13) e pre/post-update endpoint drift detection (F-38, guardrail per RC-1 future). F-39 (auto-update tabella endpoint) e F-40 (status callouts non auto-syncabili) documentati come limiti. Sentinel test pytest con 9 casi su snapshot fixtures (`backend/tests/test_sync_status_sentinel.py` + `backend/tests/fixtures/sync_snapshots/`). Test count: 1984 → 1993 (+9 sentinel). Branch: pushato direttamente a main (backend-only). Predecessor: D236 (47 findings deduplicati su 78 raw da 4 subagents).
 - **D236 / D-DOCS-CLEANUP** ✅ — Read-only audit of every doc/script artifact in the repo (90 live `*.md`, 6 archived, 11 scripts). 4 parallel Sonnet subagents (consistency, obsolescence, archive refs, status drift) → Opus synthesis. 78 raw findings deduplicated to 47 unique. Surfaced 8 root causes including: `sync_status.py` regex broken since Stripe-webhook addition (silent counter sync no-op); commit `00cdc33` mislabeled deletion as archive (4 dangling ROADMAP citations to `_archive/docs/horst_integration_audit.md` — recoverable from git `70dadfa`); Stripe go-live (2026-04-16) not retro-swept (3 P0 lies in PROJECT_BRIEF + ROADMAP); A218 cap rewrite not retro-swept ("10-13 weeks" residue). Remediation plan in 7 groups: **Group 0 = B-SYNC-FIX** (prerequisite to Group 3 counter fixes), Group 1 = Stripe/pricing P0 (suggested-text included), Group 2 = other status drift, Group 3 = counter reconciliation, Group 4 = bulk archive (~30 files) + `docs/audits/` plural→singular merge, Group 5 = misplaced renames + 4 escalations, Group 6 = broken-citation fixes incl. horst restore. Execution deferred to follow-up briefs. Output: `docs/audit/D236/` (7 files, 124 KB).
 
 ## Recently closed (2026-05-07)
@@ -82,6 +82,27 @@
 
 ---
 
+## Priority 1.28 — Audit Remediation (D236)
+
+> Tracking docs: `docs/audit/D236/00_remediation_plan.md` (piano completo, 6 Group), `docs/audit/D236/00_findings.md` (47 finding deduplicati su 78 raw).
+> Audit: D236 read-only cleanup, completato 2026-05-09 (47 findings: 6 P0, 22 P1, 13 P2, 6 P3).
+> Group 0 chiuso da B-SYNC-FIX (2026-05-10). Group 1-6 aperti come C-brief indipendenti.
+>
+> **Ordine raccomandato**: Group 3 → Group 1 → Group 6 → Group 4 → Group 2 → Group 5.
+> Razionale: Group 3 fixa code-ref errati in CLAUDE.md (F-15 closed_loop path, F-16 planner_v1→v2) — file letto da ogni istanza Claude Code, alta probabilità di morsicare in brief macrocycle/engine. Group 1 chiude P0 Stripe/pricing lies in PROJECT_BRIEF e ROADMAP. Group 6 sblocca KB anchors per D33/CUE-02. Resto è cleanup.
+
+| Group | Title | Type | Effort | Status | Notes |
+|---|---|---|---|---|---|
+| 0 | Fix `sync_status.py` regex + validate() | B | S | ✅ Done 2026-05-10 (B-SYNC-FIX) | Closed F-01, F-37, F-38; F-39, F-40 documentati come limiti |
+| 3 | Counter fixes (CLAUDE.md, PROJECT_BRIEF, README, vocabulary, ENGINE_ARCHITECTURE) | C | S | **Open — next recommend** | F-09 (endpoint count 64→68), F-10/F-11 (intent count 13+3 → 15+4), F-12 (macrocycle weeks 10-13 → lead 11-16/boulder 8-16), F-13 (8 vocab orphan templates), F-14 (`_SESSION_META` 34→31), F-15 (`closed_loop_v1.py` path → `backend/engine/adaptation/closed_loop.py`), F-16 (`planner_v1` → `planner_v2` import example), F-36, F-46, F-47. **Closes D229 implicitly.** |
+| 1 | P0 Stripe/Pricing drift + redundant cleanup | C | XS | Open | F-02 (PROJECT_BRIEF Stripe "TEST MODE"), F-03 (ROADMAP Stripe "Not live"), F-04 (pricing row "EUR 14.99" wrong on currency/amount/trial/cap), F-29 (delete 3 stub `B202/B203/B204_proposal.md`), F-30 (delete 3 abandoned `users_report_*.md`) |
+| 6 | Broken citations + horst restore | C | S | Open | F-05 (D163 path), F-06 (D172 tracker never created), F-07 (horst ghost file — `git show 70dadfa:docs/horst_integration_audit.md > _archive/docs/horst_integration_audit.md`) |
+| 4 | Bulk archive obsolete docs + merge `docs/audits/` → `docs/audit/` | C | M | Open | F-08 (dir merge), F-18 through F-28 (24 closed-brief deliverables), F-31, F-32, F-33 |
+| 2 | Status-marker drift | C | S | Open | F-17 (`design_system_v1.md` A215/A216/A217 "planned" → ✅ Done), F-35 (DESIGN doc Guided Session "spec futura" → implemented) |
+| 5 | Misplaced renames + escalations | C | XS | Open | F-34 (outdoor_audit_D170 → docs/audit/), F-41 (AUTH_AUDIT.md → docs/audit/); F-42-45 sono escalations a Daniele (4 decisioni nel piano §Group 5) |
+
+---
+
 ## Priority 1.75 — Go-to-Market Sprint
 
 > Origin: Strategic Advisory Council (2× runs, 5 advisors each, 2026-04-01)
@@ -111,7 +132,7 @@
 | GTM-STRIPE-TAX | **Stripe Tax registration** | Config | S | 🟡 Deferred | Reactivate when **either** condition met: (a) 10+ paying EU customers, OR (b) €5k cumulative EU revenue, OR (c) approaching €10k OSS threshold. Below these, IT domestic VAT rules apply (regime forfettario or ordinario per Daniele's setup), Stripe Tax is scope creep. When reactivating: 4 dashboard steps + 4-line code change in `subscription.py:108-124` (`automatic_tax: {enabled: true}` + `tax_id_collection` + `billing_address_collection: 'required'`). Decide now: prices $9.99/$4.99 are **net** (exclusive — VAT added on top at activation) — document this so future activation is consistent. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
 | B228 | **Frontend 402 global handler in `api.ts`** | B | S | Open P2 | Audit F4. Centralize 402 → router.push('/subscribe') + sonner toast. Frontend branch + Vercel preview. After both P1. |
-| D229 | **Doc drift alignment — CLAUDE.md endpoints + intents + Stripe text** | D | XS | Open P2 | Audit F7. CLAUDE.md:149 says 63 endpoints (real = 67). CLAUDE.md:144 says 13+3 intents (real = 15+4). ROADMAP line 77 says "Stripe TEST MODE / disabled" vs line 153 "LIVE since 2026-04-16". 30 min, single commit, no STOP. |
+| D229 | **Doc drift alignment — CLAUDE.md endpoints + intents + Stripe text** | D | XS | 🔁 Will close with D236 Group 3 | Audit F7. CLAUDE.md:149 says 63 endpoints (real = 67). CLAUDE.md:144 says 13+3 intents (real = 15+4). ROADMAP line 77 says "Stripe TEST MODE / disabled" vs line 153 "LIVE since 2026-04-16". 30 min, single commit, no STOP. **Superseded scope**: F-09/F-10/F-11/F-15 ora tracked in D236 Group 3 (Priority 1.28). |
 | C231 | **Catalog `intensity_level` enum normalization — drift singletons** | C | XS | Open P3 | B227 P0.2 discovery: catalog uses 7-value enum (very_low, low, moderate, medium, high, very_high, max). Two drift singletons absorb cleanly via ordinal mapping (`reverse_lunge`=moderate→medium, `thirty_thirty_intervals`=very_high→high), but worth normalizing to a clean 5-value canonical set `{very_low, low, medium, high, max}`. 2 catalog edits + test_exercises_v2.py enum check. Zero engine impact. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
