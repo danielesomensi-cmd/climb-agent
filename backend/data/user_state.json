@@ -16,7 +16,7 @@
       "lead_max_os": "6b+",
       "lead_max_rp": "7a"
     },
-    "last_assessed": "2026-05-04",
+    "last_assessed": "2026-05-11",
     "profile": {
       "endurance": 40,
       "finger_strength": 40,
@@ -55,7 +55,7 @@
     "hangboard": [
       {
         "edge_mm": 20,
-        "estimated_at": "2026-04-28",
+        "estimated_at": "2026-05-11",
         "grade_used": "7a",
         "grip": "half_crimp",
         "hang_seconds": 7,
@@ -107,8 +107,8 @@
       "pulling_strength": 45,
       "technique": 60
     },
-    "end_date": "2026-07-19",
-    "generated_at": "2026-04-28T07:45:41",
+    "end_date": "2026-08-02",
+    "generated_at": "2026-05-11T09:49:55",
     "goal_snapshot": {
       "current_grade": "7a",
       "deadline": "2026-09-01",
@@ -128,8 +128,8 @@
           "technique": 0.167,
           "volume_climbing": 0.25
         },
-        "duration_weeks": 5,
-        "end_week": 5,
+        "duration_weeks": 4,
+        "end_week": 4,
         "energy_system": "aerobic",
         "intensity_cap": "medium",
         "notes": "Build aerobic base. High volume, low intensity. Focus technique and movement quality.",
@@ -160,7 +160,7 @@
           "technique": 0.087,
           "volume_climbing": 0.13
         },
-        "duration_weeks": 2,
+        "duration_weeks": 3,
         "end_week": 7,
         "energy_system": "anaerobic_alactic",
         "intensity_cap": "max",
@@ -181,7 +181,7 @@
           "route_endurance_gym",
           "technique_focus_gym"
         ],
-        "start_week": 6
+        "start_week": 5
       },
       {
         "domain_weights": {
@@ -270,7 +270,7 @@
         "start_week": 12
       }
     ],
-    "start_date": "2026-04-27",
+    "start_date": "2026-05-11",
     "total_weeks": 12
   },
   "outdoor_spots": [],
