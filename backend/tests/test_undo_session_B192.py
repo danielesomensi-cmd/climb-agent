@@ -40,11 +40,35 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 REAL_STATE_PATH = REPO_ROOT / "backend" / "tests" / "fixtures" / "test_user_state.json"
 
 
+def _rebase_macrocycle_to_today(state: dict) -> dict:
+    """B249: anchor today inside the cycle by shifting macrocycle dates.
+
+    The shared fixture's start_date is frozen (2026-02-16); when wall-clock
+    moves past end_date, /api/week/0 falls into the 'past end' branch and
+    generates a plan for an out-of-range past period — empty for T2/T3/T4.
+    Rebasing only the in-memory copy keeps the on-disk fixture untouched
+    (18 other test files share it).
+    """
+    mc = state.get("macrocycle") or {}
+    if not mc.get("start_date"):
+        return state
+    today = date.today()
+    monday_today = today - timedelta(days=today.weekday())
+    new_start = monday_today - timedelta(weeks=4)
+    mc["start_date"] = new_start.isoformat()
+    total_weeks = sum(p.get("duration_weeks", 1) for p in (mc.get("phases") or []))
+    if total_weeks:
+        mc["end_date"] = (new_start + timedelta(weeks=total_weeks) - timedelta(days=1)).isoformat()
+    return state
+
+
 @pytest.fixture(autouse=True)
 def isolate_state(tmp_path, monkeypatch):
     tmp_state = tmp_path / "user_state.json"
     if REAL_STATE_PATH.exists():
-        shutil.copy2(REAL_STATE_PATH, tmp_state)
+        state = json.loads(REAL_STATE_PATH.read_text())
+        _rebase_macrocycle_to_today(state)
+        tmp_state.write_text(json.dumps(state, indent=2))
     else:
         tmp_state.write_text(json.dumps(deps.EMPTY_TEMPLATE, indent=2))
     from backend.engine import storage
