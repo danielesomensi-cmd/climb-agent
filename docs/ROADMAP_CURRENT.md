@@ -267,6 +267,157 @@ Add spraywall to location_any for relevant session templates: limit bouldering, 
 
 ---
 
+## Priority 2.9 — Retention & Discovery (post-launch)
+
+> Origin: discussione 2026-05-08 (gamification + daily tips).
+> Filosofia guida: "Train better, not more" (D79). Nessun elemento premia giorni consecutivi, volume cumulativo, o RPE alto. Si premia qualità, completamento di fase, e rispetto del recupero.
+> Tutte le entries sono post-launch. Non toccano moduli high-risk (planner_v2, replanner_v1, macrocycle_v1, resolve_session, progression_v1, closed_loop_v1).
+> Da rivisitare quando: 3+ paying users attivi da 30 giorni + feature freeze conclusa.
+
+### A-GAMIFY-00 — Design audit: gamification senza spingere all'overtraining
+
+**Priority:** P3 | **Status:** Open | **Type:** D (design audit) | **Effort:** S
+**Pre-requisito di tutti gli A-GAMIFY-*.**
+
+Documento di design (`docs/design_gamification.md`) che fissa:
+- Quali metriche premiamo (qualità, completamento fase, milestone una tantum)
+- Quali metriche NON premiamo mai (giorni consecutivi, volume cumulativo, RPE alto, "fai una sessione ogni giorno")
+- Vincolo hard: nessun elemento di gamification può indurre senso di colpa per un giorno saltato o un rest day
+- Linee guida copy per badge/notifiche (allineate a D77/D79: SDT principles + "train better, not more")
+
+Da approvare prima di qualunque A-GAMIFY-* di implementazione.
+
+### A-DAILYTIP — Daily tips card on Today page
+
+**Priority:** P3 | **Status:** Open | **Type:** A (catalog + backend + frontend) | **Effort:** M
+
+Card discreta su `/today`, posizionata **sotto la daily quote**, che mostra ogni giorno un tip diverso. Risolve il problema concreto: i beta tester non scoprono metà delle feature.
+
+**Catalog:** nuovo `backend/catalog/daily_tips/v1/feature_discovery.json` con ~20 tip iniziali che coprono le feature meno scoperte (recovery code, weekly override, free session, custom session builder, equipment toggle, settings → regenerate, export/import, convert outdoor slot, ecc.).
+
+**Schema tip:**
+```json
+{
+  "id": "tip_outdoor_convert",
+  "category": "feature_discovery",
+  "text": "Sapevi che puoi convertire un giorno indoor in outdoor con un tap dalla week view?",
+  "cta_label": "Provala",
+  "cta_url": "/week",
+  "tags": ["outdoor", "week_view"]
+}
+```
+
+**Backend:**
+- `get_daily_tip(user_id, date)` — selezione deterministica via hash `user_id + date`
+- Rotazione 30 giorni (stesso tip non riappare per 30gg allo stesso utente)
+- `GET /api/tips/daily` → `{tip, dismissed_today: bool}`
+- `POST /api/tips/{id}/dismiss` → append in `user_state.tips_seen[]` con timestamp
+- Pattern parallelo all'esistente `/api/quotes/daily`
+
+**Frontend:**
+- Componente `DailyTipCard` su `/today` sotto `DailyQuoteCard`
+- Stile discreto: icona lampadina, dismiss button (X), CTA opzionale
+- Persistenza dismissal nella stessa giornata
+
+**Espansione futura:** categorie `training_science` (Hörst/Lattice tip tecnici) e `personalized` (basato su user_state, es. "Test repeater programmato la prossima settimana — riposa bene il giorno prima").
+
+### A-GAMIFY-01 — Macrocycle progress + phase completion badges
+
+**Priority:** P3 | **Status:** Open | **Type:** A (frontend + light backend) | **Effort:** M
+**Depends on:** A-GAMIFY-00
+
+Visualizzazione del progresso nel macrociclo come elemento centrale di gratificazione. Niente streak.
+
+**Frontend:**
+- `MacrocycleProgressBar` su `/plan`: barra orizzontale con i 5 phase, % completata per fase, marker week corrente
+- Modal/toast di celebrazione quando si entra in una nuova fase ("Strength & Power completata 💪")
+- Sezione "Macrocycles completed" con storico (nome, durata, goal raggiunto/mancato)
+
+**Backend:**
+- Lettura da `user_state.macrocycle.phases[]` (già presente)
+- Flag `phase_completion_seen[]` in user_state per non rifare la celebrazione
+- Su `start-new-cycle`, snapshot in `user_state.completed_macrocycles[]`
+
+### A-GAMIFY-02 — Milestone system
+
+**Priority:** P3 | **Status:** Open | **Type:** A + C (catalog + feature) | **Effort:** M
+**Depends on:** A-GAMIFY-00
+
+Eventi una tantum sbloccabili. Niente ricorrenza — solo "first time" celebrations.
+
+**Catalog:** `backend/catalog/milestones/v1/milestones.json` (~15-20 milestone iniziali):
+- Climbing grades: primo 7a/7b/7c/8a redpoint, primo onsight di grado
+- Sessions: prima sessione outdoor, prima sessione guidata, prima sessione free, prima custom session
+- Macrocycle: primo test completato di ogni tipo, prima fase performance, primo macrociclo completato
+- Consistency: primo trip programmato, primo recovery code generato
+
+**Schema:**
+```json
+{
+  "id": "first_7a_redpoint",
+  "name": "First 7a Redpoint",
+  "description": "Hai chiuso la tua prima via 7a in redpoint",
+  "category": "climbing_grade | session | macrocycle | consistency",
+  "condition": "<expression on user_state>",
+  "icon": "trophy"
+}
+```
+
+**Backend:**
+- Hook su feedback log + outdoor log + macrocycle transitions → check unlock
+- `user_state.milestones_unlocked[]` (append-only, idempotente — una milestone non si "ri-blocca" se l'utente cancella un climb)
+- `GET /api/milestones` (lista + stato locked/unlocked)
+- `POST /api/milestones/{id}/seen`
+
+**Frontend:**
+- Pagina `/milestones` (galleria locked/unlocked)
+- Toast celebrativo al unlock
+- Widget "ultimi milestone" su `/plan`
+
+### A-GAMIFY-03 — Monthly activity heatmap
+
+**Priority:** P3 | **Status:** Open | **Type:** A (frontend) | **Effort:** S
+**Depends on:** A-GAMIFY-00
+
+Calendario mensile stile GitHub contributions per le sessioni di climbing.
+
+**Frontend:**
+- Componente `MonthlyHeatmap` su `/reports/weekly` (in fondo) o nuova pagina `/history`
+- Cella per giorno colorata in base a:
+  - Grigio: nessuna sessione programmata
+  - **Verde tenue: rest day rispettato** (premiamo il riposo!)
+  - Verde chiaro/medio/scuro: sessione completata (intensità via load score)
+  - Neutro: sessione skipped (NO color shame)
+- Tap sulla cella → apre la day view di quel giorno
+
+**Backend:** nessuna nuova logica (derivato da feedback log + outdoor log + plan).
+
+**Punto chiave filosofico:** i rest day rispettati hanno colore positivo distinto. È la differenza con altre app: premia il rest, non solo il lavoro.
+
+### A-GAMIFY-04 — Weekly adherence "perfect week" badge (opzionale)
+
+**Priority:** P4 | **Status:** Open — opzionale | **Type:** A | **Effort:** M
+**Depends on:** A-GAMIFY-00, A-GAMIFY-01
+
+Riconoscimento per chi ha completato fedelmente la settimana programmata, **incluso il rispetto dei rest day**.
+
+**Engine:** `compute_week_adherence(week_plan, logs)` → `{score: 0-100, perfect: bool}`. "Perfect" = sessioni hard fatte nei giorni programmati + nessuna sessione extra non programmata (anti-overtraining).
+
+**Rischio:** tocca la semantica del piano, può essere percepito come pressione. **Da fare per ultimo**, dopo aver visto la reazione utenti ai 3 elementi precedenti. Se feedback negativo → si scarta.
+
+### Sequenza implementazione consigliata
+
+1. **A-GAMIFY-00** (S) — design audit, fissa filosofia, evita drift
+2. **A-DAILYTIP** (M) — alto valore, basso rischio, risolve problema reale di discovery
+3. **A-GAMIFY-01** (M) — macrocycle progress + phase badges
+4. **A-GAMIFY-03** (S) — heatmap mensile
+5. **A-GAMIFY-02** (M) — milestone system
+6. **A-GAMIFY-04** (M, opzionale) — perfect week, solo se feedback positivo sui 3 precedenti
+
+**Effort totale:** ~5-7 giorni di lavoro post-launch.
+
+---
+
 ## Priority 2.75 — KB Research Integration
 
 > **Companion project:** The KB research lives in a **separate claude.ai project** called **"climb-agent knowledge base"**.
