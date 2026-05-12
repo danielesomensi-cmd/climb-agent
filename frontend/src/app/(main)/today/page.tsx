@@ -1044,7 +1044,7 @@ function TodayContent() {
 
         {/* C203: boulder phase tip — discipline-gated, dismissible per-phase */}
         {!loading && !error && dayPlan && boulderPhaseTip && !phaseTipDismissed && (
-          <div className="relative rounded-lg border border-info/30 bg-info/5 p-3 pr-10 text-sm">
+          <div className="relative rounded-lg border border-info/30 bg-info/5 p-3 pr-12 text-sm">
             <p className="font-medium text-info capitalize">
               {phaseId?.replace(/_/g, " ")} phase
             </p>
@@ -1055,7 +1055,7 @@ function TodayContent() {
               type="button"
               onClick={dismissPhaseTip}
               aria-label="Dismiss"
-              className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               ×
             </button>
@@ -1064,7 +1064,7 @@ function TodayContent() {
 
         {/* A202: feedback loop education banner */}
         {!loading && !error && dayPlan && hasDoneSession && !feedbackEduDismissed && (
-          <div className="relative rounded-lg border border-primary/30 bg-primary/5 p-3 pr-10 text-sm">
+          <div className="relative rounded-lg border border-primary/30 bg-primary/5 p-3 pr-12 text-sm">
             <p className="font-medium text-primary">
               Your feedback adapts your training
             </p>
@@ -1075,7 +1075,7 @@ function TodayContent() {
               type="button"
               onClick={dismissFeedbackEdu}
               aria-label="Dismiss"
-              className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               ×
             </button>
