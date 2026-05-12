@@ -1,10 +1,14 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-11 (B250 ✅ — D236 Group 3 closed: F-09 endpoint table riconciliata 64→68 (4 body_part_picker endpoint mai aggiunti dopo A213), F-13 8 orphan vocab templates rimossi. `sync_status.py` ora clean, zero warnings.)
+> Last updated: 2026-05-12 (D229 ✅ — doc drift cleanup: 5 finding fixati (F2 intent count, F3 Stripe LIVE language, F4 beta tester names, F5 pricing USD, F7 DESIGN header). F1 + sub già chiusi da B250, F6 non-issue.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
 ---
+
+## Recently closed (2026-05-12)
+
+- **D229** ✅ — Doc drift alignment, 5 finding chiusi in single commit. **F2**: `CLAUDE.md:144` "13 indoor + 3 outdoor intents" → "15 + 4" (ground truth dal codice: `INTENT_TO_SESSION` 15 keys, `OUTDOOR_INTENT_TO_DISCIPLINE` 4 keys). **F3**: 3 occorrenze Stripe stale lifted to canonical "Stripe LIVE since 2026-04-16, sk_live keys on Railway + Vercel" — `PROJECT_BRIEF.md:76` (Payments row), `ROADMAP_CURRENT.md:117` (GTM callout), `ROADMAP_CURRENT.md:121` (Week 0 timeline → marked archived ~2026-04-01). **F4**: `ROADMAP:130` GTM-02b — beta tester names "Christie, Vato, Alexis" → "Christie, Cesar, Paolo, Agustin" (allineato a PROJECT_BRIEF). **F5**: pricing decision row `ROADMAP:420` "EUR 14.99/month, 14-day trial, Founding Climber EUR 9.99 lifetime for first 50 users" → "USD $9.99/month Standard (15-day trial) + USD $4.99/month Founding Climber (first 20 users). Net/exclusive (VAT added on top at future Stripe Tax activation, decision locked 2026-04-28). Live since 2026-04-16." + GTM-02b question rewrite. **F7**: `DESIGN_GOAL_MACROCICLO_v1.1.md:4` header "Versione: 1.2 (file: v1.1) — febbraio 2026" → "Versione: 1.1 — febbraio 2026", `Ultimo audit` bumped to 2026-05-08, no file rename. F1 (endpoint count/table) + F1-sub (routers/ narrative include body_part_picker) già chiusi da B250 (2026-05-11). F6 (beta tester count) era già coerente — no fix needed. Backend/docs-only, push diretto a main.
 
 ## Recently closed (2026-05-11)
 
@@ -114,11 +118,11 @@
 > Origin: Strategic Advisory Council (2× runs, 5 advisors each, 2026-04-01)
 > Key insight: distribution + onboarding friction are the real blockers, not features.
 > Constraint: solo founder, zero marketing budget, feature freeze for 30 days.
-> Stripe status: A159 implemented in TEST MODE. Not live. Currently disabled for beta period.
+> Stripe status: LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
 
 ### Timeline
 
-- **Week 0 (now):** Beta testers using the app (4-5 users). Stripe disabled. Founder dry-run.
+- **Week 0 (archived, ~2026-04-01):** Beta testers using the app (4-5 users). Founder dry-run. Stripe LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
 - **Week 1-2:** Collect beta feedback + fix onboarding blockers from dry-run.
 - **Week 2-3:** Pricing decision → activate Stripe live → soft launch on r/climbharder.
 - **Week 3-6:** Feature freeze. Only fix bugs from paying/trialing users. Measure.
@@ -127,7 +131,7 @@
 
 | ID | Title | Type | Effort | Status | Notes |
 |----|-------|------|--------|--------|-------|
-| GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Vato, Alexis on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay €14.99/mo. |
+| GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Cesar, Paolo, Agustin on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay $9.99/mo Standard (or $4.99/mo as a Founding Climber). |
 
 ### Phase 1 — Pricing + Stripe go-live (week 2-3)
 
@@ -138,7 +142,7 @@
 | GTM-STRIPE-TAX | **Stripe Tax registration** | Config | S | 🟡 Deferred | Reactivate when **either** condition met: (a) 10+ paying EU customers, OR (b) €5k cumulative EU revenue, OR (c) approaching €10k OSS threshold. Below these, IT domestic VAT rules apply (regime forfettario or ordinario per Daniele's setup), Stripe Tax is scope creep. When reactivating: 4 dashboard steps + 4-line code change in `subscription.py:108-124` (`automatic_tax: {enabled: true}` + `tax_id_collection` + `billing_address_collection: 'required'`). Decide now: prices $9.99/$4.99 are **net** (exclusive — VAT added on top at activation) — document this so future activation is consistent. |
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
 | B228 | **Frontend 402 global handler in `api.ts`** | B | S | Open P2 | Audit F4. Centralize 402 → router.push('/subscribe') + sonner toast. Frontend branch + Vercel preview. After both P1. |
-| D229 | **Doc drift alignment — CLAUDE.md endpoints + intents + Stripe text** | D | XS | 🔁 Will close with D236 Group 3 | Audit F7. CLAUDE.md:149 says 63 endpoints (real = 67). CLAUDE.md:144 says 13+3 intents (real = 15+4). ROADMAP line 77 says "Stripe TEST MODE / disabled" vs line 153 "LIVE since 2026-04-16". 30 min, single commit, no STOP. **Superseded scope**: F-09/F-10/F-11/F-15 ora tracked in D236 Group 3 (Priority 1.28). |
+| D229 | **Doc drift alignment — CLAUDE.md endpoints + intents + Stripe text** | D | XS | ✅ Done 2026-05-12 | Closed by D229 EXTENDED (this commit): 7 findings resolved. F1 (endpoint count/table) + F1-sub (routers/ narrative) already chiusi da B250. F6 (beta tester count) was a non-issue (already coherent). F2 (intent count 13+3→15+4), F3 (3 Stripe stale strings → canonical "LIVE since 2026-04-16"), F4 (Vato/Alexis → Christie/Cesar/Paolo/Agustin), F5 (pricing EUR 14.99/14-day/first 50 → USD $9.99/$4.99/15-day/first 20, GTM-02b question updated), F7 (DESIGN header v1.2→v1.1, audit date 2026-03-28→2026-05-08) fixed in this commit. |
 | C231 | **Catalog `intensity_level` enum normalization — drift singletons** | C | XS | Open P3 | B227 P0.2 discovery: catalog uses 7-value enum (very_low, low, moderate, medium, high, very_high, max). Two drift singletons absorb cleanly via ordinal mapping (`reverse_lunge`=moderate→medium, `thirty_thirty_intervals`=very_high→high), but worth normalizing to a clean 5-value canonical set `{very_low, low, medium, high, max}`. 2 catalog edits + test_exercises_v2.py enum check. Zero engine impact. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
@@ -568,7 +572,7 @@ When the planner struggles to fit sessions into the user's availability (e.g., t
 ## Priority 4 — Go-to-market
 
 - Landing page / marketing site
-- ~~Pricing model definition~~ ✅ Decided: EUR 14.99/month, 14-day trial, Founding Climber EUR 9.99 lifetime for first 50 users
+- ~~Pricing model definition~~ ✅ Decided (final): USD $9.99/month Standard (15-day trial) + USD $4.99/month Founding Climber (first 20 users). Net/exclusive (VAT added on top at future Stripe Tax activation, decision locked 2026-04-28). Live since 2026-04-16.
 
 ### Capacitor Native Wrap
 

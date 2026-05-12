@@ -73,7 +73,7 @@ compute_assessment_profile()    [assessment_v1]
 | Deload | Mixed: programmed + adaptive + pre-trip |
 | Feedback | Granular per exercise (5 levels: very_easy → very_hard) |
 | Equipment | `equipment_required` for essential gear only, optional in notes |
-| Payments | Stripe (code complete, sk_test verified — temporarily disabled for open beta) |
+| Payments | Stripe LIVE since 2026-04-16, sk_live keys on Railway + Vercel |
 | App store | Capacitor wrapping PWA (planned) |
 | LLM Coach | Claude Sonnet conversational layer (planned, Phase 3.5) |
 
