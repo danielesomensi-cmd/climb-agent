@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 
 from backend.engine.progression_v1 import estimate_1rm_from_2rm, apply_feedback
+from backend.engine.resolve_session import suggest_max_hang_load
 
 EXERCISES_PATH = Path("backend/catalog/exercises/v1/exercises.json")
 TEMPLATES_PATH = Path("backend/catalog/templates/v1")
@@ -213,6 +214,72 @@ class TestD90_MedTestRemoved:
 # ---------------------------------------------------------------------------
 # B128: Pull-up gate separation
 # ---------------------------------------------------------------------------
+
+
+class TestB251_TestSessionLoadCalibration:
+    """B251 (D238 follow-up): test sessions must suggest 100% MVC,
+    training sessions must continue to suggest 90% MVC.
+    """
+
+    def _user_state(self, mvc_kg=120.0, bw_kg=76.0):
+        return {
+            "bodyweight_kg": bw_kg,
+            "baselines": {
+                "hangboard": [{
+                    "edge_mm": 20,
+                    "grip": "half_crimp",
+                    "hang_seconds": 7,
+                    "max_total_load_kg": mvc_kg,
+                }],
+            },
+            "assessment": {"tests": {"max_hang_20mm_7s_total_kg": mvc_kg}},
+        }
+
+    def test_test_template_carries_full_mvc_override(self, templates):
+        t = templates["finger_max_strength_test"]
+        main = next(b for b in t["blocks"] if b["block_id"] == "main")
+        assert main["prescription"].get("intensity_pct_of_total_load") == 1.0, (
+            "Test session main block must override exercise default 0.9 with 1.0 "
+            "so the suggested load equals MVC (test protocol — find your max)."
+        )
+
+    def test_test_max_hang_7s_suggests_full_mvc(self, templates, exercises):
+        # Simulate the merge done in resolve_session.py:1122-1129:
+        #   merged = ex_defaults ∪ template.block.prescription
+        t = templates["finger_max_strength_test"]
+        main = next(b for b in t["blocks"] if b["block_id"] == "main")
+        ex = exercises["max_hang_7s"]
+        merged = {**(ex.get("prescription_defaults") or {}), **main["prescription"]}
+
+        sug = suggest_max_hang_load(
+            self._user_state(mvc_kg=120.0, bw_kg=76.0),
+            merged,
+            exercise_attrs=ex.get("attributes") or {},
+        )
+        assert sug is not None
+        assert sug["target_total_load_kg"] == 120.0
+        assert sug["added_weight_kg"] == 44.0
+        assert sug["intensity_pct_of_total_load"] == 1.0
+
+    def test_training_max_hang_7s_still_uses_90pct(self, exercises):
+        # Sanity: WITHOUT the test override, the resolver must fall back to
+        # the exercise default 0.9 (training prescriptions must not regress).
+        ex = exercises["max_hang_7s"]
+        # A training prescription = exercise defaults only, no template override
+        merged = dict(ex.get("prescription_defaults") or {})
+        assert "intensity_pct_of_total_load" not in merged, (
+            "Exercise defaults must not carry the test-only override."
+        )
+
+        sug = suggest_max_hang_load(
+            self._user_state(mvc_kg=120.0, bw_kg=76.0),
+            merged,
+            exercise_attrs=ex.get("attributes") or {},
+        )
+        assert sug is not None
+        assert sug["intensity_pct_of_total_load"] == 0.9
+        assert sug["target_total_load_kg"] == 108.0
+        assert sug["added_weight_kg"] == 32.0
 
 
 class TestB128_PullupGateSeparation:

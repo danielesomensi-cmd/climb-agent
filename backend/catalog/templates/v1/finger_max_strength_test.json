@@ -34,6 +34,7 @@
         "sets": 5,
         "work_seconds": 7,
         "rest_between_sets_seconds": 180,
+        "intensity_pct_of_total_load": 1.0,
         "notes": "Test protocol: find your 7s max hang total load on 20mm (MVC-7). Rest fully between sets."
       },
       "role": ["main"],

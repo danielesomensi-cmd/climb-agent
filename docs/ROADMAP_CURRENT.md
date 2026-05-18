@@ -1,13 +1,23 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-18 (D238 ✅ — audit read-only: `test_max_hang_7s` suggerisce 90 % MVC invece di 100 %. Root cause: `max_hang_7s.attributes.intensity_pct=0.9` applicato anche a test session perché `finger_max_strength_test.json` non override la prescription. Closed-loop negativo confermato: utente che completa il sub-massimale aggiorna baselines a 108 → spirale al ribasso. Raccomandazione: catalog fix `intensity_pct_of_total_load: 1.0` nei template del test (XS, low risk).)
+> Last updated: 2026-05-18 (B251 ✅ — catalog-only fix di D238 §6 Opzione A. Test session `test_max_hang_7s` ora suggerisce 100 % MVC (120 kg) invece di 90 % (108 kg). +3 regression test (1996 totali). Fix 2 skipped: `test_max_hang_5s` è alias deprecato (catalog notes confermano backward-compat con planner_v2) già coperto da Fix 1 via template condiviso. Fix 3 deferred a B252 (richiede engine change in resolve_session.py:182).)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
 ---
 
+## Open
+
+| ID | Title | Type | Effort | Status | Notes |
+|---|---|---|---|---|---|
+| B252 | **`protocol_version` default sbagliato in `suggest_max_hang_load`** | B | XS | Open P3 | Defer da B251. `resolve_session.py:182` ritorna `"max_hang_5s.v1"` come fallback anche quando baseline è per `max_hang_7s` (line 169 lo setta esplicitamente a `"max_hang_7s.v1"` ma solo nel fallback assessment-derived; baseline-derived non porta protocol_version). Solo etichetta in `feedback_log`/`tests` history, non funzionale, ma confusionario. STOP gate engine-change. |
+| B253 | **`assessment.tests_source = {}` malgrado test reali in `tests.max_strength`** | D+B | S | Open P2 | Defer da B251 (D238 follow-up out-of-scope). Trace write path di `progression_v1.update_test_results_from_log`: il sidecar `tests_source` non viene popolato per test pre-D214 o per percorsi non-onboarding. Per Daniele: `tests.max_strength[0]` esiste (2026-03-17) ma `tests_source` è vuoto → freshness gate D214 non scatta. D-audit prima, poi B-fix. |
+
+---
+
 ## Recently closed (2026-05-18)
 
+- **B251** ✅ — D238 §6 Opzione A implementata catalog-only. **Fix 1**: aggiunto `intensity_pct_of_total_load: 1.0` nel block `main` di `finger_max_strength_test.json:38` → test sessions (`test_max_hang_7s` e alias `test_max_hang_5s`) ora suggeriscono **120 kg total / +43 kg added** (=MVC reale) invece di 108/+31. **Fix 2 skipped**: `test_max_hang_5s` è alias deprecato (catalog notes line 8 dichiarano backward-compat planner_v2; `test_planner_v2.py:517-910` ha ~7 `assertNotIn` che lo escludono dalle schedulazioni); modificarlo romperebbe la legacy feedback log parser. Già coperto dal Fix 1 perché monta lo stesso template. **Fix 3 deferred a B252**: contraddizione brief vs vincolo "no engine changes" — `protocol_version` vive solo in `resolve_session.py:182`, non nel catalog. **Regression tests** (3 nuovi in `test_session_1b.py::TestB251_TestSessionLoadCalibration`): template carries override, test session computes 100%, training session still computes 90%. Test count 1993→1996. Verifica locale con stato reale di Daniele (BW=77, MVC=120) confermata: `suggested.target_total_load_kg=120.0, added_weight_kg=43.0, intensity_pct=1.0`. Backend/catalog-only → push diretto a main.
 - **D238** ✅ — Audit read-only del bug "test_max_hang_7s suggerisce 108 kg invece di 120 kg" (90 % vs 100 % MVC). Tracciato origine in `resolve_session.py:140-199` (`suggest_max_hang_load`): `intensity = exercises[max_hang_7s].attributes.intensity_pct = 0.9`, applicato incondizionatamente perché `finger_max_strength_test.json` non override `intensity_pct_of_total_load` nella prescription del block main. Nessun branch test-aware nel resolver (a differenza del planner che ha tag `session.tags.test=true` e bypass intensity cap in pass3). **Blast radius**: 2 test session catalog (`test_max_hang_7s`, `test_max_hang_5s` — entrambi montano `finger_max_strength_test` che embed `max_hang_7s`). Bug terziari: `test_max_hang_5s` punta a un template che usa `max_hang_7s` (catalog inconsistency); `protocol_version` default `"max_hang_5s.v1"` anche per max_hang_7s; `assessment.tests_source = {}` malgrado test reale del 2026-03-17 in `tests.max_strength`. **Raccomandazione fix**: opzione A (catalog-only) — aggiungere `intensity_pct_of_total_load: 1.0` nel block main di `finger_max_strength_test.json` (e variante LP). XS, low risk, motore intatto. Implementazione su B-brief separato dopo OK Daniele. Report: `docs/audit/D238_test_load_calculation.md`.
 
 ## Recently closed (2026-05-12)
