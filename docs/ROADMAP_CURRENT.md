@@ -1,10 +1,14 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-12 (D229 ✅ — doc drift cleanup: 5 finding fixati (F2 intent count, F3 Stripe LIVE language, F4 beta tester names, F5 pricing USD, F7 DESIGN header). F1 + sub già chiusi da B250, F6 non-issue.)
+> Last updated: 2026-05-18 (D238 ✅ — audit read-only: `test_max_hang_7s` suggerisce 90 % MVC invece di 100 %. Root cause: `max_hang_7s.attributes.intensity_pct=0.9` applicato anche a test session perché `finger_max_strength_test.json` non override la prescription. Closed-loop negativo confermato: utente che completa il sub-massimale aggiorna baselines a 108 → spirale al ribasso. Raccomandazione: catalog fix `intensity_pct_of_total_load: 1.0` nei template del test (XS, low risk).)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
 ---
+
+## Recently closed (2026-05-18)
+
+- **D238** ✅ — Audit read-only del bug "test_max_hang_7s suggerisce 108 kg invece di 120 kg" (90 % vs 100 % MVC). Tracciato origine in `resolve_session.py:140-199` (`suggest_max_hang_load`): `intensity = exercises[max_hang_7s].attributes.intensity_pct = 0.9`, applicato incondizionatamente perché `finger_max_strength_test.json` non override `intensity_pct_of_total_load` nella prescription del block main. Nessun branch test-aware nel resolver (a differenza del planner che ha tag `session.tags.test=true` e bypass intensity cap in pass3). **Blast radius**: 2 test session catalog (`test_max_hang_7s`, `test_max_hang_5s` — entrambi montano `finger_max_strength_test` che embed `max_hang_7s`). Bug terziari: `test_max_hang_5s` punta a un template che usa `max_hang_7s` (catalog inconsistency); `protocol_version` default `"max_hang_5s.v1"` anche per max_hang_7s; `assessment.tests_source = {}` malgrado test reale del 2026-03-17 in `tests.max_strength`. **Raccomandazione fix**: opzione A (catalog-only) — aggiungere `intensity_pct_of_total_load: 1.0` nel block main di `finger_max_strength_test.json` (e variante LP). XS, low risk, motore intatto. Implementazione su B-brief separato dopo OK Daniele. Report: `docs/audit/D238_test_load_calculation.md`.
 
 ## Recently closed (2026-05-12)
 
