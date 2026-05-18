@@ -166,7 +166,7 @@ def suggest_max_hang_load(user_state: Optional[Dict[str, Any]], prescription: Di
         tests = (user_state.get("assessment") or {}).get("tests") or {}
         test_total = tests.get("max_hang_20mm_7s_total_kg") or tests.get("max_hang_20mm_5s_total_kg")
         if test_total is not None:
-            b = {"max_total_load_kg": float(test_total), "edge_mm": edge_mm, "grip": grip, "hang_seconds": hang_seconds, "load_method": "added_weight", "baseline_id": "from_assessment_test", "protocol_version": "max_hang_7s.v1"}
+            b = {"max_total_load_kg": float(test_total), "edge_mm": edge_mm, "grip": grip, "hang_seconds": hang_seconds, "load_method": "added_weight", "baseline_id": "from_assessment_test", "protocol_version": f"max_hang_{hang_seconds}s.v1"}
         else:
             return None
 
@@ -179,7 +179,7 @@ def suggest_max_hang_load(user_state: Optional[Dict[str, Any]], prescription: Di
 
     out = {
         "baseline_id": b.get("baseline_id"),
-        "protocol_version": b.get("protocol_version", "max_hang_5s.v1"),
+        "protocol_version": b.get("protocol_version", f"max_hang_{hang_seconds}s.v1"),
         "based_on": {"max_total_load_kg": float(max_total), "bodyweight_kg": float(bw)},
         "setup": {"edge_mm": int(b.get("edge_mm", edge_mm)), "grip": b.get("grip", grip), "load_method": b.get("load_method", "added_weight")},
         "intensity_pct_of_total_load": float(intensity),

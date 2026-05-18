@@ -282,6 +282,69 @@ class TestB251_TestSessionLoadCalibration:
         assert sug["added_weight_kg"] == 32.0
 
 
+class TestB252_ProtocolVersionDerivation:
+    """B252 (D238 §5.5 finding 1): protocol_version in suggest_max_hang_load
+    must be derived from hang_seconds, not hardcoded to "max_hang_5s.v1".
+    """
+
+    def _user_state(self, mvc=120.0, bw=76.0, hang_seconds=7, with_baseline=True):
+        state = {
+            "bodyweight_kg": bw,
+            "assessment": {"tests": {f"max_hang_20mm_{hang_seconds}s_total_kg": mvc}},
+        }
+        if with_baseline:
+            state["baselines"] = {"hangboard": [{
+                "edge_mm": 20, "grip": "half_crimp",
+                "hang_seconds": hang_seconds,
+                "max_total_load_kg": mvc,
+            }]}
+        return state
+
+    def test_protocol_version_baseline_7s(self):
+        sug = suggest_max_hang_load(
+            self._user_state(hang_seconds=7),
+            {"work_seconds": 7, "intensity_pct_of_total_load": 1.0},
+            exercise_attrs={"intensity_pct": 1.0},
+        )
+        assert sug["protocol_version"] == "max_hang_7s.v1"
+
+    def test_protocol_version_baseline_5s(self):
+        sug = suggest_max_hang_load(
+            self._user_state(hang_seconds=5),
+            {"work_seconds": 5, "intensity_pct_of_total_load": 1.0},
+            exercise_attrs={"intensity_pct": 1.0},
+        )
+        assert sug["protocol_version"] == "max_hang_5s.v1"
+
+    def test_protocol_version_fallback_assessment_7s(self):
+        # No baseline → assessment-derived path (line 169)
+        state = self._user_state(hang_seconds=7, with_baseline=False)
+        sug = suggest_max_hang_load(
+            state,
+            {"work_seconds": 7, "intensity_pct_of_total_load": 1.0},
+            exercise_attrs={"intensity_pct": 1.0},
+        )
+        assert sug["protocol_version"] == "max_hang_7s.v1"
+
+    def test_protocol_version_explicit_baseline_preserved(self):
+        # If a baseline already carries a protocol_version, the resolver
+        # must preserve it verbatim (b.get default only fires when missing).
+        state = {
+            "bodyweight_kg": 76.0,
+            "baselines": {"hangboard": [{
+                "edge_mm": 20, "grip": "half_crimp", "hang_seconds": 7,
+                "max_total_load_kg": 120.0,
+                "protocol_version": "custom.v2",
+            }]},
+        }
+        sug = suggest_max_hang_load(
+            state,
+            {"work_seconds": 7, "intensity_pct_of_total_load": 1.0},
+            exercise_attrs={"intensity_pct": 1.0},
+        )
+        assert sug["protocol_version"] == "custom.v2"
+
+
 class TestB128_PullupGateSeparation:
     """BW pull-up test and weighted 2RM are NEVER in the same session."""
 
