@@ -139,7 +139,13 @@ def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
     """
     state = _storage.read_state(user_id)
     if state is not None:
-        if _migrate_gym_ids(state):
+        # B88: gym IDs
+        dirty = _migrate_gym_ids(state)
+        # B253: tests_source sidecar backfill for pre-D214 users
+        from backend.engine.migrations.m001_backfill_tests_source import migrate as _backfill_tests_source
+        if _backfill_tests_source(state):
+            dirty = True
+        if dirty:
             save_state(state, user_id)
         return state
     if user_id:
