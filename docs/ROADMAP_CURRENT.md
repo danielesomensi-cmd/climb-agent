@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-19 (D239 ✅ — audit read-only "daily quote/tip non visibile su /today". Nessun bug: la hero card A217 è sotto fold sullo screenshot dell'iPhone, il "tip" ricordato da Daniele è `cue_028` process_cue renderizzato solo in `/guided`, e Daniele è lead discipline → mai esposto a quel cue boulder-only. 7/7 hypotheses valutate. Possibili follow-up P3 cosmetici.)
+> Last updated: 2026-05-19 (D240 ✅ — process_cue pattern snapshot pronto per KB. Schema reale documentato — 4 campi `id`/`text`/`session_types`/`source`, NO `phases`/`weight`/`tags` come ipotizzato erroneamente nel brief originale. Output: `docs/audit/D240_cue_pattern_snapshot.md` da copia-incollare nel claude.ai project "climb-agent knowledge base".)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -12,10 +12,13 @@ _Nessun follow-up D238 aperto. Tutti i finding del report `docs/audit/D238_test_
 
 _Nessun follow-up D239 aperto. Audit conferma "no bug" — 3 possibili miglioramenti cosmetici suggeriti (vedi §10 di `docs/audit/D239_quote_render_audit.md`) sono P3 e non bloccanti._
 
+**D240 next step (manuale, fuori brief)**: Daniele copia `docs/audit/D240_cue_pattern_snapshot.md` nel KB project, ottiene proposte ~20-25 nuove cue, poi apre un C-brief per merge nel catalog.
+
 ---
 
 ## Recently closed (2026-05-19)
 
+- **D240** ✅ — Process cue pattern snapshot per claude.ai KB project. Estratte le 35 cue esistenti di `backend/catalog/cues/v1/process_cues.json` in formato pattern self-contained (schema autoritativo, tone & style guide quantitativo, coverage map, source citation rules, gap analysis con target counts, output format strict). **Schema verificato**: 4 campi mandatory (`id`/`text`/`session_types`/`source` — 35/35 coverage). NO `phases`/`weight`/`tags`/`discipline` come suggerito erroneamente nel brief originale (chiarito al KB di NON proporli — verrebbero rifiutati). **Stats**: 79-163 chars (avg 116/median 113), 13-28 words (avg/median 19), 29/35 1-2 sentences, 33/35 imperative second-person voice. **Coverage gap riconfermato**: 11 session_types con zero cue (7 test sessions + `yoga_recovery`, `flexibility_full`, `handstand_practice`, `prehab_maintenance`). **Gap analysis ask al KB**: 7+ test cues (1 per test) con tono "no PR-chasing/honest measurement", 4+ ancillary cues con tono mind-body, ~8-12 cross-cutting underrepresented (lead-specific: fear management, clip strategy, breath cadence, antagonist activation, hydration/skin, mental refresh). **Decisione Daniele 2026-05-19**: `source` field opzionale per il nuovo batch (omittere se no studio specifico, mai inventare citazioni). Next step manuale: copia doc in KB project + apri C-brief per merge proposte. Output: `docs/audit/D240_cue_pattern_snapshot.md`. Read-only audit, no code change.
 - **D239** ✅ — Audit read-only "daily quote/tip non visibile su /today" (iPhone PWA, 2026-05-19, sessione "Test Max Hang 7s"). **Verdetto: no bug.** 7 hypotheses (endpoint rotto, catalog degradato, componente rimosso, SW cache stale, regressione recente, fuori viewport, falsa memoria di dove l'ha visto) valutate. **Root cause confermato**: confusione tra 3 canali di motivazione separati (A217 quote in hero card a fondo `/today`, C203 boulder phase tip — gated boulder solo, Daniele è lead → skipped, A141 process_cue renderizzato solo in `/guided/[date]/[sessionId]:576-588`). Il "tip" ricordato — *"cammina invece di sederti nelle pause"* — combacia 1:1 con `cue_028` (process_cues.json, Draper 2006 + Watts 2000), il cui `session_types` whitelist è `[limit_boulder_gym, power_contact_gym, boulder_circuit_gym]` — tutto boulder, mai esposto a lead climbers via `_attach_process_cues()`. Verificato endpoint `/api/quotes/daily` 200 con X-User-Id di Daniele (q028 general, q004 hard_day); `quote_history` a 30 entries cap, sistema attivo. La hero card A217 (aspect-4/5 `today_hero.webp`) è sotto WeekProgressBar + DayCard sull'iPhone PWA → richiede scroll, non catturata nel viewport iniziale dello screenshot `IMG_7828.PNG`. Possibili follow-up P3 cosmetici (vedi §10 audit doc): (A) spostare A217 sopra fold, (B) aggiungere process_cue per test sessions, (C) audit cross-channel coherence dei 3 sistemi tip. Report: `docs/audit/D239_quote_render_audit.md`. Read-only, no code change.
 
 ## Recently closed (2026-05-18)
