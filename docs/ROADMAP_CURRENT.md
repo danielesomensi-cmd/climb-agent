@@ -1,12 +1,21 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-19 (D240 ✅ — process_cue pattern snapshot pronto per KB. Schema reale documentato — 4 campi `id`/`text`/`session_types`/`source`, NO `phases`/`weight`/`tags` come ipotizzato erroneamente nel brief originale. Output: `docs/audit/D240_cue_pattern_snapshot.md` da copia-incollare nel claude.ai project "climb-agent knowledge base".)
+> Last updated: 2026-05-19 (A-COACH-KB-V1 Session 1 in corso — scaffold + L0/L1/L2 always-loaded layers committed in `backend/coach/knowledge/`. 24 file totali, ~5,025 tok always-loaded (target 5,100). 0 engine_internal leak. 20 L3 placeholder pronti per Session 2-6 (Batch A-E). Next: Session 2 Batch A (L3 files 01-05).)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
 ---
 
 ## Open
+
+**A-COACH-KB-V1 (in progress, Phase B, Session 1 of 7 complete)**
+- Phase A audit: `docs/research_kb/coach_kb_v1_audit.md` (commit `75bd4f5`)
+- Phase B output: `backend/coach/knowledge/` (commit `1971da1`)
+- Steps 1-4 ✅ (scaffold 24 file, L0 11 safety rules, L1 voice, L2 35 decision index)
+- Steps 5-10 ⏳ (5 batch L3 + design doc + routing + regression + lock)
+- Est. remaining: ~30h over 6 sessions
+- Step 7 (L4 schema + coach_rationale catalog edits) **DEFERRED to v1.1** per brief scope-change
+- Risk register: see brief; key items = books not yet acquired (MacLeod/Ilgner/Mobråten/Christophersen) → some L3 files will ship v1.0 with explicit gaps for v1.1 refresh
 
 _Nessun follow-up D238 aperto. Tutti i finding del report `docs/audit/D238_test_load_calculation.md` sono chiusi: B251 (Fix 1 catalog), B252 (Fix 3 protocol_version), B253 (Fix `tests_source` legacy backfill)._
 
