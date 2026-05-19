@@ -16,7 +16,7 @@
       "lead_max_os": "6b+",
       "lead_max_rp": "7a"
     },
-    "last_assessed": "2026-05-18",
+    "last_assessed": "2026-05-25",
     "profile": {
       "endurance": 40,
       "finger_strength": 40,
@@ -55,7 +55,7 @@
     "hangboard": [
       {
         "edge_mm": 20,
-        "estimated_at": "2026-05-18",
+        "estimated_at": "2026-05-19",
         "grade_used": "7a",
         "grip": "half_crimp",
         "hang_seconds": 7,
@@ -108,7 +108,7 @@
       "technique": 60
     },
     "end_date": "2026-08-09",
-    "generated_at": "2026-05-18T15:38:56",
+    "generated_at": "2026-05-19T18:55:20",
     "goal_snapshot": {
       "current_grade": "7a",
       "deadline": "2026-09-01",
