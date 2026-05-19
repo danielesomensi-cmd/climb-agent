@@ -27,7 +27,7 @@ Snapshot the KB into this folder when:
 - Before exporting to `backend/coach/knowledge/` (Fase B)
 - Before any external review or collaboration handoff
 
-**Last snapshot:** 2026-05-12
+**Last snapshot:** 2026-05-19
 
 ---
 
