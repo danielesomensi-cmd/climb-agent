@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-18 (B253 ✅ — lazy migration backfill di `tests_source` per utenti legacy pre-D214. Nuovo modulo `backend/engine/migrations/m001_backfill_tests_source.py` invocato in `deps.load_state`. Daniele e altri early users si auto-migrano al primo /api/state post-deploy. Suite 2000→2012.)
+> Last updated: 2026-05-19 (D239 ✅ — audit read-only "daily quote/tip non visibile su /today". Nessun bug: la hero card A217 è sotto fold sullo screenshot dell'iPhone, il "tip" ricordato da Daniele è `cue_028` process_cue renderizzato solo in `/guided`, e Daniele è lead discipline → mai esposto a quel cue boulder-only. 7/7 hypotheses valutate. Possibili follow-up P3 cosmetici.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -10,7 +10,13 @@
 
 _Nessun follow-up D238 aperto. Tutti i finding del report `docs/audit/D238_test_load_calculation.md` sono chiusi: B251 (Fix 1 catalog), B252 (Fix 3 protocol_version), B253 (Fix `tests_source` legacy backfill)._
 
+_Nessun follow-up D239 aperto. Audit conferma "no bug" — 3 possibili miglioramenti cosmetici suggeriti (vedi §10 di `docs/audit/D239_quote_render_audit.md`) sono P3 e non bloccanti._
+
 ---
+
+## Recently closed (2026-05-19)
+
+- **D239** ✅ — Audit read-only "daily quote/tip non visibile su /today" (iPhone PWA, 2026-05-19, sessione "Test Max Hang 7s"). **Verdetto: no bug.** 7 hypotheses (endpoint rotto, catalog degradato, componente rimosso, SW cache stale, regressione recente, fuori viewport, falsa memoria di dove l'ha visto) valutate. **Root cause confermato**: confusione tra 3 canali di motivazione separati (A217 quote in hero card a fondo `/today`, C203 boulder phase tip — gated boulder solo, Daniele è lead → skipped, A141 process_cue renderizzato solo in `/guided/[date]/[sessionId]:576-588`). Il "tip" ricordato — *"cammina invece di sederti nelle pause"* — combacia 1:1 con `cue_028` (process_cues.json, Draper 2006 + Watts 2000), il cui `session_types` whitelist è `[limit_boulder_gym, power_contact_gym, boulder_circuit_gym]` — tutto boulder, mai esposto a lead climbers via `_attach_process_cues()`. Verificato endpoint `/api/quotes/daily` 200 con X-User-Id di Daniele (q028 general, q004 hard_day); `quote_history` a 30 entries cap, sistema attivo. La hero card A217 (aspect-4/5 `today_hero.webp`) è sotto WeekProgressBar + DayCard sull'iPhone PWA → richiede scroll, non catturata nel viewport iniziale dello screenshot `IMG_7828.PNG`. Possibili follow-up P3 cosmetici (vedi §10 audit doc): (A) spostare A217 sopra fold, (B) aggiungere process_cue per test sessions, (C) audit cross-channel coherence dei 3 sistemi tip. Report: `docs/audit/D239_quote_render_audit.md`. Read-only, no code change.
 
 ## Recently closed (2026-05-18)
 
