@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-20 (A-COACH-KB-V1 Session 2 complete — Batch A done: L3 files 01-05 (periodization + 4 energy systems, 1 NEW = 03_pulling_strength). ~16,480 tok L3 content distilled, 0 engine_internal leak, L0 never contradicted, test 2012 ✓. Token undershoot vs ambitious audit targets noted — content is dense and source-anchored. Next: Session 3 Batch B (files 06-09).)
+> Last updated: 2026-05-20 (B254 — manual phase override macrociclo Daniele: base 4→2, surplus +1 S&P +1 PE, total_weeks=12 invariato; past-sessions immutable rispettato. Roadmap entry A-PHASE-EDIT (P3) per feature proper. Backend/data patch.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -26,6 +26,10 @@ _Nessun follow-up D239 aperto. Audit conferma "no bug" — 3 possibili miglioram
 **D240 next step (manuale, fuori brief)**: Daniele copia `docs/audit/D240_cue_pattern_snapshot.md` nel KB project, ottiene proposte ~20-25 nuove cue, poi apre un C-brief per merge nel catalog.
 
 ---
+
+## Recently closed (2026-05-20)
+
+- **B254** ✅ — Manual phase override sul macrociclo personale di Daniele (lead 8a+, start_date 2026-05-18, total_weeks 12): Endurance Base ridotta da 4 a 2 settimane perché tornato fresco da un macrociclo precedente, non vuole 4w di solo aerobico. Surplus +2 redistribuito: strength_power 3→4 (al cap 4), power_endurance 2→3 (al cap 3); performance/deload invariati. `total_weeks=12` e `end_date=2026-08-09` preservati. Patch applicata via `scripts/manual_phase_override_daniele.py` (one-shot, backup pre-write in `_archive/data_backups/`). **Past sessions immutable rispettato:** `week_plans[2026-05-18]` (week 1 corrente con 3 sessioni status='done': lun boulder_circuit + mar heavy_conditioning + mar test_max_hang_7s) e `week_plans[2026-05-25]` (week 2 futura, base in entrambi i piani) preservati intatti. 0 entries da invalidare in pratica perché week 3+ non ancora pre-generate. Verifica end-to-end: `/api/state` ritorna nuove phases, `/api/week/3?force=true` ora ritorna `phase_id=strength_power` (era `base` nel piano vecchio), `/api/week/1` mostra le 3 done preservate. **Nota engine:** base=2 viola `_PHASE_FLOORS_LEAD['base']=4`. Override manuale esplicito bypassa `_compute_phase_durations()` — `week_num_to_phase_context()` legge `phases[].duration_weeks` senza ri-validare, `is_macrocycle_stale()` confronta solo `assessment.profile` quindi nessun flag dirty. La feature proper A-PHASE-EDIT (P3) prevede policy "soft warning, no hard block" come default. Roadmap entry A-PHASE-EDIT aggiunto in P3 — UI polish. Backend/data patch → push diretto main.
 
 ## Recently closed (2026-05-19)
 
@@ -572,6 +576,30 @@ Same architecture as Core Circuit for post-session static stretching (30-60s hol
 
 **Status:** Open — design pending | **Effort:** M
 Same architecture for pre-session dynamic warmup (30s work / 10s transition).
+
+### A-PHASE-EDIT — Phase Duration Editor in /plan
+
+**Priority:** P3 | **Status:** Open | **Type:** A (feature) | **Effort:** M
+
+UI in `/plan` (controllo accanto al nome di ogni fase del macrociclo: +/- buttons o slider) che permette all'utente di aumentare o ridurre la durata di una fase. Le settimane recuperate o necessarie vengono redistribuite automaticamente alle altre fasi rispettando le caps A218 (con surplus distribution B). Il `total_weeks` resta invariato (la deadline non si sposta).
+
+**Policy decisa (Daniele 2026-05-20):**
+- **NO hard block, solo soft warning.** L'utente è libero di portare qualsiasi fase a 0 settimane.
+- Warning sotto floor: *"Riducendo Base sotto 3 settimane potresti compromettere la capacità aerobica di base. Per atleti advanced (8a+ lead, 7C boulder) con macrocicli completati nei 6 mesi precedenti, una base abbreviata è accettabile. Continuare?"*
+- Caps A218 diventano **soft default** (valori proposti dall'algoritmo), non hard cap.
+- L'override manuale è persistito in `macrocycle.phases[].manual_override=true` e sopravvive a rigenerazioni del macrociclo finché l'utente non cambia `goal.target_grade` o `goal.deadline`.
+
+**Decisioni di UX ancora aperte** (da chiudere nel brief A-type proper):
+1. Controllo: pulsanti +/- accanto al nome fase, slider per fase, o modal editor full-screen?
+2. Visualizzazione del ricalcolo: preview live mentre l'utente modifica, o conferma esplicita?
+3. Cosa succede se l'utente porta una fase a 0? Cancella la fase dal macrociclo o la tiene a 0w (skip)?
+4. Reset to default: pulsante "ripristina suggerito A218" per ogni fase?
+
+**Risk:** HIGH — tocca `macrocycle_v1.py`. Brief A-type proper richiede mandatory analysis phase + STOP gate (regola CLAUDE.md non-negoziabile). Suggerire `/model opus` per Phase 1 analysis.
+
+**Predecessore:** A218 (A-MACRO-CAPS), B254 (one-shot manual override per Daniele).
+
+**Origin:** Daniele richiesta diretta 2026-05-20 — caso d'uso: advanced climber che vuole base abbreviata dopo cicli completi precedenti, evitando detraining gap.
 
 ### End-of-cycle reminder UX
 
