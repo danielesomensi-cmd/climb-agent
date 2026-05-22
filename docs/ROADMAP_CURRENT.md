@@ -8,16 +8,16 @@
 
 ## Open
 
-**A-COACH-KB-V1 (in progress, Phase B, Session 2 of 7 complete)**
+**A-COACH-KB-V1 (in progress, Phase B, Session 3 of 7 complete)**
 - Phase A audit: `docs/research_kb/coach_kb_v1_audit.md` (commit `75bd4f5`)
-- Phase B output: `backend/coach/knowledge/` (Session 1: commit `1971da1`; Session 2: commit `1415b2f`)
+- Phase B output: `backend/coach/knowledge/` (Session 1: commit `1971da1`; Session 2: commit `1415b2f`; Session 3: TBD)
 - Steps 1-4 ✅ (scaffold 24 file, L0 11 safety rules, L1 voice, L2 35 decision index)
-- Step 5 in progress: Batch A ✅ (files 01-05), Batch B-E ⏳ (files 06-20)
+- Step 5 in progress: Batch A ✅ (files 01-05), **Batch B ✅** (files 06-09: technique, mental, nutrition, recovery), Batch C-E ⏳ (files 10-20)
 - Steps 6-10 ⏳ (design doc + routing + regression + lock)
-- Est. remaining: ~25h over 5 sessions
+- Est. remaining: ~20h over 4 sessions
 - Step 7 (L4 schema + coach_rationale catalog edits) **DEFERRED to v1.1** per brief scope-change
-- Risk register: see brief; key items = books not yet acquired (MacLeod/Ilgner/Mobråten/Christophersen) → some L3 files will ship v1.0 with explicit gaps for v1.1 refresh
-- Known token undershoot vs §4.6 audit targets: Batch A files landed at ~40-60% of upper-band target. Content is complete and source-anchored; padding would degrade signal. Documented for v1.1 refresh decision.
+- Risk register: see brief; key items = books not yet acquired (MacLeod/Ilgner/Mobråten/Christophersen/Bechtel pp.31-90) → L3 files 06 and 07 ship v1.0 with explicit `**v1.0 coverage gap**` markers for v1.1 refresh
+- Known token undershoot vs §4.6 audit targets: Batch A files landed at ~40-60% of upper-band; Batch B files 06+07 ~25%/13% under (no Bechtel/MacLeod content to expand into), files 08+09 spot-on within ±15%. Content is complete and source-anchored; padding would degrade signal. Documented for v1.1 refresh decision.
 
 _Nessun follow-up D238 aperto. Tutti i finding del report `docs/audit/D238_test_load_calculation.md` sono chiusi: B251 (Fix 1 catalog), B252 (Fix 3 protocol_version), B253 (Fix `tests_source` legacy backfill)._
 
