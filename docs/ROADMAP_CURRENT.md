@@ -8,16 +8,17 @@
 
 ## Open
 
-**A-COACH-KB-V1 (in progress, Phase B, Session 5 of 7 complete)**
+**A-COACH-KB-V1 (in progress, Phase B, Session 6 of 7 complete)**
 - Phase A audit: `docs/research_kb/coach_kb_v1_audit.md` (commit `75bd4f5`)
-- Phase B output: `backend/coach/knowledge/` (Session 1: commit `1971da1`; Session 2: commit `1415b2f`; Session 3: commit `7a98d05`; Session 4: commit `e682efb`; Session 5: TBD)
+- Phase B output: `backend/coach/knowledge/` (Session 1: commit `1971da1`; Session 2: commit `1415b2f`; Session 3: commit `7a98d05`; Session 4: commit `e682efb`; Session 5: commit `f87cdd0`; Session 6: TBD)
 - Steps 1-4 ✅ (scaffold 24 file, L0 11 safety rules, L1 voice, L2 35 decision index)
-- Step 5 in progress: Batch A ✅ (files 01-05), Batch B ✅ (files 06-09), Batch C ✅ (files 10-12), **Batch D ✅** (files 13-15: tapering/redpoint, female/age/youth, goal-setting/motivation), Batch E ⏳ (files 16-20)
-- Steps 6-10 ⏳ (design doc + routing + regression + lock)
-- Est. remaining: ~10h over 2 sessions
+- Step 5 ✅: Batch A ✅ (files 01-05), Batch B ✅ (files 06-09), Batch C ✅ (files 10-12), Batch D ✅ (files 13-15: tapering/redpoint, female/age/youth, goal-setting/motivation), **Batch E ✅** (files 16-20: assessment interpretation, readiness/overtraining, equipment fallback, lifestyle integration, return-to-training)
+- Step 6 ⏳ (design doc), Step 8 ⏳ (routing module `backend/coach/routing.py`), Step 9 ⏳ (28-question regression scoring with Daniele), Step 10 ⏳ (final v1.0 lock + roadmap entry)
+- Est. remaining: ~4-5h in 1 session (Session 7 = Steps 6 + 8 + 9 + 10)
 - Step 7 (L4 schema + coach_rationale catalog edits) **DEFERRED to v1.1** per brief scope-change
-- Risk register: see brief; key items = books not yet acquired (MacLeod/Ilgner/Mobråten/Christophersen Part 1+2/Bechtel pp.31-90/Lattice 2019 taper newsletter/Hörst redpoint chapter) → L3 files 06, 07, 10, 11, 13, 15 ship v1.0 with explicit `**v1.0 coverage gap**` markers for v1.1 refresh
-- Known token undershoot/overshoot vs §4.6 audit targets: Batch A files ~40-60% of upper-band; Batch B files 06+07 ~25%/13% under, files 08+09 spot-on; Batch C files 10+11+12 ~13%/5%/7% under; **Batch D file 13 +12% over (taper science + Mujika numbers comprehensive), file 14 +2% (spot-on), file 15 +25% over (SDT + Hörst goal architecture + Hardy 1996 dense, no padding)**. D82 menstrual cycle treated as educational reference (v1 engine does NOT prescribe by phase; v2 feature). Content complete and source-anchored; deviation is content-driven, not padding. Documented for v1.1 refresh decision.
+- Risk register: see brief; key items = books not yet acquired (MacLeod/Ilgner/Mobråten/Christophersen Part 1+2/Bechtel pp.31-90/Lattice 2019 taper newsletter/Hörst redpoint chapter/Bechtel Integrated Strength/Lattice MXEdge protocol/Mujika & Padilla 2000a/b detraining primaries) → L3 files 06, 07, 10, 11, 13, 15, 16, 18, 19, 20 ship v1.0 with explicit `**v1.0 coverage gap**` markers for v1.1 refresh
+- **Engine-internal D-ID firewall (D03, D04, D05, D06, D08, D13, D23, D32, D42, D61, D62, D63, D88, D90) honored across all 20 L3 files.** File 16 (assessment interpretation) explicitly firewalls D88/D90 in its v1.0-gap block: the brief mentioned them but they govern engine scheduling/protocol-selection internals, not user-facing knowledge. Verified via `grep -nE "\bD(03|04|05|06|08|13|23|32|42|61|62|63|88|90)\b"` — only hit across Batch E is the firewall block itself in file 16.
+- Known token undershoot/overshoot vs §4.6 audit targets: Batch A files ~40-60% of upper-band; Batch B files 06+07 ~25%/13% under, files 08+09 spot-on; Batch C files 10+11+12 ~13%/5%/7% under; Batch D file 13 +12% over, file 14 +2% (spot-on), file 15 +25% over; **Batch E file 16 +10% over (4419 tok vs 4000 target), file 17 -4% (4334 vs 4500 target, spot-on), file 18 +23% over (4310 vs 3500 target — substitution matrix density), file 19 +19% over (4176 vs 3500 — concurrent-training pairings + central fatigue + cut-order detail), file 20 +17% over (4666 vs 4000 — three-band decision tree + D71 reset math + injury-driven differential)**. Content complete and source-anchored; deviation is content-driven, not padding. Documented for v1.1 refresh decision.
 
 _Nessun follow-up D238 aperto. Tutti i finding del report `docs/audit/D238_test_load_calculation.md` sono chiusi: B251 (Fix 1 catalog), B252 (Fix 3 protocol_version), B253 (Fix `tests_source` legacy backfill)._
 
