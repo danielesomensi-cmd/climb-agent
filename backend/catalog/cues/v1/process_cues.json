@@ -208,5 +208,136 @@
     "text": "No heavy static forearm stretching before climbing \u2014 it can reduce grip strength for up to an hour. Light stretching and Armaid are fine.",
     "session_types": ["limit_boulder_gym", "power_contact_gym", "boulder_circuit_gym", "route_projecting_gym", "power_endurance_gym"],
     "source": "Hörst Ch.6 (CUE-02)"
+  },
+  {
+    "id": "cue_036",
+    "text": "Log sleep, fueling, and fatigue before starting. Numbers without context aren't data \u2014 they're noise you'll trust by mistake.",
+    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_lp_repeater", "test_repeater_7_3", "test_max_weighted_pullup", "test_pullup_bw"]
+  },
+  {
+    "id": "cue_037",
+    "text": "Ramp the warm-up gradually \u2014 light loads, never to failure. The first max attempt must feel fresh, not pre-fatigued.",
+    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_lp_repeater", "test_repeater_7_3", "test_max_weighted_pullup", "test_pullup_bw"]
+  },
+  {
+    "id": "cue_038",
+    "text": "Rest 5+ minutes between max attempts \u2014 neural recovery isn't optional. Rushing back wastes the rep and biases the score low.",
+    "session_types": ["test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s", "test_max_weighted_pullup"],
+    "source": "Hörst Ch.2 (self-assessment protocols)"
+  },
+  {
+    "id": "cue_039",
+    "text": "Drive the thumb pad into the long pinch \u2014 full contact, neutral wrist. Compromising the wrist for 'feel' wastes the rep.",
+    "session_types": ["test_lp_max_5s", "test_lp_repeater"]
+  },
+  {
+    "id": "cue_040",
+    "text": "Pace the repeater \u2014 don't blow early sets chasing reps. The score is your sustainable capacity, not your rep-one bravado.",
+    "session_types": ["test_lp_repeater", "test_repeater_7_3"]
+  },
+  {
+    "id": "cue_041",
+    "text": "Full extension at the bottom, chin clearly over the bar at the top. Half-reps and kips don't count toward your score.",
+    "session_types": ["test_max_weighted_pullup", "test_pullup_bw"]
+  },
+  {
+    "id": "cue_042",
+    "text": "Once form breaks, the rep doesn't count \u2014 and the next won't either. Stop while the data is still clean.",
+    "session_types": ["test_pullup_bw", "test_max_weighted_pullup", "test_repeater_7_3", "test_lp_repeater"]
+  },
+  {
+    "id": "cue_043",
+    "text": "Breathe slowly and let the day's tension dissolve \u2014 this isn't a flexibility contest. The work is the unwinding.",
+    "session_types": ["yoga_recovery"]
+  },
+  {
+    "id": "cue_044",
+    "text": "Hold each static stretch \u226530 seconds \u2014 never push to pain. Three calm sessions beat one intense one for tissue adaptation.",
+    "session_types": ["flexibility_full"]
+  },
+  {
+    "id": "cue_045",
+    "text": "Stack from ground up \u2014 wrist, shoulder, hip, heel. Correct every three breaths; falls are reps, not failures.",
+    "session_types": ["handstand_practice"]
+  },
+  {
+    "id": "cue_046",
+    "text": "Move antagonist work at slow tempo \u2014 three up, three down. The unsexy work is what keeps you climbing past thirty-five.",
+    "session_types": ["prehab_maintenance"]
+  },
+  {
+    "id": "cue_047",
+    "text": "Take one planned fall each session \u2014 small, above the bolt, eyes open. Fear shrinks when the body owns the experience.",
+    "session_types": ["route_projecting_gym", "route_endurance_gym", "power_endurance_gym"],
+    "source": "Ilgner (Rock Warrior's Way)"
+  },
+  {
+    "id": "cue_048",
+    "text": "Pre-read every clip \u2014 which hold, which hand, which body position. Clipping from a struggle is lead's costliest error.",
+    "session_types": ["route_projecting_gym", "route_endurance_gym"]
+  },
+  {
+    "id": "cue_049",
+    "text": "Long exhale through pump \u2014 4 seconds out, slow in. The slow exhale interrupts the panic loop driven by rising CO\u2082.",
+    "session_types": ["route_endurance_gym", "endurance_aerobic_gym", "power_endurance_gym", "route_projecting_gym"]
+  },
+  {
+    "id": "cue_050",
+    "text": "Call the clip, the take, the fall \u2014 silent climbers stress belayers, and stressed belayers shorten rope at the worst moment.",
+    "session_types": ["route_endurance_gym", "route_projecting_gym"]
+  },
+  {
+    "id": "cue_051",
+    "text": "Between attempts, close your eyes and replay the sequence for 60 seconds. Recall builds motor learning faster than another try.",
+    "session_types": ["route_projecting_gym", "limit_boulder_gym"],
+    "source": "Hörst Ch.3 (mental rehearsal)"
+  },
+  {
+    "id": "cue_052",
+    "text": "Between climbs, ten scapular pushups or band external rotations. Antagonist work keeps shoulders packed and balances pulling.",
+    "session_types": ["route_endurance_gym", "route_projecting_gym", "power_endurance_gym", "limit_boulder_gym"]
+  },
+  {
+    "id": "cue_053",
+    "text": "Past the 60-minute mark, take 20\u201330g of carbs \u2014 banana, gel, dates. Glycogen drop after an hour eats final-attempt quality.",
+    "session_types": ["route_projecting_gym", "limit_boulder_gym", "power_endurance_gym"],
+    "source": "Hörst Ch.11 (intra-session fueling)"
+  },
+  {
+    "id": "cue_054",
+    "text": "File skin smooth before it tears; once damage control begins, call the session. You don't get the lost friction back today.",
+    "session_types": ["limit_boulder_gym", "power_contact_gym", "route_projecting_gym"]
+  },
+  {
+    "id": "cue_055",
+    "text": "Hold every hangboard rep in clean half-crimp \u2014 that grip is your contract with your tendons. Drifts mid-rep are warning signs.",
+    "session_types": ["finger_strength_home", "strength_long", "finger_maintenance_home", "finger_maintenance_gym"],
+    "source": "ACT (Schöffl/Matros/Korb)"
+  },
+  {
+    "id": "cue_056",
+    "text": "Drop the weight before you drop form. The strength that transfers to climbing is the strength produced cleanly.",
+    "session_types": ["pulling_strength_gym", "upper_body_weights", "heavy_conditioning_gym", "complementary_conditioning"]
+  },
+  {
+    "id": "cue_057",
+    "text": "Brace before each set \u2014 exhale, lock the pelvis, then move. A loose core under load leaks the tension your hardest moves need.",
+    "session_types": ["core_training", "legs_strength", "lower_body_gym"]
+  },
+  {
+    "id": "cue_058",
+    "text": "On short repeater sets, treat pump as feedback, not enemy. End the set when grip shape changes \u2014 that's when the data goes bad.",
+    "session_types": ["finger_endurance_short", "finger_aerobic_base"]
+  },
+  {
+    "id": "cue_059",
+    "text": "After general warm-up, add five minutes of low-load grip-pattern primers. Cold tissue under max load is the injury setup.",
+    "session_types": ["finger_strength_home", "strength_long"],
+    "source": "Fradkin 2010 (warm-up meta-analysis)"
+  },
+  {
+    "id": "cue_060",
+    "text": "During deload, walk and move easy daily \u2014 sedentary rest slows the blood flow that delivers adaptation. Easy is not stop.",
+    "session_types": ["deload_recovery", "easy_climbing_deload"]
   }
 ]

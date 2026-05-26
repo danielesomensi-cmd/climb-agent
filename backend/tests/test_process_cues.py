@@ -106,6 +106,29 @@ class TestProcessCuesCatalogValid:
         ids = [c["id"] for c in cues]
         assert len(ids) == len(set(ids)), "Duplicate cue IDs found"
 
+    def test_session_types_reference_real_sessions(self):
+        """Every session_type must reference an existing session template.
+
+        Pseudo-tokens starting with '_' (e.g. '_any_last_session_before_rest')
+        are control flags, not real session ids, so they're exempt.
+        """
+        cues = _load_cues_raw()
+        template_ids = _session_template_ids()
+        unknown: list[str] = []
+        for cue in cues:
+            for st in cue["session_types"]:
+                if st.startswith("_"):
+                    continue
+                if st not in template_ids:
+                    unknown.append(f"{cue['id']}:{st}")
+        assert unknown == [], f"Cues referencing nonexistent sessions: {unknown}"
+
+    def test_text_length_sanity(self):
+        cues = _load_cues_raw()
+        for cue in cues:
+            n = len(cue["text"])
+            assert 20 < n < 400, f"Cue {cue['id']} text length {n} out of range (20, 400)"
+
 
 class TestProcessCuesSessionCoverage:
     """Every active (non-test) session template should match at least 1 cue."""

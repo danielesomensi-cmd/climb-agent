@@ -26,9 +26,13 @@ _Nessun follow-up D238 aperto. Tutti i finding del report `docs/audit/D238_test_
 
 _Nessun follow-up D239 aperto. Audit conferma "no bug" — 3 possibili miglioramenti cosmetici suggeriti (vedi §10 di `docs/audit/D239_quote_render_audit.md`) sono P3 e non bloccanti._
 
-**D240 next step (manuale, fuori brief)**: Daniele copia `docs/audit/D240_cue_pattern_snapshot.md` nel KB project, ottiene proposte ~20-25 nuove cue, poi apre un C-brief per merge nel catalog.
+_D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cue_060) sono state mergeate nel catalog._
 
 ---
+
+## Recently closed (2026-05-26)
+
+- **C239** ✅ — Merge delle 25 nuove process_cue proposte dal KB (cue_036→cue_060), follow-up del next-step D240. **Session_id audit: 0 mismatch** — tutti i 32 session_id citati dal KB esistono nel catalog (`backend/catalog/sessions/v1`), quindi nessuna mappatura né drop: tutte le 25 cue inserite as-is. Catalog `backend/catalog/cues/v1/process_cues.json` 35→60 cue. **Coverage 24/35 → 35/35 session template** (28/28 non-test + 7/7 test — le test session prima erano completamente scoperte). Schema minimal preservato (`id`/`text`/`session_types`/`source` opzionale). **Formatter fedeltà byte-for-byte verificata** prima dell'append: la convenzione del file escapa i codepoint > U+00FF (em-dash `—`, en-dash `–`, ≥ `≥`, ₂ `₂`) ma tiene Latin-1 letterale (`Hörst`). 2 nuovi test in `test_process_cues.py` (`test_session_types_reference_real_sessions` + `test_text_length_sanity`, 20<len<400) a guardia di drift futuri. Suite 2051→2053. Backend/catalog-only → push diretto a main.
 
 ## Recently closed (2026-05-20)
 
