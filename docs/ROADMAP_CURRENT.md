@@ -8,13 +8,15 @@
 
 ## Open
 
-**A-COACH-KB-V1 (in progress, Phase B, Session 6 of 7 complete)**
+**A-COACH-KB-V1 (in progress, Phase B, Session 7a of 7b complete)**
 - Phase A audit: `docs/research_kb/coach_kb_v1_audit.md` (commit `75bd4f5`)
-- Phase B output: `backend/coach/knowledge/` (Session 1: commit `1971da1`; Session 2: commit `1415b2f`; Session 3: commit `7a98d05`; Session 4: commit `e682efb`; Session 5: commit `f87cdd0`; Session 6: TBD)
+- Phase B output: `backend/coach/knowledge/` (Session 1: commit `1971da1`; Session 2: commit `1415b2f`; Session 3: commit `7a98d05`; Session 4: commit `e682efb`; Session 5: commit `f87cdd0`; Session 6: commit `bc3db55`; Session 7a: TBD)
 - Steps 1-4 ✅ (scaffold 24 file, L0 11 safety rules, L1 voice, L2 35 decision index)
 - Step 5 ✅: Batch A ✅ (files 01-05), Batch B ✅ (files 06-09), Batch C ✅ (files 10-12), Batch D ✅ (files 13-15: tapering/redpoint, female/age/youth, goal-setting/motivation), **Batch E ✅** (files 16-20: assessment interpretation, readiness/overtraining, equipment fallback, lifestyle integration, return-to-training)
-- Step 6 ⏳ (design doc), Step 8 ⏳ (routing module `backend/coach/routing.py`), Step 9 ⏳ (28-question regression scoring with Daniele), Step 10 ⏳ (final v1.0 lock + roadmap entry)
-- Est. remaining: ~4-5h in 1 session (Session 7 = Steps 6 + 8 + 9 + 10)
+- **Step 6 ✅** — `docs/coach/design.md` (2865 word ≈ 3725 tok, target 3000-4000): 9 sezioni (scope, architettura multi-layer, layer spec + catalogo 20 file L3, loading strategy, firewall 14 D-ID engine-internal, citation policy + gap markers, fase A→B→next, governance, open items v1.1). Sostituisce la dangling reference a `_archive/docs/coach_knowledge_base_spec.md` (ghost file confermato D-COACH-AUDIT).
+- **Step 8 ✅** — `backend/coach/routing.py` (BM25-style keyword router su `_index.md`, max 3 file, fallback `01_periodization`+`15_goal_setting_motivation`, co-load rule `10_injuries_fingers`→`02_finger_strength` se keyword finger-strength). Tests: `backend/tests/test_coach_routing.py`, 39 test passing (20 per UC + 19 ranking/fallback/cap/co-load/robustness).
+- Step 9 ⏳ (28-question regression scoring con Daniele), Step 10 ⏳ (final v1.0 lock + roadmap entry)
+- Est. remaining: ~2.5h in Session 7b con Daniele (Steps 9 + 10)
 - Step 7 (L4 schema + coach_rationale catalog edits) **DEFERRED to v1.1** per brief scope-change
 - Risk register: see brief; key items = books not yet acquired (MacLeod/Ilgner/Mobråten/Christophersen Part 1+2/Bechtel pp.31-90/Lattice 2019 taper newsletter/Hörst redpoint chapter/Bechtel Integrated Strength/Lattice MXEdge protocol/Mujika & Padilla 2000a/b detraining primaries) → L3 files 06, 07, 10, 11, 13, 15, 16, 18, 19, 20 ship v1.0 with explicit `**v1.0 coverage gap**` markers for v1.1 refresh
 - **Engine-internal D-ID firewall (D03, D04, D05, D06, D08, D13, D23, D32, D42, D61, D62, D63, D88, D90) honored across all 20 L3 files.** File 16 (assessment interpretation) explicitly firewalls D88/D90 in its v1.0-gap block: the brief mentioned them but they govern engine scheduling/protocol-selection internals, not user-facing knowledge. Verified via `grep -nE "\bD(03|04|05|06|08|13|23|32|42|61|62|63|88|90)\b"` — only hit across Batch E is the firewall block itself in file 16.
@@ -673,7 +675,7 @@ Interactive games via BLE LED control: tic tac toe on the wall, incremental hold
 ## Future — Phase 3.5: LLM Coach
 
 Claude Sonnet as conversational layer over the deterministic engine.
-Design spec: `_archive/docs/coach_knowledge_base_spec.md`
+Design spec: `docs/coach/design.md`
 
 - Dynamic system prompt injecting user_state + current plan + recent logs
 - POST /chat endpoint
