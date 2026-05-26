@@ -64,7 +64,7 @@ export function DailyCueBanner({ sessions, date, isToday = true }: DailyCueBanne
         </svg>
         <div>
           <p className="text-xs font-medium text-amber-400 mb-1">
-            {isToday ? "Focus di oggi" : "Focus della sessione"}
+            {isToday ? "Today's focus" : "Session focus"}
           </p>
           <p className="text-sm text-zinc-200 leading-relaxed">{cueText}</p>
         </div>
