@@ -109,6 +109,8 @@ Every week runs **Monday to Sunday**. The planner assigns sessions to the days y
 
 **The Today page** shows what's planned for today. **The Week page** shows the full 7-day grid with all sessions.
 
+At the top of **Today** you'll see a **Focus of the day** banner — a short coaching cue for one of the day's sessions (e.g., "Squeeze every rep with maximal intent"). It's there to read before you start training; once all of the day's sessions are done or skipped, the banner disappears.
+
 Your daily workflow:
 
 1. Open the app → **Today** shows your session(s)
