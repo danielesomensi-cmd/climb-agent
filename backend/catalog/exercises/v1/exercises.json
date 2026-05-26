@@ -11188,6 +11188,382 @@
       ],
       "video_url": null,
       "load_model": "external_load"
+    },
+    {
+      "id": "tech_applied_strength",
+      "name": "Applied Strength",
+      "category": "technique",
+      "focus": "body_position",
+      "time_min": 30,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "finger_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 6,
+        "reps": 1,
+        "work_seconds": 60,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "On a vertical/slightly-overhung wall (boulder, spray or system board): hold a hold one-handed for 5 sec, reach a challenging hold with the other hand, release the first, hold 5 sec, then swap. ~6 holds per hand per 1-minute set. Vary elbow and wrist angles to cover many positions. RPE ~6."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Skill-plus-strength drill that transfers hangboard-built finger strength into real, varied climbing positions. Alternating 5-second one-hand isometric holds while reaching challenging holds forces grip strength to express across many elbow/wrist angles, not just static hangs. Advanced progressions deliberately rotate through grip types (half crimp, open three-finger, full crimp, pockets, pinches) — full crimp is permitted here because the loading is brief, dynamic and distributed, unlike sustained hangboard isometrics (Steve Bechtel, Climb Strong: Drills Manual, pp.31-33).",
+      "cues": [
+        "Five seconds hold one hand, reach and match, release, five seconds, then swap",
+        "Vary elbow and wrist angles every set — cover as many positions as possible",
+        "Goal is transfer: make your hangboard finger strength usable on the wall",
+        "Start one-handed and reach a genuinely challenging hold with the free hand"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_banded_climber",
+      "name": "Banded Climber",
+      "category": "technique",
+      "focus": "body_position",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [
+        "resistance_band"
+      ],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 240,
+        "notes": "Loop a resistance band around your waist; a partner stands on the ground behind you and pulls gently outward while you traverse on large open holds. ~10 hand moves per set on easy terrain (grade ~2 below onsight). Compensate the band tension with body tension and feet, not arm strength. Requires a partner to hold the band."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Body-tension drill against an external horizontal pull. A partner pulls a waist band away from the wall while you climb; you must keep hips close to the wall and drive through legs and feet rather than fighting the band with your arms. Builds the core-to-feet tension transfer that keeps you on steep terrain. Requires a training partner and a resistance band (Steve Bechtel, Climb Strong: Drills Manual, pp.34-35; coaching consensus).",
+      "cues": [
+        "Pull with your butt, legs and feet — not with your arms",
+        "Answer the band's pull with body tension, not muscle effort",
+        "Keep your hips close to the wall no matter how hard the band pulls",
+        "Partner pulls gently — the drill should be winnable with good technique"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_diagonal_drill",
+      "name": "Diagonal Drill",
+      "category": "technique",
+      "focus": "body_position",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 2,
+        "work_seconds": 9,
+        "rest_between_reps_seconds": 15,
+        "rest_between_sets_seconds": 240,
+        "notes": "On a slightly-overhung wall with open holds: hold three isometric positions on one arm for 3 sec each — straight arm, 90-degree elbow, full lock-off — then switch to the opposite side (= 1 set). Take ~15 sec between sides to reset your stance. Working foot at knee height, just outside the shoulder line. Drill the diagonal cross-body tension, not the grip."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Cross-body tension drill: apply full-body diagonal tension from the working hand to the opposite foot while holding three progressively harder lock-off positions (straight arm to full lock-off). Trains the body to stay solid and engaged through the full range of a reach rather than relying on momentum, using open holds so the focus stays on position rather than grip (Steve Bechtel, Climb Strong: Drills Manual, pp.36-37; originator: Pollmeier).",
+      "cues": [
+        "Apply full body tension across the diagonal — right hand to left foot",
+        "Working foot at knee height, just outside the shoulder line",
+        "Three seconds straight arm, three seconds 90-degree, three seconds full lock-off, then switch",
+        "Open holds only — drill the position, not the grip"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_five_step",
+      "name": "Five Step",
+      "category": "technique",
+      "focus": "footwork",
+      "time_min": 12,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_footwork_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_routes",
+        "gym_boulder"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 1,
+        "work_seconds": 720,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Climb easy routes or boulders (grade ~2 below onsight) making five careful, quiet, accurate foot moves for every single hand move. Hands stay still while the feet work. Precision over speed.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Foot-volume drill that forces deliberate, high-frequency footwork: five precise foot placements before each hand move. By multiplying foot moves relative to hand moves it builds the habit of constantly improving foot position and weight distribution instead of reaching from poor stances. Related to silent-feet precision work but distinct — it is count-constrained rather than noise-constrained (Steve Bechtel, Climb Strong: Drills Manual, pp.38-39; coaching consensus).",
+      "cues": [
+        "Five careful, quiet, accurate foot placements before each hand move",
+        "Move the feet deliberately — precision over speed",
+        "Hands stay still while the feet work",
+        "Stay calm and methodical throughout the drill"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
+    },
+    {
+      "id": "tech_matchy_matchy",
+      "name": "Matchy Matchy",
+      "category": "technique",
+      "focus": "body_position",
+      "time_min": 22,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 120,
+        "notes": "Pick an easy boulder (grade ~2 below onsight). Climb it once normally to feel the movement, then climb it twice more matching both hands on every hold. Use body positioning to make each match efficient rather than muscling it.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Hand-matching drill that exposes body-position habits: matching both hands on every hold on a familiar boulder forces you to find the body position that makes each match efficient instead of strong-arming it. Awkward on the first pass, smoother on the second — that delta is the technique gain (Steve Bechtel, Climb Strong: Drills Manual, pp.42-43; originator: Gimme Kraft, Schoffl/Matros/Korb).",
+      "cues": [
+        "First climb: feel the natural movement",
+        "Climbs two and three: match both hands on every hold",
+        "Matching feels awkward the first time — make the second time smoother",
+        "Use body position to make matches efficient, not muscled"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
+    },
+    {
+      "id": "tech_surface_of_the_shoe",
+      "name": "Surface of the Shoe",
+      "category": "technique",
+      "focus": "footwork",
+      "time_min": 17,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_footwork_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "gym_routes"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "Climb 3-5 easy problems using only wall features for the feet — corners, smears, stems, opposing walls — and no set footholds. Use the whole shoe: inside edge, outside edge, toe, heel, smear. Maximise shoe-to-wall contact for maximum friction."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Feature-awareness footwork drill: with no set footholds allowed, you must read the wall itself — corners, smears, stems and opposing surfaces — and use every part of the shoe to generate friction. Builds the improvisational footwork and trust in smearing that set-hold climbing never trains (Steve Bechtel, Climb Strong: Drills Manual, pp.46-47; via The Beginner Climber).",
+      "cues": [
+        "Find features of the wall with no holds — corners, smears, stems, opposing walls",
+        "Use every edge of the shoe: inside edge, outside edge, toe, heel, smear",
+        "Maximum shoe contact equals maximum friction",
+        "Keep the shoe in contact with the wall at all times"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_talon_feet",
+      "name": "Talon Feet",
+      "category": "technique",
+      "focus": "footwork",
+      "time_min": 17,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "technique_footwork_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "spraywall",
+        "board_kilter",
+        "board_moonboard",
+        "board_other"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 1,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "On steep boulders (grade ~2 below onsight): engage the feet actively on every move, pulling with the feet and legs to reach the next hand rather than only pushing. Keep feet on consistently — no flagging off. Imagine talons gripping each foothold.",
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Active-foot drill for steep terrain: instead of letting feet cut or skate, you pull and claw with the toes on every move, recruiting the stronger lower body to move the hips and unload the arms. Trains the heel/toe engagement and foot tension that overhanging climbing demands (Steve Bechtel, Climb Strong: Drills Manual, pp.48-49; via The Beginner Climber).",
+      "cues": [
+        "Imagine talons on your shoes — dig into every foothold",
+        "Pull with feet and legs to reach the next hand, do not just push",
+        "Keep the feet on consistently — no flagging off",
+        "Your lower half is stronger than your upper half — climb with it"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
     }
   ]
 }

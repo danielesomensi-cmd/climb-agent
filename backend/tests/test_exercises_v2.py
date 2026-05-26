@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 218  # B224: +6 (forearms/biceps main) on top of C209's 212
+    assert len(exercise_list) == 225  # C240: +7 Bechtel positioning drills on top of B224's 218
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
