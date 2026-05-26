@@ -26,17 +26,19 @@ function hashString(s: string): number {
  * carries a cue (rest day, cues absent). The /guided banner is unaffected.
  */
 export function DailyCueBanner({ sessions, date, isToday = true }: DailyCueBannerProps) {
-  const withCue = sessions.filter(
-    (s) => s.process_cue?.text && s.process_cue.text.trim().length > 0,
+  // Only planned (non-finalized) sessions — the cue is a pre-session briefing,
+  // so once everything for the day is done/skipped the section disappears.
+  const candidates = sessions.filter(
+    (s) =>
+      s.status !== "done" &&
+      s.status !== "skipped" &&
+      s.process_cue?.text &&
+      s.process_cue.text.trim().length > 0,
   );
-  if (withCue.length === 0) return null;
+  if (candidates.length === 0) return null;
 
-  // Prefer planned (non-finalized) sessions — the cue is a pre-session briefing.
-  const planned = withCue.filter(
-    (s) => s.status !== "done" && s.status !== "skipped",
-  );
-  const candidates = planned.length > 0 ? planned : withCue;
-
+  // Cues are per-session; with multiple sessions pick one deterministically
+  // (seeded on the date so it's stable per render but varies day to day).
   const picked = candidates[hashString(date) % candidates.length];
   const cueText = picked.process_cue!.text;
 
