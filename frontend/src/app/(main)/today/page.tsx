@@ -10,6 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
+import { DailyCueBanner } from "@/components/training/daily-cue-banner";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
 import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
@@ -1080,6 +1081,15 @@ function TodayContent() {
               ×
             </button>
           </div>
+        )}
+
+        {/* A220: standalone "Focus di oggi" cue section above the day's cards */}
+        {!loading && !error && dayPlan && !heroState && dayPlan.sessions.length > 0 && (
+          <DailyCueBanner
+            sessions={dayPlan.sessions}
+            date={dayPlan.date}
+            isToday={isViewingToday}
+          />
         )}
 
         {/* Day plan — suppressed when hero is active (A217 rest-day dedup) */}
