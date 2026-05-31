@@ -33,7 +33,7 @@ export function WelcomeContent() {
             Periodized training.
           </h1>
           <p className="mt-2 text-base text-fg-secondary md:text-lg">
-            Built for the top 5%.
+            Built for climbers chasing hard grades.
           </p>
         </div>
       </section>
