@@ -466,6 +466,30 @@ Riconoscimento per chi ha completato fedelmente la settimana programmata, **incl
 
 **Effort totale:** ~5-7 giorni di lavoro post-launch.
 
+### C-FEEDBACK-LOOP — Feedback-loop email automation
+
+**Priority:** P2.9 (post-launch, alongside C-RETENTION-ROADMAP) | **Status:** Open — design only, no implementation | **Type:** A (automation) | **Effort:** M+
+**Depends on:** LLM coach layer (Phase 3.5) + knowledge-base RAG (solo per Track B)
+
+> **⚠️ Timing — NON ora.** Da affrontare **solo quando ci saranno tanti utenti**: finché il volume di supporto è gestibile a mano, il valore non giustifica il lavoro. Inbox di gestione: **daniele.somensi@gmail.com**. Origin: Daniele (2026-05-31).
+
+Automatizzare il loop di feedback/supporto clienti oggi gestito manualmente (welcome email a mano, risposte via Claude).
+
+**Due track disaccoppiati — ship indipendenti:**
+
+- **Track A — Outbound (basso rischio, può partire per primo):** trigger Stripe webhook `customer.subscription.created` → invia welcome/feedback email templata (deterministica, no LLM). Idempotenza: dedupe su subscription id; mai re-inviare su plan change o device switch. Nessuna dipendenza da Phase 3.5 — standalone.
+- **Track B — Inbound (gated su Phase 3.5):** cron (Claude Code su Mac) polla l'inbox supporto, classifica ogni reply (feedback / training question / feature request / bug). Training questions → LLM coach risponde via KB RAG (stesso layer di Phase 3.5, NON costruire un secondo RAG). Feature requests/bug → auto-file come roadmap candidate.
+
+**Non-negoziabili Track B:**
+- **Human-in-the-loop finché piccolo.** Il cron CLASSIFICA + DRAFTA solo. Daniele approva prima dell'invio. Nessuna risposta LLM non supervisionata a clienti paganti (rischio allucinazione/reputazione su consigli di training).
+- **Accesso inbox separato da claude.ai.** Il connettore Gmail nella chat claude.ai NON dà a Claude Code su Mac accesso all'inbox. Il cron serve credenziali proprie (Gmail API / IMAP) sul Mac.
+- **La KB è prerequisito, non side-project.** Risposte "tailored" hanno senso solo quando il coach legge la KB letteratura. Allineato a Phase 3.5 RAG.
+
+**Open decisions prima di qualsiasi brief:**
+1. Indirizzo inbox supporto + routing delle reply → **daniele.somensi@gmail.com** (deciso).
+2. Metodo di accesso inbox Mac-side per il cron.
+3. Soglia auto-send (se mai) — definire l'exit criteria dell'human-in-the-loop.
+
 ---
 
 ## Priority 2.75 — KB Research Integration
