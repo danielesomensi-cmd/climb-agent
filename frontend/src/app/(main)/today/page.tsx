@@ -102,6 +102,12 @@ function TodayContent() {
 
   const weekPlan: WeekPlan | null = weekQuery.data?.week_plan ?? null;
   const phaseId: string | null = weekQuery.data?.phase_id ?? null;
+  // B257: distinguish a genuine new user (no macrocycle → onboarding) from an
+  // existing user whose current week resolves to a past Monday (e.g. the
+  // macrocycle has ended), which now fails closed with week_plan: null rather
+  // than regenerating an immutable past week.
+  const hasMacrocycle = !!(stateQuery.data?.macrocycle);
+  const pastWeekUnavailable = weekQuery.data?.past_week_unavailable ?? false;
 
   // Derived from /api/state — memoised to avoid re-renders
   const gyms = useMemo<Array<{ gym_id?: string; name: string; equipment: string[] }>>(() => {
@@ -1017,8 +1023,8 @@ function TodayContent() {
         )}
 
 
-        {/* No macrocycle — prompt to start onboarding */}
-        {!loading && !error && !weekPlan && (
+        {/* No macrocycle — prompt to start onboarding (true new user only) */}
+        {!loading && !error && !weekPlan && !hasMacrocycle && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-lg font-medium">Welcome to climb-agent!</p>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -1030,6 +1036,20 @@ function TodayContent() {
             >
               Start Onboarding
             </Link>
+          </div>
+        )}
+
+        {/* B257: macrocycle exists but the current week resolves to a past,
+            immutable week (cycle ended) — explain instead of showing onboarding.
+            The "Plan your next cycle" CTA above provides the action. */}
+        {!loading && !error && !weekPlan && hasMacrocycle && pastWeekUnavailable && (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="font-medium">Nothing scheduled for today</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Your training plan has ended. Past weeks stay exactly as you
+              trained them and aren&apos;t regenerated — start your next cycle to
+              keep training.
+            </p>
           </div>
         )}
 

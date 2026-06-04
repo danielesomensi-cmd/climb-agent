@@ -143,9 +143,14 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
   if (force) params.set("force", "true");
   if (preserveBefore) params.set("preserve_before", preserveBefore);
   const qs = params.toString();
-  return request<{ week_num: number; phase_id: string; week_plan: WeekPlan }>(
-    `/api/week/${weekNum}${qs ? `?${qs}` : ""}`
-  );
+  // B257: a past week with no cached data fails closed — week_plan is null and
+  // past_week_unavailable is true (past weeks are immutable, never regenerated).
+  return request<{
+    week_num: number;
+    phase_id: string;
+    week_plan: WeekPlan | null;
+    past_week_unavailable?: boolean;
+  }>(`/api/week/${weekNum}${qs ? `?${qs}` : ""}`);
 };
 
 // Session

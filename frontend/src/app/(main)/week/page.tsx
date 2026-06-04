@@ -53,6 +53,9 @@ export default function WeekPage() {
   const stateQuery = useUserState(authReady);
   const weekQuery = useWeekPlan(weekNum, authReady);
   const weekPlan = weekQuery.data?.week_plan ?? null;
+  // B257: a past week with no saved plan fails closed (immutable, never
+  // regenerated) — show an explicit message instead of a generic empty state.
+  const pastWeekUnavailable = weekQuery.data?.past_week_unavailable ?? false;
   const phaseId = weekQuery.data?.phase_id ?? null;
   const displayWeekNum = weekQuery.data?.week_num ?? 1;
   const macrocycle = (stateQuery.data?.macrocycle as Macrocycle | undefined) ?? null;
@@ -856,9 +859,19 @@ export default function WeekPage() {
         {/* No plan */}
         {!loading && !error && !weekPlan && (
           <div className="rounded-lg border border-dashed p-8 text-center">
-            <p className="text-muted-foreground">
-              No weekly plan available.
-            </p>
+            {pastWeekUnavailable ? (
+              <>
+                <p className="font-medium">This week is in the past</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Past weeks are locked and never regenerated. There&apos;s no
+                  saved plan for this week, so there&apos;s nothing to show here.
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">
+                No weekly plan available.
+              </p>
+            )}
           </div>
         )}
       </main>
