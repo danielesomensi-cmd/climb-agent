@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -98,6 +99,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# B255: gzip response compression. /api/state ships ~1.9MB uncompressed and is
+# ~8.7x compressible (D241). minimum_size=1000 so tiny responses (e.g.
+# /api/state/status, 29B) skip compression overhead. No streaming/SSE endpoints
+# exist, so there is nothing to double-compress or break.
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 
 @app.exception_handler(Exception)
