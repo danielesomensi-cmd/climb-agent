@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-05-20 (B254 — manual phase override macrociclo Daniele: base 4→2, surplus +1 S&P +1 PE, total_weeks=12 invariato; past-sessions immutable rispettato. Roadmap entry A-PHASE-EDIT (P3) per feature proper. Backend/data patch.)
+> Last updated: 2026-06-04 (B257 — fail-closed guard: mai rigenerare una settimana passata; chiude la violazione latente d'invariante trovata da D242. + D241/D242 audit lag startup, B255 gzip.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -29,6 +29,13 @@ _Nessun follow-up D239 aperto. Audit conferma "no bug" — 3 possibili miglioram
 _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cue_060) sono state mergeate nel catalog._
 
 ---
+
+## Recently closed (2026-06-04)
+
+- **B257** ✅ — **Never regenerate a past week (fail-closed guard).** Chiude la violazione latente d'invariante trovata da D242: `GET /api/week/{past}` su cache-miss rigenerava la settimana passata (`today_str=None` → regen completa, preserve non scattano perché `old_plan=None`) → sessioni completate + feedback persi. Fix: `deps.is_past_week(monday)` (check canonico `monday < this_monday()`, riusa `this_monday()`); `week.py` serve le settimane passate **read-only** dalla cache (force ignorato), altrimenti **fail-closed** `{week_plan: null, past_week_unavailable: true}` — mai `generate_phase_week`; `replanner /override` → **422** su qualsiasi target passato (copre regen di `set_availability` + modifiche). **Cambiamento user-facing approvato**: macrociclo scaduto (week 0 clampa a Monday passato) e navigazione a settimane passate non in cache ora mostrano l'empty-state esplicito invece di un piano fabbricato. Frontend: `/week` "This week is in the past", `/today` "training plan has ended" (+ gate onboarding-welcome su `!hasMacrocycle` per non mostrare onboarding a utente con ciclo scaduto). Test: `test_b257_guard_pastweek.py` (12) + 2 test stale aggiornati (codificavano il vecchio fabricate-the-past). Verifica end-to-end locale (backend contract 3 scenari + render Playwright dei 2 messaggi). Deploy: backend-first su main (Railway) → frontend su main dopo verifica. Origina da D242.
+- **D242 / D-ARCHIVE-WEEKPLANS** ✅ (audit, read-only) — Design + invariant proof per lazy-archive delle `week_plans` passate (radice del lag azioni: 86% dello state / 1.7MB). Confermato D241 sul live (week_plans 86%, `current_week_plan` 234KB byte-identico). Ipotesi N-2 **refutata** (`load_recent_exercise_ids` legge 3 settimane). Crux: nessun guard impediva la rigenerazione di settimane passate → estratto come **B257** (prerequisito di sicurezza). Opzione A (JSONB archive cold) consigliata + prova invariante + risk list + outline STOP-gated. **Assorbe B256** (rimozione `current_week_plan`, ID bruciato). Report: `docs/audit/D242_archive_weekplans.md`. A-brief stimato M-L, high-risk. *(Implementazione archiviazione NON ancora fatta — next A-brief.)*
+- **B255** ✅ — Compressione gzip risposte (`GZipMiddleware`, `minimum_size=1000`). `/api/state` 1.89MB → 217KB (8.7×). Nessun endpoint streaming/SSE → safe. Test `test_gzip.py`. Backend-only, push diretto. Riduce solo il transfer (non il TTFB di `load_state` — quello è il lavoro sulla dimensione state, D242). Origina da D241.
+- **D241 / D-STARTUP-LAG** ✅ (audit, read-only) — Diagnosi lag 2-3s su apertura/azioni. **Non è cold start** (Railway non dorme). Radice: `user_state` ~2MB → ogni `load_state()` paga ~1.7s di fetch+deserialize Supabase (prova: `/api/state/status` 29B → TTFB 2.29s). 86% = `week_plans` (19 settimane). Quick win gzip (→ B255); fix radice = ridurre dimensione state (→ D242). Report: `docs/audit/D241_startup_lag.md`.
 
 ## Recently closed (2026-05-26)
 

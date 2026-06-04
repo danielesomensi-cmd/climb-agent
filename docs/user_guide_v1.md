@@ -107,7 +107,9 @@ Your macrocycle follows the Hörst 4-3-2-1 periodization model. Each phase build
 
 Every week runs **Monday to Sunday**. The planner assigns sessions to the days you're available, respecting your locations and equipment.
 
-**The Today page** shows what's planned for today. **The Week page** shows the full 7-day grid with all sessions.
+**The Today page** shows what's planned for today. **The Week page** shows the full 7-day grid with all sessions. You can navigate to other weeks with the **Previous / Next** buttons.
+
+Past weeks are **locked**: they stay exactly as you trained them and are never regenerated. If you navigate back to a week you never opened (so it has no saved plan), the app shows "This week is in the past" rather than inventing a plan after the fact. When your macrocycle has ended, Today shows "Your training plan has ended" with a prompt to **Plan your next cycle**.
 
 At the top of **Today** you'll see a **Today's focus** banner — a short coaching cue for one of the day's sessions (e.g., "Squeeze every rep with maximal intent"). It's there to read before you start training; once all of the day's sessions are done or skipped, the banner disappears.
 
