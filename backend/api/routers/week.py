@@ -14,6 +14,7 @@ from backend.api.deps import (
     REPO_ROOT,
     current_phase_and_week,
     get_user_id,
+    is_past_week,
     load_state,
     save_state,
     week_num_to_phase_context,
@@ -217,6 +218,18 @@ def _current_week_num(macrocycle: dict) -> int:
     return cumulative + wi + 1
 
 
+def _is_servable_plan(plan: Optional[dict], week_start_key: str) -> bool:
+    """True iff *plan* is a usable cached week plan for *week_start_key*
+    (correct start_date, at least one week block with days)."""
+    return bool(
+        plan
+        and plan.get("start_date") == week_start_key
+        and plan.get("weeks")
+        and len(plan["weeks"]) > 0
+        and plan["weeks"][0].get("days")
+    )
+
+
 @router.get("/{week_num}")
 def get_week(
     week_num: int,
@@ -275,6 +288,24 @@ def get_week(
     week_start_key = ctx["start_date"]
     week_plans = state.get("week_plans") or {}
 
+    # B257: past weeks are immutable — never regenerate. Serve the cached plan
+    # read-only if present (ignoring force); if genuinely absent, fail closed
+    # with an explicit signal rather than fabricating/overwriting history. This
+    # closes the latent hole where a cache-miss on a past week (incl. the
+    # frontend's silent N-1 prefetch, or a macrocycle that has ended clamping
+    # week_num=0 to a past Monday) would run generate_phase_week with
+    # today_str=None and lose completed sessions + feedback.
+    if is_past_week(week_start_key):
+        cached = week_plans.get(week_start_key)
+        if not _is_servable_plan(cached, week_start_key):
+            return {
+                "week_num": ctx["week_num"],
+                "phase_id": ctx["phase_id"],
+                "week_plan": None,
+                "past_week_unavailable": True,
+            }
+        week_plan = cached  # read-only: skip force/regen, fall through to resolve
+
     # Store old plan before force-regeneration
     old_plan = week_plans.get(week_start_key) if force else None
     if old_plan is None and force and is_current_week:
@@ -286,13 +317,7 @@ def get_week(
             cached = week_plans.get(week_start_key)
             if cached is None and is_current_week:
                 cached = state.get("current_week_plan")
-            if (
-                cached
-                and cached.get("start_date") == week_start_key
-                and cached.get("weeks")
-                and len(cached["weeks"]) > 0
-                and cached["weeks"][0].get("days")
-            ):
+            if _is_servable_plan(cached, week_start_key):
                 week_plan = cached
                 # B216 Defect A: self-heal legacy current_week_plan on
                 # calendar rollover. Cache-hit confirms per-week cache is

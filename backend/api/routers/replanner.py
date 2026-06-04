@@ -11,7 +11,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, current_phase_and_week, get_user_id, load_state, require_active_subscription, save_state
+from backend.api.deps import REPO_ROOT, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.planner_v2 import _SESSION_META
@@ -176,6 +176,17 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
         raise HTTPException(
             status_code=422,
             detail="week_plan is required — generate one from GET /api/week/{week_num} first",
+        )
+
+    # B257: past weeks are immutable. Reject any override targeting a week whose
+    # Monday is before the current week's — set_availability would regenerate it
+    # (generate_phase_week), and every other intent would mutate completed
+    # sessions. Only explicit user edit may touch past weeks.
+    _ws = week_plan.get("start_date")
+    if _ws and is_past_week(_ws):
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot modify a past week — past sessions are immutable.",
         )
 
     # B96: pass gyms so override can check equipment compatibility

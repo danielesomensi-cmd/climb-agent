@@ -177,8 +177,15 @@ class TestEquipmentRegenPreservesWeek:
         assert new_mc["total_weeks"] == mc["total_weeks"]
 
     def test_week_plan_accessible_after_incremental_regen(self):
-        """After incremental regen, fetching the current week should succeed."""
-        _setup_macrocycle("2026-02-23")
+        """After incremental regen, fetching the current week should succeed.
+
+        B257: the macrocycle must be ACTIVE (today inside its window) so week 0
+        resolves to this_monday() — a current week, freely regenerable. A past-
+        dated/expired macrocycle would clamp week 0 to a past Monday, which the
+        past-week guard correctly fail-closes (separately covered in
+        test_b257_guard_pastweek)."""
+        active_start = (date.today() - timedelta(days=date.today().weekday(), weeks=2)).isoformat()
+        _setup_macrocycle(active_start)
 
         r = client.post("/api/macrocycle/generate", json={
             "from_phase": "current",
