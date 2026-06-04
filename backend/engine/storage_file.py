@@ -89,6 +89,87 @@ def user_state_mtime(user_id: str) -> Optional[float]:
 
 
 # ---------------------------------------------------------------------------
+# Archived week plans (cold store) — A221
+#
+# Past week_plans are moved out of the hot user_state blob into a per-week
+# cold store, read on demand only. One file per archived week.
+# ---------------------------------------------------------------------------
+
+def _week_archive_dir(user_id: Optional[str]) -> Path:
+    """Directory holding archived week-plan files for a user."""
+    if user_id:
+        return USERS_DIR / user_id / "week_archive"
+    return DATA_DIR / "week_archive"
+
+
+def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) -> None:
+    """Write a single week plan into the cold store (atomic, write-once-style).
+
+    Pure move: the caller passes the unmodified plan dict. No resolution or
+    regeneration ever happens here.
+    """
+    path = _week_archive_dir(user_id) / f"{week_start}.json"
+    _atomic_write_text(path, json.dumps(plan, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
+
+
+def read_archived_week(user_id: Optional[str], week_start: str) -> Optional[Dict[str, Any]]:
+    """Read a single archived week plan, or None if absent/corrupt."""
+    path = _week_archive_dir(user_id) / f"{week_start}.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+
+
+def list_archived_keys(user_id: Optional[str]) -> List[str]:
+    """Return sorted list of archived week_start keys for a user."""
+    d = _week_archive_dir(user_id)
+    if not d.is_dir():
+        return []
+    return sorted(p.stem for p in d.glob("*.json"))
+
+
+def read_archived_weeks_in_range(
+    user_id: Optional[str], start: str, end: str
+) -> Dict[str, Dict[str, Any]]:
+    """Read all archived weeks whose key falls in [start, end] (inclusive)."""
+    out: Dict[str, Dict[str, Any]] = {}
+    for key in list_archived_keys(user_id):
+        if start <= key <= end:
+            plan = read_archived_week(user_id, key)
+            if plan is not None:
+                out[key] = plan
+    return out
+
+
+def delete_archived_week(user_id: Optional[str], week_start: str) -> bool:
+    """Delete a single archived week. Returns True if a file was removed."""
+    path = _week_archive_dir(user_id) / f"{week_start}.json"
+    try:
+        path.unlink()
+        return True
+    except OSError:
+        return False
+
+
+def delete_all_archived(user_id: Optional[str]) -> int:
+    """Delete the entire cold store for a user. Returns count removed."""
+    d = _week_archive_dir(user_id)
+    if not d.is_dir():
+        return 0
+    n = 0
+    for p in d.glob("*.json"):
+        try:
+            p.unlink()
+            n += 1
+        except OSError:
+            pass
+    return n
+
+
+# ---------------------------------------------------------------------------
 # Session logs (JSONL)
 # ---------------------------------------------------------------------------
 

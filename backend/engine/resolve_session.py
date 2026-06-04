@@ -727,16 +727,31 @@ def load_recent_exercise_ids(
 
     Falls back to session_logs storage if no week_plans data is available
     (backward compat).
+
+    A221: with past weeks moved to the cold store, the recency window
+    (hot ∪ archive) is reconstructed on demand. Because every archived key is
+    strictly older than every hot key (boundary = hot_floor), the most-recent
+    RECENCY_LOOKBACK_WEEKS keys live in hot whenever hot holds that many — so
+    the archive is consulted only when hot has fewer weeks, keeping the common
+    path query-free while preserving byte-identical determinism.
     """
     recent: List[str] = []
 
-    # Primary source: week_plans in user_state
+    # Primary source: week_plans in user_state (hot) + cold store (archive)
     if user_state:
         week_plans = user_state.get("week_plans") or {}
-        # Sort week keys descending (most recent first), take lookback window
-        sorted_keys = sorted(week_plans.keys(), reverse=True)[:RECENCY_LOOKBACK_WEEKS]
-        for wk_key in reversed(sorted_keys):  # oldest first → most recent last
-            plan = week_plans[wk_key]
+        hot_keys = sorted(week_plans.keys(), reverse=True)
+        # most-recent-first list of (key, plan); hot keys are all newer than
+        # any archived key, so fill from hot first, then top up from archive.
+        selected = [(k, week_plans[k]) for k in hot_keys[:RECENCY_LOOKBACK_WEEKS]]
+        if len(selected) < RECENCY_LOOKBACK_WEEKS and user_id:
+            from backend.engine import storage
+            arch_keys = sorted(storage.list_archived_keys(user_id), reverse=True)
+            for k in arch_keys[: RECENCY_LOOKBACK_WEEKS - len(selected)]:
+                plan = storage.read_archived_week(user_id, k)
+                if plan is not None:
+                    selected.append((k, plan))
+        for wk_key, plan in reversed(selected):  # oldest first → most recent last
             for week_block in plan.get("weeks") or []:
                 for day_entry in week_block.get("days") or []:
                     for sess in day_entry.get("sessions") or []:

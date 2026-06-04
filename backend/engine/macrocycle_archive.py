@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +32,9 @@ def _count_phases(macrocycle: Dict[str, Any]) -> List[str]:
     return [p.get("phase_id") for p in (macrocycle.get("phases") or []) if p.get("phase_id")]
 
 
-def _planned_session_count(macrocycle: Dict[str, Any], state: Dict[str, Any]) -> int:
+def _planned_session_count(
+    macrocycle: Dict[str, Any], state: Dict[str, Any], user_id: Optional[str] = None
+) -> int:
     """Best-effort count of planned sessions over the macrocycle's window.
 
     Reads ``state["week_plans"]`` and counts every session in every cached
@@ -40,12 +42,20 @@ def _planned_session_count(macrocycle: Dict[str, Any], state: Dict[str, Any]) ->
     not yet be cached for unreached weeks — the count therefore represents
     "sessions the user actually saw" more than "sessions the algorithm would
     eventually produce." That's the right semantic for completion %.
+
+    A221: past weeks of the cycle may have been moved to the cold store, so the
+    archived weeks within the window are merged in (hot takes precedence) to
+    keep the count complete after lazy-archiving.
     """
     start = macrocycle.get("start_date")
     end = macrocycle.get("end_date")
     if not start or not end:
         return 0
-    week_plans = state.get("week_plans") or {}
+    week_plans = dict(state.get("week_plans") or {})
+    if user_id:
+        from backend.engine import storage
+        for k, plan in storage.read_archived_weeks_in_range(user_id, start, end).items():
+            week_plans.setdefault(k, plan)
     total = 0
     for week_key, plan in week_plans.items():
         if not isinstance(week_key, str):
@@ -83,6 +93,7 @@ def _tests_completed_in_window(state: Dict[str, Any], start: str, end: str) -> L
 def _build_completion_summary(
     macrocycle: Dict[str, Any],
     state: Dict[str, Any],
+    user_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     start = macrocycle.get("start_date") or ""
     end = macrocycle.get("end_date") or ""
@@ -104,7 +115,7 @@ def _build_completion_summary(
     return {
         "sessions_done": sessions_done,
         "sessions_skipped": sessions_skipped,
-        "sessions_planned": _planned_session_count(macrocycle, state),
+        "sessions_planned": _planned_session_count(macrocycle, state, user_id),
         "tests_completed": _tests_completed_in_window(state, start, end) if start and end else [],
         "phases_completed": _count_phases(macrocycle),
     }
@@ -127,7 +138,9 @@ def _weeks_completed(macrocycle: Dict[str, Any], today_iso: str) -> int:
     return min(delta_days // 7, total_weeks)
 
 
-def archive_current_macrocycle(state: Dict[str, Any]) -> Dict[str, Any]:
+def archive_current_macrocycle(
+    state: Dict[str, Any], user_id: Optional[str] = None
+) -> Dict[str, Any]:
     """Snapshot ``state["macrocycle"]`` into ``state["macrocycle_history"]``.
 
     No-op if the state has no current macrocycle (returns the state unchanged
@@ -174,7 +187,7 @@ def archive_current_macrocycle(state: Dict[str, Any]) -> Dict[str, Any]:
         "goal_at_archive": deepcopy(state.get("goal") or {}),
         "weeks_completed": _weeks_completed(macrocycle, today_iso),
         "total_weeks": total_weeks,
-        "completion_summary": _build_completion_summary(macrocycle, state),
+        "completion_summary": _build_completion_summary(macrocycle, state, user_id),
     }
     history.append(entry)
     return state

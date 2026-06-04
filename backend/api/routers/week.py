@@ -16,6 +16,7 @@ from backend.api.deps import (
     get_user_id,
     is_past_week,
     load_state,
+    read_archived_week,
     save_state,
     week_num_to_phase_context,
 )
@@ -295,16 +296,26 @@ def get_week(
     # frontend's silent N-1 prefetch, or a macrocycle that has ended clamping
     # week_num=0 to a past Monday) would run generate_phase_week with
     # today_str=None and lose completed sessions + feedback.
+    served_from_archive = False
     if is_past_week(week_start_key):
         cached = week_plans.get(week_start_key)
-        if not _is_servable_plan(cached, week_start_key):
-            return {
-                "week_num": ctx["week_num"],
-                "phase_id": ctx["phase_id"],
-                "week_plan": None,
-                "past_week_unavailable": True,
-            }
-        week_plan = cached  # read-only: skip force/regen, fall through to resolve
+        if _is_servable_plan(cached, week_start_key):
+            week_plan = cached  # read-only: skip force/regen, fall through to resolve
+        else:
+            # A221: not in hot state → try the cold store before failing closed.
+            # An archived past week is served read-only and must NEVER be written
+            # back into hot (served_from_archive guards the cache-save below).
+            archived = read_archived_week(user_id, week_start_key)
+            if _is_servable_plan(archived, week_start_key):
+                week_plan = archived
+                served_from_archive = True
+            else:
+                return {
+                    "week_num": ctx["week_num"],
+                    "phase_id": ctx["phase_id"],
+                    "week_plan": None,
+                    "past_week_unavailable": True,
+                }
 
     # Store old plan before force-regeneration
     old_plan = week_plans.get(week_start_key) if force else None
@@ -469,8 +480,12 @@ def get_week(
     _auto_resolve(week_plan, state, user_id, phase=ctx["phase_id"])
 
     # B120: persist resolved data for completed sessions so they survive cache
-    # roundtrips and are never re-resolved with changed state (device switch)
-    if _cache_completed_resolved(week_plan, state, week_start_key, is_current_week):
+    # roundtrips and are never re-resolved with changed state (device switch).
+    # A221: a week served from the cold store must never be written back into
+    # hot state — it is already fully resolved and immutable.
+    if not served_from_archive and _cache_completed_resolved(
+        week_plan, state, week_start_key, is_current_week
+    ):
         save_state(state, user_id)
 
     # Attach feedback summaries from feedback_log (B32)

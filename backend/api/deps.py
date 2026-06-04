@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import uuid as _uuid
 from uuid import uuid4
 from copy import deepcopy
@@ -13,6 +15,8 @@ from typing import Any, Dict, Optional, Tuple
 from fastapi import Depends, HTTPException, Request
 
 from backend.engine import storage as _storage
+
+logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -145,6 +149,16 @@ def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
         from backend.engine.migrations.m001_backfill_tests_source import migrate as _backfill_tests_source
         if _backfill_tests_source(state):
             dirty = True
+        # A221: lazy-archive past week_plans into the cold store. Env-gated
+        # (default OFF) so the rollout is: deploy code (flag off) → backup +
+        # controlled migration run → flip flag on for ongoing rollover archiving.
+        # The read path serves archived weeks regardless of this flag.
+        if _lazy_archive_enabled() and user_id:
+            try:
+                if archive_past_weeks(state, user_id):
+                    dirty = True
+            except Exception:
+                logger.exception("A221: lazy archive failed; serving hot state unchanged")
         if dirty:
             save_state(state, user_id)
         return state
@@ -249,6 +263,100 @@ def is_past_week(week_start: str, from_date: Optional[date] = None) -> bool:
     string comparison is exact.
     """
     return week_start < this_monday(from_date)
+
+
+# ---------------------------------------------------------------------------
+# A221: lazy-archive of past week_plans (cold store)
+#
+# Hot window is C1 = {N-1, N, future}. Weeks with week_start < hot_floor()
+# (= Monday of the previous week) are moved to the cold store and read on
+# demand. The hot/cold boundary has a single definition (hot_floor) to avoid
+# the parallel-date-logic class of bug (B216/B217).
+# ---------------------------------------------------------------------------
+
+def hot_floor(from_date: Optional[date] = None) -> str:
+    """Monday of the *previous* week — the archiving boundary (A221, C1).
+
+    Weeks with ``week_start < hot_floor()`` are archived; {N-1, N, future}
+    stay hot. N-1 must stay hot: week.py cross-week spacing reads
+    week_plans[N-1] directly, and the recency lookback expects it present.
+    """
+    monday = date.fromisoformat(this_monday(from_date))
+    return (monday - timedelta(days=7)).isoformat()
+
+
+def _lazy_archive_enabled() -> bool:
+    """Whether the lazy archive *trigger* is active (env-gated, default OFF).
+
+    Read at call time (not import) so the controlled migration run and tests
+    can flip it without a restart. The READ path (serving archived weeks,
+    recency, reports) works regardless of this flag — only the automatic
+    hot→cold *move* in load_state is gated.
+    """
+    return os.environ.get("WEEKPLAN_ARCHIVE_LAZY", "false").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
+def archive_past_weeks(
+    state: Dict[str, Any], user_id: Optional[str], from_date: Optional[date] = None
+) -> int:
+    """Move hot ``week_plans`` with ``week_start < hot_floor()`` into the cold
+    store. Returns the number of weeks archived.
+
+    Safety crux (A221): the archive write is verified *before* the hot copy is
+    pruned. If the archive write/verify fails for a week, the hot copy is kept
+    and that week is skipped (idempotent — retried next time). Pure move: the
+    plan dict is copied unmodified, no planner/resolver ever runs. Mutates
+    ``state['week_plans']`` in place; the caller is responsible for persisting.
+    """
+    if not user_id:
+        return 0
+    floor = hot_floor(from_date)
+    week_plans = state.get("week_plans") or {}
+    to_move = sorted(k for k in week_plans if isinstance(k, str) and k < floor)
+    moved = 0
+    for k in to_move:
+        plan = week_plans[k]
+        try:
+            _storage.archive_week(user_id, k, plan)
+            # Verify the archive landed before pruning the only other copy.
+            if _storage.read_archived_week(user_id, k) is None:
+                logger.error(
+                    "A221: archive verify failed for user=%s week=%s — keeping hot copy",
+                    user_id, k,
+                )
+                continue
+        except Exception:
+            logger.exception(
+                "A221: archive write failed for user=%s week=%s — keeping hot copy",
+                user_id, k,
+            )
+            continue
+        del state["week_plans"][k]
+        moved += 1
+    return moved
+
+
+def read_archived_week(user_id: Optional[str], week_start: str) -> Optional[Dict[str, Any]]:
+    """Read a single week plan from the cold store (None if absent).
+
+    Thin call-time delegate to the active storage backend so tests can
+    monkeypatch ``backend.engine.storage``.
+    """
+    return _storage.read_archived_week(user_id, week_start)
+
+
+def read_week_plan(
+    state: Dict[str, Any], user_id: Optional[str], week_start: str
+) -> Optional[Dict[str, Any]]:
+    """Return the plan for *week_start* from hot state, falling back to the
+    cold store. None if neither has it. Read-only — never regenerates."""
+    week_plans = state.get("week_plans") or {}
+    hit = week_plans.get(week_start)
+    if hit is not None:
+        return hit
+    return _storage.read_archived_week(user_id, week_start)
 
 
 def current_phase_and_week(macrocycle: Dict[str, Any]) -> Tuple[int, int]:

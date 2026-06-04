@@ -100,6 +100,116 @@ def user_state_mtime(user_id: str) -> Optional[float]:
 
 
 # ---------------------------------------------------------------------------
+# Archived week plans (cold store) — A221
+#
+# Past week_plans live in a separate `week_archive` table, read on demand
+# only (never loaded by read_state). One row per archived week.
+# ---------------------------------------------------------------------------
+
+def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) -> None:
+    """Upsert a single week plan into the cold store, with read-after-write verify.
+
+    Pure move: the caller passes the unmodified plan dict. Raises OSError if the
+    upsert or the verifying read fails — the caller MUST NOT prune the hot copy
+    unless this returns cleanly (A221 safety crux: archive-write before hot-prune).
+    """
+    uid = _require_user_id(user_id)
+    result = _sb().table("week_archive").upsert({
+        "user_id": uid,
+        "week_start": week_start,
+        "plan": plan,
+    }).execute()
+    if not result.data:
+        raise OSError(
+            f"Supabase week_archive upsert returned empty data "
+            f"for user={uid}, week_start={week_start}"
+        )
+    verify = (
+        _sb()
+        .table("week_archive")
+        .select("week_start")
+        .eq("user_id", uid)
+        .eq("week_start", week_start)
+        .limit(1)
+        .execute()
+    )
+    if not verify.data:
+        raise OSError(
+            f"Supabase week_archive read-after-write failed for "
+            f"user={uid}, week_start={week_start}"
+        )
+
+
+def read_archived_week(user_id: Optional[str], week_start: str) -> Optional[Dict[str, Any]]:
+    """Read a single archived week plan, or None if absent."""
+    uid = _effective_uid(user_id)
+    r = (
+        _sb()
+        .table("week_archive")
+        .select("plan")
+        .eq("user_id", uid)
+        .eq("week_start", week_start)
+        .limit(1)
+        .execute()
+    )
+    if r.data:
+        return r.data[0]["plan"]
+    return None
+
+
+def list_archived_keys(user_id: Optional[str]) -> List[str]:
+    """Return sorted list of archived week_start keys for a user."""
+    uid = _effective_uid(user_id)
+    r = (
+        _sb()
+        .table("week_archive")
+        .select("week_start")
+        .eq("user_id", uid)
+        .order("week_start")
+        .execute()
+    )
+    return [row["week_start"] for row in r.data]
+
+
+def read_archived_weeks_in_range(
+    user_id: Optional[str], start: str, end: str
+) -> Dict[str, Dict[str, Any]]:
+    """Read all archived weeks whose key falls in [start, end] (inclusive)."""
+    uid = _effective_uid(user_id)
+    r = (
+        _sb()
+        .table("week_archive")
+        .select("week_start, plan")
+        .eq("user_id", uid)
+        .gte("week_start", start)
+        .lte("week_start", end)
+        .execute()
+    )
+    return {row["week_start"]: row["plan"] for row in r.data}
+
+
+def delete_archived_week(user_id: Optional[str], week_start: str) -> bool:
+    """Delete a single archived week. Returns True if a row was removed."""
+    uid = _require_user_id(user_id)
+    r = (
+        _sb()
+        .table("week_archive")
+        .delete()
+        .eq("user_id", uid)
+        .eq("week_start", week_start)
+        .execute()
+    )
+    return len(r.data) > 0
+
+
+def delete_all_archived(user_id: Optional[str]) -> int:
+    """Delete the entire cold store for a user. Returns count removed."""
+    uid = _require_user_id(user_id)
+    r = _sb().table("week_archive").delete().eq("user_id", uid).execute()
+    return len(r.data)
+
+
+# ---------------------------------------------------------------------------
 # Session logs
 # ---------------------------------------------------------------------------
 
@@ -308,4 +418,5 @@ def delete_user_data(user_id: str) -> None:
     _sb().table("outdoor_logs").delete().eq("user_id", uid).execute()
     _sb().table("event_logs").delete().eq("user_id", uid).execute()
     _sb().table("recovery_codes").delete().eq("user_id", uid).execute()
+    _sb().table("week_archive").delete().eq("user_id", uid).execute()
     _sb().table("users").delete().eq("user_id", uid).execute()

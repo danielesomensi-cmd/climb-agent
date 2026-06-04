@@ -130,12 +130,22 @@ def _build_context(user_state: Dict[str, Any], week_start: str) -> Dict[str, Any
 # ---------------------------------------------------------------------------
 
 
-def _find_week_plan(user_state: Dict[str, Any], week_start: str) -> Optional[Dict[str, Any]]:
-    """Find week plan from week_plans cache or current_week_plan."""
+def _find_week_plan(
+    user_state: Dict[str, Any], week_start: str, user_id: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """Find week plan from week_plans cache, the cold store, or current_week_plan."""
     # Try week_plans cache first
     week_plans = user_state.get("week_plans") or {}
     if week_start in week_plans:
         return week_plans[week_start]
+
+    # A221: a past week may have been moved to the cold store — read on demand
+    # so historical reports keep full adherence/load/difficulty detail.
+    if user_id:
+        from backend.engine import storage
+        archived = storage.read_archived_week(user_id, week_start)
+        if archived is not None:
+            return archived
 
     # Fallback to current_week_plan
     cwp = user_state.get("current_week_plan")
@@ -976,7 +986,7 @@ def generate_weekly_report(
         if since <= fs.get("date", "") <= until
     ]
 
-    week_plan = _find_week_plan(user_state, week_start)
+    week_plan = _find_week_plan(user_state, week_start, user_id)
 
     # Build each section
     context = _build_context(user_state, week_start)

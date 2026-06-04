@@ -196,7 +196,7 @@ def start_new_cycle(
 
     # ── 3. Archive the current macrocycle BEFORE overwrite ────────────────
     archived_count_before = len(new_state.get("macrocycle_history") or [])
-    archive_current_macrocycle(new_state)
+    archive_current_macrocycle(new_state, user_id)
     archived_count = len(new_state["macrocycle_history"]) - archived_count_before
 
     # ── 4. Update goal (with discipline-aware grade mapping) ──────────────
