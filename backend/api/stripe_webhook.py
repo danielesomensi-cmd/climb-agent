@@ -221,6 +221,18 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
     })
     logger.info("checkout.session.completed: user_id=%s linked to customer=%s", user_id, customer_id)
 
+    # Founder alert (fire-and-forget): trial started (card on file). Must never
+    # raise — a 500 here makes Stripe retry the webhook (B226).
+    try:
+        from backend.api.notifications import notify
+        notify(
+            "💳 Trial avviato (carta inserita)\n"
+            f"User: {user_id}\n"
+            f"Customer: {customer_id}"
+        )
+    except Exception:
+        pass
+
 
 def _handle_subscription_updated(sub: Dict[str, Any]) -> None:
     """customer.subscription.updated — sync status and period dates."""

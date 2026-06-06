@@ -435,6 +435,19 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
     invalidate_week_cache(state)
     save_state(state, user_id)
 
+    # Founder alert (fire-and-forget): a new user completed onboarding.
+    try:
+        from backend.api.notifications import notify
+        grades = state.get("assessment", {}).get("grades", {}) or {}
+        grade = grades.get("boulder_max_rp") if discipline == "boulder" else grades.get("lead_max_rp")
+        notify(
+            "🧗 Nuovo iscritto — onboarding completato\n"
+            f"Disciplina: {discipline} · grado: {grade or '?'}\n"
+            f"User: {user_id}"
+        )
+    except Exception:  # never let an alert break onboarding
+        pass
+
     return {"profile": profile, "macrocycle": macrocycle}
 
 
