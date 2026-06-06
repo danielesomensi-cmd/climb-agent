@@ -55,7 +55,7 @@
     "hangboard": [
       {
         "edge_mm": 20,
-        "estimated_at": "2026-06-04",
+        "estimated_at": "2026-06-06",
         "grade_used": "7a",
         "grip": "half_crimp",
         "hang_seconds": 7,
@@ -107,8 +107,8 @@
       "pulling_strength": 45,
       "technique": 60
     },
-    "end_date": "2026-08-23",
-    "generated_at": "2026-06-04T11:46:56",
+    "end_date": "2026-08-30",
+    "generated_at": "2026-06-06T17:51:06",
     "goal_snapshot": {
       "current_grade": "7a",
       "deadline": "2026-09-01",
@@ -270,7 +270,7 @@
         "start_week": 12
       }
     ],
-    "start_date": "2026-06-01",
+    "start_date": "2026-06-08",
     "total_weeks": 12
   },
   "outdoor_spots": [],
