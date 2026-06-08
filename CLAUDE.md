@@ -276,6 +276,8 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
   | STRIPE_PORTAL_ENABLED | `true` to enable Customer Portal (default: true) |
   | FRONTEND_BASE_URL | Base URL for Stripe redirect (default: Vercel prod URL) |
   | BYPASS_USER_IDS | Comma-separated user UUIDs that bypass subscription checks (founder, beta testers). Managed via Railway dashboard — no code change needed to add/remove. Read at import-time: changing it requires a service restart (Railway redeploy or manual restart). |
+  | TELEGRAM_BOT_TOKEN | Bot token (@BotFather) for founder alerts. Unset → `notify()` is a silent no-op (A222). |
+  | TELEGRAM_CHAT_ID | Destination chat id for founder alerts (new onboarding / trial started). Unset → no-op. |
 
 ### Clerk user lookup
 
