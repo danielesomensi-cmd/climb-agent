@@ -48,3 +48,6 @@ frontend/tsconfig.tsbuildinfo
 
 # stray node_modules (vitest cache when run from root cwd by mistake)
 /node_modules/
+
+# A221: local state backups (real user data — never commit)
+_backups/
