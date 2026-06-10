@@ -13,8 +13,22 @@ export function TrialBanner() {
   // Active paid subscriber — no banner
   if (isActive && !isTrialing) return null;
 
-  // Still setting up — no banner
-  if (status === "pending_checkout") return null;
+  // B258: checkout started but never completed — show a clear CTA instead of
+  // suppressing the banner. Otherwise the user lands in a dead-end: the app
+  // looks normal but every training action 402s with no path to subscribe.
+  if (status === "pending_checkout") {
+    return (
+      <div className="flex items-center justify-between bg-primary/5 text-foreground border-b border-border px-4 py-2 text-sm">
+        <span>Complete your subscription to start training.</span>
+        <button
+          onClick={() => router.push("/subscribe")}
+          className="text-xs font-medium underline underline-offset-2 text-primary"
+        >
+          Subscribe
+        </button>
+      </div>
+    );
+  }
 
   // Trialing — show countdown
   if (isTrialing) {

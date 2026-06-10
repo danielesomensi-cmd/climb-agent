@@ -434,14 +434,33 @@ def week_num_to_phase_context(macrocycle: Dict[str, Any], week_num: int) -> Dict
 # Subscription guard dependency
 # ---------------------------------------------------------------------------
 
-def require_active_subscription(user_id: Optional[str] = Depends(get_user_id)) -> None:
-    """FastAPI dependency: raise 402 if subscription is expired or canceled.
+# B258: never-trialed statuses get a "start" message; ended-trial statuses get
+# the "ended" message. Prevents the misleading "Your trial has ended" copy from
+# reaching users who never started a trial (pending_checkout / no row → none).
+_NEVER_STARTED_STATUSES = {"none", "pending_checkout"}
 
-    No-op when:
+
+def _subscription_required_message(status: str) -> str:
+    """User-facing 402 message, tailored to subscription status (B258)."""
+    if status in _NEVER_STARTED_STATUSES:
+        return "Subscribe to start training."
+    return "Your trial has ended. Subscribe to continue training."
+
+
+def require_active_subscription(user_id: Optional[str] = Depends(get_user_id)) -> None:
+    """FastAPI dependency: raise 402 when the user cannot interact.
+
+    No-op (allows the request) when:
     - STRIPE_SECRET_KEY is not set (dev/test)
     - STORAGE_BACKEND != 'supabase' (pytest uses file backend)
     - user_id is None (unauthenticated dev request)
-    - No subscription row exists (user hasn't completed checkout = still onboarding)
+    - user_id is in BYPASS_USER_IDS (founder / beta)
+    - subscription status is trialing or active
+
+    Fail-closed (raises 402) when Stripe is configured and the subscription is
+    missing/pending_checkout/past_due/canceled/expired. The 402 message is
+    status-aware so never-trialed users (pending_checkout / no row) are told to
+    *start*, not that a trial *ended* (B258).
     """
     from backend.engine.subscription_guard import check_subscription
     result = check_subscription(user_id)
@@ -451,6 +470,6 @@ def require_active_subscription(user_id: Optional[str] = Depends(get_user_id)) -
             detail={
                 "error": "subscription_required",
                 "status": result["status"],
-                "message": "Your trial has ended. Subscribe to continue training.",
+                "message": _subscription_required_message(result["status"]),
             },
         )

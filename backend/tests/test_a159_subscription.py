@@ -499,3 +499,35 @@ class TestGuardedEndpointsPassInTestMode:
 
         # 402 would mean guard fired — should NOT happen in test mode
         assert resp.status_code != 402
+
+
+# ---------------------------------------------------------------------------
+# B258 — status-aware 402 message
+# ---------------------------------------------------------------------------
+
+class TestSubscriptionRequiredMessage:
+    """The 402 message must not say 'trial has ended' to never-trialed users."""
+
+    def test_pending_checkout_gets_start_message(self):
+        from backend.api.deps import _subscription_required_message
+        msg = _subscription_required_message("pending_checkout")
+        assert "start" in msg.lower()
+        assert "ended" not in msg.lower()
+
+    def test_none_status_gets_start_message(self):
+        from backend.api.deps import _subscription_required_message
+        msg = _subscription_required_message("none")
+        assert "start" in msg.lower()
+        assert "ended" not in msg.lower()
+
+    def test_canceled_gets_ended_message(self):
+        from backend.api.deps import _subscription_required_message
+        assert "ended" in _subscription_required_message("canceled").lower()
+
+    def test_past_due_gets_ended_message(self):
+        from backend.api.deps import _subscription_required_message
+        assert "ended" in _subscription_required_message("past_due").lower()
+
+    def test_expired_gets_ended_message(self):
+        from backend.api.deps import _subscription_required_message
+        assert "ended" in _subscription_required_message("expired").lower()
