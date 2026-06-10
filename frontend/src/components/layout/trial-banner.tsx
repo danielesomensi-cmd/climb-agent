@@ -13,10 +13,12 @@ export function TrialBanner() {
   // Active paid subscriber — no banner
   if (isActive && !isTrialing) return null;
 
-  // B258: checkout started but never completed — show a clear CTA instead of
-  // suppressing the banner. Otherwise the user lands in a dead-end: the app
-  // looks normal but every training action 402s with no path to subscribe.
-  if (status === "pending_checkout") {
+  // B258: never-started subscribers (checkout begun but not completed, or no
+  // row at all) get a clear "start" CTA — never the "trial has ended" copy,
+  // which only applies to someone who actually had a trial. Without this the
+  // user lands in a dead-end: the app looks normal but every training action
+  // 402s with no path to subscribe. Mirrors backend _NEVER_STARTED_STATUSES.
+  if (status === "pending_checkout" || status === "none") {
     return (
       <div className="flex items-center justify-between bg-primary/5 text-foreground border-b border-border px-4 py-2 text-sm">
         <span>Complete your subscription to start training.</span>
