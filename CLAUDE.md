@@ -304,6 +304,23 @@ curl -s -H "Authorization: Bearer $CLERK_SECRET_KEY" \
 
 Key location: `.env` in repo root (gitignored, never commit).
 
+### Stripe read-only queries (debug/audit)
+
+`STRIPE_SECRET_KEY` (`sk_live_*`) is in `.env` at repo root (gitignored, never commit). Use it for read-only Stripe investigations (subscriptions, invoices, charges, webhook event delivery) without needing Railway CLI auth:
+
+```bash
+source .venv/bin/activate
+export STRIPE_SECRET_KEY=$(grep '^STRIPE_SECRET_KEY=' .env | cut -d= -f2-)
+python - <<'PY'
+import os, stripe
+stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+# e.g. stripe.Subscription.list(customer="cus_...", status="all")
+# e.g. stripe.Event.list(limit=30)  → check pending_webhooks (>0 = delivery not confirmed)
+PY
+```
+
+Note: StripeObject in stripe-python 15.x does not expose `.get()` as a method — use `obj["key"]` (wrapped in try/except) or `obj.to_dict_recursive()`.
+
 - **Persistence**: Supabase Postgres with JSONB (`STORAGE_BACKEND=supabase` in production). `user_state` stored as JSONB column. Railway persistent volume (`/data/climb-agent`) as fallback for `STORAGE_BACKEND=file` (pytest, local dev). `/health` exposes `ephemeral_warning`. RLS enabled on all 6 tables (2026-04-03). No policies — anon key blocked, service role key bypasses RLS.
 
 ## Documentation architecture
