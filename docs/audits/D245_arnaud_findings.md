@@ -1,7 +1,9 @@
-# D244 — Arnaud unexpected payment: findings (Phase 1, read-only)
+# D245 — Arnaud unexpected payment: investigation + refund remediation
 
-**Status:** Phase 1 investigation COMPLETA. STOP gate — attendo decisioni Daniele su refund + remediation.
+**Status:** COMPLETO (Phase 1 + Phase 2). Unico residuo: rimozione dal bypass (richiede Railway CLI auth) — vedi §Phase 2.
 **Date:** 2026-06-14
+**Brief number:** D245 (nel brief originale era "D-XXX"; D244 risultava già assegnato al Partner Mode audit).
+**Decisioni Daniele:** refund SÌ · opzione A (coupon 100%-off) · webhook fix in brief separato **B259**.
 
 ---
 
@@ -122,12 +124,23 @@ Le altre 3 righe `pending_checkout` (20 apr, 21 apr, 31 mag) **non hanno sub Str
 
 ---
 
-## STOP — decisioni richieste a Daniele (Phase 2)
+## Phase 2 — Remediation ESEGUITA (2026-06-14)
 
-1. **Refund $4.99** (charge `ch_3TiDA4Dyam3CcHNQ0nPQA1QA`)? → **Raccomandato SÌ** (gli era stato promesso gratis).
-2. **Cosa farne della subscription Stripe attiva** (altrimenti rinnova $4.99/mese):
-   - **Opzione B (raccomandata oggi, pragmatica):** refund + **cancel subscription** su Stripe + **tieni** `52681ef7-…` in `BYPASS_USER_IDS`. Pulito e immediato, indipendente dal webhook rotto.
-   - **Opzione A (brief default):** refund + coupon 100%-off + rimuovi da bypass. **Bloccata** finché il webhook è rotto (la sua riga DB resterebbe `pending_checkout` → guard lo negherebbe). Richiederebbe prima il fix webhook + sync manuale della riga.
-3. **Webhook P0** — apro brief B separato per il fix? (consigliato, ma fuori scope refund immediato)
+Decisioni Daniele: refund SÌ · **opzione A** (coupon 100%-off) · webhook fix → brief **B259**.
 
-Nessuna azione finanziaria eseguita finora. Tutto read-only.
+| # | Azione | Esito |
+|---|--------|-------|
+| 1 | **Refund $4.99** charge `ch_3TiDA4Dyam3CcHNQ0nPQA1QA` | ✅ refund **`re_3TiDA4Dyam3CcHNQ0HsD67I6`**, $4.99 usd, status=succeeded |
+| 2 | **Coupon 100%-off forever** creato + applicato a `sub_1Tcl3P` | ✅ coupon **`bPfe4kTR`** ("Friends & Family — 100% off") → discount **`di_1TiFt9Dyam3CcHNQDSwf42xv`**. Preview prossima fattura (14 lug): subtotal $4.99 → **total $0** |
+| 3 | **Sync manuale riga Supabase** (replica webhook) | ✅ riga `6cdc5e1f-…` → `status=active`, `stripe_customer_id=cus_Ubz0qNFUk7Wxx0`, `stripe_subscription_id=sub_1Tcl3P`, trial/period popolati. Solo tabella `subscriptions`, solo riga di Arnaud |
+| 4 | **Rimozione da `BYPASS_USER_IDS`** | ⏸️ **RINVIATO per scelta di Daniele** (non bloccante). Funzionalmente **non serve più** (riga reale `active` → guard passa legittimamente); il bypass resta come copertura ridondante innocua. Quando si vorrà ripulire: `railway login` → togliere `52681ef7-…` da `BYPASS_USER_IDS` → redeploy |
+
+### Verifica (2c)
+- **Accesso:** `/api/subscription/status` → `{"status":"active","is_active":true,...}` ✅
+- **Immutabilità:** `session_logs`/`outdoor_logs`/`event_logs` = 0/0/0 (invariati; mai toccato `user_state`) ✅
+- **Rinnovi futuri:** azzerati dal coupon (preview $0) ✅
+- Nota: la verifica del path "guard sulla riga reale senza bypass" sarà completa solo dopo lo step 4 (oggi il bypass intercetta prima del lookup riga). La logica è deterministica: `status=active ∈ _ACTIVE_STATUSES` → accesso garantito.
+
+### Follow-up aperti
+- **B259** — fix pipeline webhook Stripe→backend rotta (P0). Vedi §Webhook.
+- **Step 4** — rimozione bypass (Railway), quando disponibile auth.
