@@ -10,6 +10,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import (
+    assert_plan_not_paused,
     current_phase_and_week,
     ensure_monday,
     get_user_id,
@@ -39,6 +40,9 @@ def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_i
     with the current assessment profile.
     """
     state = load_state(user_id)
+
+    # A223: regeneration is a no-op while the plan is paused — resume first.
+    assert_plan_not_paused(state)
 
     goal = state.get("goal")
     if not goal:
@@ -95,6 +99,11 @@ def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_i
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
 
     state["macrocycle"] = macrocycle
+    # A223: incremental regen keeps start_date + total_weeks; the cumulative pause
+    # offset must survive too, else the effective anchor would jump back. (Full
+    # regen / new start_date deliberately resets the pause — fresh timeline.)
+    if from_phase and old_mc and old_mc.get("pause"):
+        macrocycle["pause"] = old_mc["pause"]
     state.pop("initial_tests_requested", None)
     invalidate_week_cache(state)
     save_state(state, user_id)

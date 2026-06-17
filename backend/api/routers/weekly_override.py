@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.api.deps import ensure_monday, get_user_id, load_state, save_state
+from backend.api.deps import assert_plan_not_paused, ensure_monday, get_user_id, load_state, save_state
 from backend.engine.weekly_override import build_merged_view, build_slot_view
 
 router = APIRouter(prefix="/api/weekly-override", tags=["weekly-override"])
@@ -64,6 +64,7 @@ def put_weekly_override(
 ):
     """Save an override for a specific week. Only changed days should be included."""
     state = load_state(user_id)
+    assert_plan_not_paused(state)  # A223 — availability change triggers regen
     validated_start = ensure_monday(week_start)
 
     serialized_days = {}

@@ -359,20 +359,113 @@ def read_week_plan(
     return _storage.read_archived_week(user_id, week_start)
 
 
+# ---------------------------------------------------------------------------
+# A223: Plan pause / resume (Option B from D246)
+#
+# start_date is IMMUTABLE. A cumulative, whole-week pause offset shifts the
+# *effective* anchor read ONLY by the two forward consumers below
+# (current_phase_and_week, week_num_to_phase_context) — the single source of
+# truth for the offset math. The completion window [start_date, end_date] and
+# every past-date derivation keep reading the raw start_date, so completed/
+# archived sessions stay inside the cycle window (the failure mode that ruled
+# out Option A). With no pause (offset 0, no active_since) both helpers reduce
+# to the raw values → ZERO behavior change for non-paused users.
+# ---------------------------------------------------------------------------
+
+def compute_pause_offset(paused_at: str, resume_date: str) -> int:
+    """Whole-week pause delta in days, Monday-to-Monday (A223).
+
+    ``N = Monday(resume_date) - Monday(paused_at)`` in days — always a
+    non-negative multiple of 7. A sub-week pause (resume in the same ISO week as
+    the pause start) yields ``0`` → the plan does not shift (product decision
+    "a", D246/A223). The intra-week partial is handled by the planner's existing
+    ``today`` param, so the Monday-invariant holds by construction.
+    """
+    p = datetime.strptime(paused_at, "%Y-%m-%d").date()
+    r = datetime.strptime(resume_date, "%Y-%m-%d").date()
+    p_mon = p - timedelta(days=p.weekday())
+    r_mon = r - timedelta(days=r.weekday())
+    return max(0, (r_mon - p_mon).days)
+
+
+def _effective_anchor(macrocycle: Dict[str, Any]) -> Tuple[date, date]:
+    """Return ``(effective_start, effective_today)`` accounting for pause (A223).
+
+    - ``effective_start = start_date + pause.offset_days`` (cumulative completed
+      pauses). Used so the forward position does not include paused time.
+    - ``effective_today``: while a pause is active, frozen at ``active_since`` so
+      the position stops advancing during the pause; otherwise ``date.today()``.
+
+    No pause → ``(start_date, today)`` exactly.
+    """
+    mc_start = datetime.strptime(macrocycle["start_date"], "%Y-%m-%d").date()
+    pause = macrocycle.get("pause") or {}
+    offset_days = int(pause.get("offset_days") or 0)
+    effective_start = mc_start + timedelta(days=offset_days)
+    eff_today = date.today()
+    active_since = pause.get("active_since")
+    if active_since:
+        try:
+            frozen = datetime.strptime(active_since, "%Y-%m-%d").date()
+            eff_today = min(frozen, eff_today)
+        except ValueError:
+            pass
+    return effective_start, eff_today
+
+
+def is_plan_paused(state: Dict[str, Any]) -> bool:
+    """True iff the current macrocycle has an active (open) pause."""
+    mc = state.get("macrocycle") or {}
+    return bool((mc.get("pause") or {}).get("active_since"))
+
+
+def assert_plan_not_paused(state: Dict[str, Any]) -> None:
+    """Guard for plan-mutating endpoints (A223). Raises 409 while paused so
+    replan/regenerate/availability-change paths are a no-op until the user
+    resumes. Reads stay available. No-op when not paused (every existing,
+    non-paused user)."""
+    if is_plan_paused(state):
+        raise HTTPException(
+            status_code=409,
+            detail={"paused": True, "message": "Resume your plan to continue"},
+        )
+
+
+def pause_intervals(macrocycle: Dict[str, Any], today_iso: Optional[str] = None) -> list:
+    """Closed [from, to] pause intervals for display classification (A223).
+
+    Includes the completed intervals from ``pause.log`` plus the currently-open
+    interval (``active_since`` → today) if a pause is active. Read-only.
+    """
+    pause = macrocycle.get("pause") or {}
+    out = [
+        (e["from"], e["to"])
+        for e in (pause.get("log") or [])
+        if e.get("from") and e.get("to")
+    ]
+    active_since = pause.get("active_since")
+    if active_since:
+        out.append((active_since, today_iso or date.today().isoformat()))
+    return out
+
+
 def current_phase_and_week(macrocycle: Dict[str, Any]) -> Tuple[int, int]:
     """Given a macrocycle dict, find which phase and week-within-phase today falls in.
 
     Returns (phase_index, week_within_phase) both 0-based.
     If today is before the macrocycle start, returns (0, 0).
     If today is past the end, returns last phase and its last week.
+
+    A223: reads the *effective* anchor (start_date + pause offset) and a
+    pause-frozen "today" so a paused plan holds its position. No pause →
+    identical to the pre-A223 behavior.
     """
     phases = macrocycle.get("phases") or []
     if not phases:
         return (0, 0)
 
-    today = date.today()
+    mc_start, today = _effective_anchor(macrocycle)
     cumulative_week = 0
-    mc_start = datetime.strptime(macrocycle["start_date"], "%Y-%m-%d").date()
 
     for pi, phase in enumerate(phases):
         duration = phase.get("duration_weeks", 1)
@@ -400,7 +493,9 @@ def week_num_to_phase_context(macrocycle: Dict[str, Any], week_num: int) -> Dict
     if not phases:
         raise ValueError("Macrocycle has no phases")
 
-    mc_start = datetime.strptime(macrocycle["start_date"], "%Y-%m-%d").date()
+    # A223: effective anchor (start_date + pause offset). current_phase_and_week
+    # is already pause-aware, so week_num=0 resolution stays consistent.
+    mc_start, _ = _effective_anchor(macrocycle)
 
     if week_num == 0:
         pi, wi = current_phase_and_week(macrocycle)

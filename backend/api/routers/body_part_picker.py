@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from backend.api.deps import (
     REPO_ROOT,
+    assert_plan_not_paused,
     get_user_id,
     load_state,
     require_active_subscription,
@@ -142,6 +143,7 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
     _validate_target_date(req.target_date)
 
     state = load_state(user_id)
+    assert_plan_not_paused(state)  # A223 — inserts into the week plan
     catalog = _load_catalog()
     session_payload = generate_body_part_session(
         body_parts=req.body_parts,

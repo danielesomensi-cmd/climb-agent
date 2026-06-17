@@ -71,6 +71,60 @@ def _planned_session_count(
     return total
 
 
+def _pause_intervals(macrocycle: Dict[str, Any]) -> List[tuple]:
+    """Closed [from, to] pause intervals from ``macrocycle.pause.log`` plus the
+    open interval if a pause is currently active (A223). ISO date strings, so
+    plain string comparison preserves calendar order."""
+    pause = macrocycle.get("pause") or {}
+    out = [
+        (e["from"], e["to"])
+        for e in (pause.get("log") or [])
+        if e.get("from") and e.get("to")
+    ]
+    active_since = pause.get("active_since")
+    if active_since:
+        out.append((active_since, datetime.now().strftime("%Y-%m-%d")))
+    return out
+
+
+def _date_in_any_interval(date_str: str, intervals: List[tuple]) -> bool:
+    return any(lo <= date_str <= hi for lo, hi in intervals)
+
+
+def _paused_session_count(
+    macrocycle: Dict[str, Any], state: Dict[str, Any], user_id: Optional[str] = None
+) -> int:
+    """Count planned-but-undone sessions whose day falls inside a pause interval
+    (A223). Display-only derived classification: these are "paused", NOT "missed".
+    Pure read — no session record is mutated. Returns 0 when the cycle was never
+    paused, so non-paused cycles are unaffected."""
+    intervals = _pause_intervals(macrocycle)
+    if not intervals:
+        return 0
+    start = macrocycle.get("start_date")
+    end = macrocycle.get("end_date")
+    if not start or not end:
+        return 0
+    week_plans = dict(state.get("week_plans") or {})
+    if user_id:
+        from backend.engine import storage
+        for k, plan in storage.read_archived_weeks_in_range(user_id, start, end).items():
+            week_plans.setdefault(k, plan)
+    paused = 0
+    for week_key, plan in week_plans.items():
+        if not isinstance(week_key, str) or not (start <= week_key <= end):
+            continue
+        for week in (plan.get("weeks") or []):
+            for day in (week.get("days") or []):
+                day_date = day.get("date")
+                if not day_date or not _date_in_any_interval(day_date, intervals):
+                    continue
+                for sess in (day.get("sessions") or []):
+                    if sess.get("status") not in ("done", "skipped"):
+                        paused += 1
+    return paused
+
+
 def _tests_completed_in_window(state: Dict[str, Any], start: str, end: str) -> List[Dict[str, str]]:
     """Tests session_ids completed inside the cycle window, with dates."""
     completion_log = state.get("session_completion_log") or []
@@ -115,6 +169,9 @@ def _build_completion_summary(
     return {
         "sessions_done": sessions_done,
         "sessions_skipped": sessions_skipped,
+        # A223: planned-but-undone sessions inside a pause window are "paused",
+        # not "missed" — derived at read time, no record mutated.
+        "sessions_paused": _paused_session_count(macrocycle, state, user_id),
         "sessions_planned": _planned_session_count(macrocycle, state, user_id),
         "tests_completed": _tests_completed_in_window(state, start, end) if start and end else [],
         "phases_completed": _count_phases(macrocycle),
