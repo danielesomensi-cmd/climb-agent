@@ -5,5 +5,5 @@ pytest
 httpx
 supabase
 PyJWT[crypto]
-stripe
+stripe==15.0.0  # B259: pinned — StripeObject API changes between majors broke the webhook handler (event.get); do not unpin without re-testing stripe_webhook.py
 slowapi

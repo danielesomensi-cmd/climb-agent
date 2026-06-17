@@ -103,9 +103,15 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
         logger.error("Stripe webhook construct_event failed: %s", exc)
         return JSONResponse({"error": "Bad request"}, status_code=400)
 
-    event_id = event.get("id") or ""
-    event_type = event["type"]
-    data_object = _stripe_to_dict(event["data"]["object"])
+    # B259: construct_event returns a StripeObject (stripe.Event), which in
+    # stripe-python >=8 does NOT support dict.get() — `event.get("id")` raises
+    # AttributeError and (being outside the try) 500s every real delivery while
+    # dict-mocked tests pass. Convert to a plain dict once so all access is
+    # version-agnostic, consistent with how data_object was already handled.
+    event_dict = _stripe_to_dict(event)
+    event_id = event_dict.get("id") or ""
+    event_type = event_dict["type"]
+    data_object = event_dict["data"]["object"]
 
     # DIAG: surface env state on every event so Railway logs show the truth
     import os as _os
