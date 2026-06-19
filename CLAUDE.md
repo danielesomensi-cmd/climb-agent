@@ -175,13 +175,17 @@ user_state.assessment + user_state.goal
 | POST | `/api/feedback` | Submit session feedback |
 | GET | `/api/outdoor/spots` | List outdoor spots |
 | POST | `/api/outdoor/spots` | Add outdoor spot |
-| DELETE | `/api/outdoor/spots/{id}` | Remove outdoor spot |
+| DELETE | `/api/outdoor/spots/{spot_id}` | Remove outdoor spot |
 | POST | `/api/outdoor/log` | Log outdoor session |
 | GET | `/api/outdoor/log/{date}` | Get outdoor session by date |
 | PUT | `/api/outdoor/log` | Update outdoor session |
 | DELETE | `/api/outdoor/log/{date}` | Delete outdoor session by date |
 | GET | `/api/outdoor/sessions` | List outdoor sessions |
 | GET | `/api/outdoor/stats` | Outdoor statistics |
+| GET | `/api/outdoor/strategy` | Resolve deterministic strategy + nutrition for an outdoor day (layered patches) |
+| POST | `/api/outdoor/session/start` | Start an active outdoor session (server-side timer) |
+| POST | `/api/outdoor/session/{session_id}/finish` | Finish active outdoor session → immutable outdoor.v2 log |
+| DELETE | `/api/outdoor/session/{session_id}` | Discard an active outdoor session without logging |
 | POST | `/api/outdoor/convert-slot` | Convert outdoor slot to gym/home |
 | GET | `/api/reports/weekly` | Weekly training report |
 | GET | `/api/reports/monthly` | Monthly training report |
