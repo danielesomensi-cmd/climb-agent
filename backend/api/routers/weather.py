@@ -25,7 +25,7 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.api.deps import require_active_subscription
-from backend.engine.weather_v1 import compute_dew_point, condition_band
+from backend.engine.weather_v1 import compute_dew_point, condition_band, wind_label
 
 router = APIRouter(prefix="/api/weather", tags=["weather"])
 
@@ -72,6 +72,7 @@ def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
         "humidity": round(humidity),
         "dew_point": dew_point,
         "wind": wind_kmh,
+        "wind_label": wind_label(wind_kmh),
         "condition_text": (weather0.get("description") or "").capitalize(),
         "condition_code": code,
         "condition_band": condition_band(temp, humidity, dew_point, wind_kmh, precip),
@@ -113,6 +114,7 @@ def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
         "humidity": round(humidity),
         "dew_point": dew_point,
         "wind": wind_kmh,
+        "wind_label": wind_label(wind_kmh),
         "condition_text": (weather0.get("description") or "").capitalize(),
         "condition_code": code,
         "condition_band": condition_band(temp, humidity, dew_point, wind_kmh, precip),
@@ -136,7 +138,7 @@ def _owm_get(path: str, lat: float, lon: float) -> Dict[str, Any]:
     try:
         resp = httpx.get(
             f"{_OWM_BASE}/{path}",
-            params={"lat": lat, "lon": lon, "appid": key, "units": "metric"},
+            params={"lat": lat, "lon": lon, "appid": key, "units": "metric", "lang": "it"},
             timeout=_HTTP_TIMEOUT_S,
         )
         resp.raise_for_status()

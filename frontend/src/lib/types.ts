@@ -752,6 +752,7 @@ export interface Weather {
   humidity: number;
   dew_point: number;
   wind: number;
+  wind_label: string;
   condition_text: string;
   condition_code: number;
   condition_band: ConditionBand;
