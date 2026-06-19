@@ -276,7 +276,62 @@ class TestHelperFunctions:
         assert not is_completed_table_row("| ID | Title | Status |")
         assert not is_completed_table_row("|------|--------|--------|")
 
+    def test_open_status_with_checkmark_in_notes_not_completed(self):
+        # Regression (2026-06-19): Status is Open but Notes prose mentions
+        # "✅ Done" → must NOT be treated as completed.
+        assert not is_completed_table_row(
+            '| 2 | Drift | C | S | Open | F-17 "planned" → ✅ Done, F-35 done |'
+        )
+        # And a genuine ✅-status row with no Open cell is still completed.
+        assert is_completed_table_row("| B207 | Harden | B | S | ✅ Done (B261) | x |")
+        # "Open **P2**" status marker counts as open.
+        assert not is_completed_table_row("| X | T | A | M | Open **P2** | ✅ ref |")
+
     def test_header_or_separator(self):
         assert is_header_or_separator("| ID | Title | Status |")
         assert is_header_or_separator("|------|--------|--------|")
         assert not is_header_or_separator("| B1 | Fix crash | ✅ Done |")
+
+
+# Regression (2026-06-19 hygiene round): a row with Status "Open" whose Notes
+# prose mentioned "✅ Done" was archived into the frozen ROADMAP_v2.md, silently
+# dropping an open item from active tracking.
+OPEN_NOTES_CHECKMARK_ROADMAP = """\
+# Roadmap
+
+## Priority 1 — Audit Remediation
+
+| ID | Title | Type | Effort | Status | Notes |
+|----|-------|------|--------|--------|-------|
+| 0 | Fix sync regex | B | S | ✅ Done 2026-05-10 | closed F-01 |
+| 2 | Status-marker drift | C | S | Open | F-17 "planned" → ✅ Done, F-35 implemented |
+| B207 | Harden warmup | B | S | ✅ Done (B261) | closed by B261 |
+
+---
+
+## Priority 2 — Future
+
+| ID | Title | Status |
+|----|-------|--------|
+| F1 | New feature | Planned |
+"""
+
+
+class TestOpenRowWithCheckmarkInNotesPreserved:
+    def test_open_row_kept_completed_rows_archived(self, tmp_path):
+        roadmap = _write(tmp_path, "ROADMAP.md", OPEN_NOTES_CHECKMARK_ROADMAP)
+        archive = tmp_path / "ARCHIVE.md"
+
+        trim_roadmap(roadmap, archive, dry_run=False)
+
+        current = roadmap.read_text()
+        archived = archive.read_text() if archive.exists() else ""
+
+        # Completed rows archived and gone from current
+        assert "Fix sync regex" not in current
+        assert "B207" not in current
+        assert "B207" in archived
+
+        # The OPEN row (with ✅ in its Notes) must survive in current, never archived
+        assert "Status-marker drift" in current
+        assert "Status-marker drift" not in archived

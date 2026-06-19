@@ -54,10 +54,27 @@ def is_header_or_separator(line: str) -> bool:
     return bool(HEADER_PATTERNS.match(s) or SEPARATOR_RE.match(s))
 
 
+def _table_cells(line: str) -> list[str]:
+    return [c.strip() for c in line.strip().strip("|").split("|")]
+
+
+def _row_status_is_open(line: str) -> bool:
+    """True if any cell is an explicit 'Open' status marker (e.g. 'Open',
+    'Open **P2**'). Guards against a row whose Status is Open but whose Notes
+    prose merely mentions '✅ Done' being mistaken for a completed row — the
+    bug that archived an open item into the frozen ROADMAP_v2.md."""
+    for cell in _table_cells(line):
+        c = re.sub(r"[*`]", "", cell).strip().lower()
+        if re.match(r"open\b", c):
+            return True
+    return False
+
+
 def is_completed_table_row(line: str) -> bool:
     if not is_table_row(line) or is_header_or_separator(line):
         return False
-    return "✅" in line
+    # ✅ anywhere, but an explicit "Open" status cell wins (✅ may be Notes prose).
+    return "✅" in line and not _row_status_is_open(line)
 
 
 def is_completed_bullet(line: str) -> bool:
@@ -110,8 +127,12 @@ def _has_open_items(lines: list[str]) -> bool:
         # Open bullet (starts with - but NOT - ✅)
         if s.startswith("- ") and not s.startswith("- ✅"):
             return True
-        # Open table data row (no ✅)
-        if is_table_row(line) and not is_header_or_separator(line) and "✅" not in line:
+        # Open table data row (no ✅, or explicit "Open" status despite ✅ in notes)
+        if (
+            is_table_row(line)
+            and not is_header_or_separator(line)
+            and ("✅" not in line or _row_status_is_open(line))
+        ):
             return True
         # Open subsection (### without ✅)
         if s.startswith("### ") and "✅" not in s:
@@ -267,7 +288,7 @@ def trim_roadmap(
                         if (s.startswith("- ") and not s.startswith("- ✅")) or (
                             is_table_row(bline)
                             and not is_header_or_separator(bline)
-                            and "✅" not in bline
+                            and ("✅" not in bline or _row_status_is_open(bline))
                         ):
                             has_open_items = True
                 if has_open_items or not block_archived:
