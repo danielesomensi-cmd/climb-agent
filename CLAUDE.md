@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-76 endpoints total (74 router + 2 app-level: health check + stripe webhook).
+77 endpoints total (75 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -188,6 +188,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/outdoor/session/active` | Restore in-progress active outdoor session (with live routes) |
 | POST | `/api/outdoor/session/{session_id}/log-climb` | Append a climb to the active session (live logging) |
 | DELETE | `/api/outdoor/session/{session_id}/climb/{climb_index}` | Remove a climb from the active session |
+| PUT | `/api/outdoor/session/{session_id}/routes` | Replace the active session's full routes list (live sync) |
 | DELETE | `/api/outdoor/session/{session_id}` | Discard an active outdoor session without logging |
 | POST | `/api/outdoor/convert-slot` | Convert outdoor slot to gym/home |
 | GET | `/api/reports/weekly` | Weekly training report |
