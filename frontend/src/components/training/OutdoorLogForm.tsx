@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import type { OutdoorSpot, OutdoorRoute, OutdoorAttempt, OutdoorSession } from "@/lib/types";
+import type {
+  OutdoorSpot,
+  OutdoorRoute,
+  OutdoorSession,
+  OutdoorDayType,
+  OutdoorRouteProfile,
+  OutdoorConditions,
+} from "@/lib/types";
 import { postOutdoorLog, putOutdoorLog } from "@/lib/api";
 
 const FRENCH_SPORT_GRADES = [
@@ -25,16 +32,25 @@ interface Props {
   defaultSpotName?: string;
   defaultDiscipline?: "lead" | "boulder" | "both";
   defaultGrade?: string;
+  defaultDuration?: number;
   initialData?: OutdoorSession;
   onSuccess?: () => void;
+  // A226 — guided finish flow: carry day_type/route_profile/conditions and
+  // submit through a custom handler (finishOutdoorSession) instead of post/put.
+  dayType?: OutdoorDayType;
+  routeProfile?: OutdoorRouteProfile;
+  conditions?: OutdoorConditions | null;
+  durationCappedNote?: { cap: number; raw: number } | null;
+  onSubmit?: (payload: Record<string, unknown>) => Promise<void>;
+  submitLabel?: string;
 }
 
-export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, initialData, onSuccess }: Props) {
+export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, defaultDuration, initialData, onSuccess, dayType, routeProfile, conditions, durationCappedNote, onSubmit, submitLabel }: Props) {
   const isEdit = !!initialData;
   const [date, setDate] = useState(initialData?.date || defaultDate || new Date().toISOString().slice(0, 10));
   const [spotName, setSpotName] = useState(initialData?.spot_name || defaultSpotName || "");
   const [discipline, setDiscipline] = useState<"lead" | "boulder" | "both">(initialData?.discipline || defaultDiscipline || "boulder");
-  const [duration, setDuration] = useState(initialData?.duration_minutes || 120);
+  const [duration, setDuration] = useState(initialData?.duration_minutes || defaultDuration || 120);
   const [routes, setRoutes] = useState<OutdoorRoute[]>(initialData?.routes || []);
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [submitting, setSubmitting] = useState(false);
@@ -105,7 +121,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     setSubmitting(true);
     setError(null);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         date,
         spot_name: spotName,
         discipline,
@@ -116,10 +132,17 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
         }),
         notes: notes || undefined,
       };
-      if (isEdit) {
-        await putOutdoorLog(payload);
+      // A226 — carry outdoor.v2 fields when provided (guided flow).
+      if (dayType) payload.day_type = dayType;
+      if (routeProfile && Object.keys(routeProfile).length > 0) payload.route_profile = routeProfile;
+      if (conditions) payload.conditions = conditions;
+
+      if (onSubmit) {
+        await onSubmit(payload);
+      } else if (isEdit) {
+        await putOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">);
       } else {
-        await postOutdoorLog(payload);
+        await postOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">);
       }
       onSuccess?.();
     } catch (e) {
@@ -196,6 +219,11 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
           min={1}
           className="w-24 rounded-md border bg-background px-3 py-2 text-sm"
         />
+        {durationCappedNote && (
+          <p className="mt-1 text-xs text-amber-500">
+            Timer ran long ({Math.round(durationCappedNote.raw / 60)}h) — capped to {durationCappedNote.cap} min. Adjust above if needed.
+          </p>
+        )}
       </div>
 
       {/* Routes — Issue 2: 2-row layout per card */}
@@ -302,7 +330,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
         disabled={submitting}
         className="w-full rounded-md bg-primary py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
-        {submitting ? "Saving..." : isEdit ? "Save Changes" : "Log Session"}
+        {submitting ? "Saving..." : submitLabel || (isEdit ? "Save Changes" : "Log Session")}
       </button>
     </div>
   );
