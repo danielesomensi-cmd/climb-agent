@@ -55,6 +55,9 @@ export default function OutdoorDayPage() {
   const date = String(params.date);
   const spotName = search.get("spot") || "";
   const disciplineParam = (search.get("discipline") as "lead" | "boulder" | "both" | null) || "lead";
+  // v1: the strategy/nutrition catalog (C241) is lead-only. On a boulder spot we
+  // skip the lead strategy (it would be misleading) and offer a timer + log only.
+  const isBoulder = disciplineParam === "boulder";
 
   const { state: userState } = useUserState();
   const [spots, setSpots] = useState<OutdoorSpot[]>([]);
@@ -120,7 +123,7 @@ export default function OutdoorDayPage() {
   const pickDayType = (dt: OutdoorDayType) => {
     setDayType(dt);
     setReadyOk(null);
-    resolve(dt, profile);
+    if (!isBoulder) resolve(dt, profile); // boulder: no lead-strategy resolve (v1)
   };
 
   const setRefine = (key: keyof OutdoorRouteProfile, v: string) => {
@@ -164,7 +167,7 @@ export default function OutdoorDayPage() {
   const elapsedMin = startedAt ? Math.max(1, Math.round((Date.now() - new Date(startedAt).getTime()) / 60000)) : undefined;
 
   const isProject = dayType === "project";
-  const gatePassed = !isProject || readyOk === true;
+  const gatePassed = isBoulder || !isProject || readyOk === true;
 
   return (
     <>
@@ -203,7 +206,14 @@ export default function OutdoorDayPage() {
               </div>
             </div>
 
-            {dayType && (
+            {dayType && isBoulder && (
+              <div className="rounded-lg border border-white/10 bg-zinc-900/30 p-4 text-sm text-zinc-400">
+                <p className="font-medium text-zinc-200">Boulder strategy coming soon</p>
+                <p className="mt-1">Use the timer and log your sends — full boulder strategy lands in a later update.</p>
+              </div>
+            )}
+
+            {dayType && !isBoulder && (
               <>
                 {/* Refine (progressive disclosure) */}
                 <div className="rounded-lg border border-white/5">
@@ -270,24 +280,26 @@ export default function OutdoorDayPage() {
                 {/* Strategy */}
                 {loadingStrat && <p className="text-sm text-zinc-500">Loading strategy…</p>}
                 {strategy && !loadingStrat && <StrategyView data={strategy} />}
-
-                {/* Actions */}
-                <div className="space-y-2">
-                  <button
-                    onClick={start}
-                    disabled={!gatePassed || !strategy}
-                    className="w-full rounded-md bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-40"
-                  >
-                    Start session
-                  </button>
-                  <button
-                    onClick={() => setPhase("logging")}
-                    className="w-full rounded-md border border-white/10 py-2 text-sm text-zinc-400"
-                  >
-                    Log without timer
-                  </button>
-                </div>
               </>
+            )}
+
+            {/* Actions (shared — boulder or lead) */}
+            {dayType && (
+              <div className="space-y-2">
+                <button
+                  onClick={start}
+                  disabled={!gatePassed || (!isBoulder && !strategy)}
+                  className="w-full rounded-md bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+                >
+                  Start session
+                </button>
+                <button
+                  onClick={() => setPhase("logging")}
+                  className="w-full rounded-md border border-white/10 py-2 text-sm text-zinc-400"
+                >
+                  Log without timer
+                </button>
+              </div>
             )}
           </>
         )}
