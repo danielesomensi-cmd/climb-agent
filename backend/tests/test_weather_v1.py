@@ -76,15 +76,15 @@ def test_band_strong_wind_caps_at_ok():
 # --- wind descriptor ----------------------------------------------------------
 
 def test_wind_label_scale():
-    assert wind_label(0.0) == "assente"
-    assert wind_label(0.9) == "assente"
-    assert wind_label(1.0) == "molto debole"
-    assert wind_label(9.0) == "debole"
-    assert wind_label(15.0) == "moderato"
-    assert wind_label(25.0) == "teso"
-    assert wind_label(35.0) == "fresco"
-    assert wind_label(45.0) == "forte"
-    assert wind_label(60.0) == "molto forte"
+    assert wind_label(0.0) == "calm"
+    assert wind_label(0.9) == "calm"
+    assert wind_label(1.0) == "very light"
+    assert wind_label(9.0) == "light"
+    assert wind_label(15.0) == "moderate"
+    assert wind_label(25.0) == "brisk"
+    assert wind_label(35.0) == "fresh"
+    assert wind_label(45.0) == "strong"
+    assert wind_label(60.0) == "very strong"
 
 
 # --- OWM adapters -------------------------------------------------------------
@@ -111,7 +111,7 @@ def test_normalize_current_shape():
     out = weather_router._normalize_current(_OWM_CURRENT)
     assert out["temp"] == 8.4
     assert out["wind"] == pytest.approx(9.0, abs=0.1)  # 2.5 m/s → km/h
-    assert out["wind_label"] == "debole"
+    assert out["wind_label"] == "light"
     assert out["condition_band"] == "prime"
     assert out["is_forecast"] is False
     assert out["source"] == "openweathermap"

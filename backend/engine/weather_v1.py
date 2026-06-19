@@ -77,22 +77,22 @@ def _temp_band(temp_c: float) -> ConditionBand:
     return "poor"
 
 
-# --- wind descriptor (Beaufort-aligned, Italian) ------------------------------
+# --- wind descriptor (Beaufort-aligned, English) ------------------------------
 # Upper bound (km/h, exclusive) → label. Last entry is the catch-all.
 _WIND_LABELS = (
-    (1.0, "assente"),
-    (6.0, "molto debole"),
-    (12.0, "debole"),
-    (20.0, "moderato"),
-    (29.0, "teso"),
-    (39.0, "fresco"),
-    (50.0, "forte"),
-    (float("inf"), "molto forte"),
+    (1.0, "calm"),
+    (6.0, "very light"),
+    (12.0, "light"),
+    (20.0, "moderate"),
+    (29.0, "brisk"),
+    (39.0, "fresh"),
+    (50.0, "strong"),
+    (float("inf"), "very strong"),
 )
 
 
 def wind_label(wind_kmh: float) -> str:
-    """Qualitative Italian wind descriptor from speed in km/h (Beaufort-aligned)."""
+    """Qualitative English wind descriptor from speed in km/h (Beaufort-aligned)."""
     for upper, label in _WIND_LABELS:
         if wind_kmh < upper:
             return label

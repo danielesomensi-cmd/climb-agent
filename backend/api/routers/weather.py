@@ -138,7 +138,7 @@ def _owm_get(path: str, lat: float, lon: float) -> Dict[str, Any]:
     try:
         resp = httpx.get(
             f"{_OWM_BASE}/{path}",
-            params={"lat": lat, "lon": lon, "appid": key, "units": "metric", "lang": "it"},
+            params={"lat": lat, "lon": lon, "appid": key, "units": "metric", "lang": "en"},
             timeout=_HTTP_TIMEOUT_S,
         )
         resp.raise_for_status()

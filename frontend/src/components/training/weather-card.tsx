@@ -15,7 +15,7 @@ import type { Weather, ConditionBand } from "@/lib/types";
  * refetch / re-prompt on every navigation back to /today.
  */
 
-const CACHE_KEY = "weather_v1";
+const CACHE_KEY = "weather_v2"; // v2: English strings — invalidates stale Italian cache
 const CACHE_TTL_MS = 15 * 60 * 1000; // mirrors the server-side 15-min window
 
 interface CachedWeather {
@@ -23,11 +23,11 @@ interface CachedWeather {
   ts: number;
 }
 
-/** Band → accent classes + Italian label. */
+/** Band → accent classes + label. */
 const BAND_META: Record<ConditionBand, { label: string; ring: string; dot: string; text: string }> = {
-  prime: { label: "Condizioni ottime", ring: "border-emerald-700/40 from-emerald-900/30 to-emerald-800/10", dot: "bg-emerald-400", text: "text-emerald-400" },
-  ok: { label: "Condizioni discrete", ring: "border-amber-700/40 from-amber-900/30 to-amber-800/10", dot: "bg-amber-400", text: "text-amber-400" },
-  poor: { label: "Condizioni scarse", ring: "border-zinc-700/50 from-zinc-800/40 to-zinc-800/10", dot: "bg-zinc-400", text: "text-zinc-400" },
+  prime: { label: "Prime conditions", ring: "border-emerald-700/40 from-emerald-900/30 to-emerald-800/10", dot: "bg-emerald-400", text: "text-emerald-400" },
+  ok: { label: "OK conditions", ring: "border-amber-700/40 from-amber-900/30 to-amber-800/10", dot: "bg-amber-400", text: "text-amber-400" },
+  poor: { label: "Poor conditions", ring: "border-zinc-700/50 from-zinc-800/40 to-zinc-800/10", dot: "bg-zinc-400", text: "text-zinc-400" },
 };
 
 /** OWM condition id → emoji. */
@@ -46,14 +46,14 @@ function weatherEmoji(code: number): string {
  * asked for (the band itself stays unchanged; only the copy reflects the help).
  */
 function contextPhrase(w: Weather): string {
-  if (w.condition_code < 800) return "Bagnato: roccia fuori gioco";
-  if (w.condition_band === "prime") return "Frizione ottima — giornata da progetti";
-  if (w.condition_band === "ok") return "Condizioni discrete";
+  if (w.condition_code < 800) return "Wet: rock is off";
+  if (w.condition_band === "prime") return "Great friction — a day for projects";
+  if (w.condition_band === "ok") return "Decent conditions";
   // poor — identify the limiting factor
-  if (w.dew_point > 14) return "Umido: prese unte, frizione scarsa";
-  if (w.temp > 24) return w.wind >= 12 ? "Caldo, ma il vento aiuta un po'" : "Caldo: pelle sudata, poca frizione";
-  if (w.temp < -6) return "Troppo freddo: dita intorpidite";
-  return "Condizioni scarse";
+  if (w.dew_point > 14) return "Humid: greasy holds, poor friction";
+  if (w.temp > 24) return w.wind >= 12 ? "Hot, but the wind helps a bit" : "Hot: sweaty skin, low friction";
+  if (w.temp < -6) return "Too cold: numb fingers";
+  return "Poor conditions";
 }
 
 function readCache(): Weather | null {
@@ -132,9 +132,9 @@ export function WeatherCard() {
           {weatherEmoji(weather.condition_code)}
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-2">
+          <div className="flex flex-wrap items-baseline gap-x-2">
             <span className="text-lg font-semibold text-zinc-100">{Math.round(weather.temp)}°C</span>
-            <span className="truncate text-sm text-zinc-400">{weather.condition_text}</span>
+            <span className="text-sm text-zinc-400">{weather.condition_text}</span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -155,15 +155,15 @@ export function WeatherCard() {
           <p className={`text-sm font-medium ${meta.text}`}>{contextPhrase(weather)}</p>
           <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
             <div>
-              <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Umidità</dt>
+              <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Humidity</dt>
               <dd className="text-sm text-zinc-200">{weather.humidity}%</dd>
             </div>
             <div>
-              <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Rugiada</dt>
+              <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Dew point</dt>
               <dd className="text-sm text-zinc-200">{Math.round(weather.dew_point)}°C</dd>
             </div>
             <div>
-              <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Vento</dt>
+              <dt className="text-[10px] uppercase tracking-wide text-zinc-500">Wind</dt>
               <dd className="text-sm text-zinc-200">{Math.round(weather.wind)} km/h</dd>
               <dd className="text-[11px] capitalize text-zinc-500">{weather.wind_label}</dd>
             </div>
