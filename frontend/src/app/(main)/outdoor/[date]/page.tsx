@@ -14,6 +14,9 @@ import {
   startOutdoorSession,
   finishOutdoorSession,
   cancelOutdoorSession,
+  getActiveOutdoorSession,
+  logOutdoorClimb,
+  deleteOutdoorClimb,
 } from "@/lib/api";
 import type {
   OutdoorDayType,
@@ -49,6 +52,22 @@ const REFINE: { key: keyof OutdoorRouteProfile; label: string; options: { v: str
 
 type Phase = "setup" | "active" | "logging";
 
+/** Map backend active-session routes (snake_case at_min) → LiveRoute[]. */
+function mapLiveRoutes(routes: unknown): LiveRoute[] {
+  if (!Array.isArray(routes)) return [];
+  return routes.map((r) => {
+    const o = r as Record<string, unknown>;
+    return {
+      name: String(o.name ?? ""),
+      grade: String(o.grade ?? ""),
+      attempts: (o.attempts as LiveRoute["attempts"]) ?? [],
+      style: o.style as LiveRoute["style"],
+      discipline: o.discipline as LiveRoute["discipline"],
+      atMin: typeof o.at_min === "number" ? o.at_min : 0,
+    };
+  });
+}
+
 export default function OutdoorDayPage() {
   const params = useParams();
   const search = useSearchParams();
@@ -72,6 +91,7 @@ export default function OutdoorDayPage() {
 
   const [phase, setPhase] = useState<Phase>("setup");
   const [liveRoutes, setLiveRoutes] = useState<LiveRoute[]>([]);
+  const [climbBusy, setClimbBusy] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [finishMeta, setFinishMeta] = useState<OutdoorSessionFinishResponse | null>(null);
@@ -99,6 +119,50 @@ export default function OutdoorDayPage() {
       { timeout: 8000, maximumAge: 15 * 60 * 1000 },
     );
   }, []);
+
+  // Restore an in-progress session after a refresh / app close.
+  useEffect(() => {
+    getActiveOutdoorSession(date)
+      .then((r) => {
+        const s = r.session;
+        setSessionId(String(s.session_id));
+        setStartedAt(String(s.started_at));
+        if (s.day_type) setDayType(s.day_type as OutdoorDayType);
+        setLiveRoutes(mapLiveRoutes(s.routes));
+        setPhase("active");
+      })
+      .catch(() => {}); // 404 = no active session, normal
+  }, [date]);
+
+  const addClimb = useCallback(
+    async (climb: { name: string; grade: string; attempts: { result: "sent" | "fell" }[]; at_min: number }) => {
+      if (!sessionId) return;
+      setClimbBusy(true);
+      try {
+        const r = await logOutdoorClimb(sessionId, climb);
+        setLiveRoutes(mapLiveRoutes(r.routes));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to log climb");
+      } finally {
+        setClimbBusy(false);
+      }
+    },
+    [sessionId],
+  );
+
+  const removeClimb = useCallback(
+    async (index: number) => {
+      if (!sessionId) return;
+      setClimbBusy(true);
+      try {
+        const r = await deleteOutdoorClimb(sessionId, index);
+        setLiveRoutes(mapLiveRoutes(r.routes));
+      } catch { /* out of range — ignore */ } finally {
+        setClimbBusy(false);
+      }
+    },
+    [sessionId],
+  );
 
   const resolve = useCallback(
     async (dt: OutdoorDayType, prof: OutdoorRouteProfile) => {
@@ -325,7 +389,9 @@ export default function OutdoorDayPage() {
                   discipline={disciplineParam}
                   startedAt={startedAt}
                   routes={liveRoutes}
-                  onChange={setLiveRoutes}
+                  onAdd={addClimb}
+                  onRemove={removeClimb}
+                  busy={climbBusy}
                 />
               </div>
             )}

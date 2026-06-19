@@ -556,3 +556,84 @@ class TestResolverWeatherWiring:
         # explicit band applied; no weather-derived conditions surfaced
         assert body["conditions"] is None
         assert any("Prime conditions" in m["text"] for m in body["strategy"]["modifiers"])
+
+
+# --------------------------------------------------------------------------- #
+# A226 — live route logging on the active session
+# --------------------------------------------------------------------------- #
+
+class TestLiveRouteLogging:
+    @pytest.fixture(autouse=True)
+    def setup_api(self, tmp_path, monkeypatch):
+        from backend.api import deps
+        from backend.engine import storage
+        self.state_path = tmp_path / "user_state.json"
+        self.state_path.write_text(json.dumps({"schema_version": "1.5", "outdoor_spots": []}))
+        monkeypatch.setattr(storage, "STATE_PATH", self.state_path)
+        monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
+        monkeypatch.setattr(deps, "STATE_PATH", self.state_path)
+        from fastapi.testclient import TestClient
+        from backend.api.main import app
+        self.client = TestClient(app)
+
+    def _start(self):
+        return self.client.post("/api/outdoor/session/start", json={
+            "date": "2026-06-19", "spot_name": "Arco", "discipline": "lead", "day_type": "project",
+        }).json()["session_id"]
+
+    def test_log_and_persist_climbs(self):
+        sid = self._start()
+        r1 = self.client.post(f"/api/outdoor/session/{sid}/log-climb", json={
+            "name": "Pillar", "grade": "7a", "attempts": [{"result": "sent"}], "at_min": 12,
+        })
+        assert r1.status_code == 200
+        assert r1.json()["count"] == 1
+        self.client.post(f"/api/outdoor/session/{sid}/log-climb", json={
+            "name": "Roof", "grade": "7b", "attempts": [{"result": "fell"}], "at_min": 40,
+        })
+        # Persisted on the active session → survives a "refresh" (GET active).
+        active = self.client.get("/api/outdoor/session/active", params={"date": "2026-06-19"})
+        assert active.status_code == 200
+        routes = active.json()["session"]["routes"]
+        assert [r["grade"] for r in routes] == ["7a", "7b"]
+        assert routes[0]["at_min"] == 12
+
+    def test_delete_climb(self):
+        sid = self._start()
+        for g in ("6a", "6b", "6c"):
+            self.client.post(f"/api/outdoor/session/{sid}/log-climb", json={"name": g, "grade": g, "attempts": [{"result": "sent"}]})
+        r = self.client.delete(f"/api/outdoor/session/{sid}/climb/1")
+        assert r.status_code == 200
+        assert [x["grade"] for x in r.json()["routes"]] == ["6a", "6c"]
+
+    def test_delete_climb_out_of_range(self):
+        sid = self._start()
+        r = self.client.delete(f"/api/outdoor/session/{sid}/climb/5")
+        assert r.status_code == 404
+
+    def test_get_active_none_404(self):
+        r = self.client.get("/api/outdoor/session/active", params={"date": "2099-01-01"})
+        assert r.status_code == 404
+
+    def test_finish_falls_back_to_live_routes(self):
+        """If the finish body carries no routes, the live-logged ones are used
+        (and at_min is stripped from the immutable log)."""
+        sid = self._start()
+        self.client.post(f"/api/outdoor/session/{sid}/log-climb", json={
+            "name": "Pillar", "grade": "7a", "attempts": [{"result": "sent"}], "at_min": 15,
+        })
+        fin = self.client.post(f"/api/outdoor/session/{sid}/finish", json={
+            "spot_name": "Arco", "discipline": "lead",
+        })
+        assert fin.status_code == 200
+        sessions = self.client.get("/api/outdoor/sessions").json()["sessions"]
+        assert len(sessions) == 1
+        routes = sessions[0]["routes"]
+        assert [r["grade"] for r in routes] == ["7a"]
+        assert "at_min" not in routes[0]  # stripped from the immutable log
+
+    def test_log_climb_unknown_session_404(self):
+        r = self.client.post("/api/outdoor/session/nope/log-climb", json={
+            "name": "X", "grade": "6a", "attempts": [{"result": "sent"}],
+        })
+        assert r.status_code == 404

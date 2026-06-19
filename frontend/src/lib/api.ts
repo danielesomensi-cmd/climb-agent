@@ -379,6 +379,26 @@ export const cancelOutdoorSession = (sessionId: string) =>
     method: "DELETE",
   });
 
+export const getActiveOutdoorSession = (date?: string) =>
+  request<{ session: Record<string, unknown> }>(
+    `/api/outdoor/session/active${date ? `?date=${date}` : ""}`,
+  );
+
+export const logOutdoorClimb = (
+  sessionId: string,
+  climb: { name: string; grade: string; attempts: { result: string; notes?: string }[]; style?: string; discipline?: string; at_min?: number },
+) =>
+  request<{ routes: Array<Record<string, unknown>>; count: number }>(
+    `/api/outdoor/session/${sessionId}/log-climb`,
+    { method: "POST", body: JSON.stringify(climb) },
+  );
+
+export const deleteOutdoorClimb = (sessionId: string, index: number) =>
+  request<{ routes: Array<Record<string, unknown>>; count: number }>(
+    `/api/outdoor/session/${sessionId}/climb/${index}`,
+    { method: "DELETE" },
+  );
+
 // User backup
 export async function exportUserState(): Promise<void> {
   const authHeaders = await _getAuthHeaders();

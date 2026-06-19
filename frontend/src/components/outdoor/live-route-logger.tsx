@@ -34,10 +34,12 @@ interface Props {
   discipline: "lead" | "boulder" | "both";
   startedAt: string;
   routes: LiveRoute[];
-  onChange: (routes: LiveRoute[]) => void;
+  onAdd: (climb: { name: string; grade: string; attempts: { result: "sent" | "fell" }[]; at_min: number }) => void;
+  onRemove: (index: number) => void;
+  busy?: boolean;
 }
 
-export function LiveRouteLogger({ discipline, startedAt, routes, onChange }: Props) {
+export function LiveRouteLogger({ discipline, startedAt, routes, onAdd, onRemove, busy }: Props) {
   const grades = discipline === "boulder" ? FONT_BOULDER_GRADES : FRENCH_SPORT_GRADES;
   const [grade, setGrade] = useState(grades.includes("6a") ? "6a" : grades[0]);
   const [name, setName] = useState("");
@@ -46,11 +48,11 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange }: Pro
 
   const add = (result: "sent" | "fell") => {
     const atMin = Math.max(0, Math.round((Date.now() - new Date(startedAt).getTime()) / 60000));
-    onChange([...routes, { name: name.trim() || `${routeLabel} ${routes.length + 1}`, grade, attempts: [{ result }], atMin }]);
+    onAdd({ name: name.trim() || `${routeLabel} ${routes.length + 1}`, grade, attempts: [{ result }], at_min: atMin });
     setName("");
   };
 
-  const remove = (idx: number) => onChange(routes.filter((_, i) => i !== idx));
+  const remove = (idx: number) => onRemove(idx);
 
   return (
     <div className="space-y-3">
@@ -73,10 +75,10 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange }: Pro
           />
         </div>
         <div className="mt-2 flex gap-2">
-          <button onClick={() => add("sent")} className="flex-1 rounded-md bg-green-600 py-2 text-sm font-medium text-white">
+          <button onClick={() => add("sent")} disabled={busy} className="flex-1 rounded-md bg-green-600 py-2 text-sm font-medium text-white disabled:opacity-50">
             ✓ Sent
           </button>
-          <button onClick={() => add("fell")} className="flex-1 rounded-md bg-red-600/90 py-2 text-sm font-medium text-white">
+          <button onClick={() => add("fell")} disabled={busy} className="flex-1 rounded-md bg-red-600/90 py-2 text-sm font-medium text-white disabled:opacity-50">
             ✗ Fell / try
           </button>
         </div>

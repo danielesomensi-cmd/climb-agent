@@ -15,6 +15,7 @@ from backend.api.models import (
     OutdoorSessionLog,
     OutdoorSessionStartRequest,
     OutdoorSessionFinishRequest,
+    OutdoorClimbLogRequest,
     ConvertSlotRequest,
 )
 from backend.engine.outdoor_log import (
@@ -309,10 +310,66 @@ def start_outdoor_session(
         "day_type": req.day_type,
         "status": "active",
         "started_at": now,
+        "routes": [],
     }
     active.append(session)
     save_state(state, user_id)
     return {"session_id": session_id, "started_at": now, "status": "active"}
+
+
+@router.get("/session/active")
+def get_active_outdoor_session(
+    date: Optional[str] = Query(None), user_id: Optional[str] = Depends(get_user_id)
+):
+    """Return the user's active outdoor session (optionally for a date) for restore.
+
+    Lets the UI recover a live session — including routes logged so far — after a
+    refresh / app close. Returns the most recent active session, or 404.
+    """
+    state = load_state(user_id)
+    active = state.get("outdoor_active_sessions", [])
+    if date:
+        active = [s for s in active if s.get("date") == date]
+    if not active:
+        raise HTTPException(status_code=404, detail="No active outdoor session")
+    return {"session": active[-1]}
+
+
+@router.post("/session/{session_id}/log-climb", dependencies=[Depends(require_active_subscription)])
+def log_outdoor_climb(
+    session_id: str,
+    req: OutdoorClimbLogRequest,
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Append a climb to an active outdoor session (A226 live logging).
+
+    Persists each route as it's climbed so the live log survives a refresh.
+    Returns the full updated routes list.
+    """
+    state = load_state(user_id)
+    session = _find_active_session(state, session_id)
+    route = req.model_dump(exclude_none=True)
+    session.setdefault("routes", []).append(route)
+    save_state(state, user_id)
+    return {"routes": session["routes"], "count": len(session["routes"])}
+
+
+@router.delete("/session/{session_id}/climb/{climb_index}", dependencies=[Depends(require_active_subscription)])
+def delete_outdoor_climb(
+    session_id: str,
+    climb_index: int,
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Remove a climb (by 0-based index) from an active outdoor session."""
+    state = load_state(user_id)
+    session = _find_active_session(state, session_id)
+    routes = session.get("routes", [])
+    if climb_index < 0 or climb_index >= len(routes):
+        raise HTTPException(status_code=404, detail=f"Climb index {climb_index} out of range")
+    routes.pop(climb_index)
+    session["routes"] = routes
+    save_state(state, user_id)
+    return {"routes": routes, "count": len(routes)}
 
 
 @router.post("/session/{session_id}/finish", dependencies=[Depends(require_active_subscription)])
@@ -346,6 +403,11 @@ def finish_outdoor_session(
     # Carry the day_type chosen at start unless the finish body overrides it.
     if not entry.get("day_type") and session.get("day_type"):
         entry["day_type"] = session["day_type"]
+    # Fall back to live-logged routes if the finish body carried none (A226).
+    if not entry.get("routes") and session.get("routes"):
+        entry["routes"] = [
+            {k: v for k, v in r.items() if k != "at_min"} for r in session["routes"]
+        ]
 
     try:
         append_outdoor_session(entry, user_id)

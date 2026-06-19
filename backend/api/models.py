@@ -258,6 +258,16 @@ class OutdoorSessionFinishRequest(BaseModel):
     route_profile: Optional[OutdoorRouteProfile] = None
 
 
+class OutdoorClimbLogRequest(BaseModel):
+    """Body for POST /api/outdoor/session/{id}/log-climb (A226 live logging)."""
+    name: str
+    grade: str
+    attempts: List[OutdoorAttempt] = Field(default_factory=list)
+    style: Optional[Literal["onsight", "flash", "redpoint", "project", "repeat"]] = None
+    discipline: Optional[Literal["lead", "boulder", "both"]] = None
+    at_min: Optional[int] = None
+
+
 class ConvertSlotRequest(BaseModel):
     """Body for POST /api/outdoor/convert-slot."""
     date: str
