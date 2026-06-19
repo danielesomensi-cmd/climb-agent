@@ -4488,6 +4488,14 @@
       "fatigue_cost": 1,
       "recency_group": "technique_relaxation_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4537,6 +4545,14 @@
       "fatigue_cost": 2,
       "recency_group": "technique_footwork_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4586,6 +4602,14 @@
       "fatigue_cost": 2,
       "recency_group": "technique_body_position_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4635,6 +4659,14 @@
       "fatigue_cost": 2,
       "recency_group": "technique_movement_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4684,6 +4716,14 @@
       "fatigue_cost": 3,
       "recency_group": "technique_constraint_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4734,6 +4774,14 @@
       "fatigue_cost": 2,
       "recency_group": "technique_movement_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4783,6 +4831,14 @@
       "fatigue_cost": 2,
       "recency_group": "technique_footwork_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4832,6 +4888,14 @@
       "fatigue_cost": 2,
       "recency_group": "technique_body_position_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4881,6 +4945,14 @@
       "fatigue_cost": 2,
       "recency_group": "technique_footwork_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
@@ -4930,6 +5002,14 @@
       "fatigue_cost": 3,
       "recency_group": "technique_constraint_drills",
       "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
       "location_allowed": [
         "home",
         "gym",
