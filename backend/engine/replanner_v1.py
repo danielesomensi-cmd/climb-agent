@@ -1432,7 +1432,11 @@ def _resolve_intent_for_equipment(
         "endurance": ["endurance_aerobic_gym", "route_endurance_gym", "finger_aerobic_base"],
         "aerobic_endurance": ["endurance_aerobic_gym", "route_endurance_gym", "finger_aerobic_base"],
         "projecting": ["power_contact_gym", "boulder_circuit_gym"],
-        "hard": ["strength_long", "power_contact_gym", "boulder_circuit_gym"],
+        # B262: degrade to a hard NON-climbing session (pulling strength) when no
+        # wall/board/hangboard is available. Dropped boulder_circuit_gym — it is
+        # hard=False (a medium session) and unreachable here (needs gym_boulder,
+        # same as power_contact_gym which precedes it).
+        "hard": ["strength_long", "power_contact_gym", "pulling_strength_gym"],
         "technique": ["technique_focus_gym", "easy_climbing_deload"],
     }
 
@@ -1530,6 +1534,30 @@ def apply_day_override(
 
     session_id = _resolve_intent_for_equipment(intent, gym_equipment)
     meta = _meta_for(session_id)
+
+    # B262: surface equipment-driven changes so the UI can tell the user why the
+    # session differs. Only meaningful when we actually know the gym equipment
+    # (gym_equipment is None for home/no-gym overrides → no equipment gating).
+    equipment_notice = None
+    if gym_equipment is not None:
+        primary_sid = INTENT_TO_SESSION.get(intent)
+        if session_id != primary_sid:
+            # Intent fell back to an equipment-compatible alternative.
+            equipment_notice = {
+                "type": "equipment_downgrade",
+                "intent": intent,
+                "requested_session": primary_sid,
+                "resolved_session": session_id,
+                "reason": "no_climbing_equipment",
+            }
+        elif set(_get_required_equipment(session_id)) - set(gym_equipment):
+            # Terminal case: no compatible fallback existed, so the primary was
+            # kept even though its equipment is unavailable here.
+            equipment_notice = {
+                "type": "no_compatible_hard_session",
+                "intent": intent,
+                "session": session_id,
+            }
 
     # NEW-F6: detect phase mismatch
     current_phase = (updated.get("profile_snapshot") or {}).get("phase_id", "base")
@@ -1695,5 +1723,9 @@ def apply_day_override(
     # NEW-F6: append phase mismatch warning if detected
     if phase_mismatch_warning:
         updated["adaptations"].append(phase_mismatch_warning)
+
+    # B262: append equipment downgrade / no-compatible-session notice
+    if equipment_notice:
+        updated["adaptations"].append(equipment_notice)
 
     return updated
