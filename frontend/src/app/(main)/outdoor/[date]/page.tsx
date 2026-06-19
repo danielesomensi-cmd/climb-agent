@@ -6,6 +6,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { SessionTimer } from "@/components/guided/session-timer";
 import { ConditionBadge } from "@/components/outdoor/condition-badge";
 import { StrategyView } from "@/components/outdoor/strategy-view";
+import { LiveRouteLogger, type LiveRoute } from "@/components/outdoor/live-route-logger";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
   getOutdoorStrategy,
@@ -70,6 +71,7 @@ export default function OutdoorDayPage() {
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   const [phase, setPhase] = useState<Phase>("setup");
+  const [liveRoutes, setLiveRoutes] = useState<LiveRoute[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startedAt, setStartedAt] = useState<string | null>(null);
   const [finishMeta, setFinishMeta] = useState<OutdoorSessionFinishResponse | null>(null);
@@ -315,6 +317,19 @@ export default function OutdoorDayPage() {
               {startedAt && <div className="text-xl font-semibold text-zinc-100"><SessionTimer startedAt={startedAt} /></div>}
             </div>
 
+            {/* Live route logging — capture each climb as you go */}
+            {startedAt && (
+              <div>
+                <h3 className="mb-2 text-sm font-medium text-zinc-300">Log as you climb</h3>
+                <LiveRouteLogger
+                  discipline={disciplineParam}
+                  startedAt={startedAt}
+                  routes={liveRoutes}
+                  onChange={setLiveRoutes}
+                />
+              </div>
+            )}
+
             {strategy && (
               <details className="rounded-lg border border-white/5">
                 <summary className="cursor-pointer p-3 text-sm font-medium text-zinc-300">Strategy</summary>
@@ -343,6 +358,13 @@ export default function OutdoorDayPage() {
             defaultDuration={elapsedMin}
             dayType={dayType || undefined}
             routeProfile={profile}
+            initialRoutes={liveRoutes.map((r) => ({
+              name: r.name,
+              grade: r.grade,
+              attempts: r.attempts,
+              ...(r.style ? { style: r.style } : {}),
+              ...(r.discipline ? { discipline: r.discipline } : {}),
+            }))}
             conditions={strategy?.conditions}
             durationCappedNote={
               elapsedMin && elapsedMin > 600 ? { cap: 600, raw: elapsedMin } : null

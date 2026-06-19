@@ -43,15 +43,17 @@ interface Props {
   durationCappedNote?: { cap: number; raw: number } | null;
   onSubmit?: (payload: Record<string, unknown>) => Promise<void>;
   submitLabel?: string;
+  // A226 — routes captured live during the active session (prefill, not edit mode).
+  initialRoutes?: OutdoorRoute[];
 }
 
-export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, defaultDuration, initialData, onSuccess, dayType, routeProfile, conditions, durationCappedNote, onSubmit, submitLabel }: Props) {
+export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, defaultDiscipline, defaultGrade, defaultDuration, initialData, onSuccess, dayType, routeProfile, conditions, durationCappedNote, onSubmit, submitLabel, initialRoutes }: Props) {
   const isEdit = !!initialData;
   const [date, setDate] = useState(initialData?.date || defaultDate || new Date().toISOString().slice(0, 10));
   const [spotName, setSpotName] = useState(initialData?.spot_name || defaultSpotName || "");
   const [discipline, setDiscipline] = useState<"lead" | "boulder" | "both">(initialData?.discipline || defaultDiscipline || "boulder");
   const [duration, setDuration] = useState(initialData?.duration_minutes || defaultDuration || 120);
-  const [routes, setRoutes] = useState<OutdoorRoute[]>(initialData?.routes || []);
+  const [routes, setRoutes] = useState<OutdoorRoute[]>(initialData?.routes || initialRoutes || []);
   const [notes, setNotes] = useState(initialData?.notes || "");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

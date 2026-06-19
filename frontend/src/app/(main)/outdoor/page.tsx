@@ -189,13 +189,21 @@ export default function OutdoorPage() {
             Every route you log becomes part of your training profile. Climb Agent tracks your projects, attempts, and sends — and uses that data to calibrate your indoor sessions. The more you log, the smarter your training gets.
           </p>
           {hasSpots ? (
-            <button
-              onClick={handleStartSession}
-              disabled={ctaLoading}
-              className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:opacity-80 disabled:opacity-60"
-            >
-              {ctaLoading ? "Loading..." : "Start Outdoor Session"}
-            </button>
+            <div className="space-y-2">
+              <button
+                onClick={() => router.push(`/outdoor/${today}`)}
+                className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 active:opacity-80"
+              >
+                Start Outdoor Session
+              </button>
+              <button
+                onClick={handleStartSession}
+                disabled={ctaLoading}
+                className="w-full rounded-xl border py-2.5 text-sm text-muted-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+              >
+                {ctaLoading ? "Loading..." : "Quick log (no timer)"}
+              </button>
+            </div>
           ) : (
             <button
               onClick={() => router.push("/settings")}
