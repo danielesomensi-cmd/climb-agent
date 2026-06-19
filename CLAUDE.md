@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-69 endpoints total (67 router + 2 app-level: health check + stripe webhook).
+73 endpoints total (71 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
