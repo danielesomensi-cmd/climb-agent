@@ -1,0 +1,186 @@
+{
+  "catalog_version": "outdoor_strategy.v1",
+  "source": "KB Topic 11 (C241)",
+  "day_types": ["project", "onsight_flash", "volume", "scout_easy"],
+  "dimensions": {
+    "wall_angle": ["slab", "vertical", "overhang", "roof"],
+    "route_length": ["short_power", "medium", "long_endurance"],
+    "hold_style": ["crimp", "sloper_pinch", "mixed"],
+    "target_grade_relative": ["within_limit", "at_or_above_limit"],
+    "macrocycle_phase": ["base", "build", "peak", "performance", "deload"],
+    "condition_band": ["prime", "ok", "poor_hot_humid", "poor_cold_dry"]
+  },
+  "safety": {
+    "no_cold_full_crimp": "No full-crimp loading while cold (D72).",
+    "no_static_forearm_stretch": "No static forearm stretching before performance (CUE-02).",
+    "fueling_framing_only": "All nutrition guidance is fueling/performance only, never weight (D64)."
+  },
+  "base": {
+    "lead": {
+      "project": {
+        "warmup_protocol": "General 8–15 min: pulse-raise 5–10 min @ 40–60% (the approach often covers this), then mobility (wrist/shoulder/hip) + finger pulsing. Then a graduated-pump pyramid matched to the objective (long routes for a long project, steep/bouldery for a short power route): onsight−3 → −2 → −1 → REST → burns. Example 7c project: ~6b → 6c → 7a → rest → attempts. Criticality: high (max neural). No full-crimp while cold; no static forearm stretching pre-effort.",
+        "target_burns": "3–5 good redpoint efforts. When close to the send: fewer, better.",
+        "rest_between_attempts_min": "20–45+ min between burns (work:rest ≈ 1:4; lean to ~60 min when close). Use rests as active rest: walk, rehydrate, rehearse beta.",
+        "stop_criteria": [
+          "Movement quality drops (feet cutting, sloppy placements, missing known beta)",
+          "Skin thinning / hot spots / glassy tips",
+          "Neural fatigue: repeated failure on a move you did cleanly earlier",
+          "Pump won't clear within a normal rest",
+          "Two consecutive worse attempts → end the burn-set"
+        ],
+        "skin_tips": [
+          "Carry a skin kit: fine file/sandpaper, clippers, tape",
+          "Sand to prevent flappers, not to thin",
+          "Chalk is moisture management, not a constant layer; brush holds",
+          "Sweaty tips: liquid chalk / witch hazel",
+          "Glassy tips: add warmth/moisture",
+          "When skin is sensitive, climb static and slow",
+          "Best protection: know when to call it — a last burn can cost 3 recovery days"
+        ],
+        "time_of_day_advice": "Summer: save burns for the cool early AM / evening / shade. Winter: climb the warmest part of the day to keep fingers functional.",
+        "hours_plan": "3–5 h (≈2–4 quality burns; long rests dominate the clock).",
+        "downgrade_rule": "On a red flag (finger/tendon niggle, skin past safe, dehydration ≥1.5% BW, cold-numb fingers) → downgrade to Volume/Scout or rest."
+      },
+      "onsight_flash": {
+        "warmup_protocol": "Same general phase + graduated-pump pyramid (criticality high — one chance). Add heavy ground route-reading and a pacing/commit mindset. Onsight ≈ redpoint−1 number grade for expectation-setting.",
+        "target_burns": "1 max attempt per route (by definition). Several different routes per day are fine.",
+        "rest_between_attempts_min": "Between near-max routes treat like redpoint recovery (20–45 min). Pace to freshness.",
+        "stop_criteria": [
+          "Same fatigue/skin/movement-quality signals as project",
+          "Drop in reading accuracy / committing",
+          "Pump won't clear"
+        ],
+        "skin_tips": [
+          "Same kit",
+          "Manage skin across multiple routes — don't burn it early"
+        ],
+        "time_of_day_advice": "Same conditions logic (cool/dry windows).",
+        "hours_plan": "3–6 h (project-like if near max, volume-like if sub-max).",
+        "downgrade_rule": "Same red-flag downgrade as project."
+      },
+      "volume": {
+        "warmup_protocol": "Ramp grades into the day (e.g. 6a → 6b → 6c → into onsight-level pitches). Lower criticality than project/onsight — the early pitches double as warm-up.",
+        "target_burns": "6–10+ sub-max pitches, bounded by pump/skin (not neural quality).",
+        "rest_between_attempts_min": "Active rest between pitches (walk, light shake, G-Tox). Keep efforts below the pump/anaerobic threshold; pace to skin and pump.",
+        "stop_criteria": [
+          "Pump won't clear within a normal rest",
+          "Skin thinning",
+          "Movement getting sloppy"
+        ],
+        "skin_tips": [
+          "Pace to skin",
+          "Same kit; sand to prevent flappers"
+        ],
+        "time_of_day_advice": "Conditions matter less (sub-max), but cool/dry still helps friction.",
+        "hours_plan": "4–6 h of near-continuous moderate output.",
+        "downgrade_rule": "Persistent next-day fatigue / illness → easy or rest."
+      },
+      "scout_easy": {
+        "warmup_protocol": "Light, sub-max, skin-sparing. Doubles as active recovery.",
+        "target_burns": "No max efforts — beta gathering, exploration, technique, recovery.",
+        "rest_between_attempts_min": "Relaxed; no structured rest needed.",
+        "stop_criteria": [
+          "Stop if it stops being easy/recovery",
+          "Any pain → stop"
+        ],
+        "skin_tips": [
+          "Skin-sparing; static and slow",
+          "Minimal chalk"
+        ],
+        "time_of_day_advice": "Flexible.",
+        "hours_plan": "Flexible / low.",
+        "downgrade_rule": "n/a (already low intensity)."
+      }
+    }
+  },
+  "patches": {
+    "lead": {
+      "wall_angle": {
+        "slab": {
+          "warmup_protocol_add": "Prime feet/calves, precision, low-grip; mental focus.",
+          "rest_note": "Less forearm load; mental rest.",
+          "skin_note": "EXTREME condition sensitivity (dry-fire risk when cold-dry); scrappy low-angle falls (skin/ankle)."
+        },
+        "vertical": {
+          "note": "Standard — no override."
+        },
+        "overhang": {
+          "warmup_protocol_add": "Finger recruitment, pulling, body tension, commit.",
+          "rest_note": "Lean ATP-PC / power recovery.",
+          "fall_note": "Falls usually clean."
+        },
+        "roof": {
+          "warmup_protocol_add": "Finger recruitment, pulling, body tension, commit.",
+          "rest_note": "Lean ATP-PC / power recovery.",
+          "fall_note": "Falls usually clean."
+        }
+      },
+      "route_length": {
+        "short_power": {
+          "rest_between_attempts_min_override": "Longer relative rest (~5:1 rest:work); recover power between burns; fewer max moves.",
+          "warmup_note": "Warm up steep/bouldery."
+        },
+        "medium": {
+          "note": "Balanced — no override."
+        },
+        "long_endurance": {
+          "rest_between_attempts_min_override": "~1:4 work:rest.",
+          "strategy_add": "Pump management is the constraint: mid-route shakeouts / G-Tox, pacing.",
+          "warmup_note": "Warm up on longer routes to prime aerobic delivery."
+        }
+      },
+      "hold_style": {
+        "crimp": {
+          "warmup_add": "Warm fingers gradually (pulley caution).",
+          "skin_note": "Skin loaded on tips (split risk); avoid full-crimp cold."
+        },
+        "sloper_pinch": {
+          "warmup_add": "Open-hand / thumb warm-up.",
+          "condition_note": "Friction/temperature critical (sweat = slip); favor cool/dry."
+        },
+        "mixed": {
+          "note": "Standard."
+        }
+      },
+      "target_grade_relative": {
+        "within_limit": {
+          "burns_note": "More volume possible."
+        },
+        "at_or_above_limit": {
+          "burns_note": "Fewer, longer burns; set expectation."
+        }
+      },
+      "macrocycle_phase": {
+        "base": {
+          "nudge": "Base phase — Volume / onsight-mileage / scout fit best."
+        },
+        "build": {
+          "nudge": "Build phase — favor Volume / capacity; few max redpoint days."
+        },
+        "peak": {
+          "nudge": "Peak phase — Project / send days fit."
+        },
+        "performance": {
+          "nudge": "Performance phase — a Project day is the real-rock realization session."
+        },
+        "deload": {
+          "nudge": "Deload / pre-trip — scale volume; rest or easy."
+        }
+      },
+      "condition_band": {
+        "prime": {
+          "nudge": "Prime conditions — spend your max burns now; Project/send appropriate."
+        },
+        "ok": {
+          "nudge": "OK conditions — normal plan; manage skin/heat."
+        },
+        "poor_hot_humid": {
+          "nudge": "Hot/humid — consider downgrading to Volume/Scout or rest; precool; seek shade/wind; protect skin (weaker when wet); save effort."
+        },
+        "poor_cold_dry": {
+          "nudge": "Cold-dry — warm hands between burns; beware glassy tips; manage skin cracking."
+        }
+      }
+    }
+  }
+}

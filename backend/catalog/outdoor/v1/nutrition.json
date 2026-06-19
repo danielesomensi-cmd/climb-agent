@@ -1,0 +1,24 @@
+{
+  "catalog_version": "outdoor_nutrition.v1",
+  "source": "KB Topic 11 (C241)",
+  "framing": "Fueling / performance only — never weight or deficit (D64).",
+  "base": {
+    "lead": {
+      "pre_day": "Carb-forward meal ~2–3 h before; ~1 g/kg carbohydrate pre-session; avoid a high-GI spike immediately before (spike-crash → flat).",
+      "during_by_duration": {
+        "short": "≤90 min: water is sufficient; no sports-drink benefit.",
+        "long": ">90 min: low-GI fuel (balanced 40:30:30 bars, fruit, fructose/protein drink); sip ~240 ml every 1–2 h; optional creatine 2–5 g (never load)."
+      },
+      "hydration_by_climate": "Pre-hydrate ~500 ml. ~1–2 quarts / 8 h normal, 3–4 quarts on a hot day. A 1.5% body-weight fluid loss measurably cuts max strength and raises joint/tendon injury risk. Prioritize electrolytes on long/hot days.",
+      "caffeine_timing": "Time ~45–60 min before the key burn; periodize to avoid tolerance.",
+      "post_day": "High-GI carb + protein within ~2 h (~4:1 carb:protein, ~0.3 g/kg protein); rehydrate. Sleep is the #1 recovery tool.",
+      "climate_addons": {
+        "precool": "In heat: ~1 L cold (~4 °C) drink or a slushie pre/mid-session lowers core temperature and prolongs heat tolerance."
+      },
+      "day_type_nuances": {
+        "project": "Use the long rests to refuel/rehydrate; low-GI to hold energy across the long day (brief maximal bursts).",
+        "volume": "Steady carb intake; higher fluid/electrolyte need (sustained continuous output)."
+      }
+    }
+  }
+}
