@@ -32,6 +32,7 @@ from backend.api.routers import (
     state,
     subscription,
     user,
+    weather,
     week,
     weekly_override,
 )
@@ -136,6 +137,7 @@ app.include_router(admin.router)
 app.include_router(subscription.router)
 app.include_router(custom_session.router)
 app.include_router(body_part_picker.router)
+app.include_router(weather.router)
 
 # Stripe webhook — registered directly to preserve raw body for signature verification
 app.add_api_route(

@@ -743,3 +743,19 @@ export interface UserState {
   trips: Array<Record<string, unknown>>;
   [key: string]: unknown;
 }
+
+// A224 — weather conditions (live + forecast)
+export type ConditionBand = "prime" | "ok" | "poor";
+
+export interface Weather {
+  temp: number;
+  humidity: number;
+  dew_point: number;
+  wind: number;
+  condition_text: string;
+  condition_code: number;
+  condition_band: ConditionBand;
+  is_forecast: boolean;
+  date: string | null;
+  source: string;
+}

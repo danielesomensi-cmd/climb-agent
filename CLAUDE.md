@@ -110,9 +110,9 @@ from backend.engine.planner_v1 import generate_week_plan
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (19 routers)
+  api/               # FastAPI REST API (20 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, weather
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-68 endpoints total (66 router + 2 app-level: health check + stripe webhook).
+69 endpoints total (67 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -218,6 +218,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/subscription/checkout` | Create Stripe Checkout Session → returns hosted URL |
 | POST | `/api/subscription/portal` | Create Stripe Customer Portal session (manage/cancel) |
 | POST | `/api/stripe/webhook` | Stripe webhook receiver (signature-verified) |
+| GET | `/api/weather` | Live conditions (lat/lon) or forecast-by-date; returns temp/humidity/dew_point/wind + deterministic condition_band |
 
 ## Frontend
 
@@ -278,6 +279,7 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
   | BYPASS_USER_IDS | Comma-separated user UUIDs that bypass subscription checks (founder, beta testers). Managed via Railway dashboard — no code change needed to add/remove. Read at import-time: changing it requires a service restart (Railway redeploy or manual restart). |
   | TELEGRAM_BOT_TOKEN | Bot token (@BotFather) for founder alerts. Unset → `notify()` is a silent no-op (A222). |
   | TELEGRAM_CHAT_ID | Destination chat id for founder alerts (new onboarding / trial started). Unset → no-op. |
+  | OPENWEATHER_API_KEY | OpenWeatherMap free-tier key for `/api/weather` (A224). Unset → endpoint returns 503 and the `/today` weather card hides gracefully. Commercial use requires visible OpenWeather attribution. |
 
 ### Clerk user lookup
 

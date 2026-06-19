@@ -19,6 +19,7 @@ import type {
   CustomSessionExercise,
   BuilderExercise,
   WarmupCooldownBlock,
+  Weather,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -650,4 +651,13 @@ export const getBodyPartEstimate = (bodyParts: string[], includeCooldown = true)
   return request<{ estimated_duration_min: number }>(
     `/api/body-part-picker/estimate?${sp.toString()}`
   );
+};
+
+// A224 — Weather (live conditions + forecast-by-date)
+export const getWeather = (lat: number, lon: number, date?: string) => {
+  const sp = new URLSearchParams();
+  sp.set("lat", String(lat));
+  sp.set("lon", String(lon));
+  if (date) sp.set("date", date);
+  return request<Weather>(`/api/weather?${sp.toString()}`);
 };

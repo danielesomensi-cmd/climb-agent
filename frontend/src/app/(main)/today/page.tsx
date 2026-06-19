@@ -11,6 +11,7 @@ import Link from "next/link";
 import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
 import { DailyCueBanner } from "@/components/training/daily-cue-banner";
+import { WeatherCard } from "@/components/training/weather-card";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
 import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
@@ -1102,6 +1103,9 @@ function TodayContent() {
             </button>
           </div>
         )}
+
+        {/* A224: live weather card — current location, today view only */}
+        {!loading && !error && isViewingToday && <WeatherCard />}
 
         {/* A220: standalone "Focus di oggi" cue section above the day's cards */}
         {!loading && !error && dayPlan && !heroState && dayPlan.sessions.length > 0 && (
