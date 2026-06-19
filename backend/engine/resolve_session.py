@@ -267,6 +267,51 @@ def _is_test_exercise(ex: Dict[str, Any]) -> bool:
     different test would silently measure the wrong axis."""
     return "test" in [norm_str(r) for r in (ex.get("role") or [])]
 
+# B263: device-anchored block prescriptions (hangboard / loading-pin) must not
+# bleed their device-specific notes/fields onto a NON-device exercise that was
+# substituted into the block (e.g. archer_pullup filling a finger_max_strength
+# block at a no-hangboard gym → card showed "Prefer 20mm half crimp … Rest fully
+# 2.5–4 min" on a pull-up). The exercise's modality is the reliable signal —
+# `intensity_pct` is not (e.g. horst_7_53 is a hangboard exercise with no
+# intensity_pct).
+_FINGER_DOMAINS = {"finger_strength", "finger_max_strength", "finger_endurance"}
+_FINGER_DEVICES = {"hangboard", "loading_pin"}
+_DEVICE_PRESCRIPTION_FIELDS = (
+    "hang_seconds", "hang_seconds_range",
+    "intensity_pct_of_total_load", "intensity_pct_of_total_load_range",
+)
+
+def _is_device_modality_exercise(ex: Dict[str, Any]) -> bool:
+    dom = set(norm_list_str(ex.get("domain")))
+    eq = set(ex_equipment_required(ex)) | set(ex_equipment_required_any(ex))
+    return bool(dom & _FINGER_DOMAINS) or bool(eq & _FINGER_DEVICES)
+
+def _strip_device_prescription(
+    merged: Dict[str, Any],
+    block_prescription: Dict[str, Any],
+    ex_defaults: Optional[Dict[str, Any]],
+    selected_ex: Dict[str, Any],
+) -> None:
+    """B263: if the block carries device-specific prescription params but the
+    selected exercise is not a finger/device exercise, drop those params and the
+    block's device notes (fall back to the exercise's own notes). Mutates
+    ``merged`` in place. No-op for device exercises (correct case) and for blocks
+    with no device-specific params (generic blocks)."""
+    if not isinstance(block_prescription, dict):
+        return
+    if not any(k in block_prescription for k in _DEVICE_PRESCRIPTION_FIELDS):
+        return
+    if _is_device_modality_exercise(selected_ex):
+        return
+    for k in _DEVICE_PRESCRIPTION_FIELDS:
+        merged.pop(k, None)
+    if "notes" in block_prescription:
+        ex_notes = (ex_defaults or {}).get("notes") if isinstance(ex_defaults, dict) else None
+        if ex_notes is not None:
+            merged["notes"] = ex_notes
+        else:
+            merged.pop("notes", None)
+
 
 # ---------------------------
 # Limitation helpers (B38)
@@ -1180,6 +1225,8 @@ def _resolve_inline_block(
             merged.update(ex_defaults)
         if isinstance(prescription, dict):
             merged.update(prescription)
+        # B263: don't bleed device-specific prescription onto a non-device substitute
+        _strip_device_prescription(merged, prescription, ex_defaults, selected_ex)
         # B174: selection.primary.prescription_overrides take highest priority
         if isinstance(primary_overrides, dict):
             merged.update(primary_overrides)
@@ -1674,6 +1721,8 @@ def resolve_session(
                     merged.update(ex_defaults)
                 if isinstance(prescription, dict):
                     merged.update(prescription)
+                # B263: don't bleed device-specific prescription onto a non-device substitute
+                _strip_device_prescription(merged, prescription, ex_defaults, selected_ex)
 
                 if replanner_note and replanner_note.get("reason") == "cluster_cooldown_downshift":
                     merged.setdefault("multiplier", 1.0)
