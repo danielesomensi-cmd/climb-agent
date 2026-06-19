@@ -246,6 +246,27 @@ def ex_equipment_required(ex: Dict[str, Any]) -> List[str]:
 def ex_equipment_required_any(ex: Dict[str, Any]) -> List[str]:
     return norm_list_str(ex.get("equipment_required_any"))
 
+def _pin_equipment_ok(ex: Dict[str, Any], available_equipment: List[str]) -> bool:
+    """B261: same hard equipment gate as pick_best_exercise_p0 Stage 2 —
+    ``equipment_required`` must be a subset of available, and
+    ``equipment_required_any`` (if present) must intersect available. Used to
+    validate an explicit ``exercise_id`` pin before honoring it: a pin that
+    needs equipment the user doesn't have must NOT bypass the filter."""
+    avail = set(norm_list_str(available_equipment))
+    req = set(ex_equipment_required(ex))
+    if req and not req.issubset(avail):
+        return False
+    req_any = ex_equipment_required_any(ex)
+    if req_any and set(req_any).isdisjoint(avail):
+        return False
+    return True
+
+def _is_test_exercise(ex: Dict[str, Any]) -> bool:
+    """B261: a measurement exercise (role contains ``test``). An incompatible
+    test pin must be skipped, never substituted via P0 — substituting a
+    different test would silently measure the wrong axis."""
+    return "test" in [norm_str(r) for r in (ex.get("role") or [])]
+
 
 # ---------------------------
 # Limitation helpers (B38)
@@ -1018,21 +1039,41 @@ def _resolve_inline_block(
     chosen_by: str = "p0_inline_block"
     trace: Dict[str, Any] = {}
 
+    run_p0 = True
     if explicit_ex_id:
-        selected_ex = next(
+        pinned = next(
             (e for e in exercises if norm_str(get_ex_id(e)) == norm_str(explicit_ex_id)),
             None,
         )
-        if selected_ex is not None:
-            chosen_by = "explicit_exercise_id"
-            trace = {"counts": {}, "domain_filter_applied": None, "note": "explicit_exercise_id: bypassed P0 filters"}
-        else:
+        if pinned is None:
             logger.warning(
                 "resolve_session: explicit exercise_id '%s' not found in catalog for block '%s' — falling back to P0",
                 explicit_ex_id, block_id,
             )
+        elif _pin_equipment_ok(pinned, available_equipment):
+            selected_ex = pinned
+            chosen_by = "explicit_exercise_id"
+            trace = {"counts": {}, "domain_filter_applied": None, "note": "explicit_exercise_id: bypassed P0 filters"}
+            run_p0 = False
+        elif _is_test_exercise(pinned):
+            # B261: incompatible test pin — skip the block; never substitute a
+            # different measurement via P0 (would measure the wrong axis).
+            logger.warning(
+                "resolve_session: pinned test exercise '%s' incompatible with available equipment for block '%s' — skipping block",
+                explicit_ex_id, block_id,
+            )
+            chosen_by = "pin_test_incompatible_skip"
+            trace = {"counts": {}, "domain_filter_applied": None, "note": "pinned test exercise incompatible with equipment — block skipped (B261)"}
+            run_p0 = False
+        else:
+            # B261: incompatible non-test pin — delegate to P0 with the block's
+            # role/domain so the equipment filter applies.
+            logger.info(
+                "resolve_session: pinned exercise '%s' incompatible with available equipment for block '%s' — delegating to P0",
+                explicit_ex_id, block_id,
+            )
 
-    if selected_ex is None:
+    if selected_ex is None and run_p0:
         if TRACE_RESOLVE:
             logger.warning(
                 "INLINE_BLOCK_TRACE | block=%s role=%s dom=%s pat=%s equip=%s imax=%s "
@@ -1527,16 +1568,38 @@ def resolve_session(
             selected_list: List[Dict[str, Any]] = []
             chosen_by = None
 
+            pinned = None
             if explicit_ex_id:
-                selected_ex = next(
+                pinned = next(
                     (e for e in exercises if norm_str(get_ex_id(e)) == norm_str(explicit_ex_id)),
                     None
                 )
+
+            if pinned is not None and _pin_equipment_ok(pinned, available_equipment):
+                selected_ex = pinned
                 chosen_by = "explicit_exercise_id"
                 trace = {"counts": {}, "domain_filter_applied": None, "note": "explicit_exercise_id: bypassed P0 filters"}
 
-           
+            elif pinned is not None and _is_test_exercise(pinned):
+                # B261: incompatible test pin — skip the block; never substitute a
+                # different measurement via P0 (would measure the wrong axis).
+                logger.warning(
+                    "resolve_session: pinned test exercise '%s' incompatible with available equipment (session=%s) — skipping block",
+                    explicit_ex_id, session_id,
+                )
+                selected_ex = None
+                chosen_by = "pin_test_incompatible_skip"
+                trace = {"counts": {}, "domain_filter_applied": None, "note": "pinned test exercise incompatible with equipment — block skipped (B261)"}
+
             else:
+                # B261: no pin / pin missing in catalog / incompatible non-test pin
+                # → P0 with the block's role/domain/pattern so the equipment filter
+                # applies (an incompatible pin must NOT bypass the filter).
+                if explicit_ex_id and pinned is not None:
+                    logger.info(
+                        "resolve_session: pinned exercise '%s' incompatible with available equipment (session=%s) — delegating to P0",
+                        explicit_ex_id, session_id,
+                    )
                 # P0: hard-filter only selection based on v1 schema (role/domain/pattern)
                 role_req = b.get("role")   # P0 requires explicit block.role; block.type is NOT a selector input
                 domain_req = b.get("domain")
@@ -1546,7 +1609,7 @@ def resolve_session(
                 if role_req is None:
                     logger.warning(
                         "resolve_session: block missing 'role' in template — block will be skipped (session=%s)",
-                        session_data.get("session_id", "unknown"),
+                        session_id,
                     )
                     selected_ex = None
                     chosen_by = "p0_missing_role"
