@@ -16,6 +16,7 @@ from backend.api.models import (
     OutdoorSessionStartRequest,
     OutdoorSessionFinishRequest,
     OutdoorClimbLogRequest,
+    OutdoorRoutesReplaceRequest,
     ConvertSlotRequest,
 )
 from backend.engine.outdoor_log import (
@@ -370,6 +371,24 @@ def delete_outdoor_climb(
     session["routes"] = routes
     save_state(state, user_id)
     return {"routes": routes, "count": len(routes)}
+
+
+@router.put("/session/{session_id}/routes", dependencies=[Depends(require_active_subscription)])
+def replace_outdoor_routes(
+    session_id: str,
+    req: OutdoorRoutesReplaceRequest,
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Replace the active session's full routes list (A226 live route sync).
+
+    The client manages routes + attempts locally (multiple attempts per route,
+    removals) and syncs the whole array here so it survives a refresh.
+    """
+    state = load_state(user_id)
+    session = _find_active_session(state, session_id)
+    session["routes"] = [r.model_dump(exclude_none=True) for r in req.routes]
+    save_state(state, user_id)
+    return {"routes": session["routes"], "count": len(session["routes"])}
 
 
 @router.post("/session/{session_id}/finish", dependencies=[Depends(require_active_subscription)])

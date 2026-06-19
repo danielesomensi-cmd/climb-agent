@@ -15,8 +15,7 @@ import {
   finishOutdoorSession,
   cancelOutdoorSession,
   getActiveOutdoorSession,
-  logOutdoorClimb,
-  deleteOutdoorClimb,
+  replaceOutdoorRoutes,
 } from "@/lib/api";
 import type {
   OutdoorDayType,
@@ -134,30 +133,28 @@ export default function OutdoorDayPage() {
       .catch(() => {}); // 404 = no active session, normal
   }, [date]);
 
-  const addClimb = useCallback(
-    async (climb: { name: string; grade: string; attempts: { result: "sent" | "fell" }[]; at_min: number }) => {
+  // Client owns the route list (multiple attempts, removals); each change is
+  // synced to the active session as a whole so it survives a refresh.
+  const syncRoutes = useCallback(
+    async (next: LiveRoute[]) => {
+      setLiveRoutes(next); // optimistic
       if (!sessionId) return;
       setClimbBusy(true);
       try {
-        const r = await logOutdoorClimb(sessionId, climb);
-        setLiveRoutes(mapLiveRoutes(r.routes));
+        await replaceOutdoorRoutes(
+          sessionId,
+          next.map((r) => ({
+            name: r.name,
+            grade: r.grade,
+            attempts: r.attempts,
+            at_min: r.atMin,
+            ...(r.style ? { style: r.style } : {}),
+            ...(r.discipline ? { discipline: r.discipline } : {}),
+          })),
+        );
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to log climb");
+        setError(e instanceof Error ? e.message : "Failed to sync routes");
       } finally {
-        setClimbBusy(false);
-      }
-    },
-    [sessionId],
-  );
-
-  const removeClimb = useCallback(
-    async (index: number) => {
-      if (!sessionId) return;
-      setClimbBusy(true);
-      try {
-        const r = await deleteOutdoorClimb(sessionId, index);
-        setLiveRoutes(mapLiveRoutes(r.routes));
-      } catch { /* out of range — ignore */ } finally {
         setClimbBusy(false);
       }
     },
@@ -389,8 +386,8 @@ export default function OutdoorDayPage() {
                   discipline={disciplineParam}
                   startedAt={startedAt}
                   routes={liveRoutes}
-                  onAdd={addClimb}
-                  onRemove={removeClimb}
+                  onChange={syncRoutes}
+                  suggestedRest={strategy?.strategy.base.rest_between_attempts_min}
                   busy={climbBusy}
                 />
               </div>

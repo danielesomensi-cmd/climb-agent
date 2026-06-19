@@ -399,6 +399,12 @@ export const deleteOutdoorClimb = (sessionId: string, index: number) =>
     { method: "DELETE" },
   );
 
+export const replaceOutdoorRoutes = (sessionId: string, routes: Array<Record<string, unknown>>) =>
+  request<{ routes: Array<Record<string, unknown>>; count: number }>(
+    `/api/outdoor/session/${sessionId}/routes`,
+    { method: "PUT", body: JSON.stringify({ routes }) },
+  );
+
 // User backup
 export async function exportUserState(): Promise<void> {
   const authHeaders = await _getAuthHeaders();

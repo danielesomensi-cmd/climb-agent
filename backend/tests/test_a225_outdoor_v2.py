@@ -637,3 +637,22 @@ class TestLiveRouteLogging:
             "name": "X", "grade": "6a", "attempts": [{"result": "sent"}],
         })
         assert r.status_code == 404
+
+    def test_replace_routes_full_sync(self):
+        sid = self._start()
+        # Multiple attempts on one route + a second route, synced as a whole.
+        routes = [
+            {"name": "Pillar", "grade": "7a", "attempts": [{"result": "fell"}, {"result": "sent"}], "at_min": 30},
+            {"name": "Roof", "grade": "7b", "attempts": [{"result": "fell"}], "at_min": 55},
+        ]
+        r = self.client.put(f"/api/outdoor/session/{sid}/routes", json={"routes": routes})
+        assert r.status_code == 200
+        assert r.json()["count"] == 2
+        active = self.client.get("/api/outdoor/session/active", params={"date": "2026-06-19"}).json()
+        got = active["session"]["routes"]
+        assert len(got[0]["attempts"]) == 2  # two attempts on the same route, no rewrite
+        assert got[1]["at_min"] == 55
+
+    def test_replace_routes_unknown_session_404(self):
+        r = self.client.put("/api/outdoor/session/nope/routes", json={"routes": []})
+        assert r.status_code == 404

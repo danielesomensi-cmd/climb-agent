@@ -268,6 +268,21 @@ class OutdoorClimbLogRequest(BaseModel):
     at_min: Optional[int] = None
 
 
+class OutdoorActiveRoute(BaseModel):
+    """A route on an active session (allows the live ``at_min`` marker)."""
+    name: str
+    grade: str
+    attempts: List[OutdoorAttempt] = Field(default_factory=list)
+    style: Optional[Literal["onsight", "flash", "redpoint", "project", "repeat"]] = None
+    discipline: Optional[Literal["lead", "boulder", "both"]] = None
+    at_min: Optional[int] = None
+
+
+class OutdoorRoutesReplaceRequest(BaseModel):
+    """Body for PUT /api/outdoor/session/{id}/routes (A226 live route sync)."""
+    routes: List[OutdoorActiveRoute] = Field(default_factory=list)
+
+
 class ConvertSlotRequest(BaseModel):
     """Body for POST /api/outdoor/convert-slot."""
     date: str
