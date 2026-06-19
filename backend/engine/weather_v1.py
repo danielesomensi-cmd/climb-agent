@@ -99,6 +99,27 @@ def wind_label(wind_kmh: float) -> str:
     return _WIND_LABELS[-1][1]
 
 
+# --- catalog band (A225) ------------------------------------------------------
+# The C241 outdoor-strategy catalog splits "poor" into two actionable causes so
+# the nudge can differ (precool/shade vs. warm hands/glassy tips). The 3-value
+# friction band is mapped to the 4-value catalog vocabulary by the *cause* of the
+# poor rating: cold air → cold-dry; otherwise (greasy / wet / hot) → hot-humid.
+CatalogConditionBand = Literal["prime", "ok", "poor_hot_humid", "poor_cold_dry"]
+
+
+def catalog_condition_band(temp_c: float, band: ConditionBand) -> CatalogConditionBand:
+    """Map the 3-value friction ``band`` → the 4-value catalog vocabulary.
+
+    ``prime`` / ``ok`` map through unchanged. A ``poor`` rating is classified by
+    air temperature: below the cold floor (``TEMP_OK_MIN_C``) → ``poor_cold_dry``
+    (numb fingers, glassy tips); otherwise → ``poor_hot_humid`` (greasy / wet /
+    sweaty). Deterministic, pure.
+    """
+    if band != "poor":
+        return band  # prime | ok
+    return "poor_cold_dry" if temp_c < TEMP_OK_MIN_C else "poor_hot_humid"
+
+
 def condition_band(
     temp_c: float,
     relative_humidity: float,

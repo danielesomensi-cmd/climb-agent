@@ -19,6 +19,7 @@ Canonical `location` values:
 
 Notes:
 - `gym` is a generic location class. A specific gym must be provided via `context.gym_id` (see §2.3).
+- **Location vs equipment (D1, A225).** The project rule "filter by `required_equipment`, not by `location_type`" governs **session/exercise filtering** — never gate a trainable session on where you are; gate it on the gear available. **Outdoor-day _detection_ is a deliberate, documented exception**: an outdoor day is identified by `availability.*.location == "outdoor"` (see §5.6), because "outdoor" is a venue with no indoor-equipment profile to filter on, not a session that competes for equipment. The planner therefore reads the outdoor flag to *exclude* the day from indoor session assignment (`planner_v2` `day_is_outdoor`), and does **not** apply equipment filtering to it. This is context-based by design and required **no `planner_v2` change** in A225.
 
 ---
 

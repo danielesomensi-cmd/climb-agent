@@ -342,6 +342,29 @@ class TestResolver:
         # nudge must NOT have touched any base field
         assert "nudge" not in out["base"]
 
+    def test_engine_vocabulary_phases_resolve_directly(self):
+        """macrocycle_phase uses engine names directly — no translation layer."""
+        sp = resolve_strategy("lead", "project", {"macrocycle_phase": "strength_power"})
+        assert any("Strength/Power phase" in m["text"] for m in sp["modifiers"])
+        pe = resolve_strategy("lead", "project", {"macrocycle_phase": "power_endurance"})
+        assert any("Power-endurance phase" in m["text"] for m in pe["modifiers"])
+        # old KB vocabulary is gone → skipped gracefully
+        old = resolve_strategy("lead", "project", {"macrocycle_phase": "build"})
+        assert "macrocycle_phase=build" in old["skipped_dimensions"]
+
+    def test_safety_cues_present_in_copy(self):
+        """Q2: D72 (no cold full-crimp) + CUE-02 (no pre-perf static stretch)
+        must be reachable in the resolved copy."""
+        out = resolve_outdoor_day("lead", "project", {"hold_style": "crimp"})
+        warmup = out["strategy"]["base"]["warmup_protocol"].lower()
+        assert "full-crimp while cold" in warmup           # D72
+        assert "static forearm stretching" in warmup       # CUE-02
+        # crimp patch reinforces the cold full-crimp warning
+        assert any("full-crimp cold" in m["text"].lower() for m in out["strategy"]["modifiers"])
+        # safety block carries both as standing reminders
+        assert out["safety"]["no_cold_full_crimp"]
+        assert out["safety"]["no_static_forearm_stretch"]
+
     def test_unknown_dimension_value_skipped_gracefully(self):
         out = resolve_strategy("lead", "volume", {"wall_angle": "cave"})
         assert "wall_angle=cave" in out["skipped_dimensions"]
@@ -414,3 +437,120 @@ class TestResolverEndpoint:
     def test_endpoint_bad_day_type_422(self):
         r = self.client.get("/api/outdoor/strategy", params={"day_type": "nope"})
         assert r.status_code == 422
+
+
+# --------------------------------------------------------------------------- #
+# Phase 4 — weather wiring (condition_band auto-derive; network mocked)
+# --------------------------------------------------------------------------- #
+
+from backend.engine.weather_v1 import TEMP_OK_MIN_C, catalog_condition_band
+
+
+class TestCatalogConditionBand:
+    def test_prime_and_ok_pass_through(self):
+        assert catalog_condition_band(8.0, "prime") == "prime"
+        assert catalog_condition_band(20.0, "ok") == "ok"
+
+    def test_poor_warm_is_hot_humid(self):
+        assert catalog_condition_band(28.0, "poor") == "poor_hot_humid"
+
+    def test_poor_cold_is_cold_dry(self):
+        assert catalog_condition_band(-10.0, "poor") == "poor_cold_dry"
+
+    def test_poor_at_cold_boundary(self):
+        # exactly the floor → not below → hot_humid; just under → cold_dry
+        assert catalog_condition_band(TEMP_OK_MIN_C, "poor") == "poor_hot_humid"
+        assert catalog_condition_band(TEMP_OK_MIN_C - 0.1, "poor") == "poor_cold_dry"
+
+
+def _fake_owm_current(temp, humidity, code=800, wind_ms=1.0):
+    return {
+        "main": {"temp": temp, "humidity": humidity},
+        "wind": {"speed": wind_ms},
+        "weather": [{"id": code, "description": "x"}],
+    }
+
+
+class TestFetchOutdoorConditions:
+    def test_derives_band_and_temperature(self, monkeypatch):
+        from backend.api.routers import weather
+        # hot + humid → poor → poor_hot_humid
+        monkeypatch.setattr(weather, "_owm_get", lambda path, lat, lon: _fake_owm_current(29, 85))
+        out = weather.fetch_outdoor_conditions(45.0, 7.0)
+        assert out["temperature"] == 29.0
+        assert out["condition_band"] == "poor_hot_humid"
+        assert out["weather_band_raw"] == "poor"
+
+    def test_prime_conditions(self, monkeypatch):
+        from backend.api.routers import weather
+        monkeypatch.setattr(weather, "_owm_get", lambda path, lat, lon: _fake_owm_current(8, 40))
+        out = weather.fetch_outdoor_conditions(45.0, 7.0)
+        assert out["condition_band"] == "prime"
+
+    def test_unavailable_returns_none(self, monkeypatch):
+        from backend.api.routers import weather
+
+        def _boom(path, lat, lon):
+            raise weather.WeatherUnavailable("no key")
+
+        monkeypatch.setattr(weather, "_owm_get", _boom)
+        assert weather.fetch_outdoor_conditions(45.0, 7.0) is None
+
+
+class TestResolverWeatherWiring:
+    @pytest.fixture(autouse=True)
+    def setup_api(self, tmp_path, monkeypatch):
+        from backend.api import deps
+        from backend.engine import storage
+        state_path = tmp_path / "user_state.json"
+        state_path.write_text(json.dumps({"schema_version": "1.5", "outdoor_spots": []}))
+        monkeypatch.setattr(storage, "STATE_PATH", state_path)
+        monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
+        monkeypatch.setattr(deps, "STATE_PATH", state_path)
+        from fastapi.testclient import TestClient
+        from backend.api.main import app
+        self.client = TestClient(app)
+
+    def test_endpoint_autofills_condition_band(self, monkeypatch):
+        from backend.api.routers import weather
+        monkeypatch.setattr(weather, "_owm_get", lambda path, lat, lon: _fake_owm_current(29, 85))
+        r = self.client.get("/api/outdoor/strategy", params={
+            "day_type": "project", "lat": 45.0, "lon": 7.0,
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["conditions"]["condition_band"] == "poor_hot_humid"
+        assert body["conditions"]["temperature"] == 29.0
+        # the band patch was applied → hot/humid nudge present
+        assert any(
+            "Hot/humid" in m["text"] for m in body["strategy"]["modifiers"]
+        )
+
+    def test_endpoint_graceful_when_weather_unavailable(self, monkeypatch):
+        from backend.api.routers import weather
+
+        def _boom(path, lat, lon):
+            raise weather.WeatherUnavailable("no key")
+
+        monkeypatch.setattr(weather, "_owm_get", _boom)
+        r = self.client.get("/api/outdoor/strategy", params={
+            "day_type": "project", "lat": 45.0, "lon": 7.0,
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert body["conditions"] is None
+        # base used, no condition_band modifier, still complete
+        assert body["strategy"]["base"]["warmup_protocol"]
+        assert all(m["dimension"] != "condition_band" for m in body["strategy"]["modifiers"])
+
+    def test_explicit_band_beats_weather(self, monkeypatch):
+        from backend.api.routers import weather
+        # weather would say poor_hot_humid, but explicit prime wins (no fetch needed)
+        monkeypatch.setattr(weather, "_owm_get", lambda path, lat, lon: _fake_owm_current(29, 85))
+        r = self.client.get("/api/outdoor/strategy", params={
+            "day_type": "project", "condition_band": "prime", "lat": 45.0, "lon": 7.0,
+        })
+        body = r.json()
+        # explicit band applied; no weather-derived conditions surfaced
+        assert body["conditions"] is None
+        assert any("Prime conditions" in m["text"] for m in body["strategy"]["modifiers"])

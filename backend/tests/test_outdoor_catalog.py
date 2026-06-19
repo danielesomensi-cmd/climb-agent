@@ -55,7 +55,7 @@ VALID_DIMENSIONS = {
     "route_length": {"short_power", "medium", "long_endurance"},
     "hold_style": {"crimp", "sloper_pinch", "mixed"},
     "target_grade_relative": {"within_limit", "at_or_above_limit"},
-    "macrocycle_phase": {"base", "build", "peak", "performance", "deload"},
+    "macrocycle_phase": {"base", "strength_power", "power_endurance", "performance", "deload"},
     "condition_band": {"prime", "ok", "poor_hot_humid", "poor_cold_dry"},
 }
 

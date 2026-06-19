@@ -29,18 +29,6 @@ from backend.engine.outdoor_log import (
 )
 from backend.engine.outdoor_resolver import OutdoorResolveError, resolve_outdoor_day
 
-# A225 Phase 3: map engine macrocycle phase_id → catalog macrocycle_phase
-# vocabulary (read-only nudge; D3 — no coupling to macrocycle_v1/planner_v2).
-# Engine phases: base, strength_power, power_endurance, performance, deload.
-# Catalog phases: base, build, peak, performance, deload.
-_ENGINE_TO_CATALOG_PHASE = {
-    "base": "base",
-    "strength_power": "build",
-    "power_endurance": "peak",
-    "performance": "performance",
-    "deload": "deload",
-}
-
 import logging
 
 logger = logging.getLogger(__name__)
@@ -236,6 +224,9 @@ def get_outdoor_strategy(
     condition_band: Optional[str] = Query(None),
     macrocycle_phase: Optional[str] = Query(None, description="Explicit catalog phase; overrides use_current_phase"),
     use_current_phase: bool = Query(False, description="Read the user's current macrocycle phase (read-only nudge)"),
+    lat: Optional[float] = Query(None, ge=-90.0, le=90.0, description="Optional: auto-derive condition_band from weather"),
+    lon: Optional[float] = Query(None, ge=-180.0, le=180.0),
+    date: Optional[str] = Query(None, description="YYYY-MM-DD for forecast (with lat/lon)"),
     user_id: Optional[str] = Depends(get_user_id),
 ):
     """Resolve the deterministic strategy + nutrition for an outdoor day.
@@ -243,15 +234,28 @@ def get_outdoor_strategy(
     ``day_type`` alone returns a complete entry; optional dimensions layer
     patches. ``macrocycle_phase`` is a read-only text nudge (D3): pass it
     explicitly, or set ``use_current_phase`` to derive it from the user's plan.
+    When ``condition_band`` is omitted but ``lat``/``lon`` are given, the band is
+    auto-derived from weather (graceful: no weather → base, no band).
     """
+    # macrocycle_phase shares the engine vocabulary (base, strength_power,
+    # power_endurance, performance, deload) — direct lookup, no translation (D3).
     phase = macrocycle_phase
     if phase is None and use_current_phase:
         from datetime import date as _date
         from backend.engine.free_session import get_phase_for_date
 
         state = load_state(user_id)
-        engine_phase = get_phase_for_date(state, _date.today().isoformat())
-        phase = _ENGINE_TO_CATALOG_PHASE.get(engine_phase)
+        phase = get_phase_for_date(state, _date.today().isoformat())
+
+    # Weather auto-fill (A225 Phase 4): derive condition_band when not explicit.
+    derived_conditions: Optional[Dict[str, Any]] = None
+    band = condition_band
+    if band is None and lat is not None and lon is not None:
+        from backend.api.routers.weather import fetch_outdoor_conditions
+
+        derived_conditions = fetch_outdoor_conditions(lat, lon, date)
+        if derived_conditions:
+            band = derived_conditions["condition_band"]
 
     dimensions = {
         "wall_angle": wall_angle,
@@ -259,7 +263,7 @@ def get_outdoor_strategy(
         "hold_style": hold_style,
         "target_grade_relative": target_grade_relative,
         "macrocycle_phase": phase,
-        "condition_band": condition_band,
+        "condition_band": band,
     }
 
     try:
@@ -267,6 +271,8 @@ def get_outdoor_strategy(
     except OutdoorResolveError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
+    # Surface the derived conditions so the UI (brief #3) can pre-fill the log.
+    resolved["conditions"] = derived_conditions
     return resolved
 
 

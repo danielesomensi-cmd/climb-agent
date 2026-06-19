@@ -25,7 +25,12 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.api.deps import require_active_subscription
-from backend.engine.weather_v1 import compute_dew_point, condition_band, wind_label
+from backend.engine.weather_v1 import (
+    catalog_condition_band,
+    compute_dew_point,
+    condition_band,
+    wind_label,
+)
 
 router = APIRouter(prefix="/api/weather", tags=["weather"])
 
@@ -145,6 +150,34 @@ def _owm_get(path: str, lat: float, lon: float) -> Dict[str, Any]:
         return resp.json()
     except httpx.HTTPError as exc:
         raise WeatherUnavailable(f"upstream error: {exc}") from exc
+
+
+# --- outdoor auto-fill helper (A225) ------------------------------------------
+
+def fetch_outdoor_conditions(
+    lat: float, lon: float, date: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """Derive ``{temperature, condition_band}`` (4-value catalog vocabulary) for an
+    outdoor day, reusing the same provider + normalization as the live card.
+
+    Returns ``None`` (gracefully) when the provider is unreachable/unconfigured or
+    the date is outside the forecast window — the caller then falls back to the
+    catalog base (no condition_band patch). Network is mocked in tests via
+    ``_owm_get``.
+    """
+    try:
+        if date:
+            payload = _normalize_forecast(_owm_get("forecast", lat, lon), date)
+        else:
+            payload = _normalize_current(_owm_get("weather", lat, lon))
+    except WeatherUnavailable:
+        return None
+
+    return {
+        "temperature": payload["temp"],
+        "condition_band": catalog_condition_band(payload["temp"], payload["condition_band"]),
+        "weather_band_raw": payload["condition_band"],
+    }
 
 
 # --- route --------------------------------------------------------------------
