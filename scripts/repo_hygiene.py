@@ -5,7 +5,7 @@ import os
 import subprocess
 from pathlib import Path
 
-LAST_AUDIT_DATE = "2026-03-25"
+LAST_AUDIT_DATE = "2026-05-11"  # D237 full repo hygiene audit (docs/audit/D237_repo_hygiene_2026-05-11.md)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -14,6 +14,9 @@ ROADMAP = DOCS_DIR / "ROADMAP_CURRENT.md"
 ROOT_WHITELIST = {
     "README.md", "CLAUDE.md", "PROJECT_BRIEF.md", "Procfile",
     "pyproject.toml", "railway.json", "requirements.txt", ".gitignore",
+    # AUTH_AUDIT.md: deliberately kept at root (auth reference for the external
+    # Kilter-Up project); referenced by D236/D237 audit docs — do not relocate.
+    "AUTH_AUDIT.md",
 }
 
 COMPLETED_MARKERS = {"CLOSED", "FINAL", "COMPLETED", "Done", "✅ Done"}
