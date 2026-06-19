@@ -15,6 +15,21 @@ from backend.engine import storage
 
 REQUIRED_FIELDS = {"log_version", "date", "spot_name", "discipline", "duration_minutes", "routes"}
 
+# A225: accepted log schema versions. v1 logs predate the v2 optional fields
+# (day_type, route_profile, conditions.temperature/condition_band) and stay valid.
+VALID_LOG_VERSIONS = {"outdoor.v1", "outdoor.v2"}
+CURRENT_LOG_VERSION = "outdoor.v2"
+
+# outdoor.v2 optional-field vocabularies (mirror the C241 strategy catalog).
+VALID_DAY_TYPES = {"project", "onsight_flash", "volume", "scout_easy"}
+VALID_ROUTE_PROFILE = {
+    "wall_angle": {"slab", "vertical", "overhang", "roof"},
+    "route_length": {"short_power", "medium", "long_endurance"},
+    "hold_style": {"crimp", "sloper_pinch", "mixed"},
+    "target_grade_relative": {"within_limit", "at_or_above_limit"},
+}
+VALID_CONDITION_BANDS = {"prime", "ok", "poor_hot_humid", "poor_cold_dry"}
+
 # ---------------------------------------------------------------------------
 # Outdoor load score helpers
 # ---------------------------------------------------------------------------
@@ -72,6 +87,61 @@ def compute_outdoor_load_score(entry: Dict[str, Any]) -> int:
 VALID_DISCIPLINES = {"lead", "boulder", "both"}
 
 
+# ---------------------------------------------------------------------------
+# Active outdoor session — duration derivation (A225)
+# ---------------------------------------------------------------------------
+
+# A real outdoor day rarely exceeds ~10 h. A timer left running ("Start" pressed
+# then the session closed the next day) would otherwise derive an absurd
+# duration. We cap derived durations here so a stale ``started_at`` can never
+# silently overwrite a reasonable value.
+OUTDOOR_SESSION_MAX_MINUTES = 600  # 10 hours
+
+
+def derive_outdoor_duration(
+    started_at_iso: Optional[str],
+    now: datetime,
+    manual_override: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Resolve an outdoor session's ``duration_minutes`` at close time.
+
+    Rules (deterministic):
+      1. An explicit, valid ``manual_override`` (int ≥ 1) always wins — it is the
+         user's typed value and must never be clobbered by a stale timer.
+      2. Otherwise derive from ``started_at → now`` (floored at 1 min).
+      3. If the derived value exceeds ``OUTDOOR_SESSION_MAX_MINUTES`` (stale /
+         overnight timer), cap it and flag ``capped=True`` + ``raw_minutes`` so the
+         caller can ask the user to confirm instead of writing an absurd number.
+      4. If ``started_at`` is missing/invalid and no override is given → ``None``
+         (the caller must supply a manual value).
+
+    Returns ``{minutes, capped, raw_minutes, source}`` where ``source`` is one of
+    ``manual | timer | timer_capped | none``.
+    """
+    if isinstance(manual_override, int) and not isinstance(manual_override, bool) and manual_override >= 1:
+        return {"minutes": manual_override, "capped": False, "raw_minutes": None, "source": "manual"}
+
+    try:
+        started = datetime.fromisoformat(started_at_iso) if started_at_iso else None
+    except (ValueError, TypeError):
+        started = None
+    if started is None:
+        return {"minutes": None, "capped": False, "raw_minutes": None, "source": "none"}
+
+    raw = round((now - started).total_seconds() / 60)
+    if raw < 1:
+        raw = 1
+
+    if raw > OUTDOOR_SESSION_MAX_MINUTES:
+        return {
+            "minutes": OUTDOOR_SESSION_MAX_MINUTES,
+            "capped": True,
+            "raw_minutes": raw,
+            "source": "timer_capped",
+        }
+    return {"minutes": raw, "capped": False, "raw_minutes": None, "source": "timer"}
+
+
 def validate_outdoor_entry(entry: Dict[str, Any]) -> List[str]:
     """Validate an outdoor session entry. Returns list of error strings (empty = valid)."""
     errors: List[str] = []
@@ -81,11 +151,45 @@ def validate_outdoor_entry(entry: Dict[str, Any]) -> List[str]:
         errors.append(f"Missing required fields: {sorted(missing)}")
         return errors
 
-    if entry.get("log_version") != "outdoor.v1":
-        errors.append(f"Invalid log_version: {entry.get('log_version')} (expected outdoor.v1)")
+    if entry.get("log_version") not in VALID_LOG_VERSIONS:
+        errors.append(
+            f"Invalid log_version: {entry.get('log_version')} "
+            f"(expected one of {sorted(VALID_LOG_VERSIONS)})"
+        )
 
     if entry.get("discipline") not in VALID_DISCIPLINES:
         errors.append(f"Invalid discipline: {entry.get('discipline')}")
+
+    # --- outdoor.v2 optional fields (A225) — only validated when present ----
+    day_type = entry.get("day_type")
+    if day_type is not None and day_type not in VALID_DAY_TYPES:
+        errors.append(f"Invalid day_type: {day_type} (expected one of {sorted(VALID_DAY_TYPES)})")
+
+    route_profile = entry.get("route_profile")
+    if route_profile is not None:
+        if not isinstance(route_profile, dict):
+            errors.append("route_profile must be a dict")
+        else:
+            for key, value in route_profile.items():
+                if key not in VALID_ROUTE_PROFILE:
+                    errors.append(f"Unknown route_profile key: {key}")
+                elif value is not None and value not in VALID_ROUTE_PROFILE[key]:
+                    errors.append(
+                        f"Invalid route_profile.{key}: {value} "
+                        f"(expected one of {sorted(VALID_ROUTE_PROFILE[key])})"
+                    )
+
+    conditions = entry.get("conditions")
+    if isinstance(conditions, dict):
+        band = conditions.get("condition_band")
+        if band is not None and band not in VALID_CONDITION_BANDS:
+            errors.append(
+                f"Invalid conditions.condition_band: {band} "
+                f"(expected one of {sorted(VALID_CONDITION_BANDS)})"
+            )
+        temp = conditions.get("temperature")
+        if temp is not None and not isinstance(temp, (int, float)):
+            errors.append(f"Invalid conditions.temperature: {temp} (expected a number)")
 
     date_str = entry.get("date", "")
     try:

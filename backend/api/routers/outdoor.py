@@ -4,20 +4,42 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.api.deps import get_user_id, load_state, require_active_subscription, save_state
-from backend.api.models import OutdoorSpotCreate, OutdoorSessionLog, ConvertSlotRequest
+from backend.api.models import (
+    OutdoorSpotCreate,
+    OutdoorSessionLog,
+    OutdoorSessionStartRequest,
+    OutdoorSessionFinishRequest,
+    ConvertSlotRequest,
+)
 from backend.engine.outdoor_log import (
+    CURRENT_LOG_VERSION,
     append_outdoor_session,
     compute_outdoor_load_score,
     compute_outdoor_stats,
+    derive_outdoor_duration,
     load_outdoor_sessions,
     remove_outdoor_session,
     update_outdoor_session,
 )
+from backend.engine.outdoor_resolver import OutdoorResolveError, resolve_outdoor_day
+
+# A225 Phase 3: map engine macrocycle phase_id → catalog macrocycle_phase
+# vocabulary (read-only nudge; D3 — no coupling to macrocycle_v1/planner_v2).
+# Engine phases: base, strength_power, power_endurance, performance, deload.
+# Catalog phases: base, build, peak, performance, deload.
+_ENGINE_TO_CATALOG_PHASE = {
+    "base": "base",
+    "strength_power": "build",
+    "power_endurance": "peak",
+    "performance": "performance",
+    "deload": "deload",
+}
 
 import logging
 
@@ -83,7 +105,7 @@ def delete_outdoor_spot(spot_id: str, user_id: Optional[str] = Depends(get_user_
 def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get_user_id)):
     """Validate and append an outdoor session to the log."""
     entry = req.model_dump(exclude_none=True)
-    entry["log_version"] = "outdoor.v1"
+    entry["log_version"] = CURRENT_LOG_VERSION
 
     try:
         log_path = append_outdoor_session(entry, user_id)
@@ -129,7 +151,7 @@ def get_outdoor_log_by_date(date: str, user_id: Optional[str] = Depends(get_user
 def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get_user_id)):
     """Update an existing outdoor session (replace entry for the same date)."""
     entry = req.model_dump(exclude_none=True)
-    entry["log_version"] = "outdoor.v1"
+    entry["log_version"] = CURRENT_LOG_VERSION
 
     try:
         update_outdoor_session(user_id, req.date, entry)
@@ -199,6 +221,165 @@ def get_outdoor_stats(since: Optional[str] = Query(None), user_id: Optional[str]
     sessions = load_outdoor_sessions(user_id, since_date=since)
     stats = compute_outdoor_stats(sessions)
     return stats
+
+
+# ── Strategy + nutrition resolver (A225 Phase 3) ─────────────────────────
+
+@router.get("/strategy", dependencies=[Depends(require_active_subscription)])
+def get_outdoor_strategy(
+    day_type: str = Query(..., description="project | onsight_flash | volume | scout_easy"),
+    discipline: str = Query("lead"),
+    wall_angle: Optional[str] = Query(None),
+    route_length: Optional[str] = Query(None),
+    hold_style: Optional[str] = Query(None),
+    target_grade_relative: Optional[str] = Query(None),
+    condition_band: Optional[str] = Query(None),
+    macrocycle_phase: Optional[str] = Query(None, description="Explicit catalog phase; overrides use_current_phase"),
+    use_current_phase: bool = Query(False, description="Read the user's current macrocycle phase (read-only nudge)"),
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Resolve the deterministic strategy + nutrition for an outdoor day.
+
+    ``day_type`` alone returns a complete entry; optional dimensions layer
+    patches. ``macrocycle_phase`` is a read-only text nudge (D3): pass it
+    explicitly, or set ``use_current_phase`` to derive it from the user's plan.
+    """
+    phase = macrocycle_phase
+    if phase is None and use_current_phase:
+        from datetime import date as _date
+        from backend.engine.free_session import get_phase_for_date
+
+        state = load_state(user_id)
+        engine_phase = get_phase_for_date(state, _date.today().isoformat())
+        phase = _ENGINE_TO_CATALOG_PHASE.get(engine_phase)
+
+    dimensions = {
+        "wall_angle": wall_angle,
+        "route_length": route_length,
+        "hold_style": hold_style,
+        "target_grade_relative": target_grade_relative,
+        "macrocycle_phase": phase,
+        "condition_band": condition_band,
+    }
+
+    try:
+        resolved = resolve_outdoor_day(discipline, day_type, dimensions)
+    except OutdoorResolveError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    return resolved
+
+
+# ── Active session lifecycle (A225) ─────────────────────────────────────
+# planned → active (started_at set) → done (logged to outdoor_logs, immutable).
+# The active session is transient working state in user_state; the canonical,
+# immutable record is the outdoor_logs entry written on finish.
+
+def _find_active_session(state: Dict[str, Any], session_id: str) -> Dict[str, Any]:
+    for s in state.get("outdoor_active_sessions", []):
+        if s.get("session_id") == session_id:
+            return s
+    raise HTTPException(status_code=404, detail=f"Active outdoor session '{session_id}' not found")
+
+
+@router.post("/session/start", dependencies=[Depends(require_active_subscription)])
+def start_outdoor_session(
+    req: OutdoorSessionStartRequest, user_id: Optional[str] = Depends(get_user_id)
+):
+    """Start an active outdoor session — sets started_at server-side (timer)."""
+    state = load_state(user_id)
+    active = state.setdefault("outdoor_active_sessions", [])
+
+    seq = len([s for s in active if s.get("date") == req.date]) + 1
+    session_id = f"outdoor_active_{req.date.replace('-', '')}_{seq}"
+    now = datetime.now(timezone.utc).isoformat()
+
+    session: Dict[str, Any] = {
+        "session_id": session_id,
+        "date": req.date,
+        "spot_id": req.spot_id,
+        "spot_name": req.spot_name,
+        "discipline": req.discipline,
+        "day_type": req.day_type,
+        "status": "active",
+        "started_at": now,
+    }
+    active.append(session)
+    save_state(state, user_id)
+    return {"session_id": session_id, "started_at": now, "status": "active"}
+
+
+@router.post("/session/{session_id}/finish", dependencies=[Depends(require_active_subscription)])
+def finish_outdoor_session(
+    session_id: str,
+    req: OutdoorSessionFinishRequest,
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Close an active outdoor session → write an immutable outdoor.v2 log.
+
+    Derives ``duration_minutes`` from the timer (started_at→now), capped against a
+    stale timer; an explicit ``duration_minutes`` in the body wins as a manual
+    override. Returns the saved entry plus duration provenance so the UI can ask
+    for confirmation when the timer was capped.
+    """
+    state = load_state(user_id)
+    session = _find_active_session(state, session_id)
+
+    now = datetime.now(timezone.utc)
+    dur = derive_outdoor_duration(session.get("started_at"), now, req.duration_minutes)
+    if dur["minutes"] is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot determine duration: no valid timer and no manual duration_minutes provided.",
+        )
+
+    entry = req.model_dump(exclude_none=True)
+    entry["log_version"] = CURRENT_LOG_VERSION
+    entry["date"] = session["date"]
+    entry["duration_minutes"] = dur["minutes"]
+    # Carry the day_type chosen at start unless the finish body overrides it.
+    if not entry.get("day_type") and session.get("day_type"):
+        entry["day_type"] = session["day_type"]
+
+    try:
+        append_outdoor_session(entry, user_id)
+    except ValueError as e:
+        if "authenticated user_id" in str(e):
+            raise HTTPException(status_code=401, detail="Authentication required to save outdoor session")
+        raise HTTPException(status_code=422, detail=str(e))
+    except OSError as e:
+        logger.error("Failed to write outdoor log on finish: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to write outdoor log. Please try again.")
+
+    # Remove the active session — the immutable record now lives in outdoor_logs.
+    state = load_state(user_id)
+    state["outdoor_active_sessions"] = [
+        s for s in state.get("outdoor_active_sessions", []) if s.get("session_id") != session_id
+    ]
+    save_state(state, user_id)
+
+    return {
+        "status": "done",
+        "date": entry["date"],
+        "duration_minutes": dur["minutes"],
+        "duration_capped": dur["capped"],
+        "duration_raw_minutes": dur["raw_minutes"],
+        "duration_source": dur["source"],
+        "load_score": compute_outdoor_load_score(entry),
+    }
+
+
+@router.delete("/session/{session_id}", dependencies=[Depends(require_active_subscription)])
+def cancel_outdoor_session(session_id: str, user_id: Optional[str] = Depends(get_user_id)):
+    """Discard an active outdoor session without logging it."""
+    state = load_state(user_id)
+    active = state.get("outdoor_active_sessions", [])
+    remaining = [s for s in active if s.get("session_id") != session_id]
+    if len(remaining) == len(active):
+        raise HTTPException(status_code=404, detail=f"Active outdoor session '{session_id}' not found")
+    state["outdoor_active_sessions"] = remaining
+    save_state(state, user_id)
+    return {"status": "ok"}
 
 
 # ── Slot conversion ─────────────────────────────────────────────────────

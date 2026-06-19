@@ -194,8 +194,26 @@ class OutdoorRoute(BaseModel):
     attempts: List[OutdoorAttempt] = Field(default_factory=list)
 
 
+class OutdoorRouteProfile(BaseModel):
+    """A225 (outdoor.v2): optional project/route characteristics.
+
+    All fields optional — progressive disclosure / graceful degradation. They key
+    the deterministic strategy catalog patches (C241). Absent fields → catalog
+    base defaults. Values mirror the catalog ``dimensions`` block exactly.
+    """
+    wall_angle: Optional[Literal["slab", "vertical", "overhang", "roof"]] = None
+    route_length: Optional[Literal["short_power", "medium", "long_endurance"]] = None
+    hold_style: Optional[Literal["crimp", "sloper_pinch", "mixed"]] = None
+    target_grade_relative: Optional[Literal["within_limit", "at_or_above_limit"]] = None
+
+
 class OutdoorSessionLog(BaseModel):
-    """Body for POST /api/outdoor/log."""
+    """Body for POST /api/outdoor/log.
+
+    A225: ``outdoor.v2`` adds optional ``day_type`` + ``route_profile``, and
+    ``conditions.temperature`` / ``conditions.condition_band``. All additive —
+    ``outdoor.v1`` logs (without these) stay valid, no migration.
+    """
     date: str
     spot_id: Optional[str] = None
     spot_name: str
@@ -206,6 +224,38 @@ class OutdoorSessionLog(BaseModel):
     notes: Optional[str] = None
     energy_level: Optional[str] = None
     overall_feeling: Optional[str] = None
+    # outdoor.v2 (A225) — all optional
+    day_type: Optional[Literal["project", "onsight_flash", "volume", "scout_easy"]] = None
+    route_profile: Optional[OutdoorRouteProfile] = None
+
+
+class OutdoorSessionStartRequest(BaseModel):
+    """Body for POST /api/outdoor/session/start (A225 active-session lifecycle)."""
+    date: str
+    spot_id: Optional[str] = None
+    spot_name: Optional[str] = None
+    discipline: Optional[Literal["lead", "boulder", "both"]] = None
+    day_type: Optional[Literal["project", "onsight_flash", "volume", "scout_easy"]] = None
+
+
+class OutdoorSessionFinishRequest(BaseModel):
+    """Body for POST /api/outdoor/session/{id}/finish (A225).
+
+    Mirrors OutdoorSessionLog but ``duration_minutes`` is OPTIONAL: when omitted
+    the backend derives it from the timer (started_at→now, capped). When present
+    it is treated as an explicit manual override that always wins.
+    """
+    spot_name: str
+    discipline: Literal["lead", "boulder", "both"]
+    duration_minutes: Optional[int] = None  # manual override; None → derive from timer
+    spot_id: Optional[str] = None
+    conditions: Optional[Dict[str, Any]] = None
+    routes: List[OutdoorRoute] = Field(default_factory=list)
+    notes: Optional[str] = None
+    energy_level: Optional[str] = None
+    overall_feeling: Optional[str] = None
+    day_type: Optional[Literal["project", "onsight_flash", "volume", "scout_easy"]] = None
+    route_profile: Optional[OutdoorRouteProfile] = None
 
 
 class ConvertSlotRequest(BaseModel):
