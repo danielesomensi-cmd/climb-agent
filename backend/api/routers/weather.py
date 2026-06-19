@@ -157,8 +157,9 @@ def _owm_get(path: str, lat: float, lon: float) -> Dict[str, Any]:
 def fetch_outdoor_conditions(
     lat: float, lon: float, date: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
-    """Derive ``{temperature, condition_band}`` (4-value catalog vocabulary) for an
-    outdoor day, reusing the same provider + normalization as the live card.
+    """Derive outdoor conditions (``temperature``, ``humidity``, ``wind``,
+    ``condition_band``) for an outdoor day, reusing the same provider +
+    normalization as the live card.
 
     Returns ``None`` (gracefully) when the provider is unreachable/unconfigured or
     the date is outside the forecast window — the caller then falls back to the
@@ -175,6 +176,9 @@ def fetch_outdoor_conditions(
 
     return {
         "temperature": payload["temp"],
+        "humidity": payload["humidity"],
+        "wind": payload["wind"],
+        "wind_label": payload["wind_label"],
         "condition_band": catalog_condition_band(payload["temp"], payload["condition_band"]),
         "weather_band_raw": payload["condition_band"],
     }

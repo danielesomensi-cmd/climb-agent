@@ -11,6 +11,9 @@ import type {
   OutdoorSpot,
   OutdoorSession,
   OutdoorStats,
+  OutdoorStrategyResponse,
+  OutdoorSessionStartResponse,
+  OutdoorSessionFinishResponse,
   WeeklyReport,
   MonthlyReport,
   Quote,
@@ -326,6 +329,54 @@ export const convertOutdoorSlot = (data: {
   request<{ status: string; suggestions: Array<Record<string, unknown>> }>("/api/outdoor/convert-slot", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+
+// Outdoor day (A226) — resolver + active session lifecycle
+export const getOutdoorStrategy = (params: {
+  day_type: string;
+  discipline?: string;
+  wall_angle?: string;
+  route_length?: string;
+  hold_style?: string;
+  target_grade_relative?: string;
+  condition_band?: string;
+  macrocycle_phase?: string;
+  use_current_phase?: boolean;
+  lat?: number;
+  lon?: number;
+  date?: string;
+}) => {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== "") q.set(k, String(v));
+  });
+  return request<OutdoorStrategyResponse>(`/api/outdoor/strategy?${q.toString()}`);
+};
+
+export const startOutdoorSession = (data: {
+  date: string;
+  spot_id?: string;
+  spot_name?: string;
+  discipline?: string;
+  day_type?: string;
+}) =>
+  request<OutdoorSessionStartResponse>("/api/outdoor/session/start", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const finishOutdoorSession = (
+  sessionId: string,
+  data: Partial<OutdoorSession> & { spot_name: string; discipline: string; duration_minutes?: number },
+) =>
+  request<OutdoorSessionFinishResponse>(`/api/outdoor/session/${sessionId}/finish`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
+export const cancelOutdoorSession = (sessionId: string) =>
+  request<{ status: string }>(`/api/outdoor/session/${sessionId}`, {
+    method: "DELETE",
   });
 
 // User backup

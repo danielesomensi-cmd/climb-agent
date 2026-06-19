@@ -478,6 +478,8 @@ class TestFetchOutdoorConditions:
         monkeypatch.setattr(weather, "_owm_get", lambda path, lat, lon: _fake_owm_current(29, 85))
         out = weather.fetch_outdoor_conditions(45.0, 7.0)
         assert out["temperature"] == 29.0
+        assert out["humidity"] == 85
+        assert "wind" in out and "wind_label" in out
         assert out["condition_band"] == "poor_hot_humid"
         assert out["weather_band_raw"] == "poor"
 

@@ -450,6 +450,16 @@ export function DayCard({
                     </>
                   ) : (
                     <>
+                      <Button
+                        asChild
+                        size="sm"
+                        className="text-xs bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <Link href={`/outdoor/${day.date}?spot=${encodeURIComponent(day.outdoor_spot_name ?? "")}&discipline=${day.outdoor_discipline ?? "lead"}`}>
+                          <Mountain className="size-3 mr-1" />
+                          Open outdoor day
+                        </Link>
+                      </Button>
                       {onLogOutdoor && (
                         <Button
                           size="sm"

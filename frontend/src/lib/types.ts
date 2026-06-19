@@ -330,6 +330,29 @@ export interface OutdoorRoute {
   attempts: OutdoorAttempt[];
 }
 
+// A225/A226 — outdoor.v2 vocabulary
+export type OutdoorDayType = "project" | "onsight_flash" | "volume" | "scout_easy";
+
+// 4-value catalog band (distinct from the 3-value weather `ConditionBand`).
+export type CatalogConditionBand = "prime" | "ok" | "poor_hot_humid" | "poor_cold_dry";
+
+export interface OutdoorRouteProfile {
+  wall_angle?: "slab" | "vertical" | "overhang" | "roof";
+  route_length?: "short_power" | "medium" | "long_endurance";
+  hold_style?: "crimp" | "sloper_pinch" | "mixed";
+  target_grade_relative?: "within_limit" | "at_or_above_limit";
+}
+
+// outdoor.v2 conditions written to / read from the log.
+export interface OutdoorConditions {
+  temperature?: number;
+  humidity?: number;
+  wind?: number;
+  wind_label?: string;
+  condition_band?: CatalogConditionBand;
+  weather_band_raw?: string;
+}
+
 export interface OutdoorSession {
   log_version: string;
   date: string;
@@ -337,17 +360,75 @@ export interface OutdoorSession {
   spot_name: string;
   discipline: "lead" | "boulder" | "both";
   duration_minutes: number;
-  conditions?: {
-    temperature_c?: number;
-    humidity?: "low" | "medium" | "high";
-    rock_condition?: "dry" | "damp" | "wet";
-    wind?: "none" | "light" | "strong";
-  };
+  conditions?: OutdoorConditions;
   routes: OutdoorRoute[];
   notes?: string;
   energy_level?: string;
   overall_feeling?: string;
+  day_type?: OutdoorDayType;
+  route_profile?: OutdoorRouteProfile;
   load_score?: number;
+}
+
+// ── Resolver (GET /api/outdoor/strategy) ────────────────────────────────
+export interface OutdoorStrategyBase {
+  warmup_protocol: string;
+  target_burns: string;
+  rest_between_attempts_min: string;
+  stop_criteria: string[];
+  skin_tips: string[];
+  time_of_day_advice: string;
+  hours_plan: string;
+  downgrade_rule: string;
+}
+
+export interface OutdoorModifier {
+  dimension: string;
+  value: string;
+  key: string;
+  text: string;
+}
+
+export interface OutdoorNutrition {
+  pre_day: string;
+  during_by_duration: { short: string; long: string };
+  hydration_by_climate: string;
+  caffeine_timing: string;
+  post_day: string;
+  climate_addons: { precool: string };
+  day_type_nuances: Record<string, string>;
+  day_type_nuance: string | null;
+}
+
+export interface OutdoorStrategyResponse {
+  strategy: {
+    discipline: string;
+    day_type: OutdoorDayType;
+    base: OutdoorStrategyBase;
+    modifiers: OutdoorModifier[];
+    applied_dimensions: string[];
+    skipped_dimensions: string[];
+  };
+  nutrition: OutdoorNutrition;
+  safety: Record<string, string>;
+  conditions: OutdoorConditions | null;
+}
+
+// ── Active session lifecycle ────────────────────────────────────────────
+export interface OutdoorSessionStartResponse {
+  session_id: string;
+  started_at: string;
+  status: "active";
+}
+
+export interface OutdoorSessionFinishResponse {
+  status: "done";
+  date: string;
+  duration_minutes: number;
+  duration_capped: boolean;
+  duration_raw_minutes: number | null;
+  duration_source: "timer" | "timer_capped" | "manual" | "none";
+  load_score: number;
 }
 
 export interface OutdoorStats {
