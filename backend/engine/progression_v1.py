@@ -869,7 +869,6 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
     for session in out.get("sessions") or []:
         intensity = _intensity_label(session)
         boulder_info = _boulder_target_info(session, user_state)
-        offset = boulder_info["offset_high"]
         for inst in session.get("exercise_instances") or []:
             ex_id = str(inst.get("exercise_id") or "")
             prescription = inst.get("prescription") or {}
@@ -936,8 +935,22 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             if ex_id == "limit_bouldering":
                 options = _surface_options(user_state, session.get("gym_id"))
                 selected_surface = _select_surface(preferred=None, options=options, gym_id=session.get("gym_id"), user_state=user_state)
-                target_grade = step_grade(benchmark_grade, offset)
-                target_grade_low = step_grade(benchmark_grade, boulder_info["offset_low"])
+                # B260: anchor to the catalog grade_ref (boulder_max_rp) from
+                # assessment.grades, NOT the board benchmark. Limit bouldering must
+                # anchor to redpoint (band RP-1 -> RP), per Hörst et al. The board
+                # benchmark (~onsight level) is only a fallback when the assessment
+                # grade is missing. boulder_info still drives attempt/rest guidance.
+                grades = ((user_state.get("assessment") or {}).get("grades") or {})
+                anchor_ref = prescription.get("grade_ref") or "boulder_max_rp"
+                anchor_raw = grades.get(anchor_ref)
+                anchor_grade = (
+                    str(anchor_raw).strip().upper().replace(" ", "")
+                    if anchor_raw is not None
+                    else benchmark_grade
+                )
+                anchor_offset = int(prescription.get("grade_offset") or 0)
+                target_grade = step_grade(anchor_grade, anchor_offset)
+                target_grade_low = step_grade(anchor_grade, anchor_offset - 1)
                 grade_entry = _best_entry(
                     user_state,
                     ex_id,

@@ -315,3 +315,132 @@ def test_gym_limit_bouldering_requires_surface(tmp_path):
     no = run_with_equipment(["hangboard"])
     no_ids = [i["exercise_id"] for i in no["sessions"][0]["exercise_instances"]]
     assert "limit_bouldering" not in no_ids
+
+
+# ─── B260: limit bouldering anchors to redpoint, not board benchmark ──────────
+
+def _state_with_assessment_grades() -> dict:
+    """Base state + a realistic assessment profile (RP boulder 7C, OS 7A).
+
+    The base state's Kilter benchmark (7B) and worked grade (7C) remain — so
+    a target of 7C proves the anchor is boulder_max_rp, NOT the board benchmark.
+    """
+    us = _base_user_state()
+    us["assessment"] = {
+        "grades": {
+            "boulder_max_rp": "7C",
+            "boulder_max_os": "7A",
+            "lead_max_rp": "8a",
+            "lead_max_os": "7a+",
+        }
+    }
+    return us
+
+
+def test_b260_limit_bouldering_anchors_to_redpoint():
+    """limit_bouldering target = boulder_max_rp (RP-1 -> RP band), not benchmark.
+
+    Regression for B260: previously anchored to the Kilter board benchmark
+    (~7A) via _extract_grade_benchmark, producing 7A. Must anchor to
+    boulder_max_rp (7C) with offset 0 -> 7C high, 7B low.
+    """
+    out = inject_targets(_resolved_day_for_progression(), _state_with_assessment_grades())
+    limit = next(i for i in out["sessions"][0]["exercise_instances"]
+                 if i["exercise_id"] == "limit_bouldering")
+    bt = limit["suggested"]["suggested_boulder_target"]
+    assert bt["target_grade"] == "7C"      # boulder_max_rp + 0
+    assert bt["target_grade_low"] == "7B"  # boulder_max_rp - 1  => band 7B->7C
+
+
+def test_b260_limit_bouldering_falls_back_to_benchmark_when_grade_missing():
+    """When assessment.grades has no boulder_max_rp, fall back to the board
+    benchmark (legacy behaviour) rather than crashing or defaulting blindly."""
+    us = _base_user_state()  # no assessment.grades -> benchmark 7B fallback
+    out = inject_targets(_resolved_day_for_progression(), us)
+    limit = next(i for i in out["sessions"][0]["exercise_instances"]
+                 if i["exercise_id"] == "limit_bouldering")
+    bt = limit["suggested"]["suggested_boulder_target"]
+    assert bt["target_grade"] == "7B"      # benchmark 7B + 0
+    assert bt["target_grade_low"] == "7A"  # benchmark 7B - 1
+
+
+def test_b260_other_limit_exercises_unchanged():
+    """Regression: the other 3 limit/max-recruitment boulder exercises already
+    used the catalog grade_ref path and must still yield 7C (boulder_max_rp+0)."""
+    us = _state_with_assessment_grades()
+    for ex in ("board_limit_boulders", "spray_wall_limit", "system_board_limit"):
+        day = {
+            "date": "2026-01-05",
+            "sessions": [{
+                "intent": "power", "gym_id": "blocx", "tags": {"hard": True},
+                "exercise_instances": [{
+                    "exercise_id": ex,
+                    "prescription": {"grade_ref": "boulder_max_rp", "grade_offset": 0},
+                }],
+            }],
+        }
+        out = inject_targets(day, deepcopy(us))
+        sug = out["sessions"][0]["exercise_instances"][0]["suggested"]
+        assert sug["suggested_grade"] == "7C", ex
+
+
+def test_b260_rich_boulder_target_payload_intact():
+    """The rich suggested_boulder_target payload (surface options/selection,
+    band, intensity, intent-driven guidance) survives the anchor change."""
+    out = inject_targets(_resolved_day_for_progression(), _state_with_assessment_grades())
+    bt = next(i for i in out["sessions"][0]["exercise_instances"]
+              if i["exercise_id"] == "limit_bouldering")["suggested"]["suggested_boulder_target"]
+    assert bt["schema_version"] == "boulder_grade_font_v0"
+    assert bt["surface_options"] == ["board_kilter", "spraywall"]
+    assert bt["surface_selected"] == "board_kilter"
+    assert bt["target_grade"] == "7C" and bt["target_grade_low"] == "7B"
+    assert bt["intensity_label"] == "hard"
+    assert bt["attempt_guidance"]  # intent=power -> guidance present
+    assert bt["rest_guidance"]
+
+
+def test_b260_completed_limit_bouldering_target_immutable():
+    """CRITICAL invariant: a completed limit_bouldering session keeps its frozen
+    target_grade across regeneration. The anchor change must NOT rewrite the
+    target on past/completed sessions.
+
+    Simulates an old plan completed under the OLD anchor (7A) being merged into a
+    freshly regenerated plan that would now compute 7C. The done session must
+    retain 7A.
+    """
+    from backend.engine.replanner_v1 import regenerate_preserving_completed
+
+    old_plan = {"weeks": [{"days": [{
+        "date": "2026-01-05",
+        "sessions": [{
+            "slot": "morning", "status": "done", "session_id": "power_contact_gym",
+            "exercise_instances": [{
+                "exercise_id": "limit_bouldering",
+                "suggested": {"suggested_boulder_target": {
+                    "schema_version": "boulder_grade_font_v0",
+                    "target_grade": "7A", "target_grade_low": "6C",
+                }},
+            }],
+        }],
+    }]}]}
+    new_plan = {"weeks": [{"days": [{
+        "date": "2026-01-05",
+        "sessions": [{
+            "slot": "morning", "status": "planned", "session_id": "power_contact_gym",
+            "exercise_instances": [{
+                "exercise_id": "limit_bouldering",
+                "suggested": {"suggested_boulder_target": {
+                    "schema_version": "boulder_grade_font_v0",
+                    "target_grade": "7C", "target_grade_low": "7B",
+                }},
+            }],
+        }],
+    }]}]}
+
+    merged = regenerate_preserving_completed(old_plan, new_plan)
+    day = merged["weeks"][0]["days"][0]
+    s = next(x for x in day["sessions"] if x.get("slot") == "morning")
+    bt = s["exercise_instances"][0]["suggested"]["suggested_boulder_target"]
+    assert s["status"] == "done"
+    assert bt["target_grade"] == "7A"      # frozen old value preserved
+    assert bt["target_grade_low"] == "6C"  # NOT recomputed to 7C/7B
