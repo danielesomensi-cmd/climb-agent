@@ -245,13 +245,13 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                         className={`inline-block size-2 rounded-full ${a.result === "sent" || a.result === "topped_out" ? "bg-green-500" : "bg-red-500"}`} />
                     ))}
                   </span>
-                  {/* A3 — labeled rest / climb times */}
+                  {/* A3 / B264 — labeled rest / climb times */}
                   <span className="flex shrink-0 items-center gap-2 text-[11px] text-zinc-500">
                     {restSecRow != null && (
-                      <span title="Rest taken before this burn">🛌 {fmt(restSecRow)}</span>
+                      <span title="Rest taken before this burn">🛌 rest {fmt(restSecRow)}</span>
                     )}
                     {typeof r.climb_seconds === "number" && (
-                      <span title="Time on the wall" className="text-amber-300/80">🧗 {fmt(r.climb_seconds)}</span>
+                      <span title="Time on the wall" className="text-amber-300/80">🧗 climb {fmt(r.climb_seconds)}</span>
                     )}
                   </span>
                 </div>

@@ -26,6 +26,13 @@ const FONT_BOULDER_GRADES = [
   "8a","8a+","8b","8b+","8c","8c+",
 ];
 
+/** mm:ss for a duration in seconds (B264 — rest/climb summary display). */
+function fmtSec(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 interface Props {
   spots: OutdoorSpot[];
   defaultDate?: string;
@@ -301,6 +308,18 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                   +
                 </button>
               </div>
+
+              {/* B264 — read-only rest/climb times captured live (when present) */}
+              {(typeof route.rest_seconds === "number" || typeof route.climb_seconds === "number") && (
+                <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                  {typeof route.rest_seconds === "number" && (
+                    <span title="Rest taken before this burn">🛌 rest {fmtSec(route.rest_seconds)}</span>
+                  )}
+                  {typeof route.climb_seconds === "number" && (
+                    <span title="Time on the wall" className="text-amber-500/80">🧗 climb {fmtSec(route.climb_seconds)}</span>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

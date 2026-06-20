@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { SessionTimer } from "@/components/guided/session-timer";
@@ -186,6 +186,20 @@ export default function OutdoorDayPage() {
     },
     [coords, date],
   );
+
+  // B264: a restored in-progress session never ran setup, so `strategy` is null
+  // → the weather widget + rest-guidance disappear after a close/reopen. Re-resolve
+  // once we know the day_type and we're past setup; re-runs only when the
+  // (day_type, coords) pair changes — so weather fills in once coordinates arrive,
+  // without looping when the provider legitimately returns no conditions.
+  const autoResolveKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (phase === "setup" || isBoulder || !dayType) return;
+    const key = `${dayType}|${coords ? `${coords.lat},${coords.lon}` : "nocoords"}`;
+    if (autoResolveKeyRef.current === key) return;
+    autoResolveKeyRef.current = key;
+    resolve(dayType, profile);
+  }, [phase, dayType, isBoulder, coords, resolve, profile]);
 
   const pickDayType = (dt: OutdoorDayType) => {
     setDayType(dt);
