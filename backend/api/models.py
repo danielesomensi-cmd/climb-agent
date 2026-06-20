@@ -190,8 +190,13 @@ class OutdoorRoute(BaseModel):
     name: str
     grade: str
     discipline: Optional[Literal["lead", "boulder", "both"]] = None
-    style: Optional[Literal["onsight", "flash", "redpoint", "project"]] = None
+    style: Optional[Literal["onsight", "flash", "redpoint", "project", "repeat"]] = None
     attempts: List[OutdoorAttempt] = Field(default_factory=list)
+    # A227 — additive timing (optional, backward-compatible). rest_seconds = rest
+    # taken before the burn; climb_seconds = on-the-wall time when the optional
+    # climb timer was used. Absent on legacy logs → no timing shown.
+    rest_seconds: Optional[int] = None
+    climb_seconds: Optional[int] = None
 
 
 class OutdoorRouteProfile(BaseModel):
@@ -266,6 +271,8 @@ class OutdoorClimbLogRequest(BaseModel):
     style: Optional[Literal["onsight", "flash", "redpoint", "project", "repeat"]] = None
     discipline: Optional[Literal["lead", "boulder", "both"]] = None
     at_min: Optional[int] = None
+    rest_seconds: Optional[int] = None  # A227
+    climb_seconds: Optional[int] = None  # A227
 
 
 class OutdoorActiveRoute(BaseModel):
@@ -276,6 +283,8 @@ class OutdoorActiveRoute(BaseModel):
     style: Optional[Literal["onsight", "flash", "redpoint", "project", "repeat"]] = None
     discipline: Optional[Literal["lead", "boulder", "both"]] = None
     at_min: Optional[int] = None
+    rest_seconds: Optional[int] = None  # A227
+    climb_seconds: Optional[int] = None  # A227
 
 
 class OutdoorRoutesReplaceRequest(BaseModel):

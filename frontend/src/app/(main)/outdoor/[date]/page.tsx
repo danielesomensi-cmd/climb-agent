@@ -63,6 +63,8 @@ function mapLiveRoutes(routes: unknown): LiveRoute[] {
       style: o.style as LiveRoute["style"],
       discipline: o.discipline as LiveRoute["discipline"],
       atMin: typeof o.at_min === "number" ? o.at_min : 0,
+      ...(typeof o.rest_seconds === "number" ? { rest_seconds: o.rest_seconds } : {}),
+      ...(typeof o.climb_seconds === "number" ? { climb_seconds: o.climb_seconds } : {}),
     };
   });
 }
@@ -150,6 +152,8 @@ export default function OutdoorDayPage() {
             at_min: r.atMin,
             ...(r.style ? { style: r.style } : {}),
             ...(r.discipline ? { discipline: r.discipline } : {}),
+            ...(typeof r.rest_seconds === "number" ? { rest_seconds: r.rest_seconds } : {}),
+            ...(typeof r.climb_seconds === "number" ? { climb_seconds: r.climb_seconds } : {}),
           })),
         );
       } catch (e) {
@@ -237,13 +241,13 @@ export default function OutdoorDayPage() {
       <TopBar title="Outdoor day" />
       <main className="mx-auto max-w-xl px-4 pb-24 pt-4 space-y-5">
         {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h1 className="text-lg font-semibold text-zinc-100">{spotName || "Outdoor session"}</h1>
-            <p className="text-xs text-zinc-500">{date}</p>
-          </div>
-          <ConditionBadge conditions={strategy?.conditions} />
+        <div>
+          <h1 className="text-lg font-semibold text-zinc-100">{spotName || "Outdoor session"}</h1>
+          <p className="text-xs text-zinc-500">{date}</p>
         </div>
+
+        {/* Weather widget (A227) — full-width, expandable; hidden when no conditions */}
+        <ConditionBadge conditions={strategy?.conditions} />
 
         {error && <p className="rounded-md border border-red-900/40 bg-red-950/20 p-3 text-sm text-red-400">{error}</p>}
 
@@ -427,6 +431,8 @@ export default function OutdoorDayPage() {
               attempts: r.attempts,
               ...(r.style ? { style: r.style } : {}),
               ...(r.discipline ? { discipline: r.discipline } : {}),
+              ...(typeof r.rest_seconds === "number" ? { rest_seconds: r.rest_seconds } : {}),
+              ...(typeof r.climb_seconds === "number" ? { climb_seconds: r.climb_seconds } : {}),
             }))}
             conditions={strategy?.conditions}
             durationCappedNote={

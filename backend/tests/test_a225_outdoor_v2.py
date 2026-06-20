@@ -632,6 +632,24 @@ class TestLiveRouteLogging:
         assert [r["grade"] for r in routes] == ["7a"]
         assert "at_min" not in routes[0]  # stripped from the immutable log
 
+    def test_finish_persists_timing_fields_additive(self):
+        """A227: rest_seconds/climb_seconds survive the finish (only at_min is
+        stripped from the immutable log)."""
+        sid = self._start()
+        self.client.put(f"/api/outdoor/session/{sid}/routes", json={"routes": [
+            {"name": "Pillar", "grade": "7a", "attempts": [{"result": "sent"}],
+             "at_min": 15, "rest_seconds": 180, "climb_seconds": 47, "style": "flash"},
+        ]})
+        fin = self.client.post(f"/api/outdoor/session/{sid}/finish", json={
+            "spot_name": "Arco", "discipline": "lead",
+        })
+        assert fin.status_code == 200
+        routes = self.client.get("/api/outdoor/sessions").json()["sessions"][0]["routes"]
+        assert routes[0]["rest_seconds"] == 180
+        assert routes[0]["climb_seconds"] == 47
+        assert routes[0]["style"] == "flash"
+        assert "at_min" not in routes[0]  # transient pacing marker, not persisted
+
     def test_log_climb_unknown_session_404(self):
         r = self.client.post("/api/outdoor/session/nope/log-climb", json={
             "name": "X", "grade": "6a", "attempts": [{"result": "sent"}],

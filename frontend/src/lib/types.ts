@@ -328,6 +328,10 @@ export interface OutdoorRoute {
   discipline?: "lead" | "boulder";
   style?: "onsight" | "flash" | "redpoint" | "project" | "repeat";
   attempts: OutdoorAttempt[];
+  // A227 — additive timing (optional). rest_seconds = rest before the burn;
+  // climb_seconds = on-the-wall time when the optional climb timer was used.
+  rest_seconds?: number;
+  climb_seconds?: number;
 }
 
 // A225/A226 — outdoor.v2 vocabulary
@@ -346,9 +350,14 @@ export interface OutdoorRouteProfile {
 // outdoor.v2 conditions written to / read from the log.
 export interface OutdoorConditions {
   temperature?: number;
+  feels_like?: number; // A227
   humidity?: number;
+  dew_point?: number; // A227
   wind?: number;
   wind_label?: string;
+  wind_deg?: number; // A227
+  cloud_cover?: number; // A227 (%)
+  precip_prob?: number; // A227 (%, forecast only)
   condition_band?: CatalogConditionBand;
   weather_band_raw?: string;
 }
@@ -830,10 +839,14 @@ export type ConditionBand = "prime" | "ok" | "poor";
 
 export interface Weather {
   temp: number;
+  feels_like?: number | null; // A227
   humidity: number;
   dew_point: number;
   wind: number;
   wind_label: string;
+  wind_deg?: number | null; // A227
+  cloud_cover?: number | null; // A227 (%)
+  precip_prob?: number | null; // A227 (%, forecast only)
   condition_text: string;
   condition_code: number;
   condition_band: ConditionBand;

@@ -129,6 +129,49 @@ def test_normalize_forecast_unknown_date_raises():
         weather_router._normalize_forecast(_OWM_FORECAST, "2026-12-25")
 
 
+# --- A227: expanded fields (feels_like / wind_deg / cloud_cover / precip_prob) -
+
+_OWM_CURRENT_RICH = {
+    "main": {"temp": 8.4, "feels_like": 6.1, "humidity": 55},
+    "wind": {"speed": 2.5, "deg": 270},
+    "clouds": {"all": 40},
+    "weather": [{"id": 800, "description": "clear sky"}],
+}
+
+_OWM_FORECAST_RICH = {
+    "list": [
+        {"dt_txt": "2026-06-21 12:00:00", "main": {"temp": 7.0, "feels_like": 4.0, "humidity": 45},
+         "wind": {"speed": 3.0, "deg": 180}, "clouds": {"all": 75}, "pop": 0.6,
+         "weather": [{"id": 801, "description": "few clouds"}]},
+    ]
+}
+
+
+def test_normalize_current_expanded_fields():
+    out = weather_router._normalize_current(_OWM_CURRENT_RICH)
+    assert out["feels_like"] == 6.1
+    assert out["wind_deg"] == 270
+    assert out["cloud_cover"] == 40
+    assert out["precip_prob"] is None  # current endpoint has no pop
+
+
+def test_normalize_forecast_expanded_fields():
+    out = weather_router._normalize_forecast(_OWM_FORECAST_RICH, "2026-06-21")
+    assert out["feels_like"] == 4.0
+    assert out["wind_deg"] == 180
+    assert out["cloud_cover"] == 75
+    assert out["precip_prob"] == 60  # 0.6 → 60%
+
+
+def test_normalize_missing_expanded_fields_are_none():
+    # legacy/minimal payload (no feels_like/deg/clouds) → graceful None, no crash
+    out = weather_router._normalize_current(_OWM_CURRENT)
+    assert out["feels_like"] is None
+    assert out["wind_deg"] is None
+    assert out["cloud_cover"] is None
+    assert out["precip_prob"] is None
+
+
 def test_is_precip_or_fog():
     assert weather_router._is_precip_or_fog(500) is True   # rain
     assert weather_router._is_precip_or_fog(741) is True   # fog

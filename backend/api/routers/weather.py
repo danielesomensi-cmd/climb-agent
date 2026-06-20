@@ -63,6 +63,7 @@ def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
     """Map OWM /weather (units=metric) → normalized weather dict."""
     main = raw.get("main", {})
     wind = raw.get("wind", {})
+    clouds = raw.get("clouds", {})
     weather0 = (raw.get("weather") or [{}])[0]
 
     temp = float(main["temp"])
@@ -74,10 +75,14 @@ def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "temp": round(temp, 1),
+        "feels_like": round(float(main["feels_like"]), 1) if main.get("feels_like") is not None else None,  # A227
         "humidity": round(humidity),
         "dew_point": dew_point,
         "wind": wind_kmh,
         "wind_label": wind_label(wind_kmh),
+        "wind_deg": int(wind["deg"]) if wind.get("deg") is not None else None,  # A227
+        "cloud_cover": int(clouds["all"]) if clouds.get("all") is not None else None,  # A227
+        "precip_prob": None,  # A227: current endpoint has no pop; forecast does
         "condition_text": (weather0.get("description") or "").capitalize(),
         "condition_code": code,
         "condition_band": condition_band(temp, humidity, dew_point, wind_kmh, precip),
@@ -105,6 +110,7 @@ def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
     step = min(on_date, key=_dist_to_noon)
     main = step.get("main", {})
     wind = step.get("wind", {})
+    clouds = step.get("clouds", {})
     weather0 = (step.get("weather") or [{}])[0]
 
     temp = float(main["temp"])
@@ -113,13 +119,18 @@ def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
     wind_kmh = round(float(wind.get("speed", 0.0)) * 3.6, 1)
     code = int(weather0.get("id", 800))
     precip = _is_precip_or_fog(code)
+    pop = step.get("pop")  # A227: probability of precipitation, 0..1
 
     return {
         "temp": round(temp, 1),
+        "feels_like": round(float(main["feels_like"]), 1) if main.get("feels_like") is not None else None,  # A227
         "humidity": round(humidity),
         "dew_point": dew_point,
         "wind": wind_kmh,
         "wind_label": wind_label(wind_kmh),
+        "wind_deg": int(wind["deg"]) if wind.get("deg") is not None else None,  # A227
+        "cloud_cover": int(clouds["all"]) if clouds.get("all") is not None else None,  # A227
+        "precip_prob": round(float(pop) * 100) if pop is not None else None,  # A227: 0..1 → %
         "condition_text": (weather0.get("description") or "").capitalize(),
         "condition_code": code,
         "condition_band": condition_band(temp, humidity, dew_point, wind_kmh, precip),
@@ -176,9 +187,14 @@ def fetch_outdoor_conditions(
 
     return {
         "temperature": payload["temp"],
+        "feels_like": payload.get("feels_like"),  # A227
         "humidity": payload["humidity"],
+        "dew_point": payload.get("dew_point"),  # A227
         "wind": payload["wind"],
         "wind_label": payload["wind_label"],
+        "wind_deg": payload.get("wind_deg"),  # A227
+        "cloud_cover": payload.get("cloud_cover"),  # A227
+        "precip_prob": payload.get("precip_prob"),  # A227
         "condition_band": catalog_condition_band(payload["temp"], payload["condition_band"]),
         "weather_band_raw": payload["condition_band"],
     }
