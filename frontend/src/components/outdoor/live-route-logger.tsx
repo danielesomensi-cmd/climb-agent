@@ -226,10 +226,12 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
         </div>
       </div>
 
-      {/* Logged routes — append attempts with one tap */}
+      {/* Logged routes — append attempts with one tap. B265: newest on top
+          (render in reverse) while keeping the original chronological index `i`
+          for handlers and the rest-delta computation. */}
       {routes.length > 0 && (
         <ul className="space-y-1.5">
-          {routes.map((r, i) => {
+          {routes.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => {
             const sent = r.attempts.some((a) => a.result === "sent" || a.result === "topped_out");
             const firstTrySend = sent && r.attempts.length === 1;
             const restSecRow = restForRow(routes, i);
@@ -245,13 +247,16 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                         className={`inline-block size-2 rounded-full ${a.result === "sent" || a.result === "topped_out" ? "bg-green-500" : "bg-red-500"}`} />
                     ))}
                   </span>
-                  {/* A3 / B264 — labeled rest / climb times */}
-                  <span className="flex shrink-0 items-center gap-2 text-[11px] text-zinc-500">
-                    {restSecRow != null && (
-                      <span title="Rest taken before this burn">🛌 rest {fmt(restSecRow)}</span>
-                    )}
+                  {/* A3 / B264 / B265 — labeled climb · rest times (word labels, no icons) */}
+                  <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-zinc-500">
                     {typeof r.climb_seconds === "number" && (
-                      <span title="Time on the wall" className="text-amber-300/80">🧗 climb {fmt(r.climb_seconds)}</span>
+                      <span title="Time on the wall" className="text-amber-300/80">climb {fmt(r.climb_seconds)}</span>
+                    )}
+                    {typeof r.climb_seconds === "number" && restSecRow != null && (
+                      <span className="text-zinc-600" aria-hidden="true">·</span>
+                    )}
+                    {restSecRow != null && (
+                      <span title="Rest taken before this burn">rest {fmt(restSecRow)}</span>
                     )}
                   </span>
                 </div>

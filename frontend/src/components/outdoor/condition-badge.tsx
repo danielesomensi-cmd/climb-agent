@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import type { OutdoorConditions, CatalogConditionBand } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { getWeather } from "@/lib/api";
+import type { OutdoorConditions, CatalogConditionBand, Weather } from "@/lib/types";
 
 /**
  * A226 / A227 — outdoor conditions widget. Compact band pill (temp + band) that
@@ -9,6 +10,15 @@ import type { OutdoorConditions, CatalogConditionBand } from "@/lib/types";
  * point, cloud cover and precipitation probability. All fields are optional —
  * each renders only when present. Renders NOTHING when conditions are absent
  * (no weather → no widget — graceful).
+ *
+ * B265 — the widget is now self-sufficient. It prefers the strategy-derived
+ * `conditions` (a day-specific forecast with the 4-value catalog band) but, when
+ * those are absent — e.g. a restored in-progress session where `strategy` is
+ * null, or an out-of-window forecast date — it falls back to a direct live
+ * `/api/weather` fetch using `coords`. This decouples the widget from the
+ * strategy resolve (which had caused it to "regress twice" and show stale
+ * errors) so live weather loads whenever geolocation is available. Failures stay
+ * graceful: no data → no widget, never a red error box.
  */
 
 const BAND_META: Record<CatalogConditionBand, { label: string; ring: string; dot: string; text: string }> = {
@@ -25,6 +35,33 @@ function windDir(deg: number): string {
   return COMPASS[Math.round(deg / 45) % 8];
 }
 
+// Cold floor mirrors backend weather_v1.TEMP_OK_MIN_C — below it a "poor" band is
+// cold/dry, otherwise hot/humid. Keeps the client live-fetch fallback consistent
+// with the server-side catalog_condition_band mapping.
+const TEMP_OK_MIN_C = -6.0;
+
+/** Replicate backend `catalog_condition_band`: 3-value weather band → 4-value. */
+function catalogBand(temp: number, band: Weather["condition_band"]): CatalogConditionBand {
+  if (band !== "poor") return band; // prime | ok pass through
+  return temp < TEMP_OK_MIN_C ? "poor_cold_dry" : "poor_hot_humid";
+}
+
+/** Map a live `/api/weather` response → the widget's conditions shape. */
+function weatherToConditions(w: Weather): OutdoorConditions {
+  return {
+    temperature: w.temp,
+    feels_like: w.feels_like ?? undefined,
+    humidity: w.humidity,
+    dew_point: w.dew_point,
+    wind: w.wind,
+    wind_label: w.wind_label,
+    wind_deg: w.wind_deg ?? undefined,
+    cloud_cover: w.cloud_cover ?? undefined,
+    precip_prob: w.precip_prob ?? undefined,
+    condition_band: catalogBand(w.temp, w.condition_band),
+  };
+}
+
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -34,13 +71,34 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function ConditionBadge({ conditions }: { conditions?: OutdoorConditions | null }) {
+export function ConditionBadge({
+  conditions,
+  coords,
+}: {
+  conditions?: OutdoorConditions | null;
+  coords?: { lat: number; lon: number } | null;
+}) {
   const [open, setOpen] = useState(false);
-  if (!conditions || conditions.condition_band == null) return null;
-  const meta = BAND_META[conditions.condition_band];
-  if (!meta) return null;
+  const [fetched, setFetched] = useState<OutdoorConditions | null>(null);
 
-  const c = conditions;
+  const hasStrategyConditions = !!conditions && conditions.condition_band != null;
+
+  // Fallback: when strategy didn't supply conditions but we have coordinates,
+  // pull current live weather directly. Fully graceful — any failure (no key,
+  // 503, denied) leaves the widget hidden rather than erroring.
+  useEffect(() => {
+    if (hasStrategyConditions || !coords) return;
+    let cancelled = false;
+    getWeather(coords.lat, coords.lon)
+      .then((w) => { if (!cancelled) setFetched(weatherToConditions(w)); })
+      .catch(() => { /* provider unreachable — stay hidden */ });
+    return () => { cancelled = true; };
+  }, [hasStrategyConditions, coords]);
+
+  const c = hasStrategyConditions ? conditions! : fetched;
+  if (!c || c.condition_band == null) return null;
+  const meta = BAND_META[c.condition_band];
+  if (!meta) return null;
   // Only offer expansion if there's at least one extra detail to show.
   const hasDetail =
     c.feels_like != null ||

@@ -309,14 +309,18 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                 </button>
               </div>
 
-              {/* B264 — read-only rest/climb times captured live (when present) */}
+              {/* B264 / B265 — read-only climb · rest times captured live (word
+                  labels, no icons — coherent with the live logging screen) */}
               {(typeof route.rest_seconds === "number" || typeof route.climb_seconds === "number") && (
-                <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                  {typeof route.rest_seconds === "number" && (
-                    <span title="Rest taken before this burn">🛌 rest {fmtSec(route.rest_seconds)}</span>
-                  )}
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
                   {typeof route.climb_seconds === "number" && (
-                    <span title="Time on the wall" className="text-amber-500/80">🧗 climb {fmtSec(route.climb_seconds)}</span>
+                    <span title="Time on the wall" className="text-amber-500/80">climb {fmtSec(route.climb_seconds)}</span>
+                  )}
+                  {typeof route.climb_seconds === "number" && typeof route.rest_seconds === "number" && (
+                    <span aria-hidden="true">·</span>
+                  )}
+                  {typeof route.rest_seconds === "number" && (
+                    <span title="Rest taken before this burn">rest {fmtSec(route.rest_seconds)}</span>
                   )}
                 </div>
               )}

@@ -261,7 +261,7 @@ export default function OutdoorDayPage() {
         </div>
 
         {/* Weather widget (A227) — full-width, expandable; hidden when no conditions */}
-        <ConditionBadge conditions={strategy?.conditions} />
+        <ConditionBadge conditions={strategy?.conditions} coords={coords} />
 
         {error && <p className="rounded-md border border-red-900/40 bg-red-950/20 p-3 text-sm text-red-400">{error}</p>}
 
