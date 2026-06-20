@@ -388,17 +388,18 @@ In **Settings → Outdoor Spots**, add your regular crags with:
 
 ### Logging
 
-From the **Outdoor** page:
-- Select the spot
-- Log date, discipline, grades climbed
-- Record conditions (humidity, rock condition, wind)
-- Add notes
+Start an **Outdoor Session** for a live, timed day (or use **Quick log** for a no-timer entry). As you climb, log each route with one tap:
+- **Sent** / **Fell / try** are the two primary buttons. On a clean **first-try send** you can tag it **Onsight** (no beta) or **Flash** (with beta). A send after more than one attempt is a **Redpoint** automatically.
+- A **rest timer** runs between burns (with the suggested rest beside it). Each logged route shows the **rest** you took before it.
+- Optionally tap **Start climb timer** before a burn to time the climb itself — the route then also shows your **climb time**. This is optional; skip it and nothing changes.
+
+A live **weather widget** shows conditions for the day — tap to expand for feels-like temperature, wind speed + direction, humidity, dew point, cloud cover and precipitation chance.
 
 Outdoor sessions appear in your weekly timeline. The planner knows about your outdoor days (if you've set them in availability) and plans around them — no indoor sessions are scheduled on outdoor days.
 
 ### Stats
 
-The Outdoor page shows: per-spot breakdown, grade histogram, session history, and conditions trends.
+The Outdoor page shows: per-spot breakdown, grade histogram, and session history. Tap any session to expand the routes you climbed that day. The **Routes** list can be sorted by hardest grade or most recent, and collapses to the top 10 with a "Show all" toggle. Two charts track your **grade progression** (hardest send per month) and **monthly volume**.
 
 ---
 
