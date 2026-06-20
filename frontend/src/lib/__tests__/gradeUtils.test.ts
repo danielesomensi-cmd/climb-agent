@@ -5,6 +5,9 @@ import {
   getDiscipline,
   vScaleToFont,
   V_SCALE_GRADES,
+  gradeRank,
+  compareGrades,
+  hardestGrade,
 } from "@/lib/gradeUtils";
 
 // ── displayBoulderGrade ──────────────────────────────────────────────────
@@ -128,5 +131,45 @@ describe("getDiscipline", () => {
 
   it("defaults to lead for unknown goal types", () => {
     expect(getDiscipline("something_else")).toBe("lead");
+  });
+});
+
+// ── canonical grade ordering (A227 / B2) ─────────────────────────────────
+
+describe("gradeRank / compareGrades / hardestGrade", () => {
+  it("orders French sport grades by difficulty, not lexicographically", () => {
+    expect(gradeRank("7a")).toBeGreaterThan(gradeRank("6c+"));
+    expect(gradeRank("6b")).toBeGreaterThan(gradeRank("6a+"));
+    expect(gradeRank("9a")).toBeGreaterThan(gradeRank("8c+"));
+  });
+
+  it("orders Font boulder bare-number grades below lettered grades", () => {
+    expect(gradeRank("5+")).toBeGreaterThan(gradeRank("5"));
+    expect(gradeRank("6a")).toBeGreaterThan(gradeRank("5+"));
+  });
+
+  it("is case-insensitive", () => {
+    expect(gradeRank("7A")).toBe(gradeRank("7a"));
+  });
+
+  it("ranks unknown/empty grades as -1 (sort below everything)", () => {
+    expect(gradeRank("")).toBe(-1);
+    expect(gradeRank("V5")).toBe(-1); // never V-scale
+    expect(gradeRank("xyz")).toBe(-1);
+  });
+
+  it("compareGrades sorts ascending by difficulty", () => {
+    const sorted = ["7a", "6a", "8b", "6c+"].sort(compareGrades);
+    expect(sorted).toEqual(["6a", "6c+", "7a", "8b"]);
+  });
+
+  it("hardestGrade returns the toughest grade", () => {
+    expect(hardestGrade(["6a", "7a+", "6c+"])).toBe("7a+");
+    expect(hardestGrade(["6b", "6b"])).toBe("6b");
+  });
+
+  it("hardestGrade returns null when no grade ranks", () => {
+    expect(hardestGrade([])).toBeNull();
+    expect(hardestGrade(["", "V3"])).toBeNull();
   });
 });

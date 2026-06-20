@@ -65,6 +65,55 @@ export const BOULDER_GRADE_OPTIONS = [
   "8A", "8A+", "8B", "8B+", "8C", "8C+",
 ];
 
+// ── Canonical Fontainebleau/French grade ordering (A227 / B2) ────────────
+//
+// One ordered scale covering BOTH Font boulder (4, 4+, 5+, 6a…8c+) and French
+// sport (4a…9c) tokens, lowest → hardest. Never V-scale. Use for sorting and
+// "hardest" comparisons instead of lexicographic `.sort()`, which mis-ranks
+// across number/letter/+ boundaries. Within each discipline the order is exact;
+// the bare-number Font tokens (4, 4+) sort just below the lettered French ones
+// of the same number — a deterministic, harmless cross-scale placement.
+const GRADE_ORDER_CANONICAL: string[] = [
+  "3",
+  "4", "4+", "4a", "4b", "4c",
+  "5", "5+", "5a", "5a+", "5b", "5b+", "5c", "5c+",
+  "6a", "6a+", "6b", "6b+", "6c", "6c+",
+  "7a", "7a+", "7b", "7b+", "7c", "7c+",
+  "8a", "8a+", "8b", "8b+", "8c", "8c+",
+  "9a", "9a+", "9b", "9b+", "9c",
+];
+
+const _GRADE_RANK: Record<string, number> = Object.fromEntries(
+  GRADE_ORDER_CANONICAL.map((g, i) => [g, i]),
+);
+
+/** Ordinal rank of a grade in the canonical Font/French scale. Unknown/empty
+ *  grades rank -1 (sort below everything). Case-insensitive. */
+export function gradeRank(grade: string): number {
+  if (!grade) return -1;
+  const r = _GRADE_RANK[grade.toLowerCase()];
+  return r === undefined ? -1 : r;
+}
+
+/** Compare two grades by canonical difficulty: negative if a < b. */
+export function compareGrades(a: string, b: string): number {
+  return gradeRank(a) - gradeRank(b);
+}
+
+/** Hardest grade in a list (canonical), or null if none rank. */
+export function hardestGrade(grades: string[]): string | null {
+  let best: string | null = null;
+  let bestRank = -1;
+  for (const g of grades) {
+    const r = gradeRank(g);
+    if (r > bestRank) {
+      bestRank = r;
+      best = g;
+    }
+  }
+  return best;
+}
+
 // ── Discipline-aware radar labels (A-B4) ─────────────────────────────────
 
 export type Discipline = "lead" | "boulder" | "all_round";
