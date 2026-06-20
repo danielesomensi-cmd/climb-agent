@@ -114,11 +114,14 @@ def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) 
     unless this returns cleanly (A221 safety crux: archive-write before hot-prune).
     """
     uid = _require_user_id(user_id)
+    # on_conflict targets the (user_id, week_start) unique constraint (not the
+    # serial PK) so re-archiving the same week UPDATEs instead of violating the
+    # unique key — same class of bug as outdoor_logs (B266).
     result = _sb().table("week_archive").upsert({
         "user_id": uid,
         "week_start": week_start,
         "plan": plan,
-    }).execute()
+    }, on_conflict="user_id,week_start").execute()
     if not result.data:
         raise OSError(
             f"Supabase week_archive upsert returned empty data "
@@ -275,11 +278,16 @@ def append_outdoor_log_line(user_id: Optional[str], entry: Dict[str, Any]) -> st
     uid = _require_user_id(user_id)
     session_date = entry.get("date", "")
 
+    # on_conflict MUST target the (user_id, session_date) unique constraint, not
+    # the table's serial PK. Without it postgrest defaults to the PK and the
+    # write degrades to a plain INSERT → a second finish for the same date hits
+    # `outdoor_logs_user_id_session_date_key` (23505) and 500s (B266). With it,
+    # re-finishing a day idempotently UPDATES that day's log.
     result = _sb().table("outdoor_logs").upsert({
         "user_id": uid,
         "session_date": session_date,
         "entry": entry,
-    }).execute()
+    }, on_conflict="user_id,session_date").execute()
 
     # D134 Fix A: verify upsert returned data
     if not result.data:
