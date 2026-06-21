@@ -50,10 +50,20 @@ class SchemaRegistry:
 
     def draft7_validator(self, schema: Dict[str, Any]):
         import jsonschema  # type: ignore
+        from referencing import Registry, Resource
+        from referencing.jsonschema import DRAFT7
 
-        # RefResolver is deprecated but stable enough for local refs; we use store to keep it fully local.
-        resolver = jsonschema.RefResolver(base_uri=self.base_uri, referrer=schema, store=self.store)  # type: ignore
-        return jsonschema.Draft7Validator(schema, resolver=resolver)
+        # Build a fully-local registry from the preloaded store so cross-file
+        # $refs (e.g. "exercise_outcome.v1.json") resolve without any network
+        # access. Replaces the deprecated jsonschema.RefResolver (slated for
+        # removal in a future jsonschema release). The store is keyed by both
+        # file URI and bare filename, so either $ref spelling resolves.
+        resources = [
+            (uri, Resource.from_contents(s, default_specification=DRAFT7))
+            for uri, s in self.store.items()
+        ]
+        registry = Registry().with_resources(resources)
+        return jsonschema.Draft7Validator(schema, registry=registry)
 
 def validate_instance(instance: Dict[str, Any], registry: SchemaRegistry, schema_key: str) -> List[str]:
     schema = registry.get(schema_key)

@@ -167,7 +167,8 @@ class TestPullingStrengthGym(unittest.TestCase):
     def test_contains_three_pull_vertical_exercises(self):
         """pulling_strength_compound now uses P0 — must resolve 3 distinct pull_vertical exercises."""
         import json
-        ex_data = json.load(open("backend/catalog/exercises/v1/exercises.json"))
+        with open("backend/catalog/exercises/v1/exercises.json") as f:
+            ex_data = json.load(f)
         pull_vertical_ids = {
             e["id"] for e in ex_data["exercises"]
             if "pull_vertical" in ([e.get("pattern")] if isinstance(e.get("pattern"), str) else (e.get("pattern") or []))
