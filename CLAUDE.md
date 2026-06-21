@@ -110,8 +110,8 @@ from backend.engine.planner_v1 import generate_week_plan
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (20 routers)
-    routers/         # state, catalog, onboarding, assessment, macrocycle, week,
+  api/               # FastAPI REST API (21 routers)
+    routers/         # state, catalog, onboarding, assessment, macrocycle, plan, week,
                      # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, weather
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-77 endpoints total (75 router + 2 app-level: health check + stripe webhook).
+79 endpoints total (77 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -163,6 +163,8 @@ user_state.assessment + user_state.goal
 | POST | `/api/assessment/compute` | Recompute 5-axis profile |
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
 | POST | `/api/macrocycle/start-new-cycle` | Start fresh macrocycle (atomic: archive → goal review → generate → flag tests). Subscription-gated. |
+| POST | `/api/plan/pause` | Pause active plan (A223 — records pause start; idempotent) |
+| POST | `/api/plan/resume` | Resume paused plan (A223 — shift future weeks by whole-week offset, extend end_date; idempotent) |
 | GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
 | POST | `/api/week/test-reminder-response` | Handle periodic test reminder |
 | POST | `/api/session/resolve` | Resolve a single session to exercises |
