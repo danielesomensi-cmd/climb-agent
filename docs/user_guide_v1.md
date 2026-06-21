@@ -213,6 +213,29 @@ You can regenerate your plan from **Settings**:
 
 ---
 
+## 7b. Pausing & Resuming Your Plan
+
+Going away — travel, illness, a busy stretch? Instead of regenerating, you can **pause** your plan from **Settings**:
+
+- **Pause plan**: Freezes your plan exactly where you are. While paused, Today shows a "Plan paused" card instead of sessions, and Week/Plan show a small "Paused" banner. No new sessions are scheduled.
+- **Resume plan**: Picks up exactly where you left off and shifts the remaining weeks forward by however long you were away. Your end date moves out by the same amount.
+
+**How the shift works:**
+
+- The shift is measured in **whole weeks** (Monday to Monday). A short break of **less than a week** resumes in place and does **not** shift the plan.
+- You can pause and resume as many times as you need — the shifts add up.
+- Your start date never changes, so all your completed history stays exactly where it happened.
+
+**While paused:**
+
+- Replanning, regenerating, adding sessions, and changing weekly availability are turned off until you resume.
+- **Free Sessions still work** — log any climbing you do while paused.
+- Your subscription and trial are **not** affected by pausing.
+
+**Paused, not missed**: Sessions that fall inside a pause window are counted as *paused* (neutral), never as *missed* — your adherence stats aren't penalised for time you deliberately took off.
+
+---
+
 ## 8. Modifying a Session
 
 You can modify a resolved session in several ways:
