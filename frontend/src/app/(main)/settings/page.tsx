@@ -23,6 +23,7 @@ import { LimitationsEditor, LimitationsSummary } from "@/components/settings/lim
 import { ProfileAssessmentEditor } from "@/components/settings/profile-assessment-editor";
 import { StartNewMacrocycleDialog } from "@/components/settings/start-new-macrocycle-dialog";
 import { useCanStartNewCycle } from "@/lib/hooks/use-can-start-new-cycle";
+import { usePlanPause, formatPauseDate } from "@/lib/hooks/use-plan-pause";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -95,6 +96,7 @@ export default function SettingsPage() {
   const [backupMsg, setBackupMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
   const cycleStatus = useCanStartNewCycle(state);
+  const planPause = usePlanPause(state);
 
   useEffect(() => { setVoiceCuesOn(isVoiceCuesEnabled()); }, []);
 
@@ -993,6 +995,65 @@ export default function SettingsPage() {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* ----- Pause / Resume plan (A223) ----- */}
+            {state?.macrocycle && (
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base">
+                      {planPause.isPaused ? "Plan paused" : "Pause plan"}
+                    </CardTitle>
+                    {planPause.isPaused && (
+                      <Badge variant="outline" className="border-amber-500/50 text-amber-500">
+                        Paused
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {planPause.isPaused ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        Paused since {formatPauseDate(planPause.activeSince)}. Your
+                        plan is frozen where you left off — resume to shift the
+                        remaining weeks forward and pick up exactly where you stopped.
+                      </p>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="w-full"
+                        disabled={planPause.busy}
+                        onClick={planPause.resume}
+                      >
+                        {planPause.busy ? "Resuming…" : "Resume plan"}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        Going away for a while? Pause your plan and resume when
+                        you&apos;re back — the remaining weeks shift forward so you
+                        never fall behind. A short break under a week resumes in
+                        place and does not shift the plan.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={planPause.busy}
+                        onClick={planPause.pause}
+                      >
+                        {planPause.busy ? "Pausing…" : "Pause plan"}
+                      </Button>
+                    </>
+                  )}
+                  {planPause.error && (
+                    <p className="text-xs text-destructive">{planPause.error}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Separator />
 

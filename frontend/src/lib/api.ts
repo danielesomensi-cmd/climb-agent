@@ -141,6 +141,23 @@ export const startNewMacrocycle = (
     },
   );
 
+// A223: plan pause / resume
+export interface PauseResponse {
+  paused: boolean;
+  active_since?: string | null;
+  offset_days: number;
+  shifted_days?: number;
+  end_date?: string;
+  weeks_shifted?: number;
+  weeks_dropped?: number;
+}
+
+export const pausePlan = () =>
+  request<PauseResponse>("/api/plan/pause", { method: "POST" });
+
+export const resumePlan = () =>
+  request<PauseResponse>("/api/plan/resume", { method: "POST" });
+
 // Week
 export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: string) => {
   const params = new URLSearchParams();

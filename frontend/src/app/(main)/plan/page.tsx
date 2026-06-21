@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import { RadarChart } from "@/components/onboarding/radar-chart";
 import { MacrocycleTimeline } from "@/components/training/macrocycle-timeline";
+import { PausedBanner } from "@/components/training/paused-banner";
 import { useUserState } from "@/lib/hooks/use-state";
 import { generateMacrocycle, getStateStatus, getWeek } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -107,6 +108,8 @@ export default function PlanPage() {
       <TopBar title="Plan" />
 
       <main className="mx-auto max-w-2xl space-y-6 p-4">
+        <PausedBanner since={macrocycle?.pause?.active_since} />
+
         {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center py-12">

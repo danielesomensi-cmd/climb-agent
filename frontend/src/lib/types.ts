@@ -20,6 +20,13 @@ export interface Phase {
   intensity_cap: string;
 }
 
+// A223: plan pause/resume state (lives inside the macrocycle object).
+export interface MacrocyclePause {
+  active_since: string | null; // ISO date while paused, null otherwise
+  offset_days: number; // cumulative, multiple of 7
+  log: { from: string; to: string }[]; // closed intervals
+}
+
 export interface Macrocycle {
   start_date: string;
   total_weeks: number;
@@ -27,6 +34,7 @@ export interface Macrocycle {
   goal_snapshot: Record<string, unknown>;
   profile_snapshot: Record<string, unknown>;
   end_date?: string;
+  pause?: MacrocyclePause; // A223
 }
 
 // A-NEW-MACRO: types for POST /api/macrocycle/start-new-cycle

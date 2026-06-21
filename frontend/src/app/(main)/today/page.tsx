@@ -25,6 +25,7 @@ import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
 import { queryKeys } from "@/lib/query-keys";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import { TodayHeroCTA, type NextSessionInfo } from "@/components/training/today-hero-cta";
+import { formatPauseDate } from "@/lib/hooks/use-plan-pause";
 import {
   Dialog,
   DialogContent,
@@ -383,6 +384,12 @@ function TodayContent() {
   const isPreStart = !!(
     isViewingToday && macrocycleStart && targetDate < macrocycleStart
   );
+
+  // A223: while the plan is paused, today serves no session — a paused card
+  // replaces the day view / hero. Resume lives in Settings.
+  const pausedSince: string | null =
+    (stateQuery.data?.macrocycle?.pause?.active_since) ?? null;
+  const isPaused = !!(isViewingToday && pausedSince);
 
   /** First session across the entire week_plan (used for pre_start preview) */
   const firstSessionDay: DayPlan | undefined = weekPlan?.weeks
@@ -1116,8 +1123,26 @@ function TodayContent() {
           />
         )}
 
+        {/* A223: plan paused — replaces today's sessions until resumed */}
+        {!loading && !error && isPaused && (
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-center space-y-3">
+            <p className="text-lg font-semibold text-amber-200">Plan paused</p>
+            <p className="text-sm text-muted-foreground">
+              Paused since {formatPauseDate(pausedSince)}. Your training is frozen
+              right where you left off — no sessions are scheduled while paused.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push("/settings")}
+              className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              Resume plan
+            </button>
+          </div>
+        )}
+
         {/* Day plan — suppressed when hero is active (A217 rest-day dedup) */}
-        {!loading && !error && dayPlan && !heroState && (
+        {!loading && !error && !isPaused && dayPlan && !heroState && (
           <DayCard
             day={dayPlan}
             gyms={gyms}
@@ -1158,7 +1183,7 @@ function TodayContent() {
         )}
 
         {/* A-ACTIVATION-TIMING Day 3: empty-state hero (today-viewing only) */}
-        {!loading && !error && heroState && (
+        {!loading && !error && !isPaused && heroState && (
           <TodayHeroCTA
             state={heroState}
             nextSession={nextSessionInfo}

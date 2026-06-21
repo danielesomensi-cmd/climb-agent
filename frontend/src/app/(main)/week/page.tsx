@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { TopBar } from "@/components/layout/top-bar";
 import { WeekGrid } from "@/components/training/week-grid";
+import { PausedBanner } from "@/components/training/paused-banner";
 import { DayCard } from "@/components/training/day-card";
 import { QuickAddDialog } from "@/components/training/quick-add-dialog";
 import { ReplanDialog } from "@/components/training/replan-dialog";
@@ -694,6 +695,8 @@ export default function WeekPage() {
       <TopBar title="Week" />
 
       <main className="mx-auto max-w-2xl space-y-6 p-4">
+        <PausedBanner since={macrocycle?.pause?.active_since} />
+
         {/* Week navigation */}
         {!loading && weekPlan && (
           <div className="flex items-center justify-between">
