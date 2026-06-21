@@ -622,23 +622,28 @@ class TestWeekNavigation:
         assert r_sw.status_code == 200
         assert r_sw.json()["offset_applied"] == 2
 
-        # Current week should be offset by start-week adjustment
+        # Current week should be offset by start-week adjustment. The absolute
+        # week index for "today" is derived from the live date (the exact value
+        # depends on the weekday, because onboarding defaults start_date to the
+        # upcoming Monday — A-ACTIVATION-TIMING). Read it instead of hardcoding,
+        # so this test is deterministic on every calendar day, not just some.
         r0 = client.get("/api/week/0")
         assert r0.status_code == 200
-        assert r0.json()["week_num"] >= 2  # At least week 2 after offset=2
+        cur = r0.json()["week_num"]
+        assert cur >= 2  # At least week 2 after offset=2
 
-        # Navigate to week 1 and 2 (past weeks). B257: past weeks are immutable
+        # Navigate to every strictly-past week. B257: past weeks are immutable
         # and never regenerated. These early weeks were never trained (the user
         # just back-shifted the start), so the guard fail-closes with an explicit
         # empty signal instead of fabricating a plan for the past.
-        for wn in [1, 2]:
+        for wn in range(1, cur):
             r = client.get(f"/api/week/{wn}")
             assert r.status_code == 200, f"Week {wn} after start-week failed"
-            assert r.json()["week_plan"] is None
+            assert r.json()["week_plan"] is None, f"Past week {wn} should be empty"
             assert r.json()["past_week_unavailable"] is True
 
-        # Navigate forward to week 4 (future) — regenerable as normal
-        r4 = client.get("/api/week/4")
+        # Navigate forward to a future week — regenerable as normal
+        r4 = client.get(f"/api/week/{cur + 2}")
         assert r4.status_code == 200
 
         # Back to current
