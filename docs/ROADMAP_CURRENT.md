@@ -1036,6 +1036,7 @@ Implementation approach:
 **Scope:** catalog schema change + closed-loop extension. Generic solution (not dip-specific).
 **Depends on:** nothing. Natural fit alongside LLM Coach closed-loop work (Phase 3.5).
 **Origin:** beta feedback (Daniele, 2026-03-31)
+**Audited:** D249 (2026-06-26) — `docs/audits/D249_isometric_progression.md`. Confirmed at code level: `apply_feedback` has no `bodyweight_only` branch (no-op), and this backlog item covers **external-load** bodyweight exercises only. **Time-based isometrics (Side Plank: `work_seconds`/sets/lever/variant) are UNCOVERED by this item** — they need a separate A-brief (recommended lever: increment `work_seconds`, streak-triggered, capped, future-only).
 
 ### Superseded Decisions
 
