@@ -783,6 +783,7 @@ def get_location_equipment(user_state: Optional[Dict[str, Any]], session: Dict[s
 def load_recent_exercise_ids(
     user_id: Optional[str] = None,
     user_state: Optional[Dict[str, Any]] = None,
+    reference_date: Optional[str] = None,
 ) -> List[str]:
     """Extract exercise_ids from completed sessions in recent week_plans.
 
@@ -800,19 +801,50 @@ def load_recent_exercise_ids(
     RECENCY_LOOKBACK_WEEKS keys live in hot whenever hot holds that many — so
     the archive is consulted only when hot has fewer weeks, keeping the common
     path query-free while preserving byte-identical determinism.
+
+    B267: the recency window must look BACKWARD from the current week. The hot
+    store also holds PRE-GENERATED FUTURE weeks (all status != done), and the
+    old code took the N newest keys by date — so the window saturated with
+    future weeks and recency came back empty, silently killing exercise variety
+    (every block fell to the alphabetical tie-break). We now drop weeks strictly
+    after the current week (key > current_week_monday) BEFORE selecting the
+    top-N AND before deciding whether to consult the archive — so the
+    "< N hot weeks → read archive" decision counts PAST weeks only.
+    ``reference_date`` (ISO, default today) defines the current week.
     """
     recent: List[str] = []
+
+    # B267: current week's Monday — the upper bound of the recency window.
+    from datetime import date as _date, timedelta as _td
+    _ref: Optional[_date] = None
+    if reference_date:
+        try:
+            _ref = _date.fromisoformat(str(reference_date)[:10])
+        except ValueError:
+            _ref = None
+    if _ref is None:
+        _ref = _date.today()
+    current_week_monday = (_ref - _td(days=_ref.weekday())).isoformat()
 
     # Primary source: week_plans in user_state (hot) + cold store (archive)
     if user_state:
         week_plans = user_state.get("week_plans") or {}
-        hot_keys = sorted(week_plans.keys(), reverse=True)
-        # most-recent-first list of (key, plan); hot keys are all newer than
+        # B267: drop pre-generated FUTURE weeks BEFORE windowing, so the window
+        # holds the most-recent PAST/current weeks (not future placeholders).
+        past_keys = sorted(
+            (k for k in week_plans.keys() if k <= current_week_monday),
+            reverse=True,
+        )
+        # most-recent-first list of (key, plan); hot past keys are all newer than
         # any archived key, so fill from hot first, then top up from archive.
-        selected = [(k, week_plans[k]) for k in hot_keys[:RECENCY_LOOKBACK_WEEKS]]
+        selected = [(k, week_plans[k]) for k in past_keys[:RECENCY_LOOKBACK_WEEKS]]
+        # B267: the "< N → consult archive" decision now counts PAST weeks only.
         if len(selected) < RECENCY_LOOKBACK_WEEKS and user_id:
             from backend.engine import storage
-            arch_keys = sorted(storage.list_archived_keys(user_id), reverse=True)
+            arch_keys = sorted(
+                (k for k in storage.list_archived_keys(user_id) if k <= current_week_monday),
+                reverse=True,
+            )
             for k in arch_keys[: RECENCY_LOOKBACK_WEEKS - len(selected)]:
                 plan = storage.read_archived_week(user_id, k)
                 if plan is not None:
