@@ -3508,7 +3508,10 @@
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "attributes": {
+        "allow_load_logging": true
+      }
     },
     {
       "id": "side_plank",
