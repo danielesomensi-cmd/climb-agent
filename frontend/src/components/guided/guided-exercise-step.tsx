@@ -184,8 +184,11 @@ export function GuidedExerciseStep({
   const hasLoadField =
     !isTestLoadExercise &&
     !isTestMeasurement &&
-    exercise.loadModel !== "bodyweight_only" &&
-    (exercise.suggested.externalLoadKg != null || exercise.suggested.totalLoadKg != null);
+    ((exercise.loadModel !== "bodyweight_only" &&
+      (exercise.suggested.externalLoadKg != null || exercise.suggested.totalLoadKg != null)) ||
+      // A228: catalog opt-in (e.g. Pallof Press) — record-only optional weight,
+      // no suggested load and no engine consumption (D249).
+      !!exercise.allowLoadLogging);
   const hasGradeField = !isTestMeasurement && exercise.suggested.grade != null;
 
   // Pre-populate from suggested values or previous user input
@@ -959,16 +962,17 @@ export function GuidedExerciseStep({
             {hasLoadField && !isUnilateral && (
               <div className="space-y-1.5">
                 <Label htmlFor="load-input" className="text-xs text-muted-foreground">
-                  Actual load used (kg)
+                  {exercise.allowLoadLogging ? "Weight used (kg) — optional" : "Actual load used (kg)"}
                 </Label>
                 <Input
                   id="load-input"
                   type="number"
                   step="0.5"
+                  min={0}
                   value={loadInput}
                   onChange={(e) => setLoadInput(e.target.value)}
                   className="w-32 h-9"
-                  placeholder="kg"
+                  placeholder={exercise.allowLoadLogging ? "kg — leave empty if using a band" : "kg"}
                 />
               </div>
             )}

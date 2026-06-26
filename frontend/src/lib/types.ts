@@ -664,6 +664,7 @@ export interface GuidedExercise {
   loadModel: string;
   unilateral?: boolean;    // true for loading-pin LP exercises (per-hand load tracking)
   altSides?: boolean;      // true for timer side-alternation exercises (RIGHT/LEFT badge)
+  allowLoadLogging?: boolean;  // A228: opt a bodyweight/band exercise into the optional "weight used" field (record-only, e.g. Pallof Press)
 
   // Instruction-only blocks (warmup, mobility) — no exercise selection
   isInstructionOnly?: boolean;
