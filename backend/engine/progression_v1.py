@@ -50,6 +50,7 @@ EXTERNAL_LOAD_FALLBACK_FIXED_KG: dict[str, float] = {
     "forearm_pronation_supination": 1.0,  # hammer / light dumbbell
     "wrist_curl": 3.0,                   # wrist flexion
     "reverse_wrist_curl": 2.0,           # wrist extension
+    "pallof_press": 10.0,                # A229: cable/band anti-rotation cold-start
 }
 
 # Similarity groups for cross-exercise load transfer (B90).

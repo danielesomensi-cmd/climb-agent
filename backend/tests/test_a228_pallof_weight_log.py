@@ -1,19 +1,12 @@
-"""A228: Pallof Press optional "weight used" logging (record-only).
+"""A228: Pallof Press "weight used" logging.
 
-Pallof Press is `load_model: bodyweight_only` (cable OR band) but opts into the
-existing guided "weight used (kg)" field via `attributes.allow_load_logging`.
-
-The logged weight is **record-only** — it persists on the session slot
-(`actual_exercises`) so the user remembers it ("così mi ricordo"), and is NOT
-consumed by the progression / closed-loop engine (confirmed by the D249 audit:
-`apply_feedback` has no `bodyweight_only` branch).
-
-These tests guard:
-  1. the catalog opt-in contract,
-  2. a numeric weight persists on the slot and creates NO working_loads entry,
-  3. an empty weight is accepted (band users) without error or mutation,
-  4. apply_feedback record-only invariant at the unit level,
-  5. past/completed sessions are never rewritten when logging on a current one.
+A228 first exposed an optional "weight used (kg)" field on Pallof. A229 then
+upgraded Pallof from `bodyweight_only` (record-only) to `external_load`, so the
+field is now driven by load_model + the suggested load, and the value DOES feed
+progression (see test_a229_pallof_weight_progression). These tests guard what
+A228 still owns: the catalog modeling that surfaces the field, the value
+persisting in the record/history, empty-weight acceptance (band users with no
+number), and past/completed sessions never being rewritten.
 """
 
 from __future__ import annotations
@@ -28,7 +21,6 @@ from fastapi.testclient import TestClient
 
 from backend.api import deps
 from backend.api.main import app
-from backend.engine.progression_v1 import apply_feedback
 
 client = TestClient(app)
 
@@ -88,16 +80,19 @@ def _pallof_working_entries(state: dict) -> list:
     return [e for e in entries if e.get("exercise_id") == "pallof_press"]
 
 
-# 1 — catalog opt-in contract
-def test_pallof_catalog_opts_into_load_logging():
+# 1 — catalog modeling. A229 superseded A228: pallof is now external_load and
+#     the "weight used" field is driven by load_model + suggested load (not the
+#     old A228 allow_load_logging flag, which was removed).
+def test_pallof_catalog_is_external_load_band_or_cable():
     data = json.loads(EXERCISES_PATH.read_text(encoding="utf-8"))
     pallof = next(e for e in data["exercises"] if e["id"] == "pallof_press")
-    assert pallof["load_model"] == "bodyweight_only"
-    assert (pallof.get("attributes") or {}).get("allow_load_logging") is True
+    assert pallof["load_model"] == "external_load"
+    assert set(pallof.get("equipment_required_any") or []) == {"resistance_band", "cable_machine"}
+    assert "allow_load_logging" not in (pallof.get("attributes") or {})
 
 
-# 2 — numeric weight persists on the slot (record path) + no engine consumption
-def test_pallof_numeric_weight_persists_and_not_consumed():
+# 2 — numeric weight persists on the session slot (record path / history)
+def test_pallof_numeric_weight_persists_in_record():
     wp = _pallof_week_plan()
     _seed(wp)
 
@@ -116,8 +111,7 @@ def test_pallof_numeric_weight_persists_and_not_consumed():
     state = deps.load_state(None)
     sess = state["current_week_plan"]["weeks"][0]["days"][0]["sessions"][0]
     actual = {a["exercise_id"]: a for a in sess.get("actual_exercises", [])}
-    assert actual["pallof_press"]["used_external_load_kg"] == 12.5  # record persisted
-    assert _pallof_working_entries(state) == []  # record-only, no engine consumption
+    assert actual["pallof_press"]["used_external_load_kg"] == 12.5  # logged weight in the record
 
 
 # 3 — empty weight accepted (band users): no error, no value, no mutation
@@ -143,21 +137,7 @@ def test_pallof_empty_weight_accepted():
     assert _pallof_working_entries(state) == []
 
 
-# 4 — apply_feedback unit: record-only invariant (no working_loads mutation)
-def test_apply_feedback_pallof_no_working_load_mutation():
-    state = {"working_loads": {"entries": []}, "bodyweight_kg": 70.0}
-    log_entry = {
-        "date": "2026-04-06",
-        "actual": {"exercise_feedback_v1": [
-            {"exercise_id": "pallof_press", "load_model": "bodyweight_only",
-             "feedback_label": "very_easy", "completed": True, "used_external_load_kg": 15.0}
-        ]},
-    }
-    out = apply_feedback(log_entry, state)
-    assert _pallof_working_entries(out) == []
-
-
-# 5 — immutability: logging on a current session never rewrites a past completed one
+# 4 — immutability: logging on a current session never rewrites a past completed one
 def test_pallof_past_session_untouched():
     cur_date = "2026-04-06"
     past_date = "2026-03-30"

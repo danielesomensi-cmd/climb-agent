@@ -3526,8 +3526,10 @@
       "intensity_level": "medium",
       "fatigue_cost": 4,
       "recency_group": "core_anti_rotation",
-      "equipment_required": [
-        "resistance_band"
+      "equipment_required": [],
+      "equipment_required_any": [
+        "resistance_band",
+        "cable_machine"
       ],
       "location_allowed": [
         "home",
@@ -3554,14 +3556,12 @@
         "Press straight out slowly — feel the oblique tension resist rotation",
         "Zero rotation in pelvis and torso throughout the press",
         "Pause at full extension for 1-2s before returning",
-        "Train both directions each set — do not skip the weaker side"
+        "Train both directions each set — do not skip the weaker side",
+        "No cable? Use a resistance band with tension matching the suggested kg"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only",
-      "alt_sides": true,
-      "attributes": {
-        "allow_load_logging": true
-      }
+      "load_model": "external_load",
+      "alt_sides": true
     },
     {
       "id": "side_plank",
