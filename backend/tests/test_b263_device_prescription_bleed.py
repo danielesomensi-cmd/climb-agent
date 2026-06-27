@@ -104,6 +104,36 @@ class TestB263Helpers(unittest.TestCase):
         _strip_device_prescription(merged, block, {}, {"domain": ["strength_general"]})
         self.assertNotIn("notes", merged)
 
+    def test_d250_dip_substitute_no_finger_bleed(self):
+        """D250: a Dip (push, strength_general, bodyweight_only) substituted into the
+        finger_max_strength main block must not inherit the hangboard notes
+        ("Prefer 20mm half crimp… Rest fully 2.5–4 min") nor the device fields.
+        Reproduces the exact production symptom faithfully (real finger block notes
+        + real Dip defaults)."""
+        finger_block = {
+            "sets_range": [5, 8],
+            "hang_seconds_range": [5, 10],
+            "rest_seconds_range": [150, 240],
+            "intensity_pct_of_total_load_range": [0.85, 0.95],
+            "notes": [
+                "Target: high quality efforts, no grinding. Stop if form breaks.",
+                "Prefer 20mm half crimp baseline when available; override only if needed.",
+                "Rest fully (2.5–4 min).",
+            ],
+        }
+        dip_defaults = {"sets": 3, "reps": 4, "rest_between_sets_seconds": 120,
+                        "notes": "Can use parallel bars or rings."}
+        merged = {**dip_defaults, **finger_block}  # block notes win the naive merge
+        dip_ex = {"id": "dip", "domain": ["strength_general"], "pattern": "push",
+                  "equipment_required": [], "load_model": "bodyweight_only"}
+        _strip_device_prescription(merged, finger_block, dip_defaults, dip_ex)
+        notes = " ".join(merged.get("notes") or []) if isinstance(merged.get("notes"), list) else (merged.get("notes") or "")
+        self.assertNotIn("20mm half crimp", notes)
+        self.assertNotIn("Rest fully", notes)
+        self.assertEqual(merged["notes"], "Can use parallel bars or rings.")
+        for k in _DEVICE_PRESCRIPTION_FIELDS:
+            self.assertNotIn(k, merged)
+
 
 class TestB263Integration(unittest.TestCase):
     def test_substitute_has_no_device_bleed(self):

@@ -1440,6 +1440,7 @@ def resolve_session(
     user_id: Optional[str] = None,
     phase: Optional[str] = None,
     equipment_override: Optional[List[str]] = None,
+    extra_recent_ex_ids: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     # --- Input validation ---
     if not session_path:
@@ -1517,6 +1518,15 @@ def resolve_session(
 
     # recent history (B159b: reads from week_plans in user_state)
     recent_ex_ids = load_recent_exercise_ids(user_id, user_state=user_state)
+
+    # B268: exercises from EARLIER days' sessions already planned this week count
+    # toward recency (same weight as completed history, appended as most-recent),
+    # so a session repeated on a LATER day varies instead of resolving
+    # identically. The week/replanner auto-resolve loops accumulate these
+    # per-day and pass them in; same-day siblings are intentionally excluded
+    # (the caller appends a day's exercises only after that day is resolved).
+    if extra_recent_ex_ids:
+        recent_ex_ids = recent_ex_ids + [norm_str(x) for x in extra_recent_ex_ids if x]
 
     # B159b: build recency_group set from recent exercise_ids
     _ex_by_id = {norm_str(get_ex_id(e)): e for e in exercises}

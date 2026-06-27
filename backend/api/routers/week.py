@@ -47,8 +47,12 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
     B120: completed/skipped sessions with cached resolved data are never
     re-resolved — this protects past sessions from device-switch corruption.
     """
+    # B268: exercise_ids planned on EARLIER days this week, fed into the
+    # resolver as recency so a session repeated on a later day varies.
+    planned_recent: list = []
     for week_block in week_plan.get("weeks", []):
         for day_entry in week_block.get("days", []):
+            day_ex_ids: list = []  # B268: this day's resolved exercise_ids
             for session_entry in day_entry.get("sessions", []):
                 # B120: never re-resolve completed sessions with cached data
                 # B153b: never re-resolve sessions the user explicitly edited
@@ -99,18 +103,26 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                         write_output=False,
                         user_id=user_id,
                         phase=phase,
+                        extra_recent_ex_ids=planned_recent,  # B268
                     )
                     # Re-append user-added exercises
                     if user_added:
                         rs = resolved.get("resolved_session", {})
                         rs.setdefault("exercise_instances", []).extend(user_added)
                     session_entry["resolved"] = resolved
+                    # B268: collect this day's exercises for LATER days only
+                    for _inst in (resolved or {}).get("resolved_session", {}).get("exercise_instances", []):
+                        _eid = _inst.get("exercise_id")
+                        if _eid:
+                            day_ex_ids.append(_eid)
                 except Exception as _resolve_err:
                     logger.error(
                         "_auto_resolve: session resolution failed for %r: %s",
                         session_entry.get("session_id"), _resolve_err, exc_info=True,
                     )
                     session_entry["resolved"] = None
+            # B268: a day's exercises become recency for subsequent days only
+            planned_recent.extend(day_ex_ids)
 
 
 def _cache_completed_resolved(

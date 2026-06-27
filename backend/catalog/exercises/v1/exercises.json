@@ -1475,6 +1475,56 @@
       "load_model": "bodyweight_only"
     },
     {
+      "id": "weighted_dip",
+      "name": "Weighted Dip",
+      "category": "main_strength",
+      "time_min": 15,
+      "role": [
+        "main"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "dip_variants",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "Added weight via belt, vest, or held dumbbell. Progress load, not reps."
+      },
+      "stress_tags": {
+        "elbow": "medium",
+        "fingers": "none",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Dip with added load (weight belt, vest, or held dumbbell) for compound pressing strength above bodyweight. Prerequisite: 12+ strict bodyweight dips. Antagonist counterbalance to weighted pulling; builds pressing strength and elbow resilience. (Hörst hypergravity / antagonist training)",
+      "cues": [
+        "Add 10-20% bodyweight to start — small increments",
+        "Lower until upper arms are parallel to floor — no deeper",
+        "Keep shoulders away from ears throughout",
+        "Controlled lowering 2s, no bouncing at bottom",
+        "Add weight so the final rep is hard with perfect form"
+      ],
+      "video_url": null,
+      "load_model": "total_load"
+    },
+    {
       "id": "pushup",
       "name": "Push-up",
       "category": "strength_accessory",
