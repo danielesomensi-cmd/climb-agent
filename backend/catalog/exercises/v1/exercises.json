@@ -7462,7 +7462,7 @@
         "anaerobic_capacity"
       ],
       "pattern": "climbing_intervals",
-      "intensity_level": "very_high",
+      "intensity_level": "high",
       "fatigue_cost": 9,
       "recency_group": "pe_thirty_thirty",
       "equipment_required": [],
@@ -10139,7 +10139,7 @@
         "strength_general"
       ],
       "pattern": "lunge",
-      "intensity_level": "moderate",
+      "intensity_level": "medium",
       "fatigue_cost": 4,
       "recency_group": "lunge",
       "equipment_required": [],

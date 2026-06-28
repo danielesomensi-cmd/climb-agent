@@ -348,6 +348,21 @@ def test_b224_new_exercises_vocabulary_compliance(exercise_map, exercise_list):
         )
 
 
+def test_c231_intensity_level_canonical_enum(exercise_list):
+    """C231: every intensity_level must be in the canonical 5-value set.
+
+    Drift singletons ``moderate`` and ``very_high`` were normalized into the
+    5-value ordinal set (``moderate``→``medium``, ``very_high``→``high``).
+    """
+    canonical = {"very_low", "low", "medium", "high", "max"}
+    offenders = {
+        e["id"]: e["intensity_level"]
+        for e in exercise_list
+        if e.get("intensity_level") and e["intensity_level"] not in canonical
+    }
+    assert not offenders, f"non-canonical intensity_level values: {offenders}"
+
+
 def test_b224_forearms_biceps_main_reach_n3_gym_full(exercise_list):
     """After B224 catalog expansion, forearms and biceps pools have main >= 3 in gym_full."""
     from backend.engine.body_part_picker import build_body_part_index, _exercise_fits_equipment
