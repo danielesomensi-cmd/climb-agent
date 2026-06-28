@@ -65,7 +65,7 @@ code references and a committed audit script.
 
 ### `public.users` (Supabase Postgres)
 
-Columns observed at runtime (source: `docs/audit/D-ANALYTICS-DROPOFF_output.md:13-18`,
+Columns observed at runtime (source: `_archive/docs/audit/D-ANALYTICS-DROPOFF_output.md:13-18`,
 plus writes/reads in `backend/api/auth.py:82-94` and
 `backend/engine/storage_supabase.py:79-94`):
 
@@ -80,13 +80,13 @@ plus writes/reads in `backend/api/auth.py:82-94` and
 No `email`, `name`, `password_hash` columns — those live in Clerk. Email is
 fetched from Clerk at runtime (`frontend/src/app/(main)/subscribe/page.tsx:30`
 uses `user?.primaryEmailAddress?.emailAddress` for Stripe prefill). A separate
-`docs/audit/D-ANALYTICS-DROPOFF_output.md` shows the live row count was 9 users
+`_archive/docs/audit/D-ANALYTICS-DROPOFF_output.md` shows the live row count was 9 users
 on 2026-04-17.
 
 ### Adjacent tables (used by auth flow context, not storing identity)
 
 - `subscriptions` — one-to-one with `users.user_id`, schema in
-  `docs/migrations/subscriptions_table.sql`. Includes `cancel_at_period_end`,
+  `_archive/docs/migrations/subscriptions_table.sql`. Includes `cancel_at_period_end`,
   `status`, `stripe_customer_id`, `stripe_subscription_id`, `trial_start`,
   `trial_end`, etc.
 - `session_logs`, `outdoor_logs`, `event_logs`, `recovery_codes` — keyed by
@@ -478,7 +478,7 @@ dashboard-only setting invisible here.
 - `.env` (repo root, gitignored) — holds `CLERK_SECRET_KEY`, `ADMIN_SECRET`,
   `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` for local dev.
 - `CLAUDE.md:300` — one-liner documenting the Supabase RLS posture.
-- `docs/migrations/subscriptions_table.sql` — only committed SQL migration;
+- `_archive/docs/migrations/subscriptions_table.sql` — only committed SQL migration;
   the `users` table is not in git.
 - `backend/tests/test_multiuser.py` — end-to-end auth fallback tests via
   `X-User-ID`.

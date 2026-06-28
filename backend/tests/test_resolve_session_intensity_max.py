@@ -1,7 +1,7 @@
 """B227 — Resolver intensity_max enforcement.
 
 Tests the 3-tier cascade introduced by B227 in `_resolve_inline_block` and
-`pick_best_exercise_p0`. See `docs/audit/B227_phase0_findings.md`.
+`pick_best_exercise_p0`. See `_archive/docs/audit/B227_phase0_findings.md`.
 """
 from __future__ import annotations
 

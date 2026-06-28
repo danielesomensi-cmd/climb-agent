@@ -65,7 +65,7 @@ def is_week_one_empty(
     Used by the onboarding router to decide whether `this_monday()` produces
     a useful first week for this user, or whether to fall back to strict
     next Monday. Threshold T=1 was chosen empirically from stress simulation
-    (see docs/briefs/A-ACTIVATION-timing_simulation.md §stress).
+    (see _archive/docs/briefs/A-ACTIVATION-timing_simulation.md §stress).
 
     Deterministic: same inputs → same output. No mutation of `state`.
     """
