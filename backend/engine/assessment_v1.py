@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # ---------------------------------------------------------------------------
 # Grade helpers
@@ -108,6 +108,53 @@ def brzycki_1rm(weight: float, reps: int) -> float:
 
 
 # ---------------------------------------------------------------------------
+# Weakness → axis penalty mapping (R148)
+# ---------------------------------------------------------------------------
+# Centralized self-eval weakness → axis penalty table. Previously these were
+# scattered as inline if/elif string-comparisons across every _compute_* axis.
+# Each axis maps to one or more independent weakness groups; within a group the
+# penalty is applied once — the larger value when the weakness is the user's
+# *primary* weakness, the smaller when it is the *secondary*. Multiple groups on
+# the same axis stack (e.g. endurance penalizes both pump and rest management).
+# Shape: axis -> tuple of (weakness_values, primary_penalty, secondary_penalty).
+# Prerequisite for R149 (weakness→resolver hints) and the LLM Coach layer.
+_AXIS_WEAKNESS_PENALTIES: Dict[str, Tuple[Tuple[Tuple[str, ...], float, float], ...]] = {
+    "finger_strength": ((("fingers_give_out", "weak_on_slopers"), 15.0, 8.0),),
+    "pulling_strength": ((("cant_hold_hard_moves",), 10.0, 5.0),),
+    "power_endurance": ((("pump_too_early", "poor_dynamic_movement"), 8.0, 4.0),),
+    "technique": ((
+        (
+            "technique_errors", "cant_read_routes", "poor_body_tension",
+            "poor_problem_reading", "poor_dynamic_movement",
+        ),
+        10.0, 5.0,
+    ),),
+    "endurance": (
+        (("pump_too_early",), 10.0, 5.0),
+        (("cant_manage_rests",), 10.0, 5.0),
+    ),
+}
+
+
+def _weakness_penalty(self_eval: Dict[str, Any], axis: str) -> float:
+    """Return the (negative or zero) self-eval penalty for the given axis.
+
+    Sums over the axis's weakness groups: each group contributes the primary
+    penalty if it matches ``primary_weakness``, else the secondary penalty if it
+    matches ``secondary_weakness``, else nothing.
+    """
+    total = 0.0
+    primary = self_eval.get("primary_weakness")
+    secondary = self_eval.get("secondary_weakness")
+    for weaknesses, primary_pen, secondary_pen in _AXIS_WEAKNESS_PENALTIES.get(axis, ()):
+        if primary in weaknesses:
+            total -= primary_pen
+        elif secondary in weaknesses:
+            total -= secondary_pen
+    return total
+
+
+# ---------------------------------------------------------------------------
 # Individual axis computations
 # ---------------------------------------------------------------------------
 
@@ -134,10 +181,7 @@ def _compute_finger_strength(
         else:
             score = 50.0
         # Self-eval modifier
-        if self_eval.get("primary_weakness") in ("fingers_give_out", "weak_on_slopers"):
-            score -= 15
-        elif self_eval.get("secondary_weakness") in ("fingers_give_out", "weak_on_slopers"):
-            score -= 8
+        score += _weakness_penalty(self_eval, "finger_strength")
 
     return _clamp(score)
 
@@ -172,10 +216,7 @@ def _compute_pulling_strength(
             score = (current_idx / target_idx) * 65
         else:
             score = 50.0
-        if self_eval.get("primary_weakness") == "cant_hold_hard_moves":
-            score -= 10
-        elif self_eval.get("secondary_weakness") == "cant_hold_hard_moves":
-            score -= 5
+        score += _weakness_penalty(self_eval, "pulling_strength")
 
     return _clamp(score)
 
@@ -224,11 +265,7 @@ def _compute_power_endurance(
         repeater_score = 0.0
 
     # --- Self-eval modifier (reduced penalties to avoid double counting) ---
-    eval_modifier = 0.0
-    if self_eval.get("primary_weakness") in ("pump_too_early", "poor_dynamic_movement"):
-        eval_modifier = -8.0
-    elif self_eval.get("secondary_weakness") in ("pump_too_early", "poor_dynamic_movement"):
-        eval_modifier = -4.0
+    eval_modifier = _weakness_penalty(self_eval, "power_endurance")
 
     # --- Weighted combination ---
     if has_repeater:
@@ -261,14 +298,7 @@ def _compute_technique(
     else:
         score = 50.0
 
-    technique_weaknesses = (
-        "technique_errors", "cant_read_routes",
-        "poor_body_tension", "poor_problem_reading", "poor_dynamic_movement",
-    )
-    if self_eval.get("primary_weakness") in technique_weaknesses:
-        score -= 10
-    elif self_eval.get("secondary_weakness") in technique_weaknesses:
-        score -= 5
+    score += _weakness_penalty(self_eval, "technique")
 
     return _clamp(score)
 
@@ -283,14 +313,7 @@ def _compute_endurance(
     climbing_years = experience.get("climbing_years") or 0
     score += min(climbing_years * 2, 10)
 
-    if self_eval.get("primary_weakness") == "pump_too_early":
-        score -= 10
-    elif self_eval.get("secondary_weakness") == "pump_too_early":
-        score -= 5
-    if self_eval.get("primary_weakness") == "cant_manage_rests":
-        score -= 10
-    elif self_eval.get("secondary_weakness") == "cant_manage_rests":
-        score -= 5
+    score += _weakness_penalty(self_eval, "endurance")
 
     # Max hang duration modifier (Hörst test #3: sustained finger endurance)
     tests = tests or {}
