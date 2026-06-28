@@ -272,7 +272,7 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 | GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
 | B228 | **Frontend 402 global handler in `api.ts`** | B | S | Open P2 | Audit F4. Centralize 402 → router.push('/subscribe') + sonner toast. Frontend branch + Vercel preview. After both P1. |
 | D229 | **Doc drift alignment — CLAUDE.md endpoints + intents + Stripe text** | D | XS | ✅ Done 2026-05-12 | Closed by D229 EXTENDED (this commit): 7 findings resolved. F1 (endpoint count/table) + F1-sub (routers/ narrative) already chiusi da B250. F6 (beta tester count) was a non-issue (already coherent). F2 (intent count 13+3→15+4), F3 (3 Stripe stale strings → canonical "LIVE since 2026-04-16"), F4 (Vato/Alexis → Christie/Cesar/Paolo/Agustin), F5 (pricing EUR 14.99/14-day/first 50 → USD $9.99/$4.99/15-day/first 20, GTM-02b question updated), F7 (DESIGN header v1.2→v1.1, audit date 2026-03-28→2026-05-08) fixed in this commit. |
-| C231 | **Catalog `intensity_level` enum normalization — drift singletons** | C | XS | Open P3 | B227 P0.2 discovery: catalog uses 7-value enum (very_low, low, moderate, medium, high, very_high, max). Two drift singletons absorb cleanly via ordinal mapping (`reverse_lunge`=moderate→medium, `thirty_thirty_intervals`=very_high→high), but worth normalizing to a clean 5-value canonical set `{very_low, low, medium, high, max}`. 2 catalog edits + test_exercises_v2.py enum check. Zero engine impact. |
+| C231 | **Catalog `intensity_level` enum normalization — drift singletons** | C | XS | ✅ Done 2026-06-28 | Normalized to 5-value canonical `{very_low, low, medium, high, max}`: `reverse_lunge` moderate→medium, `thirty_thirty_intervals` very_high→high. Added `test_c231_intensity_level_canonical_enum` (real enum guard; the prior B224 check was tautological). Zero engine impact. |
 
 ### Phase 2 — Measure + iterate (week 3-6)
 
@@ -681,7 +681,7 @@ Audit deliverable: `docs/audit/outdoor_audit_D170.md` (2026-04-04) — 13 findin
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
 | B40 | Branch develop/main workflow | S | Staging/production branches |
-| R148 | Centralize weakness→axis mapping | S | Single dict in assessment_v1.py instead of scattered if-strings. Prerequisite for R149 and LLM Coach. LOW risk. |
+| R148 | Centralize weakness→axis mapping | S | ✅ Done 2026-06-28 — `_AXIS_WEAKNESS_PENALTIES` table + `_weakness_penalty()` helper in `assessment_v1.py`; behavior-preserving (full suite green). Unblocks R149 + LLM Coach. |
 
 ### Stretching Circuit add-on
 
