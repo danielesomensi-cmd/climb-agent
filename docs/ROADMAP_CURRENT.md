@@ -160,7 +160,7 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ## Priority 1.25 — Audit Remediation (D163 + D164)
 
-> Full reports: `docs/audit/D164/` (138 findings) and `docs/audit/D163_frontend_audit.md` (67 findings)
+> Full reports: `docs/audit/D164/` (138 findings) and `_archive/docs/frontend_audit_D163.md` (67 findings)
 > Date: 2026-03-28
 > Combined: 205 findings (20 P1, 71 P2, 102 P3, 12 P4)
 
@@ -184,7 +184,7 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ## Priority 1.26 — Audit Remediation (D170 + D172)
 
-> Tracking docs: `docs/audit/D172_findings_tracker.md` (full 25-finding breakdown with status per item)
+> Full breakdown: tracked inline in this roadmap (see P1.26 priority list below). The file `D172_findings_tracker.md` was planned but never created.
 > Audits: D170 (gym_id propagation, 24 findings, 2026-03-31), D172 (all other fields: session_id / template_id / equipment / slot / phase / API validation, 25 findings, 2026-03-31)
 > Combined: 49 findings — 13 fixed in B173, 2 P1 hotfixes pending (B174/B175), 21 deferred to B176
 
@@ -233,12 +233,12 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 | Group | Title | Type | Effort | Status | Notes |
 |---|---|---|---|---|---|
 | 0 | Fix `sync_status.py` regex + validate() | B | S | ✅ Done 2026-05-10 (B-SYNC-FIX) | Closed F-01, F-37, F-38; F-39, F-40 documentati come limiti |
-| 3 | Counter fixes (CLAUDE.md, PROJECT_BRIEF, README, vocabulary, ENGINE_ARCHITECTURE) | C | S | **Open — next recommend** | F-09 (endpoint count 64→68), F-10/F-11 (intent count 13+3 → 15+4), F-12 (macrocycle weeks 10-13 → lead 11-16/boulder 8-16), F-13 (8 vocab orphan templates), F-14 (`_SESSION_META` 34→31), F-15 (`closed_loop_v1.py` path → `backend/engine/adaptation/closed_loop.py`), F-16 (`planner_v1` → `planner_v2` import example), F-36, F-46, F-47. **Closes D229 implicitly.** |
-| 1 | P0 Stripe/Pricing drift + redundant cleanup | C | XS | Open | F-02 (PROJECT_BRIEF Stripe "TEST MODE"), F-03 (ROADMAP Stripe "Not live"), F-04 (pricing row "EUR 14.99" wrong on currency/amount/trial/cap), F-29 (delete 3 stub `B202/B203/B204_proposal.md`), F-30 (delete 3 abandoned `users_report_*.md`) |
-| 6 | Broken citations + horst restore | C | S | Open | F-05 (D163 path), F-06 (D172 tracker never created), F-07 (horst ghost file — `git show 70dadfa:docs/horst_integration_audit.md > _archive/docs/horst_integration_audit.md`) |
-| 4 | Bulk archive obsolete docs + merge `docs/audits/` → `docs/audit/` | C | M | Open | F-08 (dir merge), F-18 through F-28 (24 closed-brief deliverables), F-31, F-32, F-33 |
-| 2 | Status-marker drift | C | S | Open | F-17 (`design_system_v1.md` A215/A216/A217 "planned" → ✅ Done), F-35 (DESIGN doc Guided Session "spec futura" → implemented) |
-| 5 | Misplaced renames + escalations | C | XS | Open | F-34 (outdoor_audit_D170 → docs/audit/), F-41 (AUTH_AUDIT.md → docs/audit/); F-42-45 sono escalations a Daniele (4 decisioni nel piano §Group 5) |
+| 3 | Counter fixes (CLAUDE.md, PROJECT_BRIEF, README, vocabulary, ENGINE_ARCHITECTURE) | C | S | ✅ Done 2026-06-28 | F-11 (ENGINE_ARCH intents 13+3→15+4, **enumerazioni riscritte da ground-truth codice** — la lista vecchia citava chiavi inesistenti), F-12 (macro weeks → lead 11–16 / boulder 8–16 in PROJECT_BRIEF+README), F-13 (vocab header 27→19, le 8 orphan già rimosse da B250), F-14 (`_SESSION_META` 34→**35** — il piano diceva 31, ground-truth è 35), F-16 (`planner_v1`→`planner_v2.generate_phase_week`), F-36 (13→14 sort categories). **F-09/F-10 già chiusi da B250/D229. F-15 = non-issue: `closed_loop_v1.py` esiste ed è il modulo di produzione (importato da `feedback.py`) → premessa del finding falsa, nessun fix. F-46 (3-pass→multi-pass) e F-47 (versione DESIGN) = no-op/già ok.** |
+| 1 | P0 Stripe/Pricing drift + redundant cleanup | C | XS | ✅ Done 2026-06-28 | F-29 (cancellati 3 stub `B202/B203/B204_proposal.md`), F-30 (cancellati 3 `users_report_*.md`). **F-02/F-03/F-04 (Stripe/pricing in PROJECT_BRIEF+ROADMAP) già chiusi da D229.** |
+| 6 | Broken citations + horst restore | C | S | ✅ Done 2026-06-28 | F-05 (D163 path → `_archive/docs/frontend_audit_D163.md`), F-06 (D172 tracker mai creato → citazione riscritta a "tracked inline"), F-07 (horst restore da git `70dadfa` → `_archive/docs/horst_integration_audit.md`, 220 righe) |
+| 4 | Bulk archive obsolete docs + merge `docs/audits/` → `docs/audit/` | C | M | Open | F-08 (dir merge), F-18 through F-28 (24 closed-brief deliverables), F-31, F-32, F-33. **Escluso dal batch "easy" (M-effort).** |
+| 2 | Status-marker drift | C | S | ✅ Done 2026-06-28 | F-17 (`design_system_v1.md` A215/A216/A217 "planned" → ✅ Done), F-35 (DESIGN doc Guided Session "spec futura" → implemented) |
+| 5 | Misplaced renames + escalations | C | XS | 🟡 Partial 2026-06-28 | F-34 ✅ (outdoor_audit_D170 → docs/audit/, refs aggiornati). **F-41 (AUTH_AUDIT.md → docs/audit/) NON eseguito: conflitto con `scripts/repo_hygiene.py` (D237, successivo) che lo whitelista a root con "deliberately kept at root ... do not relocate" → escalation a Daniele.** F-42-45 = escalations a Daniele (4 decisioni nel piano §Group 5). |
 
 ---
 
@@ -672,7 +672,7 @@ Audit should:
 
 Depends on: B186 (immediate fixes). Must be done before further outdoor features.
 
-Audit deliverable: `docs/outdoor_audit_D170.md` (2026-04-04) — 13 findings (2 P1, 5 P2, 6 P3), 5 redesign recommendations. Root cause of outdoor+indoor coexistence bug identified (F1: `add_outdoor` doesn't clear sessions).
+Audit deliverable: `docs/audit/outdoor_audit_D170.md` (2026-04-04) — 13 findings (2 P1, 5 P2, 6 P3), 5 redesign recommendations. Root cause of outdoor+indoor coexistence bug identified (F1: `add_outdoor` doesn't clear sessions).
 
 ---
 

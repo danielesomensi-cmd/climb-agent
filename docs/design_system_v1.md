@@ -251,4 +251,4 @@ Checklist:
 - **Phase 0 audit:** `docs/A214_phase0_audit.md`
 - **Live showcase:** `/dev/tokens` (local dev only)
 - **Source:** `frontend/src/app/globals.css`
-- **Downstream briefs (planned):** A215 Paywall redesign, A216 Onboarding redesign, A217 Today redesign
+- **Downstream briefs (completed):** A215 Paywall redesign ✅ (2026-04-27), A216 Onboarding redesign ✅ (2026-04-27), A217 Today redesign ✅ (2026-04-27)

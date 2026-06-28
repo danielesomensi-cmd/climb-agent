@@ -454,11 +454,11 @@ L'LLM è l'interfaccia umana, non il cervello.
 | **Feedback** | Granulare per esercizio (5 livelli: very_easy → very_hard) | Piano vs realtà: l'utente registra gradi fatti, carichi usati, serie completate |
 | **LLM Coach** | Claude Sonnet, key nel backend | Layer conversazionale sopra engine deterministico, utente non configura nulla |
 | **Equipment** | `equipment_required` solo per gear essenziale | Gear opzionale menzionato solo in `prescription_defaults.notes` |
-| **Guided Session Mode** | Timer UI con rest timer colorato | Spec completa in §12b |
+| **Guided Session Mode** | Timer UI con rest timer colorato | Spec completa in §12b (✅ implementato, `/guided/[date]/[sessionId]`; rest timer coloring parziale) |
 
 ---
 
-## 12b. Guided Session Mode (spec futura)
+## 12b. Guided Session Mode (implemented — `/guided/[date]/[sessionId]`)
 
 La UI deve supportare un'esperienza "sessione guidata" step-by-step:
 

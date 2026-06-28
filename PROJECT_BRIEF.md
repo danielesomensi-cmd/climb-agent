@@ -42,7 +42,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 ```
 Assessment (5 dimensions → radar profile 0-100)
   → Goal (lead_grade or boulder_grade, target + deadline)
-  → Macrocycle (Hörst 4-3-2-1 + DUP, 10-13 weeks, 5 phases)
+  → Macrocycle (Hörst 4-3-2-1 + DUP, 11–16 weeks lead / 8–16 weeks boulder, 5 phases)
   → Week (planner_v2 phase-aware, domain weights + session pool)
   → Session (resolver selects concrete exercises with loads)
   → Feedback (granular per exercise, plan vs actual)

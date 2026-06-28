@@ -51,7 +51,7 @@
 | `docs/audit/D175_performance_audit.md` | 2026-04-07 | **KEEP** | Blocks A187 (React Query), active dependency |
 | `docs/audit/D176_invalidation_map.md` | 2026-04-07 | **KEEP** | Cache invalidation spec for A187, active |
 | `docs/B183_duration_review.md` | 2026-04-02 | **KEEP** | Session duration audit, tracked in roadmap |
-| `docs/outdoor_audit_D170.md` | 2026-04-04 | **KEEP** | Outdoor module design audit, recent |
+| `docs/audit/outdoor_audit_D170.md` | 2026-04-04 | **KEEP** | Outdoor module design audit, recent |
 
 ### docs/audit/D164/ (pre-launch comprehensive audit)
 

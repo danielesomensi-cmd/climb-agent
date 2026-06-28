@@ -100,7 +100,7 @@ Never switch model autonomously. The decision is always Daniele's.
 All Python imports use the `backend.` prefix. Data paths are relative to repo root.
 
 ```python
-from backend.engine.planner_v1 import generate_week_plan
+from backend.engine.planner_v2 import generate_phase_week
 "backend/catalog/sessions/v1/strength_long.json"
 ```
 

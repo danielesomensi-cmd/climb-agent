@@ -493,16 +493,16 @@ Handles runtime modifications to the week plan after initial generation.
 
 ### Intent system
 
-**13 indoor intents** (mapped via `INTENT_TO_SESSION`):
+**15 indoor intents** (mapped via `INTENT_TO_SESSION`):
 ```
-strength, power_contact, limit_boulder, power_endurance, endurance_aerobic,
-technique, finger_strength, finger_maintenance, prehab, flexibility,
-complementary_conditioning, easy_climbing, handstand
+aerobic_endurance, core, endurance, finger_maintenance, finger_max,
+flexibility, hard, power, power_endurance, prehab, projecting,
+recovery, rest, strength, technique
 ```
 
-**3 outdoor intents** (mapped via `OUTDOOR_INTENT_TO_DISCIPLINE`):
+**4 outdoor intents** (mapped via `OUTDOOR_INTENT_TO_DISCIPLINE`):
 ```
-outdoor_lead, outdoor_boulder, outdoor_mixed
+outdoor_boulder, outdoor_easy, outdoor_projecting, outdoor_volume
 ```
 
 ### Key operations
@@ -547,7 +547,7 @@ Returns up to N session suggestions for quick-add, filtered by location and equi
 
 ## 10. Exercise Ordering (`exercise_ordering.py`)
 
-### 13 sort categories
+### 14 sort categories
 
 Derived from exercise `role`, `domain`, `pattern` via `infer_sort_category()`:
 
@@ -703,7 +703,7 @@ session JSON
 
 ### `_SESSION_META` — complete listing
 
-34 sessions registered (as of D163). See `planner_v2.py:lines 38-72` for the full dict.
+35 sessions registered (in `_SESSION_META`; 35 session JSON files on disk). See `planner_v2.py:lines 38-72` for the full dict.
 
 Key session categories:
 - **Hard + climbing:** `strength_long`, `power_contact_gym`, `limit_boulder_gym`, `power_endurance_gym`
