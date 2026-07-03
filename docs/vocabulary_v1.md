@@ -1037,7 +1037,8 @@ Allowed values:
 - `flash` — first attempt, with beta
 - `redpoint` — sent after previous attempts
 - `project` — working a route, not yet sent
-- `repeat` — re-climbing a previously sent route
+
+Note: `repeat` is NOT a valid free-session `climb_style` (`VALID_CLIMB_STYLES` in `free_session.py` rejects it). It exists only for outdoor route logging (`outdoor_log.py`).
 
 ### 6.5 Free session surfaces
 

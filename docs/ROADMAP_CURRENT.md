@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-06-08 (A221 — lazy-archive past week_plans nel cold store `week_archive`: hot state Daniele −77%, flag lazy attivo in prod, beta auto-archiviati. B256 scorporato come item separato. + B257/D241/D242/B255.)
+> Last updated: 2026-07-03 (D251 audit coerenza FE↔BE + B269/B270 fix critici + B271 fixture rot.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -32,7 +32,16 @@ _Nessun follow-up D239 aperto. Audit conferma "no bug" — 3 possibili miglioram
 
 _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cue_060) sono state mergeate nel catalog._
 
+**D251 follow-ups (P2, non bloccanti)** — dall'audit di coerenza FE↔BE (`docs/audit/D251_fe_be_coherence.md`, §WARNING): W1 `performance.current_level` stale su edit gradi (non PUT-abile); W2 `self_eval` weaknesses senza editor in Settings; W3 `_day_meta` legacy sopravvive ai salvataggi availability (possibile double-count `other_sport`); W4 GoalEditor boulder passa grado Font raw ai benchmark lead-calibrati (verificare convenzione vs onboarding `BOULDER_TO_LEAD`); W5 UX 402 backstop solo su start-new-cycle; W6 onboarding re-entry hardcoda `home_enabled:true`; W7 endpoint orfani (`/api/reports/monthly` mai cablato, `/api/user/recovery-code|recover` morti post-Clerk, `/api/week/test-reminder-response` solo test); W8 campo morto `limitations.has_recent_injury`; W9 tipo TS `UserState` privo di `body`/`bodyweight_kg`/`performance`/etc.
+
 ---
+
+## Recently closed (2026-07-03)
+
+- **D251 — Audit coerenza frontend ↔ backend** ✅ (audit, 4 agenti paralleli: contratti API, tipi/enum, schema user_state, feature coverage) — `docs/audit/D251_fe_be_coherence.md`. Contratti API puliti (~60 chiamate FE vs ~70 route BE, zero mismatch). 2 CRITICAL trovati e chiusi (B269, B270), 9 warning P2 tracciati sopra, 1 fix doc (vocabulary §6.4 `repeat` non è un `climb_style` free-session valido).
+- **B269 — Timeline macrociclo grigia con label raw ("aerobic", "anaerobic alactic")** ✅ (bugfix, frontend-only — `/plan`). `macrocycle-timeline.tsx` e `plan/page.tsx` passavano `phase.energy_system` (valori fisiologici: `aerobic`, `anaerobic_alactic`, …) a `PHASE_COLORS`/`PHASE_TEXT`/`getPhaseName(Short)` che sono keyed su `phase_id` → ogni lookup mancava: barre tutte `bg-gray-300`, label fallback raw. Fix: key su `phase.phase_id` (come già corretto in `week/page.tsx`). Trovato da D251.
+- **B270 — Peso corporeo editato in Settings mai letto dal motore carichi** ✅ (bugfix, backend `state.py` + frontend settings — no moduli engine toccati). L'editor Profile scriveva peso/altezza solo sotto `assessment.body`, ma `progression_v1._get_bodyweight` e `resolve_session.suggest_max_hang_load` leggono `bodyweight_kg`/`body.weight_kg` top-level (scritti solo dall'onboarding); in più `_ALLOWED_STATE_KEYS` bloccava `body`/`bodyweight_kg` → i suggerimenti max-hang usavano per sempre il peso dell'onboarding. Fix: allow-list `body`+`bodyweight_kg` (+test `test_put_state_allows_bodyweight_sync`) e Settings ora specchia peso/altezza nelle copie top-level nella stessa PUT. Trovato da D251.
+- **B271 — Fixture rot: `test_user_state.json` con `goal.deadline=2026-06-30` scaduta** ✅ (bugfix, tests-only). Dal 2026-07-01 il guard "Goal deadline is in the past" di `/api/macrocycle/generate` faceva fallire 20 test (test_api TestWeekNavigation/TestReplanner, test_outdoor E2E, test_p0_equipment_regen) — rottura date-dependent su main, indipendente da qualsiasi branch. Fix: deadline bumpata a `2030-12-31` (sia `goal` sia `macrocycle.goal_snapshot`, per non sporcare `is_macrocycle_stale`).
 
 ## Recently closed (2026-06-27)
 
