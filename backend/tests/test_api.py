@@ -1504,6 +1504,18 @@ class TestSecurityHardening:
         r = client.put("/api/state", json={"user": {"preferred_name": "OK"}})
         assert r.status_code == 200
 
+    def test_put_state_allows_bodyweight_sync(self):
+        """B270: Settings must be able to update the engine-facing bodyweight
+        copies (bodyweight_kg + body.weight_kg), not just assessment.body."""
+        r = client.put("/api/state", json={
+            "bodyweight_kg": 71.5,
+            "body": {"weight_kg": 71.5, "height_cm": 178},
+        })
+        assert r.status_code == 200
+        state = r.json()
+        assert state["bodyweight_kg"] == 71.5
+        assert state["body"]["weight_kg"] == 71.5
+
     def test_put_state_mixed_keys_rejected(self):
         """PUT /api/state with mix of known + unknown → 422 (unknown listed)."""
         r = client.put("/api/state", json={

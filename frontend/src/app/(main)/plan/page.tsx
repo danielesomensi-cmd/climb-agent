@@ -273,7 +273,7 @@ export default function PlanPage() {
 
               {macrocycle.phases.map((phase: Phase) => {
                 const isExpanded = expandedPhase === phase.phase_id;
-                const label = getPhaseName(phase.energy_system, discipline);
+                const label = getPhaseName(phase.phase_id, discipline);
 
                 return (
                   <Card

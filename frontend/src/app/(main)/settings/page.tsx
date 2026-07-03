@@ -244,7 +244,18 @@ export default function SettingsPage() {
     setSavingProfile(true);
     setActionError(null);
     try {
-      await putState({ assessment: patch });
+      // B270: mirror weight/height to the top-level copies the engine reads
+      // (progression_v1 / resolve_session use bodyweight_kg + body.weight_kg,
+      // not assessment.body) so load suggestions track Settings edits.
+      const statePatch: Record<string, unknown> = { assessment: patch };
+      const bodyPatch = patch.body as { weight_kg?: number } | undefined;
+      if (bodyPatch && Object.keys(bodyPatch).length > 0) {
+        statePatch.body = bodyPatch;
+        if (bodyPatch.weight_kg != null) {
+          statePatch.bodyweight_kg = bodyPatch.weight_kg;
+        }
+      }
+      await putState(statePatch);
       await computeAssessment({ ...state?.assessment, ...patch }, state?.goal);
       await refresh();
       invalidateWeek();

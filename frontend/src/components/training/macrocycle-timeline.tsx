@@ -10,7 +10,7 @@ interface MacrocycleTimelineProps {
   discipline?: "lead" | "boulder" | "all_round";
 }
 
-/** Background color based on the phase energy_system */
+/** Background color keyed on phase_id */
 const PHASE_COLORS: Record<string, string> = {
   base: "bg-blue-500",
   strength_power: "bg-red-500",
@@ -54,10 +54,10 @@ export function MacrocycleTimeline({
         <div className="flex h-10 w-full overflow-hidden rounded-lg">
           {phasesWithOffset.map((phase) => {
             const widthPct = (phase.duration_weeks / totalWeeks) * 100;
-            const bgColor = PHASE_COLORS[phase.energy_system] ?? "bg-gray-300";
-            const txtColor = PHASE_TEXT[phase.energy_system] ?? "text-gray-800";
+            const bgColor = PHASE_COLORS[phase.phase_id] ?? "bg-gray-300";
+            const txtColor = PHASE_TEXT[phase.phase_id] ?? "text-gray-800";
             const label =
-              getPhaseNameShort(phase.energy_system, discipline);
+              getPhaseNameShort(phase.phase_id, discipline);
 
             return (
               <div
@@ -92,7 +92,7 @@ export function MacrocycleTimeline({
         {phasesWithOffset.map((phase) => {
           const widthPct = (phase.duration_weeks / totalWeeks) * 100;
           const label =
-            getPhaseNameShort(phase.energy_system, discipline);
+            getPhaseNameShort(phase.phase_id, discipline);
 
           return (
             <div
