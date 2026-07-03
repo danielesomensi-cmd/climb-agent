@@ -207,7 +207,7 @@
   "goal": {
     "created_at": "2026-02-14",
     "current_grade": "8a+",
-    "deadline": "2026-06-30",
+    "deadline": "2030-12-31",
     "discipline": "lead",
     "goal_type": "lead_grade",
     "override_mode": null,
@@ -247,7 +247,7 @@
     "generated_at": "2026-02-15T21:31:35",
     "goal_snapshot": {
       "current_grade": "8a+",
-      "deadline": "2026-06-30",
+      "deadline": "2030-12-31",
       "goal_type": "lead_grade",
       "target_grade": "8b"
     },
