@@ -49,6 +49,9 @@ _ALLOWED_STATE_KEYS = {
     "quote_history", "progression_counters", "test_queue",
     "other_activities", "_prev_week_plan",
     "user", "progression_config",
+    # B270: allow Settings to keep the engine-facing bodyweight copies in sync
+    # with assessment.body (progression/resolver read these, not assessment.body).
+    "body", "bodyweight_kg",
 }
 
 
