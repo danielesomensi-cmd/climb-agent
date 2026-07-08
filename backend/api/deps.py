@@ -525,6 +525,30 @@ def week_num_to_phase_context(macrocycle: Dict[str, Any], week_num: int) -> Dict
     raise ValueError(f"week_num {week_num} exceeds macrocycle total weeks ({cumulative})")
 
 
+def build_current_level(grades: Dict[str, Any]) -> Dict[str, Any]:
+    """Build performance.current_level from assessment grades.
+
+    Shared by onboarding (initial build) and PUT /api/state (B272: rebuild on
+    grade edits so progression benchmarks — e.g. the kilter fallback reading
+    current_level.boulder.worked.grade — track Settings changes instead of
+    staying frozen at the onboarding-era values).
+    """
+    level: Dict[str, Any] = {"updated_at": None}
+    if grades.get("lead_max_rp") or grades.get("lead_max_os"):
+        level["sport"] = {}
+        if grades.get("lead_max_rp"):
+            level["sport"]["worked"] = {"grade": grades["lead_max_rp"]}
+        if grades.get("lead_max_os"):
+            level["sport"]["onsight"] = {"grade": grades["lead_max_os"]}
+    if grades.get("boulder_max_rp") or grades.get("boulder_max_os"):
+        level["boulder"] = {}
+        if grades.get("boulder_max_rp"):
+            level["boulder"]["worked"] = {"grade": grades["boulder_max_rp"]}
+        if grades.get("boulder_max_os"):
+            level["boulder"]["onsight"] = {"grade": grades["boulder_max_os"]}
+    return level
+
+
 # ---------------------------------------------------------------------------
 # Subscription guard dependency
 # ---------------------------------------------------------------------------

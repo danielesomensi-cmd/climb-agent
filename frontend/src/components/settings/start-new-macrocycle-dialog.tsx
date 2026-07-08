@@ -36,7 +36,7 @@ import {
   deadlineIsoToWeeks,
   weeksToDeadlineIso,
 } from "@/components/shared/deadline-weeks-selector";
-import { startNewMacrocycle } from "@/lib/api";
+import { ApiError, startNewMacrocycle } from "@/lib/api";
 import type { UserState } from "@/lib/types";
 
 const LEAD_GRADES = [
@@ -137,7 +137,11 @@ export function classifyApiError(err: unknown): {
 } {
   const raw = err instanceof Error ? err.message : String(err);
   const match = /^API (\d+):/.exec(raw);
-  const status = match ? Number(match[1]) : null;
+  // B272: prefer the explicit status carried by ApiError (friendly 402
+  // messages no longer embed the "API 402:" prefix); regex is the fallback
+  // for plain Errors.
+  const status =
+    err instanceof ApiError ? err.status : match ? Number(match[1]) : null;
   if (status === 402) {
     return {
       userMessage:

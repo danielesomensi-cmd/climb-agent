@@ -840,6 +840,25 @@ export interface UserState {
   planning_prefs: Record<string, unknown>;
   limitations: Record<string, unknown>;
   trips: Array<Record<string, unknown>>;
+  // B272: engine-facing top-level fields the app reads/writes — previously
+  // absent, forcing `as Record<string, unknown>` casts that hid exactly the
+  // fields prone to drift (see D251 C2/W1).
+  body?: { age?: number; weight_kg?: number; height_cm?: number };
+  bodyweight_kg?: number;
+  performance?: {
+    current_level?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+  preferences?: {
+    finger_training_device?: "hangboard" | "loading_pin";
+    grade_system_boulder?: "font" | "v_scale";
+    [key: string]: unknown;
+  };
+  baselines?: Record<string, unknown>;
+  working_loads?: Record<string, unknown>;
+  fatigue_proxy?: Record<string, unknown>;
+  stimulus_recency?: Record<string, unknown>;
+  outdoor_spots?: Array<Record<string, unknown>>;
   [key: string]: unknown;
 }
 

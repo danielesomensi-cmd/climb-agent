@@ -61,9 +61,35 @@ async function request<T>(path: string, options?: RequestInit, _isRetry = false)
   }
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`API ${res.status}: ${body}`);
+    if (res.status === 402) {
+      // B272: friendly backstop for subscription-gated endpoints — surface
+      // the backend detail (tailored by trial status) instead of a raw
+      // "API 402: {...}" string on every gated mutation.
+      let detail = "";
+      try {
+        detail = (JSON.parse(body) as { detail?: string }).detail ?? "";
+      } catch {
+        // non-JSON body — fall through to the generic copy
+      }
+      throw new ApiError(
+        402,
+        detail || "Subscription required. Manage your plan in Settings.",
+      );
+    }
+    throw new ApiError(res.status, `API ${res.status}: ${body}`);
   }
   return res.json() as Promise<T>;
+}
+
+/** Error thrown by `request()` with the HTTP status attached (B272) — lets
+ * callers branch on status without parsing the message string. */
+export class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
 }
 
 // State
