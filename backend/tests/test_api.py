@@ -1544,3 +1544,49 @@ class TestSecurityHardening:
         # Invalid JSON body → FastAPI 422 (not our code, but still safe)
         r = client.put("/api/state", content="not json", headers={"Content-Type": "application/json"})
         assert r.status_code == 422
+
+
+# -----------------------------------------------------------------------
+# B272: PUT assessment.grades rebuilds performance.current_level
+# -----------------------------------------------------------------------
+
+class TestCurrentLevelSync:
+    """B272: grade edits must refresh the engine-facing current_level
+    (progression's kilter fallback reads current_level.boulder.worked.grade;
+    'performance' is deliberately not PUT-able, so the rebuild is server-side)."""
+
+    def test_grade_edit_refreshes_current_level(self):
+        r = client.put("/api/state", json={"assessment": {"grades": {
+            "lead_max_rp": "8a", "lead_max_os": "7b+",
+            "boulder_max_rp": "7B", "boulder_max_os": "7A",
+        }}})
+        assert r.status_code == 200
+        cl = r.json()["performance"]["current_level"]
+        assert cl["sport"]["worked"]["grade"] == "8a"
+        assert cl["sport"]["onsight"]["grade"] == "7b+"
+        assert cl["boulder"]["worked"]["grade"] == "7B"
+        assert cl["boulder"]["onsight"]["grade"] == "7A"
+        assert cl["updated_at"]
+
+    def test_rebuild_uses_merged_grades(self):
+        """Partial grades patch → rebuild from MERGED grades (deep-merge keeps
+        the boulder values a lead-only patch does not resend)."""
+        client.put("/api/state", json={"assessment": {"grades": {
+            "lead_max_rp": "8a", "lead_max_os": "7b+",
+            "boulder_max_rp": "7B",
+        }}})
+        r = client.put("/api/state", json={"assessment": {"grades": {
+            "lead_max_rp": "8a+", "lead_max_os": "7c",
+        }}})
+        cl = r.json()["performance"]["current_level"]
+        assert cl["sport"]["worked"]["grade"] == "8a+"
+        assert cl["boulder"]["worked"]["grade"] == "7B"  # merged grades still carry it
+
+    def test_non_grade_patch_leaves_current_level_alone(self):
+        client.put("/api/state", json={"assessment": {"grades": {
+            "lead_max_rp": "7c", "lead_max_os": "7a+",
+        }}})
+        before = client.get("/api/state").json().get("performance")
+        r = client.put("/api/state", json={"user": {"preferred_name": "NoTouch"}})
+        assert r.status_code == 200
+        assert r.json().get("performance") == before

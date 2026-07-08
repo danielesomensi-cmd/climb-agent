@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import logging
 from copy import deepcopy
+from datetime import date
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import (
-    EMPTY_TEMPLATE, ensure_monday, get_user_id,
+    EMPTY_TEMPLATE, build_current_level, ensure_monday, get_user_id,
     invalidate_future_week_cache, load_state, save_state,
 )
 from backend.api.rate_limit import limiter
@@ -109,6 +110,24 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
                     "target_grade", existing_target,
                 )
     _deep_merge(state, patch)
+    # B272: grade edits must refresh performance.current_level — progression
+    # benchmarks (e.g. kilter fallback on current_level.boulder.worked.grade)
+    # read it, and "performance" is deliberately NOT PUT-able, so without this
+    # rebuild it stays frozen at the onboarding-era grades forever.
+    asmt_patch = patch.get("assessment")
+    if isinstance(asmt_patch, dict) and isinstance(asmt_patch.get("grades"), dict):
+        merged_grades = (state.get("assessment") or {}).get("grades") or {}
+        rebuilt = build_current_level(merged_grades)
+        performance = state.get("performance") or {}
+        current_level = performance.get("current_level") or {}
+        # Replace only the grade-derived branches; keep gym_reference & co.
+        for branch in ("sport", "boulder"):
+            current_level.pop(branch, None)
+            if branch in rebuilt:
+                current_level[branch] = rebuilt[branch]
+        current_level["updated_at"] = date.today().isoformat()
+        performance["current_level"] = current_level
+        state["performance"] = performance
     # B151: availability change → invalidate future week cache so they
     # regenerate with the new slots.  Current week is handled by the
     # frontend via GET /api/week/0?force=true.

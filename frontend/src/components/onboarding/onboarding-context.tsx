@@ -94,7 +94,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         if (state.equipment && Object.keys(state.equipment).length > 0) {
           const eq = state.equipment as Record<string, unknown>;
           d.equipment = {
-            home_enabled: true,
+            // B272: respect the stored flag — hardcoding true silently
+            // re-enabled home training for users who had disabled it.
+            home_enabled:
+              eq.home_enabled !== undefined
+                ? Boolean(eq.home_enabled)
+                : ((eq.home as string[]) || []).length > 0,
             home: (eq.home as string[]) || [],
             gyms: (eq.gyms as Array<{ name: string; equipment: string[] }>) || [],
           };

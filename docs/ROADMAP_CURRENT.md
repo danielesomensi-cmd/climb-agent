@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-03 (D251 audit coerenza FE↔BE + B269/B270 fix critici + B271 fixture rot.)
+> Last updated: 2026-07-08 (B272 — D251 secondary fixes W1/W3/W5/W6/W8/W9; residui W2/W4/W7 tracciati in Open.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -32,9 +32,16 @@ _Nessun follow-up D239 aperto. Audit conferma "no bug" — 3 possibili miglioram
 
 _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cue_060) sono state mergeate nel catalog._
 
-**D251 follow-ups (P2, non bloccanti)** — dall'audit di coerenza FE↔BE (`docs/audit/D251_fe_be_coherence.md`, §WARNING): W1 `performance.current_level` stale su edit gradi (non PUT-abile); W2 `self_eval` weaknesses senza editor in Settings; W3 `_day_meta` legacy sopravvive ai salvataggi availability (possibile double-count `other_sport`); W4 GoalEditor boulder passa grado Font raw ai benchmark lead-calibrati (verificare convenzione vs onboarding `BOULDER_TO_LEAD`); W5 UX 402 backstop solo su start-new-cycle; W6 onboarding re-entry hardcoda `home_enabled:true`; W7 endpoint orfani (`/api/reports/monthly` mai cablato, `/api/user/recovery-code|recover` morti post-Clerk, `/api/week/test-reminder-response` solo test); W8 campo morto `limitations.has_recent_injury`; W9 tipo TS `UserState` privo di `body`/`bodyweight_kg`/`performance`/etc.
+**D251 follow-ups residui (P2, non bloccanti)** — dall'audit `docs/audit/D251_fe_be_coherence.md` (§WARNING). W1/W3/W5/W6/W8/W9 chiusi da B272 (2026-07-08). Restano:
+- **W2** — `self_eval` weaknesses senza editor in Settings (feature: serve un A-brief; pesa su ogni asse dell'assessment ma è congelato dopo l'onboarding).
+- **W4** — convenzione grado boulder in `goal.target_grade` **contraddittoria by design tra 3 percorsi**: onboarding e start-new-cycle salvano il lead-calibrato (`BOULDER_TO_LEAD`, raw preservato in `target_boulder_grade`); il discipline-switch di `PUT /api/state` (A-NEW-MACRO) salva invece la convenzione Font (docstring `grade_mapping.py`: "Font for boulder"); il GoalEditor manda il Font raw che finisce nei benchmark lead-calibrati di `assessment_v1`. Serve una **decisione di design** (convenzione unica + normalizzazione server-side + eventuale migrazione dati) — NON un quick fix.
+- **W7** — endpoint orfani: `/api/reports/monthly` (endpoint+client mai cablati in UI → decidere: pagina report mensile o rimozione), `/api/user/recovery-code|recover` (morti post-Clerk → candidati a rimozione), `/api/week/test-reminder-response` (solo test). Toccano endpoint count/docs.
 
 ---
+
+## Recently closed (2026-07-08)
+
+- **B272 — D251 secondary fixes (W1, W3, W5, W6, W8, W9)** ✅ (bugfix batch, backend `state.py`/`deps.py`/`onboarding.py` + frontend; branch `brief/B272-d251-secondary-fixes`). **W1 (priorità Daniele):** `PUT /api/state` con patch `assessment.grades` ora **ricostruisce server-side `performance.current_level`** dai grades mergiati (helper condiviso `deps.build_current_level`, estratto da onboarding) — i benchmark di progressione (kilter fallback su `current_level.boulder.worked.grade`) seguono gli edit gradi in Settings invece di restare congelati all'onboarding; rami `sport`/`boulder` sostituiti, `gym_reference` e altre chiavi preservate, `performance` resta non-PUT-abile. **W3:** l'AvailabilityEditor manda `_day_meta: null` a ogni save → purga la chiave legacy che il planner leggeva in doppio con i per-slot `other_sport`. **W5:** `request()` lancia `ApiError` con `status` esplicito; 402 → messaggio friendly dal `detail` backend (tailored B258) su TUTTE le mutazioni gated, non solo start-new-cycle (`classifyApiError` usa `ApiError.status`, regex come fallback). **W6:** onboarding re-entry rispetta `equipment.home_enabled` salvato (prima hardcodava `true`, riabilitando silenziosamente l'home training). **W8:** rimosso il campo morto `limitations.has_recent_injury` (scritto, mai letto). **W9:** tipo TS `UserState` arricchito con `body`/`bodyweight_kg`/`performance`/`preferences`/`baselines`/`working_loads`/etc. +3 test (`TestCurrentLevelSync`). Suite 2297 → 2300.
 
 ## Recently closed (2026-07-03)
 

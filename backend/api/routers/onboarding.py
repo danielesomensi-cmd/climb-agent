@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from backend.api.deps import REPO_ROOT, ensure_monday, get_user_id, invalidate_week_cache, load_state, next_monday, this_monday, save_state
+from backend.api.deps import REPO_ROOT, build_current_level, ensure_monday, get_user_id, invalidate_week_cache, load_state, next_monday, this_monday, save_state
 from backend.api.rate_limit import limiter
 from backend.api.models import OnboardingData, StartWeekRequest
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
@@ -280,10 +280,6 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
                 for lim in data.limitations
             ],
             "details": data.limitations,
-            "has_recent_injury": any(
-                lim.get("severity") in ("active", "severe")
-                for lim in data.limitations
-            ),
         },
         "trips": data.trips,
         "outdoor_spots": [
@@ -296,7 +292,7 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
         ],
         "macrocycle": None,
         "performance": {
-            "current_level": _build_current_level(data.grades),
+            "current_level": build_current_level(data.grades),
         },
         "baselines": {},
         "recent_sessions": [],
@@ -311,24 +307,6 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
         },
     }
     return state
-
-
-def _build_current_level(grades: Dict[str, Any]) -> Dict[str, Any]:
-    """Build performance.current_level from onboarding grades."""
-    level: Dict[str, Any] = {"updated_at": None}
-    if grades.get("lead_max_rp") or grades.get("lead_max_os"):
-        level["sport"] = {}
-        if grades.get("lead_max_rp"):
-            level["sport"]["worked"] = {"grade": grades["lead_max_rp"]}
-        if grades.get("lead_max_os"):
-            level["sport"]["onsight"] = {"grade": grades["lead_max_os"]}
-    if grades.get("boulder_max_rp") or grades.get("boulder_max_os"):
-        level["boulder"] = {}
-        if grades.get("boulder_max_rp"):
-            level["boulder"]["worked"] = {"grade": grades["boulder_max_rp"]}
-        if grades.get("boulder_max_os"):
-            level["boulder"]["onsight"] = {"grade": grades["boulder_max_os"]}
-    return level
 
 
 @router.post("/complete")

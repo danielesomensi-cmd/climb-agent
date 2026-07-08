@@ -166,7 +166,11 @@ export function AvailabilityEditor({
         return slot && (slot.available || slot.preferred_location === "other_sport");
       });
       if (hasActiveSlot) {
-        enriched[day.key] = { ...dayData };
+        // B272: explicitly null legacy _day_meta — the load-time migration
+        // converts it to per-slot other_sport, but deep-merge would keep the
+        // stale key server-side and the planner reads BOTH sources
+        // (double-count risk for pre-migration users).
+        enriched[day.key] = { ...dayData, _day_meta: null };
       }
     }
     onSave(enriched, planningPrefs);
