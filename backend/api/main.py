@@ -19,6 +19,7 @@ from backend.api.routers import (
     assessment,
     body_part_picker,
     catalog,
+    coach,
     custom_session,
     feedback,
     free_session,
@@ -142,6 +143,7 @@ app.include_router(custom_session.router)
 app.include_router(body_part_picker.router)
 app.include_router(mobility.router)
 app.include_router(weather.router)
+app.include_router(coach.router)
 
 # Stripe webhook — registered directly to preserve raw body for signature verification
 app.add_api_route(

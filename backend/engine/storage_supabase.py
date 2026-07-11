@@ -1,7 +1,8 @@
 """Supabase JSONB persistence backend.
 
 Selected when STORAGE_BACKEND=supabase (production on Railway).
-Tables: users, session_logs, outdoor_logs, event_logs, recovery_codes.
+Tables: users, session_logs, outdoor_logs, event_logs, recovery_codes,
+week_archive, coach_messages.
 """
 
 from __future__ import annotations
@@ -366,6 +367,63 @@ def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
 
 
 # ---------------------------------------------------------------------------
+# Coach messages (A-COACH-V1a)
+# ---------------------------------------------------------------------------
+
+def append_coach_message(
+    user_id: Optional[str], role: str, content: str
+) -> Dict[str, Any]:
+    """Insert a coach chat message. Returns the stored row."""
+    uid = _require_user_id(user_id)
+    r = (
+        _sb()
+        .table("coach_messages")
+        .insert({"user_id": uid, "role": role, "content": content})
+        .execute()
+    )
+    if r.data:
+        return r.data[0]
+    return {"role": role, "content": content}
+
+
+def read_coach_messages(
+    user_id: Optional[str],
+    limit: int = 50,
+    before: Optional[str] = None,
+    since: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Read coach messages, newest first (paginate with ``before``)."""
+    uid = _effective_uid(user_id)
+    q = (
+        _sb()
+        .table("coach_messages")
+        .select("id, role, content, created_at")
+        .eq("user_id", uid)
+    )
+    if since:
+        q = q.gte("created_at", since)
+    if before:
+        q = q.lt("created_at", before)
+    r = q.order("created_at", desc=True).limit(max(0, limit)).execute()
+    return r.data or []
+
+
+def count_coach_user_messages_since(user_id: Optional[str], since: str) -> int:
+    """Count user-role coach messages with created_at >= since (rate limit)."""
+    uid = _effective_uid(user_id)
+    r = (
+        _sb()
+        .table("coach_messages")
+        .select("id")
+        .eq("user_id", uid)
+        .eq("role", "user")
+        .gte("created_at", since)
+        .execute()
+    )
+    return len(r.data or [])
+
+
+# ---------------------------------------------------------------------------
 # Event log
 # ---------------------------------------------------------------------------
 
@@ -423,6 +481,7 @@ def delete_user_data(user_id: str) -> None:
     """Remove all data for a user across all tables."""
     uid = _require_user_id(user_id)
     _sb().table("session_logs").delete().eq("user_id", uid).execute()
+    _sb().table("coach_messages").delete().eq("user_id", uid).execute()
     _sb().table("outdoor_logs").delete().eq("user_id", uid).execute()
     _sb().table("event_logs").delete().eq("user_id", uid).execute()
     _sb().table("recovery_codes").delete().eq("user_id", uid).execute()
