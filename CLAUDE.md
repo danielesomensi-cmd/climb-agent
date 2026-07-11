@@ -110,9 +110,9 @@ from backend.engine.planner_v2 import generate_phase_week
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (21 routers)
+  api/               # FastAPI REST API (22 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, plan, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, weather
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-79 endpoints total (77 router + 2 app-level: health check + stripe webhook).
+80 endpoints total (78 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -222,6 +222,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/body-part-picker/preview` | Generate body-part session preview (no persistence) |
 | POST | `/api/body-part-picker/start` | Generate body-part session + insert into week plan |
 | GET | `/api/body-part-picker/estimate` | Lightweight duration estimate for live counter |
+| GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 | GET | `/api/subscription/status` | Current subscription status + trial days remaining |
@@ -234,7 +235,7 @@ user_state.assessment + user_state.goal
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (43):** 12 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
+**Pages (44):** 13 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
 
 - `/today` — Today's sessions, mark done/skipped, post-session feedback
 - `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
@@ -246,6 +247,7 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 - `/settings` — Profile, goals, equipment, spots, regenerate assessment/macrocycle
 - `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
 - `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
+- `/mobility` — Stretching & Mobility pool (guided holds/releases by body region)
 - `/guide` — User guide
 - `/subscribe` — Subscription plans and checkout
 - `/onboarding/*` — 16-step wizard: welcome, install, profile, discipline, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover

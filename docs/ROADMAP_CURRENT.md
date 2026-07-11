@@ -701,8 +701,8 @@ Audit deliverable: `docs/audit/outdoor_audit_D170.md` (2026-04-04) — 13 findin
 
 ### Stretching Circuit add-on
 
-**Status:** Open — design pending | **Effort:** M
-Same architecture as Core Circuit for post-session static stretching (30-60s holds).
+**Status:** ✅ Done 2026-07-11 (A230) | **Effort:** M
+Implementato come **Stretching & Mobility pool** (A230): catalogo dedicato `backend/catalog/mobility/v1/mobility.json` (35 entries, 11 body region, mode `timed_hold`/`untimed_release`), endpoint `GET /api/mobility/pool` (GATE-2 soft warning per stretch avambracci con climbing session planned nello stesso giorno), surface free-session `mobility_stretching` + session_mode `mobility` (load_score sempre 0.0), pagina `/mobility` con runner guidato (L/R sequencing 10s, durata editabile, release senza countdown, cat-cow "slow flow"). v1.1 future: PNF UI, preset bundles, immagini auto-generate, GATE-2 hard suppression.
 
 ### Warmup Circuit add-on
 

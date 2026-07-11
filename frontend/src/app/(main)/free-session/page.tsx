@@ -6,7 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Layers, Target, Repeat, Eye, ArrowLeft,
-  Smartphone, Moon, Box, Route, Flame, Mountain, ChevronDown,
+  Smartphone, Moon, Box, Route, Flame, Mountain, ChevronDown, StretchHorizontal,
 } from "lucide-react";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
@@ -618,6 +618,22 @@ function FreeSessionContent() {
                 <div className="font-semibold">Body Part Training</div>
                 <div className="text-xs text-muted-foreground">
                   Pick body parts → strength workout with warmup & cooldown
+                </div>
+              </div>
+            </button>
+
+            {/* A230: Stretching & Mobility */}
+            <button
+              onClick={() => router.push("/mobility")}
+              className="flex items-center gap-4 rounded-xl border bg-gradient-to-r from-violet-500/20 to-violet-600/5 border-violet-500/30 p-4 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 text-violet-400">
+                <StretchHorizontal className="size-6" />
+              </div>
+              <div>
+                <div className="font-semibold">Stretching & Mobility</div>
+                <div className="text-xs text-muted-foreground">
+                  Guided stretches & releases by body region
                 </div>
               </div>
             </button>

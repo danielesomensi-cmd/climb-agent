@@ -353,7 +353,7 @@ class TestSurfacesEndpoint:
         r = client.get("/api/free-session/surfaces")
         assert r.status_code == 200
         data = r.json()
-        assert len(data["surfaces"]) == 6
+        assert len(data["surfaces"]) == 7  # A230: + mobility_stretching
         ids = {s["id"] for s in data["surfaces"]}
         assert ids == SURFACE_IDS
 

@@ -354,6 +354,16 @@ When you need a strength workout instead of climbing, the **Body Part Training**
 
 The session uses resolver-light prescriptions (sets, reps, rest, loads from your working loads / hangboard baseline when available). Completion updates your working loads but doesn't drive closed-loop progression — this keeps ad-hoc strength days from skewing the long-term plan.
 
+### Stretching & Mobility
+
+The **Stretching & Mobility** card in Free Sessions opens a guided pool of 35 stretches and self-massage releases, organised in 11 body regions (forearms & wrists, hips & glutes, chest, thoracic spine, lats, shoulders, adductors, hip flexors, hamstrings, calves & ankles, spine rotation). It's designed for post-session and rest-day use — not as a warm-up.
+
+- **Releases first** — within each region, pin-and-stretch and foam-roll releases are listed before the static holds: roll first, stretch second.
+- **Timed holds** — each stretch runs with a countdown timer. You can adjust the hold duration before starting. Per-side stretches sequence left → 10s transition → right automatically.
+- **Releases** — self-massage entries show guided coaching text with an open stopwatch instead of a forced countdown: take the time you need, then tap Done.
+- **Forearm warning** — if you still have a climbing session planned today, forearm-flexor stretches show a warning: static stretching of the finger flexors can reduce grip strength for up to an hour. The entries stay available — it's a heads-up, not a block.
+- **No training load** — mobility sessions are logged in your history but always count as zero load: stretching is recovery, and it will never inflate your weekly load numbers.
+
 ---
 
 ## 12. Confirming Next Week's Availability
