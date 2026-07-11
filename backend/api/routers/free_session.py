@@ -143,6 +143,10 @@ def start_session(
         raise HTTPException(status_code=400, detail="preset_id required for template mode")
     if req.session_mode == "circuit" and req.surface != "circuit_core":
         raise HTTPException(status_code=400, detail="circuit mode requires circuit_core surface")
+    if req.session_mode == "mobility" and req.surface != "mobility_stretching":
+        raise HTTPException(status_code=400, detail="mobility mode requires mobility_stretching surface")
+    if req.surface == "mobility_stretching" and req.session_mode != "mobility":
+        raise HTTPException(status_code=400, detail="mobility_stretching surface requires mobility mode")
 
     state = load_state(user_id)
 
@@ -178,8 +182,8 @@ def start_session(
     target_grade = None
     rest_seconds = None
 
-    if req.session_mode == "circuit":
-        # Circuit sessions don't need presets, grades, or rest
+    if req.session_mode in ("circuit", "mobility"):
+        # Circuit/mobility sessions don't need presets, grades, or rest
         pass
     elif req.session_mode == "template" and req.preset_id:
         template_tips = tips.get("template_tips", {}).get(phase_id, {})
@@ -316,6 +320,12 @@ def finish_session(
             load = 0.0
         session["load_score"] = load
         session["summary"] = compute_summary([])
+    elif session.get("session_mode") == "mobility":
+        # A230: stretching is recovery work — it must never inflate weekly load.
+        if req.mobility:
+            session["mobility"] = req.mobility
+        session["load_score"] = 0.0
+        session["summary"] = compute_summary([])
     else:
         # Summary
         climbs = session.get("climbs", [])
@@ -368,6 +378,9 @@ def get_history(
             # day-card can show `circuit.completed_exercises`. Without it
             # the count renders as "0 exercises".
             "circuit": s.get("circuit"),
+            # A230: mobility-mode sessions expose completed stretches the
+            # same way circuit sessions expose completed exercises.
+            "mobility": s.get("mobility"),
         })
 
     return {"sessions": result}

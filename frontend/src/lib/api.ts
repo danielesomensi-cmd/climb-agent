@@ -567,6 +567,10 @@ export const finishFreeSession = (sessionId: string, data: {
     completed_exercises: number;
     exercises_performed: string[];
   };
+  mobility?: {
+    completed_entries: Array<{ id: string; name: string; hold_seconds?: number }>;
+    completed_count: number;
+  };
 }) =>
   request<{
     summary: {
@@ -593,6 +597,49 @@ export const deleteFreeSession = (sessionId: string) =>
 export const getFreeSessionHistory = (date: string) =>
   request<{ sessions: Array<Record<string, unknown>> }>(
     `/api/free-session/history?date=${date}`
+  );
+
+// Mobility & Stretching pool (A230)
+export type MobilityEntry = {
+  id: string;
+  name: string;
+  body_region: string;
+  type: string;
+  mode: "timed_hold" | "untimed_release";
+  unilateral: boolean;
+  hold_seconds_editable: boolean;
+  pnf_capable: boolean;
+  pre_performance_blocked: boolean;
+  ux_flow: boolean;
+  kb_validated: boolean;
+  equipment_required: string[];
+  priority: "high" | "medium" | "low";
+  fatigue_cost: number;
+  stress_tags: Record<string, string>;
+  recency_group: string;
+  image: string | null;
+  prescription_defaults: {
+    sets: number;
+    reps: number | null;
+    work_seconds: number | null;
+    rest_between_reps_seconds: number | null;
+    rest_between_sets_seconds: number | null;
+    notes: string;
+  };
+  description: string;
+  warning?: string; // GATE-2 soft warning, set server-side
+};
+
+export type MobilityRegion = {
+  id: string;
+  label: string;
+  count: number;
+  entries: MobilityEntry[];
+};
+
+export const getMobilityPool = (date?: string) =>
+  request<{ regions: MobilityRegion[]; gate2_active: boolean }>(
+    `/api/mobility/pool${date ? `?date=${date}` : ""}`
   );
 
 // Reports

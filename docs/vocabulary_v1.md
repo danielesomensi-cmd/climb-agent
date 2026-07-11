@@ -1018,6 +1018,7 @@ Allowed values:
 - `template` — user selected a preset (grade target, rest, climb count)
 - `free` — no structure, only phase tip
 - `circuit` — timer-guided exercise circuit
+- `mobility` — guided stretching/release session (A230, requires surface `mobility_stretching`)
 
 ### 6.3 Climb status (boulder)
 
@@ -1087,9 +1088,11 @@ Allowed `surface` values for circuit sessions:
 
 - `circuit_core` — bodyweight core circuit
 
+Non-climbing add-on surfaces (non-circuit):
+- `mobility_stretching` — Stretching & Mobility pool (A230, session_mode `mobility`; superseded the planned `circuit_stretching`)
+
 Future (not in v1):
 - `circuit_warmup` — dynamic warmup circuit
-- `circuit_stretching` — post-session stretching circuit
 - `circuit_cardio` — bodyweight cardio circuit
 
 ### 6.10 Session mode (updated)
@@ -1098,6 +1101,7 @@ Allowed `session_mode` values:
 - `template` — user selected a preset
 - `free` — no structure, only phase tip
 - `circuit` — timer-guided exercise circuit
+- `mobility` — guided stretching/release session (A230)
 - `custom_build` — user-assembled strength session (custom builder A206 or body-part picker A213). Rendered via the same custom-session path; distinguished by `build_kind`.
 
 ### 6.11 Build kind (custom_build discriminator)
@@ -1133,3 +1137,27 @@ Allowed `equipment_mode` values for `/api/body-part-picker/*`:
 - `home` — expands from `state.equipment.home` (implies `weight` when loose weights are present)
 - `gym` — expands from a specific gym's equipment list (requires `gym_id`)
 - `all` — union of all known equipment keys (used for default UI counts before the user picks)
+
+### 6.14 Mobility pool vocabulary (A230)
+
+Catalog: `backend/catalog/mobility/v1/mobility.json` — separate from `exercises.json` by design; never reachable by the climbing-session resolver.
+
+`body_region` (11 values, picker sort order):
+`forearms_wrists` → `hips_glutes` → `chest_anterior_shoulder` → `thoracic_spine` → `hip_flexors_quads` → `adductors_groin` → `lats` → `shoulders_scapula` → `hamstrings` → `calves_ankles` → `spine_rotation_obliques`
+
+`mode`:
+- `timed_hold` — countdown from `prescription_defaults.work_seconds` (editable when `hold_seconds_editable`)
+- `untimed_release` — guided self-massage/pin-and-stretch, open stopwatch, no forced countdown
+
+`type` (informational): `static` | `release` | `flow`
+
+`priority`: `high` | `medium` | `low` (within-region sort: `untimed_release` first, then holds by priority)
+
+Flags:
+- `unilateral` — per-side entry; mandates `rest_between_reps_seconds: 10` (L→R transition)
+- `pre_performance_blocked` — GATE-2 soft warning when a session is still planned the same day (never suppressed in v1)
+- `ux_flow` — continuous breath-paced movement ("slow flow" copy), not a fixed hold
+- `pnf_capable` — PNF-suitable (flag only in v1, no PNF UI)
+- `kb_validated` — `false` = pending literature validation at next KB refresh
+
+`recency_group` convention: `mobility_<body_region>`.

@@ -112,7 +112,7 @@ backend/
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
   api/               # FastAPI REST API (21 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, plan, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, weather
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -222,6 +222,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/body-part-picker/preview` | Generate body-part session preview (no persistence) |
 | POST | `/api/body-part-picker/start` | Generate body-part session + insert into week plan |
 | GET | `/api/body-part-picker/estimate` | Lightweight duration estimate for live counter |
+| GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 | GET | `/api/subscription/status` | Current subscription status + trial days remaining |
