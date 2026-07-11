@@ -633,7 +633,7 @@ function FreeSessionContent() {
               <div>
                 <div className="font-semibold">Stretching & Mobility</div>
                 <div className="text-xs text-muted-foreground">
-                  Guided stretches & releases by body region
+                  Pick regions & time → guided stretch flow with timer
                 </div>
               </div>
             </button>

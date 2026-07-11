@@ -315,6 +315,107 @@ class TestGate2:
         assert r.json()["gate2_active"] is False
 
 
+# ── A231: /api/mobility/generate (guided flow) ────────────────────────────
+
+
+class TestGenerateFlow:
+    def setup_method(self):
+        _reset()
+
+    def _gen(self, **params):
+        base = {"regions": "hips_glutes", "minutes": 15, "pace": "standard", "rest": 10}
+        base.update(params)
+        return client.get("/api/mobility/generate", params=base)
+
+    def test_shape(self):
+        r = self._gen()
+        assert r.status_code == 200
+        data = r.json()
+        assert data["entry_count"] >= 1
+        assert data["total_seconds"] > 0
+        assert len(data["steps"]) > 0
+        for s in data["steps"]:
+            assert s["seconds"] >= 10
+            assert s["kind"] in ("hold", "release", "flow")
+            assert s["side"] in ("left", "right", None)
+
+    def test_fits_time_budget(self):
+        for minutes in (5, 10, 20, 45):
+            r = self._gen(regions="hips_glutes,hamstrings,lats", minutes=minutes)
+            data = r.json()
+            assert data["total_seconds"] <= minutes * 60, minutes
+            assert data["entry_count"] >= 1, minutes
+
+    def test_longer_budget_more_entries(self):
+        short = self._gen(minutes=5).json()["entry_count"]
+        long_ = self._gen(minutes=45).json()["entry_count"]
+        assert long_ >= short
+
+    def test_pace_scales_holds(self):
+        quick = self._gen(pace="quick").json()
+        standard = self._gen(pace="standard").json()
+        deep = self._gen(pace="deep").json()
+        # Compare the same entry's hold across paces
+        def hold_of(data, entry_id):
+            return next(s["seconds"] for s in data["steps"] if s["entry_id"] == entry_id)
+        common = set(quick["entry_ids"]) & set(standard["entry_ids"]) & set(deep["entry_ids"])
+        assert common
+        eid = sorted(common)[0]
+        assert hold_of(quick, eid) < hold_of(standard, eid) < hold_of(deep, eid)
+
+    def test_unilateral_entries_have_left_right_steps(self):
+        data = self._gen(regions="hips_glutes", minutes=45).json()
+        piriformis = [s for s in data["steps"] if s["entry_id"] == "stretch_piriformis"]
+        assert [s["side"] for s in piriformis] == ["left", "right"]
+
+    def test_round_robin_covers_all_selected_regions(self):
+        data = self._gen(regions="forearms_wrists,hips_glutes,hamstrings", minutes=15).json()
+        regions_hit = {s["body_region"] for s in data["steps"]}
+        assert regions_hit == {"forearms_wrists", "hips_glutes", "hamstrings"}
+
+    def test_deterministic(self):
+        a = self._gen(regions="lats,hamstrings", minutes=20).json()
+        b = self._gen(regions="lats,hamstrings", minutes=20).json()
+        assert a == b
+
+    def test_releases_first_within_region(self):
+        data = self._gen(regions="thoracic_spine", minutes=45).json()
+        kinds = [s["kind"] for s in data["steps"]]
+        first_hold = kinds.index("hold") if "hold" in kinds else len(kinds)
+        assert "release" not in kinds[first_hold:]
+
+    def test_gate2_excludes_blocked_and_reports(self):
+        _seed_week_plan({
+            "2026-07-08": [{
+                "session_id": "strength_long",
+                "slot": "evening",
+                "status": "planned",
+            }],
+        })
+        data = self._gen(regions="forearms_wrists", minutes=45, date="2026-07-08").json()
+        assert data["gate2_active"] is True
+        assert "stretch_finger_flexor" not in data["entry_ids"]
+        assert "stretch_finger_isolation" not in data["entry_ids"]
+        assert sorted(data["excluded_pre_performance"]) == [
+            "Finger Flexor Stretch",
+            "Finger Isolation Stretch",
+        ]
+
+    def test_no_gate2_without_planned_session(self):
+        data = self._gen(regions="forearms_wrists", minutes=45, date="2026-07-08").json()
+        assert data["gate2_active"] is False
+        assert "stretch_finger_flexor" in data["entry_ids"]
+
+    def test_validation_errors(self):
+        assert self._gen(regions="").status_code == 422
+        assert self._gen(regions="not_a_region").status_code == 422
+        assert self._gen(minutes=2).status_code == 422
+        assert self._gen(minutes=120).status_code == 422
+        assert self._gen(pace="turbo").status_code == 422
+        assert self._gen(rest=2).status_code == 422
+        assert self._gen(date="nope").status_code == 422
+
+
 # ── Free-session lifecycle (surface + mode wiring) ────────────────────────
 
 
