@@ -870,3 +870,26 @@ export const getWeather = (lat: number, lon: number, date?: string) => {
   if (date) sp.set("date", date);
   return request<Weather>(`/api/weather?${sp.toString()}`);
 };
+
+// A-COACH-V1a — LLM Coach (conversational layer, suggest-only)
+export interface CoachMessage {
+  id?: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at?: string;
+}
+
+export const coachChat = (message: string) =>
+  request<{ reply: string }>("/api/coach/chat", {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+
+export const getCoachHistory = (limit = 50, before?: string) => {
+  const sp = new URLSearchParams();
+  sp.set("limit", String(limit));
+  if (before) sp.set("before", before);
+  return request<{ messages: CoachMessage[]; has_more: boolean }>(
+    `/api/coach/history?${sp.toString()}`
+  );
+};

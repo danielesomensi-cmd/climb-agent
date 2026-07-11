@@ -11,8 +11,10 @@ import json
 import os
 import shutil
 import tempfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from uuid import uuid4
 
 
 # ---------------------------------------------------------------------------
@@ -369,6 +371,80 @@ def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
         os.remove(path)
         removed += 1
     return removed
+
+
+# ---------------------------------------------------------------------------
+# Coach messages (A-COACH-V1a) — JSONL, one file per user
+# ---------------------------------------------------------------------------
+
+def _coach_messages_path(user_id: Optional[str]) -> str:
+    return os.path.join(_log_dir(user_id), "coach_messages.jsonl")
+
+
+def _read_all_coach_messages(user_id: Optional[str]) -> List[Dict[str, Any]]:
+    """Read every coach message row, sorted by created_at ascending."""
+    path = _coach_messages_path(user_id)
+    rows: List[Dict[str, Any]] = []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return []
+    rows.sort(key=lambda r: r.get("created_at", ""))
+    return rows
+
+
+def append_coach_message(
+    user_id: Optional[str], role: str, content: str
+) -> Dict[str, Any]:
+    """Append a coach chat message. Returns the stored row."""
+    row = {
+        "id": uuid4().hex,
+        "role": role,
+        "content": content,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    log_dir = _log_dir(user_id)
+    os.makedirs(log_dir, exist_ok=True)
+    with open(_coach_messages_path(user_id), "a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    return row
+
+
+def read_coach_messages(
+    user_id: Optional[str],
+    limit: int = 50,
+    before: Optional[str] = None,
+    since: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Read coach messages, newest first.
+
+    ``before``/``since`` filter on the ISO ``created_at`` timestamp
+    (exclusive / inclusive respectively).
+    """
+    rows = _read_all_coach_messages(user_id)
+    if since:
+        rows = [r for r in rows if r.get("created_at", "") >= since]
+    if before:
+        rows = [r for r in rows if r.get("created_at", "") < before]
+    rows.reverse()
+    return rows[: max(0, limit)]
+
+
+def count_coach_user_messages_since(user_id: Optional[str], since: str) -> int:
+    """Count user-role coach messages with created_at >= since (rate limit)."""
+    return sum(
+        1
+        for r in _read_all_coach_messages(user_id)
+        if r.get("role") == "user" and r.get("created_at", "") >= since
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -7,3 +7,4 @@ supabase
 PyJWT[crypto]
 stripe==15.0.0  # B259: pinned — StripeObject API changes between majors broke the webhook handler (event.get); do not unpin without re-testing stripe_webhook.py
 slowapi
+anthropic==0.116.0  # A-COACH-V1a: pinned — SDK surface moves fast (stripe/B259 lesson); do not unpin without re-testing backend/coach/llm_client.py
