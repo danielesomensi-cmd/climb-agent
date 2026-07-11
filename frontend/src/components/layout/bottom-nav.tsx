@@ -40,6 +40,12 @@ const tabs = [
 
 const moreItems = [
   {
+    href: "/coach",
+    label: "Coach",
+    // Chat bubble icon
+    icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
+  },
+  {
     href: "/tabata",
     label: "Tabata",
     icon: "M12 6v6l4 2m-4-8a8 8 0 110 16 8 8 0 010-16zm0-4v2m0-2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1z",
