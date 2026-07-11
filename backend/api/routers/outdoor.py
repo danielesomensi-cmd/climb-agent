@@ -38,6 +38,104 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/outdoor", tags=["outdoor"])
 
 
+def _sync_plan_after_outdoor_log(
+    state: Dict[str, Any], user_id: Optional[str], entry: Dict[str, Any],
+    load_score: int,
+) -> bool:
+    """Close the closed-loop on the week plan after an outdoor log (B273).
+
+    The active-session finish flow (A225) wrote the immutable log but never
+    marked the plan day done — that side effect lived only in the frontend
+    form flow (today/week → applyEvents complete_outdoor), so routes/load/
+    ripple were silently skipped. The backend that records the outcome now
+    also closes it, via the same replanner events the legacy flow uses.
+
+    Best-effort by design: the outdoor log is the primary record and is
+    already persisted when this runs. Returns True iff the plan day was
+    marked done. Skips (False) when: plan paused (A223), date in a past week
+    (B257 immutability), no hot plan for that Monday, or day not in the plan.
+    """
+    from backend.api.deps import ensure_monday, is_past_week, is_plan_paused
+    from backend.api.routers.replanner import _auto_resolve, persist_week_plan
+    from backend.engine.replanner_v1 import apply_events
+
+    date = entry.get("date") or ""
+    if not date:
+        return False
+    if is_plan_paused(state):
+        logger.info("B273: plan paused — outdoor log %s saved without plan sync", date)
+        return False
+    monday = ensure_monday(date)
+    if is_past_week(monday):
+        logger.info("B273: %s is in a past week — plan untouched (immutability)", date)
+        return False
+
+    plan = (state.get("week_plans") or {}).get(monday)
+    if not plan:
+        cwp = state.get("current_week_plan")
+        if cwp and cwp.get("start_date") == monday:
+            plan = cwp
+    if not plan:
+        logger.info("B273: no hot week plan for %s — nothing to sync", monday)
+        return False
+
+    day = next(
+        (d for w in plan.get("weeks") or [] for d in w.get("days") or []
+         if d.get("date") == date),
+        None,
+    )
+    if day is None:
+        return False
+
+    events: List[Dict[str, Any]] = []
+    if not day.get("outdoor_spot_name"):
+        # Spontaneous outdoor day (not planned): register it first so
+        # complete_outdoor has a target — same as the replan add_outdoor path.
+        add_ev: Dict[str, Any] = {
+            "event_type": "add_outdoor",
+            "date": date,
+            "spot_name": entry.get("spot_name") or "Outdoor",
+            "discipline": entry.get("discipline") or "both",
+        }
+        if entry.get("spot_id"):
+            add_ev["spot_id"] = entry["spot_id"]
+        events.append(add_ev)
+    events.append({
+        "event_type": "complete_outdoor",
+        "date": date,
+        "outdoor_load_score": load_score,
+    })
+
+    updated = apply_events(
+        plan,
+        events,
+        availability=state.get("availability"),
+        planning_prefs=state.get("planning_prefs"),
+        gyms=(state.get("equipment") or {}).get("gyms"),
+        custom_sessions=state.get("custom_sessions") or [],
+    )
+
+    # B116 bookkeeping — same shape the replanner events endpoint writes.
+    u_day = next(
+        (d for w in updated.get("weeks", []) for d in w.get("days", [])
+         if d.get("date") == date),
+        None,
+    )
+    state.setdefault("outdoor_log", []).append({
+        "date": date,
+        "spot_name": (u_day or {}).get("outdoor_spot_name", entry.get("spot_name", "")),
+        "spot_id": (u_day or {}).get("outdoor_spot_id", entry.get("spot_id", "")),
+        "discipline": (u_day or {}).get("outdoor_discipline", entry.get("discipline", "both")),
+        "load_score": load_score,
+        "completed_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    persist_week_plan(updated, state, user_id)
+    # Ripple may have swapped next-day sessions with unresolved replacements.
+    _auto_resolve(updated, state, user_id)
+    return True
+
+
 # ── Spots CRUD ──────────────────────────────────────────────────────────
 
 @router.get("/spots")
@@ -445,6 +543,18 @@ def finish_outdoor_session(
     ]
     save_state(state, user_id)
 
+    load_score = compute_outdoor_load_score(entry)
+
+    # B273: close the loop on the week plan (status done + load + ripple) —
+    # best-effort, the log above is the primary record and is already saved.
+    plan_synced = False
+    try:
+        plan_synced = _sync_plan_after_outdoor_log(state, user_id, entry, load_score)
+    except Exception:
+        logger.exception(
+            "B273: plan sync after outdoor finish failed — log saved, plan untouched"
+        )
+
     return {
         "status": "done",
         "date": entry["date"],
@@ -452,7 +562,8 @@ def finish_outdoor_session(
         "duration_capped": dur["capped"],
         "duration_raw_minutes": dur["raw_minutes"],
         "duration_source": dur["source"],
-        "load_score": compute_outdoor_load_score(entry),
+        "load_score": load_score,
+        "plan_synced": plan_synced,
     }
 
 

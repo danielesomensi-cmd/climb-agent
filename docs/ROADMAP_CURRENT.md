@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-08 (B272 — D251 secondary fixes W1/W3/W5/W6/W8/W9; residui W2/W4/W7 tracciati in Open.)
+> Last updated: 2026-07-11 (B273 — outdoor finish chiude il loop sul week plan; A-COACH-V1a code merged, smoke Phase 4 pending.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -38,6 +38,10 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 - **W7** — endpoint orfani: `/api/reports/monthly` (endpoint+client mai cablati in UI → decidere: pagina report mensile o rimozione), `/api/user/recovery-code|recover` (morti post-Clerk → candidati a rimozione), `/api/week/test-reminder-response` (solo test). Toccano endpoint count/docs.
 
 ---
+
+## Recently closed (2026-07-11)
+
+- **B273 — Outdoor active-session finish non chiudeva il loop sul week plan** ✅ (bugfix, ALTO — `backend/api/routers/outdoor.py` only; `replanner_v1.py` NON toccato, riusata la sua API `apply_events`). **Bug (segnalato da Daniele):** il flusso sessione attiva (`/outdoor/[date]` → `POST /api/outdoor/session/{id}/finish`, A225) scriveva il log immutabile ma non marcava il giorno del plan → in /today//week `outdoor_session_status` restava `planned`, quindi elenco vie mai mostrato, `outdoor_load_score` assente, **ripple mai applicato**, weekly report col giorno non completato. Il side effect (`complete_outdoor`) viveva solo client-side nel flusso form legacy (today/week → applyEvents). **Fix:** `finish` ora chiude il loop server-side con gli stessi eventi replanner (`add_outdoor` di fallback per giorni non pianificati + `complete_outdoor` con load score), bookkeeping B116 (`state.outdoor_log`), `persist_week_plan` + `_auto_resolve` (il ripple può inserire sessioni sostitutive da risolvere). Best-effort: guardie A223 (plan in pausa → skip), B257 (settimana passata → plan immutabile), nessun plan hot → skip; il log resta il record primario, mai bloccato da errori di sync (`plan_synced` in response). +11 test (`test_b273_outdoor_finish_plan_sync`: done+load, add_outdoor fallback, B116, settimana passata intatta, pausa, no-plan, sync-failure isolato, ripple high-load, no-ripple low-load, done sessions intoccabili B120). Suite 2368 → 2379. Backend-only → push diretto main.
 
 ## Recently closed (2026-07-08)
 
