@@ -153,6 +153,22 @@ def _session_status(sess: Dict[str, Any]) -> str:
     return str(sess.get("status") or "planned")
 
 
+def _plan_days(plan: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Extract the day list from a week plan.
+
+    The planner stores days under ``plan["weeks"][0]["days"]``; some legacy /
+    test fixtures use a flat ``plan["days"]``. Support both.
+    """
+    if not plan:
+        return []
+    if plan.get("days"):
+        return plan["days"]
+    weeks = plan.get("weeks") or []
+    if weeks and isinstance(weeks[0], dict):
+        return weeks[0].get("days") or []
+    return []
+
+
 def _week_section(
     state: Dict[str, Any], user_id: Optional[str], today_iso: str
 ) -> str:
@@ -161,11 +177,12 @@ def _week_section(
     plan = read_week_plan(state, user_id, this_monday()) or state.get(
         "current_week_plan"
     )
+    days = _plan_days(plan)
     lines = ["## Current week plan"]
-    if not plan or not plan.get("days"):
+    if not days:
         lines.append("- No week plan generated for the current week.")
         return "\n".join(lines)
-    for day in plan.get("days") or []:
+    for day in days:
         d = day.get("date", "")
         marker = " (TODAY)" if d == today_iso else ""
         sessions = day.get("sessions") or []
@@ -190,7 +207,7 @@ def _today_section(
     )
     lines = ["## Today's session detail"]
     day = None
-    for d in (plan or {}).get("days") or []:
+    for d in _plan_days(plan):
         if d.get("date") == today_iso:
             day = d
             break
@@ -218,30 +235,56 @@ def _today_section(
     return "\n".join(lines)
 
 
-def _logs_section(user_id: Optional[str], today: date) -> List[str]:
+def _logs_section(
+    state: Dict[str, Any], user_id: Optional[str], today: date
+) -> List[str]:
     """Last-14-days log summary, one line per entry (oldest first).
 
-    Returned as a list so the budget guard can drop oldest lines first.
+    Sources: state["session_completion_log"] (indoor done/skipped, enriched
+    with feedback_log difficulty + duration), state["free_sessions"], and the
+    outdoor logs from storage. Returned as a list so the budget guard can
+    drop oldest lines first.
     """
     from backend.engine import storage
 
     since = (today - timedelta(days=14)).isoformat()
     lines: List[str] = []
-    try:
-        for entry in storage.read_session_logs(user_id, since=since):
-            sid = entry.get("session_id") or "session"
-            status = entry.get("status") or "done"
-            fb = ((entry.get("actual") or {}).get("session_feedback")
-                  or entry.get("session_feedback") or "")
-            dur = entry.get("session_duration_seconds")
-            bits = [f"{entry.get('date')}: {sid} ({status})"]
-            if fb:
-                bits.append(f"feedback: {fb}")
-            if dur:
-                bits.append(f"duration: {int(dur) // 60} min")
-            lines.append("- " + ", ".join(bits))
-    except Exception:
-        logger.exception("coach: failed to read session logs")
+
+    fb_index: Dict[Any, Dict[str, Any]] = {
+        (e.get("date"), e.get("session_id")): e
+        for e in state.get("feedback_log") or []
+    }
+    for entry in state.get("session_completion_log") or []:
+        d = entry.get("date") or ""
+        if d < since:
+            continue
+        sid = entry.get("session_id") or "session"
+        bits = [f"{d}: {sid} ({entry.get('status') or 'done'})"]
+        fb = fb_index.get((d, sid))
+        if fb:
+            if fb.get("difficulty"):
+                bits.append(f"felt: {fb['difficulty']}")
+            if fb.get("session_duration_seconds"):
+                bits.append(
+                    f"duration: {int(fb['session_duration_seconds']) // 60} min"
+                )
+        lines.append("- " + ", ".join(bits))
+
+    for entry in state.get("free_sessions") or []:
+        d = entry.get("date") or ""
+        if d < since:
+            continue
+        climbs = entry.get("climbs") or []
+        bits = [
+            f"{d}: free session ({entry.get('session_mode') or 'free'}, "
+            f"{entry.get('surface') or '?'})"
+        ]
+        if climbs:
+            grades = [c.get("grade") for c in climbs
+                      if isinstance(c, dict) and c.get("grade")]
+            bits.append(f"{len(climbs)} climbs"
+                        + (f": {', '.join(map(str, grades[:8]))}" if grades else ""))
+        lines.append("- " + ", ".join(bits))
     try:
         for entry in storage.read_outdoor_logs(user_id, since_date=since):
             routes = entry.get("routes") or entry.get("climbs") or []
@@ -291,7 +334,7 @@ def build_user_context(
     if include_week_detail:
         sections.append(_week_section(state, user_id, today_iso))
         sections.append(_today_section(state, user_id, today_iso))
-    log_lines = _logs_section(user_id, today)
+    log_lines = _logs_section(state, user_id, today)
     if max_log_lines is not None and len(log_lines) > max_log_lines:
         log_lines = log_lines[-max_log_lines:]
     sections.append(

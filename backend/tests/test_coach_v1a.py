@@ -123,6 +123,38 @@ class TestPromptBuilder:
         # But core context is still there.
         assert "## Goal & plan position" in dynamic
 
+    def test_plan_days_supports_both_week_plan_shapes(self):
+        flat = {"days": [{"date": "2026-07-06"}]}
+        nested = {"weeks": [{"days": [{"date": "2026-07-06"}]}]}
+        assert prompt_builder._plan_days(flat) == [{"date": "2026-07-06"}]
+        assert prompt_builder._plan_days(nested) == [{"date": "2026-07-06"}]
+        assert prompt_builder._plan_days(None) == []
+        assert prompt_builder._plan_days({}) == []
+
+    def test_week_section_renders_planner_shape(self):
+        from datetime import date as _date
+        from backend.api.deps import this_monday
+        monday = this_monday()
+        state = deps.load_state(None)
+        state["week_plans"] = {
+            monday: {
+                "weeks": [{
+                    "days": [{
+                        "date": _date.today().isoformat(),
+                        "weekday": "fri",
+                        "sessions": [{
+                            "session_id": "power_endurance_short",
+                            "status": "planned",
+                            "location": "gym",
+                        }],
+                    }],
+                }],
+            }
+        }
+        ctx = prompt_builder.build_user_context(state, None)
+        assert "power_endurance_short [planned, gym]" in ctx
+        assert "(TODAY)" in ctx
+
     def test_build_system_prompt_joins_blocks(self):
         prompt = prompt_builder.build_system_prompt(None, "periodization")
         assert "Always respond in English" in prompt
