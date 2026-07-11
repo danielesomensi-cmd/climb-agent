@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-80 endpoints total (78 router + 2 app-level: health check + stripe webhook).
+81 endpoints total (79 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -223,6 +223,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/body-part-picker/start` | Generate body-part session + insert into week plan |
 | GET | `/api/body-part-picker/estimate` | Lightweight duration estimate for live counter |
 | GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
+| GET | `/api/mobility/generate` | Deterministic guided stretch flow (regions + minutes + pace + rest) |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 | GET | `/api/subscription/status` | Current subscription status + trial days remaining |
@@ -247,7 +248,7 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 - `/settings` — Profile, goals, equipment, spots, regenerate assessment/macrocycle
 - `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
 - `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
-- `/mobility` — Stretching & Mobility pool (guided holds/releases by body region)
+- `/mobility` — Stretching & Mobility guided flow (multi-region setup → auto-advancing timer, Core Circuit UX)
 - `/guide` — User guide
 - `/subscribe` — Subscription plans and checkout
 - `/onboarding/*` — 16-step wizard: welcome, install, profile, discipline, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover

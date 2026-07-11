@@ -642,6 +642,48 @@ export const getMobilityPool = (date?: string) =>
     `/api/mobility/pool${date ? `?date=${date}` : ""}`
   );
 
+// A231: guided flow — the system picks the stretches
+export type MobilityFlowStep = {
+  entry_id: string;
+  name: string;
+  body_region: string;
+  side: "left" | "right" | null;
+  set: number;
+  set_count: number;
+  seconds: number;
+  kind: "hold" | "release" | "flow";
+  cue: string;
+  description: string;
+};
+
+export type MobilityFlowPlan = {
+  steps: MobilityFlowStep[];
+  entry_count: number;
+  entry_ids: string[];
+  total_seconds: number;
+  rest_seconds: number;
+  pace: string;
+  gate2_active: boolean;
+  excluded_pre_performance: string[];
+};
+
+export const getMobilityFlow = (params: {
+  regions: string[];
+  minutes: number;
+  pace: string;
+  rest: number;
+  date?: string;
+}) => {
+  const q = new URLSearchParams({
+    regions: params.regions.join(","),
+    minutes: String(params.minutes),
+    pace: params.pace,
+    rest: String(params.rest),
+  });
+  if (params.date) q.set("date", params.date);
+  return request<MobilityFlowPlan>(`/api/mobility/generate?${q.toString()}`);
+};
+
 // Reports
 export const getWeeklyReport = (weekStart: string) =>
   request<WeeklyReport>(`/api/reports/weekly?week_start=${weekStart}`);

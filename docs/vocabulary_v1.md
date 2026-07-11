@@ -1155,9 +1155,15 @@ Catalog: `backend/catalog/mobility/v1/mobility.json` — separate from `exercise
 
 Flags:
 - `unilateral` — per-side entry; mandates `rest_between_reps_seconds: 10` (L→R transition)
-- `pre_performance_blocked` — GATE-2 soft warning when a session is still planned the same day (never suppressed in v1)
+- `pre_performance_blocked` — GATE-2: soft warning in `/pool`; **excluded** from `/generate` flows when a session is still planned the same day (when the system picks, it picks safely — A231)
 - `ux_flow` — continuous breath-paced movement ("slow flow" copy), not a fixed hold
 - `pnf_capable` — PNF-suitable (flag only in v1, no PNF UI)
 - `kb_validated` — `false` = pending literature validation at next KB refresh
 
 `recency_group` convention: `mobility_<body_region>`.
+
+Guided flow generation (`/api/mobility/generate`, A231):
+- `pace`: `quick` (holds ×0.7) | `standard` (×1.0) | `deep` (×1.4); holds rounded to 5s, min 10s
+- `minutes`: 5–45 (hard fit — total never exceeds the budget); `rest`: 5–30s between steps
+- Selection: round-robin by rank across selected regions (picker order), each region's list pre-sorted releases-first then priority — deterministic, same inputs → same flow
+- `untimed_release` entries get a timed slot (45s base × pace) inside generated flows; the runner lets the user skip ahead early

@@ -356,12 +356,11 @@ The session uses resolver-light prescriptions (sets, reps, rest, loads from your
 
 ### Stretching & Mobility
 
-The **Stretching & Mobility** card in Free Sessions opens a guided pool of 35 stretches and self-massage releases, organised in 11 body regions (forearms & wrists, hips & glutes, chest, thoracic spine, lats, shoulders, adductors, hip flexors, hamstrings, calves & ankles, spine rotation). It's designed for post-session and rest-day use — not as a warm-up.
+The **Stretching & Mobility** card in Free Sessions works like the Core Circuit: you set the parameters, the app builds and runs the session for you. It draws from a pool of 35 stretches and self-massage releases across 11 body regions, and is designed for post-session and rest-day use — not as a warm-up.
 
-- **Releases first** — within each region, pin-and-stretch and foam-roll releases are listed before the static holds: roll first, stretch second.
-- **Timed holds** — each stretch runs with a countdown timer. You can adjust the hold duration before starting. Per-side stretches sequence left → 10s transition → right automatically.
-- **Releases** — self-massage entries show guided coaching text with an open stopwatch instead of a forced countdown: take the time you need, then tap Done.
-- **Forearm warning** — if you still have a climbing session planned today, forearm-flexor stretches show a warning: static stretching of the finger flexors can reduce grip strength for up to an hour. The entries stay available — it's a heads-up, not a block.
+- **Setup** — tap the body regions you want to work on (as many as you like), set the total duration (5–45 min), the pace (Quick / Standard / Deep — how long each hold lasts) and the rest between steps. A live counter shows how many stretches fit your time.
+- **Guided flow** — the app picks the stretches (releases first — roll first, stretch second — then holds by priority, balanced across your selected regions) and runs them in a fullscreen auto-advancing timer with sound cues and voice prompts, exactly like the Core Circuit. Per-side stretches sequence left → switch → right automatically. Use the arrows to skip or redo a step, tap anywhere to pause.
+- **Forearm protection** — if you still have a climbing session planned today, forearm-flexor stretches are automatically left out of the flow (static finger-flexor stretching can reduce grip strength for up to an hour). The setup screen tells you what was skipped and why.
 - **No training load** — mobility sessions are logged in your history but always count as zero load: stretching is recovery, and it will never inflate your weekly load numbers.
 
 ---
