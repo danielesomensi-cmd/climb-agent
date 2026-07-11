@@ -110,9 +110,9 @@ from backend.engine.planner_v2 import generate_phase_week
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (22 routers)
+  api/               # FastAPI REST API (23 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, plan, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-81 endpoints total (79 router + 2 app-level: health check + stripe webhook).
+83 endpoints total (81 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -224,6 +224,8 @@ user_state.assessment + user_state.goal
 | GET | `/api/body-part-picker/estimate` | Lightweight duration estimate for live counter |
 | GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
 | GET | `/api/mobility/generate` | Deterministic guided stretch flow (regions + minutes + pace + rest) |
+| POST | `/api/coach/chat` | LLM Coach chat turn (subscription-gated, 30 msg/day, suggest-only) |
+| GET | `/api/coach/history` | Coach chat history (paginated, `limit` + `before` cursor) |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 | GET | `/api/subscription/status` | Current subscription status + trial days remaining |
@@ -236,7 +238,7 @@ user_state.assessment + user_state.goal
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (44):** 13 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
+**Pages (45):** 14 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
 
 - `/today` — Today's sessions, mark done/skipped, post-session feedback
 - `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
@@ -249,6 +251,7 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 - `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
 - `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
 - `/mobility` — Stretching & Mobility guided flow (multi-region setup → auto-advancing timer, Core Circuit UX)
+- `/coach` — LLM Coach chat (plan-aware, KB-grounded, suggest-only; 30 msg/day)
 - `/guide` — User guide
 - `/subscribe` — Subscription plans and checkout
 - `/onboarding/*` — 16-step wizard: welcome, install, profile, discipline, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover
@@ -293,6 +296,8 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
   | TELEGRAM_BOT_TOKEN | Bot token (@BotFather) for founder alerts. Unset → `notify()` is a silent no-op (A222). |
   | TELEGRAM_CHAT_ID | Destination chat id for founder alerts (new onboarding / trial started). Unset → no-op. |
   | OPENWEATHER_API_KEY | OpenWeatherMap free-tier key for `/api/weather` (A224). Unset → endpoint returns 503 and the `/today` weather card hides gracefully. Commercial use requires visible OpenWeather attribution. |
+  | ANTHROPIC_API_KEY | Anthropic API key for the LLM Coach (A-COACH-V1a). Unset → `/api/coach/chat` fails LOUD with 500 `coach_not_configured` (never silent, never commit). |
+  | COACH_MODEL | Coach model id (default `claude-sonnet-4-6`). Swap here for provider/model changes — no code change needed. |
 
 ### Clerk user lookup
 
