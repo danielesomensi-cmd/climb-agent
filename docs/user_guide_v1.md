@@ -474,6 +474,13 @@ The timer shows total time and intervals computed in real-time. During execution
 
 The **Coach** (in the More menu, or from the card on Today) is a conversational training assistant that knows your plan and your history: your current phase and week, your assessment profile, your test baselines and current working loads, your recent sessions and outdoor logs, and your planned outdoor days and trips. It replies in the language you write in.
 
+It also sees **real weather** (OpenWeatherMap): current conditions at your location (if you allow location access on the Coach page) and the midday forecast for your planned outdoor days in the next 5 days — so "what conditions will I find at the crag on Sunday?" gets a real answer, with friction advice.
+
+Two ways to make it more personal:
+
+- **Notes for your Coach** (Settings): anything it should always keep in mind — fears, schedule constraints, personal goals. It factors them into every answer.
+- **Suggested questions**: tap a chip above the message box — they adapt to your week (outdoor day coming up, today's session, current phase).
+
 **What it's good at:**
 
 - "Where am I in my plan? How is it going?"
