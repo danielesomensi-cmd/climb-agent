@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-11 (B273 — outdoor finish chiude il loop sul week plan; A-COACH-V1a code merged, smoke Phase 4 pending.)
+> Last updated: 2026-07-12 (A-COACH-V1a CHIUSO — smoke Phase 4 passato 12/12, ANTHROPIC_API_KEY su Railway, coach LIVE in produzione.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -38,6 +38,10 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 - **W7** — endpoint orfani: `/api/reports/monthly` (endpoint+client mai cablati in UI → decidere: pagina report mensile o rimozione), `/api/user/recovery-code|recover` (morti post-Clerk → candidati a rimozione), `/api/week/test-reminder-response` (solo test). Toccano endpoint count/docs.
 
 ---
+
+## Recently closed (2026-07-12)
+
+- **A-COACH-V1a — LLM Coach v1 (chat + KB grounding + plan awareness)** ✅ **CHIUSO — coach LIVE in produzione.** Phase 4 smoke validation eseguita (2026-07-12): 9 domande ufficiali (6 hard-fail audit §6.1 + 3 UC del brief) + 3 custom di Daniele (riepilogo settimana, alimentazione rest-day, adattamento caldo 30°C+), tutte contro l'endpoint locale con stato prod fresco. **Esito: 12/12 risposte valide, firewall D-ID clean su tutte, verdetto Daniele positivo.** Highlights: Q-13/Q-14 stop+referral corretti senza diagnosi; Q-27 ha rilevato la contraddizione col profilo attivo e chiesto chiarimenti; Q-28 rifiuto weight-loss con RED-S e redirect a dietista. Finding minore accettato da Daniele: ~6/8 risposte in inglese a domande italiane (language matching L1 rimandato a v1.1). Spesa smoke: $0.56 totali (~$0.047/msg, prompt caching attivo: 7.3k token cached). Raw: `docs/coach/v1a_smoke_raw.md`. `ANTHROPIC_API_KEY` impostata su Railway → verifica live `POST /api/coach/chat` in prod OK (risposta plan-aware corretta). User guide: nuova sezione 16b "The Coach (AI Chat)". Suite 2379 verde.
 
 ## Recently closed (2026-07-11)
 

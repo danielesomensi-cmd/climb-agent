@@ -29,6 +29,7 @@ Last verified: 2026-03-24 at 1335 tests.
 14. [Outdoor Sessions](#14-outdoor-sessions)
 15. [Weekly Report](#15-weekly-report)
 16. [Tabata Timer](#16-tabata-timer)
+16b. [The Coach (AI Chat)](#16b-the-coach-ai-chat)
 17. [Don't Overtrain — Trust the Process](#17-dont-overtrain--trust-the-process)
 18. [Backup & Recovery](#18-backup--recovery)
 19. [Need Help?](#19-need-help)
@@ -466,6 +467,28 @@ The **Tabata** timer (in the More menu) is a standalone configurable interval ti
 - Cool down (default 0s)
 
 The timer shows total time and intervals computed in real-time. During execution: animated progress ring, phase-colored backgrounds (teal for work, blue for rest), 3-2-1 countdown beeps, and voice encouragement. Expand mode gives you a fullscreen display with large font.
+
+---
+
+## 16b. The Coach (AI Chat)
+
+The **Coach** (in the More menu, or from the card on Today) is a conversational training assistant that knows your plan and your history: your current phase and week, your assessment profile, your recent sessions and outdoor logs.
+
+**What it's good at:**
+
+- "Where am I in my plan? How is it going?"
+- "What did I do this week?"
+- "I'm climbing outdoors today and it's hot — how should I adapt?"
+- "I'm traveling without equipment — what can I do?"
+- Training-science questions (grounded in the same literature the engine is built on)
+
+**What it will NOT do:**
+
+- **Modify your plan.** The Coach is suggest-only — it can recommend, but every change to your plan goes through the normal app flows (replan, feedback, session edit). The deterministic engine stays in charge.
+- **Diagnose injuries.** If you report pain, it will tell you to stop and see a climbing-savvy physiotherapist — by design.
+- **Give weight-loss or medical advice.** It redirects you to qualified professionals.
+
+**Limits:** 30 messages per day, subscription required. Conversation history is preserved between visits.
 
 ---
 
