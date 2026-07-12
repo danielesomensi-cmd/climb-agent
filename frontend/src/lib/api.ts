@@ -879,11 +879,18 @@ export interface CoachMessage {
   created_at?: string;
 }
 
-export const coachChat = (message: string) =>
+export const coachChat = (
+  message: string,
+  coords?: { lat: number; lon: number } | null
+) =>
   request<{ reply: string }>("/api/coach/chat", {
     method: "POST",
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ message, ...(coords ?? {}) }),
   });
+
+// A-COACH-V1b — deterministic context-aware question chips
+export const getCoachSuggestions = () =>
+  request<{ suggestions: string[] }>("/api/coach/suggestions");
 
 export const getCoachHistory = (limit = 50, before?: string) => {
   const sp = new URLSearchParams();

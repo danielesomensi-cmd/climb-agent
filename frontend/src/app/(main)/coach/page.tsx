@@ -12,6 +12,7 @@ import {
   ApiError,
   coachChat,
   getCoachHistory,
+  getCoachSuggestions,
   type CoachMessage,
 } from "@/lib/api";
 
@@ -74,6 +75,8 @@ export default function CoachPage() {
   const [sending, setSending] = useState(false);
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const coordsRef = useRef<{ lat: number; lon: number } | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -86,6 +89,29 @@ export default function CoachPage() {
       })
       .catch((e) => setError(friendlyError(e)))
       .finally(() => setLoadingHistory(false));
+  }, []);
+
+  // A-COACH-V1b: suggested-question chips (deterministic, no LLM call).
+  useEffect(() => {
+    getCoachSuggestions()
+      .then((data) => setSuggestions(data.suggestions))
+      .catch(() => setSuggestions([])); // chips are optional — fail silent
+  }, []);
+
+  // A-COACH-V1b: current location → weather in the coach context. Same
+  // permission the /today weather card already uses; denied → silently off.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        coordsRef.current = {
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+        };
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 15 * 60 * 1000 }
+    );
   }, []);
 
   // Keep the view pinned to the latest message.
@@ -108,23 +134,31 @@ export default function CoachPage() {
     }
   }, [messages, loadingEarlier]);
 
-  const send = useCallback(async () => {
-    const text = input.trim();
-    if (!text || sending) return;
-    setError(null);
-    setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
-    setSending(true);
-    try {
-      const { reply } = await coachChat(text);
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-    } catch (e) {
-      setError(friendlyError(e));
-    } finally {
-      setSending(false);
-      inputRef.current?.focus();
-    }
-  }, [input, sending]);
+  const sendText = useCallback(
+    async (raw: string) => {
+      const text = raw.trim();
+      if (!text || sending) return;
+      setError(null);
+      setInput("");
+      setMessages((prev) => [...prev, { role: "user", content: text }]);
+      setSending(true);
+      try {
+        const { reply } = await coachChat(text, coordsRef.current);
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: reply },
+        ]);
+      } catch (e) {
+        setError(friendlyError(e));
+      } finally {
+        setSending(false);
+        inputRef.current?.focus();
+      }
+    },
+    [sending]
+  );
+
+  const send = useCallback(() => sendText(input), [input, sendText]);
 
   return (
     <div className="flex min-h-[calc(100vh-5rem)] flex-col">
@@ -179,6 +213,21 @@ export default function CoachPage() {
 
         {/* Composer + disclaimer — sticky above the bottom nav */}
         <div className="sticky bottom-20 -mx-4 mt-3 border-t border-border bg-background/95 px-4 pb-2 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+          {/* A-COACH-V1b: suggested-question chips — shown while composing */}
+          {suggestions.length > 0 && !input.trim() && !sending && (
+            <div className="scrollbar-none -mx-1 mb-2 flex gap-2 overflow-x-auto px-1 pb-0.5">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => sendText(s)}
+                  className="shrink-0 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-end gap-2">
             <textarea
               ref={inputRef}

@@ -413,6 +413,97 @@ def _logs_section(
     return lines
 
 
+MAX_COACH_NOTES_CHARS = 500
+FORECAST_WINDOW_DAYS = 5  # OWM free forecast horizon (5 days / 3h steps)
+MAX_WEATHER_DAYS = 3
+
+
+def _notes_section(state: Dict[str, Any]) -> Optional[str]:
+    """Free-text personal notes the athlete wrote for the coach (A-COACH-V1b).
+
+    Capped at MAX_COACH_NOTES_CHARS to bound prompt size regardless of what
+    the client sends.
+    """
+    notes = (state.get("preferences") or {}).get("coach_notes")
+    if not notes or not str(notes).strip():
+        return None
+    text = str(notes).strip()[:MAX_COACH_NOTES_CHARS]
+    return (
+        "## Personal notes from the athlete\n"
+        "(Written by the user for you — factor them into every answer.)\n"
+        f"{text}"
+    )
+
+
+def _fmt_conditions(w: Dict[str, Any]) -> str:
+    bits = [f"{w['temp']}°C", f"humidity {w['humidity']}%"]
+    if w.get("dew_point") is not None:
+        bits.append(f"dew point {w['dew_point']}°C")
+    bits.append(f"wind {w['wind']} km/h ({w.get('wind_label', '?')})")
+    if w.get("precip_prob") is not None:
+        bits.append(f"precip {w['precip_prob']}%")
+    if w.get("condition_text"):
+        bits.append(str(w["condition_text"]).lower())
+    bits.append(f"friction band: {w.get('condition_band', '?')}")
+    return ", ".join(bits)
+
+
+def _weather_section(
+    state: Dict[str, Any], user_id: Optional[str], today: date,
+    lat: Optional[float], lon: Optional[float],
+) -> Optional[str]:
+    """Live/forecast weather for the athlete's location and planned outdoor
+    days (A-COACH-V1b).
+
+    Best-effort by design: any provider failure, missing key, or unresolvable
+    spot name silently drops the affected line (or the whole section). The
+    chat must never fail or stall because of weather.
+    """
+    from backend.api.deps import read_week_plan, this_monday
+    from backend.api.routers.weather import cached_conditions, geocode_place
+
+    lines: List[str] = []
+    today_iso = today.isoformat()
+    if lat is not None and lon is not None:
+        try:
+            w = cached_conditions(lat, lon)
+            lines.append(f"- Now at the athlete's location: {_fmt_conditions(w)}")
+        except Exception:
+            logger.info("coach: current-location weather unavailable")
+
+    plan = read_week_plan(state, user_id, this_monday()) or state.get(
+        "current_week_plan"
+    )
+    horizon = (today + timedelta(days=FORECAST_WINDOW_DAYS - 1)).isoformat()
+    outdoor_days = [
+        d for d in _plan_days(plan)
+        if d.get("outdoor_spot_name")
+        and d.get("outdoor_session_status") != "done"
+        and today_iso <= d.get("date", "") <= horizon
+    ][:MAX_WEATHER_DAYS]
+    for d in outdoor_days:
+        spot = d["outdoor_spot_name"]
+        coords = geocode_place(spot)
+        if not coords:
+            continue
+        try:
+            w = cached_conditions(coords[0], coords[1], d["date"])
+        except Exception:
+            continue
+        label = "today" if d["date"] == today_iso else d["date"]
+        lines.append(f"- Forecast for {spot} ({label}, midday): {_fmt_conditions(w)}")
+
+    if not lines:
+        return None
+    return (
+        "## Weather (real measurements — OpenWeatherMap)\n"
+        + "\n".join(lines)
+        + "\n(Use these numbers for conditions/friction advice. If asked "
+        "about weather not listed here, say you don't have that data — "
+        "never invent conditions.)"
+    )
+
+
 def _equipment_section(state: Dict[str, Any]) -> str:
     eq = state.get("equipment") or {}
     lines = ["## Equipment available"]
@@ -430,13 +521,24 @@ def _equipment_section(state: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+_COMPUTE_WEATHER = object()  # sentinel: build_user_context fetches it itself
+
+
 def build_user_context(
     state: Dict[str, Any], user_id: Optional[str], max_log_lines: Optional[int] = None,
     include_week_detail: bool = True,
+    lat: Optional[float] = None, lon: Optional[float] = None,
+    weather_text: Any = _COMPUTE_WEATHER,
 ) -> str:
-    """Assemble the delimited user-context block."""
+    """Assemble the delimited user-context block.
+
+    ``weather_text``: pass a precomputed section (or None) to skip fetching —
+    build_dynamic_block does this so budget-guard reassembly never refetches.
+    """
     today = date.today()
     today_iso = today.isoformat()
+    if weather_text is _COMPUTE_WEATHER:
+        weather_text = _weather_section(state, user_id, today, lat, lon)
     sections = [
         "=== USER CONTEXT (read-only snapshot, generated "
         f"{today_iso}) ===",
@@ -444,9 +546,14 @@ def build_user_context(
         _baselines_section(state),
         _plan_section(state),
     ]
+    notes = _notes_section(state)
+    if notes:
+        sections.append(notes)
     if include_week_detail:
         sections.append(_week_section(state, user_id, today_iso))
         sections.append(_today_section(state, user_id, today_iso))
+    if weather_text:
+        sections.append(weather_text)
     log_lines = _logs_section(state, user_id, today)
     if max_log_lines is not None and len(log_lines) > max_log_lines:
         log_lines = log_lines[-max_log_lines:]
@@ -464,7 +571,8 @@ def build_user_context(
 # ---------------------------------------------------------------------------
 
 def build_dynamic_block(
-    state: Dict[str, Any], user_id: Optional[str], query: str
+    state: Dict[str, Any], user_id: Optional[str], query: str,
+    lat: Optional[float] = None, lon: Optional[float] = None,
 ) -> str:
     """Routed L3 files + user context, with token-budget truncation."""
     l3_parts: List[str] = []
@@ -476,12 +584,15 @@ def build_dynamic_block(
     l3_text = "\n\n---\n\n".join(l3_parts)
 
     static_tokens = _estimate_tokens(build_static_block())
+    # Fetched once — budget-guard reassembly below must not refetch.
+    weather_text = _weather_section(state, user_id, date.today(), lat, lon)
 
     def _assemble(max_log_lines: Optional[int], include_week_detail: bool) -> str:
         context = build_user_context(
             state, user_id,
             max_log_lines=max_log_lines,
             include_week_detail=include_week_detail,
+            weather_text=weather_text,
         )
         return (
             "# Topic knowledge (routed for this question)\n\n"
@@ -507,12 +618,18 @@ def build_dynamic_block(
     return _assemble(10, False)
 
 
-def build_system_blocks(user_id: Optional[str], query: str) -> List[str]:
+def build_system_blocks(
+    user_id: Optional[str], query: str,
+    lat: Optional[float] = None, lon: Optional[float] = None,
+) -> List[str]:
     """Return [static_block, dynamic_block] for llm_client.chat."""
     from backend.api.deps import load_state
 
     state = load_state(user_id)
-    return [build_static_block(), build_dynamic_block(state, user_id, query)]
+    return [
+        build_static_block(),
+        build_dynamic_block(state, user_id, query, lat=lat, lon=lon),
+    ]
 
 
 def build_system_prompt(user_id: Optional[str], query: str) -> str:

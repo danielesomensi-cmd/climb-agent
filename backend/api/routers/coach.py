@@ -30,6 +30,9 @@ MAX_MESSAGE_CHARS = 4000
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=MAX_MESSAGE_CHARS)
+    # A-COACH-V1b: optional current location → weather in the coach context.
+    lat: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    lon: Optional[float] = Field(None, ge=-180.0, le=180.0)
 
 
 @router.post("/chat", dependencies=[Depends(require_active_subscription)])
@@ -52,7 +55,7 @@ def coach_chat(
         )
 
     try:
-        reply = service.handle_chat(user_id, message)
+        reply = service.handle_chat(user_id, message, lat=req.lat, lon=req.lon)
     except CoachConfigError as exc:
         # Fail loud (fixed decision): 500 + explicit log, never silent.
         logger.error("Coach misconfigured: %s", exc)
@@ -71,6 +74,13 @@ def coach_chat(
         )
 
     return {"reply": reply}
+
+
+@router.get("/suggestions", dependencies=[Depends(require_active_subscription)])
+def coach_suggestions(user_id: Optional[str] = Depends(get_user_id)):
+    """Context-aware suggested questions for the chat UI (deterministic,
+    no LLM call, does not count toward the daily message limit)."""
+    return {"suggestions": service.suggested_questions(user_id)}
 
 
 @router.get("/history", dependencies=[Depends(require_active_subscription)])
