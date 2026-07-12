@@ -472,7 +472,7 @@ The timer shows total time and intervals computed in real-time. During execution
 
 ## 16b. The Coach (AI Chat)
 
-The **Coach** (in the More menu, or from the card on Today) is a conversational training assistant that knows your plan and your history: your current phase and week, your assessment profile, your recent sessions and outdoor logs.
+The **Coach** (in the More menu, or from the card on Today) is a conversational training assistant that knows your plan and your history: your current phase and week, your assessment profile, your test baselines and current working loads, your recent sessions and outdoor logs, and your planned outdoor days and trips. It replies in the language you write in.
 
 **What it's good at:**
 

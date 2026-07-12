@@ -7,8 +7,9 @@ Builds the two system blocks sent to the LLM:
       calls, so the ``cache_control: ephemeral`` breakpoint in
       ``llm_client.chat`` amortises it across every request.
   Block 2 (DYNAMIC — uncached): up to 3 routed L3 topic files (routing varies
-      per query) + the compact user-context block (profile, plan position,
-      week plan, today's session, recent logs, equipment).
+      per query) + the compact user-context block (profile, baselines &
+      working loads, plan position + trips, week plan incl. outdoor/other-
+      activity days, today's session, recent logs, equipment).
 
 Token budget guard: total system prompt target ≤ 25K tokens (chars/4
 estimate). On overflow, recent-logs lines are truncated first, then week-plan
@@ -47,7 +48,9 @@ INSTRUCTION_BLOCK = """\
   session, or any user data. When the user wants a change applied, point them
   to the app action that does it (e.g. the replan option on a day, logging a
   free session or mobility session, editing settings).
-- Always respond in English, regardless of the language the user writes in.
+- Respond in the language the user writes in (Italian message → Italian
+  reply, English → English). Use exactly ONE language per reply — never mix
+  languages within a response. Keep exercise/session IDs and grades as-is.
 - Cite sources (Author Year) only when the user asks "why" or for a source,
   or when a recommendation is genuinely counter-intuitive. Never invent a
   citation; if the knowledge base has no source, say so.
@@ -107,9 +110,71 @@ def _profile_section(state: Dict[str, Any]) -> str:
         weakest = ", ".join(k for k, _ in axes[:2])
         lines.append(f"- Assessment (5-axis): {axes_str}")
         lines.append(f"- Weakest axes: {weakest}")
+    if assessment.get("last_assessed"):
+        lines.append(f"- Last assessed: {assessment['last_assessed']}")
     limitations = (state.get("limitations") or {}).get("active_flags") or []
     if limitations:
         lines.append(f"- Active limitations: {', '.join(map(str, limitations))}")
+    return "\n".join(lines)
+
+
+def _baselines_section(state: Dict[str, Any]) -> str:
+    """Test maximals + current working loads (B-COACH-CONTEXT-FIX).
+
+    Sources: baselines.hangboard / baselines.pulling, assessment.tests,
+    working_loads.entries (capped at 15, most recently updated first).
+    """
+    lines = ["## Baselines & working loads"]
+    baselines = state.get("baselines") or {}
+    for hb in baselines.get("hangboard") or []:
+        setup_bits = []
+        if hb.get("edge_mm"):
+            setup_bits.append(f"{hb['edge_mm']}mm edge")
+        if hb.get("grip"):
+            setup_bits.append(str(hb["grip"]))
+        if hb.get("hang_seconds"):
+            setup_bits.append(f"{hb['hang_seconds']}s hang")
+        lines.append(
+            f"- Hangboard max: {_fmt(hb.get('max_total_load_kg'))} kg total"
+            + (f" ({', '.join(setup_bits)})" if setup_bits else "")
+            + f" — source: {_fmt(hb.get('source'))}, {_fmt(hb.get('estimated_at'))}"
+        )
+    pulling = baselines.get("pulling") or {}
+    if pulling:
+        pull_bits = ", ".join(f"{k}={v}" for k, v in pulling.items()
+                              if v not in (None, "", []))
+        lines.append(f"- Pulling baseline: {pull_bits}")
+    tests = (state.get("assessment") or {}).get("tests") or {}
+    for key, value in tests.items():
+        if value not in (None, "", []):
+            lines.append(f"- Test {key}: {value}")
+    entries = (state.get("working_loads") or {}).get("entries") or []
+    entries = sorted(entries, key=lambda e: str(e.get("updated_at") or ""),
+                     reverse=True)[:15]
+    for entry in entries:
+        setup = entry.get("setup") or {}
+        setup_bits = ", ".join(f"{k}={v}" for k, v in setup.items()
+                               if v not in (None, "", []))
+        load_bits = []
+        for key, label in (("next_external_load_kg", "next external load"),
+                           ("next_total_load_kg", "next total load")):
+            if entry.get(key) is not None:
+                load_bits.append(f"{label} {entry[key]} kg")
+        if entry.get("next_target_grade"):
+            load_bits.append(f"next target grade {entry['next_target_grade']}")
+        if not load_bits:
+            continue
+        lines.append(
+            f"- Working load: {entry.get('exercise_id', '?')}"
+            + (f" ({setup_bits})" if setup_bits else "")
+            + f": {', '.join(load_bits)}"
+            + (f" (updated {entry['updated_at']})" if entry.get("updated_at") else "")
+        )
+    if len(lines) == 1:
+        lines.append(
+            "- No recorded test maximals or working loads yet. Do NOT invent "
+            "numbers — suggest running the assessment tests instead."
+        )
     return "\n".join(lines)
 
 
@@ -146,6 +211,13 @@ def _plan_section(state: Dict[str, Any]) -> str:
     )
     if is_plan_paused(state):
         lines.append("- The plan is currently PAUSED (user must resume it in the app).")
+    trips = state.get("trips") or []
+    for trip in trips:
+        lines.append(
+            f"- Planned trip: {_fmt(trip.get('name'))} "
+            f"{_fmt(trip.get('start_date'))} → {_fmt(trip.get('end_date'))} "
+            f"({_fmt(trip.get('discipline'))}, priority {_fmt(trip.get('priority'))})"
+        )
     return "\n".join(lines)
 
 
@@ -169,6 +241,31 @@ def _plan_days(plan: Optional[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return []
 
 
+def _day_extras(day: Dict[str, Any]) -> List[str]:
+    """Day-level items that live OUTSIDE day["sessions"] (B-COACH-CONTEXT-FIX).
+
+    Planned outdoor days, reserved outdoor slots, other activities and
+    pre-trip deload markers are stored as flat fields on the day dict —
+    without this, an outdoor day with no guided session reads as "rest".
+    """
+    extras: List[str] = []
+    if day.get("outdoor_spot_name"):
+        extras.append(
+            f"OUTDOOR climbing at {day['outdoor_spot_name']} "
+            f"[{day.get('outdoor_session_status') or 'planned'}, "
+            f"{day.get('outdoor_discipline') or 'both'}]"
+        )
+    elif day.get("outdoor_slot"):
+        extras.append("outdoor day reserved (no crag chosen yet)")
+    if day.get("other_activity"):
+        extras.append(
+            f"other activity: {day.get('other_activity_name') or 'unspecified'}"
+        )
+    if day.get("pretrip_deload"):
+        extras.append("pre-trip deload day")
+    return extras
+
+
 def _week_section(
     state: Dict[str, Any], user_id: Optional[str], today_iso: str
 ) -> str:
@@ -186,14 +283,20 @@ def _week_section(
         d = day.get("date", "")
         marker = " (TODAY)" if d == today_iso else ""
         sessions = day.get("sessions") or []
-        if not sessions:
-            lines.append(f"- {d} {day.get('weekday', '')}{marker}: rest")
-            continue
-        descr = ", ".join(
+        parts = _day_extras(day) + [
             f"{s.get('session_id')} [{_session_status(s)}, {s.get('location', '?')}]"
             for s in sessions
-        )
+        ]
+        descr = ", ".join(parts) if parts else "rest"
         lines.append(f"- {d} {day.get('weekday', '')}{marker}: {descr}")
+    planned_load = ((plan or {}).get("weekly_load_summary") or {}).get(
+        "planned_load"
+    )
+    if planned_load is not None:
+        lines.append(
+            f"- Planned training load this week: {planned_load} "
+            "(engine load units)"
+        )
     return "\n".join(lines)
 
 
@@ -212,8 +315,17 @@ def _today_section(
             day = d
             break
     sessions = (day or {}).get("sessions") or []
+    extras = _day_extras(day or {})
+    for extra in extras:
+        lines.append(f"- {extra}")
+    if day and day.get("outdoor_spot_name"):
+        lines.append(
+            "  (This planned outdoor day IS today's main session — never "
+            "tell the user today is a rest day.)"
+        )
     if not sessions:
-        lines.append("- Nothing planned today (rest day or no plan).")
+        if not extras:
+            lines.append("- Nothing planned today (rest day or no plan).")
         return "\n".join(lines)
     for sess in sessions:
         lines.append(
@@ -329,6 +441,7 @@ def build_user_context(
         "=== USER CONTEXT (read-only snapshot, generated "
         f"{today_iso}) ===",
         _profile_section(state),
+        _baselines_section(state),
         _plan_section(state),
     ]
     if include_week_detail:

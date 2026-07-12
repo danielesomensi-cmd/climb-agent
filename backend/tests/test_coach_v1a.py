@@ -2,8 +2,9 @@
 
 Covers:
 - prompt_builder: L0/L1/L2 always present, L3 routing capped at 3, user
-  context (phase/week/today), token-budget truncation, English + suggest-only
-  instruction block;
+  context (phase/week/today), token-budget truncation, match-user-language +
+  suggest-only instruction block, outdoor/other-activity day visibility and
+  baselines/working-loads section (B-COACH-CONTEXT-FIX);
 - coach storage (file backend): append/read/count roundtrip, pagination;
 - endpoints with a MOCKED Anthropic client (never real calls): happy path,
   missing API key → loud 500, rate limit → 429, fail-closed subscription
@@ -80,8 +81,11 @@ class TestPromptBuilder:
         assert l0.strip() in block
         assert l1.strip() in block
         assert l2.strip() in block
-        # Runtime contract: English-only + suggest-only.
-        assert "Always respond in English" in block
+        # Runtime contract: match-user-language + suggest-only
+        # (B-COACH-CONTEXT-FIX: English-only replaced by language matching).
+        assert "Respond in the language the user writes in" in block
+        assert "ONE language per reply" in block
+        assert "Always respond in English" not in block
         assert "Never claim to have changed" in block
 
     def test_dynamic_block_routes_l3_capped_at_three(self):
@@ -155,9 +159,105 @@ class TestPromptBuilder:
         assert "power_endurance_short [planned, gym]" in ctx
         assert "(TODAY)" in ctx
 
+    def _state_with_day(self, day_fields):
+        """Week plan with a single day (today) carrying *day_fields*."""
+        from backend.api.deps import this_monday
+        state = deps.load_state(None)
+        day = {"date": date.today().isoformat(), "weekday": "sun",
+               "sessions": []}
+        day.update(day_fields)
+        state["week_plans"] = {this_monday(): {"weeks": [{"days": [day]}]}}
+        return state
+
+    def test_outdoor_planned_today_visible_not_rest(self):
+        """BUG-1 regression: planned outdoor day must never read as rest."""
+        state = self._state_with_day({
+            "outdoor_spot_name": "Berdorf",
+            "outdoor_discipline": "lead",
+            "outdoor_session_status": "planned",
+        })
+        ctx = prompt_builder.build_user_context(state, None)
+        assert "OUTDOOR climbing at Berdorf [planned, lead]" in ctx
+        assert "never" in ctx and "rest day" in ctx  # anti-rest instruction
+        assert "Nothing planned today" not in ctx
+        # Week section line must not say rest either.
+        week = ctx.split("## Current week plan")[1].split("##")[0]
+        assert "rest" not in week.splitlines()[1]
+
+    def test_outdoor_slot_reserved_visible(self):
+        state = self._state_with_day({"outdoor_slot": True})
+        ctx = prompt_builder.build_user_context(state, None)
+        assert "outdoor day reserved" in ctx
+        assert "Nothing planned today" not in ctx
+
+    def test_other_activity_and_pretrip_visible(self):
+        state = self._state_with_day({
+            "other_activity": True,
+            "other_activity_name": "yoga",
+            "pretrip_deload": True,
+        })
+        ctx = prompt_builder.build_user_context(state, None)
+        assert "other activity: yoga" in ctx
+        assert "pre-trip deload day" in ctx
+
+    def test_outdoor_log_in_14d_logs(self):
+        uid = _uid()
+        storage.append_outdoor_log_line(uid, {
+            "date": date.today().isoformat(),
+            "spot_name": "Berdorf",
+            "routes": [{"grade": "6b"}, {"grade": "6c+"}],
+        })
+        state = deps.load_state(uid)
+        ctx = prompt_builder.build_user_context(state, uid)
+        assert "outdoor at Berdorf" in ctx
+        assert "6b, 6c+" in ctx
+
+    def test_baselines_and_working_loads_section(self):
+        state = deps.load_state(None)
+        state["baselines"] = {"hangboard": [{
+            "edge_mm": 20, "grip": "half_crimp", "hang_seconds": 7,
+            "max_total_load_kg": 75.0, "source": "estimated_from_grade",
+            "estimated_at": "2026-07-12",
+        }]}
+        state["working_loads"] = {"entries": [{
+            "exercise_id": "max_hang_7s",
+            "setup": {"edge_mm": 20, "grip": "half_crimp"},
+            "next_external_load_kg": 12.5,
+            "updated_at": "2026-07-10",
+        }]}
+        ctx = prompt_builder.build_user_context(state, None)
+        assert "## Baselines & working loads" in ctx
+        assert "Hangboard max: 75.0 kg total (20mm edge, half_crimp, 7s hang)" in ctx
+        assert "max_hang_7s (edge_mm=20, grip=half_crimp): next external load 12.5 kg" in ctx
+
+    def test_baselines_empty_says_no_numbers(self):
+        state = deps.load_state(None)
+        state["baselines"] = {}
+        state["working_loads"] = {}
+        state.setdefault("assessment", {})["tests"] = {}
+        ctx = prompt_builder.build_user_context(state, None)
+        assert "Do NOT invent" in ctx
+
+    def test_trips_and_planned_load_and_last_assessed(self):
+        from backend.api.deps import this_monday
+        state = deps.load_state(None)
+        state["trips"] = [{"name": "Arco primavera", "start_date": "2026-08-01",
+                           "end_date": "2026-08-05", "discipline": "lead",
+                           "priority": "alta"}]
+        state.setdefault("assessment", {})["last_assessed"] = "2026-07-01"
+        state["week_plans"] = {this_monday(): {
+            "weekly_load_summary": {"planned_load": 42},
+            "weeks": [{"days": [{"date": date.today().isoformat(),
+                                 "weekday": "sun", "sessions": []}]}],
+        }}
+        ctx = prompt_builder.build_user_context(state, None)
+        assert "Planned trip: Arco primavera 2026-08-01 → 2026-08-05" in ctx
+        assert "Planned training load this week: 42" in ctx
+        assert "Last assessed: 2026-07-01" in ctx
+
     def test_build_system_prompt_joins_blocks(self):
         prompt = prompt_builder.build_system_prompt(None, "periodization")
-        assert "Always respond in English" in prompt
+        assert "Respond in the language the user writes in" in prompt
         assert "=== USER CONTEXT" in prompt
 
 
@@ -208,7 +308,7 @@ class TestChatEndpoint:
         assert r.json() == {"reply": "Mocked coach reply."}
         # System blocks: [static (cached), dynamic].
         assert len(mock_llm["system_blocks"]) == 2
-        assert "Always respond in English" in mock_llm["system_blocks"][0]
+        assert "Respond in the language the user writes in" in mock_llm["system_blocks"][0]
         assert "=== USER CONTEXT" in mock_llm["system_blocks"][1]
         assert mock_llm["messages"][-1] == {
             "role": "user", "content": "Where am I in my plan?"
