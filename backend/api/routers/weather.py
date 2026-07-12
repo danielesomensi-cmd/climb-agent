@@ -19,7 +19,7 @@ from __future__ import annotations
 import math
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -163,6 +163,60 @@ def _owm_get(path: str, lat: float, lon: float) -> Dict[str, Any]:
         raise WeatherUnavailable(f"upstream error: {exc}") from exc
 
 
+# --- geocoding (A-COACH-V1b) ---------------------------------------------------
+
+_OWM_GEO_BASE = "https://api.openweathermap.org/geo/1.0"
+
+
+def _owm_geocode_get(q: str) -> Any:
+    """Raw OWM direct-geocoding call. Tests monkeypatch this."""
+    key = os.environ.get(_OWM_KEY_ENV, "").strip()
+    if not key:
+        raise WeatherUnavailable("OPENWEATHER_API_KEY not configured")
+    try:
+        resp = httpx.get(
+            f"{_OWM_GEO_BASE}/direct",
+            params={"q": q, "limit": 1, "appid": key},
+            timeout=_HTTP_TIMEOUT_S,
+        )
+        resp.raise_for_status()
+        return resp.json()
+    except httpx.HTTPError as exc:
+        raise WeatherUnavailable(f"geocoding upstream error: {exc}") from exc
+
+
+# Cache resolved lookups only (successes + confirmed not-found) — a transient
+# provider failure must NOT stick for the process lifetime.
+_geo_cache: Dict[str, Optional[Tuple[float, float]]] = {}
+
+
+def geocode_place(name: str) -> Optional[Tuple[float, float]]:
+    """Resolve a place name (e.g. an outdoor spot) to (lat, lon).
+
+    In-memory cache only — no user_state writes from the lookup path.
+    Returns None when the provider is unconfigured/unreachable or the name
+    doesn't resolve.
+    """
+    q = (name or "").strip().lower()
+    if not q:
+        return None
+    if q in _geo_cache:
+        return _geo_cache[q]
+    try:
+        results = _owm_geocode_get(q)
+    except WeatherUnavailable:
+        return None  # transient / unconfigured — do not cache
+    coords: Optional[Tuple[float, float]] = None
+    if results and isinstance(results, list):
+        try:
+            coords = (float(results[0]["lat"]), float(results[0]["lon"]))
+        except (KeyError, TypeError, ValueError):
+            coords = None
+    if len(_geo_cache) < 256:
+        _geo_cache[q] = coords
+    return coords
+
+
 # --- outdoor auto-fill helper (A225) ------------------------------------------
 
 def fetch_outdoor_conditions(
@@ -200,6 +254,28 @@ def fetch_outdoor_conditions(
     }
 
 
+def cached_conditions(
+    lat: float, lon: float, date: Optional[str] = None
+) -> Dict[str, Any]:
+    """Normalized current/forecast conditions through the shared 15-min cache.
+
+    Single fetch path for the ``/api/weather`` route AND the coach context
+    (A-COACH-V1b) — a chat turn right after the /today card render is a cache
+    hit, not a second OWM call. Raises WeatherUnavailable on provider failure.
+    """
+    bucket = math.floor(time.time() / _CACHE_WINDOW_S)
+    cache_key = (round(lat, 2), round(lon, 2), date or "current", bucket)
+    cached = _cache.get(cache_key)
+    if cached is not None:
+        return cached
+    if date:
+        payload = _normalize_forecast(_owm_get("forecast", lat, lon), date)
+    else:
+        payload = _normalize_current(_owm_get("weather", lat, lon))
+    _cache[cache_key] = payload
+    return payload
+
+
 # --- route --------------------------------------------------------------------
 
 @router.get("", dependencies=[Depends(require_active_subscription)])
@@ -214,19 +290,7 @@ def get_weather(
     condition_band, is_forecast, date, source}``. 503 when the provider is
     unreachable / unconfigured (frontend hides the card gracefully).
     """
-    bucket = math.floor(time.time() / _CACHE_WINDOW_S)
-    cache_key = (round(lat, 2), round(lon, 2), date or "current", bucket)
-    cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
-
     try:
-        if date:
-            payload = _normalize_forecast(_owm_get("forecast", lat, lon), date)
-        else:
-            payload = _normalize_current(_owm_get("weather", lat, lon))
+        return cached_conditions(lat, lon, date)
     except WeatherUnavailable as exc:
         raise HTTPException(status_code=503, detail={"error": "weather_unavailable", "message": str(exc)})
-
-    _cache[cache_key] = payload
-    return payload

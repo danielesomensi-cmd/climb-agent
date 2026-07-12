@@ -261,6 +261,179 @@ class TestPromptBuilder:
         assert "=== USER CONTEXT" in prompt
 
 
+# ── A-COACH-V1b: weather, notes, suggestions ───────────────────────────────
+
+OWM_CURRENT = {
+    "main": {"temp": 31.0, "feels_like": 33.0, "humidity": 55},
+    "wind": {"speed": 2.0, "deg": 180},
+    "clouds": {"all": 20},
+    "weather": [{"id": 800, "description": "clear sky"}],
+}
+
+
+def _owm_forecast_for(date_iso: str):
+    return {
+        "list": [{
+            "dt_txt": f"{date_iso} 12:00:00",
+            "main": {"temp": 18.0, "feels_like": 18.0, "humidity": 50},
+            "wind": {"speed": 3.0, "deg": 90},
+            "clouds": {"all": 10},
+            "weather": [{"id": 801, "description": "few clouds"}],
+            "pop": 0.1,
+        }]
+    }
+
+
+class TestCoachV1b:
+    @pytest.fixture(autouse=True)
+    def clear_weather_caches(self):
+        from backend.api.routers import weather
+        weather._cache.clear()
+        weather._geo_cache.clear()
+        yield
+        weather._cache.clear()
+        weather._geo_cache.clear()
+
+    def _state_with_outdoor(self, date_iso):
+        from backend.api.deps import this_monday
+        state = deps.load_state(None)
+        state["week_plans"] = {this_monday(): {"weeks": [{"days": [{
+            "date": date_iso, "weekday": "sun", "sessions": [],
+            "outdoor_spot_name": "Berdorf",
+            "outdoor_discipline": "lead",
+            "outdoor_session_status": "planned",
+        }]}]}}
+        return state
+
+    def test_weather_forecast_for_planned_outdoor_day(self, monkeypatch):
+        from backend.api.routers import weather
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        monkeypatch.setattr(
+            weather, "_owm_get",
+            lambda path, lat, lon: _owm_forecast_for(tomorrow),
+        )
+        monkeypatch.setattr(
+            weather, "_owm_geocode_get",
+            lambda q: [{"lat": 49.82, "lon": 6.35}],
+        )
+        state = self._state_with_outdoor(tomorrow)
+        dynamic = prompt_builder.build_dynamic_block(state, None, "meteo")
+        assert "## Weather" in dynamic
+        assert "Forecast for Berdorf" in dynamic
+        assert "friction band:" in dynamic
+
+    def test_weather_current_location(self, monkeypatch):
+        from backend.api.routers import weather
+        monkeypatch.setattr(
+            weather, "_owm_get", lambda path, lat, lon: OWM_CURRENT
+        )
+        state = deps.load_state(None)
+        dynamic = prompt_builder.build_dynamic_block(
+            state, None, "fa caldo?", lat=49.6, lon=6.1
+        )
+        assert "Now at the athlete's location: 31.0°C" in dynamic
+
+    def test_weather_unavailable_is_silent(self, monkeypatch):
+        from backend.api.routers import weather
+
+        def boom(*a, **kw):
+            raise weather.WeatherUnavailable("no key")
+
+        monkeypatch.setattr(weather, "_owm_get", boom)
+        monkeypatch.setattr(weather, "_owm_geocode_get", boom)
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        state = self._state_with_outdoor(tomorrow)
+        dynamic = prompt_builder.build_dynamic_block(
+            state, None, "meteo", lat=49.6, lon=6.1
+        )
+        assert "## Weather" not in dynamic
+        assert "=== USER CONTEXT" in dynamic  # context intact
+
+    def test_geocode_does_not_cache_transient_failure(self, monkeypatch):
+        from backend.api.routers import weather
+
+        def boom(q):
+            raise weather.WeatherUnavailable("down")
+
+        monkeypatch.setattr(weather, "_owm_geocode_get", boom)
+        assert weather.geocode_place("Berdorf") is None
+        monkeypatch.setattr(
+            weather, "_owm_geocode_get", lambda q: [{"lat": 1.0, "lon": 2.0}]
+        )
+        assert weather.geocode_place("Berdorf") == (1.0, 2.0)
+        assert weather.geocode_place("BERDORF") == (1.0, 2.0)  # cached, case-insensitive
+
+    def test_coach_notes_in_context_capped(self):
+        state = deps.load_state(None)
+        state.setdefault("preferences", {})["coach_notes"] = (
+            "Ho paura di volare su lead. " + "x" * 600
+        )
+        ctx = prompt_builder.build_user_context(state, None, weather_text=None)
+        assert "## Personal notes from the athlete" in ctx
+        assert "Ho paura di volare su lead." in ctx
+        start = ctx.index("## Personal notes")
+        section = ctx[start:].split("\n\n")[0]
+        notes_body = section.splitlines()[-1]
+        assert len(notes_body) <= prompt_builder.MAX_COACH_NOTES_CHARS
+
+    def test_no_notes_no_section(self):
+        state = deps.load_state(None)
+        (state.setdefault("preferences", {}))["coach_notes"] = "   "
+        ctx = prompt_builder.build_user_context(state, None, weather_text=None)
+        assert "## Personal notes" not in ctx
+
+    def test_chat_endpoint_forwards_coords(self, mock_llm, monkeypatch):
+        from backend.api.routers import weather
+        monkeypatch.setattr(
+            weather, "_owm_get", lambda path, lat, lon: OWM_CURRENT
+        )
+        uid = _uid()
+        r = client.post(
+            "/api/coach/chat",
+            json={"message": "che tempo fa?", "lat": 49.6, "lon": 6.1},
+            headers={"X-User-ID": uid},
+        )
+        assert r.status_code == 200
+        assert "Now at the athlete's location" in mock_llm["system_blocks"][1]
+
+    def test_chat_endpoint_rejects_bad_coords(self, mock_llm):
+        r = client.post(
+            "/api/coach/chat",
+            json={"message": "hi", "lat": 123.0, "lon": 6.1},
+            headers={"X-User-ID": _uid()},
+        )
+        assert r.status_code == 422
+
+    def test_suggestions_endpoint_outdoor_and_session(self):
+        from backend.api.deps import this_monday
+        uid = _uid()
+        today_iso = date.today().isoformat()
+        state = deps.load_state(uid)
+        state["week_plans"] = {this_monday(): {"weeks": [{"days": [
+            {
+                "date": today_iso, "weekday": "sun",
+                "sessions": [{"session_id": "strength_long",
+                              "status": "planned", "location": "gym"}],
+                "outdoor_spot_name": "Berdorf",
+                "outdoor_discipline": "lead",
+                "outdoor_session_status": "planned",
+            },
+        ]}]}}
+        deps.save_state(state, uid)
+        r = client.get("/api/coach/suggestions", headers={"X-User-ID": uid})
+        assert r.status_code == 200
+        sugg = r.json()["suggestions"]
+        assert any("Berdorf today" in s for s in sugg)
+        assert any("today's session" in s for s in sugg)
+        assert 1 <= len(sugg) <= service.MAX_SUGGESTIONS
+
+    def test_suggestions_fallback_always_present(self):
+        r = client.get("/api/coach/suggestions", headers={"X-User-ID": _uid()})
+        assert r.status_code == 200
+        sugg = r.json()["suggestions"]
+        assert "How is my training going so far?" in sugg
+
+
 # ── storage (file backend) ─────────────────────────────────────────────────
 
 class TestCoachStorage:

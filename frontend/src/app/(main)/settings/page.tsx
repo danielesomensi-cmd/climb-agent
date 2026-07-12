@@ -147,6 +147,26 @@ export default function SettingsPage() {
   const gradeSystemBoulder = (prefs?.grade_system_boulder as "font" | "v_scale" | undefined) ?? "font";
   const [savingDevice, setSavingDevice] = useState(false);
   const [savingGradeSystem, setSavingGradeSystem] = useState(false);
+  // A-COACH-V1b: personal notes for the coach. null = no local edit yet.
+  const savedCoachNotes = (prefs?.coach_notes as string | undefined) ?? "";
+  const [coachNotesDraft, setCoachNotesDraft] = useState<string | null>(null);
+  const [savingCoachNotes, setSavingCoachNotes] = useState(false);
+  const coachNotesValue = coachNotesDraft ?? savedCoachNotes;
+
+  /** Save coach notes preference */
+  async function handleSaveCoachNotes() {
+    setSavingCoachNotes(true);
+    setActionError(null);
+    try {
+      await putState({ preferences: { coach_notes: coachNotesValue.trim() } });
+      await refresh();
+      setCoachNotesDraft(null);
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to save coach notes");
+    } finally {
+      setSavingCoachNotes(false);
+    }
+  }
   const availability = (state?.availability ?? {}) as Record<
     string,
     Record<string, { available: boolean; preferred_location?: string; gym_id?: string }>
@@ -894,6 +914,46 @@ export default function SettingsPage() {
                       : gradeSystemBoulder === "font"
                         ? "Switch to V-scale"
                         : "Switch to Font"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* ----- Coach notes (A-COACH-V1b) ----- */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Notes for your Coach</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Anything you want the AI Coach to always keep in mind — fears,
+                  schedule constraints, personal goals, style preferences.
+                  E.g. &ldquo;I&apos;m scared of falling on lead&rdquo; or
+                  &ldquo;I work night shifts on Tuesdays&rdquo;.
+                </p>
+                <textarea
+                  value={coachNotesValue}
+                  onChange={(e) => setCoachNotesDraft(e.target.value)}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Write your notes here…"
+                  className="w-full resize-none rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+                />
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-muted-foreground">
+                    {coachNotesValue.length}/500
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={
+                      savingCoachNotes ||
+                      coachNotesDraft === null ||
+                      coachNotesDraft.trim() === savedCoachNotes
+                    }
+                    onClick={handleSaveCoachNotes}
+                  >
+                    {savingCoachNotes ? "Saving…" : "Save notes"}
                   </Button>
                 </div>
               </CardContent>
