@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import { Providers } from "./providers";
 import { SwUpdateBanner } from "@/components/sw-update-banner";
+import { AttributionCapture } from "@/components/attribution-capture";
 import "./globals.css";
 
 const inter = Inter({
@@ -61,6 +62,7 @@ export default function RootLayout({
             <div className="mx-auto min-h-screen max-w-3xl">{children}</div>
             <Toaster richColors position="top-center" />
             <SwUpdateBanner />
+            <AttributionCapture />
           </Providers>
           <Analytics />
           <script

@@ -311,6 +311,8 @@ export interface OnboardingData {
     discipline: "lead" | "boulder" | "both";
   }>;
   test_week_requested?: boolean;
+  /** A233: first-touch attribution (utm_*, referrer, landing_page, first_touch_at) */
+  attribution?: Record<string, string>;
 }
 
 // -----------------------------------------------------------------------

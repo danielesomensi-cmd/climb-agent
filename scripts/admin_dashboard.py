@@ -176,6 +176,7 @@ def analyze_state(state: dict, days: int) -> dict:
         "warnings": [],
         "stale_plan": False,
         "consecutive_very_hard": 0,
+        "attribution_source": "—",  # A233: "—" = pre-A233 user (no record)
     }
 
     if not state:
@@ -185,6 +186,19 @@ def analyze_state(state: dict, days: int) -> dict:
     has_assessment = bool(state.get("assessment") and state["assessment"].get("profile"))
     has_macrocycle = bool(state.get("macrocycle") and state["macrocycle"].get("phases"))
     result["onboarding_complete"] = has_assessment and has_macrocycle
+
+    # A233: first-touch attribution → compact source label
+    attr = state.get("attribution") or {}
+    if attr:
+        src = attr.get("utm_source")
+        if src:
+            campaign = attr.get("utm_campaign")
+            result["attribution_source"] = f"{src}/{campaign}" if campaign else src
+        elif attr.get("referrer"):
+            from urllib.parse import urlparse
+            result["attribution_source"] = urlparse(attr["referrer"]).netloc or attr["referrer"]
+        else:
+            result["attribution_source"] = "direct"
 
     # Discipline
     goal = state.get("goal") or {}
@@ -427,6 +441,7 @@ def build_report(users_data: list[dict], days: int) -> tuple[str, dict]:
     if new_users:
         header = (
             _col("Nome", 22) + _col("Email", 34) + _col("Iscritto", 12)
+            + _col("Origine", 24)
         )
         lines.append("  " + header)
         lines.append("  " + _hr("─", len(header)))
@@ -436,6 +451,7 @@ def build_report(users_data: list[dict], days: int) -> tuple[str, dict]:
                 + _col(u["name"], 22)
                 + _col(u["email"], 34)
                 + _col(fmt_dt(u.get("created_at")), 12)
+                + _col(u.get("activity", {}).get("attribution_source", "—"), 24)
             )
     else:
         lines.append("  Nessun nuovo iscritto.")

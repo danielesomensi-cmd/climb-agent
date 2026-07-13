@@ -159,6 +159,9 @@ class OnboardingData(BaseModel):
     trips: List[Dict[str, Any]] = Field(default_factory=list)
     outdoor_spots: List[Dict[str, Any]] = Field(default_factory=list)
     test_week_requested: bool = False
+    # A233: first-touch attribution captured client-side (utm_*, referrer,
+    # landing_page, first_touch_at). Sanitized server-side before persisting.
+    attribution: Optional[Dict[str, Any]] = None
 
 
 class TestReminderResponse(BaseModel):

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { completeOnboarding } from "@/lib/api";
+import { getAttribution } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -133,7 +134,10 @@ export default function ReviewPage() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      await completeOnboarding(data, { signal: controller.signal });
+      await completeOnboarding(
+        { ...data, attribution: getAttribution() },
+        { signal: controller.signal },
+      );
       sessionStorage.removeItem("climb_onboarding_draft");
       setSuccess(true);
       setTimeout(() => {
@@ -157,7 +161,10 @@ export default function ReviewPage() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
     try {
-      await completeOnboarding({ ...data, test_week_requested: true }, { signal: controller.signal });
+      await completeOnboarding(
+        { ...data, test_week_requested: true, attribution: getAttribution() },
+        { signal: controller.signal },
+      );
       sessionStorage.removeItem("climb_onboarding_draft");
       setSuccess(true);
       setTimeout(() => {
