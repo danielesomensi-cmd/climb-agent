@@ -32,6 +32,7 @@ Last verified: 2026-03-24 at 1335 tests.
 16b. [The Coach (AI Chat)](#16b-the-coach-ai-chat)
 17. [Don't Overtrain — Trust the Process](#17-dont-overtrain--trust-the-process)
 18. [Backup & Recovery](#18-backup--recovery)
+18b. [Subscription & Free Trial](#18b-subscription--free-trial)
 19. [Need Help?](#19-need-help)
 
 ---
@@ -535,6 +536,17 @@ To recover: open the app → on the onboarding screen, tap "Recover existing acc
 In **Settings**, you can:
 - **Export**: Download your full training state as a JSON file. Use this as a backup.
 - **Import**: Upload a previously exported state to restore your data.
+
+---
+
+## 18b. Subscription & Free Trial
+
+Your first 15 days are a **free trial — no card required**. Start it from the Subscribe page and train normally right away.
+
+- While trialing, a banner shows how many days remain. If you haven't added a payment method, the banner offers **Add payment method** — it opens Stripe's secure billing portal.
+- If the trial ends **without** a card on file, nothing is charged: access to training actions simply locks, and you can subscribe whenever you're ready. **Your training data is safe** — plans, history, and logs are all preserved.
+- If the trial ends **with** a card on file, the subscription starts automatically. Cancel anytime from **Settings → Manage subscription**.
+- The free trial is one per account. If yours has already ended, subscribing restarts access immediately (billed from day one).
 
 ---
 
