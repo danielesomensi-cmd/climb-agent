@@ -42,7 +42,7 @@
         "primary": {
           "filters": {
             "role": ["technique"],
-            "pattern": ["technique_drill"]
+            "pattern": ["technique_drill", "climbing_intervals", "explosive_touch"]
           }
         }
       }
@@ -57,7 +57,7 @@
         "primary": {
           "filters": {
             "role": ["technique"],
-            "pattern": ["technique_drill"]
+            "pattern": ["technique_drill", "climbing_intervals", "explosive_touch"]
           }
         }
       }
@@ -72,7 +72,7 @@
         "primary": {
           "filters": {
             "role": ["technique"],
-            "pattern": ["technique_drill"]
+            "pattern": ["technique_drill", "climbing_intervals", "explosive_touch"]
           }
         }
       }
