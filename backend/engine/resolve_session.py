@@ -1,7 +1,8 @@
+import hashlib
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.engine.equipment_utils import expand_equipment
@@ -414,6 +415,35 @@ def _apply_limitation_to_instance(
         presc["multiplier"] = float(presc["multiplier"]) * 0.8
 
 
+def _variety_seed_from_date(target_date: Any) -> Optional[str]:
+    """B274: weekly variety seed — ISO Monday of target_date's week.
+
+    Same week → same seed → stable re-resolution within the week; new week →
+    new seed → the tie-break rotation changes. None (no date in context) →
+    None → legacy alphabetical tie-break, so date-less callers are unchanged.
+    """
+    if target_date is None:
+        return None
+    try:
+        monday = target_date - timedelta(days=target_date.weekday())
+        return monday.isoformat()
+    except (AttributeError, TypeError):
+        return None
+
+
+def _variety_key(ex_id: str, variety_seed: Optional[str]) -> str:
+    """B274: deterministic tie-break key.
+
+    Without a seed, ties break on the alphabetical exercise_id (legacy — biases
+    against `tech_*` ids). With a seed, ties break on a stable md5 of
+    (exercise_id, seed): deterministic for the same (state, week) input but
+    free of the alphabetical bias, so the eligible pool rotates week by week.
+    """
+    if not variety_seed:
+        return ex_id
+    return hashlib.md5(f"{ex_id}|{variety_seed}".encode("utf-8")).hexdigest()
+
+
 def pick_best_exercise_p0(
     *,
     exercises: List[Dict[str, Any]],
@@ -431,6 +461,7 @@ def pick_best_exercise_p0(
     finger_device: Optional[str] = None,
     user_age: Optional[int] = None,
     experience_years: Optional[float] = None,
+    variety_seed: Optional[str] = None,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -443,7 +474,9 @@ def pick_best_exercise_p0(
         Missing intensity_level → excluded (R3 strict policy).
       - domain matches only if it doesn't zero candidates (ANY)
       - pattern matches only if it doesn't zero candidates (ANY)
-    Deterministic tie-break: exercise_id
+    Deterministic tie-break: md5(exercise_id | variety_seed) when a seed is
+    provided (B274 — weekly rotation, no alphabetical bias); exercise_id
+    ascending otherwise (legacy, date-less callers).
     """
     loc = norm_str(location)
     avail = set(norm_list_str(available_equipment))
@@ -632,16 +665,16 @@ def pick_best_exercise_p0(
         return None, trace
 
     # Deterministic pick: score_exercise for recency-aware tie-breaking,
-    # then exercise_id ascending for final deterministic tie-break
+    # then _variety_key for the final deterministic tie-break (B274)
     if recent_ex_ids or recent_recency_groups:
         prefs_empty: Dict[str, Any] = {}
         _rrg = recent_recency_groups or set()
         base3.sort(key=lambda e: (
             -score_exercise(e, prefs_empty, recent_ex_ids or [], _rrg),
-            norm_str(get_ex_id(e)),
+            _variety_key(norm_str(get_ex_id(e)), variety_seed),
         ))
     else:
-        base3.sort(key=lambda e: norm_str(get_ex_id(e)))
+        base3.sort(key=lambda e: _variety_key(norm_str(get_ex_id(e)), variety_seed))
 
     selected = base3[0] if base3 else None
 
@@ -1041,29 +1074,6 @@ def score_exercise(
     return s
 
 
-def pick_best_exercise(
-    exercises: List[Dict[str, Any]],
-    filters: Dict[str, Any],
-    available_equipment: List[str],
-    prefs: Dict[str, Any],
-    recent_ex_ids: List[str],
-) -> Optional[Dict[str, Any]]:
-    candidates: List[Dict[str, Any]] = []
-    for ex in exercises:
-        if not exercise_matches_filters(ex, filters):
-            continue
-        if not compatible_with_location(ex, available_equipment):
-            continue
-        candidates.append(ex)
-
-    if not candidates:
-        return None
-
-    scored = [(score_exercise(ex, prefs, recent_ex_ids), ex) for ex in candidates]
-    scored.sort(key=lambda x: x[0], reverse=True)
-    return scored[0][1]
-
-
 # ---------------------------
 # Inline block resolution
 # ---------------------------
@@ -1182,6 +1192,7 @@ def _resolve_inline_block(
                 finger_device=_finger_dev,
                 user_age=user_age,
                 experience_years=experience_years,
+                variety_seed=_variety_seed_from_date(target_date),
             )
 
         cascade_tier: Any = 1
@@ -1718,6 +1729,7 @@ def resolve_session(
                         finger_device=finger_device,
                         user_age=user_age,
                         experience_years=experience_years,
+                        variety_seed=_variety_seed_from_date(target_date),
                     )
                     chosen_by = "p0_hard_filters"
 

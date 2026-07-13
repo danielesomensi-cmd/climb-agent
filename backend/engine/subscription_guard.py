@@ -124,6 +124,7 @@ _ALLOW_ALL: Dict[str, Any] = {
     "is_active": True,
     "trial_days_remaining": None,
     "can_interact": True,
+    "has_payment_method": True,
 }
 
 _DENY_ALL: Dict[str, Any] = {
@@ -131,6 +132,7 @@ _DENY_ALL: Dict[str, Any] = {
     "is_active": False,
     "trial_days_remaining": None,
     "can_interact": False,
+    "has_payment_method": False,
 }
 
 
@@ -142,6 +144,7 @@ def check_subscription(user_id: Optional[str]) -> Dict[str, Any]:
         is_active            bool — status in (trialing, active)
         trial_days_remaining int|None — days left if trialing
         can_interact         bool — same as is_active
+        has_payment_method   bool — card on file (A232; synced by webhooks)
 
     Bypass cases (returns ALLOW_ALL) — only when Stripe is NOT configured:
     - Stripe not configured (dev/test)
@@ -185,4 +188,5 @@ def check_subscription(user_id: Optional[str]) -> Dict[str, Any]:
         "is_active": is_active,
         "trial_days_remaining": trial_days_remaining,
         "can_interact": is_active,
+        "has_payment_method": bool(row.get("has_payment_method")),
     }

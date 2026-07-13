@@ -7,9 +7,15 @@ Events handled:
     checkout.session.completed      → link stripe_customer_id, set trialing
     customer.subscription.updated   → sync status, period dates, cancel flag
     customer.subscription.deleted   → set canceled
+    customer.subscription.trial_will_end → log + founder alert (A232, fires ~3 days before)
     customer.deleted                → clear stripe IDs, mark canceled (B226)
     invoice.payment_succeeded       → set active, update period dates
     invoice.payment_failed          → set past_due
+
+A232: card-free trials — has_payment_method is synced from the Stripe
+subscription's default_payment_method on checkout.session.completed and
+customer.subscription.updated, so the frontend can show an "Add payment
+method" CTA to trialing users without a card.
 
 B226 hardening:
     - Handler exceptions return HTTP 500 → Stripe retries (was: swallowed 200).
@@ -144,6 +150,8 @@ async def handle_stripe_webhook(request: Request) -> JSONResponse:
             _handle_subscription_updated(data_object)
         elif event_type == "customer.subscription.deleted":
             _handle_subscription_deleted(data_object)
+        elif event_type == "customer.subscription.trial_will_end":
+            _handle_trial_will_end(data_object)
         elif event_type == "customer.deleted":
             _handle_customer_deleted(data_object)
         elif event_type == "invoice.payment_succeeded":
@@ -200,6 +208,7 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
     trial_end = None
     period_start = None
     period_end = None
+    has_payment_method = False
 
     if subscription_id and _STRIPE_SECRET_KEY:
         try:
@@ -209,9 +218,10 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
             trial_end = _ts(sub.get("trial_end"))
             period_start = _ts(sub.get("current_period_start"))
             period_end = _ts(sub.get("current_period_end"))
+            has_payment_method = bool(sub.get("default_payment_method"))
             logger.info(
-                "DIAG checkout_completed sub fetched trial_start=%s trial_end=%s",
-                trial_start, trial_end,
+                "DIAG checkout_completed sub fetched trial_start=%s trial_end=%s has_pm=%s",
+                trial_start, trial_end, has_payment_method,
             )
         except Exception as exc:
             logger.warning("Could not fetch subscription from Stripe: %s", exc)
@@ -224,15 +234,17 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
         "trial_end": trial_end,
         "current_period_start": period_start,
         "current_period_end": period_end,
+        "has_payment_method": has_payment_method,
     })
     logger.info("checkout.session.completed: user_id=%s linked to customer=%s", user_id, customer_id)
 
-    # Founder alert (fire-and-forget): trial started (card on file). Must never
-    # raise — a 500 here makes Stripe retry the webhook (B226).
+    # Founder alert (fire-and-forget). Must never raise — a 500 here makes
+    # Stripe retry the webhook (B226).
     try:
         from backend.api.notifications import notify
+        card = "carta inserita" if has_payment_method else "senza carta (A232)"
         notify(
-            "💳 Trial avviato (carta inserita)\n"
+            f"💳 Trial avviato ({card})\n"
             f"User: {user_id}\n"
             f"Customer: {customer_id}"
         )
@@ -273,6 +285,7 @@ def _handle_subscription_updated(sub: Dict[str, Any]) -> None:
         "current_period_start": _ts(sub.get("current_period_start")),
         "current_period_end": _ts(sub.get("current_period_end")),
         "cancel_at_period_end": sub.get("cancel_at_period_end", False),
+        "has_payment_method": bool(sub.get("default_payment_method")),
     })
     logger.info("subscription.updated: user_id=%s status=%s", user_id, status)
 
@@ -297,6 +310,41 @@ def _handle_subscription_deleted(sub: Dict[str, Any]) -> None:
 
     upsert_subscription(user_id, {"status": "canceled"})
     logger.info("subscription.deleted: user_id=%s → canceled", user_id)
+
+
+def _handle_trial_will_end(sub: Dict[str, Any]) -> None:
+    """customer.subscription.trial_will_end — fires ~3 days before trial end.
+
+    A232 minimum viable: log + founder alert so no-card trials about to expire
+    are visible. No DB write, no email — the frontend banner already turns
+    urgent at ≤3 days via trial_days_remaining.
+    """
+    subscription_id = sub.get("id")
+    customer_id = sub.get("customer")
+
+    user_id = (sub.get("metadata") or {}).get("user_id")
+    if not user_id:
+        row = find_subscription_by_stripe_subscription_id(subscription_id)
+        if row is None:
+            row = find_subscription_by_stripe_customer(customer_id)
+        user_id = row["user_id"] if row else None
+
+    has_pm = bool(sub.get("default_payment_method"))
+    logger.info(
+        "subscription.trial_will_end: user_id=%s subscription_id=%s has_payment_method=%s",
+        user_id, subscription_id, has_pm,
+    )
+
+    try:
+        from backend.api.notifications import notify
+        card = "carta inserita" if has_pm else "SENZA carta → cancellerà"
+        notify(
+            f"⏳ Trial in scadenza tra ~3 giorni ({card})\n"
+            f"User: {user_id or '?'}\n"
+            f"Subscription: {subscription_id}"
+        )
+    except Exception:
+        pass
 
 
 def _handle_customer_deleted(customer: Dict[str, Any]) -> None:

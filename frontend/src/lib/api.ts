@@ -701,6 +701,7 @@ export type SubscriptionStatus = {
   is_active: boolean;
   trial_days_remaining: number | null;
   can_interact: boolean;
+  has_payment_method?: boolean; // A232: card on file (synced by Stripe webhooks)
 };
 
 export const getSubscriptionStatus = () =>

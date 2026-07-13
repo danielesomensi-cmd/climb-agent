@@ -135,7 +135,7 @@ export function SubscribeContent() {
               "Full AI-powered training plans",
               "Weekly plan adaptation",
               "Assessment every 6 weeks",
-              "15-day free trial",
+              "15-day free trial — no card required",
             ]}
             ctaLabel="Start free trial"
             loading={loading === PRICE_ID_STANDARD}
@@ -145,9 +145,9 @@ export function SubscribeContent() {
         </div>
 
         <p className="mt-6 px-8 text-center text-xs text-fg-muted">
-          Accepts Apple Pay, Google Pay, and card — handled securely by Stripe.
-          Your card will be charged after the 15-day trial. Cancel anytime from
-          Settings.
+          No card required to start your 15-day free trial. Add a payment
+          method anytime before it ends — handled securely by Stripe (Apple
+          Pay, Google Pay, and card). Cancel anytime from Settings.
         </p>
 
         {error && (

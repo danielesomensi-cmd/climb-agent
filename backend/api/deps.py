@@ -563,7 +563,7 @@ def _subscription_required_message(status: str) -> str:
     """User-facing 402 message, tailored to subscription status (B258)."""
     if status in _NEVER_STARTED_STATUSES:
         return "Subscribe to start training."
-    return "Your trial has ended. Subscribe to continue training."
+    return "Your trial has ended — subscribe to continue. Your training data is safe."
 
 
 def require_active_subscription(user_id: Optional[str] = Depends(get_user_id)) -> None:

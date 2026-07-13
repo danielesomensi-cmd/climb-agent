@@ -60,7 +60,7 @@ export function WelcomeContent() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                AI coach coming soon: conversational guidance built on your training data
+                AI coach: conversational guidance built on your plan and training data
               </li>
             </ul>
           </CardContent>

@@ -71,7 +71,12 @@ def create_checkout_session(
     """Create a Stripe Checkout Session and return the hosted URL.
 
     - mode: subscription
-    - 15-day trial (card required upfront)
+    - 15-day trial without card (A232): payment_method_collection=if_required;
+      trial ends with no card on file → subscription cancels cleanly (no
+      invoice, no dunning) and the fail-closed guard (B202) takes over.
+    - One trial per user, ever: a row with trial_end already set means the
+      trial was consumed — the new checkout charges immediately (Stripe then
+      requires the card because an amount is due).
     - Redirects back to /today on success/cancel
     """
     if not user_id:
@@ -105,19 +110,33 @@ def create_checkout_session(
 
     existing_customer_id: Optional[str] = row.get("stripe_customer_id") if row else None
 
+    # A232 anti-abuse: trial_end set on the row (past or future) means this
+    # user already consumed their one trial — do not grant another. Abandoned
+    # checkouts (pending_checkout rows) have no trial_end and keep full trial.
+    trial_already_used = bool(row and row.get("trial_end"))
+
+    subscription_data: dict = {
+        # Propagated to the Subscription object — survives race conditions
+        # where invoice events arrive before checkout.session.completed.
+        "metadata": {"user_id": user_id},
+    }
+    if not trial_already_used:
+        subscription_data["trial_period_days"] = 15
+        subscription_data["trial_settings"] = {
+            "end_behavior": {"missing_payment_method": "cancel"},
+        }
+
     checkout_params: dict = {
         "mode": "subscription",
         "line_items": [{"price": price_id, "quantity": 1}],
-        "subscription_data": {
-            "trial_period_days": 15,
-            # Propagated to the Subscription object — survives race conditions
-            # where invoice events arrive before checkout.session.completed.
-            "metadata": {"user_id": user_id},
-        },
+        "subscription_data": subscription_data,
         "success_url": f"{_FRONTEND_BASE}/today?checkout=success",
         "cancel_url": f"{_FRONTEND_BASE}/today?checkout=canceled",
         "allow_promotion_codes": True,
         "payment_method_types": ["card"],
+        # A232: no card during the free trial; Stripe still collects one when
+        # an amount is due (i.e. trial already consumed → immediate charge).
+        "payment_method_collection": "if_required",
         # Stripe-native field — surfaced on checkout session and child sessions.
         "client_reference_id": user_id,
         "metadata": {"user_id": user_id},

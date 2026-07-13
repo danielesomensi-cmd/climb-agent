@@ -11,6 +11,7 @@ export type UseSubscriptionResult = {
   isTrialing: boolean;
   trialDaysRemaining: number | null;
   canInteract: boolean;
+  hasPaymentMethod: boolean;
   loading: boolean;
 };
 
@@ -20,6 +21,7 @@ const _ALLOW: UseSubscriptionResult = {
   isTrialing: false,
   trialDaysRemaining: null,
   canInteract: true,
+  hasPaymentMethod: true,
   loading: false,
 };
 
@@ -29,6 +31,7 @@ const _DENY: UseSubscriptionResult = {
   isTrialing: false,
   trialDaysRemaining: null,
   canInteract: false,
+  hasPaymentMethod: false,
   loading: false,
 };
 
@@ -39,6 +42,7 @@ function mapResponse(data: SubscriptionStatus): UseSubscriptionResult {
     isTrialing: data.status === "trialing",
     trialDaysRemaining: data.trial_days_remaining,
     canInteract: data.can_interact,
+    hasPaymentMethod: data.has_payment_method ?? false,
     loading: false,
   };
 }
