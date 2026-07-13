@@ -357,6 +357,7 @@ Note: StripeObject in stripe-python 15.x does not expose `.get()` as a method �
 - `docs/audit_workflow.md` — Repeatable literature audit process (snapshot extraction → knowledge base audit → implementation brief)
 - `docs/ENGINE_ARCHITECTURE.md` — Engine internals reference (how modules work, data flow, key data structures)
 - `docs/user_guide_v1.md` — User-facing guide (update after A/B briefs that change UX)
+- `docs/attribution_utm_convention.md` — UTM convention per channel (flyer QR, Reddit, email) + how first-touch attribution flows into `user_state.attribution` (A233)
 - All audit deliverables live in `docs/audit/<brief-id>_<topic>.md` (singular `audit/`, never `docs/audits/`). Obsolete/closed audits move to `_archive/docs/audit/`.
 
 ## Docs maintenance

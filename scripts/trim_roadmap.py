@@ -43,6 +43,13 @@ BRIEF_ID_RE = re.compile(r"\b([ABCD])(\d+)(?![\w-])")
 # Sections to never trim (even if all items look completed)
 KEEP_SECTION_KEYWORDS = ["completed phases"]
 
+# "## Recently closed (YYYY-MM-DD)" sections: entries use the
+# `- **ID — title** ✅ (details…)` format. They are archived only once the
+# section date is older than RECENT_RETENTION_DAYS — fresh closures stay in
+# ROADMAP_CURRENT as short-term context for /brief.
+RECENT_SECTION_RE = re.compile(r"^## Recently closed \((\d{4}-\d{2}-\d{2})\)")
+RECENT_RETENTION_DAYS = 7
+
 
 def is_table_row(line: str) -> bool:
     s = line.strip()
@@ -79,6 +86,24 @@ def is_completed_table_row(line: str) -> bool:
 
 def is_completed_bullet(line: str) -> bool:
     return line.strip().startswith("- ✅")
+
+
+def is_closed_entry_bullet(line: str) -> bool:
+    """`- **A232 — title** ✅ …` / `- **C255** ✅ — …` (Recently-closed format)."""
+    s = line.strip()
+    return s.startswith("- **") and "** ✅" in s[:200]
+
+
+def _section_is_stale_recent(stripped: str) -> bool:
+    """True if the line is a Recently-closed header older than retention."""
+    m = RECENT_SECTION_RE.match(stripped)
+    if not m:
+        return False
+    try:
+        section_date = date.fromisoformat(m.group(1))
+    except ValueError:
+        return False
+    return (date.today() - section_date).days > RECENT_RETENTION_DAYS
 
 
 def _is_completed_subsection(block: list[str]) -> bool:
@@ -253,6 +278,7 @@ def trim_roadmap(
     output: list[str] = []
     i = 0
     in_keep_section = False
+    in_stale_recent_section = False
 
     while i < len(lines):
         line = lines[i]
@@ -261,6 +287,7 @@ def trim_roadmap(
         # Track ## sections for KEEP list
         if SECTION_RE.match(stripped):
             in_keep_section = _should_keep_section(stripped)
+            in_stale_recent_section = _section_is_stale_recent(stripped)
 
         # Never trim KEEP sections
         if in_keep_section:
@@ -303,6 +330,12 @@ def trim_roadmap(
 
         # Standalone completed bullet
         if is_completed_bullet(line):
+            archived.append(line)
+            i += 1
+            continue
+
+        # Recently-closed entry (`- **ID — title** ✅ …`) in a stale section
+        if in_stale_recent_section and is_closed_entry_bullet(line):
             archived.append(line)
             i += 1
             continue
