@@ -11697,6 +11697,334 @@
       "video_url": null,
       "load_model": "grade_relative",
       "attributes": {}
+    },
+    {
+      "id": "tech_barn_door_2000",
+      "name": "Barn Door 2000",
+      "category": "technique",
+      "focus": "body_position",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 15,
+        "rest_between_sets_seconds": 150,
+        "notes": "Set a few hand holds all facing the same direction (open holds, open feet to start — a spraywall is ideal for hold choice). Move between hand holds with feet directly under you, one traverse right-to-left plus one left-to-right per set (~15 sec to reset between directions). Play with speed: lock-off and reach, dynamic, moderate consistent pace — notice the non-working leg. Progress: less positive holds, longer distances, steeper terrain. Regress: vertical-to-slab, open holds, shorter moves, larger holds. A partner choosing holds keeps it creative."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "low"
+      },
+      "description": "Barn-door control drill: expose yourself to off-balance barn-door positions and learn to mitigate the swing by stopping or slowing it, working same-facing holds with feet directly underneath (Steve Bechtel, Climb Strong: Drills Manual, p.52).",
+      "cues": [
+        "Feel the barn door start — then kill the swing before it takes you",
+        "Notice the unbalanced relationship between foot placement and hold facing",
+        "Vary the speed: lock and reach, then dynamic, then a steady moderate pace",
+        "Watch what the non-working leg is doing"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_climb_it_backwards",
+      "name": "Climb It Backwards",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_movement_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 180,
+        "rest_between_sets_seconds": 180,
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2,
+        "notes": "Slightly overhung terrain (10-15°), set problems around onsight −1 to −3. One set = the same boulder three times: 1) climb it as perfectly as you can, 2) climb it fully mirrored (left hand where right was, same with feet — choose problems carefully, this strains sequencing and body), 3) climb it as intended again. Rest 2-4 min between attempts. Progress: steeper (or counter-intuitively vertical-to-slab), harder problems, smaller holds, longer moves. Regress: lower grade, matched holds, shorter moves, self-made problems fitted to your size."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "low"
+      },
+      "description": "Sequencing drill built on deliberate mistakes: climbing a problem mirrored teaches proactive decision-making — understanding what does not work facilitates understanding of what does (Steve Bechtel, Climb Strong: Drills Manual, p.56).",
+      "cues": [
+        "First ascent: climb it perfectly, no wasted movement",
+        "Mirrored ascent: left hand where the right was — feet too",
+        "Notice where the mirrored sequence fights your body, and why",
+        "Final ascent: feel how much cleaner the intended sequence flows"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
+    },
+    {
+      "id": "tech_deadpoint_roll_through",
+      "name": "Deadpoint Roll-Through",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "technique_movement_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 20,
+        "rest_between_sets_seconds": 150,
+        "notes": "On a 10-15° overhanging wall with moderate holds (onsight-level hold types), build the three-move sequence: deadpoint to holds → cross under and over → match at the end. Movement distances about an arm's length. One sequence per side per set (~20 sec to reset between sides). Experiment with hip position and tension through the working arm and leg to facilitate the cross and the unwinding. A symmetrical fixed board (Tension, Grasshopper) is ideal for mirrored execution. Progress: steeper (up to 40-50°), smaller holds, bigger moves and boxes. Regress: moderate angle, bigger holds, shorter moves, smaller box."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "high",
+        "skin": "low"
+      },
+      "description": "Steep-terrain sequence drill piecing together deadpoint, cross under/over, and match — the movement chains prevalent on overhanging climbing (Steve Bechtel, Climb Strong: Drills Manual, p.58).",
+      "cues": [
+        "Deadpoint first: latch at the apex, not past it",
+        "Drive the cross from the hips, not the reaching arm",
+        "Keep tension through the working arm and leg while you unwind",
+        "Full rest between sets — quality every sequence, no junk reps"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_foot_to_hand",
+      "name": "Foot to Hand",
+      "category": "technique",
+      "focus": "footwork",
+      "time_min": 10,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "technique_footwork_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 15,
+        "rest_between_sets_seconds": 120,
+        "notes": "On a 10-15° wall with medium holds, build a sequence that forces you to match your foot onto the hold your hand just left before the next move — for most climbers bigger holds are necessary. At least two moves per side; one rep per side per set (~15 sec to reset). Work mobility on the way in (foot up to the hand hold) and explosiveness on the way out. Movements about an arm's length. Progress: smaller holds, longer moves, up to 30-45° walls. Regress: bigger holds, moderate steepness, moves shorter than an arm's length."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "low"
+      },
+      "description": "Foot-hand matching drill: force a foot match onto the hand hold before every move, training hip mobility into the position and explosiveness out of it (Steve Bechtel, Climb Strong: Drills Manual, p.60; original source Lattice).",
+      "cues": [
+        "Foot exactly where the hand was — no half placements",
+        "Slow and mobile moving the foot in, explosive moving out",
+        "High hips make the match — get them over the foot",
+        "At least two moves per side, both sides every set"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_single_leg_climbing",
+      "name": "Single Leg Climbing",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 10,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_constraint"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_constraint_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 20,
+        "rest_between_sets_seconds": 120,
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2,
+        "notes": "On an easy problem or open holds (best on a slightly overhanging wall), climb using only the left leg, then repeat the same problem or hold series using only the right leg — one ascent per leg per set (~20 sec to reset between legs). An accuracy and control drill. Progress: big foot moves, or foot moves inside the frame of the shoulders. Regress: very short foot moves, larger handholds."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "low"
+      },
+      "description": "Constraint drill climbing with one leg at a time: removing half the footwork forces accuracy, control and deliberate weight shifting over the working foot (Steve Bechtel, Climb Strong: Drills Manual, p.66).",
+      "cues": [
+        "Only one leg works — the other never touches",
+        "Shift your hips fully over the working foot before standing up",
+        "Same problem, both legs: notice which side is weaker",
+        "Slightly overhanging terrain makes the control honest"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
+    },
+    {
+      "id": "tech_trust_the_eyes",
+      "name": "Trust the Eyes",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_movement_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 900,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "On open holds anywhere in the gym — not on set problems (they diminish the drill). Whichever holds your eyes land on is where you start, hands and feet. Once you pull on, the eyes lead: where you look is where you grab and step, letting the body dictate movement and body position. Vertical terrain, mostly medium holds, top of the wall or 10-12 moves per lap, 15-30 min total. Excellent at the end of the warm-up or start of a focused session. Progress: steeper angles, fewer/smaller hold options. Regress: slab, mostly large holds, 5-7 moves to mid-wall."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Intuition and flow drill on open holds: the eyes lead and the body follows — wherever you look is where you grab and step, training trust in instinctive movement decisions (Steve Bechtel, Climb Strong: Drills Manual, p.68).",
+      "cues": [
+        "Eyes first: look, then grab exactly where you looked",
+        "No set problems — let the wall offer the options",
+        "Don't second-guess: commit to the first hold your eyes choose",
+        "Let body position follow the eyes, not a plan"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
     }
   ]
 }

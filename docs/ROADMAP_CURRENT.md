@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-12 (A-COACH-V1b CHIUSO — meteo nel contesto coach, note personali, chips suggerite.)
+> Last updated: 2026-07-13 (C255 — Bechtel Movement Drills batch 2: +6 drill, catalogo 232; next batch Momentum pp.71-91.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -42,6 +42,10 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 - **W7** — endpoint orfani: `/api/reports/monthly` (endpoint+client mai cablati in UI → decidere: pagina report mensile o rimozione), `/api/user/recovery-code|recover` (morti post-Clerk → candidati a rimozione), `/api/week/test-reminder-response` (solo test). Toccano endpoint count/docs.
 
 ---
+
+## Recently closed (2026-07-13)
+
+- **C255** ✅ — Batch 2 Bechtel Movement Drills (Climb Strong: Drills Manual pp.51-69), follow-up del pilot C240. **6 drill mergeati** (di 8 nel patch KB): `tech_barn_door_2000` (p.52), `tech_climb_it_backwards` (p.56), `tech_deadpoint_roll_through` (p.58), `tech_foot_to_hand` (p.60, orig. Lattice), `tech_single_leg_climbing` (p.66), `tech_trust_the_eyes` (p.68). **2 esclusi:** `tech_move_and_lock` SKIP per dedup (meccanica pause-before-latch = `hover_hands`; lato tension-awareness = `freeze_drill` — stesso trattamento di matched_breathing nel pilot); `tech_rockovers` EXCLUDED — richiede `plyo_box`, token assente dal vocabulary §1.2, no silent vocabulary extension → **flag back al KB project** (decidere se aggiungere il token o riscrivere il drill senza box). **Remapping schema v1:** equipment `bouldering_wall`→`gym_boulder`, `spray_wall`→`spraywall`, `system_board`/`fixed_board`→`board_*`; gate C243 standard (`equipment_required: []` + `equipment_required_any` a 6 superfici) su tutti; `campus_board`/`hangboard` del patch droppati (erano solo su move_and_lock, skippato). stress_tags rimappati al canon fingers/elbow/cns/skin (`core_tension`→`cns`, `lock_off`→`elbow`; droppati `skill`/`shoulders`/`hip_mobility`/`legs` — nessun equivalente canonico). `experience_level` droppato (0/28 technique drill usano difficulty_tier). **Deviazione dal patch documentata:** recency_group allineato al domain per convenzione catalogo (barn_door→body_position_drills, foot_to_hand→footwork_drills, single_leg→constraint_drills, altri 3→movement_drills) invece del singolo `technique_movement_drills` del patch. load_model per-drill: `grade_relative` (boulder_max_os −2) su climb_it_backwards e single_leg, `bodyweight_only` sugli altri 4 (sequenze auto-costruite/open holds). D133: rest_between_reps_seconds esplicito (15-20s) sui 4 drill side-switching. Catalogo 226→232 (count test aggiornato; nota: base era 226 post-C251, non 225 come da brief). Nuovo `test_c255_movement_drills.py` (9 test: presenza, 5 campi prescription canonici, load_model+grade anchor, equipment canonici, stress_tags canonici, D133, invariante C243 wall-surface, pickup resolver, no-leak no-wall). **Smoke pickup:** `technique_focus_gym` (lead intermediate, gym_boulder+gym_routes) risolve; sotto pressione di recency il resolver seleziona `tech_barn_door_2000`+`tech_climb_it_backwards`+`tech_deadpoint_roll_through` → pickup reale confermato; graceful skip a no-wall gym invariato. Suite verde. Catalog-only → push diretto main. **Next batch KB: Momentum (pp.71-91, ~9-10 drill).**
 
 ## Recently closed (2026-07-12)
 
