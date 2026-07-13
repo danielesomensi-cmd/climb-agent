@@ -116,6 +116,7 @@ async def test_payment_succeeded_handler_runs_unpatched_on_stripeobject():
     event = _stripe_event_object(
         "evt_paid_real", "invoice.payment_succeeded",
         {"id": "in_9", "customer": "cus_9", "subscription": "sub_9",
+         "amount_paid": 999,  # B275: $0 invoices are skipped by design
          "lines": {"data": [{"period": {"start": 1700000000, "end": 1702592000}}]}},
     )
 
