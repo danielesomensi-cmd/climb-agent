@@ -26,6 +26,26 @@ from backend.engine.start_date_utils import (
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
+# A233: whitelist of attribution keys the client may persist. Anything else
+# is dropped server-side; values are cut to _ATTRIBUTION_MAX_LEN chars.
+_ATTRIBUTION_KEYS = {
+    "utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term",
+    "referrer", "landing_page", "first_touch_at",
+}
+_ATTRIBUTION_MAX_LEN = 200
+
+
+def _sanitize_attribution(raw: Optional[Dict[str, Any]]) -> Dict[str, str]:
+    """Keep only whitelisted string keys, truncated — never trust the client."""
+    if not raw or not isinstance(raw, dict):
+        return {}
+    out: Dict[str, str] = {}
+    for key in _ATTRIBUTION_KEYS:
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            out[key] = value.strip()[:_ATTRIBUTION_MAX_LEN]
+    return out
+
 # Boulder grades (Fontainebleau)
 BOULDER_GRADE_ORDER = [
     "5A", "5B", "5C",
@@ -325,6 +345,14 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
 
     # 1. Build user state
     state = _build_user_state_from_onboarding(data)
+
+    # 1b. A233: persist first-touch attribution (sanitized). Written before any
+    # save_state so it survives even if assessment/macrocycle generation fails.
+    attribution = _sanitize_attribution(data.attribution)
+    if attribution:
+        from datetime import datetime as _dt, timezone as _tz
+        attribution["onboarded_at"] = _dt.now(_tz.utc).isoformat()
+        state["attribution"] = attribution
 
     # 2. Estimate missing baselines from grade/pullup before assessment
     estimate_missing_baselines(state)
