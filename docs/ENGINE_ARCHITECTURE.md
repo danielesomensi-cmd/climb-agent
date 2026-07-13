@@ -378,14 +378,21 @@ The P0 filter chain is a staged pipeline. Each stage narrows the candidate pool.
 
 After all filters, candidates are sorted by:
 1. `score_exercise()` descending — recency-aware scoring
-2. `exercise_id` ascending — deterministic final tie-break
+2. `_variety_key(exercise_id, variety_seed)` ascending — deterministic final tie-break (B274)
+
+The variety seed is the ISO Monday of the week of `context.target_date`
+(`_variety_seed_from_date()`): same week → same rotation (stable re-resolution),
+new week → the tied pool rotates via `md5(exercise_id | seed)`, removing the
+alphabetical bias that starved late-sorting ids (all `tech_*` drills). Callers
+with no date in context get `seed=None` → legacy alphabetical `exercise_id`
+tie-break, unchanged.
 
 ### Recency scoring (`score_exercise()`)
 
 ```python
 # Exercise-level recency penalty
-if ex_id in recent[-5:]  → -100
-if ex_id in recent[-15:] → -25
+if ex_id in recent[-5:]  → -30
+if ex_id in recent[-15:] → -15
 if ex_id in recent        → -5
 
 # Recency group penalty (B159b)
