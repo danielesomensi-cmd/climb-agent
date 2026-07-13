@@ -224,8 +224,9 @@ user_state.assessment + user_state.goal
 | GET | `/api/body-part-picker/estimate` | Lightweight duration estimate for live counter |
 | GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
 | GET | `/api/mobility/generate` | Deterministic guided stretch flow (regions + minutes + pace + rest) |
-| POST | `/api/coach/chat` | LLM Coach chat turn (subscription-gated, 30 msg/day, suggest-only) |
+| POST | `/api/coach/chat` | LLM Coach chat turn (subscription-gated, 30 msg/day, suggest-only; optional `lat`/`lon` → weather in context) |
 | GET | `/api/coach/history` | Coach chat history (paginated, `limit` + `before` cursor) |
+| GET | `/api/coach/suggestions` | Context-aware suggested questions (deterministic, no LLM, not rate-limited) |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 | GET | `/api/subscription/status` | Current subscription status + trial days remaining |
@@ -251,7 +252,7 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 - `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
 - `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
 - `/mobility` — Stretching & Mobility guided flow (multi-region setup → auto-advancing timer, Core Circuit UX)
-- `/coach` — LLM Coach chat (plan-aware, KB-grounded, suggest-only; 30 msg/day)
+- `/coach` — LLM Coach chat (plan-aware, KB-grounded, suggest-only; 30 msg/day; weather-aware via GPS + spot geocoding, personal notes, suggested chips)
 - `/guide` — User guide
 - `/subscribe` — Subscription plans and checkout
 - `/onboarding/*` — 16-step wizard: welcome, install, profile, discipline, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover
@@ -295,7 +296,7 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
   | BYPASS_USER_IDS | Comma-separated user UUIDs that bypass subscription checks (founder, beta testers). Managed via Railway dashboard — no code change needed to add/remove. Read at import-time: changing it requires a service restart (Railway redeploy or manual restart). |
   | TELEGRAM_BOT_TOKEN | Bot token (@BotFather) for founder alerts. Unset → `notify()` is a silent no-op (A222). |
   | TELEGRAM_CHAT_ID | Destination chat id for founder alerts (new onboarding / trial started). Unset → no-op. |
-  | OPENWEATHER_API_KEY | OpenWeatherMap free-tier key for `/api/weather` (A224). Unset → endpoint returns 503 and the `/today` weather card hides gracefully. Commercial use requires visible OpenWeather attribution. |
+  | OPENWEATHER_API_KEY | OpenWeatherMap free-tier key for `/api/weather` (A224) + coach weather context & spot geocoding (A-COACH-V1b). Unset → endpoint returns 503, `/today` card hides, coach weather section silently absent. Commercial use requires visible OpenWeather attribution. |
   | ANTHROPIC_API_KEY | Anthropic API key for the LLM Coach (A-COACH-V1a). Unset → `/api/coach/chat` fails LOUD with 500 `coach_not_configured` (never silent, never commit). |
   | COACH_MODEL | Coach model id (default `claude-sonnet-4-6`). Swap here for provider/model changes — no code change needed. |
 

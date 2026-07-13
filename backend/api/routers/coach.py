@@ -1,8 +1,10 @@
 """LLM Coach router (A-COACH-V1a).
 
 Endpoints:
-  POST /api/coach/chat     — one chat turn (subscription-gated, 30 msg/day)
-  GET  /api/coach/history  — paginated full history for the UI
+  POST /api/coach/chat         — one chat turn (subscription-gated, 30 msg/day;
+                                 optional lat/lon → weather context, A-COACH-V1b)
+  GET  /api/coach/history      — paginated full history for the UI
+  GET  /api/coach/suggestions  — deterministic context-aware question chips
 
 The coach is a read-only conversational layer: it never mutates plan, state,
 or logs. Access is fail-closed (B202 pattern) via require_active_subscription.
