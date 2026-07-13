@@ -381,7 +381,21 @@ def _handle_customer_deleted(customer: Dict[str, Any]) -> None:
 
 
 def _handle_payment_succeeded(invoice: Dict[str, Any]) -> None:
-    """invoice.payment_succeeded — set status=active, update period."""
+    """invoice.payment_succeeded — set status=active, update period.
+
+    B275: the trial-start invoice is $0 and "paid" immediately — promoting it
+    to active masked the trialing status (no banner, no countdown) and, on
+    newer Stripe API versions where the invoice has no top-level
+    `subscription`, overwrote stripe_subscription_id with None. A real payment
+    is never $0: skip zero-amount invoices entirely.
+    """
+    if not invoice.get("amount_paid"):
+        logger.info(
+            "invoice.payment_succeeded: $0 invoice (trial start) — skipping, "
+            "status stays trialing"
+        )
+        return
+
     subscription_id = invoice.get("subscription")
     customer_id = invoice.get("customer")
 
@@ -401,13 +415,17 @@ def _handle_payment_succeeded(invoice: Dict[str, Any]) -> None:
         period_start = _ts(period.get("start"))
         period_end = _ts(period.get("end"))
 
-    upsert_subscription(user_id, {
+    fields: Dict[str, Any] = {
         "stripe_customer_id": customer_id,
-        "stripe_subscription_id": subscription_id,
         "status": "active",
         "current_period_start": period_start,
         "current_period_end": period_end,
-    })
+    }
+    # B275: never clobber a stored subscription id with None (newer Stripe API
+    # versions carry the id under parent.subscription_details, not top-level).
+    if subscription_id:
+        fields["stripe_subscription_id"] = subscription_id
+    upsert_subscription(user_id, fields)
     logger.info("invoice.payment_succeeded: user_id=%s → active", user_id)
 
 
