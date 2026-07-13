@@ -12025,6 +12025,554 @@
       "video_url": null,
       "load_model": "bodyweight_only",
       "attributes": {}
+    },
+    {
+      "id": "tech_contrast_bouldering",
+      "name": "Contrast Bouldering",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_movement_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 120,
+        "rest_between_sets_seconds": null,
+        "grade_ref": "boulder_max_os",
+        "grade_offset": 0,
+        "notes": "Onsight-level boulders on a moderate 10-30° overhanging wall, 5-8 problems per session, each climbed three times: 1) as statically as possible, 2) as dynamically as possible, 3) as your body naturally chooses. Feel the difference in energy usage and movement quality, and how wall angle and hold types demand a style. Regress: lower grade, steeper angle. Progress: higher grade, lower angle."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Style-contrast drill: climb the same onsight-level boulder statically, then dynamically, then naturally, building awareness of your default style and when to switch modes (Steve Bechtel, Climb Strong: Drills Manual, p.72; original source: Gimme Kraft).",
+      "cues": [
+        "First ascent fully static — no momentum allowed",
+        "Second ascent fully dynamic — commit to the swing",
+        "Third ascent: let the body choose, notice what it picks",
+        "Compare energy cost between the three styles"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
+    },
+    {
+      "id": "tech_foot_flyaways",
+      "name": "Foot Flyaways",
+      "category": "technique",
+      "focus": "footwork",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "technique_momentum_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 150,
+        "rest_between_sets_seconds": 150,
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -2,
+        "notes": "Warm-up level problems on a 30-40° wall. On every hand move let both feet come off the wall, then bring them back to the next appropriate foothold in the sequence; repeat to the top. 2-3 problems per set, 3-5 sets, 2-3 min rest between problems. Regress: open holds, less steep, bigger handholds/target feet, fewer flys. Progress: harder problems, longer moves, steeper walls, smaller holds."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Footwork-accuracy and core-integration drill mimicking steep terrain: both feet fly off on every hand move and must return precisely to the next foothold (Steve Bechtel, Climb Strong: Drills Manual, p.74).",
+      "cues": [
+        "Feet off on every hand move — no cheating with one toe on",
+        "Eyes find the return foothold before the feet leave",
+        "Absorb the swing with the core, not the arms",
+        "Place the returning feet silently and exactly"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
+    },
+    {
+      "id": "tech_green_light_red_light",
+      "name": "Green Light Red Light",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 20,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "climbing_intervals",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_pacing_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 2,
+        "reps": 2,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": 40,
+        "rest_between_sets_seconds": 600,
+        "grade_ref": "boulder_max_os",
+        "grade_offset": -1,
+        "notes": "With a partner calling start/stop or a pre-set timer, on open holds or a spray wall (vertical terrain, onsight −1 difficulty): climb as fast as possible with good form and focused footwork for 10-30 sec, then recover ON the wall for double the climbing time, lowering heart rate and breathing. Two climb/rest series per set, 10 min rest between sets, 2-3 sets. Regress: slab, larger holds, shorter intervals. Progress: harder problems, steeper walls, smaller sloping holds."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Climb-with-haste plus active-rest interval drill: short bursts of fast, precise climbing alternated with on-wall recovery, training pace control under a running clock (Steve Bechtel, Climb Strong: Drills Manual, p.76).",
+      "cues": [
+        "Fast never means sloppy — footwork stays focused",
+        "Recover on the wall: shake out, slow the breathing",
+        "Rest double what you climbed",
+        "Green light: move with intent, no hesitating mid-sequence"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
+    },
+    {
+      "id": "tech_hard_target",
+      "name": "Hard Target",
+      "category": "technique",
+      "focus": "footwork",
+      "time_min": 5,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_footwork"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_footwork_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 40,
+        "rest_between_sets_seconds": 60,
+        "notes": "Hold two matched jugs on an overhanging wall so the body hangs away from the wall. One foot at a time, laser-place the foot on 5-8 different footholds, each only for a moment. Jump down, rest 30-45 sec, repeat with the other foot (one rep per side per set). 4-6 sets. Complicate with staggered handhold heights, hard-to-reach footholds, or an eyes-closed set. Regress: anchor one foot, bigger handholds. Progress: reach across the centerline, steeper wall, hands closer together, smaller handholds."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Foot-placement accuracy drill hanging from matched jugs: laser-place one foot on a series of footholds, momentarily each, training precision under body tension (Steve Bechtel, Climb Strong: Drills Manual, p.78).",
+      "cues": [
+        "Laser placement: the toe lands exactly where the eyes chose",
+        "Only a moment per foothold — touch and move on",
+        "Keep the hanging body quiet while the foot works",
+        "Both sides every set — jump down and switch feet"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_hips_first",
+      "name": "Hips First",
+      "category": "technique",
+      "focus": "body_position",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_body_position"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "technique_body_position_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 150,
+        "rest_between_sets_seconds": null,
+        "notes": "Traversing on vertical terrain on open holds: think and act as if the hips are the FIRST thing that moves in every sequence, before pulling with the arms or pushing with the feet. 5-7 problems/laps with 2-3 min rest. As proficiency grows add diagonal then upward movement and set routes. Regress: slab/vertical, bigger holds, shorter moves. Progress: steeper, smaller holds, difficult hold angles, set problems."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Hip-lead movement awareness drill: initiate every sequence from the hips before arms pull or feet push, mitigating barn-dooring and reach-with-hips-behind habits (Steve Bechtel, Climb Strong: Drills Manual, p.80).",
+      "cues": [
+        "Hips move first — arms and feet follow",
+        "Feel the reach get shorter when the hips lead",
+        "If you barn-door, the hips started late",
+        "Start traversing, then add diagonal and upward lines"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_hop_and_skip",
+      "name": "Hop and Skip",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 30,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "high",
+      "fatigue_cost": 4,
+      "recency_group": "technique_momentum_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": 6,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 120,
+        "rest_between_sets_seconds": null,
+        "notes": "Freeform: get from the bottom to the top of the wall in the LEAST number of hand moves possible (matching counts as a move). Start on open holds, then move to set boulder problems. Steeper walls allow feet-off two-handed dynamic risks; vertical angles demand caution with balance. Scheduled here as a compact ~30-min block; Bechtel allows expanding it to a full 45-min bouldering session. Regress: bigger holds, moderate angles, open holds. Progress: smaller holds, angles >45°, set problems."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Dynamic creativity drill: top the wall in the fewest hand moves possible, working explosiveness, eye-hand-foot coordination and creative beta decisions (Steve Bechtel, Climb Strong: Drills Manual, p.82; original source: Dave Wetmore).",
+      "cues": [
+        "Count every hand move — matching counts too",
+        "Big span beats two small moves: look for the skip",
+        "Eyes lock the target hold before you launch",
+        "Fewer moves each lap, same wall"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_pogo",
+      "name": "Pogo",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "explosive_touch",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_momentum_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 60,
+        "rest_between_sets_seconds": 120,
+        "notes": "Open jug-like holds on 15-25° angles, moderate movement distances. Move dynamically hold-to-hold in an off-set nature, generating momentum off the foot OPPOSITE the moving hand: right hand moves → left leg drives on the wall, right leg swings through the air in the direction of travel, timed with the push off the planted foot. Perfect the timing on easy styles first, then smaller holds or bigger distances, then set boulders. Campus board is only an optional tool variant, not the anchor. Regress: shorter reaches, bigger holds, less steep (not vertical). Progress: long reaches, small footholds, set problems, steeper walls."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Dynamic momentum-generation drill: swing the leg opposite the moving hand to generate and time momentum, training efficient power, coordination and off-balance precision (Steve Bechtel, Climb Strong: Drills Manual, p.84).",
+      "cues": [
+        "Opposite leg swings, planted leg drives",
+        "Time the latch with the apex of the swing",
+        "Start on jugs at easy angles — timing before difficulty",
+        "The swing goes in the direction of travel, not just out"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_smooth_is_fast",
+      "name": "Smooth Is Fast",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_pacing_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 3,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 90,
+        "rest_between_sets_seconds": 180,
+        "grade_ref": "boulder_max_os",
+        "grade_offset": 0,
+        "notes": "Onsight-level problem at a slightly overhanging angle allowing fluid movement. One set = the same boulder/route three times: 1) slow and methodical, deciding the best beta; come down, rehearse, rest 1-2 min; 2) with speed and fluidity — as fast as possible with the best technique possible; 3) match or increase the speed of the last ascent. 3 sets. Regress: easier problems, open holds, less steep. Progress: onsight +1/+2, 25-35° angles."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Efficiency and controlled-speed drill: decide the beta slowly, then repeat the same climb with increasing speed while holding technique — smooth first, fast follows (Steve Bechtel, Climb Strong: Drills Manual, p.86).",
+      "cues": [
+        "First lap is for beta, not for speed",
+        "Fast lap: same feet, same sequence, more flow",
+        "Speed comes from fluidity, never from rushing",
+        "If technique degrades, you went past smooth"
+      ],
+      "video_url": null,
+      "load_model": "grade_relative",
+      "attributes": {}
+    },
+    {
+      "id": "tech_the_bump",
+      "name": "The Bump",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "technique_drill",
+      "intensity_level": "medium",
+      "fatigue_cost": 2,
+      "recency_group": "technique_momentum_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 15,
+        "rest_between_sets_seconds": 120,
+        "notes": "Vertical terrain, open holds: build sequences where the same hand moves twice (then 3-4 times) in a row before the other hand moves. One rep per side per set (~15 sec to reset between sides), two bumps in a row per side at anchor. Pay attention to what the lower hand must do and where the body needs to be in space. A partner helps with setting creativity. Regress: vertical-to-slab, incut holds, shorter moves (campus board with easy holds and feet on kickboard only as regression tool). Progress: steep terrain, sloping holds, bigger moves, set problems."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Same-arm bumping drill: move one hand twice or more in a row before the other moves, training intermediate-hold usage, lower-hand work and body positioning (Steve Bechtel, Climb Strong: Drills Manual, p.88).",
+      "cues": [
+        "Same hand goes again — resist matching",
+        "The lower hand carries the position between bumps",
+        "Set the hips before the second bump, not during",
+        "Both sides every set: bump left, then bump right"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
+    },
+    {
+      "id": "tech_throwing_the_shoe",
+      "name": "Throwing The Shoe",
+      "category": "technique",
+      "focus": "movement",
+      "time_min": 15,
+      "role": [
+        "technique"
+      ],
+      "domain": [
+        "technique_movement"
+      ],
+      "pattern": "explosive_touch",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "technique_momentum_drills",
+      "equipment_required": [],
+      "equipment_required_any": [
+        "gym_boulder",
+        "board_kilter",
+        "board_moonboard",
+        "board_other",
+        "spraywall",
+        "homewall"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 2,
+        "work_seconds": null,
+        "rest_between_reps_seconds": 15,
+        "rest_between_sets_seconds": 120,
+        "notes": "Slightly overhung terrain, open medium-to-large holds set just inside max reach (ideally on a spray wall): create small boulders of 1-3 hand moves and 1-3 foot moves that force a jump to the next hold or a very hard effort to keep feet on. One dynamic movement per side per set (~15 sec to reset), 4-6 total reps per direction across the session, 2 min between sets. Key points: timing, eye contact on the next handhold, tension through the working leg if keeping feet on, controlled leg trajectory if cutting. A stated progression of Foot Flyaways. Note: the printed p.91 PROG rows appear to duplicate The Bump's table (book erratum); the ANCHOR row is coherent and used here. Regress: less steep, incut holds, shorter moves, better feet. Progress: steep terrain, bigger moves, set problems."
+      },
+      "stress_tags": {
+        "fingers": "medium",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "low"
+      },
+      "description": "Anticipation drill for max-reach moves: choose between keeping feet on (tension through the working leg) or cutting loose (controlled leg trajectory, tag the next foothold swiftly) (Steve Bechtel, Climb Strong: Drills Manual, p.90).",
+      "cues": [
+        "Decide before you move: feet stay or feet fly",
+        "Eyes on the next handhold through the whole throw",
+        "If cutting: steer the legs, don't let them whip",
+        "If keeping: tension through the working leg and foot"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "attributes": {}
     }
   ]
 }

@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 232  # C255: +6 Bechtel movement drills on top of C251's 226
+    assert len(exercise_list) == 242  # C256: +10 Bechtel momentum drills on top of C255's 232
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
