@@ -331,12 +331,13 @@ export default function WeekPage() {
     }
   }
 
-  /** Complete other activity with feedback + optional duration (B127) */
-  async function handleCompleteOtherActivity(date: string, feedback: string, durationMinutes?: number) {
+  /** Complete other activity with feedback + optional duration (B127/B276) */
+  async function handleCompleteOtherActivity(date: string, slot: string | undefined, feedback: string, durationMinutes?: number) {
     if (!weekPlan) return;
     setError(null);
     try {
       const ev: Record<string, unknown> = { event_type: "complete_other_activity", date, feedback };
+      if (slot) ev.slot = slot;
       if (durationMinutes != null) ev.duration_minutes = durationMinutes;
       const result = await applyEvents({
         events: [ev],
@@ -348,13 +349,13 @@ export default function WeekPage() {
     }
   }
 
-  /** Edit a completed other-activity (B127) */
-  async function handleEditOtherActivity(date: string, fields: { activity_name?: string; feedback?: string; duration_minutes?: number }) {
+  /** Edit a completed other-activity (B127/B276) */
+  async function handleEditOtherActivity(date: string, slot: string | undefined, fields: { activity_name?: string; feedback?: string; duration_minutes?: number }) {
     if (!weekPlan) return;
     setError(null);
     try {
       const result = await applyEvents({
-        events: [{ event_type: "edit_other_activity", date, ...fields }],
+        events: [{ event_type: "edit_other_activity", date, ...(slot ? { slot } : {}), ...fields }],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -363,13 +364,13 @@ export default function WeekPage() {
     }
   }
 
-  /** Undo other activity completion */
-  async function handleUndoOtherActivity(date: string) {
+  /** Undo other activity completion (B276: per-slot) */
+  async function handleUndoOtherActivity(date: string, slot?: string) {
     if (!weekPlan) return;
     setError(null);
     try {
       const result = await applyEvents({
-        events: [{ event_type: "undo_other_activity", date }],
+        events: [{ event_type: "undo_other_activity", date, ...(slot ? { slot } : {}) }],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -378,13 +379,13 @@ export default function WeekPage() {
     }
   }
 
-  /** Remove other activity from a day */
-  async function handleRemoveOtherActivity(date: string) {
+  /** Remove other activity from a day (B276: per-slot) */
+  async function handleRemoveOtherActivity(date: string, slot?: string) {
     if (!weekPlan) return;
     setError(null);
     try {
       const result = await applyEvents({
-        events: [{ event_type: "remove_other_activity", date }],
+        events: [{ event_type: "remove_other_activity", date, ...(slot ? { slot } : {}) }],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);

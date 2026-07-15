@@ -112,6 +112,15 @@ export interface SessionSlot {
   target_duration_min?: number;
 }
 
+export interface OtherActivity {
+  slot?: "morning" | "lunch" | "evening";
+  name?: string;
+  status?: "completed";
+  feedback?: "easy" | "ok" | "hard";
+  load?: number;
+  duration_minutes?: number;
+}
+
 export interface DayPlan {
   date: string;
   weekday: string;
@@ -123,6 +132,9 @@ export interface DayPlan {
   outdoor_spot_id?: string;
   outdoor_session_status?: "planned" | "done";
   pretrip_deload?: boolean;
+  // B276: multiple other activities per day (one per slot).
+  other_activities?: OtherActivity[];
+  // Legacy scalar fields (pre-B276) — kept for reading preserved past days.
   other_activity?: boolean;
   other_activity_name?: string;
   other_activity_slot?: "morning" | "lunch" | "evening";
@@ -558,7 +570,8 @@ export interface WeeklyReportDay {
   weekday: string;
   sessions: WeeklyReportSession[];
   outdoor: { spot_name: string; discipline: string; status: string; route_count?: number } | null;
-  other_activity: { name: string; status: string; feedback: string; load?: number } | null;
+  // B276: per-slot list of other activities (was a single object).
+  other_activities: { slot?: string; name: string; status: string; feedback: string; load?: number }[];
   free_sessions?: WeeklyReportFreeSession[];
   is_rest_day: boolean;
 }

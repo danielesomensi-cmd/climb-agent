@@ -2,6 +2,7 @@
 
 import type { WeekPlan } from "@/lib/types";
 import { getPhaseName } from "@/lib/phase-labels";
+import { normalizeOtherActivities } from "@/lib/other-activity";
 
 interface WeekProgressBarProps {
   weekPlan: WeekPlan;
@@ -32,9 +33,9 @@ export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = t
       return sum + actual;
     }, 0);
 
-  // Add other activity load (Yoga, running, etc.) from completed days
+  // Add other activity load (Yoga, running, etc.) from completed days (B276: sum per-slot list)
   const otherActivityLoad = days.reduce(
-    (sum, d) => sum + (d.other_activity_load ?? 0), 0
+    (sum, d) => sum + normalizeOtherActivities(d).reduce((s, oa) => s + (oa.load ?? 0), 0), 0
   );
 
   // Add free session load (matches report_engine.py logic)

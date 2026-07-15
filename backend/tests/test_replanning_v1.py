@@ -570,9 +570,11 @@ def test_complete_other_activity_easy():
     ])
 
     sun = next(d for d in updated["weeks"][0]["days"] if d["date"] == sun_date)
-    assert sun["other_activity_status"] == "completed"
-    assert sun["other_activity_feedback"] == "easy"
-    assert sun["other_activity_load"] == COMPLEMENTARY_LOAD_EASY
+    # B276: legacy scalar input migrated to list form on mutation.
+    oa = sun["other_activities"][0]
+    assert oa["status"] == "completed"
+    assert oa["feedback"] == "easy"
+    assert oa["load"] == COMPLEMENTARY_LOAD_EASY
     assert sun["status"] == "done"
 
 
@@ -586,7 +588,7 @@ def test_complete_other_activity_ok():
     ])
 
     sun = next(d for d in updated["weeks"][0]["days"] if d["date"] == sun_date)
-    assert sun["other_activity_load"] == COMPLEMENTARY_LOAD_OK
+    assert sun["other_activities"][0]["load"] == COMPLEMENTARY_LOAD_OK
 
 
 def test_complete_other_activity_hard():
@@ -599,7 +601,7 @@ def test_complete_other_activity_hard():
     ])
 
     sun = next(d for d in updated["weeks"][0]["days"] if d["date"] == sun_date)
-    assert sun["other_activity_load"] == COMPLEMENTARY_LOAD_HARD
+    assert sun["other_activities"][0]["load"] == COMPLEMENTARY_LOAD_HARD
 
 
 def test_undo_other_activity():
@@ -641,9 +643,10 @@ def test_add_other_activity():
         {"event_type": "add_other_activity", "date": mon_date, "activity_name": "Swimming", "slot": "evening"},
     ])
     mon = next(d for d in result["weeks"][0]["days"] if d["date"] == mon_date)
-    assert mon["other_activity"] is True
-    assert mon["other_activity_name"] == "Swimming"
-    assert mon["other_activity_slot"] == "evening"
+    # B276: activities stored as a per-slot list.
+    assert len(mon["other_activities"]) == 1
+    assert mon["other_activities"][0]["name"] == "Swimming"
+    assert mon["other_activities"][0]["slot"] == "evening"
     # Sessions should still be present (not wiped)
     assert len(mon.get("sessions", [])) > 0
 
@@ -661,6 +664,78 @@ def test_add_other_activity_blocks_slot():
     with pytest.raises(ValueError, match="already occupied by other activity"):
         apply_day_add(plan, session_id="core_training", target_date=mon_date,
                       slot="morning", location="home")
+
+
+def test_add_two_other_activities_same_day():
+    """B276: two activities on the same day (different slots) both persist."""
+    plan = _plan_snapshot()
+    mon_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "mon")
+    result = apply_events(plan, [
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "Chest", "slot": "lunch"},
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "HIIT", "slot": "evening"},
+    ])
+    mon = next(d for d in result["weeks"][0]["days"] if d["date"] == mon_date)
+    names = {oa["slot"]: oa["name"] for oa in mon["other_activities"]}
+    assert names == {"lunch": "Chest", "evening": "HIIT"}
+    # Slot order preserved (morning < lunch < evening)
+    assert [oa["slot"] for oa in mon["other_activities"]] == ["lunch", "evening"]
+
+
+def test_add_other_activity_same_slot_updates_in_place():
+    """B276: re-adding on an occupied slot updates the name, no duplicate item."""
+    plan = _plan_snapshot()
+    mon_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "mon")
+    result = apply_events(plan, [
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "Chest", "slot": "lunch"},
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "Back", "slot": "lunch"},
+    ])
+    mon = next(d for d in result["weeks"][0]["days"] if d["date"] == mon_date)
+    assert len(mon["other_activities"]) == 1
+    assert mon["other_activities"][0]["name"] == "Back"
+
+
+def test_complete_one_of_two_other_activities():
+    """B276: completing one activity by slot leaves the other untouched; day not done until both."""
+    plan = _plan_snapshot()
+    mon = next(d for d in plan["weeks"][0]["days"] if d["weekday"] == "mon")
+    mon["sessions"] = []
+    mon_date = mon["date"]
+    plan = apply_events(plan, [
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "Chest", "slot": "lunch"},
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "HIIT", "slot": "evening"},
+    ])
+    # Complete only the lunch one
+    result = apply_events(plan, [
+        {"event_type": "complete_other_activity", "date": mon_date, "slot": "lunch", "feedback": "ok"},
+    ])
+    mon = next(d for d in result["weeks"][0]["days"] if d["date"] == mon_date)
+    by_slot = {oa["slot"]: oa for oa in mon["other_activities"]}
+    assert by_slot["lunch"]["status"] == "completed"
+    assert "status" not in by_slot["evening"]
+    # Day is NOT done while the evening activity is still pending
+    assert mon.get("status") is None
+    # Now complete the evening one → day done
+    result = apply_events(result, [
+        {"event_type": "complete_other_activity", "date": mon_date, "slot": "evening", "feedback": "hard"},
+    ])
+    mon = next(d for d in result["weeks"][0]["days"] if d["date"] == mon_date)
+    assert mon["status"] == "done"
+
+
+def test_remove_one_of_two_other_activities():
+    """B276: removing one activity by slot leaves the other in place."""
+    plan = _plan_snapshot()
+    mon_date = next(d["date"] for d in plan["weeks"][0]["days"] if d["weekday"] == "mon")
+    plan = apply_events(plan, [
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "Chest", "slot": "lunch"},
+        {"event_type": "add_other_activity", "date": mon_date, "activity_name": "HIIT", "slot": "evening"},
+    ])
+    result = apply_events(plan, [
+        {"event_type": "remove_other_activity", "date": mon_date, "slot": "lunch"},
+    ])
+    mon = next(d for d in result["weeks"][0]["days"] if d["date"] == mon_date)
+    assert len(mon["other_activities"]) == 1
+    assert mon["other_activities"][0]["slot"] == "evening"
 
 
 def test_remove_other_activity():

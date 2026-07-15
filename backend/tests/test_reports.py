@@ -946,10 +946,11 @@ class TestDayByDayEnriched:
         ]))
         report = generate_weekly_report(state, None, WEEK_START)
         sat = [d for d in report["days"] if d["date"] == "2026-03-21"][0]
-        assert sat["other_activity"] is not None
-        assert sat["other_activity"]["name"] == "Yoga"
-        assert sat["other_activity"]["status"] == "completed"
-        assert sat["other_activity"]["load"] == 15
+        # B276: report exposes a per-slot list of other activities.
+        assert len(sat["other_activities"]) == 1
+        assert sat["other_activities"][0]["name"] == "Yoga"
+        assert sat["other_activities"][0]["status"] == "completed"
+        assert sat["other_activities"][0]["load"] == 15
         assert sat["is_rest_day"] is False
 
     def test_mixed_week_all_visible(self, tmp_log_dir):
@@ -976,7 +977,7 @@ class TestDayByDayEnriched:
         assert report["days"][0]["sessions"][0]["status"] == "done"
         # Fri: manual
         fri = [d for d in report["days"] if d["date"] == "2026-03-20"][0]
-        assert fri["other_activity"]["name"] == "Circus"
+        assert fri["other_activities"][0]["name"] == "Circus"
         # Sun: outdoor
         assert report["days"][6]["outdoor"]["spot_name"] == "Crag"
 
