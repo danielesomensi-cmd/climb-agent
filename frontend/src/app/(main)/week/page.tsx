@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute, OutdoorSession, Phase } from "@/lib/types";
+import { normalizeOtherActivities } from "@/lib/other-activity";
 import {
   Drawer,
   DrawerContent,
@@ -732,7 +733,7 @@ export default function WeekPage() {
                         + d.sessions
                             .filter((s) => s.status === "done")
                             .reduce((acc, s) => acc + (s.session_load_score ?? s.estimated_load_score ?? 0), 0)
-                        + (d.other_activity_load ?? 0)
+                        + normalizeOtherActivities(d).reduce((a, oa) => a + (oa.load ?? 0), 0)
                         + ((freeSessionsByDate[d.date] ?? []).reduce((a, fs) => a + ((fs.load_score as number) ?? 0), 0))
                         + (outdoorLoadMap[d.date] ?? 0),
                         0,
