@@ -407,6 +407,26 @@ class TestOutdoorFieldsPreserved:
         assert tue["other_activity_feedback"] == "hard"
         assert tue["other_activity_load"] == 30
 
+    def test_other_activities_list_preserved_regen(self):
+        """B276: the new multi-activity list survives regeneration untouched."""
+        old = _make_week_plan("2026-02-23")
+        old["weeks"][0]["days"][1]["other_activities"] = [
+            {"slot": "lunch", "name": "Chest", "status": "completed",
+             "feedback": "ok", "load": 20, "duration_minutes": 45},
+            {"slot": "evening", "name": "HIIT", "status": "completed",
+             "feedback": "hard", "load": 30},
+        ]
+
+        new = _make_week_plan("2026-02-23")
+        result = regenerate_preserving_completed(old, new)
+        tue = result["weeks"][0]["days"][1]
+        assert tue["other_activities"] == [
+            {"slot": "lunch", "name": "Chest", "status": "completed",
+             "feedback": "ok", "load": 20, "duration_minutes": 45},
+            {"slot": "evening", "name": "HIIT", "status": "completed",
+             "feedback": "hard", "load": 30},
+        ]
+
     def test_outdoor_without_done_sessions_preserved(self):
         """Outdoor fields preserved even if no done sessions on that day."""
         prev = _make_week_plan("2026-02-23")

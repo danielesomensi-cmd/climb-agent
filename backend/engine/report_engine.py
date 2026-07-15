@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from backend.engine import storage
 from backend.engine.closed_loop_v1 import STIMULUS_CATEGORIES, _session_categories
+from backend.engine.other_activity_v1 import normalize_other_activities
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions
 
 # Difficulty label→score mapping (mirrors adaptive_replan.py)
@@ -259,8 +260,10 @@ def _build_load(
                     if s.get("status") == "done"
                 )
                 actual_total += day_load_actual
-                # B164: include other_activity_load in actual
-                actual_total += day.get("other_activity_load") or 0
+                # B164/B276: include other-activity load (sum across the day's list)
+                actual_total += sum(
+                    int(oa.get("load") or 0) for oa in normalize_other_activities(day)
+                )
 
                 has_hard = any(s.get("tags", {}).get("hard") for s in sessions)
                 if has_hard:
@@ -615,14 +618,17 @@ def _build_days(
             route_count = sum(len(s.get("routes") or []) for s in actual_outdoor)
             outdoor_info["route_count"] = route_count
 
-        other_activity = None
-        if plan_day.get("other_activity"):
-            other_activity = {
-                "name": plan_day.get("other_activity_name"),
-                "status": plan_day.get("other_activity_status"),
-                "feedback": plan_day.get("other_activity_feedback"),
-                "load": plan_day.get("other_activity_load"),
+        # B276: per-day list of other activities (legacy scalars normalized in).
+        other_activities = [
+            {
+                "slot": oa.get("slot"),
+                "name": oa.get("name"),
+                "status": oa.get("status"),
+                "feedback": oa.get("feedback"),
+                "load": oa.get("load"),
             }
+            for oa in normalize_other_activities(plan_day)
+        ]
 
         # Free sessions (A138)
         day_free = []
@@ -647,14 +653,14 @@ def _build_days(
                 "climb_type": "routes" if surface == "gym_routes" else "boulders",
             })
 
-        is_rest_day = not sessions and not outdoor_info and not other_activity and not day_free
+        is_rest_day = not sessions and not outdoor_info and not other_activities and not day_free
 
         result.append({
             "date": d_str,
             "weekday": weekday,
             "sessions": sessions,
             "outdoor": outdoor_info,
-            "other_activity": other_activity,
+            "other_activities": other_activities,
             "free_sessions": day_free,
             "is_rest_day": is_rest_day,
         })
@@ -861,8 +867,11 @@ def _build_training_time(
                 d = day.get("date", "")
                 if not (since <= d <= until):
                     continue
-                if day.get("other_activity") and day.get("other_activity_status") == "completed":
-                    dur_min = day.get("other_activity_duration_minutes")
+                # B276: sum duration across all completed other activities.
+                for oa in normalize_other_activities(day):
+                    if oa.get("status") != "completed":
+                        continue
+                    dur_min = oa.get("duration_minutes")
                     if dur_min is not None:
                         dur = int(dur_min) * 60
                         total_seconds += dur
@@ -931,10 +940,12 @@ def _build_active_days(
             outdoor = day["outdoor"]
             if outdoor.get("status") == "done" or outdoor.get("route_count"):
                 has_activity = True
-        if not has_activity and day.get("other_activity"):
-            oa = day["other_activity"]
-            if oa.get("status") in ("completed", "done"):
-                has_activity = True
+        if not has_activity:
+            # B276: day is active if any other activity was completed.
+            for oa in day.get("other_activities") or []:
+                if oa.get("status") in ("completed", "done"):
+                    has_activity = True
+                    break
         # Free sessions with at least 1 climb or circuit session (A138/A140)
         if not has_activity:
             for fs in day.get("free_sessions", []):

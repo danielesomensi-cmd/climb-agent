@@ -36,6 +36,7 @@ import {
 import { getInProgressSession, clearSavedSession, type InProgressSession } from "@/lib/guided-session-utils";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
 import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
+import { hasOtherActivity } from "@/lib/other-activity";
 
 /** Full weekday names */
 const WEEKDAY_FULL: Record<number, string> = {
@@ -424,7 +425,7 @@ function TodayContent() {
    */
   const hasNonEngineContent: boolean = !!(
     dayPlan && (
-      dayPlan.other_activity ||
+      hasOtherActivity(dayPlan) ||
       dayPlan.outdoor_spot_name ||
       dayPlan.outdoor_slot ||
       freeSessions.length > 0
@@ -511,7 +512,7 @@ function TodayContent() {
   }
 
   /** Complete an other-activity (complementary sport) with feedback + optional duration */
-  async function handleCompleteOtherActivity(date: string, feedback: string, durationMinutes?: number) {
+  async function handleCompleteOtherActivity(date: string, slot: string | undefined, feedback: string, durationMinutes?: number) {
     if (!weekPlan) return;
     try {
       const ev: Record<string, unknown> = {
@@ -519,6 +520,7 @@ function TodayContent() {
         date,
         feedback,
       };
+      if (slot) ev.slot = slot;
       if (durationMinutes != null) ev.duration_minutes = durationMinutes;
       const result = await applyEvents({
         events: [ev],
@@ -530,12 +532,12 @@ function TodayContent() {
     }
   }
 
-  /** Edit a completed other-activity (B127) */
-  async function handleEditOtherActivity(date: string, fields: { activity_name?: string; feedback?: string; duration_minutes?: number }) {
+  /** Edit a completed other-activity (B127/B276) */
+  async function handleEditOtherActivity(date: string, slot: string | undefined, fields: { activity_name?: string; feedback?: string; duration_minutes?: number }) {
     if (!weekPlan) return;
     try {
       const result = await applyEvents({
-        events: [{ event_type: "edit_other_activity", date, ...fields }],
+        events: [{ event_type: "edit_other_activity", date, ...(slot ? { slot } : {}), ...fields }],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -544,8 +546,8 @@ function TodayContent() {
     }
   }
 
-  /** Undo other-activity completion */
-  async function handleUndoOtherActivity(date: string) {
+  /** Undo other-activity completion (B276: per-slot) */
+  async function handleUndoOtherActivity(date: string, slot?: string) {
     if (!weekPlan) return;
     try {
       const result = await applyEvents({
@@ -553,6 +555,7 @@ function TodayContent() {
           {
             event_type: "undo_other_activity",
             date,
+            ...(slot ? { slot } : {}),
           },
         ],
         week_plan: weekPlan,
@@ -563,12 +566,12 @@ function TodayContent() {
     }
   }
 
-  /** Remove other activity from a day */
-  async function handleRemoveOtherActivity(date: string) {
+  /** Remove other activity from a day (B276: per-slot) */
+  async function handleRemoveOtherActivity(date: string, slot?: string) {
     if (!weekPlan) return;
     try {
       const result = await applyEvents({
-        events: [{ event_type: "remove_other_activity", date }],
+        events: [{ event_type: "remove_other_activity", date, ...(slot ? { slot } : {}) }],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);

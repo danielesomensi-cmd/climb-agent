@@ -778,8 +778,9 @@ class TestPlannerV2OtherActivity(unittest.TestCase):
         plan = generate_phase_week(**_make_kwargs("strength_power", availability=avail))
         days = plan["weeks"][0]["days"]
         wed = next(d for d in days if d["weekday"] == "wed")
-        self.assertTrue(wed.get("other_activity"), "Missing other_activity flag")
-        self.assertEqual(wed.get("other_activity_name"), "Trail running")
+        # B276: emitted as a per-slot list.
+        self.assertTrue(wed.get("other_activities"), "Missing other_activities list")
+        self.assertEqual(wed["other_activities"][0].get("name"), "Trail running")
         # Sessions are allowed, but no hard sessions on this day
         for s in wed["sessions"]:
             self.assertFalse(s["tags"]["hard"],
@@ -823,10 +824,10 @@ class TestPlannerV2OtherActivity(unittest.TestCase):
         plan = generate_phase_week(**_make_kwargs("base", availability=avail))
         days = plan["weeks"][0]["days"]
         wed = next(d for d in days if d["weekday"] == "wed")
-        # The other_activity flag should be set
-        self.assertTrue(wed.get("other_activity"), "Missing other_activity flag")
-        self.assertEqual(wed.get("other_activity_name"), "Circus")
-        self.assertEqual(wed.get("other_activity_slot"), "evening")
+        # B276: the other activity should be in the per-slot list
+        self.assertTrue(wed.get("other_activities"), "Missing other_activities list")
+        self.assertEqual(wed["other_activities"][0].get("name"), "Circus")
+        self.assertEqual(wed["other_activities"][0].get("slot"), "evening")
         # No session should be in the evening slot (blocked by other_sport)
         for s in wed["sessions"]:
             self.assertNotEqual(s["slot"], "evening",

@@ -184,7 +184,7 @@ class TestApplyEventsRecomputesStatus:
             {"event_type": "complete_other_activity", "date": "2026-03-09"},
         ])
         day = result["weeks"][0]["days"][0]
-        assert day["other_activity_status"] == "completed"
+        assert day["other_activities"][0]["status"] == "completed"
         assert "status" not in day, "Day should NOT be 'done' while indoor session is planned"
 
     def test_complete_outdoor_indoor_planned_not_done(self):

@@ -109,7 +109,8 @@ class TestAddGeneratedSessionEvent:
     def test_add_generated_session_rejects_other_activity_slot(self):
         """B218 Bug 1: rest-day/other-activity slot still blocks insertion."""
         plan = _make_week_plan()
-        plan["weeks"][0]["days"][2]["other_activity_slot"] = "evening"
+        # B276: other activities stored as a per-slot list.
+        plan["weeks"][0]["days"][2]["other_activities"] = [{"slot": "evening", "name": "Yoga"}]
         payload = _make_generated_payload()
         with pytest.raises(ValueError, match="already occupied by other activity"):
             apply_events(plan, [{

@@ -15,6 +15,13 @@ logger = logging.getLogger(__name__)
 
 from backend.engine.macrocycle_v1 import _build_session_pool
 from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META, generate_phase_week
+from backend.engine.other_activity_v1 import (
+    ensure_other_activities_list,
+    normalize_other_activities,
+    other_activity_slots,
+    select_activity,
+    sort_other_activities,
+)
 
 def _recovery_gap(plan: Dict[str, Any]) -> int:
     """B165b: read recovery_multiplier from plan and return spacing gap (same formula as planner)."""
@@ -380,7 +387,7 @@ def apply_day_add(
     for s in target_day.get("sessions", []):
         if s.get("slot") == slot:
             raise ValueError(f"Slot '{slot}' already occupied on {target_date}")
-    if target_day.get("other_activity_slot") == slot:
+    if slot in other_activity_slots(target_day):
         raise ValueError(f"Slot '{slot}' already occupied by other activity on {target_date}")
 
     meta = _meta_for(session_id)
@@ -483,11 +490,12 @@ def _recompute_day_status(day: Dict[str, Any]) -> None:
     elif outdoor_st is not None:
         statuses.append(None)  # blocks "done" until outdoor is completed
 
-    other_st = day.get("other_activity_status")
-    if other_st in ("done", "completed"):
-        statuses.append("done")
-    elif day.get("other_activity") and other_st not in ("done", "completed"):
-        statuses.append(None)  # blocks "done" until other_activity is completed
+    # B276: a day is "done" only when every other activity is completed.
+    for oa in normalize_other_activities(day):
+        if oa.get("status") in ("done", "completed"):
+            statuses.append("done")
+        else:
+            statuses.append(None)  # blocks "done" until this activity is completed
 
     if not statuses:
         day.pop("status", None)
@@ -636,7 +644,11 @@ def merge_prev_week_sessions(
 
 _DAY_LEVEL_FIELDS = (
     "outdoor_spot_name", "outdoor_spot_id", "outdoor_discipline",
-    "outdoor_session_status", "other_activity", "other_activity_name",
+    "outdoor_session_status",
+    # B276: new canonical list form. Legacy scalars kept for preserved
+    # pre-B276 days that were never re-touched (single source: whichever exists).
+    "other_activities",
+    "other_activity", "other_activity_name",
     "other_activity_slot", "other_activity_status",
     "other_activity_feedback", "other_activity_load",
     "other_activity_duration_minutes",
@@ -902,57 +914,81 @@ def apply_events(
                 day.pop("status", None)
 
         elif event_type == "complete_other_activity":
+            # B276: keyed by slot; falls back to the sole activity when no slot.
             day = _find_day(updated, event["date"])
-            if not day.get("other_activity"):
+            items = ensure_other_activities_list(day)
+            item = select_activity(items, event.get("slot"))
+            if item is None:
                 raise ValueError(f"Date {event['date']} is not an other-activity day")
             feedback = event.get("feedback", "ok")
-            load = COMPLEMENTARY_LOAD_MAP.get(feedback, COMPLEMENTARY_LOAD_OK)
-            day["other_activity_status"] = "completed"
-            day["other_activity_feedback"] = feedback
-            day["other_activity_load"] = load
+            item["status"] = "completed"
+            item["feedback"] = feedback
+            item["load"] = COMPLEMENTARY_LOAD_MAP.get(feedback, COMPLEMENTARY_LOAD_OK)
             # B127: optional duration from user input
             if event.get("duration_minutes") is not None:
-                day["other_activity_duration_minutes"] = int(event["duration_minutes"])
+                item["duration_minutes"] = int(event["duration_minutes"])
             _recompute_day_status(day)
 
         elif event_type == "edit_other_activity":
             day = _find_day(updated, event["date"])
-            if not day.get("other_activity"):
+            items = ensure_other_activities_list(day)
+            item = select_activity(items, event.get("slot"))
+            if item is None:
                 raise ValueError(f"Date {event['date']} is not an other-activity day")
             if event.get("activity_name") is not None:
-                day["other_activity_name"] = event["activity_name"]
+                item["name"] = event["activity_name"]
             if event.get("feedback") is not None:
                 feedback = event["feedback"]
-                day["other_activity_feedback"] = feedback
-                day["other_activity_load"] = COMPLEMENTARY_LOAD_MAP.get(feedback, COMPLEMENTARY_LOAD_OK)
+                item["feedback"] = feedback
+                item["load"] = COMPLEMENTARY_LOAD_MAP.get(feedback, COMPLEMENTARY_LOAD_OK)
             if event.get("duration_minutes") is not None:
-                day["other_activity_duration_minutes"] = int(event["duration_minutes"])
+                item["duration_minutes"] = int(event["duration_minutes"])
 
         elif event_type == "undo_other_activity":
             day = _find_day(updated, event["date"])
-            day.pop("other_activity_status", None)
-            day.pop("other_activity_feedback", None)
-            day.pop("other_activity_load", None)
-            day.pop("other_activity_duration_minutes", None)
+            items = ensure_other_activities_list(day)
+            item = select_activity(items, event.get("slot"))
+            if item is not None:
+                item.pop("status", None)
+                item.pop("feedback", None)
+                item.pop("load", None)
+                item.pop("duration_minutes", None)
             day.pop("status", None)
 
         elif event_type == "add_other_activity":
             day = _find_day(updated, event["date"])
-            day["other_activity"] = True
-            if event.get("activity_name"):
-                day["other_activity_name"] = event["activity_name"]
-            if event.get("slot"):
-                day["other_activity_slot"] = event["slot"]
+            items = ensure_other_activities_list(day)
+            slot = event.get("slot")
+            name = event.get("activity_name")
+            # One other-activity per slot: update in place if the slot is taken,
+            # otherwise append a new item.
+            existing = next((it for it in items if slot and it.get("slot") == slot), None)
+            if existing is not None:
+                if name:
+                    existing["name"] = name
+            else:
+                new_item: Dict[str, Any] = {}
+                if slot:
+                    new_item["slot"] = slot
+                if name:
+                    new_item["name"] = name
+                items.append(new_item)
+            sort_other_activities(items)
+            # A pending activity blocks the day from being "done".
+            _recompute_day_status(day)
 
         elif event_type == "remove_other_activity":
             day = _find_day(updated, event["date"])
-            day.pop("other_activity", None)
-            day.pop("other_activity_name", None)
-            day.pop("other_activity_slot", None)
-            day.pop("other_activity_status", None)
-            day.pop("other_activity_feedback", None)
-            day.pop("other_activity_load", None)
-            day.pop("other_activity_duration_minutes", None)
+            items = ensure_other_activities_list(day)
+            slot = event.get("slot")
+            if slot:
+                day["other_activities"] = [it for it in items if it.get("slot") != slot]
+            else:
+                # No slot → legacy behaviour: clear the whole day.
+                day["other_activities"] = []
+            if not day["other_activities"]:
+                day.pop("other_activities", None)
+            _recompute_day_status(day)
 
         elif event_type == "add_outdoor":
             day = _find_day(updated, event["date"])
@@ -1209,7 +1245,7 @@ def apply_events(
                     raise ValueError(
                         f"Slot '{slot}' already occupied on {target_date}"
                     )
-            if day.get("other_activity_slot") == slot:
+            if slot in other_activity_slots(day):
                 raise ValueError(
                     f"Slot '{slot}' already occupied by other activity on {target_date}"
                 )
@@ -1267,7 +1303,7 @@ def apply_events(
             # B218 Bug 1: generated sessions (body-part picker etc.) stack on
             # top of any existing planned session, same as quick-add. We only
             # reject when the day is marked as a rest/other-activity slot.
-            if day.get("other_activity_slot") == slot:
+            if slot in other_activity_slots(day):
                 raise ValueError(
                     f"Slot '{slot}' already occupied by other activity on {target_date}"
                 )

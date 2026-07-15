@@ -335,15 +335,15 @@ function WeeklyReportContent() {
                             )}
                           </span>
                         )}
-                        {day.other_activity && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-xs text-white">
+                        {day.other_activities?.map((oa, i) => (
+                          <span key={oa.slot ?? `oa-${i}`} className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-xs text-white">
                             <Activity className="size-3" />
-                            {day.other_activity.name ?? "Other"}
-                            {day.other_activity.feedback && (
-                              <span className="opacity-80">· {day.other_activity.feedback}</span>
+                            {oa.name ?? "Other"}
+                            {oa.feedback && (
+                              <span className="opacity-80">· {oa.feedback}</span>
                             )}
                           </span>
-                        )}
+                        ))}
                         {day.free_sessions?.map((fs: WeeklyReportFreeSession) => (
                           <span key={fs.id} className="inline-flex items-center gap-1 rounded-full bg-purple-600 px-2 py-0.5 text-xs text-white">
                             {fs.context === "add_on" ? "+" : ""}Free: {fs.surface} {fs.preset_name}

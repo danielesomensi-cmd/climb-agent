@@ -697,28 +697,41 @@ def generate_phase_week(
 
     # Extract other-activity flags from availability.
     # Sources: legacy _day_meta OR per-slot preferred_location="other_sport".
+    # B276: multiple other activities per day (one per slot). day_other_activity
+    # stays as a per-day bool for the intensity-reduction logic below; the full
+    # list is emitted into the plan as `other_activities`.
     day_other_activity: List[bool] = [False] * 7
     day_reduce_after: List[bool] = [False] * 7
-    day_activity_name: List[Optional[str]] = [None] * 7
-    day_activity_slot: List[Optional[str]] = [None] * 7
+    day_other_activities: List[List[Dict[str, Any]]] = [[] for _ in range(7)]
     for offset in range(7):
         raw_day = (availability or {}).get(day_keys[offset]) or {}
         if not isinstance(raw_day, dict):
             continue
+
+        def _append_activity(slot_key: Optional[str], name: Optional[str]) -> None:
+            # One item per slot — skip if this slot already recorded.
+            if slot_key and any(
+                it.get("slot") == slot_key for it in day_other_activities[offset]
+            ):
+                return
+            item: Dict[str, Any] = {}
+            if slot_key:
+                item["slot"] = slot_key
+            if name:
+                item["name"] = name
+            day_other_activities[offset].append(item)
+            day_other_activity[offset] = True
+
         # Legacy _day_meta approach
         meta = raw_day.get("_day_meta")
         if isinstance(meta, dict) and meta.get("other_activity"):
-            day_other_activity[offset] = True
-            day_activity_name[offset] = meta.get("other_activity_name")
-            day_activity_slot[offset] = meta.get("other_activity_slot")
+            _append_activity(meta.get("other_activity_slot"), meta.get("other_activity_name"))
             day_reduce_after[offset] = bool(meta.get("reduce_intensity_after"))
         # Per-slot approach: preferred_location="other_sport"
         for s_key in SLOTS:
             slot_val = raw_day.get(s_key)
             if isinstance(slot_val, dict) and slot_val.get("preferred_location") == "other_sport":
-                day_other_activity[offset] = True
-                day_activity_slot[offset] = s_key
-                day_activity_name[offset] = slot_val.get("other_activity_name") or day_activity_name[offset]
+                _append_activity(s_key, slot_val.get("other_activity_name"))
                 day_reduce_after[offset] = day_reduce_after[offset] or bool(slot_val.get("reduce_intensity_after"))
 
     # Track constraints
@@ -1405,12 +1418,9 @@ def generate_phase_week(
             day_entry["outdoor_slot"] = True
         if day_dates[offset] in pretrip_set:
             day_entry["pretrip_deload"] = True
-        if day_other_activity[offset]:
-            day_entry["other_activity"] = True
-            if day_activity_name[offset]:
-                day_entry["other_activity_name"] = day_activity_name[offset]
-            if day_activity_slot[offset]:
-                day_entry["other_activity_slot"] = day_activity_slot[offset]
+        if day_other_activities[offset]:
+            # B276: emit the full per-slot list (no legacy scalar fields).
+            day_entry["other_activities"] = day_other_activities[offset]
         if day_intensity_reduced[offset]:
             day_entry["prev_other_activity_reduce"] = True
         plan_days.append(day_entry)
