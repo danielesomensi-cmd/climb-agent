@@ -55,7 +55,7 @@
     "hangboard": [
       {
         "edge_mm": 20,
-        "estimated_at": "2026-07-15",
+        "estimated_at": "2026-07-17",
         "grade_used": "7a",
         "grip": "half_crimp",
         "hang_seconds": 7,
@@ -107,7 +107,7 @@
       "technique": 60
     },
     "end_date": "2026-10-04",
-    "generated_at": "2026-07-15T17:38:47",
+    "generated_at": "2026-07-17T21:44:03",
     "goal_snapshot": {
       "current_grade": "7a",
       "deadline": "2026-09-01",

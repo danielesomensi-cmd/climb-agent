@@ -121,7 +121,11 @@ def _sync_plan_after_outdoor_log(
          if d.get("date") == date),
         None,
     )
-    state.setdefault("outdoor_log", []).append({
+    # B277: one bookkeeping entry per date — idempotent across re-logs and
+    # manual edits (also cleans up any historical duplicates for this date).
+    bookkeeping = state.setdefault("outdoor_log", [])
+    bookkeeping[:] = [e for e in bookkeeping if e.get("date") != date]
+    bookkeeping.append({
         "date": date,
         "spot_name": (u_day or {}).get("outdoor_spot_name", entry.get("spot_name", "")),
         "spot_id": (u_day or {}).get("outdoor_spot_id", entry.get("spot_id", "")),
@@ -220,7 +224,22 @@ def post_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(ge
             detail="Outdoor log write succeeded but file could not be verified.",
         )
 
-    return {"status": "ok", "log_path": os.path.basename(log_path)}
+    # B277: close the closed-loop on the week plan (status done + load + ripple),
+    # same as the active-session finish flow (B273). Without this, a manually
+    # logged outdoor session stays "planned" on the plan and its routes never
+    # surface in the Week view. Best-effort — the log above is the primary record.
+    plan_synced = False
+    try:
+        state = load_state(user_id)
+        plan_synced = _sync_plan_after_outdoor_log(
+            state, user_id, entry, compute_outdoor_load_score(entry)
+        )
+    except Exception:
+        logger.exception(
+            "B277: plan sync after manual outdoor log failed — log saved, plan untouched"
+        )
+
+    return {"status": "ok", "log_path": os.path.basename(log_path), "plan_synced": plan_synced}
 
 
 @router.get("/log/{date}")
@@ -264,7 +283,19 @@ def put_outdoor_log(req: OutdoorSessionLog, user_id: Optional[str] = Depends(get
             break
     save_state(state, user_id)
 
-    return {"status": "ok", "load_score": compute_outdoor_load_score(entry)}
+    # B277: close the loop if an edit finalizes a session whose plan day was
+    # never marked done (dedupe in the sync keeps bookkeeping to one entry).
+    plan_synced = False
+    try:
+        plan_synced = _sync_plan_after_outdoor_log(
+            state, user_id, entry, compute_outdoor_load_score(entry)
+        )
+    except Exception:
+        logger.exception(
+            "B277: plan sync after outdoor log update failed — log saved, plan untouched"
+        )
+
+    return {"status": "ok", "load_score": compute_outdoor_load_score(entry), "plan_synced": plan_synced}
 
 
 @router.delete("/log/{date}")
