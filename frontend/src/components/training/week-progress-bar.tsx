@@ -10,9 +10,12 @@ interface WeekProgressBarProps {
   freeSessions?: Array<Record<string, unknown>>;
   /** When true, free session data has finished loading */
   freeSessionsLoaded?: boolean;
+  /** B278: total completed outdoor load for the week (kept coherent with the
+   *  Week header + weekly report, which both include outdoor load). */
+  outdoorLoad?: number;
 }
 
-export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = true }: WeekProgressBarProps) {
+export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = true, outdoorLoad = 0 }: WeekProgressBarProps) {
   const days = weekPlan.weeks?.[0]?.days ?? [];
   const allSessions = days.flatMap((d) => d.sessions ?? []).filter((s) => s.session_id);
   const totalSessions = allSessions.length;
@@ -43,7 +46,8 @@ export function WeekProgressBar({ weekPlan, freeSessions, freeSessionsLoaded = t
     (sum, fs) => sum + ((fs.load_score as number) || 0), 0
   );
 
-  const doneLoad = Math.round(doneSessionLoad + otherActivityLoad + freeLoad);
+  // B278: include outdoor load so Today matches the Week header + report.
+  const doneLoad = Math.round(doneSessionLoad + otherActivityLoad + freeLoad + (outdoorLoad ?? 0));
 
   const phaseId = (weekPlan.profile_snapshot?.phase_id as string) ?? "";
   const wpDiscipline = (weekPlan.profile_snapshot?.discipline as string) ?? "lead";
