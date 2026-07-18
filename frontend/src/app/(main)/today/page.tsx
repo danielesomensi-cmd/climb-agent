@@ -179,6 +179,7 @@ function TodayContent() {
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
+  const [weekOutdoorLoad, setWeekOutdoorLoad] = useState(0); // B278: outdoor load for the week
   const [freeSessions, setFreeSessions] = useState<Array<Record<string, unknown>>>([]);
   const [weekFreeSessions, setWeekFreeSessions] = useState<Array<Record<string, unknown>>>([]);
   const [weekFreeSessionsLoaded, setWeekFreeSessionsLoaded] = useState(false);
@@ -316,6 +317,7 @@ function TodayContent() {
       .map(d => d.date);
     if (doneDates.length === 0) {
       setOutdoorRoutesMap({});
+      setWeekOutdoorLoad(0);
       return;
     }
     const minDate = doneDates.sort()[0];
@@ -323,14 +325,17 @@ function TodayContent() {
       .then(({ sessions }) => {
         const map: Record<string, OutdoorRoute[]> = {};
         const durMap: Record<string, number> = {};
+        let outdoorLoadTotal = 0; // B278: keep Today's load coherent with Week header + report
         for (const s of sessions) {
           if (doneDates.includes(s.date)) {
             map[s.date] = [...(map[s.date] || []), ...s.routes];
             if (s.duration_minutes) durMap[s.date] = (durMap[s.date] ?? 0) + s.duration_minutes;
+            if (s.load_score) outdoorLoadTotal += s.load_score;
           }
         }
         setOutdoorRoutesMap(map);
         setOutdoorDurationMap(durMap);
+        setWeekOutdoorLoad(outdoorLoadTotal);
       })
       .catch((err) => { console.error("Failed to load outdoor sessions:", err); });
   }, [weekPlan]);
@@ -1067,7 +1072,7 @@ function TodayContent() {
 
         {/* Week progress bar */}
         {!loading && !error && weekPlan && (
-          <WeekProgressBar weekPlan={weekPlan} freeSessions={weekFreeSessions} freeSessionsLoaded={weekFreeSessionsLoaded} />
+          <WeekProgressBar weekPlan={weekPlan} freeSessions={weekFreeSessions} freeSessionsLoaded={weekFreeSessionsLoaded} outdoorLoad={weekOutdoorLoad} />
         )}
 
         {/* Weekly check-in card (Sunday / Monday morning grace) */}
