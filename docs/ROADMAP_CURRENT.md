@@ -329,16 +329,12 @@ Add spraywall to location_any for relevant session templates: limit bouldering, 
 
 ### A-GAMIFY-00 — Design audit: gamification senza spingere all'overtraining
 
-**Priority:** P3 | **Status:** Open | **Type:** D (design audit) | **Effort:** S
+**Priority:** P3 | **Status:** 📄 **Doc consegnato (2026-07-19) — in attesa approvazione Daniele** | **Type:** D (design audit) | **Effort:** S
 **Pre-requisito di tutti gli A-GAMIFY-*.**
 
-Documento di design (`docs/design_gamification.md`) che fissa:
-- Quali metriche premiamo (qualità, completamento fase, milestone una tantum)
-- Quali metriche NON premiamo mai (giorni consecutivi, volume cumulativo, RPE alto, "fai una sessione ogni giorno")
-- Vincolo hard: nessun elemento di gamification può indurre senso di colpa per un giorno saltato o un rest day
-- Linee guida copy per badge/notifiche (allineate a D77/D79: SDT principles + "train better, not more")
+Deliverable: `docs/design_gamification.md` (v1 draft) — regole non negoziabili (cosa premiamo / cosa mai / vincoli hard incl. opt-out), copy guidelines SDT, ricerca online (anti-pattern: Duolingo streak/loss-aversion, Apple rings senza rest day, Strava social comparison, 8a.nu ego-orientation, studio 2025 "media gamification > alta"; modelli: Whoop recovery-first, Finch gentle/no-shame, Garmin one-time badges, retention ∝ difficoltà achievement), 6 proposte rankate: P1=A-GAMIFY-01 (phase completion ⭐), P2=A-GAMIFY-03 (heatmap rest-positive), P3=A-GAMIFY-02 (milestones con distribuzione di difficoltà), P4=A-GAMIFY-04 (smart week, ultima e opzionale), P5 micro-copy "recovery respected" (XS, nuova), P6 cycle recap (nuova). Escluse esplicitamente: leaderboard, streak giornalieri, XP/punti, badge di volume, push di gamification.
 
-Da approvare prima di qualunque A-GAMIFY-* di implementazione.
+Alla approvazione → aggiornare gli A-GAMIFY-* sotto con le decisioni e partire con P1.
 
 ### A-DAILYTIP-V2 — Daily tips: categorie future (stub)
 
