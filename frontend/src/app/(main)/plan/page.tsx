@@ -21,6 +21,7 @@ import {
 import { PERIODIZATION_RATIONALE, PHASE_RATIONALES } from "@/lib/phase-rationales";
 import { getDiscipline } from "@/lib/gradeUtils";
 import { getPhaseName } from "@/lib/phase-labels";
+import { computeCurrentWeek } from "@/lib/phase-progress";
 import type { Phase } from "@/lib/types";
 
 /** Domain labels */
@@ -37,14 +38,6 @@ const DOMAIN_LABELS: Record<string, string> = {
   prehab: "Prehab",
 };
 
-/** Compute the current week of the macrocycle based on the start date */
-function computeCurrentWeek(startDate: string): number {
-  const start = new Date(startDate);
-  const now = new Date();
-  const diffMs = now.getTime() - start.getTime();
-  const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
-  return Math.max(1, diffWeeks + 1);
-}
 
 export default function PlanPage() {
   const { isLoaded: authReady } = useAuth();
@@ -60,7 +53,7 @@ export default function PlanPage() {
 
   const macrocycle = state?.macrocycle ?? null;
   const profile = state?.assessment?.profile ?? null;
-  const currentWeek = macrocycle ? computeCurrentWeek(macrocycle.start_date) : undefined;
+  const currentWeek = macrocycle ? computeCurrentWeek(macrocycle) : undefined;
   const discipline = getDiscipline((state?.goal as Record<string, unknown>)?.goal_type as string | undefined);
 
   const checkStale = useCallback(async () => {
@@ -204,6 +197,7 @@ export default function PlanPage() {
               </CardHeader>
               <CardContent>
                 <MacrocycleTimeline
+                  showProgress
                   macrocycle={macrocycle}
                   currentWeek={currentWeek}
                   discipline={discipline}

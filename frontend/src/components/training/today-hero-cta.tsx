@@ -144,8 +144,10 @@ export function TodayHeroCTA(props: TodayHeroCTAProps) {
       <div className="rounded-lg border border-dashed p-6 text-center space-y-4">
         <div className="space-y-2">
           <p className="text-lg font-medium">Rest day today</p>
+          {/* A235 (P5): rest is framed as productive, never as absence */}
           <p className="text-sm text-muted-foreground">
-            Recover today — your next session is coming up.
+            Recovery is where the gains happen — your body is consolidating the
+            last sessions. Enjoy it.
           </p>
         </div>
 

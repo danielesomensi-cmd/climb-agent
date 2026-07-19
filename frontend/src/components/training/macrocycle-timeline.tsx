@@ -8,6 +8,8 @@ interface MacrocycleTimelineProps {
   macrocycle: Macrocycle;
   currentWeek?: number;
   discipline?: "lead" | "boulder" | "all_round";
+  /** A235: mark completed phases (✓) and show cycle-progress summary. */
+  showProgress?: boolean;
 }
 
 /** Background color keyed on phase_id */
@@ -32,6 +34,7 @@ export function MacrocycleTimeline({
   macrocycle,
   currentWeek,
   discipline = "lead",
+  showProgress = false,
 }: MacrocycleTimelineProps) {
   const totalWeeks = macrocycle.total_weeks;
 
@@ -93,6 +96,12 @@ export function MacrocycleTimeline({
           const widthPct = (phase.duration_weeks / totalWeeks) * 100;
           const label =
             getPhaseNameShort(phase.phase_id, discipline);
+          // A235: a phase is complete once its last week is behind the
+          // current week (currentWeek is 1-based and clamped upstream).
+          const isComplete =
+            showProgress &&
+            currentWeek != null &&
+            phase.startWeek + phase.duration_weeks < currentWeek;
 
           return (
             <div
@@ -102,6 +111,11 @@ export function MacrocycleTimeline({
             >
               <p className="text-[10px] font-medium text-muted-foreground leading-tight break-words">
                 {label}
+                {isComplete && (
+                  <span className="ml-0.5 text-emerald-500" aria-label="Phase complete">
+                    ✓
+                  </span>
+                )}
               </p>
               <p className="text-[10px] text-muted-foreground">
                 {phase.duration_weeks} wk
@@ -114,7 +128,17 @@ export function MacrocycleTimeline({
       {/* Current week indicator (legend) */}
       {currentWeek != null && (
         <p className="text-xs text-muted-foreground text-center mt-1">
-          Current week: {currentWeek} / {totalWeeks}
+          {showProgress ? (
+            <>
+              Week {currentWeek} of {totalWeeks} ·{" "}
+              {Math.round(((currentWeek - 1) / totalWeeks) * 100)}% of cycle
+              complete
+            </>
+          ) : (
+            <>
+              Current week: {currentWeek} / {totalWeeks}
+            </>
+          )}
         </p>
       )}
     </div>

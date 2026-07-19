@@ -885,6 +885,8 @@ export interface UserState {
   preferences?: {
     finger_training_device?: "hangboard" | "loading_pin";
     grade_system_boulder?: "font" | "v_scale";
+    /** A235: celebration keys `${macrocycle.start_date}:${phase_id}` already shown. */
+    phase_celebrations_seen?: string[];
     [key: string]: unknown;
   };
   baselines?: Record<string, unknown>;

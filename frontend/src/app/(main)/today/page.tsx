@@ -12,6 +12,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
 import { DailyCueBanner } from "@/components/training/daily-cue-banner";
 import { DailyTipCard } from "@/components/training/daily-tip-card";
+import { PhaseCelebration } from "@/components/training/phase-celebration";
 import { WeatherCard } from "@/components/training/weather-card";
 import { CoachCard } from "@/components/training/coach-card";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
@@ -1264,6 +1265,11 @@ function TodayContent() {
           <DailyTipCard date={targetDate} />
         )}
       </main>
+
+      {/* A235: one-time phase-transition celebration */}
+      {isViewingToday && !loading && (
+        <PhaseCelebration state={stateQuery.data} />
+      )}
 
       {/* Post-session feedback dialog */}
       <FeedbackDialog

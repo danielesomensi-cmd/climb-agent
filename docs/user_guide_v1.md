@@ -63,6 +63,8 @@ climb-agent builds your training plan through a pipeline:
 
 Your macrocycle follows the Hörst 4-3-2-1 periodization model. Each phase builds on the previous one. **Trust the progression** — it's designed this way for a reason.
 
+The **Plan** page shows your position in the cycle: completed phases get a green ✓ on the timeline, and a progress line tells you how much of the cycle is behind you. When you enter a new phase, the app celebrates the one you just completed and tells you what to expect next.
+
 ### Base / Endurance (4–6 weeks)
 
 **What you'll do**: ARC (Aerobic Restoration and Capillarity) training, easy sustained climbing, repeaters, technique drills, general conditioning.

@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-19 (A234 — daily tips card su /today: 22 tip feature-discovery, rotazione deterministica per-utente, dismiss per-day. Endpoint 84→86.)
+> Last updated: 2026-07-19 (A235 — macrocycle progress su /plan + celebrazione passaggio fase + rest-copy positiva. A-GAMIFY-00 approvato; stessa giornata: A234 daily tips.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -44,6 +44,8 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 ---
 
 ## Recently closed (2026-07-19)
+
+- **A235 — Macrocycle progress + phase completion celebration (A-GAMIFY-01 + P5)** ✅ (feature P2.9 retention, frontend-only, branch `brief/A235-gamify-phase-progress` → preview Vercel prima del merge). Prima implementazione del design gamification (A-GAMIFY-00, doc approvato stesso giorno). **Timeline /plan:** `MacrocycleTimeline` con `showProgress` — ✓ verde sulle fasi completate + riga "Week X of Y · Z% of cycle complete"; marker settimana ora **pause-aware**: nuova util condivisa `lib/phase-progress.ts` (`computeCurrentWeek` sottrae `pause.offset_days` A223 e clampa a total_weeks — fix del calcolo che su /plan ignorava la pausa). **Celebrazione fase:** `PhaseCelebration` su /today — modal one-time all'ingresso in una nuova fase che celebra la fase COMPLETATA ("{Fase} complete! N weeks of focused work in the bank") + "what to expect" della nuova fase (riusa `PHASE_RATIONALES` A141); seen-tracking in `preferences.phase_celebrations_seen` (chiavi `{start_date}:{phase_id}`, scoped al ciclo → un nuovo macrociclo ri-celebra) via PUT /api/state deep-merge, **zero backend nuovo**; regola backlog: si celebra SOLO l'ingresso nella fase corrente, le precedenti non viste vengono marcate in silenzio (niente coda di modal dopo assenze); guardie: mai per la prima fase, mai in pausa, mai a ciclo finito. **P5:** copy hero rest-day su /today riframata in positivo ("Recovery is where the gains happen — your body is consolidating the last sessions"). Vincoli design doc rispettati: nessuno stato negativo, nessuno streak, skip neutro. Build frontend OK, suite invariata (2477).
 
 - **A234 — Daily tips card on Today page (A-DAILYTIP v1)** ✅ (feature P2.9 retention/discovery, branch `brief/A234-daily-tips` → preview Vercel prima del merge). Risolve il problema reale: i beta tester non scoprono metà delle feature. **Catalog:** `backend/catalog/daily_tips/v1/feature_discovery.json` — 22 tip `feature_discovery` (replan, weekly override, free session, Session Builder, body-part picker, mobility, guided mode, Coach + note personali, backup/export, equipment, spot, pausa piano, report, outdoor stats, quick-add, tabata, whats-next, guide, radar, feedback loop). **Backend:** `backend/engine/tips_engine.py` — selezione stateless deterministica: permutazione per-utente del pool (md5 `user_id|tip_id`) indicizzata da `date.toordinal() % pool` → nessuna ripetizione entro pool-size giorni (22), utenti diversi vedono tip diversi lo stesso giorno; **deviazione documentata dal design originale** ("rotazione 30gg" → rotazione = dimensione pool, cresce col catalogo, zero stato da persistere per la selezione). Dismissal per-giorno in `user_state.tips_seen` (idempotente, trim a 100). Router `tips.py`: `GET /api/tips/daily?date=` (read-only, client-local date) + `POST /api/tips/{tip_id}/dismiss` (404 su id ignoto, 422 su data invalida). Endpoint 84 → 86. **Frontend:** `DailyTipCard` (icona Sparkles + accento sky per distinguerla dal cue banner amber A220) su `/today` sotto la quote, solo vista-oggi; dismiss ottimistico persistito server-side (cross-device); CTA `Link` alle pagine feature. Distinto da A220 daily-cue-banner (process cue di training ≠ feature discovery). Test: `test_a234_daily_tips.py` (14: catalog integrity + CTA route valide, determinismo, copertura pool completa senza ripetizioni, permutazioni per-utente, dismissal idempotente/trim/per-day, API e2e). Suite 2463 → 2477. User guide §3 aggiornata.
 
@@ -329,7 +331,7 @@ Add spraywall to location_any for relevant session templates: limit bouldering, 
 
 ### A-GAMIFY-00 — Design audit: gamification senza spingere all'overtraining
 
-**Priority:** P3 | **Status:** 📄 **Doc consegnato (2026-07-19) — in attesa approvazione Daniele** | **Type:** D (design audit) | **Effort:** S
+**Priority:** P3 | **Status:** ✅ **Approvato da Daniele (2026-07-19)** — P1 implementata come A235; next: P2 (heatmap) → P3 (milestones, catalogo bozza integrato con input Daniele; badge "mi alleno tutti i giorni" respinto per vincolo hard) | **Type:** D (design audit) | **Effort:** S
 **Pre-requisito di tutti gli A-GAMIFY-*.**
 
 Deliverable: `docs/design_gamification.md` (v1 draft) — regole non negoziabili (cosa premiamo / cosa mai / vincoli hard incl. opt-out), copy guidelines SDT, ricerca online (anti-pattern: Duolingo streak/loss-aversion, Apple rings senza rest day, Strava social comparison, 8a.nu ego-orientation, studio 2025 "media gamification > alta"; modelli: Whoop recovery-first, Finch gentle/no-shame, Garmin one-time badges, retention ∝ difficoltà achievement), 6 proposte rankate: P1=A-GAMIFY-01 (phase completion ⭐), P2=A-GAMIFY-03 (heatmap rest-positive), P3=A-GAMIFY-02 (milestones con distribuzione di difficoltà), P4=A-GAMIFY-04 (smart week, ultima e opzionale), P5 micro-copy "recovery respected" (XS, nuova), P6 cycle recap (nuova). Escluse esplicitamente: leaderboard, streak giornalieri, XP/punti, badge di volume, push di gamification.
@@ -344,8 +346,9 @@ Espansione di A234 (v1 chiusa 2026-07-19): categorie `training_science` (Hörst/
 
 ### A-GAMIFY-01 — Macrocycle progress + phase completion badges
 
-**Priority:** P3 | **Status:** Open | **Type:** A (frontend + light backend) | **Effort:** M
-**Depends on:** A-GAMIFY-00
+**Priority:** P3 | **Status:** ✅ **Chiusa come A235 (2026-07-19)** — vedi Recently closed. Nota: implementata interamente frontend (nessun backend: seen-tracking in `preferences.phase_celebrations_seen` via PUT /api/state deep-merge; snapshot `completed_macrocycles[]` esisteva già da A-NEW-MACRO).
+
+<details><summary>Spec originale (superata da A235)</summary>
 
 Visualizzazione del progresso nel macrociclo come elemento centrale di gratificazione. Niente streak.
 
@@ -358,6 +361,8 @@ Visualizzazione del progresso nel macrociclo come elemento centrale di gratifica
 - Lettura da `user_state.macrocycle.phases[]` (già presente)
 - Flag `phase_completion_seen[]` in user_state per non rifare la celebrazione
 - Su `start-new-cycle`, snapshot in `user_state.completed_macrocycles[]`
+
+</details>
 
 ### A-GAMIFY-02 — Milestone system
 
@@ -428,9 +433,9 @@ Riconoscimento per chi ha completato fedelmente la settimana programmata, **incl
 
 ### Sequenza implementazione consigliata
 
-1. **A-GAMIFY-00** (S) — design audit, fissa filosofia, evita drift
+1. ~~A-GAMIFY-00~~ ✅ doc `docs/design_gamification.md` approvato da Daniele (2026-07-19)
 2. ~~A-DAILYTIP~~ ✅ chiusa come **A234** (2026-07-19)
-3. **A-GAMIFY-01** (M) — macrocycle progress + phase badges
+3. ~~A-GAMIFY-01~~ ✅ chiusa come **A235** (2026-07-19, include P5 rest-copy)
 4. **A-GAMIFY-03** (S) — heatmap mensile
 5. **A-GAMIFY-02** (M) — milestone system
 6. **A-GAMIFY-04** (M, opzionale) — perfect week, solo se feedback positivo sui 3 precedenti
