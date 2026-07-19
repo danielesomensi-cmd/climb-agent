@@ -12573,6 +12573,591 @@
       "video_url": null,
       "load_model": "bodyweight_only",
       "attributes": {}
+    },
+    {
+      "id": "back_squat",
+      "name": "Back Squat",
+      "category": "strength_accessory",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "medium",
+      "fatigue_cost": 6,
+      "recency_group": "lower_body_quad",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 150,
+        "notes": "Barbell back squat; a goblet/dumbbell variant works too (see goblet_squat). RPE 7-8, leave 2-3 reps in reserve."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "high",
+        "skin": "none"
+      },
+      "description": "Bilateral barbell back squat — the most load-measurable lower-body strength lift, making progressive overload easy to track. For climbers it is general-strength and antagonist support: builds quad, glute and trunk strength for high-steps, mantles, drop-knees and rock-overs. Scale down to a goblet or dumbbell squat when a barbell/rack is unavailable.",
+      "cues": [
+        "Bar on upper traps (high-bar) or rear delts (low-bar), not the neck",
+        "Feet shoulder-width, toes slightly out, whole foot planted",
+        "Brace the core and break at hips and knees together",
+        "Descend to at least thighs-parallel with an upright-as-possible torso",
+        "Drive through the mid-foot, knees tracking over toes, squeeze glutes at lockout",
+        "3-second controlled descent — no bouncing out of the bottom"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "deadlift",
+      "name": "Conventional Deadlift",
+      "category": "strength_accessory",
+      "time_min": 12,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "high",
+      "fatigue_cost": 7,
+      "recency_group": "hip_hinge",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 180,
+        "notes": "Conventional floor deadlift. Brace hard, keep a neutral spine, RPE 7-8. Distinct from the Romanian deadlift (floor pull vs. hamstring hinge)."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "none",
+        "cns": "high",
+        "skin": "none"
+      },
+      "description": "Conventional deadlift from the floor — a full posterior-chain pull loading hamstrings, glutes, erectors and grip. Highest whole-body strength carryover of the general lifts; for climbers it builds the trunk stiffness and grip endurance behind overhang tension and big compression moves. Distinct from the existing Romanian deadlift, which is a top-down hamstring hinge, not a floor pull.",
+      "cues": [
+        "Bar over mid-foot, shins close, grip just outside the knees",
+        "Hips between a squat and a hinge — shoulders slightly ahead of the bar",
+        "Brace the whole trunk before the bar leaves the floor",
+        "Push the floor away; keep the bar dragging up the legs",
+        "Lock out with glutes — no leaning back or lumbar hyperextension",
+        "Reset each rep; do not bounce off the floor for touch-and-go under heavy load"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "leg_extension",
+      "name": "Leg Extension (Machine)",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "squat",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "lower_body_quad",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [
+        "knee_injury"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Machine quad isolation. Controlled tempo, pause at full extension, RPE 7-8."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Seated machine knee-extension isolating the quadriceps. A low-systemic-cost way to add quad volume for climbers who want knee-drive and high-step strength without the systemic fatigue of a barbell squat. Pin-loaded machine; if none is available the coach can substitute a squat or split-squat variation.",
+      "cues": [
+        "Align the knee joint with the machine's pivot",
+        "Pad rests on the lower shin, not the ankle",
+        "Extend smoothly to full lockout and pause 1 second",
+        "Lower under control — 2-3 seconds, no dropping the stack",
+        "Keep the lower back against the pad; do not thrust the hips"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "leg_curl",
+      "name": "Leg Curl (Machine)",
+      "category": "strength_accessory",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "lower_body_posterior",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Lying or seated machine hamstring curl. Controlled eccentric, RPE 7-8. Distinct from bodyweight nordic_curl."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Machine hamstring curl (lying or seated) isolating knee-flexion. Direct hamstring strength and injury-prevention volume for climbers — supports heel hooks and posterior-chain balance. A low-fatigue machine complement to the bodyweight nordic curl already in the catalog.",
+      "cues": [
+        "Align the knee with the machine pivot; pad on the lower calf",
+        "Curl fully, squeezing the hamstrings at the top",
+        "Lower slowly — 2-3 seconds, resisting the stack",
+        "Keep hips down on the pad; do not lift them to cheat the weight",
+        "Point toes toward shins for more hamstring, away for more calf involvement"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "standing_calf_raise_loaded",
+      "name": "Loaded Standing Calf Raise",
+      "category": "conditioning",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "calf_raise",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "lower_body_calf",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Loaded/machine standing calf raise (dumbbells, barbell, or calf machine). Full range, pause at the top, RPE 7-8."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "none",
+        "skin": "none"
+      },
+      "description": "Bilateral standing calf raise under external load — dumbbells, a barbell, or a calf machine. Adds loaded plantar-flexion strength beyond the bodyweight single-leg version, supporting heel hooks, slab smearing, and general foot and ankle robustness.",
+      "cues": [
+        "Balls of the feet on a step or block, heels free to drop below",
+        "Rise as high as possible onto the toes, pause 1 second at the top",
+        "Lower slowly to a full stretch below the step",
+        "Keep knees straight (bent-knee shifts load to the soleus)",
+        "Add load only once full range and a clean top pause are owned"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "skullcrusher",
+      "name": "Lying Triceps Extension (Skullcrusher)",
+      "category": "strength_accessory",
+      "time_min": 7,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "push_tricep",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive",
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Lying EZ-bar, barbell or dumbbell triceps extension. RPE 7-8. Lower to the forehead or just behind the head; keep elbows from flaring."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Lying triceps extension (skullcrusher) — an EZ-bar, barbell or dumbbell elbow-extension performed supine. Loads the triceps at a different angle than the overhead extension already in the catalog and is highly load-measurable. Strong antagonist to climbing's pulling bias and direct assist for manteling and lock-offs.",
+      "cues": [
+        "Lie on a bench, weight pressed over the shoulders to start",
+        "Keep the upper arms fixed — hinge only at the elbows",
+        "Lower to the forehead or just behind the head under control",
+        "Keep elbows tucked in line with the shoulders, not flaring wide",
+        "Extend back without locking out aggressively; keep tension on the triceps",
+        "Drop the load at the first sign of elbow discomfort — this is elbow-sensitive"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "triceps_cable_pushdown",
+      "name": "Triceps Cable Pushdown",
+      "category": "strength_accessory",
+      "time_min": 7,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "strength_general"
+      ],
+      "pattern": "push",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "push_tricep",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "elbow_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Cable pushdown with a rope or bar attachment (a resistance band over a high anchor works too). RPE 7-8. Elbows pinned to the sides."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "medium",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Triceps pushdown against a high cable (rope or straight-bar attachment). A joint-friendly, elbow-isolating triceps builder with easy load micro-adjustment — useful antagonist volume for climbers with pull-dominant elbows. No cable machine? Anchor a resistance band overhead for the same movement.",
+      "cues": [
+        "Stand tall, slight forward lean, core braced",
+        "Pin the elbows to your sides — they stay fixed the whole set",
+        "Extend fully, squeezing the triceps at the bottom",
+        "Return under control to about 90 degrees at the elbow",
+        "Keep the wrists neutral; do not lean the bodyweight into the bar"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "dumbbell_external_rotation",
+      "name": "Dumbbell External Rotation",
+      "category": "prehab",
+      "time_min": 6,
+      "role": [
+        "prehab"
+      ],
+      "domain": [
+        "prehab_shoulder"
+      ],
+      "pattern": "rotation",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "prehab_shoulder_rotator_cuff",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 15,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Side-lying dumbbell (or standing cable) rotator-cuff external rotation. Very light load, RPE 5-6 — this is endurance/tendon work, not a strength lift."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Loaded rotator-cuff external rotation — side-lying with a light dumbbell or standing at a cable. Strengthens infraspinatus and teres minor to counterbalance climbing's pull-dominant shoulder pattern. Complements the band external rotation already in the catalog by adding a gym-friendly loaded option (Hörst, Dr. Vagy).",
+      "cues": [
+        "Side-lying: working arm on top, elbow tucked to the ribs at 90 degrees",
+        "Standing cable: a rolled towel under the elbow improves isolation",
+        "Rotate the forearm outward — the elbow stays fixed at the side",
+        "Slow, controlled reps; the cuff responds to endurance, not heavy load",
+        "If form breaks or it feels hard, halve the weight"
+      ],
+      "video_url": null,
+      "load_model": "external_load",
+      "alt_sides": true
+    },
+    {
+      "id": "back_extension",
+      "name": "Back Extension (Hyperextension)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "hinge",
+      "intensity_level": "low",
+      "fatigue_cost": 4,
+      "recency_group": "core_extension",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 12,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Hyperextension/45-degree bench. Bodyweight to start; hug a plate to the chest to progress. Extend only to a neutral spine — no lumbar hyperextension. RPE 6-7."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Trunk extension on a hyperextension (or 45-degree) bench, training the erector spinae and posterior chain in endurance. Builds the low-back endurance that keeps hips close to the wall on steep terrain and stabilises the spine under load. Bodyweight to begin, then hold a plate — stop the range at a neutral spine, never arching past it (D55: no loaded spinal flexion or forced hyperextension).",
+      "cues": [
+        "Hip crease just past the top pad so you can hinge freely",
+        "Cross arms on the chest, or hug a plate to add load",
+        "Lower by folding at the hips with a neutral spine",
+        "Raise until the body is a straight line — stop there, do not arch past neutral",
+        "Move smoothly; no jerking or ballistic swinging at the top"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "cable_woodchop",
+      "name": "Cable Woodchop (Anti-Rotation)",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_rotation",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_rotation",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 10,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Cable or band chop, high-to-low and low-to-high. Rotation driven from the hips with a braced trunk — not a loaded lumbar twist. Train both directions. RPE 6-7."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Diagonal cable (or band) chop training rotational power and, above all, the trunk's ability to control rotation under load. Transfers to twisting moves, hip flags and barn-door prevention. Rotation comes from the hips and thoracic spine while the lumbar stays braced — a spine-safe alternative to loaded twisting (kept off the D55 blacklist by design).",
+      "cues": [
+        "Cable or band anchored high (for high-to-low) or low (for low-to-high)",
+        "Hands together, arms long; pivot the rear foot as you chop",
+        "Drive the rotation from the hips and mid-back, lumbar braced and quiet",
+        "Control the return — resist the cable pulling you back into rotation",
+        "Both directions each session; do not skip the weaker side",
+        "No cable? A resistance band at the same anchor height matches the movement"
+      ],
+      "video_url": null,
+      "load_model": "external_load",
+      "alt_sides": true
+    },
+    {
+      "id": "weighted_hanging_leg_raise",
+      "name": "Weighted Hanging Leg Raise",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "compression",
+      "intensity_level": "high",
+      "fatigue_cost": 6,
+      "recency_group": "core_compression",
+      "equipment_required": [
+        "pullup_bar",
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Ankle weights or a dumbbell held between the feet. Straight legs to the bar, control the negative, no kipping. RPE 7-8. Loaded progression of hanging_leg_raise."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Loaded progression of the hanging leg raise — ankle weights or a dumbbell pinched between the feet. Trains hip flexion, lower-ab compression and grip from a climbing-specific dead hang, directly building the compression behind toe hooks, bat hangs and steep high-steps. A spine-safe loaded-core option (no loaded spinal flexion), added in place of a weighted crunch per the D55 safety rule.",
+      "cues": [
+        "Dead hang with shoulders actively engaged, not passive",
+        "Depress the scapulae first, then raise straight legs — no kipping or swinging",
+        "Bring the legs to at least parallel, ideally toward the bar",
+        "Lower under control over 2-3 seconds; kill any swing before the next rep",
+        "Start with light ankle weights; only add load once form holds for all reps"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
+    },
+    {
+      "id": "weighted_plank",
+      "name": "Weighted Plank",
+      "category": "core",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "core"
+      ],
+      "pattern": "anti_extension",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "core_anti_extension",
+      "equipment_required": [
+        "weight"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 45,
+        "notes": "Plate resting on the upper back. Neutral spine, glutes and quads engaged. RPE 7. Loaded progression of the bodyweight plank."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Front plank with a plate loaded across the upper back — a loaded anti-extension hold that raises the total-body-tension demand of the standard plank. Directly builds the ability to keep hips close to the wall and transfer force between arms and feet on steep climbing. A spine-safe loaded-core option added in place of a machine crunch per the D55 safety rule.",
+      "cues": [
+        "Have a partner place a plate on the upper back, over the shoulder blades",
+        "Neutral spine — no hip sag and no piking up under the extra load",
+        "Squeeze glutes and quads to close the hips toward the shoulders",
+        "Breathe steadily; do not hold your breath under the plate",
+        "Progress load only while a clean neutral spine is held for the full time"
+      ],
+      "video_url": null,
+      "load_model": "external_load"
     }
   ]
 }
