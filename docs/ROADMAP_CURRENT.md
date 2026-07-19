@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-13 (B274 — variety tie-break settimanale nel resolver: pool drill 12→18, tech_* 8%→61% degli slot. Entrambi i finding C256 chiusi (C257 + B274).)
+> Last updated: 2026-07-19 (A234 — daily tips card su /today: 22 tip feature-discovery, rotazione deterministica per-utente, dismiss per-day. Endpoint 84→86.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -42,6 +42,10 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 - **W7** — endpoint orfani: `/api/reports/monthly` (endpoint+client mai cablati in UI → decidere: pagina report mensile o rimozione), `/api/user/recovery-code|recover` (morti post-Clerk → candidati a rimozione), `/api/week/test-reminder-response` (solo test). Toccano endpoint count/docs.
 
 ---
+
+## Recently closed (2026-07-19)
+
+- **A234 — Daily tips card on Today page (A-DAILYTIP v1)** ✅ (feature P2.9 retention/discovery, branch `brief/A234-daily-tips` → preview Vercel prima del merge). Risolve il problema reale: i beta tester non scoprono metà delle feature. **Catalog:** `backend/catalog/daily_tips/v1/feature_discovery.json` — 22 tip `feature_discovery` (replan, weekly override, free session, Session Builder, body-part picker, mobility, guided mode, Coach + note personali, backup/export, equipment, spot, pausa piano, report, outdoor stats, quick-add, tabata, whats-next, guide, radar, feedback loop). **Backend:** `backend/engine/tips_engine.py` — selezione stateless deterministica: permutazione per-utente del pool (md5 `user_id|tip_id`) indicizzata da `date.toordinal() % pool` → nessuna ripetizione entro pool-size giorni (22), utenti diversi vedono tip diversi lo stesso giorno; **deviazione documentata dal design originale** ("rotazione 30gg" → rotazione = dimensione pool, cresce col catalogo, zero stato da persistere per la selezione). Dismissal per-giorno in `user_state.tips_seen` (idempotente, trim a 100). Router `tips.py`: `GET /api/tips/daily?date=` (read-only, client-local date) + `POST /api/tips/{tip_id}/dismiss` (404 su id ignoto, 422 su data invalida). Endpoint 84 → 86. **Frontend:** `DailyTipCard` (icona Sparkles + accento sky per distinguerla dal cue banner amber A220) su `/today` sotto la quote, solo vista-oggi; dismiss ottimistico persistito server-side (cross-device); CTA `Link` alle pagine feature. Distinto da A220 daily-cue-banner (process cue di training ≠ feature discovery). Test: `test_a234_daily_tips.py` (14: catalog integrity + CTA route valide, determinismo, copertura pool completa senza ripetizioni, permutazioni per-utente, dismissal idempotente/trim/per-day, API e2e). Suite 2463 → 2477. User guide §3 aggiornata.
 
 ## Recently closed (2026-07-18)
 
@@ -336,39 +340,11 @@ Documento di design (`docs/design_gamification.md`) che fissa:
 
 Da approvare prima di qualunque A-GAMIFY-* di implementazione.
 
-### A-DAILYTIP — Daily tips card on Today page
+### A-DAILYTIP-V2 — Daily tips: categorie future (stub)
 
-**Priority:** P3 | **Status:** Open | **Type:** A (catalog + backend + frontend) | **Effort:** M
+**Priority:** P3 | **Status:** Open | **Type:** A + C | **Effort:** S-M
 
-Card discreta su `/today`, posizionata **sotto la daily quote**, che mostra ogni giorno un tip diverso. Risolve il problema concreto: i beta tester non scoprono metà delle feature.
-
-**Catalog:** nuovo `backend/catalog/daily_tips/v1/feature_discovery.json` con ~20 tip iniziali che coprono le feature meno scoperte (recovery code, weekly override, free session, custom session builder, equipment toggle, settings → regenerate, export/import, convert outdoor slot, ecc.).
-
-**Schema tip:**
-```json
-{
-  "id": "tip_outdoor_convert",
-  "category": "feature_discovery",
-  "text": "Sapevi che puoi convertire un giorno indoor in outdoor con un tap dalla week view?",
-  "cta_label": "Provala",
-  "cta_url": "/week",
-  "tags": ["outdoor", "week_view"]
-}
-```
-
-**Backend:**
-- `get_daily_tip(user_id, date)` — selezione deterministica via hash `user_id + date`
-- Rotazione 30 giorni (stesso tip non riappare per 30gg allo stesso utente)
-- `GET /api/tips/daily` → `{tip, dismissed_today: bool}`
-- `POST /api/tips/{id}/dismiss` → append in `user_state.tips_seen[]` con timestamp
-- Pattern parallelo all'esistente `/api/quotes/daily`
-
-**Frontend:**
-- Componente `DailyTipCard` su `/today` sotto `DailyQuoteCard`
-- Stile discreto: icona lampadina, dismiss button (X), CTA opzionale
-- Persistenza dismissal nella stessa giornata
-
-**Espansione futura:** categorie `training_science` (Hörst/Lattice tip tecnici) e `personalized` (basato su user_state, es. "Test repeater programmato la prossima settimana — riposa bene il giorno prima").
+Espansione di A234 (v1 chiusa 2026-07-19): categorie `training_science` (Hörst/Lattice tip tecnici) e `personalized` (basato su user_state, es. "Test repeater programmato la prossima settimana — riposa bene il giorno prima"). La v1 copre solo `feature_discovery` (22 tip).
 
 ### A-GAMIFY-01 — Macrocycle progress + phase completion badges
 
@@ -457,7 +433,7 @@ Riconoscimento per chi ha completato fedelmente la settimana programmata, **incl
 ### Sequenza implementazione consigliata
 
 1. **A-GAMIFY-00** (S) — design audit, fissa filosofia, evita drift
-2. **A-DAILYTIP** (M) — alto valore, basso rischio, risolve problema reale di discovery
+2. ~~A-DAILYTIP~~ ✅ chiusa come **A234** (2026-07-19)
 3. **A-GAMIFY-01** (M) — macrocycle progress + phase badges
 4. **A-GAMIFY-03** (S) — heatmap mensile
 5. **A-GAMIFY-02** (M) — milestone system

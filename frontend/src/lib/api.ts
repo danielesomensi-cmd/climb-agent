@@ -17,6 +17,7 @@ import type {
   WeeklyReport,
   MonthlyReport,
   Quote,
+  DailyTipResponse,
   CustomSession,
   CustomSessionSummary,
   CustomSessionExercise,
@@ -694,6 +695,16 @@ export const getMonthlyReport = (month: string) =>
 // Quotes
 export const getDailyQuote = (context?: string) =>
   request<Quote>(`/api/quotes/daily${context ? `?context=${context}` : ""}`);
+
+// Daily tips (A234)
+export const getDailyTip = (date?: string) =>
+  request<DailyTipResponse>(`/api/tips/daily${date ? `?date=${date}` : ""}`);
+
+export const dismissDailyTip = (tipId: string, date?: string) =>
+  request<{ ok: boolean }>(
+    `/api/tips/${tipId}/dismiss${date ? `?date=${date}` : ""}`,
+    { method: "POST" },
+  );
 
 // Subscription
 export type SubscriptionStatus = {

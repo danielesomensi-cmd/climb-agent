@@ -47,6 +47,9 @@ export const queryKeys = {
   // Quotes
   quotesDaily: (context: string) => ["quotes", "daily", context] as const,
 
+  // Daily tips (A234)
+  tipsDaily: (date: string) => ["tips", "daily", date] as const,
+
   // Onboarding defaults (static)
   onboardingDefaults: ["onboarding", "defaults"] as const,
 

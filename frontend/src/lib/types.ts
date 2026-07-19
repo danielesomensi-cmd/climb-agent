@@ -642,6 +642,24 @@ export interface Quote {
 }
 
 // -----------------------------------------------------------------------
+// Daily tips (A234)
+// -----------------------------------------------------------------------
+
+export interface DailyTip {
+  id: string;
+  category: string;
+  text: string;
+  cta_label?: string | null;
+  cta_url?: string | null;
+  tags?: string[];
+}
+
+export interface DailyTipResponse {
+  tip: DailyTip | null;
+  dismissed_today: boolean;
+}
+
+// -----------------------------------------------------------------------
 // Weekly Check-in (B42)
 // -----------------------------------------------------------------------
 

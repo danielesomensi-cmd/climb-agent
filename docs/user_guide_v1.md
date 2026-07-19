@@ -115,6 +115,8 @@ Past weeks are **locked**: they stay exactly as you trained them and are never r
 
 At the top of **Today** you'll see a **Today's focus** banner — a short coaching cue for one of the day's sessions (e.g., "Squeeze every rep with maximal intent"). It's there to read before you start training; once all of the day's sessions are done or skipped, the banner disappears.
 
+At the bottom of **Today**, below the daily quote, a small **"Did you know?"** card surfaces one app feature per day — things like the weekly availability override, the Session Builder, or the Coach's personal notes. Tap the link to jump straight to the feature, or the ✕ to dismiss it for the day.
+
 Your daily workflow:
 
 1. Open the app → **Today** shows your session(s)

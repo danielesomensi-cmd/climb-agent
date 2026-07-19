@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   getDailyQuote,
+  getDailyTip,
   getOnboardingDefaults,
   getSubscriptionStatus,
   getWeeklyReport,
@@ -17,6 +18,15 @@ export function useDailyQuote(context: string, enabled = true) {
     staleTime: 24 * 60 * 60_000, // 24h — quote is per-phase, daily refresh enough
     gcTime: 24 * 60 * 60_000,
     enabled: enabled && !!context,
+  });
+}
+
+export function useDailyTip(date: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.tipsDaily(date),
+    queryFn: () => getDailyTip(date),
+    staleTime: 60 * 60_000, // tip is per-day; hourly refresh is plenty
+    enabled: enabled && !!date,
   });
 }
 
