@@ -650,6 +650,33 @@ class TestLiveRouteLogging:
         assert routes[0]["style"] == "flash"
         assert "at_min" not in routes[0]  # transient pacing marker, not persisted
 
+    def test_per_attempt_timing_round_trips(self):
+        """B279: attempt-level rest_seconds/climb_seconds (project mode — multiple
+        burns on the same route) survive the live sync AND the finish."""
+        sid = self._start()
+        self.client.put(f"/api/outdoor/session/{sid}/routes", json={"routes": [
+            {"name": "Project", "grade": "7c", "style": "redpoint", "at_min": 90,
+             "attempts": [
+                 {"result": "fell", "rest_seconds": 300, "climb_seconds": 120},
+                 {"result": "fell", "rest_seconds": 600, "climb_seconds": 150},
+                 {"result": "sent", "rest_seconds": 900, "climb_seconds": 180},
+             ]},
+        ]})
+        # Live restore keeps per-attempt timing.
+        active = self.client.get("/api/outdoor/session/active", params={"date": "2026-06-19"})
+        atts = active.json()["session"]["routes"][0]["attempts"]
+        assert [a["rest_seconds"] for a in atts] == [300, 600, 900]
+        assert [a["climb_seconds"] for a in atts] == [120, 150, 180]
+        # Immutable log keeps it too.
+        fin = self.client.post(f"/api/outdoor/session/{sid}/finish", json={
+            "spot_name": "Arco", "discipline": "lead",
+        })
+        assert fin.status_code == 200
+        route = self.client.get("/api/outdoor/sessions").json()["sessions"][0]["routes"][0]
+        assert [a["result"] for a in route["attempts"]] == ["fell", "fell", "sent"]
+        assert [a["rest_seconds"] for a in route["attempts"]] == [300, 600, 900]
+        assert [a["climb_seconds"] for a in route["attempts"]] == [120, 150, 180]
+
     def test_log_climb_unknown_session_404(self):
         r = self.client.post("/api/outdoor/session/nope/log-climb", json={
             "name": "X", "grade": "6a", "attempts": [{"result": "sent"}],

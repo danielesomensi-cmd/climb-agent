@@ -428,7 +428,8 @@ In **Settings → Outdoor Spots**, add your regular crags with:
 
 Start an **Outdoor Session** for a live, timed day (or use **Quick log** for a no-timer entry). As you climb, log each route with one tap:
 - **Sent** / **Fell / try** are the two primary buttons. On a clean **first-try send** you can tag it **Onsight** (no beta) or **Flash** (with beta). A send after more than one attempt is a **Redpoint** automatically.
-- A **rest timer** runs between burns (with the suggested rest beside it). Each logged route shows the **rest** you took before it.
+- **Projecting**: after a **Fell**, the panel stays on the **same route** — the next Sent/Fell logs another attempt on it (no need to re-enter grade or name). Tap **New route** to switch to a different climb; a **Sent** closes the project automatically.
+- A **rest timer** runs between burns (with the suggested rest beside it). Each logged route shows the **rest** you took before it — on multi-attempt routes it's the total, and each attempt keeps its own rest and climb time.
 - Optionally tap **Start climb timer** before a burn to time the climb itself — the route then also shows your **climb time**. This is optional; skip it and nothing changes.
 
 A live **weather widget** shows conditions for the day — tap to expand for feels-like temperature, wind speed + direction, humidity, dew point, cloud cover and precipitation chance.
