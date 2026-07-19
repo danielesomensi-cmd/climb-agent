@@ -493,6 +493,7 @@ Two ways to make it more personal:
 - "What did I do this week?"
 - "I'm climbing outdoors today and it's hot — how should I adapt?"
 - "I'm traveling without equipment — what can I do?"
+- **"I'm at a regular gym today — build me a session."** The Coach composes a structured strength/antagonist session (warm-up → main blocks → optional core/prehab) from real catalog exercises, adapted to your current phase and the rest of your week, with loads given as effort (RPE), never kilograms. Ask it for an alternative when you don't feel like the planned session and it'll weigh what you want against what the plan needs. It's a suggestion in chat — to keep it, rebuild it in the Session Builder (the Coach can't save or log it for you).
 - Training-science questions (grounded in the same literature the engine is built on)
 
 **What it will NOT do:**

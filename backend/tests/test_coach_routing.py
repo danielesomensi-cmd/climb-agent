@@ -1,8 +1,8 @@
 """Unit tests for backend.coach.routing.
 
-Covers all 20 L3 routing rows from `backend/coach/knowledge/_index.md`
-(the 20 routing rows together cover audit use cases UC1-UC15, UC17-UC19,
-UC21-UC23). Also exercises fallback, ordering, cap, and the co-load rule.
+Covers all 21 L3 routing rows from `backend/coach/knowledge/_index.md`
+(the 21 routing rows together cover audit use cases UC1-UC15, UC17-UC19,
+UC21-UC25). Also exercises fallback, ordering, cap, and the co-load rule.
 """
 
 from pathlib import Path
@@ -35,9 +35,9 @@ def _names(paths):
 # ---------------------------------------------------------------------------
 
 
-def test_index_loads_twenty_rows():
+def test_index_loads_twentyone_rows():
     rows = routing._load_routing_table()
-    assert len(rows) == 20
+    assert len(rows) == 21
 
 
 def test_index_rows_point_to_existing_files():
@@ -102,6 +102,10 @@ def test_index_rows_have_keywords():
         ("Concurrent running plus work stress and lifestyle juggling", "19_lifestyle_integration.md"),
         # UC23 (row 20)
         ("Back to training after a long break, detraining restart from illness", "20_return_to_training.md"),
+        # UC24 (row 21) — commercial-gym session composition
+        ("I'm at a commercial gym today, build me a workout with dumbbells and a bench", "21_adhoc_gym_sessions.md"),
+        # UC25 (row 21) — off-plan swap
+        ("I don't feel like today's session, I'd rather do something else at the gym", "21_adhoc_gym_sessions.md"),
     ],
 )
 def test_per_uc_routing(query, expected_top):

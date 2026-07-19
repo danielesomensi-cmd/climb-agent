@@ -42,6 +42,7 @@
 | "no hangboard", "alternative", "travel", "home gym", "minimum", "no equipment" | `L3/18_equipment_fallback.md` | UC19 | ~3,000 |
 | "work", "running", "lifting", "other sport", "stress", "lifestyle", "concurrent" | `L3/19_lifestyle_integration.md` | UC22 | ~3,000 |
 | "back to training", "break", "off", "detraining", "return", "restart", "illness", "injury return" | `L3/20_return_to_training.md` | UC23 | ~3,000 |
+| "gym", "bench", "dumbbell", "dumbbells", "barbell", "machine", "weights", "workout", "swap", "bored", "build me a session", "commercial gym", "regular gym", "work gym", "don't feel like", "not feeling it", "rather do", "leg day", "upper body", "general strength" | `L3/21_adhoc_gym_sessions.md` | UC24/UC25 | ~3,800 |
 
 ---
 
@@ -73,3 +74,4 @@ Output target per coach response: 300-800 tokens.
 | Version | Date | Change |
 |---|---|---|
 | v1.0 | 2026-05-19 | Initial Phase B output (A-COACH-KB-V1). 20 L3 files; 13 from existing sources + 7 NEW (03_pulling_strength, 13_tapering_redpoint, 16_assessment_interpretation, 17_readiness_overtraining, 18_equipment_fallback, 19_lifestyle_integration, 20_return_to_training). |
+| v1.1 | 2026-07-19 | A237 (Adhoc Coach v0). +1 L3 file (21_adhoc_gym_sessions) for on-request commercial-gym session composition + off-plan swap trade-off. 21 L3 files total. |

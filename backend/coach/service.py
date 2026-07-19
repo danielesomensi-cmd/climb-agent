@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 HISTORY_MAX_MESSAGES = 40
 HISTORY_MAX_DAYS = 30
 DAILY_MESSAGE_LIMIT = 30
-MAX_SUGGESTIONS = 4
+MAX_SUGGESTIONS = 6
 
 
 def messages_sent_today(user_id: Optional[str]) -> int:
@@ -109,6 +109,10 @@ def suggested_questions(user_id: Optional[str]) -> List[str]:
                 suggestions.append(f"What matters most in the {pretty} phase?")
         except Exception:
             logger.exception("coach suggestions: phase lookup failed")
+
+    # A237 — Adhoc Coach v0: always-relevant off-plan / commercial-gym chips.
+    suggestions.append("I'm at a regular gym today — build me a session")
+    suggestions.append("I don't feel like today's session — what are my alternatives?")
 
     suggestions.append("How is my training going so far?")
     return suggestions[:MAX_SUGGESTIONS]
