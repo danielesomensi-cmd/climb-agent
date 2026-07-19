@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-86 endpoints total (84 router + 2 app-level: health check + stripe webhook).
+87 endpoints total (85 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -195,6 +195,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/outdoor/convert-slot` | Convert outdoor slot to gym/home |
 | GET | `/api/reports/weekly` | Weekly training report |
 | GET | `/api/reports/monthly` | Monthly training report |
+| GET | `/api/reports/heatmap` | Monthly rest-positive heatmap cells (`?month=YYYY-MM`) |
 | GET | `/api/quotes/daily` | Daily motivational quote |
 | GET | `/api/tips/daily` | Daily feature-discovery tip (deterministic per user, `?date=` client-local) |
 | POST | `/api/tips/{tip_id}/dismiss` | Dismiss today's tip (per-day, idempotent) |
