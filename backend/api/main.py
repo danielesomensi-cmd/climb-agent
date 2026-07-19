@@ -34,6 +34,7 @@ from backend.api.routers import (
     session,
     state,
     subscription,
+    tips,
     user,
     weather,
     week,
@@ -135,6 +136,7 @@ app.include_router(outdoor.router)
 app.include_router(free_session.router)
 app.include_router(reports.router)
 app.include_router(quotes.router)
+app.include_router(tips.router)
 app.include_router(user.router)
 app.include_router(weekly_override.router)
 app.include_router(admin.router)

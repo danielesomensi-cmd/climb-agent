@@ -1,0 +1,182 @@
+{
+  "version": "v1",
+  "category": "feature_discovery",
+  "tips": [
+    {
+      "id": "tip_replan_day",
+      "category": "feature_discovery",
+      "text": "Life happens: tap any day in the Week view to replan it. Swap, move or skip the session and the engine adapts the rest of your week.",
+      "cta_label": "Open Week",
+      "cta_url": "/week",
+      "tags": ["replanner", "week_view"]
+    },
+    {
+      "id": "tip_convert_outdoor",
+      "category": "feature_discovery",
+      "text": "Heading to the crag? Convert any planned indoor day into an outdoor session from the Week view — the plan reshuffles around it.",
+      "cta_label": "Open Week",
+      "cta_url": "/week",
+      "tags": ["outdoor", "week_view"]
+    },
+    {
+      "id": "tip_weekly_override",
+      "category": "feature_discovery",
+      "text": "Traveling or a packed week ahead? Set a weekly availability override and the planner rebuilds just that week around your real schedule.",
+      "cta_label": "Open Week",
+      "cta_url": "/week",
+      "tags": ["availability", "week_view"]
+    },
+    {
+      "id": "tip_free_session",
+      "category": "feature_discovery",
+      "text": "Climbed outside the plan? Log it as a Free Session — grades, tries and load all count toward your weekly report.",
+      "cta_label": "Log a session",
+      "cta_url": "/free-session",
+      "tags": ["free_session", "logging"]
+    },
+    {
+      "id": "tip_session_builder",
+      "category": "feature_discovery",
+      "text": "Build your own workout with the Session Builder: pick exercises from the catalog, save it, and add it to any training day.",
+      "cta_label": "Try the builder",
+      "cta_url": "/session-builder",
+      "tags": ["custom_session"]
+    },
+    {
+      "id": "tip_body_part_picker",
+      "category": "feature_discovery",
+      "text": "Short on time? The Body-Part Picker generates a focused mini-session — core, antagonists, shoulders — sized to the minutes you have.",
+      "cta_label": "Try it",
+      "cta_url": "/body-part-picker",
+      "tags": ["body_part_picker"]
+    },
+    {
+      "id": "tip_mobility",
+      "category": "feature_discovery",
+      "text": "Try the guided Stretching & Mobility flow: pick body regions and minutes, then follow the auto-advancing timer.",
+      "cta_label": "Start stretching",
+      "cta_url": "/mobility",
+      "tags": ["mobility"]
+    },
+    {
+      "id": "tip_guided_mode",
+      "category": "feature_discovery",
+      "text": "Every session has a Guided mode: step-by-step timers for work, rest and transitions — no mental math mid-session. Look for the Start button on today's session.",
+      "cta_label": null,
+      "cta_url": null,
+      "tags": ["guided_session"]
+    },
+    {
+      "id": "tip_coach",
+      "category": "feature_discovery",
+      "text": "The AI Coach knows your plan, your grades and the weather at your crag. Ask it anything about your training.",
+      "cta_label": "Ask the Coach",
+      "cta_url": "/coach",
+      "tags": ["coach"]
+    },
+    {
+      "id": "tip_coach_notes",
+      "category": "feature_discovery",
+      "text": "Add personal notes for your Coach in Settings — fears, preferences, past injuries. It reads them before every answer.",
+      "cta_label": "Open Settings",
+      "cta_url": "/settings",
+      "tags": ["coach", "settings"]
+    },
+    {
+      "id": "tip_export_backup",
+      "category": "feature_discovery",
+      "text": "Your data is yours: download a full JSON backup of your training state anytime from Settings.",
+      "cta_label": "Open Settings",
+      "cta_url": "/settings",
+      "tags": ["backup", "settings"]
+    },
+    {
+      "id": "tip_equipment_toggle",
+      "category": "feature_discovery",
+      "text": "Got new gear? Update your equipment in Settings — sessions are filtered by what you actually have, wherever you train.",
+      "cta_label": "Open Settings",
+      "cta_url": "/settings",
+      "tags": ["equipment", "settings"]
+    },
+    {
+      "id": "tip_spots",
+      "category": "feature_discovery",
+      "text": "Save your outdoor spots in Settings: the app tracks per-spot stats and grade histograms, and the Coach checks their weather forecast.",
+      "cta_label": "Open Settings",
+      "cta_url": "/settings",
+      "tags": ["outdoor", "settings"]
+    },
+    {
+      "id": "tip_pause_plan",
+      "category": "feature_discovery",
+      "text": "Injured or on holiday? Pause your plan from Settings — future weeks shift forward when you resume, past weeks stay untouched.",
+      "cta_label": "Open Settings",
+      "cta_url": "/settings",
+      "tags": ["pause", "settings"]
+    },
+    {
+      "id": "tip_weekly_report",
+      "category": "feature_discovery",
+      "text": "Check your Weekly Report: adherence, training load and difficulty distribution, all computed from what you actually logged.",
+      "cta_label": "See report",
+      "cta_url": "/reports/weekly",
+      "tags": ["reports"]
+    },
+    {
+      "id": "tip_outdoor_stats",
+      "category": "feature_discovery",
+      "text": "The Outdoor page keeps your full crag history: per-spot breakdown, grade histogram and send stats.",
+      "cta_label": "See outdoor stats",
+      "cta_url": "/outdoor",
+      "tags": ["outdoor"]
+    },
+    {
+      "id": "tip_quick_add",
+      "category": "feature_discovery",
+      "text": "Extra energy today? Use quick-add (+) on any day to add a session that fits your equipment and current training phase.",
+      "cta_label": null,
+      "cta_url": null,
+      "tags": ["quick_add"]
+    },
+    {
+      "id": "tip_tabata",
+      "category": "feature_discovery",
+      "text": "Need a standalone interval timer? There's a Tabata timer built in — work/rest rounds with audio cues.",
+      "cta_label": "Open timer",
+      "cta_url": "/tabata",
+      "tags": ["tabata", "timer"]
+    },
+    {
+      "id": "tip_whats_next",
+      "category": "feature_discovery",
+      "text": "Vote on what gets built next: the roadmap is public and your feedback shapes it.",
+      "cta_label": "See roadmap",
+      "cta_url": "/whats-next",
+      "tags": ["roadmap", "feedback"]
+    },
+    {
+      "id": "tip_guide",
+      "category": "feature_discovery",
+      "text": "Lost in a feature? The User Guide covers everything — from onboarding to the AI Coach.",
+      "cta_label": "Open guide",
+      "cta_url": "/guide",
+      "tags": ["guide"]
+    },
+    {
+      "id": "tip_plan_radar",
+      "category": "feature_discovery",
+      "text": "Your Plan page shows the 5-axis assessment radar and the full macrocycle timeline — see why each phase exists.",
+      "cta_label": "Open Plan",
+      "cta_url": "/plan",
+      "tags": ["plan", "assessment"]
+    },
+    {
+      "id": "tip_feedback_loop",
+      "category": "feature_discovery",
+      "text": "Rate every session after finishing: your feedback drives the closed loop that adjusts future loads and progressions.",
+      "cta_label": null,
+      "cta_url": null,
+      "tags": ["feedback", "closed_loop"]
+    }
+  ]
+}

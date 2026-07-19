@@ -110,9 +110,9 @@ from backend.engine.planner_v2 import generate_phase_week
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (23 routers)
+  api/               # FastAPI REST API (24 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, plan, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach
+                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-84 endpoints total (82 router + 2 app-level: health check + stripe webhook).
+86 endpoints total (84 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -196,6 +196,8 @@ user_state.assessment + user_state.goal
 | GET | `/api/reports/weekly` | Weekly training report |
 | GET | `/api/reports/monthly` | Monthly training report |
 | GET | `/api/quotes/daily` | Daily motivational quote |
+| GET | `/api/tips/daily` | Daily feature-discovery tip (deterministic per user, `?date=` client-local) |
+| POST | `/api/tips/{tip_id}/dismiss` | Dismiss today's tip (per-day, idempotent) |
 | GET | `/api/user/export` | Download user_state as JSON backup |
 | POST | `/api/user/import` | Import user_state (validates, overwrites) |
 | POST | `/api/user/recovery-code` | Get or create recovery code (CLIMB-XXXX) |
