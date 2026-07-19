@@ -451,7 +451,10 @@ def _fmt_conditions(w: Dict[str, Any]) -> str:
         bits.append(f"precip {w['precip_prob']}%")
     if w.get("condition_text"):
         bits.append(str(w["condition_text"]).lower())
-    bits.append(f"friction band: {w.get('condition_band', '?')}")
+    band_bit = f"friction band: {w.get('condition_band', '?')}"
+    if w.get("friction_score") is not None:  # A238
+        band_bit += f" ({w['friction_score']}/100)"
+    bits.append(band_bit)
     return ", ".join(bits)
 
 

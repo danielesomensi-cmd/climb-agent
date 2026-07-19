@@ -26,9 +26,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from backend.api.deps import require_active_subscription
 from backend.engine.weather_v1 import (
+    FRICTION_WEIGHTS,
+    band_headline,
     catalog_condition_band,
     compute_dew_point,
-    condition_band,
+    compute_friction_score,
+    friction_components,
+    metric_qualifiers,
     wind_label,
 )
 
@@ -59,6 +63,32 @@ def _is_precip_or_fog(owm_weather_id: int) -> bool:
     return owm_weather_id < 800
 
 
+def _rain_mm(container: Dict[str, Any]) -> float:
+    """Recent/step precipitation in mm from an OWM ``rain``/``snow`` block."""
+    total = 0.0
+    for key in ("rain", "snow"):
+        block = container.get(key) or {}
+        if isinstance(block, dict):
+            total += float(block.get("1h") or block.get("3h") or 0.0)
+    return round(total, 2)
+
+
+def _friction_fields(
+    temp: float, humidity: float, dew_point: float, wind_kmh: float,
+    precip_active: bool, precip_mm: float,
+) -> Dict[str, Any]:
+    """A238 additive fields shared by current + forecast normalization."""
+    score, band = compute_friction_score(temp, humidity, dew_point, wind_kmh, precip_active)
+    return {
+        "friction_score": score,
+        "band": band,
+        "condition_band": band,  # legacy key, now emits the 4-value vocabulary
+        "dew_spread": round(temp - dew_point, 1),
+        "headline": band_headline(band, temp, humidity, dew_point, wind_kmh, precip_active),
+        "qualifiers": metric_qualifiers(temp, humidity, dew_point, wind_kmh, precip_mm),
+    }
+
+
 def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
     """Map OWM /weather (units=metric) → normalized weather dict."""
     main = raw.get("main", {})
@@ -71,7 +101,8 @@ def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
     dew_point = compute_dew_point(temp, humidity)
     wind_kmh = round(float(wind.get("speed", 0.0)) * 3.6, 1)  # m/s → km/h
     code = int(weather0.get("id", 800))
-    precip = _is_precip_or_fog(code)
+    rain_mm = _rain_mm(raw)  # A238: rain.1h/3h present during/right after rain
+    precip = _is_precip_or_fog(code) or rain_mm > 0
 
     return {
         "temp": round(temp, 1),
@@ -85,7 +116,9 @@ def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
         "precip_prob": None,  # A227: current endpoint has no pop; forecast does
         "condition_text": (weather0.get("description") or "").capitalize(),
         "condition_code": code,
-        "condition_band": condition_band(temp, humidity, dew_point, wind_kmh, precip),
+        **_friction_fields(temp, humidity, dew_point, wind_kmh, precip, rain_mm),
+        "recent_rain_mm": rain_mm,  # A238
+        "best_window": None,  # A238: filled by cached_conditions when forecast is available
         "is_forecast": False,
         "date": None,
         "source": "openweathermap",
@@ -118,8 +151,9 @@ def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
     dew_point = compute_dew_point(temp, humidity)
     wind_kmh = round(float(wind.get("speed", 0.0)) * 3.6, 1)
     code = int(weather0.get("id", 800))
-    precip = _is_precip_or_fog(code)
     pop = step.get("pop")  # A227: probability of precipitation, 0..1
+    rain_mm = _rain_mm(step)
+    precip = _is_precip_or_fog(code) or rain_mm > 0 or (pop is not None and float(pop) > 0.3)
 
     return {
         "temp": round(temp, 1),
@@ -133,11 +167,115 @@ def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
         "precip_prob": round(float(pop) * 100) if pop is not None else None,  # A227: 0..1 → %
         "condition_text": (weather0.get("description") or "").capitalize(),
         "condition_code": code,
-        "condition_band": condition_band(temp, humidity, dew_point, wind_kmh, precip),
+        **_friction_fields(temp, humidity, dew_point, wind_kmh, precip, rain_mm),
+        "recent_rain_mm": rain_mm,  # A238
+        "best_window": None,  # A238: filled by cached_conditions from the same raw
         "is_forecast": True,
         "date": date,
         "source": "openweathermap",
     }
+
+
+# --- A238: best window of the day ----------------------------------------------
+
+_BEST_WINDOW_MIN_GAIN = 10   # must beat the current score by ≥10 points
+_BEST_WINDOW_RUN_TOL = 5     # contiguous run: steps within 5 points of the peak
+_DAYLIGHT_HOURS = (7, 21)    # local clock window considered climbable
+
+_REASON_LABELS = {
+    "temp": lambda cur, best: (
+        f"temp drops to {round(best['temp'])}°C" if best["temp"] < cur["temp"]
+        else f"temp rises to {round(best['temp'])}°C"
+    ),
+    "dew_spread": lambda cur, best: f"drier air (spread {round(best['temp'] - best['dew_point'])}°)",
+    "humidity": lambda cur, best: f"humidity drops to {round(best['humidity'])}%",
+    "wind": lambda cur, best: ("wind eases" if best["wind"] < cur["wind"] else "more breeze"),
+}
+
+
+def _score_step(step: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Minimal normalization + friction score for one 3h forecast step."""
+    try:
+        main = step.get("main", {})
+        temp = float(main["temp"])
+        humidity = float(main["humidity"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    dew_point = compute_dew_point(temp, humidity)
+    wind_kmh = round(float((step.get("wind") or {}).get("speed", 0.0)) * 3.6, 1)
+    code = int(((step.get("weather") or [{}])[0]).get("id", 800))
+    pop = step.get("pop")
+    rain = _rain_mm(step)
+    precip = _is_precip_or_fog(code) or rain > 0 or (pop is not None and float(pop) > 0.3)
+    score, band = compute_friction_score(temp, humidity, dew_point, wind_kmh, precip)
+    return {
+        "temp": temp, "humidity": humidity, "dew_point": dew_point, "wind": wind_kmh,
+        "score": score, "band": band, "dt": int(step.get("dt", 0)),
+    }
+
+
+def best_window(
+    forecast_raw: Dict[str, Any], local_date: str, current: Dict[str, Any], now_dt: int = 0
+) -> Optional[Dict[str, Any]]:
+    """Best later window of *local_date* from the 3h forecast steps (A238).
+
+    Scores every step whose LOCAL start time falls on ``local_date`` within
+    daylight hours, strictly in the future. Returns the peak step expanded to
+    the contiguous run within ``_BEST_WINDOW_RUN_TOL`` points — only when the
+    peak beats the current score by ≥ ``_BEST_WINDOW_MIN_GAIN``. ``reason`` is
+    the component with the largest weighted improvement vs. now. None when now
+    is already (close to) the best the day offers, or on any malformed input.
+    """
+    try:
+        tz_offset = int((forecast_raw.get("city") or {}).get("timezone", 0))
+        scored = []
+        for step in forecast_raw.get("list", []):
+            s = _score_step(step)
+            if s is None or s["dt"] <= now_dt:
+                continue
+            local = time.gmtime(s["dt"] + tz_offset)
+            if time.strftime("%Y-%m-%d", local) != local_date:
+                continue
+            if not (_DAYLIGHT_HOURS[0] <= local.tm_hour < _DAYLIGHT_HOURS[1]):
+                continue
+            s["local_hm"] = time.strftime("%H:%M", local)
+            s["local_end_hm"] = time.strftime("%H:%M", time.gmtime(s["dt"] + tz_offset + 3 * 3600))
+            scored.append(s)
+        if not scored:
+            return None
+
+        peak_i = max(range(len(scored)), key=lambda i: scored[i]["score"])
+        peak = scored[peak_i]
+        if peak["score"] < int(current["friction_score"]) + _BEST_WINDOW_MIN_GAIN:
+            return None
+
+        lo = peak_i
+        while lo > 0 and scored[lo - 1]["score"] >= peak["score"] - _BEST_WINDOW_RUN_TOL \
+                and scored[lo]["dt"] - scored[lo - 1]["dt"] == 3 * 3600:
+            lo -= 1
+        hi = peak_i
+        while hi < len(scored) - 1 and scored[hi + 1]["score"] >= peak["score"] - _BEST_WINDOW_RUN_TOL \
+                and scored[hi + 1]["dt"] - scored[hi]["dt"] == 3 * 3600:
+            hi += 1
+
+        cur_comps = friction_components(
+            float(current["temp"]), float(current["humidity"]),
+            float(current["dew_point"]), float(current["wind"]),
+        )
+        best_comps = friction_components(peak["temp"], peak["humidity"], peak["dew_point"], peak["wind"])
+        gains = {k: (best_comps[k] - cur_comps[k]) * FRICTION_WEIGHTS[k] for k in FRICTION_WEIGHTS}
+        top = max(gains, key=lambda k: gains[k])
+        reason = _REASON_LABELS[top](current, peak) if gains[top] > 0 else "conditions improve"
+
+        return {
+            "from": scored[lo]["local_hm"],
+            "to": scored[hi]["local_end_hm"],
+            "score": peak["score"],
+            "band": peak["band"],
+            "reason": reason,
+        }
+    except Exception:
+        return None  # best-effort — never break the weather payload
 
 
 # --- network layer (mocked in tests) ------------------------------------------
@@ -251,6 +389,13 @@ def fetch_outdoor_conditions(
         "precip_prob": payload.get("precip_prob"),  # A227
         "condition_band": catalog_condition_band(payload["temp"], payload["condition_band"]),
         "weather_band_raw": payload["condition_band"],
+        # A238 — additive: same friction verdict as the live card, so the
+        # outdoor widget renders identical band/headline/chips.
+        "band": payload.get("band"),
+        "friction_score": payload.get("friction_score"),
+        "dew_spread": payload.get("dew_spread"),
+        "headline": payload.get("headline"),
+        "qualifiers": payload.get("qualifiers"),
     }
 
 
@@ -269,9 +414,23 @@ def cached_conditions(
     if cached is not None:
         return cached
     if date:
-        payload = _normalize_forecast(_owm_get("forecast", lat, lon), date)
+        raw = _owm_get("forecast", lat, lon)
+        payload = _normalize_forecast(raw, date)
+        payload["best_window"] = best_window(raw, date, payload)
     else:
-        payload = _normalize_current(_owm_get("weather", lat, lon))
+        raw_cur = _owm_get("weather", lat, lon)
+        payload = _normalize_current(raw_cur)
+        # A238 best-effort: score the rest of the local day from the forecast.
+        # Any failure (provider, malformed payload) leaves best_window = None.
+        try:
+            now_dt = int(raw_cur.get("dt") or time.time())
+            tz_offset = int(raw_cur.get("timezone") or 0)
+            local_date = time.strftime("%Y-%m-%d", time.gmtime(now_dt + tz_offset))
+            payload["best_window"] = best_window(
+                _owm_get("forecast", lat, lon), local_date, payload, now_dt=now_dt
+            )
+        except (WeatherUnavailable, ValueError, TypeError):
+            pass
     _cache[cache_key] = payload
     return payload
 

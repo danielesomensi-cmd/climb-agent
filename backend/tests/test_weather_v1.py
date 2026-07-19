@@ -1,8 +1,9 @@
 """Tests for A224 — weather engine + /api/weather proxy.
 
-Covers the deterministic core (Magnus dew point, condition_band boundaries),
-the OWM adapters, and the endpoint with the upstream provider mocked (never
-hits the network in CI).
+Covers the deterministic core (Magnus dew point), the OWM adapters, and the
+endpoint with the upstream provider mocked (never hits the network in CI).
+A238: the hard-threshold ``condition_band`` boundary tests were superseded by
+the composite friction score — see ``test_a238_weather_v2.py``.
 """
 
 from __future__ import annotations
@@ -12,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from backend.api.main import app
 from backend.api.routers import weather as weather_router
-from backend.engine.weather_v1 import compute_dew_point, condition_band, wind_label
+from backend.engine.weather_v1 import compute_dew_point, wind_label
 
 client = TestClient(app)
 
@@ -32,45 +33,6 @@ def test_dew_point_known_value():
 def test_dew_point_clamps_zero_humidity():
     # Must not raise on RH=0 (log(0)) — clamped to a small floor.
     assert compute_dew_point(10.0, 0.0) < -20.0
-
-
-# --- condition_band boundaries ------------------------------------------------
-
-def test_band_prime_cool_and_dry():
-    assert condition_band(10.0, 40.0, 5.0, 10.0, False) == "prime"
-
-
-def test_band_precip_override_always_poor():
-    # Even with otherwise prime numbers, precipitation/fog forces poor.
-    assert condition_band(8.0, 30.0, 2.0, 5.0, True) == "poor"
-
-
-def test_band_dew_point_boundaries():
-    assert condition_band(10.0, 50.0, 8.0, 0.0, False) == "prime"   # ≤ 8 → prime
-    assert condition_band(10.0, 50.0, 8.1, 0.0, False) == "ok"      # > 8 → ok
-    assert condition_band(10.0, 50.0, 14.0, 0.0, False) == "ok"     # ≤ 14 → ok
-    assert condition_band(10.0, 50.0, 14.1, 0.0, False) == "poor"   # > 14 → poor
-
-
-def test_band_temperature_boundaries():
-    # Low dew point keeps the dew axis prime; temp axis drives the result.
-    assert condition_band(16.0, 30.0, 5.0, 0.0, False) == "prime"   # ≤ 16 → prime
-    assert condition_band(16.1, 30.0, 5.0, 0.0, False) == "ok"      # warm → ok
-    assert condition_band(24.0, 30.0, 5.0, 0.0, False) == "ok"      # ≤ 24 → ok
-    assert condition_band(24.1, 30.0, 5.0, 0.0, False) == "poor"    # hot → poor
-    assert condition_band(-2.0, 30.0, 5.0, 0.0, False) == "prime"   # ≥ -2 → prime
-    assert condition_band(-6.0, 30.0, 5.0, 0.0, False) == "ok"      # cold → ok
-    assert condition_band(-6.1, 30.0, 5.0, 0.0, False) == "poor"    # frozen → poor
-
-
-def test_band_weakest_link():
-    # Prime temp but greasy dew point → overall poor (worse axis wins).
-    assert condition_band(10.0, 90.0, 18.0, 0.0, False) == "poor"
-
-
-def test_band_strong_wind_caps_at_ok():
-    assert condition_band(10.0, 40.0, 5.0, 41.0, False) == "ok"     # > 40 → cap
-    assert condition_band(10.0, 40.0, 5.0, 40.0, False) == "prime"  # = 40 → no cap
 
 
 # --- wind descriptor ----------------------------------------------------------
@@ -228,4 +190,6 @@ def test_endpoint_caches_within_window(monkeypatch):
     monkeypatch.setattr(weather_router, "_owm_get", _counting)
     client.get("/api/weather", params={"lat": 45.07, "lon": 7.69})
     client.get("/api/weather", params={"lat": 45.07, "lon": 7.69})
-    assert calls["n"] == 1  # second request served from cache
+    # A238: a current-weather fetch makes 2 upstream calls (weather + forecast
+    # for the best-window scan); the second request is served from cache.
+    assert calls["n"] == 2

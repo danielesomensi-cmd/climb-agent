@@ -236,7 +236,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/subscription/checkout` | Create Stripe Checkout Session → returns hosted URL |
 | POST | `/api/subscription/portal` | Create Stripe Customer Portal session (manage/cancel) |
 | POST | `/api/stripe/webhook` | Stripe webhook receiver (signature-verified) |
-| GET | `/api/weather` | Live conditions (lat/lon) or forecast-by-date; returns temp/humidity/dew_point/wind + deterministic condition_band |
+| GET | `/api/weather` | Live conditions (lat/lon) or forecast-by-date; returns metrics + composite friction_score/band (prime/good/ok/poor), per-metric qualifiers, headline, best_window (A238) |
 
 ## Frontend
 
