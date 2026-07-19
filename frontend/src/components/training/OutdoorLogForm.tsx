@@ -27,6 +27,21 @@ const FONT_BOULDER_GRADES = [
 ];
 
 /** mm:ss for a duration in seconds (B264 — rest/climb summary display). */
+/** B279 — timing totals for a route: sum of per-attempt values when present,
+ *  else the A227 route-level value (first burn only on legacy logs). */
+function routeTiming(route: OutdoorRoute): { climb: number | null; rest: number | null } {
+  const climbs = route.attempts.filter((a) => typeof a.climb_seconds === "number");
+  const rests = route.attempts.filter((a) => typeof a.rest_seconds === "number");
+  return {
+    climb: climbs.length
+      ? climbs.reduce((s, a) => s + (a.climb_seconds ?? 0), 0)
+      : typeof route.climb_seconds === "number" ? route.climb_seconds : null,
+    rest: rests.length
+      ? rests.reduce((s, a) => s + (a.rest_seconds ?? 0), 0)
+      : typeof route.rest_seconds === "number" ? route.rest_seconds : null,
+  };
+}
+
 function fmtSec(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -309,21 +324,27 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                 </button>
               </div>
 
-              {/* B264 / B265 — read-only climb · rest times captured live (word
-                  labels, no icons — coherent with the live logging screen) */}
-              {(typeof route.rest_seconds === "number" || typeof route.climb_seconds === "number") && (
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
-                  {typeof route.climb_seconds === "number" && (
-                    <span title="Time on the wall" className="text-amber-500/80">climb {fmtSec(route.climb_seconds)}</span>
-                  )}
-                  {typeof route.climb_seconds === "number" && typeof route.rest_seconds === "number" && (
-                    <span aria-hidden="true">·</span>
-                  )}
-                  {typeof route.rest_seconds === "number" && (
-                    <span title="Rest taken before this burn">rest {fmtSec(route.rest_seconds)}</span>
-                  )}
-                </div>
-              )}
+              {/* B264 / B265 / B279 — read-only climb · rest times captured live
+                  (word labels, no icons — coherent with the live logging screen);
+                  totals across attempts on multi-burn (project) routes */}
+              {(() => {
+                const t = routeTiming(route);
+                const multi = route.attempts.length > 1;
+                if (t.climb == null && t.rest == null) return null;
+                return (
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                    {t.climb != null && (
+                      <span title={multi ? `Total time on the wall (${route.attempts.length} tries)` : "Time on the wall"} className="text-amber-500/80">climb {fmtSec(t.climb)}</span>
+                    )}
+                    {t.climb != null && t.rest != null && (
+                      <span aria-hidden="true">·</span>
+                    )}
+                    {t.rest != null && (
+                      <span title={multi ? `Total rest (${route.attempts.length} tries)` : "Rest taken before this burn"}>rest {fmtSec(t.rest)}</span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

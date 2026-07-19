@@ -186,6 +186,11 @@ class OutdoorAttempt(BaseModel):
     """Single attempt on a route."""
     result: Literal["sent", "fell", "topped_out"]
     notes: Optional[str] = None
+    # B279 — per-attempt timing (optional, backward-compatible). On multi-attempt
+    # (project) routes each burn carries its own rest/climb; route-level fields
+    # keep describing the first burn only (A227 legacy).
+    rest_seconds: Optional[int] = None
+    climb_seconds: Optional[int] = None
 
 
 class OutdoorRoute(BaseModel):

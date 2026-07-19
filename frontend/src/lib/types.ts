@@ -342,6 +342,10 @@ export interface OutdoorSpot {
 export interface OutdoorAttempt {
   result: "sent" | "fell" | "topped_out";
   notes?: string;
+  // B279 — per-attempt timing (optional). On multi-attempt (project) routes each
+  // burn carries its own rest/climb; route-level fields stay = first burn (A227).
+  rest_seconds?: number;
+  climb_seconds?: number;
 }
 
 export interface OutdoorRoute {
