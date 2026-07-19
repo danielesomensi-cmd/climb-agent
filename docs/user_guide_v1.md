@@ -432,7 +432,7 @@ Start an **Outdoor Session** for a live, timed day (or use **Quick log** for a n
 - A **rest timer** runs between burns (with the suggested rest beside it). Each logged route shows the **rest** you took before it — on multi-attempt routes it's the total, and each attempt keeps its own rest and climb time.
 - Optionally tap **Start climb timer** before a burn to time the climb itself — the route then also shows your **climb time**. This is optional; skip it and nothing changes.
 
-A live **weather widget** shows conditions for the day — tap to expand for feels-like temperature, wind speed + direction, humidity, dew point, cloud cover and precipitation chance.
+A live **weather widget** shows conditions for the day, rated by a **friction score** (0–100) into four bands — **PRIME / GOOD / OK / POOR** — with a plain-language verdict (e.g. "Conditions are prime — go send your project."). When a later part of the day scores clearly better, a **best window** line tells you when (e.g. "Peak conditions from 19:00 — temp drops to 17°C"). Tap to expand the metrics — each one carries a small tag that says what it means for friction (e.g. **dew spread** "15° below air — prime friction", humidity "dry air", wind "helps drying"). The same card appears on the Today page and on outdoor days.
 
 Outdoor sessions appear in your weekly timeline. The planner knows about your outdoor days (if you've set them in availability) and plans around them — no indoor sessions are scheduled on outdoor days.
 

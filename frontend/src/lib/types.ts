@@ -386,6 +386,12 @@ export interface OutdoorConditions {
   precip_prob?: number; // A227 (%, forecast only)
   condition_band?: CatalogConditionBand;
   weather_band_raw?: string;
+  // A238 — additive friction verdict from the weather layer (same as Weather).
+  band?: ConditionBand;
+  friction_score?: number;
+  dew_spread?: number;
+  headline?: string;
+  qualifiers?: WeatherQualifiers;
 }
 
 export interface OutdoorSession {
@@ -901,8 +907,26 @@ export interface UserState {
   [key: string]: unknown;
 }
 
-// A224 — weather conditions (live + forecast)
-export type ConditionBand = "prime" | "ok" | "poor";
+// A224 — weather conditions (live + forecast). A238: 4-value friction band.
+export type ConditionBand = "prime" | "good" | "ok" | "poor";
+
+// A238 — per-metric plain-English chips (backend-owned copy).
+export interface WeatherQualifiers {
+  temp: string;
+  humidity: string;
+  dew_spread: string;
+  wind: string;
+  precip: string;
+}
+
+// A238 — best later window of the local day (null when now is already best).
+export interface BestWindow {
+  from: string; // local "HH:MM"
+  to: string;
+  score: number;
+  band: ConditionBand;
+  reason: string;
+}
 
 export interface Weather {
   temp: number;
@@ -917,6 +941,14 @@ export interface Weather {
   condition_text: string;
   condition_code: number;
   condition_band: ConditionBand;
+  // A238 — composite friction verdict (additive)
+  friction_score?: number;
+  band?: ConditionBand;
+  dew_spread?: number;
+  headline?: string;
+  qualifiers?: WeatherQualifiers;
+  best_window?: BestWindow | null;
+  recent_rain_mm?: number;
   is_forecast: boolean;
   date: string | null;
   source: string;
