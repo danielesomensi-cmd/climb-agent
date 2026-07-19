@@ -43,6 +43,7 @@ export const queryKeys = {
 
   // Reports
   reportsWeekly: (weekStart: string) => ["reports", "weekly", weekStart] as const,
+  reportsHeatmap: (month: string) => ["reports", "heatmap", month] as const,
 
   // Quotes
   quotesDaily: (context: string) => ["quotes", "daily", context] as const,

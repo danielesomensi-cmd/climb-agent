@@ -1137,3 +1137,130 @@ def generate_monthly_report(
         "feedback_summary": feedback_labels,
         "suggestions": suggestions[:3],
     }
+
+# ---------------------------------------------------------------------------
+# Monthly heatmap (A236 / A-GAMIFY-03)
+# ---------------------------------------------------------------------------
+
+def _heatmap_day_cell(
+    day: Optional[Dict[str, Any]],
+    date_iso: str,
+    today_iso: str,
+    free_load: float,
+    outdoor_logged_load: Optional[float],
+) -> Dict[str, Any]:
+    """Classify one calendar day for the monthly heatmap.
+
+    Statuses (design_gamification.md §P2 — rest-positive, no shame):
+      done         — something was completed (sessions/outdoor/other/free)
+      planned      — future (or today, not yet done) day with scheduled work
+      skipped      — past day with scheduled work, nothing done (NEUTRAL color)
+      rest         — in-plan day with nothing scheduled, today or past → "rest
+                     day respected" (the differentiator: rest gets its own green)
+      rest_planned — in-plan future day with nothing scheduled
+      none         — day not covered by any stored plan and no logged activity
+    """
+    future = date_iso > today_iso
+    load = 0.0
+    done = False
+    scheduled = False
+
+    if day is not None:
+        for s in day.get("sessions") or []:
+            scheduled = True
+            if s.get("status") == "done":
+                done = True
+                load += s.get("session_load_score") or s.get("estimated_load_score") or 0
+        if day.get("outdoor_slot") or day.get("outdoor_spot_name"):
+            scheduled = True
+        if day.get("outdoor_session_status") == "done":
+            done = True
+            load += day.get("outdoor_load_score") or 0
+        elif outdoor_logged_load is not None:
+            # Outdoor logged but plan day not synced (pre-B277 history)
+            done = True
+            load += outdoor_logged_load
+        for act in normalize_other_activities(day):
+            scheduled = True
+            if act.get("status") == "completed":
+                done = True
+                load += act.get("load") or 0
+    elif outdoor_logged_load is not None:
+        done = True
+        load += outdoor_logged_load
+
+    if free_load > 0:
+        done = True
+        load += free_load
+
+    if done:
+        status = "done"
+    elif day is None:
+        status = "none"
+    elif scheduled:
+        status = "planned" if date_iso >= today_iso else "skipped"
+    else:
+        status = "rest_planned" if future else "rest"
+
+    return {"date": date_iso, "status": status, "load": round(load, 1)}
+
+
+def generate_monthly_heatmap(
+    user_state: Dict[str, Any],
+    user_id: Optional[str],
+    month: str,
+) -> Dict[str, Any]:
+    """Per-day activity/rest cells for a calendar month (A236 / A-GAMIFY-03).
+
+    Read-only: plans come from hot ``week_plans`` with cold-store fallback
+    (_find_week_plan), plus finished free sessions and outdoor logs. Never
+    regenerates anything.
+    """
+    start = datetime.strptime(f"{month}-01", "%Y-%m-%d").date()
+    if start.month == 12:
+        end = datetime(start.year + 1, 1, 1).date() - timedelta(days=1)
+    else:
+        end = datetime(start.year, start.month + 1, 1).date() - timedelta(days=1)
+    today_iso = datetime.now().date().isoformat()
+
+    # Plans for every week overlapping the month, indexed day-by-day
+    day_by_date: Dict[str, Dict[str, Any]] = {}
+    monday = start - timedelta(days=start.weekday())
+    while monday <= end:
+        plan = _find_week_plan(user_state, monday.isoformat(), user_id)
+        for wk in (plan or {}).get("weeks") or []:
+            for d in wk.get("days") or []:
+                if d.get("date"):
+                    day_by_date[d["date"]] = d
+        monday += timedelta(days=7)
+
+    # Finished free sessions, summed per date
+    free_by_date: Dict[str, float] = {}
+    for fs in user_state.get("free_sessions") or []:
+        d = fs.get("date", "")
+        if fs.get("finished_at") and start.isoformat() <= d <= end.isoformat():
+            free_by_date[d] = free_by_date.get(d, 0.0) + (fs.get("load_score") or 0)
+
+    # Outdoor logs, summed per date (fallback for plan days not synced)
+    outdoor_by_date: Dict[str, float] = {}
+    for s in load_outdoor_sessions(user_id, since_date=start.isoformat()):
+        d = s.get("date", "")
+        if d <= end.isoformat():
+            outdoor_by_date[d] = outdoor_by_date.get(d, 0.0) + (s.get("load_score") or 0)
+
+    cells: List[Dict[str, Any]] = []
+    cursor = start
+    while cursor <= end:
+        iso = cursor.isoformat()
+        cells.append(
+            _heatmap_day_cell(
+                day_by_date.get(iso),
+                iso,
+                today_iso,
+                free_by_date.get(iso, 0.0),
+                outdoor_by_date.get(iso),
+            )
+        )
+        cursor += timedelta(days=1)
+
+    return {"month": month, "today": today_iso, "days": cells}

@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-19 (A235 — macrocycle progress su /plan + celebrazione passaggio fase + rest-copy positiva. A-GAMIFY-00 approvato; stessa giornata: A234 daily tips.)
+> Last updated: 2026-07-19 (A236 — heatmap mensile rest-positive su /reports/weekly. Stessa giornata: A-GAMIFY-00 approvato, A234 daily tips, A235 phase progress.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -44,6 +44,8 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 ---
 
 ## Recently closed (2026-07-19)
+
+- **A236 — Monthly heatmap rest-positive (A-GAMIFY-03)** ✅ (feature P2.9 retention, branch `brief/A236-monthly-heatmap` → preview Vercel; slice backend additiva pushata direttamente su main per rendere la preview testabile, pattern A234). Calendario mensile "Month at a glance" in fondo a `/reports/weekly` con navigazione mese e tap-to-day-view. **Il differenziatore filosofico del design doc:** rest day rispettato = verde tenue proprio (premiamo il riposo), skip = neutro zinc indistinguibile dal quiet (NO color shame, mai rosso), done = 3 tier emerald via load score, planned/rest_planned futuri = bordo tratteggiato, oggi = ring azzurro. **Backend:** `generate_monthly_heatmap` in `report_engine.py` + `GET /api/reports/heatmap?month=YYYY-MM` (86 → 87 endpoint) — read-only, riusa `_find_week_plan` (hot `week_plans` + cold store A221), somma per-giorno session/outdoor/other-activity/free-session load; classificazione: done > (planned se futuro-o-oggi | skipped se passato) > (rest se in-plan vuoto passato/oggi | rest_planned se futuro) > none; guardie anti-double-count (outdoor done nel piano vince sul log; log outdoor conta solo per giorni non sincati pre-B277); free session finita su giorno senza piano = done (mai "rest" farlocco). Test: `test_a236_monthly_heatmap.py` (17: classificazione celle, tier load, cold-store fallback via monkeypatch, free session aggregation, contratto API + 422). Suite 2477 → 2494. Build frontend OK.
 
 - **A235 — Macrocycle progress + phase completion celebration (A-GAMIFY-01 + P5)** ✅ (feature P2.9 retention, frontend-only, branch `brief/A235-gamify-phase-progress` → preview Vercel prima del merge). Prima implementazione del design gamification (A-GAMIFY-00, doc approvato stesso giorno). **Timeline /plan:** `MacrocycleTimeline` con `showProgress` — ✓ verde sulle fasi completate + riga "Week X of Y · Z% of cycle complete"; marker settimana ora **pause-aware**: nuova util condivisa `lib/phase-progress.ts` (`computeCurrentWeek` sottrae `pause.offset_days` A223 e clampa a total_weeks — fix del calcolo che su /plan ignorava la pausa). **Celebrazione fase:** `PhaseCelebration` su /today — modal one-time all'ingresso in una nuova fase che celebra la fase COMPLETATA ("{Fase} complete! N weeks of focused work in the bank") + "what to expect" della nuova fase (riusa `PHASE_RATIONALES` A141); seen-tracking in `preferences.phase_celebrations_seen` (chiavi `{start_date}:{phase_id}`, scoped al ciclo → un nuovo macrociclo ri-celebra) via PUT /api/state deep-merge, **zero backend nuovo**; regola backlog: si celebra SOLO l'ingresso nella fase corrente, le precedenti non viste vengono marcate in silenzio (niente coda di modal dopo assenze); guardie: mai per la prima fase, mai in pausa, mai a ciclo finito. **P5:** copy hero rest-day su /today riframata in positivo ("Recovery is where the gains happen — your body is consolidating the last sessions"). Vincoli design doc rispettati: nessuno stato negativo, nessuno streak, skip neutro. Build frontend OK, suite invariata (2477).
 
@@ -402,23 +404,7 @@ Eventi una tantum sbloccabili. Niente ricorrenza — solo "first time" celebrati
 
 ### A-GAMIFY-03 — Monthly activity heatmap
 
-**Priority:** P3 | **Status:** Open | **Type:** A (frontend) | **Effort:** S
-**Depends on:** A-GAMIFY-00
-
-Calendario mensile stile GitHub contributions per le sessioni di climbing.
-
-**Frontend:**
-- Componente `MonthlyHeatmap` su `/reports/weekly` (in fondo) o nuova pagina `/history`
-- Cella per giorno colorata in base a:
-  - Grigio: nessuna sessione programmata
-  - **Verde tenue: rest day rispettato** (premiamo il riposo!)
-  - Verde chiaro/medio/scuro: sessione completata (intensità via load score)
-  - Neutro: sessione skipped (NO color shame)
-- Tap sulla cella → apre la day view di quel giorno
-
-**Backend:** nessuna nuova logica (derivato da feedback log + outdoor log + plan).
-
-**Punto chiave filosofico:** i rest day rispettati hanno colore positivo distinto. È la differenza con altre app: premia il rest, non solo il lavoro.
+**Priority:** P3 | **Status:** ✅ **Chiusa come A236 (2026-07-19)** — vedi Recently closed. Deviazione dallo spec: aggiunto un endpoint read-only `GET /api/reports/heatmap` (lo spec diceva "nessuna nuova logica backend", ma i week plan passati vivono nel cold store A221 → serviva l'aggregazione server-side hot+archivio).
 
 ### A-GAMIFY-04 — Weekly adherence "perfect week" badge (opzionale)
 
@@ -436,6 +422,7 @@ Riconoscimento per chi ha completato fedelmente la settimana programmata, **incl
 1. ~~A-GAMIFY-00~~ ✅ doc `docs/design_gamification.md` approvato da Daniele (2026-07-19)
 2. ~~A-DAILYTIP~~ ✅ chiusa come **A234** (2026-07-19)
 3. ~~A-GAMIFY-01~~ ✅ chiusa come **A235** (2026-07-19, include P5 rest-copy)
+4. ~~A-GAMIFY-03~~ ✅ chiusa come **A236** (2026-07-19, heatmap rest-positive)
 4. **A-GAMIFY-03** (S) — heatmap mensile
 5. **A-GAMIFY-02** (M) — milestone system
 6. **A-GAMIFY-04** (M, opzionale) — perfect week, solo se feedback positivo sui 3 precedenti

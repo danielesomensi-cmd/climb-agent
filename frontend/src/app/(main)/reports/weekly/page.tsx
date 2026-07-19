@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
+import { MonthlyHeatmap } from "@/components/training/monthly-heatmap";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -525,6 +526,9 @@ function WeeklyReportContent() {
             <p className="text-muted-foreground">No report data available.</p>
           </div>
         )}
+
+        {/* A236: monthly rest-positive heatmap — always available */}
+        {!loading && <MonthlyHeatmap />}
       </main>
     </>
   );

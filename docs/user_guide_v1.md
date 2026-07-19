@@ -450,6 +450,7 @@ The **Weekly Report** (Reports tab) gives you a snapshot of your training week:
 - **Difficulty Distribution**: How exercises felt across the week (histogram of feedback)
 - **Progression Table**: Which exercises progressed, regressed, or stayed flat
 - **Free Climbing Summary**: If you had free sessions — number of climbs, max grade, send rate, duration
+- **Month at a glance**: A calendar heatmap at the bottom of the page. Trained days are green (darker = bigger load), and **respected rest days get their own soft green** — recovery counts as a win here, not an empty box. Skipped days stay neutral (no red, ever). Tap any day to open it.
 
 **How to read it**:
 - Adherence > 80% is great. Below 60% consistently means the plan might not match your real schedule — adjust your availability.

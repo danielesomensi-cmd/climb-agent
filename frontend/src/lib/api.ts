@@ -18,6 +18,7 @@ import type {
   MonthlyReport,
   Quote,
   DailyTipResponse,
+  MonthlyHeatmapData,
   CustomSession,
   CustomSessionSummary,
   CustomSessionExercise,
@@ -695,6 +696,10 @@ export const getMonthlyReport = (month: string) =>
 // Quotes
 export const getDailyQuote = (context?: string) =>
   request<Quote>(`/api/quotes/daily${context ? `?context=${context}` : ""}`);
+
+// Monthly heatmap (A236)
+export const getMonthlyHeatmap = (month: string) =>
+  request<MonthlyHeatmapData>(`/api/reports/heatmap?month=${month}`);
 
 // Daily tips (A234)
 export const getDailyTip = (date?: string) =>

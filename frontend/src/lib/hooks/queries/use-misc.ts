@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getDailyQuote,
   getDailyTip,
+  getMonthlyHeatmap,
   getOnboardingDefaults,
   getSubscriptionStatus,
   getWeeklyReport,
@@ -55,6 +56,15 @@ export function useWeeklyReport(weekStart: string, enabled = true) {
     queryFn: () => getWeeklyReport(weekStart),
     staleTime: 60_000,
     enabled: enabled && !!weekStart,
+  });
+}
+
+export function useMonthlyHeatmap(month: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.reportsHeatmap(month),
+    queryFn: () => getMonthlyHeatmap(month),
+    staleTime: 60_000,
+    enabled: enabled && !!month,
   });
 }
 
