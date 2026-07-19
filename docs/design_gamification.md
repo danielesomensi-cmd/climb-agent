@@ -92,8 +92,20 @@ Calendario mensile in fondo a `/reports/weekly`.
 ### P3 — Milestone system (= A-GAMIFY-02)
 
 Eventi una tantum, unlock istantaneo (modello Garmin), append-only (mai revocati).
-- Catalog `backend/catalog/milestones/v1/milestones.json`, ~15-20 iniziali su 4 categorie: grade firsts (primo 6b/7a/... redpoint/onsight — dai log esistenti), session firsts (prima outdoor, prima guided, prima custom, prima free), macrocycle (primo test di ogni tipo, prima fase performance, primo ciclo completato), **process firsts** (primo deload completato integralmente, primo retest con miglioramento, prima settimana 100% aderente incluso il riposo).
+- Catalog `backend/catalog/milestones/v1/milestones.json`, ~25-30 iniziali su 5 categorie (bozza v1, integra input Daniele 2026-07-19):
+
+| Categoria | Milestone (bozza) | Fonte dati |
+|---|---|---|
+| **Grade firsts** | Primo redpoint / primo onsight di ogni nuovo grado **outdoor**, per disciplina (Font per boulder) | outdoor log |
+| **Session firsts** | Prima guided · prima free session · prima custom session · prima body-part session · prima mobility flow · prima outdoor del ciclo | feedback/free/outdoor log |
+| **Exercise-family firsts** | First hangboard session · first campus · first board · first technique drill (per famiglia, NON per singolo esercizio: 242 badge = inflazione) · **Explorer** (25 / 50 esercizi *diversi* provati — premia varietà, non volume) | actual_exercises |
+| **Technique** | **Drill collector** (10 / 20 drill tecnici diversi provati) · **Technique breakthrough** (asse technique migliorato al retest) | actual_exercises + assessment |
+| **Outdoor** | Primo spot nuovo · Crag explorer (3 / 5 spot diversi) · primo onsight outdoor | outdoor log + spots |
+| **Macrocycle & process** | Primo test di ogni tipo · prima fase performance raggiunta · primo macrociclo completato · primo deload completato integralmente · primo retest con miglioramento · **Perfect week** (sessioni chiave fatte + rest day rispettati + feedback dato — la risposta corretta al desiderio "mi alleno tutti i giorni": stessa gratificazione di costanza, ma premia l'aderenza al piano riposo incluso) | week plans + assessment |
+
+- **Respinto esplicitamente (proposto e valutato):** badge "mi alleno tutti i giorni" — viola il vincolo hard §3 (premia il non-rispetto dei rest day pianificati; è lo streak Duolingo/Apple-rings in salsa training). Il bisogno emotivo che copre ("sono costante") è servito da Perfect week.
 - Distribuzione di difficoltà deliberata (ricerca: gli achievement difficili trattengono di più): 1/3 facili-attivazione, 1/3 medi, 1/3 “career milestones”.
+- Idempotenza: unlock append-only in `user_state.milestones_unlocked[]`, mai revocati (cancellare un climb non ri-blocca), check deterministico su eventi esistenti (feedback submit, outdoor log, retest, fine settimana).
 - Toast celebrativo + galleria `/milestones` (o sezione in `/plan`).
 - **Effort M** | catalog + hook su feedback/outdoor log + frontend.
 
