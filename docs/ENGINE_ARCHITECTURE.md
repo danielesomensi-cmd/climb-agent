@@ -61,9 +61,10 @@ apply_feedback()                      ← progression_v1.py
     │  reads: exercise outcomes (difficulty, actual loads)
     │  writes: user_state.baselines, test results
     ▼
-update_user_state_adjustments()       ← adaptation/closed_loop.py
-    │  reads: per-exercise difficulty
-    │  writes: user_state.adjustments.per_exercise (multiplier, streak, cooldowns)
+record_cluster_cooldown()             ← adaptation/closed_loop.py
+    │  ⚠ NOT WIRED — nothing calls this today (A245 E-4)
+    │  would read:  per-exercise difficulty
+    │  would write: user_state.cooldowns.per_cluster
     ▼
 [next week → generate_phase_week() uses updated user_state]
 ```
@@ -446,35 +447,24 @@ Processes post-session exercise feedback:
 
 ## 8. Closed-Loop Adaptation (`adaptation/closed_loop.py`)
 
-### Multiplier system
+> **STATUS (A245 E-4, 2026-07-20): per-cluster cooldown is implemented and
+> tested, but NOT yet wired to the feedback path.**
+>
+> Nothing calls `record_cluster_cooldown()`, so `cooldowns.per_cluster` is always
+> empty in production and the resolver's `cluster_cooldown_fallback` /
+> `cluster_cooldown_downshift` branches have never fired for a user. This page
+> previously described the whole module as active — it was not, and had not been
+> since it was written. Activation is tracked as `A-CLOSED-LOOP-ACTIVATION`.
+>
+> The **live** per-exercise adaptation is `progression_v1.apply_feedback`, which
+> adjusts `working_loads`. See §7.
+>
+> A245 E-4 also removed a multiplier system (`adjustments.per_exercise`,
+> `compute_next_multiplier`, `apply_multiplier`) that used to be documented here:
+> it had zero readers in production and its `adjustments` key collided by name
+> with the unrelated `adjustments[]` list the replanner returns (B287).
 
-**Entry point:** `update_user_state_adjustments(user_state, exercise_id, outcome, *, exercises_by_id, feedback_date) → Dict`
-
-Each exercise gets a per-exercise multiplier in `user_state.adjustments.per_exercise[exercise_id]`:
-
-```python
-{"multiplier": 1.025, "streak": 0, "last_update": "2026-03-25T18:30:00"}
-```
-
-**`compute_next_multiplier(multiplier, difficulty, streak, config)`:**
-
-Default delta rules (`DEFAULT_RULES`):
-```python
-"too_easy":  +2.5%
-"easy":      +1.0%
-"ok":         0.0%
-"hard":      -2.5%
-"too_hard":  -5.0%
-"fail":      -5.0%
-```
-
-Formula: `next = current × (1.0 + delta_pct)`, clamped to `[0.85, 1.15]`.
-
-### Streak tracking
-
-- Hard difficulties (`hard`, `too_hard`, `fail`) increment the streak counter.
-- Easy difficulties (`too_easy`, `easy`, `ok`) reset it to 0.
-- Streak is reserved for future rules (currently unused beyond tracking).
+**Entry point:** `record_cluster_cooldown(user_state, exercise_id, outcome, *, exercises_by_id, feedback_date) → Dict`
 
 ### Cooldown system
 
@@ -486,11 +476,7 @@ Cooldowns are stored in `user_state.cooldowns.per_cluster[cluster_key]`:
 {"until_date": "2026-03-27", "reason": "difficulty:too_hard", "last_updated": "2026-03-25"}
 ```
 
-The resolver checks cooldowns via `_cooldown_until_date()` and swaps to a cluster fallback or applies a 0.9 downshift.
-
-### Multiplier application
-
-`apply_multiplier(load_kg, multiplier, rounding_step)` → `round(load × multiplier / step) × step`.
+The resolver checks cooldowns via `_cooldown_until_date()` and swaps to a cluster fallback or applies a 0.9 downshift — **that reader is live, but it never finds an entry**, because the writer above is not called from the feedback path (A245 E-4).
 
 ---
 
@@ -875,7 +861,7 @@ assessment_v1.py
 | `planner_v2` | `availability`, `equipment`, `planning_prefs`, `preferences` | — (returns week plan) |
 | `resolve_session` | `equipment`, `context`, `baselines`, `limitations`, `preferences`, `overrides`, `week_plans`, `body`, `assessment` | — (returns resolved session) |
 | `progression_v1` | `baselines`, `assessment`, `adjustments`, `body` | `baselines`, `tests` (via apply_feedback) |
-| `closed_loop.py` | `adjustments`, `cooldowns` | `adjustments.per_exercise`, `cooldowns.per_cluster` |
+| `closed_loop.py` ⚠ not wired | `cooldowns` | `cooldowns.per_cluster` (would; see §8) |
 | `replanner_v1` | Full user_state (passes to planner) | — (modifies plan in-place) |
 
 All engine modules receive `user_state` as a parameter — none read it directly from disk (that happens in the API layer).
