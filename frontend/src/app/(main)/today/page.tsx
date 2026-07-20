@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { StartNewMacrocycleDialog } from "@/components/settings/start-new-macrocycle-dialog";
 import { useCanStartNewCycle } from "@/lib/hooks/use-can-start-new-cycle";
@@ -16,16 +18,18 @@ import { PhaseCelebration } from "@/components/training/phase-celebration";
 import { MilestoneToast } from "@/components/training/milestone-toast";
 import { WeatherCard } from "@/components/training/weather-card";
 import { CoachCard } from "@/components/training/coach-card";
-import { FeedbackDialog } from "@/components/training/feedback-dialog";
-import { QuickAddDialog } from "@/components/training/quick-add-dialog";
-import { ReplanDialog } from "@/components/training/replan-dialog";
-import { MoveSessionDialog } from "@/components/training/move-session-dialog";
-import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
+const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
+const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
+const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
+const MoveSessionDialog = dynamic(() => import("@/components/training/move-session-dialog").then((m) => m.MoveSessionDialog), { ssr: false });
+const GymPickerDialog = dynamic(() => import("@/components/training/gym-picker-dialog").then((m) => m.GymPickerDialog), { ssr: false });
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
-import { applyEvents, postFeedback, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
+import { TodaySkeleton } from "@/components/training/today-skeleton";
+import { applyEvents, postFeedback, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
+import { useFreeSessionHistory, useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { flush as flushOutbox } from "@/lib/outbox";
@@ -37,7 +41,7 @@ import {
 } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
-import OutdoorLogForm from "@/components/training/OutdoorLogForm";
+const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
 import { TodayHeroCTA, type NextSessionInfo } from "@/components/training/today-hero-cta";
 import { formatPauseDate } from "@/lib/hooks/use-plan-pause";
 import {
@@ -196,9 +200,6 @@ function TodayContent() {
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
   const [weekOutdoorLoad, setWeekOutdoorLoad] = useState(0); // B278: outdoor load for the week
-  const [freeSessions, setFreeSessions] = useState<Array<Record<string, unknown>>>([]);
-  const [weekFreeSessions, setWeekFreeSessions] = useState<Array<Record<string, unknown>>>([]);
-  const [weekFreeSessionsLoaded, setWeekFreeSessionsLoaded] = useState(false);
   const [resumeSession, setResumeSession] = useState<InProgressSession | null>(null);
   // A-NEW-MACRO: end-of-cycle banner + dialog
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
@@ -378,31 +379,21 @@ function TodayContent() {
       .catch((err) => { console.error("Failed to load outdoor sessions:", err); });
   }, [weekPlan]);
 
-  // Fetch free sessions for target date (A138)
-  useEffect(() => {
-    if (!targetDate) return;
-    getFreeSessionHistory(targetDate)
-      .then((data) => setFreeSessions(data.sessions))
-      .catch(() => setFreeSessions([]));
-  }, [targetDate, weekPlan]); // re-fetch when weekPlan changes (after save)
-
-  // Fetch free sessions for ALL week days (for WeekProgressBar load total)
-  useEffect(() => {
-    if (!weekPlan) return;
-    setWeekFreeSessionsLoaded(false);
-    const dates = weekPlan.weeks.flatMap(w => w.days).map(d => d.date);
-    if (dates.length === 0) { setWeekFreeSessionsLoaded(true); return; }
-    Promise.all(
-      dates.map(d =>
-        getFreeSessionHistory(d)
-          .then(r => r.sessions as Array<Record<string, unknown>>)
-          .catch(() => [] as Array<Record<string, unknown>>)
-      )
-    ).then(results => {
-      setWeekFreeSessions(results.flat());
-      setWeekFreeSessionsLoaded(true);
-    });
-  }, [weekPlan]);
+  // A245 F-5 (F15): free sessions now come from the React Query cache instead
+  // of two hand-rolled effects keyed on [weekPlan]. With structuralSharing
+  // disabled every mutation produced a new weekPlan reference, so those effects
+  // refired on every user action — 8 uncached requests each time.
+  const weekDates = useMemo(
+    () => weekPlan?.weeks.flatMap((w) => w.days).map((d) => d.date) ?? [],
+    [weekPlan],
+  );
+  const freeSessionsQuery = useFreeSessionHistory(targetDate, !!targetDate);
+  const freeSessions = useMemo(
+    () => freeSessionsQuery.data?.sessions ?? [],
+    [freeSessionsQuery.data],
+  );
+  const { sessions: weekFreeSessions, isSettled: weekFreeSessionsLoaded } =
+    useFreeSessionsForDates(weekDates, !!weekPlan);
 
   /** Find target day in the weekly plan */
   const dayPlan: DayPlan | undefined = weekPlan?.weeks
@@ -1037,11 +1028,9 @@ function TodayContent() {
         )}
 
         {/* Loading state */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        )}
+        {/* A245 F-6 (F14): a skeleton that reserves the real height, not a
+            centred spinner that lets the page snap from empty to full. */}
+        {loading && <TodaySkeleton />}
 
         {/* Error state */}
         {(error || queryError) && !loading && (
@@ -1205,7 +1194,9 @@ function TodayContent() {
             onDeleteFreeSession={async (sessionId: string) => {
               try {
                 await deleteFreeSession(sessionId);
-                setFreeSessions((prev) => prev.filter((s) => s.id !== sessionId));
+                // A245 F-5: the list is cache-owned now, so drop the cached
+                // day instead of filtering a local copy that no longer exists.
+                qc.invalidateQueries({ queryKey: queryKeys.freeSessionHistoryAll });
               } catch { /* ignore */ }
             }}
           />
