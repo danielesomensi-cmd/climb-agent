@@ -36,11 +36,20 @@ export function Providers({ children }: { children: React.ReactNode }) {
         dehydrateOptions: {
           shouldDehydrateQuery: (query) => {
             const root = query.queryKey[0];
-            return (
-              query.state.status === "success" &&
-              typeof root === "string" &&
-              PERSISTED_QUERY_PREFIXES.includes(root)
-            );
+            if (query.state.status !== "success") return false;
+            if (typeof root !== "string" || !PERSISTED_QUERY_PREFIXES.includes(root)) {
+              return false;
+            }
+            // B292 — never persist an EMPTY user state. It restores instantly
+            // on the next load with `isLoading === false`, which made /today
+            // tell an established user to "complete your onboarding" while the
+            // real state was still being fetched. A user with no plan has
+            // nothing worth showing offline anyway.
+            if (root === "state") {
+              const data = query.state.data as { macrocycle?: unknown } | undefined;
+              return !!data?.macrocycle;
+            }
+            return true;
           },
         },
       }}

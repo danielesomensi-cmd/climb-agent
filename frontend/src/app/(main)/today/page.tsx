@@ -1030,7 +1030,7 @@ function TodayContent() {
         {/* Loading state */}
         {/* A245 F-6 (F14): a skeleton that reserves the real height, not a
             centred spinner that lets the page snap from empty to full. */}
-        {loading && <TodaySkeleton />}
+        {(loading || (stateQuery.isFetching && !hasMacrocycle)) && <TodaySkeleton />}
 
         {/* Error state */}
         {(error || queryError) && !loading && (
@@ -1046,8 +1046,17 @@ function TodayContent() {
         )}
 
 
-        {/* No macrocycle — prompt to start onboarding (true new user only) */}
-        {!loading && !error && !weekPlan && !hasMacrocycle && (
+        {/* No macrocycle — prompt to start onboarding (true new user only).
+         *
+         * B292 — `loading` is `isLoading`, which is FALSE as soon as any cached
+         * value exists, including a restored-but-empty one (A245 B-2 added
+         * cache persistence). An established user could therefore be told
+         * "Welcome to climb-agent! Complete your onboarding" while the real
+         * state was still in flight — the worst possible message for someone
+         * who has been training for months.
+         *
+         * Never claim the user has no plan while we are still asking. */}
+        {!loading && !stateQuery.isFetching && !error && !weekPlan && !hasMacrocycle && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-lg font-medium">Welcome to climb-agent!</p>
             <p className="mt-2 text-sm text-muted-foreground">
