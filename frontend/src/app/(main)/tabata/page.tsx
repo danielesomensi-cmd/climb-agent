@@ -3,7 +3,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TopBar } from "@/components/layout/top-bar";
 import { cn } from "@/lib/utils";
-import { getAudioContext, unlockAudio } from "@/lib/audio-unlock";
+import { unlockAudio } from "@/lib/audio-unlock";
+import { countdownTick, halfwayTick, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
 
 // ===========================================================================
@@ -187,26 +188,7 @@ const PHASE_TEXT_COLOR: Record<TabataPhase, string> = {
 // Audio (reuse pattern from exercise-timer.tsx)
 // ===========================================================================
 
-async function beep(freq: number, duration: number, volume: number) {
-  try {
-    const ctx = getAudioContext();
-    if (ctx.state !== "running") await ctx.resume();
-    if (ctx.state !== "running") return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  } catch { /* silent */ }
-}
 
-function countdownTick() { beep(660, 0.08, 0.25); }
-function transitionBeep() { beep(880, 0.2, 0.4); }
 
 // ===========================================================================
 // Helpers
@@ -559,7 +541,7 @@ export default function TabataPage() {
       const halfPoint = Math.ceil(dur / 2);
       if (secondsLeft === halfPoint && !halfTimeRef.current) {
         halfTimeRef.current = true;
-        beep(550, 0.06, 0.15); // soft, low tick
+        halfwayTick();
       } else if (secondsLeft !== halfPoint) {
         halfTimeRef.current = false;
       }

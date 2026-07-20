@@ -3,7 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, CheckCircle2, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getAudioContext, unlockAudio } from "@/lib/audio-unlock";
+import { unlockAudio } from "@/lib/audio-unlock";
+import { countdownTick, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
 
 // ---------------------------------------------------------------------------
@@ -37,31 +38,8 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 // Start button), so the context is already running by the time beep() fires.
 // ---------------------------------------------------------------------------
 
-async function beep(freq: number, duration: number, volume: number) {
-  try {
-    const ctx = getAudioContext();
-    if (ctx.state !== "running") {
-      await ctx.resume();
-    }
-    if (ctx.state !== "running") return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  } catch { /* silent */ }
-}
 
-/** Short high-pitched tick for countdown 3-2-1 */
-function countdownTick() { beep(660, 0.08, 0.25); }
 
-/** Longer beep on phase transition */
-function transitionBeep() { beep(880, 0.2, 0.4); }
 
 // ---------------------------------------------------------------------------
 // Helpers

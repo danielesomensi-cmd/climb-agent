@@ -5,7 +5,8 @@ import { CheckCircle2, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getAudioContext, unlockAudio } from "@/lib/audio-unlock";
+import { unlockAudio } from "@/lib/audio-unlock";
+import { countdownTick, longBeep, transitionBeep } from "@/lib/beep";
 import type { CustomSessionExercise } from "@/lib/types";
 
 export type ExerciseCategory = "time_based" | "reps_based" | "timed_sets";
@@ -20,34 +21,7 @@ export function detectCategory(ex: CustomSessionExercise): ExerciseCategory {
   return "reps_based";
 }
 
-function beep(freq: number, duration: number, volume: number) {
-  try {
-    const ctx = getAudioContext();
-    if (ctx.state !== "running") return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  } catch {
-    /* silent */
-  }
-}
 
-function countdownTick() {
-  beep(660, 0.08, 0.25);
-}
-function transitionBeep() {
-  beep(880, 0.3, 0.5);
-}
-function longBeep() {
-  beep(660, 0.6, 0.5);
-}
 
 function vibrate(pattern: number[]) {
   try {
