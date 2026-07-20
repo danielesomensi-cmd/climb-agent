@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { formatDateShort } from "@/lib/format";
 
 interface Gym {
   gym_id?: string;
@@ -45,17 +46,6 @@ const OUTDOOR_INTENT_OPTIONS = [
 ];
 
 /** Format date as "15 Feb" */
-function formatDateLabel(dateStr: string): string {
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  return `${day} ${months[monthIdx] ?? parts[1]}`;
-}
 
 export function ReplanDialog({
   open,
@@ -102,7 +92,7 @@ export function ReplanDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md max-h-[75dvh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Change plan — {formatDateLabel(date)}</DialogTitle>
+          <DialogTitle>Change plan — {formatDateShort(date)}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2 overflow-y-auto min-h-0 flex-1">

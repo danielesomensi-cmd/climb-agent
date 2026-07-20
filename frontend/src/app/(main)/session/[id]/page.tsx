@@ -11,13 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { ResolvedSession } from "@/lib/types";
+import { formatSessionName } from "@/lib/format";
 
-/** Format session_id into a readable name */
-function formatSessionName(sessionId: string): string {
-  return sessionId
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 /** Format rest seconds into a readable string */
 function formatRest(seconds: number): string {

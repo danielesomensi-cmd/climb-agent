@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { SessionCard } from "@/components/training/session-card";
 import type { DayPlan, OtherActivity, OutdoorRoute, WeekPlan } from "@/lib/types";
 import { normalizeOtherActivities, hasOtherActivity } from "@/lib/other-activity";
+import { formatDateShort } from "@/lib/format";
 
 interface Gym {
   gym_id?: string;
@@ -109,17 +110,6 @@ function isToday(dateStr: string): boolean {
 }
 
 /** Format a date string into a short readable form: "15 Feb" */
-function formatDateShort(dateStr: string): string {
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  return `${day} ${months[monthIdx] ?? parts[1]}`;
-}
 
 /** Human label for an activity slot. */
 const SLOT_LABEL: Record<string, string> = {

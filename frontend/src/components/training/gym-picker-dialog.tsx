@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Home, MapPin } from "lucide-react";
+import { formatDateShort } from "@/lib/format";
 
 interface Gym {
   gym_id?: string;
@@ -25,17 +26,6 @@ interface GymPickerDialogProps {
   onApply: (data: { gym_id?: string; location: string }) => void;
 }
 
-function formatDateShort(dateStr: string): string {
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  return `${day} ${months[monthIdx] ?? parts[1]}`;
-}
 
 export function GymPickerDialog({
   open,
