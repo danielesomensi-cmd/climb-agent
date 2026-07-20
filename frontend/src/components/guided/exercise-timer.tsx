@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, CheckCircle2, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
@@ -83,7 +83,20 @@ export function shouldFireCountdownBeep(
 // Component
 // ---------------------------------------------------------------------------
 
-export function ExerciseTimer({
+/**
+ * A245 F-8 (F26) — memoised.
+ *
+ * Every prop below is a primitive derived from `exercise`, plus a stable
+ * `onSetChange`. Without memo, every keystroke in GuidedExerciseStep's load /
+ * reps / notes inputs re-rendered this component's ~370 lines of JSX *while a
+ * workout timer was running*.
+ *
+ * Note the audit's other half — the 1 Hz tick re-rendering this component
+ * itself — is NOT addressed here: `secondsLeft` drives the phase machine, so
+ * relocating it into a subscribed display is a real refactor of the app's most
+ * safety-critical component. Tracked as B-TIMER-TICK-SCOPE.
+ */
+function ExerciseTimerImpl({
   workSeconds,
   restBetweenRepsSeconds,
   restBetweenSetsSeconds,
@@ -920,3 +933,5 @@ export function ExerciseTimer({
     </div>
   );
 }
+
+export const ExerciseTimer = memo(ExerciseTimerImpl);
