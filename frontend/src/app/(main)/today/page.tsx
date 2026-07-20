@@ -27,6 +27,8 @@ import { applyEvents, postFeedback, applyOverride, quickAddSession, getOutdoorSp
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
+import { queueOrWarn } from "@/lib/outbox-feedback";
+import { flush as flushOutbox } from "@/lib/outbox";
 import { queryKeys } from "@/lib/query-keys";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import { TodayHeroCTA, type NextSessionInfo } from "@/components/training/today-hero-cta";
@@ -37,7 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getInProgressSession, clearSavedSession, type InProgressSession } from "@/lib/guided-session-utils";
+import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressSession } from "@/lib/guided-session-utils";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
 import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
 import { hasOtherActivity } from "@/lib/other-activity";
@@ -247,8 +249,10 @@ function TodayContent() {
   // Stays outside React Query — this is recovery of pending writes, not a fetch.
   useEffect(() => {
     if (!authReady || typeof window === "undefined") return;
-    const userId = window.Clerk?.session ? "clerk" : "";
-    const prefix = `guided_session_${userId}_`;
+    // A245 B-2: was rebuilding the prefix inline with the literal "clerk"
+    // instead of the real user id — same bug as guided-session-utils, and a
+    // second copy of the same expression. Single source of truth now.
+    const prefix = getKeyPrefix();
     const now = Date.now();
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -299,6 +303,28 @@ function TodayContent() {
         // Ignore malformed localStorage entries
       }
     }
+  }, [authReady, qc]);
+
+  // A245 B-4 (F4, F5) — drain the offline outbox on mount and whenever the
+  // browser reports the connection is back. /today is the natural place: it is
+  // the first screen after a session and the app's default landing route.
+  useEffect(() => {
+    if (!authReady || typeof window === "undefined") return;
+
+    const drain = () => {
+      flushOutbox()
+        .then(({ sent }) => {
+          if (sent > 0) {
+            qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+            qc.invalidateQueries({ queryKey: queryKeys.state });
+          }
+        })
+        .catch((err) => console.error("[outbox] flush failed:", err));
+    };
+
+    drain();
+    window.addEventListener("online", drain);
+    return () => window.removeEventListener("online", drain);
   }, [authReady, qc]);
 
   // Daily quote — context derived from current week plan
@@ -888,7 +914,7 @@ function TodayContent() {
           completed: true,
         })
       );
-      await postFeedback({
+      const body = {
         log_entry: {
           date: targetDate,
           session_id: feedbackSessionId,
@@ -898,11 +924,17 @@ function TodayContent() {
           },
         },
         status: "done",
-      });
-      // Re-fetch week plan so feedback_summary badges appear immediately
-      refetchAll();
-    } catch {
-      // Non-critical feedback, don't block the UX
+      };
+      try {
+        await postFeedback(body);
+        // Re-fetch week plan so feedback_summary badges appear immediately
+        refetchAll();
+      } catch {
+        // A245 B-4 (F4) — this used to be `catch { /* Non-critical */ }`.
+        // Feedback IS the closed loop's fuel: losing it silently desynchronises
+        // progression with no signal to anyone.
+        queueOrWarn(body);
+      }
     } finally {
       setFeedbackOpen(false);
       setFeedbackSessionId(null);

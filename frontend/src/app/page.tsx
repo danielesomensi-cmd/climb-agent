@@ -4,6 +4,17 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { getState } from "@/lib/api";
+import { readLastDestination, writeLastDestination } from "@/lib/last-destination";
+
+/**
+ * A245 B-3 (F1) — the root used to decide where to go by calling getState()
+ * against Railway. Offline that call fails and the old `.catch` sent the user
+ * to /onboarding/welcome: an established user opening the PWA in falesia was
+ * dropped into the onboarding wizard, with the real plan sitting in cache.
+ *
+ * The last known destination is now recorded in localStorage and used
+ * immediately; the network only ever corrects it.
+ */
 
 export default function Home() {
   const router = useRouter();
@@ -21,13 +32,18 @@ export default function Home() {
 
     getState()
       .then((state) => {
-        if (state.macrocycle) {
-          router.replace("/today");
-        } else {
-          router.replace("/onboarding/welcome");
-        }
+        const dest = state.macrocycle ? "/today" : "/onboarding/welcome";
+        writeLastDestination(dest);
+        router.replace(dest);
       })
       .catch((err) => {
+        // Network failure is NOT evidence that onboarding is incomplete.
+        const remembered = readLastDestination();
+        if (remembered) {
+          console.warn("Root redirect offline — using last known destination:", remembered);
+          router.replace(remembered);
+          return;
+        }
         console.error("Failed to load state on root redirect:", err);
         router.replace("/onboarding/welcome");
       })

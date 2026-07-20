@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { applyEvents } from "@/lib/api";
+import { ApiError, NETWORK_ERROR_STATUS, applyEvents } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import type { WeekPlan } from "@/lib/types";
 
@@ -43,6 +43,17 @@ export function useWeekEvents(weekNum: number) {
         const cached = qc.getQueryData<WeekCacheEntry>(queryKeys.week(weekNum));
         const weekPlan = cached?.week_plan;
         if (!weekPlan) throw new Error("Week plan not loaded");
+
+        // A245 B-4 — these events are deliberately NOT queued in the outbox:
+        // they ship the whole week plan and the backend persists it wholesale,
+        // so replaying a stale snapshot later would overwrite everything that
+        // happened in between and could touch past sessions. Fail loudly.
+        if (typeof navigator !== "undefined" && navigator.onLine === false) {
+          throw new ApiError(
+            NETWORK_ERROR_STATUS,
+            "You're offline — this change can't be saved yet. Try again once you're connected.",
+          );
+        }
 
         const result = await applyEvents({ events, week_plan: weekPlan });
 

@@ -5,7 +5,9 @@ import { Zap, Check, X, Plus, Minus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GradePicker } from "./grade-picker";
 import { RestTimer } from "./rest-timer";
+import { toast } from "sonner";
 import { logFreeClimb, deleteFreeClimb } from "@/lib/api";
+import { enqueue } from "@/lib/outbox";
 import { displayBoulderGrade, type BoulderGradeSystem } from "@/lib/gradeUtils";
 import {
   saveDraft,
@@ -196,14 +198,33 @@ export function ClimbLogger({
     if (isLogging) return;
     setIsLogging(true);
     try {
-      const result = await logFreeClimb(sessionId, {
+      const climb = {
         grade,
         status,
         attempts,
         style: isLead(surface) ? style : undefined,
         topped: isLead(surface) ? topped : undefined,
         notes: notes || undefined,
-      });
+      };
+
+      // A245 B-4 (F5) — a failed log used to be a bare console.error: the climb
+      // never entered the UI and never reached the server. It is now queued and
+      // shown optimistically. The local index is display-only; the server
+      // assigns the real one on replay and the next refetch reconciles.
+      let result: { index: number; logged_at: string };
+      try {
+        result = await logFreeClimb(sessionId, climb);
+      } catch (err) {
+        const queued = enqueue("free_climb", { session_id: sessionId, ...climb });
+        if (!queued) throw err;
+        toast("Climb saved on this device — it will sync when you're back online.", {
+          duration: 5000,
+        });
+        result = {
+          index: climbs.reduce((max, c) => Math.max(max, c.index), -1) + 1,
+          logged_at: new Date().toISOString(),
+        };
+      }
 
       const newClimb: LoggedClimb = {
         index: result.index,
@@ -241,10 +262,11 @@ export function ClimbLogger({
       }
     } catch (err) {
       console.error("Failed to log climb:", err);
+      toast.error("Could not save this climb. Please try again.", { duration: 8000 });
     } finally {
       setIsLogging(false);
     }
-  }, [sessionId, grade, status, attempts, style, topped, notes, surface, sessionMode, restSeconds, isLogging]);
+  }, [sessionId, grade, status, attempts, style, topped, notes, surface, sessionMode, restSeconds, isLogging, climbs]);
 
   const handleDeleteClimb = useCallback(async (climbIndex: number) => {
     // Optimistic remove

@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getState, getStateStatus } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { PERSIST_MAX_AGE_MS } from "@/lib/query-persist";
 
 /**
  * A187 — Cached read of /api/state.
@@ -16,6 +17,10 @@ export function useUserState(enabled = true) {
     queryKey: queryKeys.state,
     queryFn: getState,
     enabled,
+    // A245 B-2: must be >= PERSIST_MAX_AGE_MS, otherwise React Query evicts
+    // this query 5 min after the last observer and the next persist writes the
+    // offline cache back out empty.
+    gcTime: PERSIST_MAX_AGE_MS,
   });
 }
 

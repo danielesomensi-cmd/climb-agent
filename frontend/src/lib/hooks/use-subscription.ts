@@ -66,9 +66,22 @@ export function useSubscription(): UseSubscriptionResult {
 
   useEffect(() => {
     fetch();
-    timerRef.current = setInterval(fetch, REFRESH_INTERVAL_MS);
+    // A245 B-5 (F44) — the 5-minute poll used to fire regardless of
+    // connectivity: offline it burned a request (and, since A245 A-3, a 15s
+    // timeout) every 5 minutes, all guaranteed to fail. Skip the tick when the
+    // browser knows there is no connection, and catch up on reconnect.
+    //
+    // Scope note: this only gates WHEN we poll. The fail-closed _DENY on error
+    // (B202) is untouched here — that is F8, Phase C.
+    const tick = () => {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+      fetch();
+    };
+    timerRef.current = setInterval(tick, REFRESH_INTERVAL_MS);
+    window.addEventListener("online", fetch);
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      window.removeEventListener("online", fetch);
     };
   }, [fetch]);
 

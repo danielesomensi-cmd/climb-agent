@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { Providers } from "./providers";
 import { SwUpdateBanner } from "@/components/sw-update-banner";
 import { AttributionCapture } from "@/components/attribution-capture";
+import { SessionScopeGuard } from "@/components/session-scope-guard";
 import "./globals.css";
 
 const inter = Inter({
@@ -64,6 +65,7 @@ export default function RootLayout({
             <Toaster richColors position="top-center" />
             <SwUpdateBanner />
             <AttributionCapture />
+            <SessionScopeGuard />
           </Providers>
           <Analytics />
           <script
