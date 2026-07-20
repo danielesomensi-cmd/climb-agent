@@ -21,9 +21,11 @@ interface DayCardProps {
   day: DayPlan;
   gyms?: Gym[];
   homeEquipment?: string[];
-  onMarkDone?: (sessionId: string) => void;
-  onMarkSkipped?: (sessionId: string) => void;
-  onUndo?: (sessionId: string) => void;
+  // F6 — restituiscono la promise della mutation: la SessionCard la attende per
+  // tenere Done/Skip disabilitati finché la scrittura non ha risposto.
+  onMarkDone?: (sessionId: string) => void | Promise<void>;
+  onMarkSkipped?: (sessionId: string) => void | Promise<void>;
+  onUndo?: (sessionId: string) => void | Promise<void>;
   onReplan?: (date: string, sessionIndex?: number) => void;
   onQuickAdd?: (date: string) => void;
   onMoveSession?: (date: string, slot: string, sessionId: string) => void;
