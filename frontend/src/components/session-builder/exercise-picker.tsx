@@ -31,9 +31,45 @@ function exerciseToDefaults(ex: BuilderExercise): CustomSessionExercise {
     work_seconds: d.work_seconds ?? null,
     rest_between_sets_seconds: d.rest_between_sets_seconds ?? null,
     rest_between_reps_seconds: d.rest_between_reps_seconds ?? null,
-    load_kg: 0,
+    // A242: prefill the user's remembered load (0 when none) — never invented.
+    load_kg: ex.proposal?.load_kg ?? 0,
     notes: "",
   };
+}
+
+/** Compact relative age, e.g. "today", "3 days ago", "5 months ago". */
+function formatAgo(dateStr: string | null): string {
+  if (!dateStr) return "";
+  const then = new Date(dateStr + "T00:00:00");
+  if (Number.isNaN(then.getTime())) return "";
+  const days = Math.floor((Date.now() - then.getTime()) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) {
+    const w = Math.floor(days / 7);
+    return `${w} week${w > 1 ? "s" : ""} ago`;
+  }
+  if (days < 365) {
+    const m = Math.floor(days / 30);
+    return `${m} month${m > 1 ? "s" : ""} ago`;
+  }
+  const y = Math.floor(days / 365);
+  return `${y} year${y > 1 ? "s" : ""} ago`;
+}
+
+/** "Last time: 40 kg · 3 months ago" — remembered load/effort memory, or null. */
+function lastTimeLabel(ex: BuilderExercise): string | null {
+  const last = ex.proposal?.last_logged;
+  if (!last) return null;
+  const ago = formatAgo(last.date);
+  const head =
+    last.load_kg != null && last.load_kg > 0
+      ? `${last.load_kg} kg`
+      : last.feedback_label
+        ? last.feedback_label.replace(/_/g, " ")
+        : "logged";
+  return ago ? `Last time: ${head} · ${ago}` : `Last time: ${head}`;
 }
 
 function formatDefaults(ex: BuilderExercise): string {
@@ -71,6 +107,9 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
     if (activeDomains.length <= 1) return true;
     return ex.domain.some((d) => activeDomains.includes(d));
   });
+
+  // A242: phase effort cue is identical across exercises — show it once.
+  const effortBand = exercises[0]?.proposal?.effort_band ?? null;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
@@ -114,6 +153,13 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
           ))}
         </div>
 
+        {/* A242: phase effort-band cue (display-only, no RPE number) */}
+        {effortBand && (
+          <p className="px-4 pb-2 text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground/80">This phase:</span> {effortBand}
+          </p>
+        )}
+
         {/* Exercise list */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 space-y-1" style={{ maxHeight: "55vh" }}>
             {isLoading && (
@@ -141,6 +187,9 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {formatDefaults(ex)}
                     </p>
+                    {lastTimeLabel(ex) && (
+                      <p className="text-[11px] text-amber-500/90 mt-0.5">{lastTimeLabel(ex)}</p>
+                    )}
                     {ex.equipment_required.length > 0 && (
                       <div className="flex gap-1 mt-1">
                         {ex.equipment_required.map((eq) => (

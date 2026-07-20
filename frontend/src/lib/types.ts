@@ -888,6 +888,23 @@ export interface BuilderExercise {
   };
   fatigue_cost: number;
   load_model: string;
+  // A242: deterministic starting proposal + last-logged memory (custom-only).
+  proposal?: ExerciseProposal;
+}
+
+export interface ExerciseProposal {
+  sets?: number | null;
+  reps?: number | null;
+  work_seconds?: number | null;
+  rest_between_sets_seconds?: number | null;
+  rest_between_reps_seconds?: number | null;
+  load_kg: number; // remembered value or 0 — never an invented absolute
+  effort_band: string | null; // display-only phase cue (no RPE number)
+  last_logged: {
+    load_kg: number | null;
+    feedback_label: string | null;
+    date: string | null;
+  } | null;
 }
 
 export interface WarmupCooldownBlock {
