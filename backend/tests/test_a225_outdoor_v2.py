@@ -677,6 +677,35 @@ class TestLiveRouteLogging:
         assert [a["rest_seconds"] for a in route["attempts"]] == [300, 600, 900]
         assert [a["climb_seconds"] for a in route["attempts"]] == [120, 150, 180]
 
+    def test_a241_logged_at_round_trips(self):
+        """A241: per-try ``logged_at`` (client-stamped ISO UTC) survives the live
+        sync AND the finish; rest is derived at render, never stored. Mixed
+        payloads (legacy tries without logged_at) still validate."""
+        sid = self._start()
+        self.client.put(f"/api/outdoor/session/{sid}/routes", json={"routes": [
+            {"name": "Project", "grade": "7c", "at_min": 30,
+             "attempts": [
+                 {"result": "fell", "logged_at": "2026-06-19T09:12:00Z", "climb_seconds": 120},
+                 {"result": "fell", "logged_at": "2026-06-19T09:31:00Z"},  # no timer
+                 {"result": "sent"},  # legacy shape, no timestamp — still valid
+             ]},
+        ]})
+        active = self.client.get("/api/outdoor/session/active", params={"date": "2026-06-19"})
+        atts = active.json()["session"]["routes"][0]["attempts"]
+        assert atts[0]["logged_at"] == "2026-06-19T09:12:00Z"
+        assert atts[0]["climb_seconds"] == 120
+        assert atts[1]["logged_at"] == "2026-06-19T09:31:00Z"
+        assert "climb_seconds" not in atts[1]
+        assert "logged_at" not in atts[2]
+        assert all("rest_seconds" not in a for a in atts)  # derive, don't store
+        fin = self.client.post(f"/api/outdoor/session/{sid}/finish", json={
+            "spot_name": "Arco", "discipline": "lead",
+        })
+        assert fin.status_code == 200
+        route = self.client.get("/api/outdoor/sessions").json()["sessions"][0]["routes"][0]
+        assert [a.get("logged_at") for a in route["attempts"]] == \
+            ["2026-06-19T09:12:00Z", "2026-06-19T09:31:00Z", None]
+
     def test_log_climb_unknown_session_404(self):
         r = self.client.post("/api/outdoor/session/nope/log-climb", json={
             "name": "X", "grade": "6a", "attempts": [{"result": "sent"}],

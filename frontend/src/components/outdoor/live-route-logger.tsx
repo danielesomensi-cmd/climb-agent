@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { OutdoorRoute } from "@/lib/types";
+import { deriveTryTimings, lastTryMs, routeHasTimestamps } from "@/lib/try-timings";
+import { TryBreakdown } from "./try-breakdown";
 
 /**
  * A226 / A227 — log routes LIVE during an active outdoor session.
@@ -107,6 +109,10 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
   const nowMsRef = useRef<number>(startMs);
   const liveActionMsRef = useRef<number | null>(null);
   const [restSec, setRestSec] = useState(0);
+  // A241 — render-safe "now" for the per-route "since last try" ticker.
+  const [nowMs, setNowMs] = useState<number>(startMs);
+  // A241 — per-card expand/collapse (indices into `routes`).
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   // A4 — optional climb timer (counts on-the-wall time for the current burn).
   const climbStartMsRef = useRef<number | null>(null);
@@ -116,6 +122,7 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
   useEffect(() => {
     const tick = () => {
       nowMsRef.current = Date.now();
+      setNowMs(nowMsRef.current);
       const fallback = routes.length ? startMs + Math.max(...routes.map((r) => r.atMin)) * 60000 : null;
       const ref = liveActionMsRef.current ?? fallback;
       setRestSec(ref == null ? 0 : Math.max(0, Math.floor((nowMsRef.current - ref) / 1000)));
@@ -147,26 +154,28 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
   };
 
   /** Close out the burn that just ended: stop the climb timer, restart the
-   *  rest counter, and return the timing to store on the attempt (B279). */
+   *  rest counter, and return the timing for the new try. A241: the try stores
+   *  its end-of-burn timestamp (rest is derived at render, never stored);
+   *  route-level rest/climb keep the A227 first-burn contract. */
   const takeBurnTiming = () => {
-    const nowMs = nowMsRef.current;
+    const pressMs = nowMsRef.current;
     const climb = consumeClimb();
-    const rest = Math.round(restSec); // rest taken before this burn
-    liveActionMsRef.current = nowMs;
+    const rest = Math.round(restSec); // A227 route-level field only
+    liveActionMsRef.current = pressMs;
     setRestSec(0);
-    const atMin = Math.max(0, Math.round((nowMs - startMs) / 60000));
-    return { climb, rest, atMin };
+    const atMin = Math.max(0, Math.round((pressMs - startMs) / 60000));
+    return { climb, rest, atMin, loggedAt: new Date(pressMs).toISOString() };
   };
 
   const addRoute = (result: "sent" | "fell") => {
-    const { climb, rest, atMin } = takeBurnTiming();
+    const { climb, rest, atMin, loggedAt } = takeBurnTiming();
     const idx = routes.length;
     onChange([
       ...routes,
       {
         name: name.trim() || `${routeLabel} ${idx + 1}`,
         grade,
-        attempts: [{ result, rest_seconds: rest, ...(climb ? { climb_seconds: climb } : {}) }],
+        attempts: [{ result, logged_at: loggedAt, ...(climb ? { climb_seconds: climb } : {}) }],
         atMin,
         rest_seconds: rest,
         ...(climb ? { climb_seconds: climb } : {}),
@@ -178,13 +187,13 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
   };
 
   const addAttempt = (idx: number, result: "sent" | "fell") => {
-    const { climb, rest, atMin } = takeBurnTiming();
+    const { climb, atMin, loggedAt } = takeBurnTiming();
     onChange(
       routes.map((r, i) => {
         if (i !== idx) return r;
         const attempts = [
           ...r.attempts,
-          { result, rest_seconds: rest, ...(climb ? { climb_seconds: climb } : {}) },
+          { result, logged_at: loggedAt, ...(climb ? { climb_seconds: climb } : {}) },
         ];
         // Validity rule: >1 attempt invalidates onsight/flash. A send on a
         // multi-attempt route is a redpoint going forward.
@@ -205,7 +214,19 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
   const remove = (idx: number) => {
     onChange(routes.filter((_, i) => i !== idx));
     setActiveIdx((cur) => (cur == null || cur === idx ? null : cur > idx ? cur - 1 : cur));
+    setExpanded(new Set()); // indices shifted — collapse all (cheap & safe)
   };
+
+  const toggleExpanded = (idx: number) =>
+    setExpanded((cur) => {
+      const next = new Set(cur);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+
+  // A241 — derived per-try timings (session-wide chronological rest).
+  const timings = deriveTryTimings(routes);
 
   return (
     <div className="space-y-3">
@@ -294,15 +315,26 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
           {routes.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => {
             const sent = r.attempts.some((a) => a.result === "sent" || a.result === "topped_out");
             const firstTrySend = sent && r.attempts.length === 1;
-            const restSecRow = restForRow(routes, i);
-            const climbSecRow = climbForRow(r);
+            // A241 — timestamped routes: ticking "since last try" + expandable
+            // per-try breakdown. Legacy routes (no logged_at): old totals.
+            const hasTs = routeHasTimestamps(r);
+            const isOpen = hasTs && expanded.has(i);
+            const last = hasTs ? lastTryMs(r) : null;
+            const sinceLast = last != null ? Math.max(0, Math.floor((nowMs - last) / 1000)) : null;
+            const restSecRow = hasTs ? null : restForRow(routes, i);
+            const climbSecRow = hasTs ? null : climbForRow(r);
             const multi = r.attempts.length > 1;
             return (
               <li key={i} className={`rounded-lg border px-3 py-2 ${i === projectIdx ? "border-indigo-600/50 bg-indigo-950/20" : "border-white/5 bg-zinc-900/40"}`}>
-                <div className="flex items-center gap-2 text-sm">
+                <button
+                  type="button"
+                  onClick={() => hasTs && toggleExpanded(i)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center gap-2 text-left text-sm"
+                >
                   <span className="w-10 shrink-0 font-mono font-medium text-zinc-200">{r.grade}</span>
                   <span className="min-w-0 flex-1 truncate text-zinc-400">{r.name}</span>
-                  {/* attempt dots — tooltip carries per-attempt timing (B279) */}
+                  {/* attempt dots */}
                   <span className="flex shrink-0 items-center gap-1">
                     {r.attempts.map((a, ai) => (
                       <span key={ai}
@@ -314,9 +346,14 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                         className={`inline-block size-2 rounded-full ${a.result === "sent" || a.result === "topped_out" ? "bg-green-500" : "bg-red-500"}`} />
                     ))}
                   </span>
-                  {/* A3 / B264 / B265 / B279 — labeled climb · rest times; totals
-                      across attempts on multi-burn (project) routes */}
                   <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-zinc-500">
+                    {/* A241 — ticking time since the last try on THIS route */}
+                    {sinceLast != null && (
+                      <span className="tabular-nums" title="Time since the last try on this route">
+                        last try {fmt(sinceLast)} ago
+                      </span>
+                    )}
+                    {/* A3 / B264 / B265 / B279 — legacy totals (no timestamps) */}
                     {climbSecRow != null && (
                       <span title={multi ? `Total time on the wall (${r.attempts.length} tries)` : "Time on the wall"} className="text-amber-300/80">climb {fmt(climbSecRow)}</span>
                     )}
@@ -326,8 +363,22 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                     {restSecRow != null && (
                       <span title={multi ? `Total rest (${r.attempts.length} tries)` : "Rest taken before this burn"}>rest {fmt(restSecRow)}</span>
                     )}
+                    {hasTs && (
+                      <svg
+                        className={`h-3 w-3 text-zinc-600 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    )}
                   </span>
-                </div>
+                </button>
+                {/* A241 — per-try rest/climb progression (chronological) */}
+                {isOpen && (
+                  <div className="mt-1.5 border-t border-white/5 pt-1.5">
+                    <TryBreakdown attempts={r.attempts} timings={timings[i]} />
+                  </div>
+                )}
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   <span className={`text-[11px] ${i === projectIdx ? "text-indigo-400" : "text-zinc-600"}`}>{sent ? "Sent" : i === projectIdx ? "Projecting" : "Open"} · {r.attempts.length} {r.attempts.length === 1 ? "try" : "tries"}</span>
                   {/* A2 — onsight/flash only on a first-attempt send */}

@@ -10,6 +10,8 @@ import type {
   OutdoorConditions,
 } from "@/lib/types";
 import { postOutdoorLog, putOutdoorLog } from "@/lib/api";
+import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
+import { TryBreakdown } from "@/components/outdoor/try-breakdown";
 
 const FRENCH_SPORT_GRADES = [
   "4a","4b","4c","5a","5a+","5b","5b+","5c","5c+",
@@ -176,6 +178,9 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     }
   };
 
+  // A241 — derived per-try rest/climb (session-wide chronological rule).
+  const tryTimings = deriveTryTimings(routes);
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">{isEdit ? "Edit Outdoor Session" : "Log Outdoor Session"}</h3>
@@ -324,10 +329,11 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                 </button>
               </div>
 
-              {/* B264 / B265 / B279 — read-only climb · rest times captured live
-                  (word labels, no icons — coherent with the live logging screen);
-                  totals across attempts on multi-burn (project) routes */}
-              {(() => {
+              {/* A241 — per-try rest/climb breakdown when timestamps exist;
+                  B264 / B265 / B279 totals as the legacy fallback */}
+              {routeHasTimestamps(route) ? (
+                <TryBreakdown attempts={route.attempts} timings={tryTimings[rIdx]} />
+              ) : (() => {
                 const t = routeTiming(route);
                 const multi = route.attempts.length > 1;
                 if (t.climb == null && t.rest == null) return null;

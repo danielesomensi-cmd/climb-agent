@@ -81,8 +81,10 @@ def count_tests() -> int:
     )
     total = 0
     for line in result.stdout.splitlines():
-        # Format: "backend/tests/test_foo.py: 42"
-        m = re.match(r".+\.py:\s*(\d+)$", line)
+        # Format: "backend/tests/test_foo.py: 42". Anchor on the test dir so
+        # deprecation-warning lines that also end in ".py:<lineno>" (emitted on
+        # stdout by some deps) are not mistaken for collection counts.
+        m = re.match(r"backend/tests/\S+\.py:\s*(\d+)$", line)
         if m:
             total += int(m.group(1))
     # Fallback: try "N tests collected" or "N test" summary line
