@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { hasSavedProgress } from "@/lib/guided-session-utils";
+import { buildGuidedStateFromExercises, hasSavedProgress } from "@/lib/guided-session-utils";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -181,58 +181,21 @@ function buildInstructionStep(block: Record<string, unknown>): GuidedExercise {
 }
 
 /**
- * B218 Bug 3: build GuidedSessionState from an inline, flat-exercise session
- * (Body Part Picker generated sessions — is_custom + session.exercises[],
- * no saved custom_session_id). Shape matches CustomSessionExercise: sets,
- * reps, work_seconds, rest_between_sets_seconds, load_kg, notes at top level.
+ * B218 Bug 3 / B283: build GuidedSessionState from an inline, flat-exercise
+ * session (saved custom sessions AND Body Part Picker generated sessions —
+ * both run through the real guided player; the A211 minimal page is retired).
+ * Delegates to the shared lib helper.
  */
 function buildGuidedStateFromInline(
   session: SessionSlot,
   date: string,
 ): GuidedSessionState | null {
-  const exList = (session.exercises ?? []) as unknown as Array<Record<string, unknown>>;
-  if (exList.length === 0) return null;
-
-  const exercises: GuidedExercise[] = exList.map((ex) => {
-    const exerciseId = (ex.exercise_id as string) ?? "";
-    const name =
-      (ex.name as string) ??
-      exerciseId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-    return {
-      exerciseId,
-      name,
-      category: (ex.category as string) ?? "",
-      blockUid: (ex.body_part as string) ?? (ex.module_role as string) ?? "",
-      loadModel: (ex.load_model as string) ?? "",
-      prescription: {
-        sets: ex.sets as number | undefined,
-        reps: ex.reps != null ? (ex.reps as string | number) : undefined,
-        workSeconds: ex.work_seconds as number | undefined,
-        restBetweenRepsSeconds: ex.rest_between_reps_seconds as number | undefined,
-        restSeconds: ex.rest_between_sets_seconds as number | undefined,
-        loadKg: ex.load_kg as number | undefined,
-        notes: ex.notes as string | undefined,
-      },
-      suggested: {
-        externalLoadKg: ex.suggested_external_load_kg as number | undefined,
-        totalLoadKg: ex.suggested_total_load_kg as number | undefined,
-        loadSource: ex.load_source as string | undefined,
-      },
-      cues: (ex.cues as string[] | undefined) ?? undefined,
-      status: "pending",
-      feedbackLabel: "ok",
-    };
-  });
-
-  return {
-    version: 1,
+  return buildGuidedStateFromExercises(
+    session.session_id,
+    session.name || session.session_id,
     date,
-    sessionId: session.session_id,
-    sessionName: session.name || session.session_id,
-    startedAt: new Date().toISOString(),
-    currentIndex: 0,
-    exercises,
-  };
+    (session.exercises ?? []) as unknown as Array<Record<string, unknown>>,
+  );
 }
 
 /** Build GuidedSessionState from a resolved session slot */
@@ -324,28 +287,20 @@ function handleStartGuided(
     return;
   }
 
-  // A211: saved custom sessions have a dedicated playback page with timer.
-  if (session.is_custom && session.custom_session_id) {
-    router.push(
-      `/session-builder/${session.custom_session_id}/play?date=${encodeURIComponent(date)}`,
-    );
-    return;
-  }
-
   // B181: don't overwrite saved progress — resume instead.
   if (hasSavedProgress(date, session.session_id)) {
     router.push(`/guided/${date}/${session.session_id}`);
     return;
   }
 
-  // B218 Bug 3: inline generated sessions (A213 Body Part Picker etc.) are
-  // is_custom but have no custom_session_id — they live only inside the week
-  // plan as a flat exercises[] list. Build a guided state from that shape and
-  // reuse the /guided/[date]/[sessionId] flow via localStorage.
-  const guidedState =
-    session.is_custom && !session.custom_session_id
-      ? buildGuidedStateFromInline(session, date)
-      : buildGuidedState(session, date);
+  // B218 Bug 3 / B283: is_custom sessions (saved custom, adhoc, Body Part
+  // Picker) live in the week plan as a flat exercises[] list. Build a guided
+  // state from that shape and reuse the real /guided/[date]/[sessionId] player
+  // — the dedicated A211 playback page is retired (it lacked progress,
+  // navigation, cues and load display).
+  const guidedState = session.is_custom
+    ? buildGuidedStateFromInline(session, date)
+    : buildGuidedState(session, date);
   if (!guidedState) return;
 
   const userId = window.Clerk?.session ? "clerk" : "";

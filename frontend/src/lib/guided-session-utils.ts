@@ -1,4 +1,4 @@
-import type { GuidedSessionState } from "@/lib/types";
+import type { GuidedExercise, GuidedSessionState } from "@/lib/types";
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -98,4 +98,87 @@ export function clearSavedSession(date: string, sessionId: string): void {
   const prefix = getKeyPrefix();
   const key = `${prefix}${date}_${sessionId}`;
   localStorage.removeItem(key);
+}
+
+/**
+ * B283: build GuidedSessionState from a flat CustomSessionExercise-shaped
+ * list (saved custom sessions, adhoc coach sessions, body-part inline
+ * sessions). Custom sessions now run through the REAL guided player — the
+ * minimal A211 playback page is retired. Exercises may carry catalog display
+ * enrichment (name, cues, video_url, load_model, category — B283 backend);
+ * everything degrades gracefully when absent.
+ */
+export function buildGuidedStateFromExercises(
+  sessionId: string,
+  sessionName: string,
+  date: string,
+  exList: Array<Record<string, unknown>>,
+): GuidedSessionState | null {
+  if (exList.length === 0) return null;
+
+  const exercises: GuidedExercise[] = exList.map((ex) => {
+    const exerciseId = (ex.exercise_id as string) ?? "";
+    const name =
+      (ex.name as string) ??
+      exerciseId.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const loadKg = typeof ex.load_kg === "number" ? (ex.load_kg as number) : undefined;
+    return {
+      exerciseId,
+      name,
+      category: (ex.category as string) ?? "",
+      blockUid: (ex.body_part as string) ?? (ex.module_role as string) ?? "",
+      loadModel: (ex.load_model as string) ?? "",
+      prescription: {
+        sets: ex.sets as number | undefined,
+        reps: ex.reps != null ? (ex.reps as string | number) : undefined,
+        workSeconds: ex.work_seconds as number | undefined,
+        restBetweenRepsSeconds: ex.rest_between_reps_seconds as number | undefined,
+        restSeconds: ex.rest_between_sets_seconds as number | undefined,
+        loadKg,
+        notes: ex.notes as string | undefined,
+      },
+      suggested: {
+        // Show the stored load as the suggested weight (remembered value from
+        // working_loads via the builder proposal, or the user's own entry).
+        externalLoadKg:
+          (ex.suggested_external_load_kg as number | undefined) ??
+          (loadKg != null && loadKg > 0 ? loadKg : undefined),
+        totalLoadKg: ex.suggested_total_load_kg as number | undefined,
+        loadSource: ex.load_source as string | undefined,
+      },
+      cues: (ex.cues as string[] | undefined) ?? undefined,
+      videoUrl: (ex.video_url as string | undefined) ?? undefined,
+      status: "pending",
+      feedbackLabel: "ok",
+    };
+  });
+
+  return {
+    version: 1,
+    date,
+    sessionId,
+    sessionName,
+    startedAt: new Date().toISOString(),
+    currentIndex: 0,
+    exercises,
+  };
+}
+
+/**
+ * B283: persist a guided state under the canonical localStorage key,
+ * preserving a prior startedAt (B197 — duration must not reset on re-entry).
+ */
+export function saveGuidedState(state: GuidedSessionState): void {
+  if (typeof window === "undefined") return;
+  const key = `${getKeyPrefix()}${state.date}_${state.sessionId}`;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const prior = JSON.parse(raw) as GuidedSessionState;
+      if (prior?.startedAt) state.startedAt = prior.startedAt;
+    }
+  } catch {
+    /* fresh startedAt */
+  }
+  localStorage.setItem(key, JSON.stringify(state));
 }
