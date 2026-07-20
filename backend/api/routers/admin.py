@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -17,10 +18,14 @@ ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "")
 
 
 def _require_admin(request: Request) -> None:
-    """Raise 403 if X-Admin-Key header is missing or wrong."""
+    """Raise 403 if X-Admin-Key header is missing or wrong.
+
+    B285/SEC-3: constant-time comparison — a plain ``!=`` leaks the secret's
+    prefix length through timing across repeated requests.
+    """
     secret = ADMIN_SECRET
     key = request.headers.get("X-Admin-Key")
-    if not secret or key != secret:
+    if not secret or not secrets.compare_digest(key or "", secret):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 

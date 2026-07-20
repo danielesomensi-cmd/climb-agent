@@ -53,10 +53,14 @@ def get_subscription_row(user_id: str) -> Optional[Dict[str, Any]]:
 def upsert_subscription(user_id: str, fields: Dict[str, Any]) -> None:
     """Create or update subscription row for user_id."""
     import logging as _logging
+
+    from backend.engine.log_utils import mask_uid
+
     _log = _logging.getLogger(__name__)
-    _log.info(
-        "DIAG upsert_subscription called user_id=%s fields_keys=%s supabase_enabled=%s",
-        user_id, list(fields.keys()), _supabase_enabled(),
+    # B285/SEC-4: DEBUG + masked id — this fired at INFO on every webhook.
+    _log.debug(
+        "upsert_subscription called user_id=%s fields_keys=%s supabase_enabled=%s",
+        mask_uid(user_id), list(fields.keys()), _supabase_enabled(),
     )
     if not _supabase_enabled():
         _log.warning(
@@ -69,9 +73,12 @@ def upsert_subscription(user_id: str, fields: Dict[str, Any]) -> None:
     payload = {"user_id": user_id, **fields}
     try:
         result = _sb().table("subscriptions").upsert(payload, on_conflict="user_id").execute()
-        _log.info("DIAG upsert_subscription OK user_id=%s result_count=%s", user_id, len(result.data or []))
+        _log.debug(
+            "upsert_subscription OK user_id=%s result_count=%s",
+            mask_uid(user_id), len(result.data or []),
+        )
     except Exception as exc:
-        _log.error("DIAG upsert_subscription FAILED user_id=%s: %s", user_id, exc, exc_info=True)
+        _log.error("upsert_subscription FAILED user_id=%s: %s", mask_uid(user_id), exc, exc_info=True)
         raise
 
 
@@ -149,13 +156,21 @@ def check_subscription(user_id: Optional[str]) -> Dict[str, Any]:
     Bypass cases (returns ALLOW_ALL) — only when Stripe is NOT configured:
     - Stripe not configured (dev/test)
     - STORAGE_BACKEND != 'supabase' (pytest)
-    - user_id is None (unauthenticated dev request)
+    - user_id is None *in that same dev/test configuration only*
 
     Fail-closed (returns DENY_ALL) — when Stripe IS configured:
     - No subscription row in DB → user must subscribe
+    - user_id is None → anonymous request (B285/SEC-2). Previously this
+      fell through to ALLOW_ALL, letting unauthenticated traffic past every
+      gated endpoint — including the paid LLM call in /api/coach/chat, which
+      runs before any persistence. deps.get_user_id now 401s first; this is
+      defense in depth for any non-HTTP caller.
     """
-    if not _stripe_enabled() or not _supabase_enabled() or not user_id:
+    if not _stripe_enabled() or not _supabase_enabled():
         return _ALLOW_ALL.copy()
+
+    if not user_id:
+        return _DENY_ALL.copy()
 
     # Founder / beta bypass — managed via BYPASS_USER_IDS env var
     if user_id in _BYPASS_USER_IDS:

@@ -37,6 +37,7 @@ import stripe
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from backend.engine.log_utils import mask_uid
 from backend.engine.subscription_guard import (
     find_subscription_by_stripe_customer,
     find_subscription_by_stripe_subscription_id,
@@ -188,8 +189,8 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
     user_id = metadata.get("user_id") or client_ref
 
     logger.info(
-        "DIAG checkout_completed metadata=%s client_reference_id=%s → user_id=%s",
-        metadata, client_ref, user_id,
+        "DIAG checkout_completed metadata_keys=%s client_reference_id=%s → user_id=%s",
+        sorted(metadata.keys()), mask_uid(client_ref), mask_uid(user_id),
     )
 
     if not user_id:
@@ -236,7 +237,10 @@ def _handle_checkout_completed(session: Dict[str, Any]) -> None:
         "current_period_end": period_end,
         "has_payment_method": has_payment_method,
     })
-    logger.info("checkout.session.completed: user_id=%s linked to customer=%s", user_id, customer_id)
+    logger.info(
+        "checkout.session.completed: user_id=%s linked to customer=%s",
+        mask_uid(user_id), mask_uid(customer_id),
+    )
 
     # Founder alert (fire-and-forget). Must never raise — a 500 here makes
     # Stripe retry the webhook (B226).
@@ -287,7 +291,7 @@ def _handle_subscription_updated(sub: Dict[str, Any]) -> None:
         "cancel_at_period_end": sub.get("cancel_at_period_end", False),
         "has_payment_method": bool(sub.get("default_payment_method")),
     })
-    logger.info("subscription.updated: user_id=%s status=%s", user_id, status)
+    logger.info("subscription.updated: user_id=%s status=%s", mask_uid(user_id), status)
 
 
 def _handle_subscription_deleted(sub: Dict[str, Any]) -> None:
@@ -309,7 +313,7 @@ def _handle_subscription_deleted(sub: Dict[str, Any]) -> None:
         user_id = row["user_id"]
 
     upsert_subscription(user_id, {"status": "canceled"})
-    logger.info("subscription.deleted: user_id=%s → canceled", user_id)
+    logger.info("subscription.deleted: user_id=%s → canceled", mask_uid(user_id))
 
 
 def _handle_trial_will_end(sub: Dict[str, Any]) -> None:
@@ -332,7 +336,7 @@ def _handle_trial_will_end(sub: Dict[str, Any]) -> None:
     has_pm = bool(sub.get("default_payment_method"))
     logger.info(
         "subscription.trial_will_end: user_id=%s subscription_id=%s has_payment_method=%s",
-        user_id, subscription_id, has_pm,
+        mask_uid(user_id), mask_uid(subscription_id), has_pm,
     )
 
     try:
@@ -376,7 +380,7 @@ def _handle_customer_deleted(customer: Dict[str, Any]) -> None:
     })
     logger.info(
         "customer.deleted: user_id=%s customer=%s → cleared + canceled",
-        user_id, customer_id,
+        mask_uid(user_id), mask_uid(customer_id),
     )
 
 
@@ -426,7 +430,7 @@ def _handle_payment_succeeded(invoice: Dict[str, Any]) -> None:
     if subscription_id:
         fields["stripe_subscription_id"] = subscription_id
     upsert_subscription(user_id, fields)
-    logger.info("invoice.payment_succeeded: user_id=%s → active", user_id)
+    logger.info("invoice.payment_succeeded: user_id=%s → active", mask_uid(user_id))
 
 
 def _handle_payment_failed(invoice: Dict[str, Any]) -> None:
@@ -447,7 +451,7 @@ def _handle_payment_failed(invoice: Dict[str, Any]) -> None:
         "stripe_subscription_id": subscription_id,
         "status": "past_due",
     })
-    logger.info("invoice.payment_failed: user_id=%s → past_due", user_id)
+    logger.info("invoice.payment_failed: user_id=%s → past_due", mask_uid(user_id))
 
 
 # ---------------------------------------------------------------------------
@@ -485,7 +489,7 @@ def _resolve_user_id(
             sub = _stripe_to_dict(client.subscriptions.retrieve(subscription_id))
             uid = (sub.get("metadata") or {}).get("user_id")
             if uid:
-                logger.info("_resolve_user_id: found user_id=%s via subscription metadata", uid)
+                logger.info("_resolve_user_id: found user_id=%s via subscription metadata", mask_uid(uid))
                 return uid
         except Exception as exc:
             logger.warning("_resolve_user_id: could not retrieve subscription: %s", exc)
@@ -498,7 +502,7 @@ def _resolve_user_id(
                 s_dict = _stripe_to_dict(s)
                 uid = s_dict.get("client_reference_id")
                 if uid:
-                    logger.info("_resolve_user_id: found user_id=%s via checkout client_reference_id", uid)
+                    logger.info("_resolve_user_id: found user_id=%s via checkout client_reference_id", mask_uid(uid))
                     return uid
         except Exception as exc:
             logger.warning("_resolve_user_id: could not list checkout sessions: %s", exc)

@@ -50,8 +50,23 @@ def _user_state_path(user_id: Optional[str]) -> Path:
 
 
 def _effective_uid(user_id: Optional[str]) -> str:
-    """Map None → '__legacy__' for Supabase (every row needs a user_id)."""
-    return user_id or "__legacy__"
+    """Resolve the row key for a request, fail-closed on anonymous access.
+
+    B285/SEC-5: this used to map ``None → '__legacy__'``, so an unauthenticated
+    request read a shared bucket instead of being rejected. Writes were already
+    guarded (``_require_user_id``); reads were not. Verified before the change:
+    zero ``__legacy__`` rows exist in production across users, subscriptions,
+    coach_messages and session_logs, so nothing depends on the old mapping.
+
+    ``deps.get_user_id`` now 401s before any handler runs — this raise is the
+    backstop for non-HTTP callers (scripts, migrations, jobs).
+    """
+    if not user_id or user_id == "__legacy__":
+        raise ValueError(
+            "Cannot read from Supabase without an authenticated user_id. "
+            f"Received: {user_id!r}"
+        )
+    return user_id
 
 
 def _require_user_id(user_id: Optional[str]) -> str:

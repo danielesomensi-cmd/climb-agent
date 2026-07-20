@@ -39,7 +39,10 @@ def test_cors_allows_localhost_dev():
 
 def test_cors_allows_vercel_preview_branch():
     """Preview deployment URL for a brief/B196-* branch."""
-    origin = "https://climb-agent-git-brief-b196-sw-versioning-danieles-projects.vercel.app"
+    origin = (
+        "https://climb-agent-git-brief-b196-sw-versioning"
+        "-danielesomensi-cmds-projects.vercel.app"
+    )
     res = _preflight(origin)
     assert res.status_code == 200
     assert res.headers.get("access-control-allow-origin") == origin
@@ -47,10 +50,27 @@ def test_cors_allows_vercel_preview_branch():
 
 def test_cors_allows_vercel_preview_hash():
     """Per-deployment hash URL (no branch, just commit hash)."""
-    origin = "https://climb-agent-abc123def456-danieles-projects.vercel.app"
+    origin = "https://climb-agent-abc123def456-danielesomensi-cmds-projects.vercel.app"
     res = _preflight(origin)
     assert res.status_code == 200
     assert res.headers.get("access-control-allow-origin") == origin
+
+
+def test_cors_rejects_climb_agent_preview_from_another_account():
+    """B285/SEC-6: a project named `climb-agent` under someone else's Vercel
+    team must NOT get a credentialed cross-origin channel to this API. The
+    regex is pinned to the owning team slug, which Vercel always appends."""
+    origin = "https://climb-agent-abc123-attacker-projects.vercel.app"
+    res = _preflight(origin)
+    assert res.headers.get("access-control-allow-origin") != origin
+
+
+def test_cors_rejects_bare_climb_agent_preview_without_team_slug():
+    """The old pattern allowed `climb-agent-<anything>.vercel.app` with no team
+    segment — any Vercel user could claim such a subdomain."""
+    origin = "https://climb-agent-evil.vercel.app"
+    res = _preflight(origin)
+    assert res.headers.get("access-control-allow-origin") != origin
 
 
 def test_cors_rejects_unrelated_vercel_site():

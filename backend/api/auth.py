@@ -24,6 +24,7 @@ import jwt
 from jwt import PyJWKClient
 
 from backend.engine import storage
+from backend.engine.log_utils import mask_uid
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,11 @@ def lookup_or_create_user(clerk_id: str) -> str:
         "clerk_id": clerk_id,
         "state": {},
     }).execute()
-    logger.info("Created new user %s for clerk_id %s", new_user_id, clerk_id)
+    # B285/SEC-4: identifiers are masked — a full internal UUID in the log
+    # stream is an account-recovery vector, not a debugging aid.
+    logger.info(
+        "Created new user %s for clerk_id %s",
+        mask_uid(new_user_id), mask_uid(clerk_id),
+    )
     _clerk_id_cache[clerk_id] = (new_user_id, now)
     return new_user_id

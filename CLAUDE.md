@@ -305,6 +305,7 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
   | OPENWEATHER_API_KEY | OpenWeatherMap free-tier key for `/api/weather` (A224) + coach weather context & spot geocoding (A-COACH-V1b). Unset → endpoint returns 503, `/today` card hides, coach weather section silently absent. Commercial use requires visible OpenWeather attribution. |
   | ANTHROPIC_API_KEY | Anthropic API key for the LLM Coach (A-COACH-V1a). Unset → `/api/coach/chat` fails LOUD with 500 `coach_not_configured` (never silent, never commit). |
   | COACH_MODEL | Coach model id (default `claude-sonnet-4-6`). Swap here for provider/model changes — no code change needed. |
+  | ALLOW_LEGACY_HEADER | **Dev only.** `1` re-enables the `X-User-ID` auth fallback and anonymous (`user_id=None`) requests. MUST stay unset in production: with Clerk configured or `STORAGE_BACKEND=supabase`, B285 rejects both with 401 (the header was a full IDOR). |
 
 ### Clerk user lookup
 
