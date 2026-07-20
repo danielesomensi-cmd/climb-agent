@@ -15,7 +15,7 @@ Methodology: Hörst 4-3-2-1 adaptive periodization with DUP (Daily Undulating Pe
 | Templates | 19 |
 | API endpoints | 89 |
 | Frontend pages | 45 |
-| Frontend components | 91 |
+| Frontend components | 93 |
 <!-- STATUS_TABLE_END -->
 
 ## Architecture

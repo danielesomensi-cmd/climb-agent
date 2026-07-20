@@ -65,6 +65,8 @@ Your macrocycle follows the Hörst 4-3-2-1 periodization model. Each phase build
 
 The **Plan** page shows your position in the cycle: completed phases get a green ✓ on the timeline, and a progress line tells you how much of the cycle is behind you. When you enter a new phase, the app celebrates the one you just completed and tells you what to expect next.
 
+The Plan page also has a **Milestones** gallery — one-time achievements you unlock as you train: your first guided session, your first outdoor day, a new hardest grade sent, a "Perfect Week" (every planned session done, rest days included). They're all "firsts" — there are no streaks to lose and nothing ever locks back up. Unlocked ones light up; the rest stay dimmed so you can see what's ahead.
+
 ### Base / Endurance (4–6 weeks)
 
 **What you'll do**: ARC (Aerobic Restoration and Capillarity) training, easy sustained climbing, repeaters, technique drills, general conditioning.

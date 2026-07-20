@@ -19,6 +19,7 @@ import type {
   Quote,
   DailyTipResponse,
   MonthlyHeatmapData,
+  MilestonesResponse,
   CustomSession,
   CustomSessionSummary,
   CustomSessionExercise,
@@ -700,6 +701,15 @@ export const getDailyQuote = (context?: string) =>
 // Monthly heatmap (A236)
 export const getMonthlyHeatmap = (month: string) =>
   request<MonthlyHeatmapData>(`/api/reports/heatmap?month=${month}`);
+
+// Milestones (A239)
+export const getMilestones = () =>
+  request<MilestonesResponse>("/api/milestones");
+
+export const markMilestoneSeen = (milestoneId: string) =>
+  request<{ ok: boolean }>(`/api/milestones/${encodeURIComponent(milestoneId)}/seen`, {
+    method: "POST",
+  });
 
 // Daily tips (A234)
 export const getDailyTip = (date?: string) =>

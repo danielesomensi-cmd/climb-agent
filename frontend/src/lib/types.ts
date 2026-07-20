@@ -660,6 +660,27 @@ export interface MonthlyHeatmapData {
   days: HeatmapDay[];
 }
 
+// A239 (A-GAMIFY-02): milestone system.
+export interface MilestoneItem {
+  id: string;
+  name: string;
+  description: string;
+  category: "session" | "outdoor" | "grade" | "exercise" | "process";
+  tier: "activation" | "medium" | "career";
+  icon: string;
+  dynamic?: boolean;
+  unlocked: boolean;
+  unlocked_at?: string | null;
+  seen?: boolean;
+  context?: { rule?: string; discipline?: string; grade?: string } | null;
+}
+
+export interface MilestonesResponse {
+  milestones: MilestoneItem[];
+  unlocked_count: number;
+  newly_unlocked: Array<{ id: string; unlocked_at: string }>;
+}
+
 // -----------------------------------------------------------------------
 // Quotes
 // -----------------------------------------------------------------------

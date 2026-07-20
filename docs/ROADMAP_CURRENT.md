@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-20 (merge A236 heatmap rest-positive. 19-20/07: A-GAMIFY-00 approvato, A234 daily tips, A235 phase progress, A236 heatmap + sessione parallela: D252, B279, C258, A237 adhoc coach, A238 weather v2.)
+> Last updated: 2026-07-20 (A239 — milestone system. Piano gamification: A-GAMIFY-00 approvato → A234 daily tips, A235 phase progress, A236 heatmap, A239 milestones. Restano A-GAMIFY-04 (opzionale) e A-DAILYTIP-V2.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -42,6 +42,10 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 - **W7** — endpoint orfani: `/api/reports/monthly` (endpoint+client mai cablati in UI → decidere: pagina report mensile o rimozione), `/api/user/recovery-code|recover` (morti post-Clerk → candidati a rimozione), `/api/week/test-reminder-response` (solo test). Toccano endpoint count/docs.
 
 ---
+
+## Recently closed (2026-07-20)
+
+- **A239 — Milestone system (A-GAMIFY-02)** ✅ (feature P2.9 retention, branch `brief/A239-milestones` → preview Vercel; slice backend additiva su main per la preview, pattern A234). Terza tappa del piano gamification (A-GAMIFY-00). **Catalog:** `backend/catalog/milestones/v1/milestones.json` — 22 milestone one-time su 5 categorie (session/exercise/outdoor/grade/process), distribuzione di difficoltà deliberata activation/medium/career (ricerca: retention ∝ difficoltà achievement). Integra le idee di Daniele: exercise-family firsts (hangboard/campus/technique via equipment del catalogo, NON per-esercizio), Explorer 25/50 esercizi diversi, Drill Collector 10, grade-firsts outdoor per disciplina (dynamic, redpoint+onsight), Crag Explorer 3/5 spot, **Perfect week** (tutte le sessioni pianificate fatte + almeno un rest day → la risposta corretta al "badge mi alleno tutti i giorni" respinto in A-GAMIFY-00). **Engine:** `milestones_v1.evaluate_milestones` — valutazione **lazy read-driven** (nessun hook nei write path, zero moduli high-risk toccati), deterministica; deriva tutto da dati esistenti (hot week_plans, outdoor log, free/custom sessions, macrocycle+history). Stato additivo `state.milestones{unlocked[],counters,counted_weeks}`: unlock **append-only mai revocati** (cancellare un climb non ri-blocca), counter esercizi assorbono SOLO settimane completamente passate (immutabili per invariante → sopravvivono all'archiviazione A221; la settimana in corso è transitoria, un undo non lascia conteggi fantasma). **Deviazione documentata:** le settimane archiviate prima del lancio non vengono scansionate (i conteggi cumulativi partono da oggi; i grade-PB retroattivi hanno unlock_at = data di scoperta). Router `GET /api/milestones` (valuta+persiste se nuovi) + `POST /api/milestones/{id}/seen`, endpoint 87 → 89. **Frontend:** `MilestonesCard` su /plan (griglia 4-col, unlocked ambrati / locked dimmed+grayscale, dynamic grade-PB con grado, show-all), `MilestoneToast` su /today (toast celebrativo per unseen, >2 collassano in un summary anti-spam, tutti marcati seen). Vincoli design doc: nessuno streak, nessun badge di volume, nessuno stato negativo. Test: `test_a239_milestones.py` (17: integrità catalog + distribuzione tier, condizioni session/exercise/outdoor/process, append-only/idempotenza, counters fold solo-passato + survive-archiving, dynamic PB nuovo grado, API). Suite 2525 → 2542. Build frontend OK.
 
 ## Recently closed (2026-07-19)
 
@@ -377,39 +381,13 @@ Visualizzazione del progresso nel macrociclo come elemento centrale di gratifica
 
 ### A-GAMIFY-02 — Milestone system
 
-**Priority:** P3 | **Status:** Open | **Type:** A + C (catalog + feature) | **Effort:** M
-**Depends on:** A-GAMIFY-00
+**Priority:** P3 | **Status:** ✅ **Chiusa come A239 (2026-07-20)** — vedi Recently closed. Deviazione: `milestones_unlocked[]` → `state.milestones{unlocked,counters,counted_weeks}` (counter incrementali che sopravvivono all'archiviazione A221); nessun hook nei write path (valutazione lazy read-driven su GET), grade-firsts retroattivi (unlock_at = data di scoperta).
 
-Eventi una tantum sbloccabili. Niente ricorrenza — solo "first time" celebrations.
+<details><summary>Spec originale (superata da A239)</summary>
 
-**Catalog:** `backend/catalog/milestones/v1/milestones.json` (~15-20 milestone iniziali):
-- Climbing grades: primo 7a/7b/7c/8a redpoint, primo onsight di grado
-- Sessions: prima sessione outdoor, prima sessione guidata, prima sessione free, prima custom session
-- Macrocycle: primo test completato di ogni tipo, prima fase performance, primo macrociclo completato
-- Consistency: primo trip programmato, primo recovery code generato
+Eventi una tantum sbloccabili. Niente ricorrenza — solo "first time" celebrations. Catalog `milestones.json`, `GET /api/milestones` + `POST /api/milestones/{id}/seen`, galleria + toast celebrativo. (Realizzato in A239 con 22 milestone su 5 categorie e galleria su /plan invece di pagina dedicata.)
 
-**Schema:**
-```json
-{
-  "id": "first_7a_redpoint",
-  "name": "First 7a Redpoint",
-  "description": "Hai chiuso la tua prima via 7a in redpoint",
-  "category": "climbing_grade | session | macrocycle | consistency",
-  "condition": "<expression on user_state>",
-  "icon": "trophy"
-}
-```
-
-**Backend:**
-- Hook su feedback log + outdoor log + macrocycle transitions → check unlock
-- `user_state.milestones_unlocked[]` (append-only, idempotente — una milestone non si "ri-blocca" se l'utente cancella un climb)
-- `GET /api/milestones` (lista + stato locked/unlocked)
-- `POST /api/milestones/{id}/seen`
-
-**Frontend:**
-- Pagina `/milestones` (galleria locked/unlocked)
-- Toast celebrativo al unlock
-- Widget "ultimi milestone" su `/plan`
+</details>
 
 ### A-GAMIFY-03 — Monthly activity heatmap
 
@@ -432,6 +410,7 @@ Riconoscimento per chi ha completato fedelmente la settimana programmata, **incl
 2. ~~A-DAILYTIP~~ ✅ chiusa come **A234** (2026-07-19)
 3. ~~A-GAMIFY-01~~ ✅ chiusa come **A235** (2026-07-19, include P5 rest-copy)
 4. ~~A-GAMIFY-03~~ ✅ chiusa come **A236** (2026-07-19, heatmap rest-positive)
+5. ~~A-GAMIFY-02~~ ✅ chiusa come **A239** (2026-07-20, milestone system, 22 milestone)
 4. **A-GAMIFY-03** (S) — heatmap mensile
 5. **A-GAMIFY-02** (M) — milestone system
 6. **A-GAMIFY-04** (M, opzionale) — perfect week, solo se feedback positivo sui 3 precedenti
