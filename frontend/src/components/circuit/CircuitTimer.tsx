@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, transitionBeep } from "@/lib/beep";
@@ -569,9 +570,13 @@ export function CircuitTimer({
             {/* Exercise info */}
             <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
               {displayExercise.image && (
-                <img
+                <Image
                   src={`/exercises/core/${displayExercise.image}`}
                   alt={displayExercise.name}
+                  width={560}
+                  height={280}
+                  sizes="(max-width: 640px) 100vw, 384px"
+                  priority
                   className="mx-auto mb-2 max-h-[140px] w-full object-contain rounded-xl"
                 />
               )}
@@ -601,9 +606,13 @@ export function CircuitTimer({
           <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
             <p className="text-xs text-center text-white/50 uppercase tracking-wider mb-2">First up</p>
             {sequence[0].image && (
-              <img
+              <Image
                 src={`/exercises/core/${sequence[0].image}`}
                 alt={sequence[0].name}
+                width={560}
+                height={280}
+                sizes="(max-width: 640px) 100vw, 384px"
+                priority
                 className="mx-auto mb-2 max-h-[140px] w-full object-contain rounded-xl"
               />
             )}
