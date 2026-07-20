@@ -1,3 +1,15 @@
+"""LEGACY — superseded by `planner_v2.generate_phase_week`. NOT used in production.
+
+A245 E-3 (B16): verified 2026-07-20 — zero production imports. The only
+importers are `test_planner_v1.py`, `test_replanning_v1.py` and
+`test_b175_input_validation.py`, which still exercise real behaviour through it.
+
+Deliberately kept rather than archived: moving it would mean rewriting those
+three suites onto planner_v2, which changes test coverage rather than removing
+dead weight. Do not add new callers — the phase-aware planner is planner_v2,
+and `CLAUDE.md` names planner_v2 (not this module) as a STOP-gate module.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

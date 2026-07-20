@@ -126,6 +126,10 @@ def get_user_id(request: Request) -> Optional[str]:
     1. Authorization: Bearer <clerk_jwt> → verify → lookup/create user_id
     2. X-User-ID header — dev/test only, rejected when _auth_enforced() (B285)
     3. None — dev only; 401 when _auth_enforced() (B285)
+
+    A245 E-1 (B4): the resolved id is also stashed on `request.state` so the
+    rate limiter can key per user instead of per (proxy) IP. Doing it here means
+    every authenticated route gets it for free, with no extra dependency.
     """
     # 1. Try Clerk JWT
     auth_header = request.headers.get("Authorization")
@@ -135,7 +139,11 @@ def get_user_id(request: Request) -> Optional[str]:
             try:
                 token = auth_header.split(" ", 1)[1]
                 clerk_id = get_clerk_user_id(token)
-                return lookup_or_create_user(clerk_id)
+                user_id = lookup_or_create_user(clerk_id)
+                request.state.user_id = user_id
+                return user_id
+            except HTTPException:
+                raise
             except Exception as e:
                 raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
@@ -158,6 +166,7 @@ def get_user_id(request: Request) -> Optional[str]:
             _uuid.UUID(header, version=4)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid X-User-ID: must be a valid UUID v4")
+        request.state.user_id = header
         return header
 
     # 3. No credentials at all

@@ -33,7 +33,12 @@ class AssessmentRequest(BaseModel):
 class MacrocycleRequest(BaseModel):
     """Body for POST /api/macrocycle/generate."""
     start_date: Optional[str] = None
-    total_weeks: int = 12  # A218: must satisfy [11..16] lead / [8..16] boulder
+    # A245 E-2 (B15): bounded at the edge. Unbounded, an absurd total_weeks made
+    # it all the way into generate_macrocycle() and came back as a 422 carrying
+    # the engine's own ValueError text. 8 is the boulder floor and 16 the KB
+    # consensus cap (A218); the per-discipline floor (lead 11) still belongs to
+    # the engine, which knows the discipline.
+    total_weeks: int = Field(12, ge=8, le=16)
     from_phase: Optional[str] = None  # "current" or a phase_id for incremental regen
 
 

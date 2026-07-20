@@ -16,11 +16,7 @@ from backend.engine.closed_loop_v1 import (
     build_log_entry,
     ensure_planning_defaults,
 )
-from backend.engine.adaptation.closed_loop import (
-    apply_multiplier,
-    compute_next_multiplier,
-    update_user_state_adjustments,
-)
+from backend.engine.adaptation.closed_loop import record_cluster_cooldown
 
 
 # ---------------------------------------------------------------------------
@@ -104,17 +100,6 @@ class TestCrashPaths:
         assert entry["summary"]["session_count"] == 0
         assert entry["location"] is None
 
-    def test_adaptation_missing_difficulty_is_noop(self):
-        """update_user_state_adjustments with no difficulty → no mutation."""
-        state = {"adjustments": {"per_exercise": {}}}
-        original = deepcopy(state)
-        result = update_user_state_adjustments(state, "weighted_pullup", {})
-        assert result["adjustments"]["per_exercise"] == original["adjustments"]["per_exercise"]
-
-    def test_adaptation_invalid_difficulty_raises(self):
-        """compute_next_multiplier with invalid difficulty → ValueError."""
-        with pytest.raises(ValueError, match="Unsupported difficulty"):
-            compute_next_multiplier(1.0, "banana", streak=0)
 
 
 # ===================================================================
@@ -153,17 +138,6 @@ class TestIdempotency:
         assert cat["done_count"] == 1
         assert cat["skipped_count"] == 1
 
-    def test_adaptation_multiplier_compound_correctly(self):
-        """Applying feedback twice compounds the multiplier (not resets)."""
-        state = {"adjustments": {"per_exercise": {}}}
-        outcome = {"difficulty": "too_easy"}
-        state = update_user_state_adjustments(state, "max_hang_7s", outcome)
-        m1 = state["adjustments"]["per_exercise"]["max_hang_7s"]["multiplier"]
-        assert m1 == pytest.approx(1.025)
-
-        state = update_user_state_adjustments(state, "max_hang_7s", outcome)
-        m2 = state["adjustments"]["per_exercise"]["max_hang_7s"]["multiplier"]
-        assert m2 == pytest.approx(1.025 * 1.025, abs=0.001)
 
 
 # ===================================================================
@@ -291,26 +265,12 @@ class TestEnsurePlanningDefaults:
 
 
 # ===================================================================
-# PRIORITY 4 — Adaptation (streak, cooldown, update_user_state_adjustments)
+# PRIORITY 4 — Per-cluster cooldown (A245 E-4: multiplier branch removed)
 # ===================================================================
 
 
-class TestAdaptation:
-    """Verify adaptation/closed_loop.py edge cases."""
-
-    def test_streak_increments_on_hard(self):
-        state = {"adjustments": {"per_exercise": {}}}
-        state = update_user_state_adjustments(state, "weighted_pullup", {"difficulty": "hard"})
-        assert state["adjustments"]["per_exercise"]["weighted_pullup"]["streak"] == 1
-        state = update_user_state_adjustments(state, "weighted_pullup", {"difficulty": "too_hard"})
-        assert state["adjustments"]["per_exercise"]["weighted_pullup"]["streak"] == 2
-
-    def test_streak_resets_on_easy(self):
-        state = {"adjustments": {"per_exercise": {
-            "weighted_pullup": {"multiplier": 0.95, "streak": 3, "last_update": "2026-01-01"},
-        }}}
-        state = update_user_state_adjustments(state, "weighted_pullup", {"difficulty": "easy"})
-        assert state["adjustments"]["per_exercise"]["weighted_pullup"]["streak"] == 0
+class TestClusterCooldown:
+    """A245 E-4: only the cooldown branch survives — see closed_loop.py."""
 
     def test_cooldown_set_on_fail(self):
         exercises_by_id = {
@@ -320,9 +280,9 @@ class TestAdaptation:
                 "recency_group": "pulling_weighted",
             },
         }
-        state = {"adjustments": {"per_exercise": {}}}
+        state = {}
         outcome = {"difficulty": "fail", "date": "2026-02-10"}
-        state = update_user_state_adjustments(
+        state = record_cluster_cooldown(
             state, "weighted_pullup", outcome,
             exercises_by_id=exercises_by_id, feedback_date="2026-02-10",
         )
@@ -340,31 +300,12 @@ class TestAdaptation:
                 "recency_group": "pulling_weighted",
             },
         }
-        state = {"adjustments": {"per_exercise": {}}}
+        state = {}
         outcome = {"difficulty": "ok", "date": "2026-02-10"}
-        state = update_user_state_adjustments(
+        state = record_cluster_cooldown(
             state, "weighted_pullup", outcome,
             exercises_by_id=exercises_by_id, feedback_date="2026-02-10",
         )
         cooldowns = state.get("cooldowns", {}).get("per_cluster", {})
         assert len(cooldowns) == 0
 
-    def test_adaptation_does_not_touch_other_exercises(self):
-        """Updating one exercise must not mutate another's state."""
-        state = {"adjustments": {"per_exercise": {
-            "max_hang_7s": {"multiplier": 1.05, "streak": 1, "last_update": "2026-01-01"},
-        }}}
-        original_hang = deepcopy(state["adjustments"]["per_exercise"]["max_hang_7s"])
-        state = update_user_state_adjustments(state, "weighted_pullup", {"difficulty": "hard"})
-        assert state["adjustments"]["per_exercise"]["max_hang_7s"] == original_hang
-
-    def test_apply_multiplier_rounding(self):
-        """Load rounding with 0.5 step."""
-        assert apply_multiplier(40.0, 1.025, 0.5) == 41.0
-        assert apply_multiplier(40.0, 1.0, 0.5) == 40.0
-        assert apply_multiplier(25.0, 0.95, 0.5) == 24.0  # 23.75 rounds to 24.0
-
-    def test_apply_multiplier_zero_step(self):
-        """Rounding step 0 → no rounding."""
-        assert apply_multiplier(40.0, 1.025, 0) == pytest.approx(41.0)
-        assert apply_multiplier(33.3, 1.01, 0) == pytest.approx(33.633)
