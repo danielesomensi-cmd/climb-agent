@@ -118,6 +118,43 @@ def suggested_questions(user_id: Optional[str]) -> List[str]:
     return suggestions[:MAX_SUGGESTIONS]
 
 
+def handle_adhoc_compose(
+    user_id: Optional[str], message: str
+) -> Optional[Dict[str, Any]]:
+    """A243 — extract intent, deterministically compose an adhoc session preview.
+
+    Returns ``{"adhoc": True, "session": <custom_session preview>}`` or None when
+    the message is not an adhoc-session request (caller then falls back to chat).
+
+    Composition does NOT persist the session (A243 decision — zero orphans);
+    persistence happens on the user's CTA via the custom-session + replanner
+    endpoints. On success we DO append the turn to coach history (so it counts
+    toward the daily limit and keeps the conversation coherent).
+    """
+    from backend.api.deps import load_state
+    from backend.coach import adhoc_intent
+    from backend.engine.adaptive_replan import load_exercises_by_id
+    from backend.engine.adhoc_builder import compose_adhoc_session
+
+    intent = adhoc_intent.extract_intent(message)
+    if intent is None:
+        # Not an adhoc request — no history write, no rate-limit charge here.
+        return None
+
+    state = load_state(user_id)
+    catalog = load_exercises_by_id()
+    session = compose_adhoc_session(intent, state, catalog)
+
+    storage.append_coach_message(user_id, "user", message)
+    summary = (
+        f"I built you a session — {session['name']} "
+        f"(~{session['estimated_duration_minutes']} min). {session['explanation']}"
+    )
+    storage.append_coach_message(user_id, "assistant", summary)
+
+    return {"adhoc": True, "session": session, "summary": summary}
+
+
 def handle_chat(
     user_id: Optional[str], message: str,
     lat: Optional[float] = None, lon: Optional[float] = None,

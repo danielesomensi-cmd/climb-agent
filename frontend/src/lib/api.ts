@@ -904,7 +904,41 @@ export interface CoachMessage {
   role: "user" | "assistant";
   content: string;
   created_at?: string;
+  // A243 — structured adhoc-session card payload (client-only, not persisted).
+  adhocSession?: AdhocSessionPreview;
 }
+
+// A243 — deterministic adhoc session preview from POST /api/coach/adhoc-session.
+export interface AdhocSessionExercisePreview {
+  exercise_id: string;
+  name: string;
+  sets: number;
+  reps: number | null;
+  work_seconds: number | null;
+  rest_between_sets_seconds: number | null;
+  rest_between_reps_seconds: number | null;
+  load_kg: number;
+  notes: string;
+}
+
+export interface AdhocSessionPreview {
+  adhoc: true;
+  name: string;
+  tags: string[];
+  exercises: AdhocSessionExercisePreview[];
+  estimated_load_score: number;
+  estimated_duration_minutes: number;
+  explanation: string;
+  effort_band: string | null;
+  phase: string | null;
+  intent: { equipment_set: string; focus: string; minutes: number; energy: string };
+}
+
+export const coachAdhocSession = (message: string) =>
+  request<{ adhoc: boolean; session?: AdhocSessionPreview; summary?: string }>(
+    "/api/coach/adhoc-session",
+    { method: "POST", body: JSON.stringify({ message }) },
+  );
 
 export const coachChat = (
   message: string,

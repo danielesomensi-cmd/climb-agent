@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-89 endpoints total (87 router + 2 app-level: health check + stripe webhook).
+90 endpoints total (88 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -230,6 +230,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
 | GET | `/api/mobility/generate` | Deterministic guided stretch flow (regions + minutes + pace + rest) |
 | POST | `/api/coach/chat` | LLM Coach chat turn (subscription-gated, 30 msg/day, suggest-only; optional `lat`/`lon` → weather in context) |
+| POST | `/api/coach/adhoc-session` | Compose an ad-hoc session PREVIEW from a chat turn (A243). LLM extracts a structured intent via forced tool; deterministic `adhoc_builder` composes. No persistence/plan mutation — client persists + inserts on the "Add to today & run" CTA. `{adhoc:false}` → fall back to `/chat`. Counts toward the 30/day limit only on adhoc:true. |
 | GET | `/api/coach/history` | Coach chat history (paginated, `limit` + `before` cursor) |
 | GET | `/api/coach/suggestions` | Context-aware suggested questions (deterministic, no LLM, not rate-limited) |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |

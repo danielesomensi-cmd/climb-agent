@@ -78,6 +78,55 @@ def coach_chat(
     return {"reply": reply}
 
 
+@router.post("/adhoc-session", dependencies=[Depends(require_active_subscription)])
+def coach_adhoc_session(
+    req: ChatRequest,
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """A243 — compose an ad-hoc session preview from a chat turn.
+
+    The LLM only extracts a structured intent (never the catalog); the
+    deterministic ``adhoc_builder`` composes. Returns a PREVIEW — no persistence,
+    no plan mutation. The client persists + inserts on the user's CTA via the
+    custom-session and replanner endpoints. ``{adhoc: false}`` means the message
+    wasn't a build request; the client then falls back to POST /api/coach/chat.
+    """
+    message = req.message.strip()
+    if not message:
+        raise HTTPException(status_code=422, detail="Message is empty")
+
+    if service.messages_sent_today(user_id) >= service.DAILY_MESSAGE_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "daily_limit",
+                "message": "You've reached today's coach limit — back tomorrow!",
+            },
+        )
+
+    try:
+        result = service.handle_adhoc_compose(user_id, message)
+    except CoachConfigError as exc:
+        logger.error("Coach misconfigured: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "coach_not_configured", "message": str(exc)},
+        )
+    except APIError:
+        logger.exception("Coach adhoc extraction failed")
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "error": "llm_unavailable",
+                "message": "The coach is temporarily unavailable — try again in a minute.",
+            },
+        )
+
+    if result is None:
+        return {"adhoc": False}
+    return result
+
+
 @router.get("/suggestions", dependencies=[Depends(require_active_subscription)])
 def coach_suggestions(user_id: Optional[str] = Depends(get_user_id)):
     """Context-aware suggested questions for the chat UI (deterministic,

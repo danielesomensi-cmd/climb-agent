@@ -94,3 +94,26 @@ def chat(system_blocks: List[str], messages: List[Dict[str, Any]]) -> str:
     return "".join(
         block.text for block in response.content if block.type == "text"
     ).strip()
+
+
+def extract(system_text: str, message: str, tool: Dict[str, Any]) -> Dict[str, Any]:
+    """Force-call a single extraction *tool* on one user *message*.
+
+    Returns the tool's ``input`` dict (the structured slots). The model is given
+    only the tool schema — never the exercise catalog — so it can extract intent
+    but can never pick exercises or loads (A243). Raises CoachConfigError if the
+    LLM is unconfigured and propagates anthropic.APIError on provider failure.
+    """
+    client = _get_client()
+    response = client.messages.create(
+        model=_model(),
+        max_tokens=MAX_TOKENS,
+        system=[{"type": "text", "text": system_text}],
+        messages=[{"role": "user", "content": message}],
+        tools=[tool],
+        tool_choice={"type": "tool", "name": tool["name"]},
+    )
+    for block in response.content:
+        if block.type == "tool_use" and block.name == tool["name"]:
+            return dict(block.input or {})
+    return {}
