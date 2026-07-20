@@ -112,7 +112,7 @@ export function FeedbackDialog({
                     />
                     <Label
                       htmlFor={`${exercise.exercise_id}-${level.value}`}
-                      className="text-[10px] text-center leading-tight cursor-pointer text-muted-foreground"
+                      className="text-xs text-center leading-tight cursor-pointer text-muted-foreground"
                     >
                       {level.label}
                     </Label>
@@ -131,6 +131,7 @@ export function FeedbackDialog({
               <Input
                 id="session-duration"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 max={600}
                 step={5}

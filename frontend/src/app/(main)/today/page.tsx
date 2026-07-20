@@ -26,6 +26,7 @@ import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { applyEvents, postFeedback, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
+import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queryKeys } from "@/lib/query-keys";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import { TodayHeroCTA, type NextSessionInfo } from "@/components/training/today-hero-cta";
@@ -155,6 +156,9 @@ function TodayContent() {
       old ? { ...old, week_plan: newWeekPlan } : { week_num: 0, week_plan: newWeekPlan },
     );
   }, [qc]);
+
+  /** F6 — done/skip/undo passano da qui: coda FIFO + snapshot fresco. */
+  const runWeekEvents = useWeekEvents(0);
 
   /** Helper: refetch state + week (used by retry button and weekly check-in callback) */
   const refetchAll = useCallback(() => {
@@ -454,17 +458,10 @@ function TodayContent() {
     if (!canInteract) { router.push("/subscribe"); return; }
     if (!weekPlan) return;
     try {
-      const result = await applyEvents({
-        events: [
-          {
-            event_type: "mark_done",
-            date: targetDate,
-            session_ref: sessionId,
-          },
-        ],
-        week_plan: weekPlan,
-      });
-      updateWeekCache(result.week_plan);
+      // F6 — serializzata + snapshot riletto dalla cache (vedi useWeekEvents).
+      await runWeekEvents([
+        { event_type: "mark_done", date: targetDate, session_ref: sessionId },
+      ]);
 
       // A207: custom sessions don't feed closed-loop/progression — skip feedback dialog.
       const markedSession = dayPlan?.sessions.find((s) => s.session_id === sessionId);
@@ -483,17 +480,9 @@ function TodayContent() {
     if (!canInteract) { router.push("/subscribe"); return; }
     if (!weekPlan) return;
     try {
-      const result = await applyEvents({
-        events: [
-          {
-            event_type: "mark_skipped",
-            date: targetDate,
-            session_ref: sessionId,
-          },
-        ],
-        week_plan: weekPlan,
-      });
-      updateWeekCache(result.week_plan);
+      await runWeekEvents([
+        { event_type: "mark_skipped", date: targetDate, session_ref: sessionId },
+      ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     }
@@ -503,17 +492,9 @@ function TodayContent() {
   async function handleUndo(sessionId: string) {
     if (!weekPlan) return;
     try {
-      const result = await applyEvents({
-        events: [
-          {
-            event_type: "mark_planned",
-            date: targetDate,
-            session_ref: sessionId,
-          },
-        ],
-        week_plan: weekPlan,
-      });
-      updateWeekCache(result.week_plan);
+      await runWeekEvents([
+        { event_type: "mark_planned", date: targetDate, session_ref: sessionId },
+      ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo");
     }

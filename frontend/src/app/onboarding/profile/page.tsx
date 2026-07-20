@@ -69,6 +69,7 @@ export default function ProfilePage() {
             <Input
               id="age"
               type="number"
+              inputMode="numeric"
               min={1}
               max={99}
               value={profile.age || ""}
@@ -82,6 +83,7 @@ export default function ProfilePage() {
             <Input
               id="weight_kg"
               type="number"
+              inputMode="decimal"
               min={1}
               step={0.1}
               value={profile.weight_kg || ""}
@@ -95,6 +97,7 @@ export default function ProfilePage() {
             <Input
               id="height_cm"
               type="number"
+              inputMode="numeric"
               min={1}
               value={profile.height_cm || ""}
               onChange={(e) => set("height_cm", Number(e.target.value))}

@@ -449,21 +449,21 @@ export function CircuitTimer({
   return (
     <div
       className={cn(
-        "fixed inset-0 z-50 flex flex-col transition-colors duration-500",
+        "fixed inset-0 z-[60] flex flex-col transition-colors duration-500",
         PHASE_BG[phase]
       )}
     >
       {/* Header — minimal */}
-      <div className="flex shrink-0 items-center justify-between px-4 pt-1 pb-0.5">
+      <div className="flex shrink-0 items-center justify-between px-4 pt-[calc(0.25rem+env(safe-area-inset-top))] pb-0.5">
         <span className={cn("text-sm font-bold uppercase tracking-[0.2em]", PHASE_TEXT[phase])}>
           {PHASE_LABEL[phase]}
         </span>
         <button
           onClick={(e) => { e.stopPropagation(); handleExit(); }}
-          className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors"
+          className="-mr-2 flex min-h-[44px] items-center gap-1.5 px-2 text-sm text-white/60 hover:text-white/90 transition-colors"
           aria-label="Exit circuit"
         >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 6L6 18M6 6l12 12" />
           </svg>
           Exit
@@ -476,6 +476,12 @@ export function CircuitTimer({
         <div
           className="relative w-36 h-36 shrink-0 cursor-pointer"
           onClick={handlePauseToggle}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter") handlePauseToggle();
+          }}
+          aria-label={paused ? "Resume timer" : "Pause timer"}
         >
           <svg viewBox="0 0 220 220" className="w-full h-full -rotate-90">
             <circle
@@ -556,6 +562,12 @@ export function CircuitTimer({
       <div
         className="flex flex-1 min-h-0 flex-col items-center px-4 pt-2 overflow-y-auto cursor-pointer"
         onClick={handlePauseToggle}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") handlePauseToggle();
+        }}
+        aria-label={paused ? "Resume timer" : "Pause timer"}
       >
         {/* Exercise card with back/next arrows */}
         {phase !== "prepare" && (

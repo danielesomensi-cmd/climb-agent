@@ -41,6 +41,50 @@ async function _getAuthHeaders(): Promise<Record<string, string>> {
   return {};
 }
 
+/**
+ * F7 (A245) — nessuna fetch deve poter restare appesa per sempre.
+ *
+ * Su rete scarsa una connessione TCP stallata non fallisce mai: il `retry: 1`
+ * globale di React Query non scatta, lo spinner gira all'infinito e l'unica via
+ * d'uscita è ricaricare la PWA — esattamente nel contesto d'uso primario
+ * (palestra/falesia senza campo).
+ *
+ * `AbortSignal.any()` non è usata di proposito: è iOS 17.4+ e gli utenti PWA
+ * iPhone sono il target dichiarato. Il combinatore manuale copre tutti i device.
+ */
+const DEFAULT_TIMEOUT_MS = 15_000;
+/** Endpoint legittimamente lenti (LLM o generazione macrociclo). */
+const SLOW_PATHS = ["/api/coach/", "/api/onboarding/complete", "/api/macrocycle/"];
+const SLOW_TIMEOUT_MS = 60_000;
+
+function timeoutFor(path: string): number {
+  return SLOW_PATHS.some((p) => path.startsWith(p)) ? SLOW_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
+}
+
+/** Combina il signal del chiamante (React Query) con un timeout locale. */
+function linkedAbort(caller: AbortSignal | null | undefined, ms: number) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(
+    () => ctrl.abort(new DOMException("Request timed out", "TimeoutError")),
+    ms,
+  );
+  const onAbort = () => ctrl.abort(caller?.reason);
+  if (caller) {
+    if (caller.aborted) ctrl.abort(caller.reason);
+    else caller.addEventListener("abort", onAbort, { once: true });
+  }
+  return {
+    signal: ctrl.signal,
+    cleanup: () => {
+      clearTimeout(timer);
+      caller?.removeEventListener("abort", onAbort);
+    },
+  };
+}
+
+/** Status sintetico per un fallimento di rete/timeout (nessuna risposta HTTP). */
+export const NETWORK_ERROR_STATUS = 0;
+
 async function request<T>(path: string, options?: RequestInit, _isRetry = false): Promise<T> {
   const authHeaders = await _getAuthHeaders();
   const headers: Record<string, string> = {
@@ -48,15 +92,44 @@ async function request<T>(path: string, options?: RequestInit, _isRetry = false)
     ...authHeaders,
     ...((options?.headers as Record<string, string>) || {}),
   };
+  const { signal, cleanup } = linkedAbort(options?.signal, timeoutFor(path));
+  try {
+    return await _send<T>(path, options, headers, signal, _isRetry);
+  } catch (err) {
+    // Il timeout è nostro; un abort del chiamante (unmount, query cancellata)
+    // deve propagarsi invariato perché React Query lo riconosca.
+    if (err instanceof DOMException && err.name === "TimeoutError") {
+      throw new ApiError(
+        NETWORK_ERROR_STATUS,
+        "Network too slow — check your connection and try again.",
+      );
+    }
+    throw err;
+  } finally {
+    cleanup();
+  }
+}
+
+async function _send<T>(
+  path: string,
+  options: RequestInit | undefined,
+  headers: Record<string, string>,
+  signal: AbortSignal,
+  _isRetry: boolean,
+): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
+    signal,
   });
-  // B155: on 401, retry once after 500ms — Clerk token may not be ready yet
+  // B155: on 401, retry once after 500ms — Clerk token may not be ready yet.
+  // Gli header vanno RIcostruiti: il punto del retry è raccogliere il token che
+  // al primo tentativo non c'era ancora.
   if (res.status === 401 && !_isRetry && typeof window !== "undefined") {
     console.warn(`[B155] 401 on ${path} — retrying in 500ms (Clerk may still be loading)`);
     await new Promise((r) => setTimeout(r, 500));
-    return request<T>(path, options, true);
+    const retryHeaders = { ...headers, ...(await _getAuthHeaders()) };
+    return _send<T>(path, options, retryHeaders, signal, true);
   }
   if (res.status === 401 && typeof window !== "undefined") {
     window.location.href = "/sign-in";

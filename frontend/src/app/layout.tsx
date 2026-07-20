@@ -45,7 +45,8 @@ export const viewport: Viewport = {
   themeColor: "#0f121a",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale: pinch-zoom must stay available (WCAG 1.4.4) — in falesia
+  // al sole le label piccole sono illeggibili senza zoom.
   viewportFit: "cover",
 };
 

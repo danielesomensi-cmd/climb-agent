@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { OutdoorRoute } from "@/lib/types";
 import { deriveTryTimings, lastTryMs, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "./try-breakdown";
@@ -114,6 +115,13 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
   // A241 — per-card expand/collapse (indices into `routes`).
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
+  // F3 — routes correnti per l'undo del remove: la closure del toast è stale.
+  // Scrittura in effect (il lint React 19 vieta i write di ref in render).
+  const routesRef = useRef(routes);
+  useEffect(() => {
+    routesRef.current = routes;
+  }, [routes]);
+
   // A4 — optional climb timer (counts on-the-wall time for the current burn).
   const climbStartMsRef = useRef<number | null>(null);
   const [climbSec, setClimbSec] = useState(0);
@@ -211,10 +219,26 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
   const tagStyle = (idx: number, s: "onsight" | "flash") =>
     onChange(routes.map((r, i) => (i === idx ? { ...r, style: r.style === s ? undefined : s } : r)));
 
+  // F3 — la ✕ elimina via + tutti i tentativi loggati, ed è adiacente al
+  // bottone più premuto (+✗). Con le mani magnesiate un mis-tap cancellava dati
+  // che alimentano il closed-loop, senza rimedio: ora c'è un undo di 10s.
   const remove = (idx: number) => {
+    const removed = routes[idx];
     onChange(routes.filter((_, i) => i !== idx));
     setActiveIdx((cur) => (cur == null || cur === idx ? null : cur > idx ? cur - 1 : cur));
     setExpanded(new Set()); // indices shifted — collapse all (cheap & safe)
+    toast("Route removed", {
+      duration: 10_000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          const cur = routesRef.current;
+          const next = [...cur];
+          next.splice(Math.min(idx, next.length), 0, removed);
+          onChange(next);
+        },
+      },
+    });
   };
 
   const toggleExpanded = (idx: number) =>
@@ -386,19 +410,20 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                     <span className="flex items-center gap-1">
                       <button
                         onClick={() => tagStyle(i, "onsight")}
-                        className={`rounded border px-1.5 py-0.5 text-[10px] ${r.style === "onsight" ? "border-emerald-500 bg-emerald-950/40 text-emerald-300" : "border-white/10 text-zinc-500"}`}
+                        className={`min-h-[44px] rounded border px-2.5 text-xs ${r.style === "onsight" ? "border-emerald-500 bg-emerald-950/40 text-emerald-300" : "border-white/10 text-zinc-500"}`}
                         title="Onsight — sent first try, no beta"
                       >OS</button>
                       <button
                         onClick={() => tagStyle(i, "flash")}
-                        className={`rounded border px-1.5 py-0.5 text-[10px] ${r.style === "flash" ? "border-amber-500 bg-amber-950/40 text-amber-300" : "border-white/10 text-zinc-500"}`}
+                        className={`min-h-[44px] rounded border px-2.5 text-xs ${r.style === "flash" ? "border-amber-500 bg-amber-950/40 text-amber-300" : "border-white/10 text-zinc-500"}`}
                         title="Flash — sent first try, with beta"
                       >FL</button>
                     </span>
                   )}
-                  <button onClick={() => addAttempt(i, "sent")} disabled={busy} className="ml-auto rounded border border-green-700/50 px-2 py-0.5 text-xs text-green-400 disabled:opacity-50">+✓</button>
-                  <button onClick={() => addAttempt(i, "fell")} disabled={busy} className="rounded border border-red-700/50 px-2 py-0.5 text-xs text-red-400 disabled:opacity-50">+✗</button>
-                  <button onClick={() => remove(i)} aria-label="Remove route" className="rounded border border-white/10 px-2 py-0.5 text-xs text-zinc-500">✕</button>
+                  <button onClick={() => addAttempt(i, "sent")} disabled={busy} className="ml-auto min-h-[44px] rounded border border-green-700/50 px-3 text-sm text-green-400 disabled:opacity-50">+✓</button>
+                  <button onClick={() => addAttempt(i, "fell")} disabled={busy} className="min-h-[44px] rounded border border-red-700/50 px-3 text-sm text-red-400 disabled:opacity-50">+✗</button>
+                  {/* F3 — delete staccato dagli action button (ml-3) + undo toast */}
+                  <button onClick={() => remove(i)} aria-label="Remove route" className="ml-3 min-h-[44px] rounded border border-white/10 px-3 text-sm text-zinc-500">✕</button>
                 </div>
               </li>
             );

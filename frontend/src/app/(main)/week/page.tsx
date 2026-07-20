@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
+import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queryKeys } from "@/lib/query-keys";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
@@ -86,6 +87,9 @@ export default function WeekPage() {
     },
     [qc, weekNum],
   );
+
+  /** F6 — done/skip/undo passano da qui: coda FIFO + snapshot fresco. */
+  const runWeekEvents = useWeekEvents(weekNum);
 
   /** Force refetch of state + current week. */
   const refetchAll = useCallback(() => {
@@ -400,11 +404,8 @@ export default function WeekPage() {
     if (!weekPlan) return;
     setError(null);
     try {
-      const result = await applyEvents({
-        events: [{ event_type: "mark_done", date, session_ref: sessionId }],
-        week_plan: weekPlan,
-      });
-      updateWeekCache(result.week_plan);
+      // F6 — serializzata + snapshot riletto dalla cache (vedi useWeekEvents).
+      await runWeekEvents([{ event_type: "mark_done", date, session_ref: sessionId }]);
 
       // A207: custom sessions don't feed closed-loop/progression — skip feedback dialog.
       const day = weekPlan.weeks?.[0]?.days?.find((d) => d.date === date);
@@ -424,11 +425,7 @@ export default function WeekPage() {
     if (!weekPlan) return;
     setError(null);
     try {
-      const result = await applyEvents({
-        events: [{ event_type: "mark_skipped", date, session_ref: sessionId }],
-        week_plan: weekPlan,
-      });
-      updateWeekCache(result.week_plan);
+      await runWeekEvents([{ event_type: "mark_skipped", date, session_ref: sessionId }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
     }
@@ -439,11 +436,7 @@ export default function WeekPage() {
     if (!weekPlan) return;
     setError(null);
     try {
-      const result = await applyEvents({
-        events: [{ event_type: "mark_planned", date, session_ref: sessionId }],
-        week_plan: weekPlan,
-      });
-      updateWeekCache(result.week_plan);
+      await runWeekEvents([{ event_type: "mark_planned", date, session_ref: sessionId }]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo");
     }

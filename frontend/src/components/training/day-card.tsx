@@ -21,9 +21,11 @@ interface DayCardProps {
   day: DayPlan;
   gyms?: Gym[];
   homeEquipment?: string[];
-  onMarkDone?: (sessionId: string) => void;
-  onMarkSkipped?: (sessionId: string) => void;
-  onUndo?: (sessionId: string) => void;
+  // F6 — restituiscono la promise della mutation: la SessionCard la attende per
+  // tenere Done/Skip disabilitati finché la scrittura non ha risposto.
+  onMarkDone?: (sessionId: string) => void | Promise<void>;
+  onMarkSkipped?: (sessionId: string) => void | Promise<void>;
+  onUndo?: (sessionId: string) => void | Promise<void>;
   onReplan?: (date: string, sessionIndex?: number) => void;
   onQuickAdd?: (date: string) => void;
   onMoveSession?: (date: string, slot: string, sessionId: string) => void;
@@ -252,7 +254,7 @@ function OtherActivityBlock({
                     <button
                       key={opt.value}
                       type="button"
-                      className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+                      className={`min-h-[44px] rounded-md border px-3 text-sm font-medium transition-colors ${
                         editFeedback === opt.value
                           ? opt.color + " ring-1 ring-offset-1"
                           : "border-muted text-muted-foreground"
@@ -268,6 +270,7 @@ function OtherActivityBlock({
                 <label className="text-[10px] text-muted-foreground">Duration (min)</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   max={600}
                   value={editDuration}
@@ -311,7 +314,7 @@ function OtherActivityBlock({
               <button
                 key={opt.value}
                 type="button"
-                className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${opt.color} hover:opacity-80`}
+                className={`min-h-[44px] rounded-md border px-3 text-sm font-medium transition-colors ${opt.color} hover:opacity-80`}
                 onClick={() => {
                   const dur = parseInt(otherDurationStr, 10);
                   setFeedbackPicking(false);
@@ -327,6 +330,7 @@ function OtherActivityBlock({
             <Clock className="size-3 text-muted-foreground" />
             <input
               type="number"
+              inputMode="numeric"
               min={1}
               max={600}
               value={otherDurationStr}
@@ -442,6 +446,19 @@ export function DayCard({
                     hasExpandableOutdoor && "cursor-pointer"
                   )}
                   onClick={hasExpandableOutdoor ? () => setOutdoorExpanded(v => !v) : undefined}
+                  {...(hasExpandableOutdoor && {
+                    // F40 — un div cliccabile senza semantica: niente focus,
+                    // niente tastiera, invisibile agli screen reader.
+                    role: "button",
+                    tabIndex: 0,
+                    "aria-expanded": outdoorExpanded,
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        setOutdoorExpanded((v) => !v);
+                      }
+                    },
+                  })}
                 >
                   <Mountain className="size-4 text-green-500" />
                   <span className="font-medium">{day.outdoor_spot_name}</span>

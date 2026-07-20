@@ -52,9 +52,11 @@ interface SessionCardProps {
   homeEquipment?: string[];
   weekPlan?: WeekPlan | null;
   sessionIndex?: number;
-  onMarkDone?: () => void;
-  onMarkSkipped?: () => void;
-  onUndo?: () => void;
+  // F6 — i callback della page sono async: il tipo deve permettere di attenderli
+  // per poter disabilitare il bottone finché la mutation è in volo.
+  onMarkDone?: () => void | Promise<void>;
+  onMarkSkipped?: () => void | Promise<void>;
+  onUndo?: () => void | Promise<void>;
   onMove?: () => void;
   onRemove?: () => void;
   onReplan?: () => void;
@@ -555,6 +557,7 @@ function AddExerciseDialog({
                   <Label className="text-xs">Sets</Label>
                   <Input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     max={20}
                     value={sets}
@@ -566,6 +569,7 @@ function AddExerciseDialog({
                     <Label className="text-xs">Duration (s)</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       max={600}
                       value={workSeconds ?? 0}
@@ -577,6 +581,7 @@ function AddExerciseDialog({
                     <Label className="text-xs">Reps</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       max={100}
                       value={reps}
@@ -588,6 +593,7 @@ function AddExerciseDialog({
                   <Label className="text-xs">Additional weight (kg)</Label>
                   <Input
                     type="number"
+                    inputMode="decimal"
                     min={0}
                     step={0.5}
                     value={loadKg ?? 0}
@@ -627,7 +633,8 @@ function ExerciseItemWrapper({ children, canEdit, onRemove }: {
       {children}
       {canEdit && onRemove && (
         <button
-          className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/30 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+          aria-label="Remove exercise"
+          className="absolute top-0 right-0 flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground/30 hover:text-red-500 hover:bg-red-500/10 transition-colors"
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
         >
           <Trash2 className="size-3.5" />
@@ -655,6 +662,9 @@ export function SessionCard({
   onSessionUpdated,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
+  // F6 — un secondo tap su Done/Skip prima che il primo abbia risposto partiva
+  // dallo stesso snapshot e faceva perdere il mark precedente.
+  const [marking, setMarking] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
@@ -664,6 +674,20 @@ export function SessionCard({
   const [boulderOverrideLoading, setBoulderOverrideLoading] = useState(false);
   const [boulderOverrideError, setBoulderOverrideError] = useState<string | null>(null);
   const router = useRouter();
+
+  /** F6 — esegue un mark tenendo il bottone disabilitato fino alla risposta. */
+  const runMark = useCallback(
+    async (fn: (() => void | Promise<void>) | undefined) => {
+      if (!fn || marking) return;
+      setMarking(true);
+      try {
+        await fn();
+      } finally {
+        setMarking(false);
+      }
+    },
+    [marking],
+  );
 
   // A210: effective resolved session — override takes precedence over the planned one
   const effectiveResolved = (boulderOverride ?? session.resolved) as Record<string, unknown> | undefined;
@@ -1102,8 +1126,7 @@ export function SessionCard({
               <div className="flex flex-wrap items-center gap-1.5">
                 {hasExercises && (
                   <Button
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    className="min-h-[44px] bg-primary hover:bg-primary/90 text-primary-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleStartGuided(session, date, router);
@@ -1115,29 +1138,29 @@ export function SessionCard({
                 )}
                 {onMarkDone && (
                   <Button
-                    size="sm"
                     variant="outline"
-                    className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+                    disabled={marking}
+                    className="min-h-[44px] text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onMarkDone();
+                      void runMark(onMarkDone);
                     }}
                   >
-                    <Check className="size-3.5 mr-1" />
+                    <Check className="size-4 mr-1" />
                     Done
                   </Button>
                 )}
                 {onMarkSkipped && (
                   <Button
-                    size="sm"
                     variant="outline"
-                    className="text-muted-foreground"
+                    disabled={marking}
+                    className="min-h-[44px] text-muted-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onMarkSkipped();
+                      void runMark(onMarkSkipped);
                     }}
                   >
-                    <X className="size-3.5 mr-1" />
+                    <X className="size-4 mr-1" />
                     Skip
                   </Button>
                 )}

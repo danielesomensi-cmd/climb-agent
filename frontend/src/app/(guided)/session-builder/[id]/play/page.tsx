@@ -434,7 +434,7 @@ export default function SessionPlayPage() {
   return (
     <div className="mx-auto max-w-2xl min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-4 py-3 space-y-2">
+      <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"

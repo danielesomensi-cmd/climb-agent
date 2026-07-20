@@ -508,6 +508,7 @@ export function GuidedExerciseStep({
               <Input
                 id="measurement-input"
                 type="number"
+                inputMode="decimal"
                 step={exercise.testUnit === "cm" ? "1" : "0.5"}
                 min="0"
                 value={measurementInput}
@@ -550,6 +551,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="test-left-meas"
                     type="number"
+                    inputMode="numeric"
                     step="1"
                     min="0"
                     value={loadInputLeft}
@@ -566,6 +568,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="test-right-meas"
                     type="number"
+                    inputMode="numeric"
                     step="1"
                     min="0"
                     value={loadInputRight}
@@ -586,7 +589,7 @@ export function GuidedExerciseStep({
                     key={opt.value}
                     type="button"
                     onClick={() => setFeedback(opt.value)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all ${
                       feedback === opt.value
                         ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -701,6 +704,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="sets-input"
                     type="number"
+                    inputMode="numeric"
                     step="1"
                     min="0"
                     value={setsInput}
@@ -723,6 +727,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="repeater-load-input"
                     type="number"
+                    inputMode="decimal"
                     step="0.5"
                     min="0"
                     value={loadInput}
@@ -766,6 +771,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="lp-rep-reps-right"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       value={repsInputRight}
@@ -782,6 +788,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="lp-rep-reps-left"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       value={repsInputLeft}
@@ -800,6 +807,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="lp-rep-load-right"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={loadInputRight}
@@ -815,6 +823,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="lp-rep-load-left"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={loadInputLeft}
@@ -839,6 +848,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="test-left"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={loadInputLeft}
@@ -855,6 +865,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="test-right"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={loadInputRight}
@@ -877,7 +888,7 @@ export function GuidedExerciseStep({
                     key={opt.value}
                     type="button"
                     onClick={() => setFeedback(opt.value)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all ${
                       feedback === opt.value
                         ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -900,6 +911,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="external-load-input"
                     type="number"
+                    inputMode="decimal"
                     step="0.5"
                     min="0"
                     value={loadInput}
@@ -935,6 +947,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="load-left"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       value={loadInputLeft}
                       onChange={(e) => setLoadInputLeft(e.target.value)}
@@ -947,6 +960,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="load-right"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       value={loadInputRight}
                       onChange={(e) => setLoadInputRight(e.target.value)}
@@ -967,6 +981,7 @@ export function GuidedExerciseStep({
                 <Input
                   id="load-input"
                   type="number"
+                  inputMode="decimal"
                   step="0.5"
                   min={0}
                   value={loadInput}
@@ -1030,17 +1045,15 @@ export function GuidedExerciseStep({
         {/* Action buttons */}
         <div className="flex items-center gap-2 pt-2">
           <Button
-            size="sm"
             variant="outline"
-            className="text-muted-foreground"
+            className="min-h-[44px] text-muted-foreground"
             onClick={onSkip}
           >
             <SkipForward className="size-4 mr-1" />
             Skip
           </Button>
           <Button
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white flex-1"
+            className="min-h-[44px] bg-green-600 hover:bg-green-700 text-white flex-1"
             onClick={handleDone}
           >
             <Check className="size-4 mr-1" />
