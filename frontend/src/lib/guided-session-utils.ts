@@ -2,10 +2,48 @@ import type { GuidedExercise, GuidedSessionState } from "@/lib/types";
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-function getKeyPrefix(): string {
-  if (typeof window === "undefined") return "guided_session__";
-  const userId = window.Clerk?.session ? "clerk" : "";
-  return `guided_session_${userId}_`;
+/**
+ * A245 B-2 — this used to return `guided_session_clerk_` for every signed-in
+ * user: the LITERAL string "clerk", never the real id. On a shared device (or
+ * after a recovery-code import) user A's in-progress session was readable and
+ * writable as user B's. Harmless-looking while it only held guided progress,
+ * fatal once `state`/`week` are persisted under the same convention — so the
+ * scope is now the real Clerk user id everywhere.
+ */
+export function getKeyPrefix(): string {
+  if (typeof window === "undefined") return `guided_session_${ANON_SCOPE}_`;
+  const userId = window.Clerk?.user?.id;
+  // `anon` is a distinct scope, NOT one of the legacy prefixes: local dev and
+  // the legacy-UUID fallback must keep working without being purged below.
+  return `guided_session_${userId ?? ANON_SCOPE}_`;
+}
+
+const ANON_SCOPE = "anon";
+
+/** Unscoped prefixes written before the fix above. */
+const LEGACY_PREFIXES = ["guided_session__", "guided_session_clerk_"];
+
+/**
+ * Drop every unscoped guided-session key.
+ *
+ * Deliberately a PURGE and not a migration: re-keying legacy data onto the
+ * currently signed-in user is exactly the leak we are closing — on a shared
+ * device it would hand A's session to whoever signs in next. The cost is
+ * losing a session that was literally mid-workout across one deploy; those
+ * entries expire in 24h anyway.
+ */
+export function purgeLegacyGuidedKeys(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const doomed: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && LEGACY_PREFIXES.some((p) => key.startsWith(p))) doomed.push(key);
+    }
+    doomed.forEach((k) => localStorage.removeItem(k));
+  } catch {
+    // Private mode / storage disabled — nothing to purge.
+  }
 }
 
 export interface InProgressSession {

@@ -37,7 +37,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getInProgressSession, clearSavedSession, type InProgressSession } from "@/lib/guided-session-utils";
+import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressSession } from "@/lib/guided-session-utils";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
 import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
 import { hasOtherActivity } from "@/lib/other-activity";
@@ -247,8 +247,10 @@ function TodayContent() {
   // Stays outside React Query — this is recovery of pending writes, not a fetch.
   useEffect(() => {
     if (!authReady || typeof window === "undefined") return;
-    const userId = window.Clerk?.session ? "clerk" : "";
-    const prefix = `guided_session_${userId}_`;
+    // A245 B-2: was rebuilding the prefix inline with the literal "clerk"
+    // instead of the real user id — same bug as guided-session-utils, and a
+    // second copy of the same expression. Single source of truth now.
+    const prefix = getKeyPrefix();
     const now = Date.now();
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);

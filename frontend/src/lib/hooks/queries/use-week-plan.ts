@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getWeek } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { PERSIST_MAX_AGE_MS } from "@/lib/query-persist";
 
 /**
  * A187 — Cached read of /api/week/{n}.
@@ -30,6 +31,8 @@ export function useWeekPlan(weekNum = 0, enabled = true) {
     staleTime: 60_000,
     enabled,
     structuralSharing: false,
+    // A245 B-2: see use-user-state — gcTime must outlive the persisted cache.
+    gcTime: PERSIST_MAX_AGE_MS,
   });
 
   // Prefetch adjacent weeks once we have data for the current one.
