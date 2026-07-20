@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { buildGuidedStateFromExercises, hasSavedProgress } from "@/lib/guided-session-utils";
+import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -305,8 +305,8 @@ function handleStartGuided(
     : buildGuidedState(session, date);
   if (!guidedState) return;
 
-  const userId = window.Clerk?.session ? "clerk" : "";
-  const key = `guided_session_${userId}_${date}_${session.session_id}`;
+  // B290 (closes F54): was building the key inline with the literal "clerk".
+  const key = guidedStorageKey(date, session.session_id);
 
   // B197: if any prior state exists for this slot (even one without
   // visible progress that hasSavedProgress would skip), preserve its

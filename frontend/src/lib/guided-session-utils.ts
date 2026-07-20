@@ -20,29 +20,87 @@ export function getKeyPrefix(): string {
 
 const ANON_SCOPE = "anon";
 
-/** Unscoped prefixes written before the fix above. */
-const LEGACY_PREFIXES = ["guided_session__", "guided_session_clerk_"];
+/**
+ * B290 (closes F54) — THE key builder for guided session state.
+ *
+ * Every producer must call this. Three separate inline copies existed; when
+ * A245 B-2 fixed one of them, writers and readers silently stopped agreeing.
+ */
+export function guidedStorageKey(date: string, sessionId: string): string {
+  return `${getKeyPrefix()}${date}_${sessionId}`;
+}
 
 /**
- * Drop every unscoped guided-session key.
+ * Prefixes written before every producer was unified on `getKeyPrefix()`.
  *
- * Deliberately a PURGE and not a migration: re-keying legacy data onto the
- * currently signed-in user is exactly the leak we are closing — on a shared
- * device it would hand A's session to whoever signs in next. The cost is
- * losing a session that was literally mid-workout across one deploy; those
- * entries expire in 24h anyway.
+ * `guided_session_clerk_` is in here because B290 found the guided page and
+ * SessionCard still building it inline: they were the WRITERS while the readers
+ * in this module had already moved to the real user id.
  */
-export function purgeLegacyGuidedKeys(): void {
+export const LEGACY_PREFIXES = ["guided_session__", "guided_session_clerk_"];
+
+/**
+ * Move any legacy-keyed guided session onto the current user's key.
+ *
+ * B290 — this used to be `purgeLegacyGuidedKeys()`, and deleting was the right
+ * call in A245 B-2: those keys then held only STALE data of ambiguous
+ * ownership, so re-keying it onto whoever signed in next would have been the
+ * very leak we were closing.
+ *
+ * That reasoning stopped holding the moment the fix shipped half-applied. The
+ * writers kept using `guided_session_clerk_`, so the prefix stopped meaning
+ * "old data from before the fix" and started meaning "the session this user is
+ * in the middle of, written minutes ago". Purging it deleted live sessions and
+ * pending offline feedback on every app open.
+ *
+ * Guards that keep the original leak closed:
+ *  - runs ONLY with a real signed-in user id (never onto `anon`);
+ *  - never overwrites an existing key for the current user;
+ *  - skips entries older than the 24h guided TTL, so genuinely stale data from
+ *    a previous owner of the device is dropped rather than adopted.
+ *
+ * Note there is no separate "pending feedback" store to migrate: the guided
+ * player records it as `submitStatus: "feedback_pending"` INSIDE the session
+ * state, so moving the session moves the queued feedback with it.
+ */
+export function migrateLegacyGuidedKeys(): void {
   if (typeof window === "undefined") return;
+  const userId = window.Clerk?.user?.id;
+  if (!userId) return; // no identified owner → leave it alone, do not adopt
+
+  const prefix = `guided_session_${userId}_`;
+  const now = Date.now();
   try {
-    const doomed: string[] = [];
+    const legacy: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && LEGACY_PREFIXES.some((p) => key.startsWith(p))) doomed.push(key);
+      if (key && LEGACY_PREFIXES.some((p) => key.startsWith(p))) legacy.push(key);
     }
-    doomed.forEach((k) => localStorage.removeItem(k));
+
+    for (const key of legacy) {
+      const raw = localStorage.getItem(key);
+      if (raw === null) continue;
+
+      const suffix = key.slice(key.indexOf("_", "guided_session_".length) + 1);
+      const target = `${prefix}${suffix}`;
+
+      let keep = true;
+      try {
+        const saved = JSON.parse(raw) as GuidedSessionState;
+        if (saved?.startedAt && now - new Date(saved.startedAt).getTime() > MAX_AGE_MS) {
+          keep = false;
+        }
+      } catch {
+        keep = false; // unparseable → not worth adopting
+      }
+
+      if (keep && localStorage.getItem(target) === null) {
+        localStorage.setItem(target, raw);
+      }
+      localStorage.removeItem(key);
+    }
   } catch {
-    // Private mode / storage disabled — nothing to purge.
+    // Private mode / storage disabled — nothing to migrate.
   }
 }
 
@@ -208,7 +266,7 @@ export function buildGuidedStateFromExercises(
  */
 export function saveGuidedState(state: GuidedSessionState): void {
   if (typeof window === "undefined") return;
-  const key = `${getKeyPrefix()}${state.date}_${state.sessionId}`;
+  const key = guidedStorageKey(state.date, state.sessionId);
   try {
     const raw = localStorage.getItem(key);
     if (raw) {
