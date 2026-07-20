@@ -7,7 +7,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
       <TrialBanner />
       {children}
       <BottomNav />

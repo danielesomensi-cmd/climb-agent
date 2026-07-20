@@ -525,7 +525,7 @@ export default function GuidedSessionPage() {
   return (
     <div className="mx-auto max-w-2xl">
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-4 py-3 space-y-3">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 space-y-3">
         {/* Top row: back + timer + session name */}
         <div className="flex items-center justify-between gap-2">
           <button

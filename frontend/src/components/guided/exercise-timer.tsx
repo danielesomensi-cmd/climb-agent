@@ -829,7 +829,7 @@ export function ExerciseTimer({
                   <>
                     <span className="text-2xl font-bold">Rep {currentRep}/{reps}</span>
                     <span className="text-xs text-muted-foreground mt-1">Set {displaySet}/{sets}</span>
-                    <span className="text-[10px] text-muted-foreground/60 mt-0.5">
+                    <span className="text-xs text-muted-foreground/70 mt-0.5">
                       Tap when done
                     </span>
                   </>
@@ -839,7 +839,7 @@ export function ExerciseTimer({
                     <span className="text-xs text-muted-foreground mt-1">
                       {reps > 1 ? `Do ${reps} reps` : "Do your set"}
                     </span>
-                    <span className="text-[10px] text-muted-foreground/60 mt-0.5">
+                    <span className="text-xs text-muted-foreground/70 mt-0.5">
                       Tap when done
                     </span>
                   </>
