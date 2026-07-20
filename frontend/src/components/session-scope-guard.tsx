@@ -5,6 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { purgePersistedCache } from "@/lib/query-persist";
 import { purgeLegacyGuidedKeys } from "@/lib/guided-session-utils";
+import { purgeLastDestination } from "@/lib/last-destination";
 
 /**
  * A245 B-2 — purge every device-local trace of the previous user when the
@@ -39,6 +40,7 @@ export function SessionScopeGuard() {
 
     if (previous.current !== current) {
       purgePersistedCache();
+      purgeLastDestination();
       qc.clear();
       previous.current = current;
     }
