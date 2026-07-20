@@ -12,6 +12,7 @@ import { GuidedSummary } from "@/components/guided/guided-summary";
 import { postFeedback, getState } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { buildGuidedFeedbackItems } from "@/lib/feedback-items";
+import { guidedStorageKey } from "@/lib/guided-session-utils";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
@@ -20,18 +21,16 @@ import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
 // localStorage helpers
 // ---------------------------------------------------------------------------
 
-function getStorageKey(date: string, sessionId: string): string {
-  let userId = "";
-  if (typeof window !== "undefined") {
-    userId = window.Clerk?.session ? "clerk" : "";
-  }
-  return `guided_session_${userId}_${date}_${sessionId}`;
-}
+// B290 (closes F54): the local key builder that used to live here produced
+// `guided_session_clerk_...` — the literal string, not the user id — while the
+// readers in guided-session-utils had already moved to the real id. Writers and
+// readers stopped agreeing, so resume and the offline feedback retry both went
+// blind. There is now exactly one key builder: guidedStorageKey().
 
 function loadState(date: string, sessionId: string): GuidedSessionState | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(getStorageKey(date, sessionId));
+    const raw = localStorage.getItem(guidedStorageKey(date, sessionId));
     return raw ? (JSON.parse(raw) as GuidedSessionState) : null;
   } catch {
     return null;
@@ -40,13 +39,13 @@ function loadState(date: string, sessionId: string): GuidedSessionState | null {
 
 function saveState(state: GuidedSessionState) {
   if (typeof window === "undefined") return;
-  const key = getStorageKey(state.date, state.sessionId);
+  const key = guidedStorageKey(state.date, state.sessionId);
   localStorage.setItem(key, JSON.stringify(state));
 }
 
 function removeState(date: string, sessionId: string) {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(getStorageKey(date, sessionId));
+  localStorage.removeItem(guidedStorageKey(date, sessionId));
 }
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { purgePersistedCache } from "@/lib/query-persist";
-import { purgeLegacyGuidedKeys } from "@/lib/guided-session-utils";
+import { migrateLegacyGuidedKeys } from "@/lib/guided-session-utils";
 import { purgeLastDestination } from "@/lib/last-destination";
 
 /**
@@ -34,7 +34,9 @@ export function SessionScopeGuard() {
     // the cold-start case is covered there.
     if (previous.current === undefined) {
       previous.current = current;
-      purgeLegacyGuidedKeys();
+      // B290: MIGRATE, don't purge — this prefix holds sessions written minutes
+      // ago by the (previously unfixed) writers, not stale pre-fix data.
+      migrateLegacyGuidedKeys();
       return;
     }
 
