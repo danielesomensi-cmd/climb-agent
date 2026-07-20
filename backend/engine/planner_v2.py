@@ -108,7 +108,17 @@ MAX_WEEKS_UNTESTED = 12  # Force maintenance retest if axis untested for 12+ wee
 
 
 def _validate_session_meta_equipment() -> None:
-    """D172-17: warn if _SESSION_META.required_equipment differs from session JSON files."""
+    """D172-17: warn if _SESSION_META.required_equipment differs from session JSON files.
+
+    A245 E-6 (B19): this used to be CALLED at module import, opening ~35 JSON
+    files every time anything imported planner_v2 — including every worker boot
+    and every test collection — with `except Exception: pass` swallowing any
+    problem. Import-time I/O in a hot module is both a startup cost and a
+    silent failure mode: a real mismatch produced a log line nobody reads.
+
+    The call now lives in `test_a245_catalog_meta_consistency.py`, where drift
+    fails the suite instead. The function body is unchanged.
+    """
     import os as _os
     import json as _json
     sessions_dir = _os.path.join(_os.path.dirname(__file__), "..", "catalog", "sessions", "v1")
@@ -130,7 +140,8 @@ def _validate_session_meta_equipment() -> None:
             pass
 
 
-_validate_session_meta_equipment()
+# A245 E-6 (B19): the import-time call that used to sit here was removed —
+# see the docstring above. Catalog drift is checked by the test suite.
 
 _INTENSITY_ORDER = {"low": 0, "medium": 1, "high": 2, "max": 3}
 
