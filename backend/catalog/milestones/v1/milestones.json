@@ -1,0 +1,183 @@
+{
+  "version": "v1",
+  "milestones": [
+    {
+      "id": "first_session_done",
+      "name": "First Steps",
+      "description": "Complete your first training session",
+      "category": "session",
+      "tier": "activation",
+      "icon": "🎯"
+    },
+    {
+      "id": "first_guided_session",
+      "name": "Guided by the Machine",
+      "description": "Complete your first guided session with the step-by-step timer",
+      "category": "session",
+      "tier": "activation",
+      "icon": "⏱️"
+    },
+    {
+      "id": "first_free_session",
+      "name": "Off Script",
+      "description": "Log your first free climbing session",
+      "category": "session",
+      "tier": "activation",
+      "icon": "🧗"
+    },
+    {
+      "id": "first_custom_session",
+      "name": "Session Architect",
+      "description": "Build your first custom session in the Session Builder",
+      "category": "session",
+      "tier": "medium",
+      "icon": "🛠️"
+    },
+    {
+      "id": "first_body_part_session",
+      "name": "Targeted Work",
+      "description": "Complete your first body-part focused session",
+      "category": "session",
+      "tier": "medium",
+      "icon": "💪"
+    },
+    {
+      "id": "first_outdoor_session",
+      "name": "Into the Wild",
+      "description": "Log your first outdoor session",
+      "category": "outdoor",
+      "tier": "activation",
+      "icon": "⛰️"
+    },
+    {
+      "id": "first_onsight_outdoor",
+      "name": "First Read",
+      "description": "Send an outdoor route onsight",
+      "category": "outdoor",
+      "tier": "medium",
+      "icon": "👁️"
+    },
+    {
+      "id": "crag_explorer_3",
+      "name": "Crag Explorer",
+      "description": "Climb at 3 different outdoor spots",
+      "category": "outdoor",
+      "tier": "medium",
+      "icon": "🗺️"
+    },
+    {
+      "id": "crag_explorer_5",
+      "name": "Crag Connoisseur",
+      "description": "Climb at 5 different outdoor spots",
+      "category": "outdoor",
+      "tier": "career",
+      "icon": "🧭"
+    },
+    {
+      "id": "grade_first_redpoint",
+      "name": "New Grade: Redpoint",
+      "description": "Send a new hardest grade outdoors",
+      "category": "grade",
+      "tier": "career",
+      "icon": "🔴",
+      "dynamic": true
+    },
+    {
+      "id": "grade_first_onsight",
+      "name": "New Grade: Onsight",
+      "description": "Onsight a new hardest grade outdoors",
+      "category": "grade",
+      "tier": "career",
+      "icon": "⚡",
+      "dynamic": true
+    },
+    {
+      "id": "first_hangboard_session",
+      "name": "Finger Forge",
+      "description": "Complete your first hangboard exercise",
+      "category": "exercise",
+      "tier": "activation",
+      "icon": "🤏"
+    },
+    {
+      "id": "first_campus_session",
+      "name": "Campus Cadet",
+      "description": "Complete your first campus board exercise",
+      "category": "exercise",
+      "tier": "medium",
+      "icon": "🪜"
+    },
+    {
+      "id": "first_technique_drill",
+      "name": "Movement Student",
+      "description": "Complete your first technique drill",
+      "category": "exercise",
+      "tier": "activation",
+      "icon": "🩰"
+    },
+    {
+      "id": "drill_collector_10",
+      "name": "Drill Collector",
+      "description": "Try 10 different technique drills",
+      "category": "exercise",
+      "tier": "career",
+      "icon": "🎒"
+    },
+    {
+      "id": "explorer_25",
+      "name": "Exercise Explorer",
+      "description": "Try 25 different exercises",
+      "category": "exercise",
+      "tier": "medium",
+      "icon": "🔍"
+    },
+    {
+      "id": "explorer_50",
+      "name": "Catalog Cartographer",
+      "description": "Try 50 different exercises",
+      "category": "exercise",
+      "tier": "career",
+      "icon": "📚"
+    },
+    {
+      "id": "first_test_done",
+      "name": "Know Thyself",
+      "description": "Complete your first assessment test",
+      "category": "process",
+      "tier": "activation",
+      "icon": "📊"
+    },
+    {
+      "id": "reached_performance",
+      "name": "Send Season",
+      "description": "Reach the Performance phase of a training cycle",
+      "category": "process",
+      "tier": "medium",
+      "icon": "🚀"
+    },
+    {
+      "id": "first_deload_completed",
+      "name": "Recovery Discipline",
+      "description": "Complete a full deload week — resting hard is training too",
+      "category": "process",
+      "tier": "medium",
+      "icon": "🧘"
+    },
+    {
+      "id": "first_cycle_completed",
+      "name": "Full Circle",
+      "description": "Complete an entire training macrocycle",
+      "category": "process",
+      "tier": "career",
+      "icon": "🏆"
+    },
+    {
+      "id": "perfect_week",
+      "name": "Perfect Week",
+      "description": "Complete every planned session in a week — rest days included",
+      "category": "process",
+      "tier": "medium",
+      "icon": "✨"
+    }
+  ]
+}
