@@ -15,6 +15,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { getInProgressSession } from "@/lib/guided-session-utils";
 
 export function SwUpdateBanner() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
@@ -51,7 +52,17 @@ export function SwUpdateBanner() {
     });
 
     function onControllerChange() {
-      if (!cancelled) window.location.reload();
+      if (cancelled) return;
+      // A245 B-1 (F22) — a controllerchange used to reload unconditionally.
+      // If it landed mid-workout the guided session reloaded under the user:
+      // progress survives in localStorage, but the timer and scroll position
+      // visibly reset. The new build is already installed and will be picked up
+      // on the next natural navigation, so skipping this reload costs nothing.
+      if (getInProgressSession()) {
+        console.info("[sw] update reload suppressed — guided session in progress");
+        return;
+      }
+      window.location.reload();
     }
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
