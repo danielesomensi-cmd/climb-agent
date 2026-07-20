@@ -11,6 +11,7 @@ import type {
   OutdoorConditions,
 } from "@/lib/types";
 import { postOutdoorLog, putOutdoorLog } from "@/lib/api";
+import { enqueue } from "@/lib/outbox";
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
 
@@ -194,7 +195,19 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       } else if (isEdit) {
         await putOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">);
       } else {
-        await postOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">);
+        // A245 B-4 (F5) — a new outdoor log is append-only and self-contained,
+        // so it can safely wait in the outbox. An EDIT (putOutdoorLog) cannot:
+        // replaying it hours later would clobber whatever changed in between.
+        // The active-session finish path (onSubmit) needs a live server id.
+        try {
+          await postOutdoorLog(payload as unknown as Omit<OutdoorSession, "log_version">);
+        } catch (err) {
+          const queued = enqueue("outdoor_log", payload);
+          if (!queued) throw err;
+          toast("Session saved on this device — it will sync when you're back online.", {
+            duration: 6000,
+          });
+        }
       }
       onSuccess?.();
     } catch (e) {

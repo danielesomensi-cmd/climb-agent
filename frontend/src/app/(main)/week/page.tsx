@@ -21,6 +21,7 @@ import { applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSp
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
+import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
@@ -468,7 +469,7 @@ export default function WeekPage() {
           completed: true,
         })
       );
-      await postFeedback({
+      const body = {
         log_entry: {
           date: feedbackDate,
           session_id: feedbackSessionId,
@@ -476,11 +477,16 @@ export default function WeekPage() {
           actual: { exercise_feedback_v1: feedbackItems },
         },
         status: "done",
-      });
-      // Re-fetch week plan so feedback_summary badges appear (cascade from progression)
-      qc.invalidateQueries({ queryKey: queryKeys.weekAll });
-    } catch {
-      // Non-critical
+      };
+      try {
+        await postFeedback(body);
+        // Re-fetch week plan so feedback_summary badges appear (cascade from progression)
+        qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+      } catch {
+        // A245 B-4 (F4) — see today/page.tsx: silently dropping feedback
+        // desynchronises progression with no signal.
+        queueOrWarn(body);
+      }
     } finally {
       setFeedbackOpen(false);
       setFeedbackSessionId(null);
