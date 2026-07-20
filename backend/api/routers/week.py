@@ -110,6 +110,8 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                         rs = resolved.get("resolved_session", {})
                         rs.setdefault("exercise_instances", []).extend(user_added)
                     session_entry["resolved"] = resolved
+                    # A stale marker would keep an error banner up forever.
+                    session_entry.pop("resolve_error", None)
                     # B268: collect this day's exercises for LATER days only
                     for _inst in (resolved or {}).get("resolved_session", {}).get("exercise_instances", []):
                         _eid = _inst.get("exercise_id")
@@ -121,6 +123,13 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                         session_entry.get("session_id"), _resolve_err, exc_info=True,
                     )
                     session_entry["resolved"] = None
+                    # A245 E-3 (B17): `resolved=None` alone is ambiguous — it is
+                    # indistinguishable from "no compatible exercise for this
+                    # user's equipment", so the client rendered a silent empty
+                    # session card either way. Mark the failure explicitly so a
+                    # transient error can be surfaced (and retried) instead of
+                    # looking like a legitimately empty session.
+                    session_entry["resolve_error"] = True
             # B268: a day's exercises become recency for subsequent days only
             planned_recent.extend(day_ex_ids)
 

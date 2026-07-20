@@ -207,6 +207,8 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
                         extra_recent_ex_ids=planned_recent,  # B268
                     )
                     session_entry["resolved"] = resolved
+                    # A stale marker would keep an error banner up forever.
+                    session_entry.pop("resolve_error", None)
                     # B268: collect this day's exercises for LATER days only
                     for _inst in (resolved or {}).get("resolved_session", {}).get("exercise_instances", []):
                         _eid = _inst.get("exercise_id")
@@ -218,6 +220,10 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
                         session_entry.get("session_id"), _resolve_err, exc_info=True,
                     )
                     session_entry["resolved"] = None
+                    # A245 E-3 (B17): see the identical marker in week.py —
+                    # `resolved=None` cannot tell a transient failure apart from
+                    # a legitimately empty session.
+                    session_entry["resolve_error"] = True
             # B268: a day's exercises become recency for subsequent days only
             planned_recent.extend(day_ex_ids)
 
