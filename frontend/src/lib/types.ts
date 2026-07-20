@@ -179,22 +179,52 @@ export interface SessionMeta {
   required_equipment?: string[];
 }
 
+/**
+ * A245 G-6 (F23) — the REAL shape of a resolved session.
+ *
+ * The previous declaration was fiction: it claimed a top-level
+ * `blocks: [{ block_name, exercises }]`. The payload
+ * (`resolve_session.py`, `session_instance`) actually nests everything under
+ * `resolved_session` and names the fields `block_uid` / `selected_exercises`.
+ * The only consumer did `resolved.blocks.map(...)` — a guaranteed TypeError
+ * that never fired only because nothing links to `/session/[id]`.
+ *
+ * A type that lies is worse than no type: it makes 220 `as X` casts elsewhere
+ * (finding F24) look safe while the compiler validates nothing real.
+ */
+export interface ResolvedExerciseInstance {
+  exercise_id: string;
+  name?: string;
+  block_uid?: string;
+  prescription?: Record<string, unknown>;
+  suggested?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface ResolvedBlock {
+  block_uid: string;
+  block_id?: string;
+  type?: string;
+  status?: string;
+  message?: string | null;
+  selected_exercises: ResolvedExerciseInstance[];
+}
+
 export interface ResolvedSession {
-  session_id: string;
-  session_name: string;
-  blocks: Array<{
-    block_name: string;
-    exercises: Array<{
-      exercise_id: string;
-      name: string;
-      sets?: number;
-      reps?: string;
-      load_kg?: number;
-      rest_s?: number;
-      tempo?: string;
-      notes?: string;
-    }>;
-  }>;
+  session_instance_version?: string;
+  context?: Record<string, unknown>;
+  session: {
+    session_id: string;
+    session_name: string;
+    session_version?: string;
+    target_duration_min?: number | null;
+  };
+  resolved_session: {
+    resolver_version?: string;
+    modules?: unknown[];
+    blocks: ResolvedBlock[];
+    exercise_instances: ResolvedExerciseInstance[];
+  };
 }
 
 export interface WeaknessOption {
@@ -1015,4 +1045,15 @@ export interface Weather {
   is_forecast: boolean;
   date: string | null;
   source: string;
+}
+
+/**
+ * A245 G-4 (F52) — periodic retest reminder emitted by `GET /api/week/{n}`.
+ *
+ * Shape mirrors `should_show_test_reminder()` in `backend/engine/planner_v2.py`.
+ */
+export interface TestReminder {
+  type: "test_week_reminder";
+  message: string;
+  options: Array<"confirm" | "postpone_1_week" | "skip_cycle">;
 }

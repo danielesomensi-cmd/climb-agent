@@ -26,6 +26,7 @@ import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
+import { writeWeekCache } from "@/lib/week-cache";
 import { buildDialogFeedbackItems, extractFeedbackExercises } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ import {
 } from "@/components/ui/drawer";
 
 import { getPhaseName } from "@/lib/phase-labels";
+import { completeOtherActivityEvent, removeOtherActivityEvent, removeOutdoorEvent, undoOtherActivityEvent, undoOutdoorEvent } from "@/lib/week-events";
 
 /** Returns today's date in YYYY-MM-DD format */
 function todayISO(): string {
@@ -88,9 +90,8 @@ export default function WeekPage() {
   /** Update the cached week plan after a mutation. */
   const updateWeekCache = useCallback(
     (newWeekPlan: WeekPlan) => {
-      qc.setQueryData(queryKeys.week(weekNum), (old: { week_num: number; phase_id?: string | null; week_plan: WeekPlan } | undefined) =>
-        old ? { ...old, week_plan: newWeekPlan } : { week_num: weekNum, week_plan: newWeekPlan },
-      );
+      // A245 G-2 (F34): keeps week(0) and week(<server num>) in step.
+      writeWeekCache(qc, weekNum, newWeekPlan);
     },
     [qc, weekNum],
   );
@@ -102,6 +103,9 @@ export default function WeekPage() {
   const refetchAll = useCallback(() => {
     qc.invalidateQueries({ queryKey: queryKeys.state });
     qc.invalidateQueries({ queryKey: queryKeys.week(weekNum) });
+    // A245 G-3 (F36): progression rewrites working_loads, so any resolved
+    // session in cache is now showing pre-feedback numbers.
+    qc.invalidateQueries({ queryKey: queryKeys.sessionResolveAll });
   }, [qc, weekNum]);
   const [replanDate, setReplanDate] = useState<string | null>(null);
   const [replanSessionIndex, setReplanSessionIndex] = useState<number | undefined>(undefined);
@@ -348,9 +352,7 @@ export default function WeekPage() {
     if (!weekPlan) return;
     setError(null);
     try {
-      const ev: Record<string, unknown> = { event_type: "complete_other_activity", date, feedback };
-      if (slot) ev.slot = slot;
-      if (durationMinutes != null) ev.duration_minutes = durationMinutes;
+      const ev = completeOtherActivityEvent(date, slot, feedback, durationMinutes);
       const result = await applyEvents({
         events: [ev],
         week_plan: weekPlan,
@@ -382,7 +384,7 @@ export default function WeekPage() {
     setError(null);
     try {
       const result = await applyEvents({
-        events: [{ event_type: "undo_other_activity", date, ...(slot ? { slot } : {}) }],
+        events: [undoOtherActivityEvent(date, slot)],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -397,7 +399,7 @@ export default function WeekPage() {
     setError(null);
     try {
       const result = await applyEvents({
-        events: [{ event_type: "remove_other_activity", date, ...(slot ? { slot } : {}) }],
+        events: [removeOtherActivityEvent(date, slot)],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -633,7 +635,7 @@ export default function WeekPage() {
     if (!weekPlan) return;
     try {
       const result = await applyEvents({
-        events: [{ event_type: "undo_outdoor", date }],
+        events: [undoOutdoorEvent(date)],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -647,7 +649,7 @@ export default function WeekPage() {
     if (!weekPlan) return;
     try {
       const result = await applyEvents({
-        events: [{ event_type: "remove_outdoor", date }],
+        events: [removeOutdoorEvent(date)],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);

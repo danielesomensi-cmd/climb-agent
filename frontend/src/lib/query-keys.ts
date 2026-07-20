@@ -20,6 +20,13 @@ export const queryKeys = {
 
   // Catalog (immutable)
   catalogSessions: ["catalog", "sessions"] as const,
+
+  // A245 G-3 (F36): the resolved session was keyed with a literal array in the
+  // page and cached for 5 minutes as "deterministic per session_id". It is not:
+  // resolution reads the working_loads that progression rewrites on feedback,
+  // so a stale entry shows PRE-progression loads on the training screen.
+  sessionResolve: (sessionId: string) => ["session", "resolve", sessionId] as const,
+  sessionResolveAll: ["session", "resolve"] as const,
   catalogExercises: ["catalog", "exercises"] as const,
 
   // Outdoor

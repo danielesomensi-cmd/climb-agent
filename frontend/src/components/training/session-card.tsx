@@ -38,6 +38,7 @@ import { ExerciseCard } from "@/components/training/exercise-card";
 import { getExercises, addExerciseToSession, removeExerciseFromSession, resolveSession } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
+import { walkResolvedBlocks } from "@/lib/session-blocks";
 import { formatSessionName } from "@/lib/format";
 
 interface Gym {
@@ -206,30 +207,14 @@ function buildGuidedState(
   const blocks = (resolvedSession?.blocks ?? []) as Array<Record<string, unknown>>;
   if (instances.length === 0 && blocks.length === 0) return null;
 
-  const exercises: GuidedExercise[] = [];
-  const usedInstances = new Set<number>();
-
-  for (const block of blocks) {
-    const blockUid = (block.block_uid as string) ?? "";
-    const selExercises = (block.selected_exercises ?? []) as unknown[];
-
-    if (selExercises.length === 0 && block.instructions) {
-      exercises.push(buildInstructionStep(block));
-    } else {
-      for (let i = 0; i < instances.length; i++) {
-        if (!usedInstances.has(i) && (instances[i].block_uid as string) === blockUid) {
-          exercises.push(buildGuidedExercise(instances[i]));
-          usedInstances.add(i);
-        }
-      }
-    }
-  }
-
-  for (let i = 0; i < instances.length; i++) {
-    if (!usedInstances.has(i)) {
-      exercises.push(buildGuidedExercise(instances[i]));
-    }
-  }
+  // A245 G-7 (F20): shared walk — this loop existed verbatim ~800 lines below
+  // for the card layout, so the guided order and the displayed order could
+  // drift apart with any edit to either copy.
+  const exercises: GuidedExercise[] = walkResolvedBlocks(blocks, instances).map((item) =>
+    item.kind === "instruction"
+      ? buildInstructionStep(item.block)
+      : buildGuidedExercise(item.instance),
+  );
 
   if (exercises.length === 0) return null;
 
@@ -1018,31 +1003,17 @@ export function SessionCard({
               }
 
               // Block-based grouping for display
-              const items: Array<{ type: "instruction"; block: Record<string, unknown>; visualPos?: undefined; moduleRole?: undefined } | { type: "exercise"; inst: Record<string, unknown>; visualPos: number; moduleRole?: string }> = [];
-              const usedIdx = new Set<number>();
-              let exerciseCounter = 0;
-
-              for (const block of allBlocks) {
-                const blockUid = (block.block_uid as string) ?? "";
-                const selEx = (block.selected_exercises ?? []) as unknown[];
-                const blockModuleRole = (block.module_role ?? block.type) as string | undefined;
-
-                if (selEx.length === 0 && block.instructions) {
-                  items.push({ type: "instruction", block });
-                } else {
-                  for (let i = 0; i < allInstances.length; i++) {
-                    if (!usedIdx.has(i) && (allInstances[i].block_uid as string) === blockUid) {
-                      items.push({ type: "exercise", inst: allInstances[i], visualPos: exerciseCounter++, moduleRole: blockModuleRole });
-                      usedIdx.add(i);
-                    }
-                  }
-                }
-              }
-              for (let i = 0; i < allInstances.length; i++) {
-                if (!usedIdx.has(i)) {
-                  items.push({ type: "exercise", inst: allInstances[i], visualPos: exerciseCounter++ });
-                }
-              }
+              // A245 G-7 (F20): same walk as buildGuidedState — one copy now.
+              const items = walkResolvedBlocks(allBlocks, allInstances).map((item) =>
+                item.kind === "instruction"
+                  ? { type: "instruction" as const, block: item.block, visualPos: undefined, moduleRole: undefined }
+                  : {
+                      type: "exercise" as const,
+                      inst: item.instance,
+                      visualPos: item.exerciseIndex,
+                      moduleRole: item.moduleRole,
+                    },
+              );
 
               const canEditExercises = !isFinalized && !!weekPlan;
 

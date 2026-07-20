@@ -8,12 +8,13 @@
  */
 
 import type { Macrocycle, Phase } from "@/lib/types";
+import { parseISODateLocal } from "@/lib/dates";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 /** 1-based current macrocycle week, clamped to [1, total_weeks]. */
 export function computeCurrentWeek(macrocycle: Macrocycle): number {
-  const start = new Date(macrocycle.start_date);
+  const start = parseISODateLocal(macrocycle.start_date);
   const offsetDays = macrocycle.pause?.offset_days ?? 0;
   const diffMs = Date.now() - start.getTime() - offsetDays * 24 * 60 * 60 * 1000;
   const week = Math.floor(diffMs / WEEK_MS) + 1;
@@ -24,9 +25,9 @@ export function computeCurrentWeek(macrocycle: Macrocycle): number {
 export function isCycleEnded(macrocycle: Macrocycle): boolean {
   const offsetDays = macrocycle.pause?.offset_days ?? 0;
   const end = macrocycle.end_date
-    ? new Date(macrocycle.end_date)
+    ? parseISODateLocal(macrocycle.end_date)
     : new Date(
-        new Date(macrocycle.start_date).getTime() +
+        parseISODateLocal(macrocycle.start_date).getTime() +
           macrocycle.total_weeks * WEEK_MS +
           offsetDays * 24 * 60 * 60 * 1000,
       );

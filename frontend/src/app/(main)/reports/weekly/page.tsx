@@ -30,6 +30,7 @@ import type {
 } from "@/lib/types";
 
 import { getPhaseName } from "@/lib/phase-labels";
+import { parseISODateLocal, shiftISODate } from "@/lib/dates";
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   very_easy: "bg-emerald-400",
@@ -75,13 +76,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 function shiftWeek(dateStr: string, delta: number): string {
-  const d = new Date(dateStr);
-  d.setDate(d.getDate() + delta * 7);
-  return d.toISOString().slice(0, 10);
+  // A245 G-1 (F50): was `new Date(dateStr)` (UTC) + `toISOString()` (UTC) —
+  // two timezone bugs that cancelled out only east of Greenwich.
+  return shiftISODate(dateStr, delta * 7);
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
+  const d = parseISODateLocal(dateStr);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 

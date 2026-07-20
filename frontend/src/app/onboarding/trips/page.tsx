@@ -5,6 +5,7 @@ import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { parseISODateLocal } from "@/lib/dates";
 import {
   Select,
   SelectContent,
@@ -67,7 +68,7 @@ export default function TripsPage() {
       }
       // Prevent end_date before start_date
       if (field === "end_date" && updated.start_date && value <= updated.start_date) {
-        const d = new Date(updated.start_date);
+        const d = parseISODateLocal(updated.start_date);
         d.setDate(d.getDate() + 1);
         updated.end_date = d.toISOString().split("T")[0];
       }

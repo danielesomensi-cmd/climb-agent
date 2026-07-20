@@ -24,6 +24,7 @@ import { getDiscipline } from "@/lib/gradeUtils";
 import { getPhaseName } from "@/lib/phase-labels";
 import { computeCurrentWeek } from "@/lib/phase-progress";
 import type { Phase } from "@/lib/types";
+import { parseISODateLocal } from "@/lib/dates";
 
 /** Domain labels */
 const DOMAIN_LABELS: Record<string, string> = {
@@ -189,7 +190,7 @@ export default function PlanPage() {
                 <CardTitle className="text-base">Macrocycle</CardTitle>
                 <p className="text-sm text-muted-foreground">
                   {macrocycle.total_weeks} weeks starting from{" "}
-                  {new Date(macrocycle.start_date).toLocaleDateString("en-US", {
+                  {parseISODateLocal(macrocycle.start_date).toLocaleDateString("en-US", {
                     day: "numeric",
                     month: "long",
                     year: "numeric",

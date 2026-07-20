@@ -26,6 +26,7 @@ import type {
   BuilderExercise,
   WarmupCooldownBlock,
   Weather,
+  TestReminder,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -308,6 +309,20 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
     phase_id: string;
     week_plan: WeekPlan | null;
     past_week_unavailable?: boolean;
+    /**
+     * A245 G-4 (F52) — the periodic retest reminder.
+     *
+     * The backend emits this every ~6 weeks (`should_show_test_reminder`,
+     * planner_v2), and a whole endpoint exists to answer it
+     * (`POST /api/week/test-reminder-response`, with confirm / postpone /
+     * skip). It was absent from this type and read by NOTHING in the client, so
+     * the reminder has never reached a user: periodic recalibration — a pillar
+     * of the 4-3-2-1 methodology — silently never happens.
+     *
+     * Typed here so the payload stops being invisible. The card that shows it
+     * is new user-facing surface and is tracked as A-TEST-REMINDER-UI.
+     */
+    test_reminder?: TestReminder;
   }>(`/api/week/${weekNum}${qs ? `?${qs}` : ""}`);
 };
 

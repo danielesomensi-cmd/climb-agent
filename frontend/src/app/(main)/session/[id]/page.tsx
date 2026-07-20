@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { ResolvedSession } from "@/lib/types";
 import { formatSessionName } from "@/lib/format";
+import { queryKeys } from "@/lib/query-keys";
 
 
 /** Format rest seconds into a readable string */
@@ -35,7 +36,7 @@ function SessionPageInner() {
   // A187: cache resolveSession by sessionId — deterministic per session_id,
   // safe to cache for the session lifetime so back/forward navigation is instant.
   const sessionQuery = useQuery({
-    queryKey: ["session", "resolve", sessionId],
+    queryKey: queryKeys.sessionResolve(sessionId),
     queryFn: () => resolveSession(sessionId),
     enabled: authReady && !!sessionId,
     staleTime: 5 * 60_000,
@@ -84,7 +85,9 @@ function SessionPageInner() {
         {/* Resolved session: blocks with exercises */}
         {!loading && !error && resolved && (
           <>
-            {resolved.blocks.map((block, blockIdx) => (
+            {/* A245 G-6 (F23): reads the real nested shape. Was
+                `resolved.blocks`, which does not exist on the payload. */}
+            {resolved.resolved_session.blocks.map((block, blockIdx) => (
               <div key={blockIdx} className="space-y-3">
                 {/* Block header */}
                 <div className="flex items-center gap-2">
@@ -92,20 +95,23 @@ function SessionPageInner() {
                     Block {blockIdx + 1}
                   </Badge>
                   <span className="text-sm font-medium">
-                    {block.block_name}
+                    {block.block_id ?? block.block_uid}
                   </span>
                 </div>
 
                 {/* Exercises in block */}
                 <div className="space-y-2 pl-2 border-l-2 border-border">
-                  {block.exercises.map((exercise, exIdx) => {
+                  {block.selected_exercises.map((exercise, exIdx) => {
                     const rawMatch = rawInstances.find(
                       (r) => (r.exercise_id as string) === exercise.exercise_id,
                     );
                     return (
                       <ExerciseCard
                         key={`${blockIdx}-${exIdx}`}
-                        exercise={exercise}
+                        // A245 G-6 (F23): the real payload does not guarantee a
+                        // display name — fall back to the id rather than
+                        // widening the type back into a comfortable lie.
+                        exercise={{ ...exercise, name: exercise.name ?? exercise.exercise_id }}
                         rawExercise={rawMatch}
                       />
                     );
@@ -113,7 +119,7 @@ function SessionPageInner() {
                 </div>
 
                 {/* Separator between blocks (except last) */}
-                {blockIdx < resolved.blocks.length - 1 && (
+                {blockIdx < resolved.resolved_session.blocks.length - 1 && (
                   <Separator className="my-2" />
                 )}
               </div>
