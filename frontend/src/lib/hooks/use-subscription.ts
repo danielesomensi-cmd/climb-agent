@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getSubscriptionStatus, type SubscriptionStatus } from "@/lib/api";
+import { ApiError, getSubscriptionStatus, type SubscriptionStatus } from "@/lib/api";
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -47,6 +47,24 @@ function mapResponse(data: SubscriptionStatus): UseSubscriptionResult {
   };
 }
 
+/**
+ * A245 C-1 (F8) — the paywall rule, extracted so it can be tested directly.
+ *
+ * @param err          whatever `getSubscriptionStatus()` rejected with
+ * @param everAnswered has the server ever given us an authoritative answer?
+ * @returns true to fall back to _DENY (B202 fail-closed)
+ *
+ * A 401/402/403 is the server actually ruling on entitlement → deny.
+ * Anything else is transport (offline, timeout, 5xx). Before the first
+ * successful answer we cannot tell entitled from unknown, so deny; afterwards
+ * the last known state is better evidence than a dropped connection.
+ */
+export function shouldDenyOnError(err: unknown, everAnswered: boolean): boolean {
+  const status = err instanceof ApiError ? err.status : null;
+  if (status === 401 || status === 402 || status === 403) return true;
+  return !everAnswered;
+}
+
 export function useSubscription(): UseSubscriptionResult {
   const [result, setResult] = useState<UseSubscriptionResult>({
     ..._DENY,
@@ -54,13 +72,35 @@ export function useSubscription(): UseSubscriptionResult {
   });
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  /**
+   * A245 C-1 (F8) — have we ever had an authoritative answer from the server?
+   *
+   * Until we have, a failure means "unknown" and B202 fail-closed applies.
+   * Once we have, a failure means "the network is down", which is NOT evidence
+   * that the subscription lapsed.
+   */
+  const everAnswered = useRef(false);
+
   const fetch = useCallback(async () => {
     try {
       const data = await getSubscriptionStatus();
+      everAnswered.current = true;
       setResult(mapResponse(data));
-    } catch {
-      // On error (e.g. network), deny access — fail-closed (B202)
-      setResult(_DENY);
+    } catch (err) {
+      // A245 C-1 (F8) — this used to be an unconditional _DENY, so ANY fetch
+      // error (plain offline included) flipped canInteract to false and /today
+      // bounced the user to /subscribe on mark-done. A paying climber in a gym
+      // with no signal was told to go buy a subscription: the worst possible
+      // message in the worst possible place.
+      //
+      // A 401/402/403 is the server actually answering about entitlement —
+      // still fail-closed. Anything else (network, timeout, 5xx) is transport,
+      // so keep the last known state if we ever had one.
+      if (shouldDenyOnError(err, everAnswered.current)) {
+        setResult(_DENY);
+        return;
+      }
+      setResult((prev) => ({ ...prev, loading: false }));
     }
   }, []);
 

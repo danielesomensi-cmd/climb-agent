@@ -30,15 +30,38 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+/** Status used when we have a Clerk session but could not mint a token. */
+export const AUTH_UNAVAILABLE_STATUS = 499;
+
+/**
+ * A245 C-2 (F9, client half) — this used to swallow every Clerk failure and
+ * send the request WITHOUT an Authorization header.
+ *
+ * The backend half is already closed: since B285, `_auth_enforced()` makes an
+ * unauthenticated request 401 instead of serving EMPTY_TEMPLATE with HTTP 200.
+ * But the client should not fire a request it knows is unauthenticated in the
+ * first place — doing so turned "Clerk could not refresh the token right now"
+ * into a round trip whose only possible outcome is a 401, which then triggers
+ * the sign-in redirect (F51) and drops the user out of the app.
+ *
+ * Distinction that matters: NO session means genuinely signed out (let it
+ * through, the backend answers 401 authoritatively). A session that exists but
+ * cannot produce a token is a transient local failure — raise, do not send.
+ */
 async function _getAuthHeaders(): Promise<Record<string, string>> {
   if (typeof window === "undefined") return {};
+  const session = window.Clerk?.session;
+  if (!session) return {};
   try {
-    const token = await window.Clerk?.session?.getToken();
+    const token = await session.getToken();
     if (token) return { Authorization: `Bearer ${token}` };
   } catch {
-    // Clerk not loaded yet or session expired — fall through
+    // fall through to the throw below
   }
-  return {};
+  throw new ApiError(
+    AUTH_UNAVAILABLE_STATUS,
+    "Could not verify your session. Check your connection and try again.",
+  );
 }
 
 /**
@@ -132,8 +155,20 @@ async function _send<T>(
     return _send<T>(path, options, retryHeaders, signal, true);
   }
   if (res.status === 401 && typeof window !== "undefined") {
+    // A245 C-3 (F51) — this was an unconditional `window.location.href =
+    // "/sign-in"`: a full document load that throws away every bit of
+    // in-memory state, and offline cannot even complete because /sign-in is
+    // not in the precache. The user was left on a dead white page.
+    //
+    // Offline, a 401 is not trustworthy evidence that the session ended, so
+    // surface it as an error the caller can render and leave the user where
+    // they are. Online, still send them to sign in — but via the router-free
+    // soft path so the SW can serve it.
+    if (navigator.onLine === false) {
+      throw new ApiError(401, "Session could not be verified while offline.");
+    }
     window.location.href = "/sign-in";
-    throw new Error("Session expired");
+    throw new ApiError(401, "Session expired");
   }
   if (!res.ok) {
     const body = await res.text();

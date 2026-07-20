@@ -65,13 +65,21 @@ export default function GuidedSessionPage() {
   const sessionId = params.sessionId as string;
   const qc = useQueryClient();
   const { canInteract, loading: subLoading } = useSubscription();
+  // A245 C-1 (F8) — true once saved state has been loaded, i.e. this really is
+  // a session in progress and not a cold hit on the URL.
+  const [sessionStarted, setSessionStarted] = useState(false);
 
-  // Gate: redirect expired users to subscribe page
+  // Gate: redirect expired users to subscribe page.
+  //
+  // A245 C-1 (F8) — but NEVER once a session is under way. The gate belongs at
+  // the entry point (/today's "Start session"); yanking someone to /subscribe
+  // mid-workout because the gym wifi flapped loses the session they are in the
+  // middle of. `sessionStarted` is set as soon as saved state is loaded.
   useEffect(() => {
-    if (!subLoading && !canInteract) {
+    if (!subLoading && !canInteract && !sessionStarted) {
       router.replace("/subscribe");
     }
-  }, [canInteract, subLoading, router]);
+  }, [canInteract, subLoading, sessionStarted, router]);
 
   const [state, setState] = useState<GuidedSessionState | null>(null);
   const [showSummary, setShowSummary] = useState(false);
@@ -89,6 +97,7 @@ export default function GuidedSessionPage() {
     const saved = loadState(date, sessionId);
     if (saved) {
       setState(saved);
+      setSessionStarted(true);
       // Show resume banner if there's actual progress (not a fresh session)
       const hasProgress =
         saved.exercises.some((ex) => ex.status !== "pending") ||
