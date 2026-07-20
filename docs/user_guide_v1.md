@@ -496,7 +496,7 @@ Two ways to make it more personal:
 - "What did I do this week?"
 - "I'm climbing outdoors today and it's hot — how should I adapt?"
 - "I'm traveling without equipment — what can I do?"
-- **"I'm at a regular gym today — build me a session."** The Coach composes a structured strength/antagonist session (warm-up → main blocks → optional core/prehab) from real catalog exercises, adapted to your current phase and the rest of your week, with loads given as effort (RPE), never kilograms. Ask it for an alternative when you don't feel like the planned session and it'll weigh what you want against what the plan needs. It's a suggestion in chat — to keep it, rebuild it in the Session Builder (the Coach can't save or log it for you).
+- **"I'm at a regular gym today — build me a session."** The Coach composes a structured strength/antagonist session (warm-up → main blocks → optional core/prehab) from real catalog exercises, adapted to your current phase and the rest of your week, with loads shown as effort for the phase plus your last-logged weight when you've done the move before (never an invented number). The composed session appears as a **card in the chat with one button, "Add to today & run"** — tap it and the Coach adds it to today as an off-plan session and opens the guided player so you can run and log it. It never touches your planned training. (The AI only reads your request and picks the shape; a deterministic engine chooses the exercises and loads.) Ask it for an alternative when you don't feel like the planned session and it'll weigh what you want against what the plan needs.
 - Training-science questions (grounded in the same literature the engine is built on)
 
 **What it will NOT do:**

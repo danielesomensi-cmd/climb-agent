@@ -7,16 +7,92 @@
 // with a "Coach is thinking…" indicator.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import {
   ApiError,
+  applyEvents,
+  coachAdhocSession,
   coachChat,
+  createCustomSession,
   getCoachHistory,
   getCoachSuggestions,
+  getWeek,
+  type AdhocSessionPreview,
   type CoachMessage,
 } from "@/lib/api";
 
 const PAGE_SIZE = 50;
+
+/** Local (not UTC) YYYY-MM-DD — matches how the app dates "today" elsewhere. */
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Cheap gate: only route plausibly-adhoc turns to the compose endpoint (the
+ * backend extraction is the authority and returns {adhoc:false} to fall back). */
+const ADHOC_RE =
+  /\b(build|compose|make|give)\b.*\b(session|workout|routine)\b|\b(session|workout|routine)\b.*\b(build|compose|make|give)\b|componi|costruisci|allenamento|at the (regular |commercial )?gym|in palestra|sono in palestra|quick (core|session|workout)/i;
+
+function looksLikeAdhoc(text: string): boolean {
+  return ADHOC_RE.test(text);
+}
+
+function exerciseLine(ex: AdhocSessionPreview["exercises"][number]): string {
+  const parts: string[] = [];
+  const sets = ex.sets ?? 1;
+  if (ex.reps != null && ex.reps > 0) parts.push(`${sets}×${ex.reps}`);
+  else if (ex.work_seconds != null && ex.work_seconds > 0) parts.push(`${sets}×${ex.work_seconds}s`);
+  else parts.push(`${sets} sets`);
+  if (ex.load_kg > 0) parts.push(`${ex.load_kg} kg`);
+  return parts.join(" · ");
+}
+
+function AdhocSessionCard({
+  session,
+  onAddAndRun,
+  busy,
+}: {
+  session: AdhocSessionPreview;
+  onAddAndRun: (s: AdhocSessionPreview) => void;
+  busy: boolean;
+}) {
+  return (
+    <div className="max-w-[92%] space-y-3 rounded-2xl rounded-bl-md border border-primary/30 bg-muted/50 px-4 py-3 text-sm">
+      <div>
+        <p className="font-semibold">{session.name}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          ~{session.estimated_duration_minutes} min · load {session.estimated_load_score}
+        </p>
+      </div>
+      {session.effort_band && (
+        <p className="text-[11px] text-muted-foreground">
+          <span className="font-medium text-foreground/80">This phase:</span> {session.effort_band}
+        </p>
+      )}
+      <ul className="space-y-1.5">
+        {session.exercises.map((ex, i) => (
+          <li key={`${ex.exercise_id}-${i}`} className="flex items-baseline justify-between gap-3">
+            <span className="min-w-0 truncate">{ex.name}</span>
+            <span className="shrink-0 tabular-nums text-xs text-muted-foreground">{exerciseLine(ex)}</span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={() => onAddAndRun(session)}
+        disabled={busy}
+        className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-40"
+      >
+        {busy ? "Adding…" : "Add to today & run"}
+      </button>
+      <p className="text-[10px] leading-tight text-muted-foreground">
+        Adds an off-plan session to today — never changes your planned training.
+      </p>
+    </div>
+  );
+}
 
 function friendlyError(e: unknown): string {
   if (e instanceof ApiError) {
@@ -29,8 +105,24 @@ function friendlyError(e: unknown): string {
   return "Something went wrong — try again.";
 }
 
-function MessageBubble({ msg }: { msg: CoachMessage }) {
+function MessageBubble({
+  msg,
+  onAddAndRun,
+  busy,
+}: {
+  msg: CoachMessage;
+  onAddAndRun: (s: AdhocSessionPreview) => void;
+  busy: boolean;
+}) {
   const isUser = msg.role === "user";
+  // A243 — an assistant turn carrying a composed session renders as a card.
+  if (msg.adhocSession) {
+    return (
+      <div className="flex justify-start">
+        <AdhocSessionCard session={msg.adhocSession} onAddAndRun={onAddAndRun} busy={busy} />
+      </div>
+    );
+  }
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
@@ -68,6 +160,7 @@ function ThinkingIndicator() {
 }
 
 export default function CoachPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<CoachMessage[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -143,6 +236,18 @@ export default function CoachPage() {
       setMessages((prev) => [...prev, { role: "user", content: text }]);
       setSending(true);
       try {
+        // A243: route plausibly-adhoc turns to the deterministic composer. The
+        // backend is the authority — {adhoc:false} means fall back to chat.
+        if (looksLikeAdhoc(text)) {
+          const res = await coachAdhocSession(text);
+          if (res.adhoc && res.session) {
+            setMessages((prev) => [
+              ...prev,
+              { role: "assistant", content: res.summary ?? "", adhocSession: res.session },
+            ]);
+            return;
+          }
+        }
         const { reply } = await coachChat(text, coordsRef.current);
         setMessages((prev) => [
           ...prev,
@@ -159,6 +264,44 @@ export default function CoachPage() {
   );
 
   const send = useCallback(() => sendText(input), [input, sendText]);
+
+  // A243: persist-on-accept + insert into today + open the Phase-1 player.
+  const [addingAdhoc, setAddingAdhoc] = useState(false);
+  const handleAddAndRun = useCallback(
+    async (session: AdhocSessionPreview) => {
+      if (addingAdhoc) return;
+      setAddingAdhoc(true);
+      setError(null);
+      try {
+        const created = await createCustomSession({
+          name: session.name,
+          tags: session.tags,
+          exercises: session.exercises,
+        });
+        const today = localToday();
+        const week = await getWeek(0);
+        if (!week.week_plan) {
+          throw new Error("No current week plan — open This Week once, then retry.");
+        }
+        await applyEvents({
+          events: [
+            {
+              event_type: "add_custom_session",
+              custom_session_id: created.id,
+              target_date: today,
+              slot: "evening",
+            },
+          ],
+          week_plan: week.week_plan,
+        });
+        router.push(`/session-builder/${created.id}/play?date=${encodeURIComponent(today)}`);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : friendlyError(e));
+        setAddingAdhoc(false);
+      }
+    },
+    [addingAdhoc, router]
+  );
 
   return (
     <div className="flex min-h-[calc(100vh-5rem)] flex-col">
@@ -197,7 +340,12 @@ export default function CoachPage() {
           )}
 
           {messages.map((m, i) => (
-            <MessageBubble key={m.id ?? `${m.created_at ?? "local"}-${i}`} msg={m} />
+            <MessageBubble
+              key={m.id ?? `${m.created_at ?? "local"}-${i}`}
+              msg={m}
+              onAddAndRun={handleAddAndRun}
+              busy={addingAdhoc}
+            />
           ))}
 
           {sending && <ThinkingIndicator />}
