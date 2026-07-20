@@ -20,6 +20,7 @@ import { getPhaseName } from "@/lib/phase-labels";
 import { getDiscipline } from "@/lib/gradeUtils";
 import { PHASE_RATIONALES } from "@/lib/phase-rationales";
 import type { Macrocycle, UserState } from "@/lib/types";
+import { parseISODateLocal } from "@/lib/dates";
 
 interface PhaseCelebrationProps {
   state: UserState | undefined;
@@ -54,7 +55,7 @@ export function PhaseCelebration({ state }: PhaseCelebrationProps) {
     checkedRef.current = true;
 
     if (macrocycle.pause?.active_since) return; // paused → not a celebration moment
-    if (new Date(macrocycle.start_date).getTime() > Date.now()) return;
+    if (parseISODateLocal(macrocycle.start_date).getTime() > Date.now()) return;
     if (isCycleEnded(macrocycle)) return;
 
     const week = computeCurrentWeek(macrocycle);

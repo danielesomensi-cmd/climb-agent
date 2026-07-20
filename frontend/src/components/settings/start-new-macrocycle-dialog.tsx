@@ -38,6 +38,7 @@ import {
 } from "@/components/shared/deadline-weeks-selector";
 import { ApiError, startNewMacrocycle } from "@/lib/api";
 import type { UserState } from "@/lib/types";
+import { parseISODateLocal } from "@/lib/dates";
 
 const LEAD_GRADES = [
   "5a", "5a+", "5b", "5b+", "5c", "5c+",
@@ -98,7 +99,7 @@ function daysBetween(a: string, b: string): number {
 
 function formatDateLong(iso: string): string {
   if (!iso) return "—";
-  const d = new Date(iso);
+  const d = parseISODateLocal(iso);
   return d.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
 }
 
