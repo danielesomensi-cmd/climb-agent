@@ -13,12 +13,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { hasLoadInput, type FeedbackDialogExercise } from "@/lib/feedback-items";
 
 interface FeedbackDialogProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (feedback: Record<string, string>, durationMinutes: number) => void;
-  exercises: Array<{ exercise_id: string; name: string }>;
+  /**
+   * B288: `loads` (kg per exercise_id) is the third argument. Without it the
+   * engine's load memory never updates for sessions completed from here — see
+   * lib/feedback-items.ts.
+   */
+  onSubmit: (
+    feedback: Record<string, string>,
+    durationMinutes: number,
+    loads: Record<string, number>,
+  ) => void;
+  exercises: FeedbackDialogExercise[];
   /** Session slot — used to pre-fill duration estimate */
   slot?: string;
 }
@@ -50,6 +60,16 @@ export function FeedbackDialog({
   const [feedback, setFeedback] = useState<Record<string, string>>({});
   const estimatedMin = slot ? SLOT_ESTIMATES[slot] ?? 60 : 60;
   const [durationStr, setDurationStr] = useState(String(estimatedMin));
+  // B288: kg per exercise, pre-filled with the suggested load. Same contract as
+  // the guided player — submitting untouched confirms the proposed load, which
+  // is what keeps the load memory alive instead of decaying to the fallback.
+  const [loadStr, setLoadStr] = useState<Record<string, string>>({});
+
+  function loadValue(ex: FeedbackDialogExercise): string {
+    const typed = loadStr[ex.exercise_id];
+    if (typed != null) return typed;
+    return ex.suggestedExternalLoadKg != null ? String(ex.suggestedExternalLoadKg) : "";
+  }
 
   function handleValueChange(exerciseId: string, value: string) {
     setFeedback((prev) => ({ ...prev, [exerciseId]: value }));
@@ -61,14 +81,22 @@ export function FeedbackDialog({
     for (const ex of exercises) {
       complete[ex.exercise_id] = feedback[ex.exercise_id] ?? "ok";
     }
+    const loads: Record<string, number> = {};
+    for (const ex of exercises) {
+      if (!hasLoadInput(ex)) continue;
+      const raw = loadValue(ex);
+      if (raw === "") continue;
+      const parsedLoad = parseFloat(raw);
+      if (!isNaN(parsedLoad) && parsedLoad >= 0) loads[ex.exercise_id] = parsedLoad;
+    }
     const parsed = parseInt(durationStr, 10);
     const userEntered = !isNaN(parsed) && parsed > 0;
     const dur = userEntered ? parsed : estimatedMin;
     // B217: duration_source dropped — was a Potemkin field (never persisted
-    // server-side, read only with hard-coded default). Caller signature
-    // simplified to (feedback, durationMinutes).
-    onSubmit(complete, dur);
+    // server-side, read only with hard-coded default).
+    onSubmit(complete, dur, loads);
     setFeedback({});
+    setLoadStr({});
     setDurationStr(String(estimatedMin));
   }
 
@@ -76,6 +104,7 @@ export function FeedbackDialog({
     if (!nextOpen) {
       onClose();
       setFeedback({});
+      setLoadStr({});
       setDurationStr(String(estimatedMin));
     }
   }
@@ -119,6 +148,35 @@ export function FeedbackDialog({
                   </div>
                 ))}
               </RadioGroup>
+
+              {/* B288: load actually used — the engine's only progression input */}
+              {hasLoadInput(exercise) && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Label
+                    htmlFor={`${exercise.exercise_id}-load`}
+                    className="text-xs text-muted-foreground"
+                  >
+                    Load used
+                  </Label>
+                  <Input
+                    id={`${exercise.exercise_id}-load`}
+                    type="number"
+                    inputMode="decimal"
+                    step="0.5"
+                    min={0}
+                    value={loadValue(exercise)}
+                    onChange={(e) =>
+                      setLoadStr((prev) => ({
+                        ...prev,
+                        [exercise.exercise_id]: e.target.value,
+                      }))
+                    }
+                    className="w-24 h-8"
+                    placeholder="kg"
+                  />
+                  <span className="text-xs text-muted-foreground">kg</span>
+                </div>
+              )}
             </div>
           ))}
 

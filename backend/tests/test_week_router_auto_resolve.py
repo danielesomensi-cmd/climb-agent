@@ -129,17 +129,21 @@ def test_auto_resolve_honors_working_loads_via_target_date_injection():
     )
 
 
-def test_auto_resolve_stale_entry_falls_back():
-    """Same path with a stale entry (>60d) must reach FIXED_KG fallback."""
+def test_auto_resolve_months_old_entry_survives():
+    """B288: months-old external_load memory survives through the auto-resolve path.
+
+    Was asserting the opposite (>60d → FIXED_KG). See
+    test_resolve_session_freshness.test_months_old_working_loads_survives for
+    the rationale; this pins the same behaviour through week.py's _auto_resolve,
+    the path that actually builds what /today renders.
+    """
     ex_id = _discover_loadable_ex()
-    # updated_at >60 days before TARGET_DATE
     state = _build_state(wl_ex_id=ex_id, updated_at="2025-12-01")
     week_plan = _build_week_plan()
 
     _auto_resolve(week_plan, state, user_id="test-uuid", phase="power_endurance")
 
     load = _find_load(week_plan, ex_id)
-    fallback = EXTERNAL_LOAD_FALLBACK_FIXED_KG[ex_id]
-    assert load == fallback, (
-        f"Stale entry must hit FIXED_KG[{fallback}], got {load}"
+    assert load == WL_NEXT_KG, (
+        f"Months-old entry must surface working_loads ({WL_NEXT_KG}), got {load}"
     )

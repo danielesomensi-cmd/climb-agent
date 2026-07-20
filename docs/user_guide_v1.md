@@ -174,6 +174,23 @@ After completing a session, you're asked for feedback on each exercise:
 
 **Be honest.** The system only works if your feedback is accurate. There's no benefit to saying "OK" when it was "Very Hard" — you'll just get a harder session next time that's too much.
 
+### The load you actually used
+
+For every exercise with a weight, the feedback form shows a **kg field pre-filled
+with the load the app proposed**. Change it whenever you used something else —
+that number, not the proposed one, is what the app remembers for next time.
+
+This works the same way whether you run the session in the guided player or mark
+it done from **Today** / **Week**: both ask for the load, and leaving the
+pre-filled value confirms it.
+
+Two things worth knowing:
+
+- Your remembered load does **not** expire. An exercise you only train every few
+  months comes back with the weight you last used, not with the beginner default.
+- A remembered load only moves when your difficulty feedback says so ("Easy"
+  raises it, "Hard" lowers it). "OK" keeps it exactly where you put it.
+
 ---
 
 ## 6. Test Sessions

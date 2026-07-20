@@ -30,6 +30,11 @@ import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { flush as flushOutbox } from "@/lib/outbox";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  buildDialogFeedbackItems,
+  buildGuidedFeedbackItems,
+  extractFeedbackExercises,
+} from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
@@ -43,7 +48,7 @@ import {
 } from "@/components/ui/dialog";
 import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressSession } from "@/lib/guided-session-utils";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
-import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession } from "@/lib/types";
+import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession, GuidedExercise } from "@/lib/types";
 import { hasOtherActivity } from "@/lib/other-activity";
 
 /** Full weekday names */
@@ -275,16 +280,14 @@ function TodayContent() {
 
         // Retry pending feedback
         if (saved.submitStatus === "feedback_pending" && saved.exercises) {
-          const feedbackItems = saved.exercises.map((ex: Record<string, unknown>) => {
-            const item: Record<string, unknown> = {
-              exercise_id: ex.exerciseId,
-              feedback_label: ex.feedbackLabel,
-              completed: ex.status === "done",
-            };
-            if (ex.usedLoadKg != null) item.used_external_load_kg = ex.usedLoadKg;
-            if (ex.usedGrade) item.used_grade = ex.usedGrade;
-            return item;
-          });
+          // B288: this replay used to rebuild items by hand and kept only
+          // usedLoadKg + usedGrade — a failed POST silently degraded into a
+          // lossy one (total load, per-hand `hand` split, sets/reps, surface,
+          // notes and test measurements all dropped) and then deleted the
+          // richer local copy. Same builder as the guided player now.
+          const feedbackItems = buildGuidedFeedbackItems(
+            saved.exercises as unknown as GuidedExercise[],
+          );
           postFeedback({
             log_entry: {
               date: saved.date ?? "",
@@ -912,15 +915,20 @@ function TodayContent() {
   }
 
   /** Submit session feedback (B127: always includes duration) */
-  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes: number) {
+  async function handleFeedbackSubmit(
+    feedback: Record<string, string>,
+    durationMinutes: number,
+    loads: Record<string, number>,
+  ) {
     if (!feedbackSessionId) return;
     try {
-      const feedbackItems = Object.entries(feedback).map(
-        ([exercise_id, feedback_label]) => ({
-          exercise_id,
-          feedback_label,
-          completed: true,
-        })
+      // B288: was {exercise_id, feedback_label, completed} only — the used
+      // load never reached the engine, so working_loads stayed frozen and the
+      // suggestion decayed back to the cold-start fallback forever.
+      const feedbackItems = buildDialogFeedbackItems(
+        feedbackExercises,
+        feedback,
+        loads,
       );
       const body = {
         log_entry: {
@@ -956,24 +964,9 @@ function TodayContent() {
 
   const feedbackSlot = feedbackSession?.slot ?? "";
 
-  const feedbackExercises: Array<{ exercise_id: string; name: string }> =
-    (() => {
-      if (!feedbackSession?.resolved) return [];
-      const resolved = feedbackSession.resolved as Record<string, unknown>;
-      const resolvedSession = resolved.resolved_session as
-        | Record<string, unknown>
-        | undefined;
-      const instances = (resolvedSession?.exercise_instances ?? []) as Array<
-        Record<string, unknown>
-      >;
-      return instances.map((ex) => ({
-        exercise_id: (ex.exercise_id as string) ?? "",
-        name:
-          (ex.name as string) ??
-          (ex.exercise_id as string)?.replace(/_/g, " ") ??
-          "",
-      }));
-    })();
+  const feedbackExercises = extractFeedbackExercises(
+    feedbackSession,
+  );
 
   const title = isViewingToday ? "Today" : formatDateSubtitle(targetDate);
   const subtitle = isViewingToday

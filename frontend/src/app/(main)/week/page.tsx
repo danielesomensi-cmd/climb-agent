@@ -23,6 +23,7 @@ import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
+import { buildDialogFeedbackItems, extractFeedbackExercises } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
@@ -461,15 +462,20 @@ export default function WeekPage() {
   }
 
   /** Submit session feedback (B127: always includes duration) */
-  async function handleFeedbackSubmit(feedback: Record<string, string>, durationMinutes: number) {
+  async function handleFeedbackSubmit(
+    feedback: Record<string, string>,
+    durationMinutes: number,
+    loads: Record<string, number>,
+  ) {
     if (!feedbackSessionId || !feedbackDate) return;
     try {
-      const feedbackItems = Object.entries(feedback).map(
-        ([exercise_id, feedback_label]) => ({
-          exercise_id,
-          feedback_label,
-          completed: true,
-        })
+      // B288: was {exercise_id, feedback_label, completed} only — the used
+      // load never reached the engine, so working_loads stayed frozen and the
+      // suggestion decayed back to the cold-start fallback forever.
+      const feedbackItems = buildDialogFeedbackItems(
+        feedbackExercises,
+        feedback,
+        loads,
       );
       const body = {
         log_entry: {
@@ -680,24 +686,9 @@ export default function WeekPage() {
   const feedbackSessionObj = feedbackDay?.sessions.find((s) => s.session_id === feedbackSessionId);
   const feedbackSlot = feedbackSessionObj?.slot ?? "";
 
-  const feedbackExercises: Array<{ exercise_id: string; name: string }> =
-    (() => {
-      if (!feedbackSessionObj?.resolved) return [];
-      const resolved = feedbackSessionObj.resolved as Record<string, unknown>;
-      const resolvedSession = resolved.resolved_session as
-        | Record<string, unknown>
-        | undefined;
-      const instances = (resolvedSession?.exercise_instances ?? []) as Array<
-        Record<string, unknown>
-      >;
-      return instances.map((ex) => ({
-        exercise_id: (ex.exercise_id as string) ?? "",
-        name:
-          (ex.name as string) ??
-          (ex.exercise_id as string)?.replace(/_/g, " ") ??
-          "",
-      }));
-    })();
+  const feedbackExercises = extractFeedbackExercises(
+    feedbackSessionObj,
+  );
 
   return (
     <>
