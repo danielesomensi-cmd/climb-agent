@@ -228,3 +228,96 @@ class TestCustomSessionEnrichment:
         assert "cues" in ex
         # original objects untouched (read-path only)
         assert "cues" not in legacy[0]["exercises"][0]
+
+
+# ── B284: named-gym equipment + secondary-focus block ───────────────────
+
+
+def _multi_gym_state() -> dict:
+    """Daniele's real shape: bouldering gym + routes gym + weights gym."""
+    return {
+        "equipment": {
+            "home": ["hangboard", "pullup_bar", "dumbbell", "band", "resistance_band"],
+            "gyms": [
+                {"gym_id": "g_bkl", "name": "Bkl", "equipment": ["hangboard", "spraywall", "gym_boulder", "campus_board", "pullup_bar", "dumbbell", "rings"]},
+                {"gym_id": "g_work", "name": "Work", "equipment": ["barbell", "cable_machine", "bench", "dumbbell", "pullup_bar", "weight", "rings"]},
+            ],
+        },
+        "macrocycle": {"start_date": "2026-07-06", "phases": [{"phase_id": "performance", "duration_weeks": 3}]},
+        "recent_sessions": [],
+    }
+
+
+class TestNamedGymAndSecondaryFocus:
+    def test_named_gym_restricts_equipment(self):
+        """'al Bkl' must never yield exercises needing the OTHER gym's bench/
+        cable — the field failure was the union of all gyms."""
+        from backend.engine.body_part_picker import resolve_equipment_mode
+
+        cat, st = _catalog(), _multi_gym_state()
+        s = compose_adhoc_session(
+            {"equipment_set": "gym", "gym_name": "bkl", "focus": "technique",
+             "secondary_focus": "core", "minutes": 80, "energy": "medium"},
+            st, cat, today="2026-07-20",
+        )
+        bkl_eq = set(resolve_equipment_mode("gym", st, gym_id="g_bkl"))
+        for e in s["exercises"]:
+            req = set(cat[e["exercise_id"]].get("equipment_required") or [])
+            assert req.issubset(bkl_eq), f"{e['exercise_id']} needs {sorted(req - bkl_eq)} — not at Bkl"
+        assert "Bkl" in s["name"]
+        assert s["intent"]["gym_name"] == "Bkl"
+
+    def test_gym_name_matching_is_fuzzy(self):
+        from backend.engine.adhoc_builder import match_gym
+
+        st = _multi_gym_state()
+        assert match_gym(st, "bkl")["gym_id"] == "g_bkl"
+        assert match_gym(st, "BKL")["gym_id"] == "g_bkl"
+        assert match_gym(st, "al bkl")["gym_id"] == "g_bkl"  # substring tolerant
+        assert match_gym(st, "boulderland") is None
+
+    def test_single_gym_user_defaults_to_that_gym(self):
+        from backend.engine.adhoc_builder import match_gym
+
+        st = _multi_gym_state()
+        st["equipment"]["gyms"] = [st["equipment"]["gyms"][0]]  # only Bkl
+        assert match_gym(st, None)["gym_id"] == "g_bkl"
+
+    def test_secondary_focus_gets_a_real_block(self):
+        """'core e tecnica' keeps >=2 core exercises (field failure: zero)."""
+        cat, st = _catalog(), _multi_gym_state()
+        s = compose_adhoc_session(
+            {"equipment_set": "gym", "gym_name": "bkl", "focus": "technique",
+             "secondary_focus": "core", "minutes": 80, "energy": "medium"},
+            st, cat, today="2026-07-20",
+        )
+        core_count = sum(
+            1 for e in s["exercises"]
+            if cat[e["exercise_id"]].get("category") == "core"
+            and "warmup" not in (cat[e["exercise_id"]].get("role") or [])
+        )
+        assert core_count >= 2, f"expected a real core block, got {core_count}"
+
+    def test_secondary_core_skips_duplicate_finisher(self):
+        """When core is the secondary block, no extra core finisher stacks on."""
+        cat, st = _catalog(), _multi_gym_state()
+        s = compose_adhoc_session(
+            {"equipment_set": "gym", "gym_name": "bkl", "focus": "technique",
+             "secondary_focus": "core", "minutes": 120, "energy": "medium"},
+            st, cat, today="2026-07-20",
+        )
+        # secondary block is capped at 3 → core (non-warmup) never exceeds 3
+        core_count = sum(
+            1 for e in s["exercises"]
+            if cat[e["exercise_id"]].get("category") == "core"
+            and "warmup" not in (cat[e["exercise_id"]].get("role") or [])
+        )
+        assert core_count <= 3
+
+    def test_b284_determinism(self):
+        cat, st = _catalog(), _multi_gym_state()
+        intent = {"equipment_set": "gym", "gym_name": "Bkl", "focus": "fingers",
+                  "secondary_focus": "core", "minutes": 60, "energy": "medium"}
+        a = compose_adhoc_session(intent, st, cat, today="2026-07-20")
+        b = compose_adhoc_session(intent, st, cat, today="2026-07-20")
+        assert [e["exercise_id"] for e in a["exercises"]] == [e["exercise_id"] for e in b["exercises"]]

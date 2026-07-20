@@ -27,10 +27,13 @@ _SYSTEM = (
     "slots from the latest message AND the recent conversation — earlier turns "
     "often carry the place, focus or minutes a short follow-up like 'retry' or "
     "'crearla tu?' refers to. A named climbing/bouldering gym counts as "
-    "equipment_set=gym. If the user asks for two focuses (e.g. core and "
-    "technique), pick the dominant one. Use sensible defaults only when truly "
-    "unstated (equipment_set=home, focus=general_strength, minutes=45, "
-    "energy=medium). Never guess exercises or loads — only these slots."
+    "equipment_set=gym AND its name goes in gym_name verbatim (e.g. 'al Bkl' → "
+    "gym_name='Bkl') — this is critical: it selects which equipment is "
+    "available. If the user asks for two focuses (e.g. 'core e tecnica'), put "
+    "the dominant one in focus and the other in secondary_focus. Use sensible "
+    "defaults only when truly unstated (equipment_set=home, "
+    "focus=general_strength, minutes=45, energy=medium). Never guess exercises "
+    "or loads — only these slots."
 )
 
 _TOOL: Dict[str, Any] = {
@@ -52,6 +55,15 @@ _TOOL: Dict[str, Any] = {
                 "type": "string",
                 "enum": list(ADHOC_FOCUS),
                 "description": "Primary training focus.",
+            },
+            "secondary_focus": {
+                "type": "string",
+                "enum": list(ADHOC_FOCUS),
+                "description": "Second focus when the user asks for two (e.g. 'core e tecnica' → focus=technique, secondary_focus=core). Omit otherwise.",
+            },
+            "gym_name": {
+                "type": "string",
+                "description": "The gym's name verbatim when the user names one (e.g. 'Bkl'). Selects which gym's equipment is available. Omit if no gym named.",
             },
             "minutes": {
                 "type": "integer",
@@ -106,6 +118,8 @@ def extract_intent(
     return {
         "equipment_set": slots.get("equipment_set"),
         "focus": slots.get("focus"),
+        "secondary_focus": slots.get("secondary_focus"),
+        "gym_name": slots.get("gym_name"),
         "minutes": slots.get("minutes"),
         "energy": slots.get("energy"),
     }
