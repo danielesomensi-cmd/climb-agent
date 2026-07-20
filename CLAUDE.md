@@ -391,6 +391,37 @@ Note: StripeObject in stripe-python 15.x does not expose `.get()` as a method �
 - Brief types: A = new feature, B = bugfix, C = catalog/content, D = audit/documentation (read-only). Each type (A/B/C/D) has its **own independent counter**; `next_brief.py` returns `max+1` **per type**. The same number can legitimately appear under different types (e.g. B161 and D161 coexist) — that is expected, not a collision. Never reuse a number **within the same type**. **Before assigning a new brief number, ALWAYS run `python scripts/next_brief.py` — it scans both ROADMAP_CURRENT.md and `git log --all` (commit messages can reference briefs never added to the roadmap, causing silent collisions). Do NOT guess the next number from the roadmap alone.**
 - Push at end of session: `git add -A && git commit -m 'description' && git push`
 
+## Session isolation (parallel Claude sessions)
+
+More than one Claude session can be open on this repo at the same time. They share **one** working tree, **one** index and **one** HEAD — so without isolation they corrupt each other's work.
+
+**Preflight — run before creating a branch or touching a file, every brief, no exceptions:**
+
+```bash
+git status --short          # must be empty
+git branch --show-current   # must be main
+```
+
+"I'm on main with a clean tree" is an **assumption until these two commands prove it**. This has already gone wrong twice (2026-07-19 D252/B279, 2026-07-20 B288/A245-D): the second time, `git checkout -b` ran while the tree sat on another session's dirty branch, so the new branch was born on top of foreign work and that session's `git add -A` packaged two files of the other brief into a commit with the wrong message, on the wrong branch.
+
+**If either check fails → work in a dedicated worktree. Do not "just be careful".**
+
+```bash
+python scripts/start_brief.py <BRIEF-ID> <slug>      # preflight + worktree + branch from origin/main
+```
+
+Or by hand: `git worktree add ../climb-agent-<brief> -b brief/<ID>-<slug> origin/main`
+
+Rules that hold in any shared tree:
+
+- **Never `git add -A` when the tree was not clean at brief start.** Stage explicit paths. `git add -A` is only safe when every dirty file is provably yours.
+- **Never `git checkout` / `git switch` in a shared tree**: it moves HEAD for the other session too.
+- A worktree needs a real `npm ci` in `frontend/` — symlinking `node_modules` fails the build (`Symlink node_modules is invalid, it points out of the filesystem root`).
+- `backend/data/user_state.json` is a tracked fixture that the pytest suite rewrites: check it did not sneak into the commit.
+- Cleanup after merge: `git worktree remove ../climb-agent-<brief>` then delete the branch.
+
+**Untangling (only with the other session stopped):** back up both sessions' uncommitted files to disk **before** any git command → `git branch salvage/<sha> <sha>` on the mixed commit → `git cherry-pick -n` + surgical removal of the other brief's files → `git commit -C <sha>` to preserve message and author → verify file-by-file against the backups before deleting anything.
+
 ## Branch workflow
 
 Regola obbligatoria per evitare di intrappolare gli utenti PWA su una build rotta:

@@ -453,7 +453,17 @@ def check_uncommitted_work() -> None:
         print("Commit your work before running sync_status.py:\n")
         for f in dirty:
             print(f"  - {f}")
-        print("\nRun: git add -A && git commit -m '<brief-id>: <description>'")
+        # D255: this used to print "Run: git add -A && git commit". When a second
+        # Claude session is working in the same tree, some of the files above are
+        # NOT yours, and `add -A` packages them into your commit under your brief
+        # id — the exact failure of 2026-07-20 (B288 vs A245 Phase D). Never
+        # advise a blanket stage from here.
+        print("\n⚠️  CHECK EVERY FILE ABOVE IS YOURS before staging.")
+        print("   Another Claude session may be working in this same tree")
+        print("   (see 'Session isolation' in CLAUDE.md). Files you do not")
+        print("   recognise belong to someone else's brief — do not commit them.")
+        print("\nStage explicit paths, never -A:")
+        print("   git commit -m '<brief-id>: <description>' -- <your-file> ...")
         sys.exit(1)
 
 
