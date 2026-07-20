@@ -244,3 +244,69 @@ def test_missing_index_returns_empty(monkeypatch, tmp_path):
     monkeypatch.setattr(routing, "INDEX_PATH", bogus)
     routing._clear_cache()
     assert route_query("hangboard") == []
+
+
+# ---------------------------------------------------------------------------
+# C259 — Italian keyword routing (D253 §2.2/§3.2)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "query, expected_top",
+    [
+        # The five acceptance queries from the C-KB-ROUTING-IT brief.
+        ("scheda per la trave", "02_finger_strength.md"),
+        ("settimana di scarico", "01_periodization.md"),
+        ("dolore alla puleggia", "10_injuries_fingers.md"),
+        ("sono in stallo", "15_goal_setting_motivation.md"),
+        ("resistenza per il lavorato", "05_aerobic_endurance_arc.md"),
+        # A few more single-intent Italian queries across other rows.
+        ("ho paura di cadere durante il volo", "07_mental_fear_focus.md"),
+        ("creami una sessione in palestra con i manubri", "21_adhoc_gym_sessions.md"),
+        ("come miglioro la tecnica sui piedi", "06_technique_movement.md"),
+        ("mi alleno le trazioni per il bloccaggio", "03_pulling_strength.md"),
+        ("sono sempre stanco, forse sovrallenamento", "17_readiness_overtraining.md"),
+    ],
+)
+def test_italian_routing(query, expected_top):
+    paths = route_query(query)
+    assert paths, f"no routing for {query!r}"
+    assert paths[0].name == expected_top, (
+        f"query {query!r}: expected top={expected_top}, got {_names(paths)}"
+    )
+
+
+def test_italian_body_part_disambiguation():
+    # "dolore" lives on both finger (10) and shoulder/elbow (11) rows; the
+    # body-part term must break the tie to the right file.
+    assert route_query("dolore alla spalla")[0].name == "11_injuries_shoulder_elbow.md"
+    assert route_query("dolore alle dita")[0].name == "10_injuries_fingers.md"
+    assert route_query("dolore alla puleggia")[0].name == "10_injuries_fingers.md"
+
+
+def test_mixed_language_query_routes_sensibly():
+    # Either language's keywords should hit — here EN "hangboard" and IT
+    # "forza dita" both point at finger strength.
+    paths = route_query("hangboard session per la forza dita")
+    assert paths[0].name == "02_finger_strength.md"
+
+
+def test_italian_offtopic_still_falls_back():
+    # Genuinely off-topic Italian text matches no keyword row → fallback pair.
+    paths = route_query("che bella giornata di sole oggi al mare")
+    assert _names(paths) == [p.name for p in FALLBACK_FILES]
+
+
+def test_singleword_keywords_survive_tokenization():
+    # The query tokenizer ([a-z0-9+×x]+) drops accented letters, so an
+    # accented single-word keyword (e.g. "continuità" → "continuit") could
+    # never match a real query. Invariant: every single-word keyword must
+    # tokenize back to itself as one intact token. (Multi-word keywords are
+    # substring-matched on the raw lowercased query and are exempt.)
+    rows = routing._load_routing_table()
+    for row in rows:
+        for kw in row.keywords:
+            assert kw in routing._tokenize(kw), (
+                f"single-word keyword {kw!r} in {row.path.name} is not "
+                "recoverable by the query tokenizer (accented/unsupported char)"
+            )
