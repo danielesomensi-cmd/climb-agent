@@ -346,6 +346,10 @@ export interface OutdoorAttempt {
   // burn carries its own rest/climb; route-level fields stay = first burn (A227).
   rest_seconds?: number;
   climb_seconds?: number;
+  // A241 — end-of-burn timestamp (ISO 8601 UTC, client-stamped). Rest between
+  // tries is derived at render from the chronological chain (any route) —
+  // new tries carry logged_at and omit rest_seconds. Absent on legacy tries.
+  logged_at?: string;
 }
 
 export interface OutdoorRoute {

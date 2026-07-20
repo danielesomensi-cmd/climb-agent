@@ -191,6 +191,11 @@ class OutdoorAttempt(BaseModel):
     # keep describing the first burn only (A227 legacy).
     rest_seconds: Optional[int] = None
     climb_seconds: Optional[int] = None
+    # A241 — client-stamped end-of-burn timestamp (ISO 8601 UTC). Rest between
+    # tries is DERIVED at render from the chronological chain (any route), never
+    # stored: new attempts carry logged_at (+climb_seconds when timed) and omit
+    # rest_seconds. Absent on legacy tries → no breakdown, old display.
+    logged_at: Optional[str] = None
 
 
 class OutdoorRoute(BaseModel):

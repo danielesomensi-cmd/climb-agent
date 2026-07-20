@@ -16,6 +16,8 @@ import { useOutdoorSessions, useOutdoorStats } from "@/lib/hooks/queries/use-out
 import { invalidateOutdoor } from "@/lib/invalidation";
 import { displayBoulderGrade, hardestGrade, gradeRank, type BoulderGradeSystem } from "@/lib/gradeUtils";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
+import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
+import { TryBreakdown } from "@/components/outdoor/try-breakdown";
 
 // ---------------------------------------------------------------------------
 // Route aggregation (A180)
@@ -544,26 +546,39 @@ export default function OutdoorPage() {
                         </div>
                         {isOpen && hasRoutes && (
                           <ul className="space-y-1 border-t pt-2">
-                            {(s.routes || []).map((r, ri) => {
-                              const style = sessionRouteStyle(r);
-                              const sent = isSendResult(r.attempts?.[0]?.result ?? "") || (r.attempts || []).some((a) => isSendResult(a.result));
-                              const dg = r.discipline === "boulder" ? displayBoulderGrade(r.grade, gradeSystem) : r.grade;
-                              return (
-                                <li key={ri} className="flex items-center gap-2 text-xs">
-                                  <span className="w-10 shrink-0 font-mono text-muted-foreground">{dg}</span>
-                                  <span className="min-w-0 flex-1 truncate">{r.name || "—"}</span>
-                                  <Badge
-                                    variant="outline"
-                                    className={`text-[10px] ${sent ? "border-green-600/60 text-green-500" : "text-muted-foreground"}`}
-                                  >
-                                    {STYLE_LABEL[style] || style}
-                                  </Badge>
-                                  <span className="shrink-0 text-muted-foreground">
-                                    {(r.attempts?.length || 0)} {(r.attempts?.length || 0) === 1 ? "try" : "tries"}
-                                  </span>
-                                </li>
-                              );
-                            })}
+                            {(() => {
+                              // A241 — session-wide chronological rest derivation.
+                              const sessionRoutes = (s.routes || []).map((r) => ({ attempts: r.attempts || [] }));
+                              const timings = deriveTryTimings(sessionRoutes);
+                              return (s.routes || []).map((r, ri) => {
+                                const style = sessionRouteStyle(r);
+                                const sent = isSendResult(r.attempts?.[0]?.result ?? "") || (r.attempts || []).some((a) => isSendResult(a.result));
+                                const dg = r.discipline === "boulder" ? displayBoulderGrade(r.grade, gradeSystem) : r.grade;
+                                return (
+                                  <li key={ri} className="text-xs">
+                                    <div className="flex items-center gap-2">
+                                      <span className="w-10 shrink-0 font-mono text-muted-foreground">{dg}</span>
+                                      <span className="min-w-0 flex-1 truncate">{r.name || "—"}</span>
+                                      <Badge
+                                        variant="outline"
+                                        className={`text-[10px] ${sent ? "border-green-600/60 text-green-500" : "text-muted-foreground"}`}
+                                      >
+                                        {STYLE_LABEL[style] || style}
+                                      </Badge>
+                                      <span className="shrink-0 text-muted-foreground">
+                                        {(r.attempts?.length || 0)} {(r.attempts?.length || 0) === 1 ? "try" : "tries"}
+                                      </span>
+                                    </div>
+                                    {/* A241 — per-try rest/climb progression (new logs only) */}
+                                    {routeHasTimestamps(sessionRoutes[ri]) && (
+                                      <div className="mt-1 pl-12">
+                                        <TryBreakdown attempts={r.attempts || []} timings={timings[ri]} />
+                                      </div>
+                                    )}
+                                  </li>
+                                );
+                              });
+                            })()}
                           </ul>
                         )}
                         {isConfirming && (
