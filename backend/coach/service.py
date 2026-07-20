@@ -136,7 +136,10 @@ def handle_adhoc_compose(
     from backend.engine.adaptive_replan import load_exercises_by_id
     from backend.engine.adhoc_builder import compose_adhoc_session
 
-    intent = adhoc_intent.extract_intent(message)
+    # B281: give the extractor the recent conversation — short follow-ups like
+    # "riprovi a crearla?" carry their place/focus/minutes in earlier turns.
+    history = _load_history(user_id)
+    intent = adhoc_intent.extract_intent(message, history=history)
     if intent is None:
         # Not an adhoc request — no history write, no rate-limit charge here.
         return None

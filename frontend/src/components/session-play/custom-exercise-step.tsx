@@ -156,6 +156,15 @@ export function CustomExerciseStep({
     onSetDoneRef.current();
   }, []);
 
+  // B281: never trap the user inside a countdown — long timed exercises (5-15
+  // min drills) need a way out. Finishing early counts the set as done.
+  const handleFinishEarly = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setTimerRunning(false);
+    setSecondsLeft(0);
+    onSetDoneRef.current();
+  }, []);
+
   const isCountdown = timerRunning && secondsLeft <= 3 && secondsLeft > 0;
 
   return (
@@ -208,6 +217,15 @@ export function CustomExerciseStep({
               <Play className="size-5" />
               Start set
             </Button>
+          )}
+          {timerRunning && (
+            <button
+              type="button"
+              onClick={handleFinishEarly}
+              className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            >
+              Finish set early
+            </button>
           )}
         </div>
       )}

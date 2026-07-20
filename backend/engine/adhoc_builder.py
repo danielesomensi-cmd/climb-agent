@@ -59,6 +59,18 @@ ADHOC_ENERGY = ("low", "medium", "high")
 MIN_MINUTES = 20
 MAX_MINUTES = 120
 
+# B281 quality guards: cap total exercises (a 45-min session with 9+ moves is
+# noise), cap same-movement-pattern picks (5 pull-up variants is not a session),
+# and keep the single warmup short (an 8-minute unskippable mobility timer was
+# the worst offender in field testing).
+MAX_EXERCISES = 8
+MAX_PER_PATTERN = 2
+MAX_WARMUP_WORK_SECONDS = 300
+
+# Deterministic ordering of the main block: heavy compound work first, then
+# accessories, then everything else (technique/endurance drills).
+_CATEGORY_ORDER = {"main_strength": 0, "power_endurance": 1, "endurance": 1, "strength_accessory": 2}
+
 # Spine-safe defense-in-depth: the catalog is already curated (D55 —
 # test_catalog_safety forbids loaded spinal-flexion ids), this is belt-and-
 # suspenders against future additions.
@@ -166,10 +178,12 @@ def _to_custom_exercise(
     eid = str(ex.get("id"))
     p = propose_exercise_prescription(eid, catalog_by_id, user_state, phase, today=today)
     sets = _int_or_none(p.get("sets")) or 1
-    # Energy modulates volume by ±1 set (bounded); never below 1.
-    if energy == "low":
+    # Energy modulates volume by ±1 set (bounded); never below 1. Warmups are
+    # exempt (B281) — feeling fresh doesn't mean warming up twice as long.
+    is_warmup = "warmup" in _roles_of(ex)
+    if energy == "low" and not is_warmup:
         sets = max(1, sets - 1)
-    elif energy == "high":
+    elif energy == "high" and not is_warmup:
         sets = min(6, sets + 1)
     load = p.get("load_kg")
     return {
@@ -251,43 +265,90 @@ def compose_adhoc_session(
     chosen: List[Dict[str, Any]] = []
     used: set = set(recent)  # avoid recents AND avoid duplicates within the session
 
-    # 1. Warmup (1) — phase-agnostic; equipment-fit; role=warmup.
+    # 1. Warmup (1) — phase-agnostic; equipment-fit; role=warmup. Keep it SHORT
+    # (B281): a long mobility flow as the opener kills the session — prefer the
+    # briefest warmup, and never one above MAX_WARMUP_WORK_SECONDS.
     warmups = _candidates(catalog_by_id, role="warmup", equipment=equipment, exclude=used)
-    warmups.sort(key=lambda e: _rank_key(e, phase, recent))
+    warmups = [
+        w for w in warmups
+        if (_int_or_none((w.get("prescription_defaults") or {}).get("work_seconds")) or 0)
+        <= MAX_WARMUP_WORK_SECONDS
+    ]
+    warmups.sort(
+        key=lambda e: (
+            _int_or_none((e.get("prescription_defaults") or {}).get("work_seconds")) or 0,
+            str(e.get("id") or ""),
+        )
+    )
     if warmups:
         chosen.append(warmups[0])
         used.add(str(warmups[0].get("id")))
 
-    # 2. Main focus blocks — as many as the minutes budget allows (min 1).
+    # 2. Main focus blocks — as many as the minutes budget allows (min 1),
+    # with movement-pattern diversity (B281: max MAX_PER_PATTERN per pattern —
+    # no more five-pull-up-variants sessions).
     mains = _candidates(catalog_by_id, domains=domains, equipment=equipment, exclude=used)
     # exclude warmup/cooldown/test-role picks from the main pool
     mains = [e for e in mains if not ({"warmup", "cooldown", "test"} & set(_roles_of(e)))]
     mains.sort(key=lambda e: _rank_key(e, phase, recent))
 
-    # 3. Core finisher (1) — spine-safe core, distinct from mains.
     def _append_within_budget(candidate: Dict[str, Any]) -> bool:
         trial = chosen + [candidate]
         exs = [_to_custom_exercise(e, catalog_by_id, user_state, phase, energy, today) for e in trial]
         return estimate_custom_session_duration(exs) <= minutes
 
+    pattern_counts: Dict[str, int] = {}
+
+    def _pattern_of(ex: Dict[str, Any]) -> str:
+        p = ex.get("pattern")
+        if isinstance(p, list):
+            p = p[0] if p else None
+        return str(p or ex.get("recency_group") or ex.get("id") or "")
+
+    main_picks: List[Dict[str, Any]] = []
     for m in mains:
+        if len(chosen) >= MAX_EXERCISES:
+            break
         mid = str(m.get("id"))
         if mid in used:
             continue
+        pat = _pattern_of(m)
+        if pattern_counts.get(pat, 0) >= MAX_PER_PATTERN:
+            continue
         if _append_within_budget(m):
             chosen.append(m)
+            main_picks.append(m)
             used.add(mid)
+            pattern_counts[pat] = pattern_counts.get(pat, 0) + 1
         # keep scanning — a later, shorter exercise may still fit
     # Guarantee at least one main even if the budget is tiny.
-    if len(chosen) <= 1 and mains:
+    if not main_picks and mains:
         first_main = next((m for m in mains if str(m.get("id")) not in used), None)
         if first_main:
             chosen.append(first_main)
+            main_picks.append(first_main)
             used.add(str(first_main.get("id")))
 
+    # Order the main block deterministically: compound strength first, then
+    # accessories, then drills — instead of the alphabetical soup (B281).
+    main_picks.sort(
+        key=lambda e: (
+            _CATEGORY_ORDER.get(str(e.get("category") or ""), 3),
+            str(e.get("id") or ""),
+        )
+    )
+    warm_part = [c for c in chosen if c not in main_picks]
+    chosen = warm_part + main_picks
+
+    # 3. Core finisher (1) — spine-safe core, distinct from mains.
     finishers = _candidates(catalog_by_id, categories=["core"], equipment=equipment, exclude=used)
     finishers.sort(key=lambda e: _rank_key(e, phase, recent))
-    if focus != "core" and finishers and _append_within_budget(finishers[0]):
+    if (
+        focus != "core"
+        and finishers
+        and len(chosen) < MAX_EXERCISES
+        and _append_within_budget(finishers[0])
+    ):
         chosen.append(finishers[0])
         used.add(str(finishers[0].get("id")))
 
