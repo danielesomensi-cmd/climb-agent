@@ -24,6 +24,7 @@ from backend.api.routers import (
     feedback,
     free_session,
     macrocycle,
+    milestones,
     mobility,
     onboarding,
     outdoor,
@@ -137,6 +138,7 @@ app.include_router(free_session.router)
 app.include_router(reports.router)
 app.include_router(quotes.router)
 app.include_router(tips.router)
+app.include_router(milestones.router)
 app.include_router(user.router)
 app.include_router(weekly_override.router)
 app.include_router(admin.router)
