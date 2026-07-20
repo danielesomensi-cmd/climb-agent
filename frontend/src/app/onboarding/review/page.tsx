@@ -63,10 +63,12 @@ function SummaryRow({
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
         <p className="text-sm">{value}</p>
       </div>
+      {/* A245 Phase D (F47): ?from=review lets the step offer a one-tap return
+          instead of making the user walk the rest of the wizard. */}
       <button
         type="button"
-        className="shrink-0 text-xs text-primary hover:underline"
-        onClick={() => router.push(editHref)}
+        className="-m-2 shrink-0 p-2 text-xs text-primary hover:underline"
+        onClick={() => router.push(`${editHref}?from=review`)}
       >
         Edit
       </button>

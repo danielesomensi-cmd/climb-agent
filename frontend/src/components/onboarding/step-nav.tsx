@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -31,13 +31,21 @@ export function StepNav({
   onNext?: () => void;
 }) {
   const router = useRouter();
+  const params = useSearchParams();
   const [attempted, setAttempted] = useState(false);
   const blocked = blockers.length > 0;
+
+  // A245 Phase D (F47) — when the user came here from the summary to fix one
+  // field, Next should take them back there, not deeper into the wizard.
+  const fromReview = params.get("from") === "review";
+  const target = fromReview ? "/onboarding/review" : nextHref;
+  const label = fromReview ? "Done — back to summary" : nextLabel;
 
   return (
     <div className="space-y-3">
       {attempted && blocked && (
         <div
+          id="step-blockers"
           role="alert"
           className="rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning"
         >
@@ -68,10 +76,10 @@ export function StepNav({
               return;
             }
             onNext?.();
-            router.push(nextHref);
+            router.push(target);
           }}
         >
-          {nextLabel}
+          {label}
         </Button>
       </div>
     </div>
