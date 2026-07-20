@@ -23,8 +23,8 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Sessions (active) | 35 |
 | Templates | 19 |
 | API endpoints | 90 |
-| Frontend pages | 45 |
-| Frontend components | 94 |
+| Frontend pages | 46 |
+| Frontend components | 95 |
 <!-- STATUS_TABLE_END -->
 
 **Current phase:** Paid launch prep. Stripe LIVE (sk_live keys on Railway + Vercel). B202 fail-closed subscription guard deployed. Founding Climber ($4.99/mo) and Standard ($9.99/mo) plans active. 4 beta testers (Christie, Cesar, Paolo, Agustin) — will need to subscribe after B202.

@@ -245,7 +245,7 @@ user_state.assessment + user_state.goal
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (45):** 14 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
+**Pages (46):** 14 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
 
 - `/today` — Today's sessions, mark done/skipped, post-session feedback
 - `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
