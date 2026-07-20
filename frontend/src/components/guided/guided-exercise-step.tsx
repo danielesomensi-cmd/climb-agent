@@ -191,8 +191,18 @@ export function GuidedExerciseStep({
       !!exercise.allowLoadLogging);
   const hasGradeField = !isTestMeasurement && exercise.suggested.grade != null;
 
-  // Pre-populate from suggested values or previous user input
+  // Pre-populate from suggested values or previous user input.
+  //
+  // B288: this effect depends on the whole `exercise` object, so it re-ran on
+  // EVERY update to the current exercise — changing sets or typing a note
+  // rewrote the load field back to the suggested value, wiping what the user
+  // had just typed (report: "metto 5 e poco dopo mi ripropone i 2kg"). The
+  // pre-fill is a cold start, not a sync: run it once per exercise and never
+  // clobber user input afterwards.
+  const prefilledForRef = useRef<string | null>(null);
   useEffect(() => {
+    if (prefilledForRef.current === exercise.exerciseId) return;
+    prefilledForRef.current = exercise.exerciseId;
     if (exercise.usedLoadKg != null) {
       setLoadInput(String(exercise.usedLoadKg));
     } else if (exercise.suggested.externalLoadKg != null) {

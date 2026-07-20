@@ -11,6 +11,7 @@ import { GuidedExerciseStep } from "@/components/guided/guided-exercise-step";
 import { GuidedSummary } from "@/components/guided/guided-summary";
 import { postFeedback, getState } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { buildGuidedFeedbackItems } from "@/lib/feedback-items";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
@@ -295,9 +296,19 @@ export default function GuidedSessionPage() {
   const handleMarkRemainingOk = useCallback(() => {
     setState((prev) => {
       if (!prev) return prev;
-      const exercises = prev.exercises.map((ex) =>
-        ex.status === "pending" ? { ...ex, status: "done" as const, feedbackLabel: "ok" } : ex
-      );
+      const exercises = prev.exercises.map((ex) => {
+        if (ex.status !== "pending") return ex;
+        // B288: an exercise closed from here was never visited, so usedLoadKg
+        // is null and the item would ship without a load — the engine then
+        // discards it and the load memory never moves. The suggested load is
+        // what the user saw and (implicitly) confirmed by marking it OK, which
+        // is exactly what the guided step does when you tap Done without
+        // touching the field.
+        const usedLoadKg =
+          ex.usedLoadKg ??
+          (ex.loadModel !== "bodyweight_only" ? ex.suggested.externalLoadKg : undefined);
+        return { ...ex, status: "done" as const, feedbackLabel: "ok", usedLoadKg };
+      });
       return { ...prev, exercises };
     });
   }, []);
@@ -335,93 +346,9 @@ export default function GuidedSessionPage() {
       // /api/feedback and returns the updated week_plan. No prelude
       // getState/getWeek/applyEvents round-trips needed.
 
-      // Build and send feedback (exclude instruction-only blocks)
-      const exerciseFeedback: Record<string, unknown>[] = [];
-      for (const ex of finalExercises) {
-        if (ex.isInstructionOnly) continue;
-
-        // B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand)
-        if (ex.unilateral && ex.testField && (ex.testMeasurementRight != null || ex.testMeasurementLeft != null)) {
-          for (const hand of ["right", "left"] as const) {
-            const measurement = hand === "right" ? ex.testMeasurementRight : ex.testMeasurementLeft;
-            const suggestedLoad = hand === "right"
-              ? ex.suggested.rightHand?.externalLoadKg
-              : ex.suggested.leftHand?.externalLoadKg;
-            exerciseFeedback.push({
-              exercise_id: ex.exerciseId,
-              feedback_label: ex.feedbackLabel,
-              completed: ex.status === "done",
-              hand,
-              [ex.testField]: measurement,
-              used_external_load_kg: suggestedLoad,
-            });
-          }
-          continue;
-        }
-
-        // Unilateral exercises: split into per-hand feedback entries
-        if (ex.unilateral && (ex.usedLoadKgRight != null || ex.usedLoadKgLeft != null)) {
-          for (const hand of ["right", "left"] as const) {
-            const load = hand === "right" ? ex.usedLoadKgRight : ex.usedLoadKgLeft;
-            const reps = hand === "right" ? ex.completedRepsRight : ex.completedRepsLeft;
-            const entry: Record<string, unknown> = {
-              exercise_id: ex.exerciseId,
-              feedback_label: ex.feedbackLabel,
-              completed: ex.status === "done",
-              hand,
-              used_external_load_kg: load,
-            };
-            if (reps != null) {
-              entry.completed_reps = reps;
-            }
-            exerciseFeedback.push(entry);
-          }
-          continue;
-        }
-
-        const item: Record<string, unknown> = {
-          exercise_id: ex.exerciseId,
-          feedback_label: ex.feedbackLabel,
-          completed: ex.status === "done",
-        };
-        if (ex.usedTotalLoadKg != null) {
-          item.used_total_load_kg = ex.usedTotalLoadKg;
-        }
-        if (ex.usedLoadKg != null) {
-          item.used_external_load_kg = ex.usedLoadKg;
-          // Auto-compute total from external + body weight if not manually set
-          if (ex.usedTotalLoadKg == null && ex.suggested.totalLoadKg != null && ex.suggested.externalLoadKg != null) {
-            const bodyWeight = ex.suggested.totalLoadKg - ex.suggested.externalLoadKg;
-            item.used_total_load_kg = bodyWeight + ex.usedLoadKg;
-          }
-        }
-        if (ex.usedGrade) {
-          item.used_grade = ex.usedGrade;
-        }
-        if (ex.suggested.surface) {
-          item.surface_selected = ex.suggested.surface;
-        }
-        if (ex.completedSets != null) {
-          item.completed_sets = ex.completedSets;
-          // B133: new repeater test expects completed_reps
-          item.completed_reps = ex.completedSets;
-        }
-        // Test measurement exercises: send the value as the field name directly
-        if (ex.testField && ex.testMeasurement != null) {
-          item[ex.testField] = ex.testMeasurement;
-        }
-        exerciseFeedback.push(item);
-      }
-
-      // B156: inject per-exercise notes into feedback items
-      const notesMap = new Map<string, string>();
-      for (const ex of finalExercises) {
-        if (ex.notes) notesMap.set(ex.exerciseId, ex.notes);
-      }
-      for (const fb of exerciseFeedback) {
-        const exNotes = notesMap.get(fb.exercise_id as string);
-        if (exNotes) fb.notes = exNotes;
-      }
+      // B288: item construction lives in lib/feedback-items so the /today
+      // retry path replays the identical payload instead of a narrowed copy.
+      const exerciseFeedback = buildGuidedFeedbackItems(finalExercises);
 
       const durationSeconds = Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000));
 

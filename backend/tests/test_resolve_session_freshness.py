@@ -141,18 +141,34 @@ def test_no_date_anywhere_keeps_legacy_fallback():
     )
 
 
-def test_stale_working_loads_falls_back():
-    """Entry older than 60 days from target_date → still considered stale → fallback.
+def test_months_old_working_loads_survives():
+    """B288: an entry months old still wins over FIXED_KG for external_load.
 
-    The 60-day staleness gate in `_is_fresh` is the legitimate guard rail.
-    Patch B unblocks reading the entry, but the stale entry must still be rejected.
+    Was the inverse assertion (>60d → fallback). The 60-day gate made sense for
+    a physiological max, but for accessory work the entry records which dumbbell
+    the user picked up: prehab recurs every 2-3 months, so the gate guaranteed a
+    permanent reset to the cold-start default no matter how often the real load
+    was logged. The window is now EXTERNAL_LOAD_FRESHNESS_DAYS — still finite,
+    still date-gated (see the two tests above), just not shorter than the
+    programming cycle. The 60-day gate is unchanged for hangboard/max-hang.
     """
     ctx = {"location": "home", "gym_id": None, "target_date": "2026-05-04"}
     ex_id = _discover_loadable_ex(ctx)
 
-    # 123 days before target_date — stale
+    # 123 days before target_date — would have been discarded pre-B288
     load = _suggested_load(_resolve(_user_state(ctx, ex_id, "2026-01-01")), ex_id)
+    assert load == WL_NEXT_KG, (
+        f"Months-old entry must still surface working_loads ({WL_NEXT_KG}), got {load}"
+    )
+
+
+def test_entry_beyond_window_falls_back():
+    """The window is wide, not infinite — beyond it the fallback still applies."""
+    ctx = {"location": "home", "gym_id": None, "target_date": "2026-05-04"}
+    ex_id = _discover_loadable_ex(ctx)
+
+    load = _suggested_load(_resolve(_user_state(ctx, ex_id, "1990-01-01")), ex_id)
     fallback = EXTERNAL_LOAD_FALLBACK_FIXED_KG[ex_id]
     assert load == fallback, (
-        f"Stale entry (>60d) must trigger FIXED_KG[{fallback}] fallback, got {load}"
+        f"Entry older than the window must fall back to FIXED_KG[{fallback}], got {load}"
     )

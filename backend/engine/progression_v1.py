@@ -44,6 +44,12 @@ EXTERNAL_LOAD_FALLBACK_PCT_BW = {
     "turkish_getup": 0.15,
 }
 
+# B288: freshness window for external_load load memory (accessory/prehab work).
+# Not unlimited — a date must still exist and not be in the future — but long
+# enough that an exercise programmed every 2-3 months keeps its remembered load
+# instead of decaying back to the cold-start fallback below.
+EXTERNAL_LOAD_FRESHNESS_DAYS = 3650
+
 # Fixed fallback in kg for prehab exercises — bodyweight-% makes no sense here (A123).
 EXTERNAL_LOAD_FALLBACK_FIXED_KG: dict[str, float] = {
     "elbow_eccentric_curl": 1.5,         # Tyler Twist — light dumbbell
@@ -995,7 +1001,25 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
 
             # External load exercises — data-driven from load_model (ARCH-2)
             if load_model == "external_load" and not is_unilateral:
-                entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
+                # B288: widened freshness window for external_load. For
+                # prehab/accessory work the remembered load is "which dumbbell
+                # did I pick up", not a physiological test — a real observation
+                # from 4 months ago beats EXTERNAL_LOAD_FALLBACK_FIXED_KG every
+                # time. Prehab recurs every 2-3 months, so the 60-day default
+                # guaranteed a permanent reset to the cold-start default
+                # (reverse_wrist_curl pinned at 2.0kg from 2026-03-30 to
+                # 2026-07-20 despite being logged in between).
+                #
+                # Deliberately a WIDE WINDOW, not freshness_days=None: _is_fresh
+                # is also the guard that rejects a missing/unparseable target
+                # date (B-fix-CORE) and future-dated entries. Disabling it
+                # outright resurrected the exact bug those guard rails pin.
+                # The 60-day gate stays for max-hang / hangboard / loading-pin /
+                # grade entries, where a stale max IS dangerous.
+                entry = _best_entry(
+                    user_state, ex_id, {}, out.get("date") or "",
+                    freshness_days=EXTERNAL_LOAD_FRESHNESS_DAYS,
+                )
                 if entry and entry.get("next_external_load_kg") is not None:
                     next_load = _round_half_step(float(entry["next_external_load_kg"]))
                 else:
