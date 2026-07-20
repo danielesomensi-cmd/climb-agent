@@ -831,6 +831,12 @@ def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
         for day in reversed(hard_days[hard_cap:]):
             for session in day.get("sessions") or []:
                 tags = session.get("tags") or {}
+                # B287/R-8: never rewrite a completed or skipped session. The
+                # day-level selection above already ignores done sessions, but
+                # this inner loop used to downshift every hard session on the
+                # day — including one the user had already trained.
+                if session.get("status") in ("done", "skipped"):
+                    continue
                 if tags.get("hard"):
                     recovery_meta = _meta_for("regeneration_easy")
                     _previous_id = session.get("session_id")
@@ -885,26 +891,45 @@ def _enforce_no_consecutive_finger(
     last_finger_date = _seed_finger_date(prev_days)
     for day in days:
         cur = _parse_date(day["date"])
-        has_finger = any((s.get("tags") or {}).get("finger") and s.get("status") != "done" for s in day.get("sessions") or [])
-        if has_finger and last_finger_date and (cur - last_finger_date).days <= _recovery_gap(plan):
-            for session in day.get("sessions") or []:
-                if (session.get("tags") or {}).get("finger"):
-                    recovery_meta = _meta_for("regeneration_easy")
-                    _previous_id = session.get("session_id")
-                    session.update(
-                        {
-                            "session_id": "regeneration_easy",
-                            "intensity": recovery_meta["intensity"],
-                            "tags": {"hard": False, "finger": False},
-                            "constraints_applied": ["finger_spacing_downshift"],
-                            "explain": ["no consecutive finger days", "deterministic downshift"],
-                        }
-                    )
-                    adjustments.append(
-                        _adjustment(day.get("date", ""), session, _previous_id, "finger_spacing_downshift")
-                    )
-            has_finger = False
-        if has_finger:
+        finger_sessions = [s for s in day.get("sessions") or [] if (s.get("tags") or {}).get("finger")]
+
+        # B287/R-8: a finger session that was actually PERFORMED constrains the
+        # following days exactly like a planned one — the tendons don't care
+        # whether the entry is ticked. The old scan excluded status == "done"
+        # from the whole computation, so a finger session completed on Tuesday
+        # never became the anchor and a Wednesday quick-add sailed through the
+        # 48h gap. Skipped sessions never happened, so they constrain nothing.
+        constrains = [s for s in finger_sessions if s.get("status") != "skipped"]
+        # ...but only sessions that are neither done nor skipped may be REWRITTEN.
+        # The inner loop used to downshift every finger session on the day,
+        # completed ones included, silently rewriting immutable history.
+        downshiftable = [s for s in finger_sessions if s.get("status") not in ("done", "skipped")]
+
+        violates = bool(constrains) and last_finger_date is not None \
+            and (cur - last_finger_date).days <= _recovery_gap(plan)
+
+        if violates and downshiftable:
+            for session in downshiftable:
+                recovery_meta = _meta_for("regeneration_easy")
+                _previous_id = session.get("session_id")
+                session.update(
+                    {
+                        "session_id": "regeneration_easy",
+                        "intensity": recovery_meta["intensity"],
+                        "tags": {"hard": False, "finger": False},
+                        "constraints_applied": ["finger_spacing_downshift"],
+                        "explain": ["no consecutive finger days", "deterministic downshift"],
+                    }
+                )
+                adjustments.append(
+                    _adjustment(day.get("date", ""), session, _previous_id, "finger_spacing_downshift")
+                )
+            # The day stops being an anchor only if nothing finger-ish survived:
+            # an immutable done session on this day still constrains what follows.
+            if not any(s.get("status") == "done" for s in constrains):
+                continue
+
+        if constrains:
             last_finger_date = cur
     return adjustments
 

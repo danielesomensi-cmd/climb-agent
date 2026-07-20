@@ -11,6 +11,12 @@ R-6  persist_week_plan and _is_current_macrocycle_monday recomputed the current
      offset, so with a pause current_week_plan was never refreshed.
 R-7  _auto_resolve never passed `phase`, so resolve_session fell back to
      date.today() and ordered a future week's exercises with today's phase.
+R-8  (found while verifying R-5) the in-week scan excluded status == "done"
+     from the WHOLE finger computation: a session actually trained on Tuesday
+     neither constrained Wednesday — a hole in the 48h invariant — nor was
+     protected from the downshift loop, which rewrote every finger session on a
+     violating day, completed ones included. Same rewrite hole in _enforce_caps.
+     Done sessions are constraints but never targets; skipped are neither.
 """
 from __future__ import annotations
 
@@ -25,6 +31,7 @@ from backend.api import deps
 from backend.api.routers import replanner as replanner_router
 from backend.api.routers.feedback import _is_current_macrocycle_monday
 from backend.engine.replanner_v1 import (
+    _enforce_caps,
     _enforce_no_consecutive_finger,
     _reconcile,
     apply_day_add,
@@ -189,6 +196,111 @@ class TestR5CrossWeekSeeding:
         assert replanner_router._prev_week_days({}, _monday()) is None
         assert replanner_router._prev_week_days({"week_plans": {}}, None) is None
         assert replanner_router._prev_week_days({"week_plans": {}}, "not-a-date") is None
+
+
+# ── R-8: done sessions constrain, but are never rewritten ───────────────────
+
+class TestR8DoneSessionsAreConstraints:
+    """Mirror of the seeding rule, inside the week.
+
+    Found while verifying the seed asymmetry: the in-week scan excluded
+    ``status == "done"`` from the WHOLE computation, which meant a completed
+    finger session neither constrained the following days (hole in the 48h
+    invariant) nor was protected from the downshift loop, which rewrote every
+    finger session on a violating day — completed ones included.
+    """
+
+    def _week(self, sessions_by_index: dict) -> dict:
+        plan = _plan(_monday())
+        for idx, sessions in sessions_by_index.items():
+            plan["weeks"][0]["days"][idx]["sessions"] = sessions
+        return plan
+
+    def _finger(self, *, status: str | None = None, slot: str = "evening") -> dict:
+        s = {
+            "session_id": FINGER_SESSION, "slot": slot, "location": "home",
+            "phase_id": "base", "tags": {"hard": True, "finger": True},
+        }
+        if status:
+            s["status"] = status
+        return s
+
+    def test_completed_session_constrains_the_next_day(self):
+        """A finger session TRAINED on Tuesday must block a Wednesday one."""
+        plan = self._week({1: [self._finger(status="done")], 2: [self._finger()]})
+        _enforce_no_consecutive_finger(plan)
+        assert _session_on(plan, 2)["session_id"] == EASY_SESSION
+
+    def test_completed_session_is_never_rewritten(self):
+        """Immutability: the downshift must not touch what was already trained."""
+        plan = self._week({
+            0: [self._finger()],
+            1: [self._finger(status="done", slot="morning"), self._finger(slot="evening")],
+        })
+        _enforce_no_consecutive_finger(plan)
+        done = _session_on(plan, 1, slot="morning")
+        assert done["session_id"] == FINGER_SESSION, "a completed session was rewritten"
+        assert done["status"] == "done"
+        assert _session_on(plan, 1, slot="evening")["session_id"] == EASY_SESSION
+
+    def test_completed_session_keeps_anchoring_after_a_downshift(self):
+        """The day stays a finger day thanks to its immutable done session, so
+        the day after is still constrained."""
+        plan = self._week({
+            0: [self._finger()],
+            1: [self._finger(status="done", slot="morning"), self._finger(slot="evening")],
+            2: [self._finger()],
+        })
+        _enforce_no_consecutive_finger(plan)
+        assert _session_on(plan, 2)["session_id"] == EASY_SESSION
+
+    def test_skipped_session_constrains_nothing(self):
+        """A skipped session never happened — it must not block the next day."""
+        plan = self._week({1: [self._finger(status="skipped")], 2: [self._finger()]})
+        _enforce_no_consecutive_finger(plan)
+        assert _session_on(plan, 2)["session_id"] == FINGER_SESSION
+
+    def test_skipped_session_is_never_rewritten(self):
+        """Skipped is preservable too (_is_preservable), so it must survive."""
+        plan = self._week({
+            0: [self._finger()],
+            1: [self._finger(status="skipped", slot="morning"), self._finger(slot="evening")],
+        })
+        _enforce_no_consecutive_finger(plan)
+        assert _session_on(plan, 1, slot="morning")["session_id"] == FINGER_SESSION
+
+    def test_cap_enforcer_never_rewrites_a_completed_session(self):
+        """Same hole in _enforce_caps' inner loop."""
+        def hard(status=None, slot="evening"):
+            s = {"session_id": "strength_long", "slot": slot, "location": "home",
+                 "tags": {"hard": True, "finger": False}}
+            if status:
+                s["status"] = status
+            return s
+
+        plan = _plan(_monday(), hard_cap=3)
+        for i in range(3):
+            plan["weeks"][0]["days"][i]["sessions"] = [hard()]
+        plan["weeks"][0]["days"][3]["sessions"] = [
+            hard(status="done", slot="morning"), hard(slot="evening"),
+        ]
+
+        _enforce_caps(plan)
+
+        assert _session_on(plan, 3, slot="morning")["session_id"] == "strength_long"
+        assert _session_on(plan, 3, slot="morning")["status"] == "done"
+        assert _session_on(plan, 3, slot="evening")["session_id"] == EASY_SESSION
+
+    def test_quick_add_blocked_by_a_session_trained_yesterday(self):
+        """End-to-end: the real user path this invariant exists for."""
+        plan = self._week({0: [self._finger(status="done")]})
+        updated, _w, adjustments = apply_day_add(
+            plan, session_id=FINGER_SESSION,
+            target_date=plan["weeks"][0]["days"][1]["date"],
+            slot="evening", location="home",
+        )
+        assert _session_on(updated, 1)["session_id"] == EASY_SESSION
+        assert adjustments[0]["reason"] == "finger_spacing_downshift"
 
 
 # ── R-6: pause-aware current-week anchor ────────────────────────────────────
