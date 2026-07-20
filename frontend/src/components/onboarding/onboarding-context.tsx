@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { stepIndexOf } from "@/lib/onboarding-steps";
 import { getState } from "@/lib/api";
 import type { OnboardingData } from "@/lib/types";
 
@@ -20,44 +22,139 @@ const DEFAULT_DATA: OnboardingData = {
   outdoor_spots: [],
 };
 
-const SESSION_KEY = "climb_onboarding_draft";
+/**
+ * A245 Phase D (F16) — the draft used to live in `sessionStorage`, which dies
+ * when the tab closes. On mobile that is the norm, not the exception: anyone
+ * who stepped away around step 8-10 (~10 minutes of typing) came back to an
+ * empty wizard. Highest-probability abandonment point in the funnel.
+ *
+ * Now: localStorage, scoped per user (same reasoning as A245 B-2 — an
+ * unscoped draft would surface one user's answers to the next), with the
+ * deepest step reached so we can offer to resume.
+ */
+const DRAFT_KEY_BASE = "climb_onboarding_draft";
+/** Pre-A245 key. Tab-scoped, so reading it can never leak across users. */
+const LEGACY_SESSION_KEY = "climb_onboarding_draft";
+const DRAFT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function loadDraft(): OnboardingData | null {
+type DraftEnvelope = {
+  data: OnboardingData;
+  deepestStep: number;
+  savedAt: number;
+};
+
+function draftKey(): string {
+  const userId =
+    typeof window !== "undefined" ? window.Clerk?.user?.id : undefined;
+  return `${DRAFT_KEY_BASE}_${userId ?? "anon"}`;
+}
+
+function loadDraft(): DraftEnvelope | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as OnboardingData) : null;
+    const raw = localStorage.getItem(draftKey());
+    if (raw) {
+      const env = JSON.parse(raw) as DraftEnvelope;
+      if (env?.data && Date.now() - (env.savedAt ?? 0) < DRAFT_TTL_MS) return env;
+      localStorage.removeItem(draftKey());
+      return null;
+    }
+    // One-time bridge: a wizard already in flight in this tab when the new
+    // build landed. sessionStorage is tab-scoped, so this is safe.
+    const legacy = sessionStorage.getItem(LEGACY_SESSION_KEY);
+    if (legacy) {
+      return { data: JSON.parse(legacy) as OnboardingData, deepestStep: 0, savedAt: Date.now() };
+    }
+    return null;
   } catch {
     return null;
   }
 }
 
-function saveDraft(data: OnboardingData) {
+function saveDraft(data: OnboardingData, deepestStep: number) {
   if (typeof window === "undefined") return;
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
+  try {
+    localStorage.setItem(
+      draftKey(),
+      JSON.stringify({ data, deepestStep, savedAt: Date.now() } satisfies DraftEnvelope),
+    );
+  } catch (err) {
+    console.warn("[onboarding] could not save draft:", err);
+  }
+}
+
+/** Called on successful submit, and by SessionScopeGuard when the user changes. */
+export function clearOnboardingDraft(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(draftKey());
+    sessionStorage.removeItem(LEGACY_SESSION_KEY);
+  } catch {
+    // Nothing to clear.
+  }
+}
+
+/** Purge every onboarding draft on this device, whoever it belongs to. */
+export function purgeAllOnboardingDrafts(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const doomed: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(DRAFT_KEY_BASE)) doomed.push(k);
+    }
+    doomed.forEach((k) => localStorage.removeItem(k));
+    sessionStorage.removeItem(LEGACY_SESSION_KEY);
+  } catch {
+    // Nothing to purge.
+  }
 }
 
 interface OnboardingContextType {
   data: OnboardingData;
   update: <K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => void;
   loaded: boolean;
+  /** Furthest step index reached, for the resume affordance (F16). */
+  deepestStep: number;
+  clearDraft: () => void;
 }
 
 const OnboardingCtx = createContext<OnboardingContextType>({
   data: DEFAULT_DATA,
   update: () => {},
   loaded: false,
+  deepestStep: 0,
+  clearDraft: () => {},
 });
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<OnboardingData>(DEFAULT_DATA);
   const [loaded, setLoaded] = useState(false);
+  const [deepestStep, setDeepestStep] = useState(0);
+  const pathname = usePathname();
 
-  // Pre-populate: sessionStorage draft first, then backend state as fallback
+  // A245 Phase D (F16) — track how far the user got, without touching a single
+  // step page: the provider wraps them all and the route already says where we
+  // are. Monotonic, so going Back doesn't lower the resume point.
+  const deepestRef = useRef(0);
+  useEffect(() => {
+    const idx = stepIndexOf(pathname);
+    if (idx > deepestRef.current) {
+      deepestRef.current = idx;
+      setDeepestStep(idx);
+    }
+  }, [pathname]);
+
+  // Pre-populate: local draft first, then backend state as fallback
   useEffect(() => {
     const draft = loadDraft();
-    if (draft && draft.profile.name) {
-      setData(draft);
+    // A245 Phase D (F16) — the old guard was `draft.profile.name`, so a draft
+    // from anyone who hadn't reached (or filled) the name field was silently
+    // discarded. Any stored draft is now honoured.
+    if (draft) {
+      setData(draft.data);
+      deepestRef.current = draft.deepestStep;
+      setDeepestStep(draft.deepestStep);
       setLoaded(true);
       return;
     }
@@ -129,7 +226,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
           d.limitations = lim.details as OnboardingData["limitations"];
         }
         setData(d);
-        saveDraft(d);
+        saveDraft(d, deepestRef.current);
       })
       .catch((err) => { console.error("Failed to load draft state from API:", err); })
       .finally(() => setLoaded(true));
@@ -138,16 +235,22 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const update = useCallback(<K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
     setData((prev) => {
       const next = { ...prev, [key]: value };
-      saveDraft(next);
+      saveDraft(next, deepestRef.current);
       return next;
     });
   }, []);
 
-  return (
-    <OnboardingCtx.Provider value={{ data, update, loaded }}>
-      {children}
-    </OnboardingCtx.Provider>
+  const clearDraft = useCallback(() => clearOnboardingDraft(), []);
+
+  // A245 Phase D (F49) — this object literal used to be built inline, so every
+  // keystroke handed a new `value` to the provider and re-rendered EVERY
+  // consumer of the context, not just the field being typed into.
+  const value = useMemo(
+    () => ({ data, update, loaded, deepestStep, clearDraft }),
+    [data, update, loaded, deepestStep, clearDraft],
   );
+
+  return <OnboardingCtx.Provider value={value}>{children}</OnboardingCtx.Provider>;
 }
 
 export function useOnboarding() {

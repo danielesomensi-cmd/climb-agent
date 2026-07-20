@@ -2,18 +2,19 @@
 
 import { usePathname } from "next/navigation";
 import { Progress } from "@/components/ui/progress";
+import { ONBOARDING_STEPS, stepIndexOf } from "@/lib/onboarding-steps";
 
-const STEPS = [
-  "welcome", "install", "profile", "experience", "discipline", "grades", "goals",
-  "weaknesses", "tests", "limitations", "locations", "availability", "trips", "review",
-];
+// A245 Phase D (F45): `welcome` used to be in this list. It is hidden by the
+// guard below but still counted, so the first screen the user actually fills in
+// announced itself as "2 / 14".
+const STEPS = ONBOARDING_STEPS;
 
 export function StepIndicator() {
   const pathname = usePathname();
   // A216: hide on welcome — hero takes full visual focus
   if (pathname.endsWith("/welcome")) return null;
   const isStartWeek = pathname.includes("start-week");
-  const currentStep = isStartWeek ? STEPS.length - 1 : STEPS.findIndex((s) => pathname.includes(s));
+  const currentStep = isStartWeek ? STEPS.length - 1 : stepIndexOf(pathname);
   const progress = isStartWeek ? 100 : (currentStep >= 0 ? ((currentStep + 1) / STEPS.length) * 100 : 0);
 
   return (
