@@ -45,6 +45,10 @@ climb-agent builds your training plan through a pipeline:
 
 1. **Assessment**: During onboarding, you provide your climbing experience, grades, test results, and self-reported weaknesses. This generates a 5-axis profile (finger strength, pulling strength, power endurance, technique, endurance) scored 0–100.
 
+   Only your **redpoint** grade is required — onsight and your secondary weakness are optional, and leaving them blank costs you nothing (the engine uses a neutral value). What you *do* need is at least one place with a climbing wall or board and at least one slot you can actually train in; without those there is no climbing to schedule, and the wizard will say so rather than letting you through.
+
+   Your answers are saved on this device as you go, so closing the app mid-wizard doesn't lose them. From the final summary you can jump back to any step and return with one tap.
+
 2. **Goal**: You set a target grade (Fontainebleau) and a deadline. The engine calculates how many weeks you have and what needs to improve.
 
 3. **Macrocycle**: A periodized plan (typically 10–13 weeks, minimum 9) is generated, divided into phases. Each phase has a specific physiological purpose. The plan is tailored to your weaknesses — if your finger strength is low relative to your goal, the plan allocates more time and intensity to finger training.

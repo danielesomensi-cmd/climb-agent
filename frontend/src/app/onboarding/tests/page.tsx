@@ -379,14 +379,16 @@ export default function TestsPage() {
           Back
         </Button>
         <div className="flex gap-2">
+          {/* A245 Phase D (F46) — Skip used to call `update("tests", {})`, wiping
+              every measurement already entered. Someone who filled three tests
+              and then tapped Skip on the fourth lost all three, silently.
+              Skipping is about not entering MORE, never about deleting. */}
           <Button
             variant="ghost"
-            onClick={() => {
-              update("tests", {});
-              router.push("/onboarding/limitations");
-            }}
+            className="min-h-[44px]"
+            onClick={() => router.push("/onboarding/limitations")}
           >
-            Skip
+            Skip for now
           </Button>
           <Button onClick={() => router.push("/onboarding/limitations")}>
             Next

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
-import { completeOnboarding } from "@/lib/api";
+import { submitOnboarding } from "@/lib/onboarding-submit";
 import { getAttribution } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,10 +63,12 @@ function SummaryRow({
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
         <p className="text-sm">{value}</p>
       </div>
+      {/* A245 Phase D (F47): ?from=review lets the step offer a one-tap return
+          instead of making the user walk the rest of the wizard. */}
       <button
         type="button"
-        className="shrink-0 text-xs text-primary hover:underline"
-        onClick={() => router.push(editHref)}
+        className="-m-2 shrink-0 p-2 text-xs text-primary hover:underline"
+        onClick={() => router.push(`${editHref}?from=review`)}
       >
         Edit
       </button>
@@ -76,10 +78,13 @@ function SummaryRow({
 
 export default function ReviewPage() {
   const router = useRouter();
-  const { data } = useOnboarding();
+  const { data, clearDraft } = useOnboarding();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // A245 Phase D (F17): false when an immediate retry cannot help (rate limit,
+  // expired session) — the CTA says so instead of inviting a doomed tap.
+  const [retryable, setRetryable] = useState(true);
 
   // Count tests entered
   const testCount = useMemo(() => {
@@ -128,59 +133,31 @@ export default function ReviewPage() {
     );
   }, [data.equipment.gyms]);
 
-  const handleGenerate = async () => {
+  /**
+   * A245 Phase D (F17) — one submit path for both CTAs. They were two
+   * byte-identical handlers differing only in a flag and a destination, which
+   * is how the same raw-error bug came to exist twice.
+   */
+  const submit = async (opts: { testWeek?: boolean; destination: string }) => {
     setLoading(true);
     setError(null);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    try {
-      await completeOnboarding(
-        { ...data, attribution: getAttribution() },
-        { signal: controller.signal },
-      );
-      sessionStorage.removeItem("climb_onboarding_draft");
-      setSuccess(true);
-      setTimeout(() => {
-        router.push("/onboarding/start-week");
-      }, 1500);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        setError("Generation is taking too long. Please try again.");
-      } else {
-        setError(err instanceof Error ? err.message : "Error generating the plan");
-      }
+    const result = await submitOnboarding(
+      { ...data, attribution: getAttribution() },
+      { testWeek: opts.testWeek },
+    );
+    if (!result.ok) {
+      setError(result.message);
+      setRetryable(result.retryable);
       setLoading(false);
-    } finally {
-      clearTimeout(timeout);
+      return;
     }
+    clearDraft();
+    setSuccess(true);
+    setTimeout(() => router.push(opts.destination), 1500);
   };
 
-  const handleTestWeek = async () => {
-    setLoading(true);
-    setError(null);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-    try {
-      await completeOnboarding(
-        { ...data, test_week_requested: true, attribution: getAttribution() },
-        { signal: controller.signal },
-      );
-      sessionStorage.removeItem("climb_onboarding_draft");
-      setSuccess(true);
-      setTimeout(() => {
-        router.push("/plan");
-      }, 1500);
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        setError("Generation is taking too long. Please try again.");
-      } else {
-        setError(err instanceof Error ? err.message : "Error generating the plan");
-      }
-      setLoading(false);
-    } finally {
-      clearTimeout(timeout);
-    }
-  };
+  const handleGenerate = () => submit({ destination: "/onboarding/start-week" });
+  const handleTestWeek = () => submit({ testWeek: true, destination: "/plan" });
 
   // Test values summary
   const testValues = useMemo(() => {
@@ -350,9 +327,28 @@ export default function ReviewPage() {
         </div>
       )}
 
+      {/* A245 Phase D (F17) — this used to render whatever string came back,
+          which at the highest-intent moment in the product meant the user read
+          `API 422: {"detail":"Macrocycle generation failed: ..."}`. */}
       {error && (
-        <div className="rounded-md border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger">
-          {error}
+        <div
+          role="alert"
+          className="space-y-3 rounded-md border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+        >
+          <p>{error}</p>
+          <p className="text-xs text-danger/80">
+            Nothing was lost — your answers are saved on this device.
+          </p>
+          {retryable && (
+            <Button
+              variant="outline"
+              className="min-h-[44px] w-full text-sm"
+              disabled={loading}
+              onClick={handleGenerate}
+            >
+              {loading ? "Retrying..." : "Retry"}
+            </Button>
+          )}
         </div>
       )}
 
@@ -372,14 +368,14 @@ export default function ReviewPage() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            className="text-sm px-3 py-2"
+            className="min-h-[44px] text-sm px-3"
             disabled={loading}
             onClick={handleGenerate}
           >
             {loading ? "Generating..." : "Start training now"}
           </Button>
           <Button
-            className="text-sm px-3 py-2"
+            className="min-h-[44px] text-sm px-3"
             disabled={loading}
             onClick={handleTestWeek}
           >
