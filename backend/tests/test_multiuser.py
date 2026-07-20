@@ -18,10 +18,25 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.api.deps import EMPTY_TEMPLATE, REPO_ROOT, USERS_DIR
+from backend.api.deps import EMPTY_TEMPLATE, REPO_ROOT
 from backend.api.main import app
 
 client = TestClient(app)
+
+
+def _users_dir() -> Path:
+    """Per-user root, resolved at call time.
+
+    B-TEST-COACH-ISOLATION: the conftest fixture redirects
+    ``storage_file.USERS_DIR`` to a tmp dir, so this must be read as a module
+    attribute rather than bound at import — otherwise the test asserts on
+    ``backend/data/users/`` while the code under test writes to tmp. Reading it
+    live is also what stops this file from creating real directories in the
+    repo, which is where the stale UUID dirs under backend/data/users came from.
+    """
+    from backend.engine import storage_file
+
+    return storage_file.USERS_DIR
 
 
 @pytest.fixture(autouse=True)
@@ -31,7 +46,7 @@ def _clean_test_users():
     orig_mkdir = Path.mkdir
 
     def tracking_mkdir(self, *args, **kwargs):
-        if USERS_DIR in self.parents or self == USERS_DIR:
+        if _users_dir() in self.parents or self == _users_dir():
             created.append(self)
         return orig_mkdir(self, *args, **kwargs)
 
@@ -40,10 +55,10 @@ def _clean_test_users():
     Path.mkdir = orig_mkdir  # type: ignore[assignment]
     # Clean up user dirs created during test
     for p in created:
-        # Walk up to the user_id directory (direct child of USERS_DIR)
-        while p.parent != USERS_DIR and p.parent != p:
+        # Walk up to the user_id directory (direct child of _users_dir())
+        while p.parent != _users_dir() and p.parent != p:
             p = p.parent
-        if p.parent == USERS_DIR and p.exists():
+        if p.parent == _users_dir() and p.exists():
             shutil.rmtree(p, ignore_errors=True)
 
 
@@ -69,8 +84,8 @@ class TestUserIsolation:
         assert r_b.status_code == 200
 
         # Verify separate files exist
-        assert (USERS_DIR / uid_a / "user_state.json").exists()
-        assert (USERS_DIR / uid_b / "user_state.json").exists()
+        assert (_users_dir() / uid_a / "user_state.json").exists()
+        assert (_users_dir() / uid_b / "user_state.json").exists()
 
     def test_modify_a_does_not_affect_b(self):
         uid_a = _uid()
@@ -109,7 +124,7 @@ class TestNewUserAutoCreation:
 
     def test_state_file_created_on_disk(self):
         uid = _uid()
-        path = USERS_DIR / uid / "user_state.json"
+        path = _users_dir() / uid / "user_state.json"
         assert not path.exists()
 
         client.get("/api/state", headers=_headers(uid))
