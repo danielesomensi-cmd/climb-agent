@@ -519,6 +519,27 @@ def _is_preservable(session: Dict[str, Any]) -> bool:
     return False
 
 
+def _preserve_floor(plan: Dict[str, Any], today: Optional[str] = None) -> str:
+    """B287: canonical ``preserve_before`` floor for in-place regenerations.
+
+    ``max(today, plan.start_date)`` — days strictly before this floor are copied
+    wholesale from the old plan and can never be rewritten:
+
+    - regenerating the CURRENT week → floor is today, so Mon..yesterday are frozen
+      and only the remaining days are re-planned;
+    - regenerating a FUTURE week → floor is that week's Monday (no day precedes
+      it), so nothing is force-copied, while the session-level merge still keeps
+      any day the user completed ahead of time (``_is_preservable``).
+
+    Past weeks never reach this helper: they are rejected upstream by the B257
+    guard on ``/override`` and ``/events``.
+    """
+    today_str = today or datetime.now().strftime("%Y-%m-%d")
+    start = plan.get("start_date") or ""
+    # Both operands are ISO dates → lexicographic max is chronological max.
+    return max(today_str, start) if start else today_str
+
+
 def merge_prev_week_sessions(
     prev_plan: Dict[str, Any],
     new_plan: Dict[str, Any],
@@ -570,35 +591,50 @@ def merge_prev_week_sessions(
             continue
 
         # --- Hard guard: days before preserve_before → copy wholesale ---
+        #
+        # B287/R-4: EXACT DATE ONLY. The weekday fallback used to apply here too
+        # and then re-stamped copied["date"], moving another day's completed
+        # sessions onto this date — fabricated training history, and
+        # _attach_feedback would then bind the wrong feedback via its
+        # (date, session_id) key. When the date ranges don't overlap we now
+        # leave the regenerated past day untouched: the immutable records
+        # (session_completion_log, feedback logs, outdoor JSONL) remain the
+        # source of truth for what actually happened.
         if preserve_date and day_date < preserve_date:
             prev_day = prev_by_date.get(day_date_str)
-            if not prev_day:
-                wd = day_date.weekday()
-                prev_day = prev_by_wd.get(wd)
             if prev_day:
-                copied = deepcopy(prev_day)
-                copied["date"] = day_date_str  # keep the new date
-                (result.get("weeks") or [{}])[0]["days"][i] = copied
+                # Same date by construction → no date rewrite happens.
+                (result.get("weeks") or [{}])[0]["days"][i] = deepcopy(prev_day)
+            elif prev_by_wd.get(day_date.weekday()):
+                logger.warning(
+                    "merge_prev_week_sessions: no same-date match for past day %s "
+                    "(date ranges don't overlap) — skipping weekday fallback to "
+                    "avoid re-stamping another day's history",
+                    day_date_str,
+                )
             continue
 
         # --- Days >= preserve_before: merge preservable sessions ---
+        # The weekday fallback stays allowed here (B114: macrocycle start_date
+        # shifted) because this path only merges preservable sessions into the
+        # freshly generated day and never rewrites a date.
         prev_day = prev_by_date.get(day_date_str)
+        same_date_match = prev_day is not None
         if not prev_day:
             wd = day_date.weekday()
             prev_day = prev_by_wd.get(wd)
         if not prev_day:
             continue
 
-        # Bug 2: if today has any completed session or outdoor log → copy wholesale
-        if preserve_date and day_date == preserve_date:
+        # Bug 2: if today has any completed session or outdoor log → copy wholesale.
+        # B287/R-4: wholesale copy requires a same-date match, for the reason above.
+        if preserve_date and day_date == preserve_date and same_date_match:
             has_completed = any(
                 s.get("status") == "done" for s in prev_day.get("sessions", [])
             )
             has_outdoor = prev_day.get("outdoor_session_status") == "done"
             if has_completed or has_outdoor:
-                copied = deepcopy(prev_day)
-                copied["date"] = day_date_str
-                (result.get("weeks") or [{}])[0]["days"][i] = copied
+                (result.get("weeks") or [{}])[0]["days"][i] = deepcopy(prev_day)
                 continue
 
         to_merge = [s for s in prev_day.get("sessions", []) if _is_preservable(s)]
@@ -1192,7 +1228,11 @@ def apply_events(
                 _weights_map = _BASE_WEIGHTS_BOULDER if discipline == "boulder" else _BASE_WEIGHTS
                 base_weights = _weights_map.get(phase_id, _weights_map["base"])
                 domain_weights = snapshot.get("domain_weights", base_weights)
-                session_pool = _build_session_pool(phase_id)
+                # B287/R-3: the pool must follow the discipline, exactly like
+                # generate_macrocycle does (macrocycle_v1.py). Before this fix the
+                # call defaulted to discipline="lead", so a boulder user got
+                # boulder domain weights combined with a LEAD session pool.
+                session_pool = _build_session_pool(phase_id, discipline=discipline)
                 regenerated = generate_phase_week(
                     phase_id=phase_id,
                     domain_weights=domain_weights,
@@ -1205,7 +1245,16 @@ def apply_events(
                     default_gym_id=((planning_prefs or {}).get("default_gym_id")),
                     gyms=gyms,
                 )
-                updated["weeks"] = regenerated["weeks"]
+                # B287/R-1: NEVER replace weeks wholesale. Before this fix the
+                # regenerated plan overwrote updated["weeks"] with no preserve
+                # step, so every done/skipped session in the week was destroyed —
+                # a direct violation of the past-session immutability pillar.
+                # Route through the same helper every other regeneration path
+                # uses, with the standard preserve floor.
+                merged = regenerate_preserving_completed(
+                    updated, regenerated, preserve_before=_preserve_floor(updated),
+                )
+                updated["weeks"] = merged["weeks"]
                 updated["profile_snapshot"] = regenerated["profile_snapshot"]
 
         elif event_type == "add_custom_session":

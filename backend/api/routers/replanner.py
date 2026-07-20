@@ -73,6 +73,13 @@ def _get_supplementary_sessions(location: str) -> list:
     return results
 
 
+# B287/R-2: event types that rebuild the week from scratch (generate_phase_week)
+# rather than editing individual sessions. Only these are refused on a past week.
+# Keep in sync with the apply_events branches in replanner_v1.py — today
+# set_availability is the single call site of generate_phase_week.
+_REGENERATING_EVENT_TYPES = frozenset({"set_availability"})
+
+
 def persist_week_plan(updated: dict, state: dict, user_id) -> None:
     """Save modified plan to per-week cache and (if current) to legacy cache.
 
@@ -330,6 +337,26 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
         raise HTTPException(
             status_code=422,
             detail="week_plan is required — generate one from GET /api/week/{week_num} first",
+        )
+
+    # B287/R-2: /override has carried the B257 past-week guard since B257, but
+    # /events never did — and `set_availability` is reachable from BOTH (it is
+    # the only event type that calls generate_phase_week). Applied to the
+    # client-supplied start_date, exactly like /override.
+    #
+    # Scoped to regenerating event types on purpose: a blanket guard would also
+    # reject mark_done/mark_skipped on a past week, which the UI still renders
+    # and allows whenever a saved plan exists (week/page.tsx — past_week_unavailable
+    # is only set when there is NO saved plan). Retroactively ticking a session
+    # you forgot to mark is explicit user edit, the one exception the
+    # immutability pillar allows. Regeneration is not.
+    _ws = week_plan.get("start_date")
+    if _ws and is_past_week(_ws) and any(
+        ev.get("event_type") in _REGENERATING_EVENT_TYPES for ev in req.events
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot modify a past week — past sessions are immutable.",
         )
 
     availability = state.get("availability")
