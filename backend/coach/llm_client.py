@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import anthropic
 
@@ -25,6 +25,12 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 1024
+
+# A244 — tool-use loop guards. MAX_TOOL_CALLS bounds provider/OWM cost per coach
+# message; MAX_ITERATIONS is a hard backstop so a misbehaving model can never
+# spin the loop forever (it always terminates in a text answer).
+MAX_TOOL_CALLS = 2
+MAX_ITERATIONS = 4
 
 # Re-exported so callers can catch provider errors without importing the SDK.
 APIError = anthropic.APIError
@@ -53,30 +59,7 @@ def _model() -> str:
     return os.environ.get("COACH_MODEL", DEFAULT_MODEL)
 
 
-def chat(system_blocks: List[str], messages: List[Dict[str, Any]]) -> str:
-    """Send one chat turn. Returns the assistant reply text.
-
-    ``system_blocks``: [static_kb, dynamic] from prompt_builder.
-    ``messages``: alternating user/assistant dicts, last one the new user msg.
-    """
-    client = _get_client()
-    system: List[Dict[str, Any]] = [
-        {
-            "type": "text",
-            "text": system_blocks[0],
-            "cache_control": {"type": "ephemeral"},
-        }
-    ]
-    for block in system_blocks[1:]:
-        system.append({"type": "text", "text": block})
-
-    response = client.messages.create(
-        model=_model(),
-        max_tokens=MAX_TOKENS,
-        system=system,
-        messages=messages,
-    )
-
+def _log_usage(response: Any) -> None:
     usage = response.usage
     cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
     cache_created = getattr(usage, "cache_creation_input_tokens", 0) or 0
@@ -91,9 +74,88 @@ def chat(system_blocks: List[str], messages: List[Dict[str, Any]]) -> str:
             "check static-block stability and minimum cacheable prefix size"
         )
 
+
+def _final_text(response: Any) -> str:
     return "".join(
         block.text for block in response.content if block.type == "text"
     ).strip()
+
+
+def chat(
+    system_blocks: List[str],
+    messages: List[Dict[str, Any]],
+    tools: Optional[List[Dict[str, Any]]] = None,
+    tool_executor: Optional[Callable[[str, Dict[str, Any]], str]] = None,
+) -> str:
+    """Send one chat turn. Returns the assistant reply text.
+
+    ``system_blocks``: [static_kb, dynamic] from prompt_builder.
+    ``messages``: alternating user/assistant dicts, last one the new user msg.
+    ``tools`` / ``tool_executor`` (A244): when both are given the call runs a
+    native tool-use loop — if the model emits ``tool_use`` blocks they are
+    executed via ``tool_executor(name, input) -> str`` and fed back as
+    ``tool_result`` turns until the model returns text (bounded by
+    MAX_TOOL_CALLS / MAX_ITERATIONS). Omitting them preserves the plain
+    single-call behaviour (zero regression for non-weather turns: the tool
+    definition rides the cached prefix, and no tool call fires unless needed).
+    """
+    client = _get_client()
+    system: List[Dict[str, Any]] = [
+        {
+            "type": "text",
+            "text": system_blocks[0],
+            "cache_control": {"type": "ephemeral"},
+        }
+    ]
+    for block in system_blocks[1:]:
+        system.append({"type": "text", "text": block})
+
+    create_kwargs: Dict[str, Any] = {}
+    if tools:
+        create_kwargs["tools"] = tools
+
+    convo: List[Dict[str, Any]] = list(messages)  # never mutate the caller's list
+    tool_calls = 0
+
+    for _ in range(MAX_ITERATIONS):
+        response = client.messages.create(
+            model=_model(),
+            max_tokens=MAX_TOKENS,
+            system=system,
+            messages=convo,
+            **create_kwargs,
+        )
+        _log_usage(response)
+
+        if response.stop_reason != "tool_use" or tool_executor is None:
+            return _final_text(response)
+
+        # Echo the assistant tool_use turn, then answer each tool_use block.
+        convo.append({"role": "assistant", "content": response.content})
+        results: List[Dict[str, Any]] = []
+        for block in response.content:
+            if block.type != "tool_use":
+                continue
+            if tool_calls >= MAX_TOOL_CALLS:
+                result = "Weather lookup limit reached for this message."
+            else:
+                tool_calls += 1
+                try:
+                    result = tool_executor(block.name, dict(block.input or {}))
+                except Exception:  # noqa: BLE001 — a tool must never break the loop
+                    logger.exception("coach tool_executor failed for %s", block.name)
+                    result = "That lookup is unavailable right now."
+            results.append(
+                {"type": "tool_result", "tool_use_id": block.id, "content": result}
+            )
+        convo.append({"role": "user", "content": results})
+
+    # Backstop: force one final, tool-free answer so we always return text.
+    response = client.messages.create(
+        model=_model(), max_tokens=MAX_TOKENS, system=system, messages=convo,
+    )
+    _log_usage(response)
+    return _final_text(response)
 
 
 def extract(system_text: str, message: str, tool: Dict[str, Any]) -> Dict[str, Any]:

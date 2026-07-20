@@ -164,17 +164,30 @@ def handle_chat(
 ) -> str:
     """One chat turn. Returns the assistant reply (already persisted).
 
-    ``lat``/``lon``: optional current location from the client — enables the
-    weather section in the context block (A-COACH-V1b).
+    ``lat``/``lon``: optional current location from the client — passed to the
+    ``get_weather`` tool executor so "here" resolves to the user's GPS
+    (A244; weather is now on-demand tool use, not a pre-fetch).
     """
+    from backend.api.deps import load_state
+    from backend.coach import weather_tool
+
+    state = load_state(user_id)
     history = _load_history(user_id)
-    system_blocks = prompt_builder.build_system_blocks(
-        user_id, message, lat=lat, lon=lon
-    )
+    system_blocks = prompt_builder.build_system_blocks(user_id, message, state=state)
     messages: List[Dict[str, Any]] = history + [
         {"role": "user", "content": message}
     ]
-    reply = llm_client.chat(system_blocks, messages)
+
+    def _tool_executor(name: str, tool_input: Dict[str, Any]) -> str:
+        if name == weather_tool.WEATHER_TOOL["name"]:
+            return weather_tool.execute_get_weather(tool_input, state, lat, lon)
+        return f"Unknown tool: {name}"
+
+    reply = llm_client.chat(
+        system_blocks, messages,
+        tools=[weather_tool.WEATHER_TOOL],
+        tool_executor=_tool_executor,
+    )
     storage.append_coach_message(user_id, "user", message)
     storage.append_coach_message(user_id, "assistant", reply)
     return reply

@@ -56,9 +56,11 @@ def mock_llm(monkeypatch):
     """Replace the Anthropic call with a canned reply; capture inputs."""
     calls = {}
 
-    def fake_chat(system_blocks, messages):
+    def fake_chat(system_blocks, messages, tools=None, tool_executor=None):
         calls["system_blocks"] = system_blocks
         calls["messages"] = messages
+        calls["tools"] = tools
+        calls["tool_executor"] = tool_executor
         return "Mocked coach reply."
 
     monkeypatch.setattr(llm_client, "chat", fake_chat)
@@ -305,47 +307,18 @@ class TestCoachV1b:
         }]}]}}
         return state
 
-    def test_weather_forecast_for_planned_outdoor_day(self, monkeypatch):
-        from backend.api.routers import weather
-        tomorrow = (date.today() + timedelta(days=1)).isoformat()
-        monkeypatch.setattr(
-            weather, "_owm_get",
-            lambda path, lat, lon: _owm_forecast_for(tomorrow),
-        )
-        monkeypatch.setattr(
-            weather, "_owm_geocode_get",
-            lambda q: [{"lat": 49.82, "lon": 6.35}],
-        )
-        state = self._state_with_outdoor(tomorrow)
-        dynamic = prompt_builder.build_dynamic_block(state, None, "meteo")
-        assert "## Weather" in dynamic
-        assert "Forecast for Berdorf" in dynamic
-        assert "friction band:" in dynamic
-
-    def test_weather_current_location(self, monkeypatch):
-        from backend.api.routers import weather
-        monkeypatch.setattr(
-            weather, "_owm_get", lambda path, lat, lon: OWM_CURRENT
-        )
-        state = deps.load_state(None)
-        dynamic = prompt_builder.build_dynamic_block(
-            state, None, "fa caldo?", lat=49.6, lon=6.1
-        )
-        assert "Now at the athlete's location: 31.0°C" in dynamic
-
-    def test_weather_unavailable_is_silent(self, monkeypatch):
+    def test_weather_never_prefetched_into_context(self, monkeypatch):
+        # A244: weather is on-demand tool use, never injected into the prompt.
         from backend.api.routers import weather
 
         def boom(*a, **kw):
-            raise weather.WeatherUnavailable("no key")
+            raise AssertionError("weather must NOT be fetched at prompt-build time")
 
         monkeypatch.setattr(weather, "_owm_get", boom)
         monkeypatch.setattr(weather, "_owm_geocode_get", boom)
         tomorrow = (date.today() + timedelta(days=1)).isoformat()
         state = self._state_with_outdoor(tomorrow)
-        dynamic = prompt_builder.build_dynamic_block(
-            state, None, "meteo", lat=49.6, lon=6.1
-        )
+        dynamic = prompt_builder.build_dynamic_block(state, None, "meteo")
         assert "## Weather" not in dynamic
         assert "=== USER CONTEXT" in dynamic  # context intact
 
@@ -368,7 +341,7 @@ class TestCoachV1b:
         state.setdefault("preferences", {})["coach_notes"] = (
             "Ho paura di volare su lead. " + "x" * 600
         )
-        ctx = prompt_builder.build_user_context(state, None, weather_text=None)
+        ctx = prompt_builder.build_user_context(state, None)
         assert "## Personal notes from the athlete" in ctx
         assert "Ho paura di volare su lead." in ctx
         start = ctx.index("## Personal notes")
@@ -379,14 +352,12 @@ class TestCoachV1b:
     def test_no_notes_no_section(self):
         state = deps.load_state(None)
         (state.setdefault("preferences", {}))["coach_notes"] = "   "
-        ctx = prompt_builder.build_user_context(state, None, weather_text=None)
+        ctx = prompt_builder.build_user_context(state, None)
         assert "## Personal notes" not in ctx
 
-    def test_chat_endpoint_forwards_coords(self, mock_llm, monkeypatch):
-        from backend.api.routers import weather
-        monkeypatch.setattr(
-            weather, "_owm_get", lambda path, lat, lon: OWM_CURRENT
-        )
+    def test_chat_endpoint_passes_weather_tool_and_executor(self, mock_llm):
+        # A244: the chat turn wires the get_weather tool + an executor; coords
+        # are handed to the executor (not pre-fetched into the prompt).
         uid = _uid()
         r = client.post(
             "/api/coach/chat",
@@ -394,7 +365,11 @@ class TestCoachV1b:
             headers={"X-User-ID": uid},
         )
         assert r.status_code == 200
-        assert "Now at the athlete's location" in mock_llm["system_blocks"][1]
+        tool_names = [t["name"] for t in (mock_llm["tools"] or [])]
+        assert "get_weather" in tool_names
+        assert callable(mock_llm["tool_executor"])
+        # Unknown tools are handled gracefully (never raise into the loop).
+        assert "Unknown tool" in mock_llm["tool_executor"]("nope", {})
 
     def test_chat_endpoint_rejects_bad_coords(self, mock_llm):
         r = client.post(
@@ -432,6 +407,205 @@ class TestCoachV1b:
         assert r.status_code == 200
         sugg = r.json()["suggestions"]
         assert "How is my training going so far?" in sugg
+
+
+# ── A244: on-demand weather tool ───────────────────────────────────────────
+
+from types import SimpleNamespace  # noqa: E402
+
+
+def _fake_usage():
+    return SimpleNamespace(
+        input_tokens=10, output_tokens=5,
+        cache_read_input_tokens=1, cache_creation_input_tokens=0,
+    )
+
+
+def _text_block(text):
+    return SimpleNamespace(type="text", text=text)
+
+
+def _tool_use_block(name, tid, tool_input):
+    return SimpleNamespace(type="tool_use", name=name, id=tid, input=tool_input)
+
+
+class _FakeMessages:
+    """Serves a scripted list of responses on successive .create() calls."""
+
+    def __init__(self, responses):
+        self._responses = list(responses)
+        self.create_calls = []
+
+    def create(self, **kwargs):
+        self.create_calls.append(kwargs)
+        return self._responses.pop(0)
+
+
+class _FakeClient:
+    def __init__(self, responses):
+        self.messages = _FakeMessages(responses)
+
+
+class TestWeatherTool:
+    @pytest.fixture(autouse=True)
+    def clear_weather_caches(self, monkeypatch):
+        from backend.api.routers import weather
+        weather._cache.clear()
+        weather._geo_cache.clear()
+        yield
+        weather._cache.clear()
+        weather._geo_cache.clear()
+
+    # ---- executor -----------------------------------------------------------
+
+    def test_here_uses_client_gps(self, monkeypatch):
+        from backend.api.routers import weather
+        from backend.coach import weather_tool
+        monkeypatch.setattr(weather, "_owm_get", lambda p, lat, lon: OWM_CURRENT)
+        out = weather_tool.execute_get_weather(
+            {"location": "here", "days_ahead": 0}, {}, lat=49.6, lon=6.1
+        )
+        assert "your current location" in out
+        assert "31.0°C" in out and "friction band" in out
+
+    def test_here_without_gps_is_unavailable(self):
+        from backend.coach import weather_tool
+        out = weather_tool.execute_get_weather(
+            {"location": "here"}, {}, lat=None, lon=None
+        )
+        assert "unavailable" in out.lower() and "here" in out.lower()
+
+    def test_named_place_forecast(self, monkeypatch):
+        from backend.api.routers import weather
+        from backend.coach import weather_tool
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        monkeypatch.setattr(
+            weather, "_owm_geocode_get", lambda q: [{"lat": 49.82, "lon": 6.35}]
+        )
+        monkeypatch.setattr(
+            weather, "_owm_get", lambda p, lat, lon: _owm_forecast_for(tomorrow)
+        )
+        out = weather_tool.execute_get_weather(
+            {"location": "Berdorf", "days_ahead": 1}, {}
+        )
+        assert "Berdorf" in out and "1 day(s)" in out and "friction band" in out
+
+    def test_unresolvable_place_is_unavailable(self, monkeypatch):
+        from backend.api.routers import weather
+        from backend.coach import weather_tool
+        monkeypatch.setattr(weather, "_owm_geocode_get", lambda q: [])
+        out = weather_tool.execute_get_weather({"location": "Nowheresville"}, {})
+        assert "unavailable" in out.lower()
+
+    def test_provider_failure_never_raises(self, monkeypatch):
+        from backend.api.routers import weather
+        from backend.coach import weather_tool
+
+        def boom(*a, **kw):
+            raise weather.WeatherUnavailable("down")
+
+        monkeypatch.setattr(weather, "_owm_get", boom)
+        out = weather_tool.execute_get_weather(
+            {"location": "here"}, {}, lat=1.0, lon=2.0
+        )
+        assert "unavailable" in out.lower()
+
+    def test_days_ahead_clamped(self):
+        from backend.coach import weather_tool
+        # 99 → clamped to the 5-day OWM horizon; bad type → 0. Neither raises.
+        assert weather_tool.execute_get_weather(
+            {"location": "here", "days_ahead": 99}, {}, lat=None, lon=None
+        )
+        assert weather_tool.execute_get_weather(
+            {"location": "here", "days_ahead": "oops"}, {}, lat=None, lon=None
+        )
+
+    # ---- llm_client tool-use loop ------------------------------------------
+
+    def test_chat_runs_tool_loop_and_returns_text(self, monkeypatch):
+        from backend.coach import llm_client
+        calls = {"exec": []}
+
+        def executor(name, tool_input):
+            calls["exec"].append((name, tool_input))
+            return "Weather at Berdorf (now): 18.0°C, friction band: prime (85/100)"
+
+        responses = [
+            SimpleNamespace(
+                stop_reason="tool_use",
+                content=[_tool_use_block("get_weather", "t1", {"location": "Berdorf"})],
+                usage=_fake_usage(),
+            ),
+            SimpleNamespace(
+                stop_reason="end_turn",
+                content=[_text_block("Conditions at Berdorf look prime today.")],
+                usage=_fake_usage(),
+            ),
+        ]
+        fake = _FakeClient(responses)
+        monkeypatch.setattr(llm_client, "_get_client", lambda: fake)
+
+        reply = llm_client.chat(
+            ["static", "dynamic"],
+            [{"role": "user", "content": "conditions at Berdorf?"}],
+            tools=[{"name": "get_weather"}],
+            tool_executor=executor,
+        )
+        assert reply == "Conditions at Berdorf look prime today."
+        assert calls["exec"] == [("get_weather", {"location": "Berdorf"})]
+        # Second create() carried the tool_result turn back to the model.
+        assert len(fake.messages.create_calls) == 2
+        last_msgs = fake.messages.create_calls[1]["messages"]
+        assert any(
+            m["role"] == "user" and isinstance(m["content"], list)
+            and m["content"][0].get("type") == "tool_result"
+            for m in last_msgs
+        )
+
+    def test_chat_without_tools_is_single_call(self, monkeypatch):
+        from backend.coach import llm_client
+        fake = _FakeClient([
+            SimpleNamespace(
+                stop_reason="end_turn",
+                content=[_text_block("Plain answer.")],
+                usage=_fake_usage(),
+            )
+        ])
+        monkeypatch.setattr(llm_client, "_get_client", lambda: fake)
+        reply = llm_client.chat(["static", "dynamic"], [{"role": "user", "content": "hi"}])
+        assert reply == "Plain answer."
+        assert len(fake.messages.create_calls) == 1
+        assert "tools" not in fake.messages.create_calls[0]
+
+    def test_tool_loop_respects_call_cap(self, monkeypatch):
+        from backend.coach import llm_client
+        n_exec = {"n": 0}
+
+        def executor(name, tool_input):
+            n_exec["n"] += 1
+            return "some weather"
+
+        # Model keeps asking for a tool every turn; the loop must terminate and
+        # never execute more than MAX_TOOL_CALLS real lookups.
+        def tool_resp(i):
+            return SimpleNamespace(
+                stop_reason="tool_use",
+                content=[_tool_use_block("get_weather", f"t{i}", {"location": "x"})],
+                usage=_fake_usage(),
+            )
+
+        text_resp = SimpleNamespace(
+            stop_reason="end_turn", content=[_text_block("done")], usage=_fake_usage()
+        )
+        # Enough tool responses to exceed the iteration cap, then a text answer.
+        fake = _FakeClient([tool_resp(i) for i in range(10)] + [text_resp])
+        monkeypatch.setattr(llm_client, "_get_client", lambda: fake)
+        reply = llm_client.chat(
+            ["s", "d"], [{"role": "user", "content": "weather?"}],
+            tools=[{"name": "get_weather"}], tool_executor=executor,
+        )
+        assert isinstance(reply, str)
+        assert n_exec["n"] <= llm_client.MAX_TOOL_CALLS
 
 
 # ── storage (file backend) ─────────────────────────────────────────────────

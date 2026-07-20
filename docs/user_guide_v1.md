@@ -483,7 +483,7 @@ The timer shows total time and intervals computed in real-time. During execution
 
 The **Coach** (in the More menu, or from the card on Today) is a conversational training assistant that knows your plan and your history: your current phase and week, your assessment profile, your test baselines and current working loads, your recent sessions and outdoor logs, and your planned outdoor days and trips. It replies in the language you write in.
 
-It also sees **real weather** (OpenWeatherMap): current conditions at your location (if you allow location access on the Coach page) and the midday forecast for your planned outdoor days in the next 5 days — so "what conditions will I find at the crag on Sunday?" gets a real answer, with friction advice.
+It can also pull **real weather** on demand (OpenWeatherMap): just ask. Say "here" (allow location access on the Coach page) for current conditions where you are, or name any crag/city and a day up to 5 ahead — "what conditions will I find at Berdorf on Sunday?" gets a real answer with a friction score and advice. It only checks the weather when your question needs it, and it never invents conditions: if it can't reach the provider it tells you so.
 
 Two ways to make it more personal:
 
