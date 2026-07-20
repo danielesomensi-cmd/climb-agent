@@ -1,14 +1,38 @@
 #!/bin/bash
-# Pre-push hook: run sync_status.py and check for uncommitted changes
+# Pre-push hook: run sync_status.py and check for uncommitted changes.
 
-# Activate venv if present (needed for pytest collection)
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-if [ -f "$REPO_ROOT/.venv/bin/activate" ]; then
-    source "$REPO_ROOT/.venv/bin/activate"
+# Resolve the MAIN working tree root (not the current worktree) so the shared
+# .venv is found even when pushing from a `git worktree`. --git-common-dir points
+# at the main repo's .git; its parent is the main working tree.
+COMMON_DIR="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+if [ -n "$COMMON_DIR" ]; then
+    MAIN_ROOT="$(cd "$(dirname "$COMMON_DIR")" && pwd)"
+else
+    MAIN_ROOT="$(git rev-parse --show-toplevel)"
 fi
 
-echo "Running sync_status.py..."
-python scripts/sync_status.py
+# Activate the venv if present (needed for pytest collection in sync_status.py).
+if [ -f "$MAIN_ROOT/.venv/bin/activate" ]; then
+    # shellcheck disable=SC1090
+    source "$MAIN_ROOT/.venv/bin/activate"
+fi
+
+# Pick a Python interpreter robustly: the (now-activated) venv python, else the
+# venv binary directly, else python3, else python. Bare `python` is often absent
+# on modern macOS/Homebrew — never rely on it alone.
+if command -v python >/dev/null 2>&1; then
+    PYTHON="python"
+elif [ -x "$MAIN_ROOT/.venv/bin/python" ]; then
+    PYTHON="$MAIN_ROOT/.venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON="python3"
+else
+    echo "pre-push: no Python interpreter found (tried venv, python, python3)." >&2
+    exit 1
+fi
+
+echo "Running sync_status.py ($PYTHON)..."
+"$PYTHON" scripts/sync_status.py
 
 # Check if sync modified any files
 if ! git diff --quiet; then
