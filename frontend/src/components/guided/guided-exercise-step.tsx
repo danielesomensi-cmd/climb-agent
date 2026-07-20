@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
 import type { GuidedExercise } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
+import { FEEDBACK_OPTIONS } from "@/lib/format";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
@@ -20,13 +21,6 @@ interface GuidedExerciseStepProps {
   onNotesChange?: (notes: string) => void;
 }
 
-const FEEDBACK_OPTIONS = [
-  { value: "very_easy", label: "Very easy", color: "bg-green-600" },
-  { value: "easy", label: "Easy", color: "bg-green-500" },
-  { value: "ok", label: "OK", color: "bg-yellow-500" },
-  { value: "hard", label: "Hard", color: "bg-orange-500" },
-  { value: "very_hard", label: "Very hard", color: "bg-red-500" },
-];
 
 function formatRest(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -601,7 +595,7 @@ export function GuidedExerciseStep({
                     onClick={() => setFeedback(opt.value)}
                     className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all ${
                       feedback === opt.value
-                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
+                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
                     }`}
                   >
@@ -900,7 +894,7 @@ export function GuidedExerciseStep({
                     onClick={() => setFeedback(opt.value)}
                     className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all ${
                       feedback === opt.value
-                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
+                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
                     }`}
                   >

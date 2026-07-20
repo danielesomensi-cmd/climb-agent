@@ -38,6 +38,7 @@ import { ExerciseCard } from "@/components/training/exercise-card";
 import { getExercises, addExerciseToSession, removeExerciseFromSession, resolveSession } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
+import { formatSessionName } from "@/lib/format";
 
 interface Gym {
   gym_id?: string;
@@ -63,12 +64,6 @@ interface SessionCardProps {
   onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
 }
 
-/** Format session_id into a readable string: replace _ with spaces, capitalize */
-function formatSessionName(sessionId: string): string {
-  return sessionId
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
 
 const FEEDBACK_BADGE_STYLE: Record<string, string> = {
   very_easy: "bg-emerald-400/20 text-emerald-300 border-emerald-400/30",

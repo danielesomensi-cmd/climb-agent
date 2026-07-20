@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import type { WeekPlan } from "@/lib/types";
+import { formatDateShort } from "@/lib/format";
 
 interface MoveSessionDialogProps {
   open: boolean;
@@ -40,17 +41,6 @@ const WEEKDAY_LABELS: Record<string, string> = {
 };
 
 /** Format date as "15 Feb" */
-function formatDateShort(dateStr: string): string {
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  return `${day} ${months[monthIdx] ?? parts[1]}`;
-}
 
 export function MoveSessionDialog({
   open,

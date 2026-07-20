@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { CustomExerciseStep } from "@/components/session-play/custom-exercise-step";
 import { CustomRestTimer } from "@/components/session-play/custom-rest-timer";
 import { unlockAudio } from "@/lib/audio-unlock";
+import { FEEDBACK_OPTIONS } from "@/lib/format";
 
 type Stage = "idle" | "exercise_active" | "resting" | "completed";
 
@@ -23,13 +24,6 @@ type CachedWeek = { week_num: number; phase_id?: string | null; week_plan: WeekP
 // A240: perceived-effort options mirror the guided player's feedback labels
 // (guided-exercise-step.tsx) — reused verbatim so custom logging feeds the same
 // exercise_feedback_v1 shape the engine's apply_feedback already consumes.
-const FEEDBACK_OPTIONS = [
-  { value: "very_easy", label: "Very easy", color: "bg-green-600" },
-  { value: "easy", label: "Easy", color: "bg-green-500" },
-  { value: "ok", label: "OK", color: "bg-yellow-500" },
-  { value: "hard", label: "Hard", color: "bg-orange-500" },
-  { value: "very_hard", label: "Very hard", color: "bg-red-500" },
-] as const;
 
 /**
  * A240: per-exercise capture on the completion screen. Collects perceived

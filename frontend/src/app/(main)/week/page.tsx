@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useAuth } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,26 +9,27 @@ import { TopBar } from "@/components/layout/top-bar";
 import { WeekGrid } from "@/components/training/week-grid";
 import { PausedBanner } from "@/components/training/paused-banner";
 import { DayCard } from "@/components/training/day-card";
-import { QuickAddDialog } from "@/components/training/quick-add-dialog";
-import { ReplanDialog } from "@/components/training/replan-dialog";
-import { MoveSessionDialog } from "@/components/training/move-session-dialog";
-import { GymPickerDialog } from "@/components/training/gym-picker-dialog";
+const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
+const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
+const MoveSessionDialog = dynamic(() => import("@/components/training/move-session-dialog").then((m) => m.MoveSessionDialog), { ssr: false });
+const GymPickerDialog = dynamic(() => import("@/components/training/gym-picker-dialog").then((m) => m.GymPickerDialog), { ssr: false });
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide-react";
-import { FeedbackDialog } from "@/components/training/feedback-dialog";
+const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
-import { applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, getFreeSessionHistory, deleteFreeSession } from "@/lib/api";
+import { applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
+import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
 import { buildDialogFeedbackItems, extractFeedbackExercises } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
-import OutdoorLogForm from "@/components/training/OutdoorLogForm";
+const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
 import {
   Dialog,
   DialogContent,
@@ -118,8 +121,6 @@ export default function WeekPage() {
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
   const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
   const [outdoorLoadMap, setOutdoorLoadMap] = useState<Record<string, number>>({});
-  const [freeSessionsByDate, setFreeSessionsByDate] = useState<Record<string, Array<Record<string, unknown>>>>({});
-  const [freeSessionsLoaded, setFreeSessionsLoaded] = useState(false);
   const weekRouter = useRouter();
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -164,23 +165,25 @@ export default function WeekPage() {
       .catch((err) => { console.error("Failed to load outdoor sessions:", err); });
   }, [weekPlan]);
 
-  // Fetch free sessions for all days in the week (A138)
-  useEffect(() => {
-    if (!weekPlan) return;
-    setFreeSessionsLoaded(false);
-    const allDays = weekPlan.weeks.flatMap(w => w.days);
-    const dates = allDays.map(d => d.date);
-    if (dates.length === 0) { setFreeSessionsLoaded(true); return; }
-    Promise.all(dates.map(d => getFreeSessionHistory(d).then(r => ({ date: d, sessions: r.sessions })).catch(() => ({ date: d, sessions: [] }))))
-      .then((results) => {
-        const map: Record<string, Array<Record<string, unknown>>> = {};
-        for (const r of results) {
-          if (r.sessions.length > 0) map[r.date] = r.sessions;
-        }
-        setFreeSessionsByDate(map);
-        setFreeSessionsLoaded(true);
-      });
-  }, [weekPlan]);
+  // A245 F-5 (F15): was a hand-rolled Promise.all over 7 days in an effect
+  // keyed on [weekPlan]. structuralSharing is off, so every mutation produced a
+  // fresh reference and refired all 7 requests, uncached, on every action —
+  // and again on every today→week→today navigation. Now cache-backed, sharing
+  // the same per-date keys as /today.
+  const weekDates = useMemo(
+    () => weekPlan?.weeks.flatMap((w) => w.days).map((d) => d.date) ?? [],
+    [weekPlan],
+  );
+  const { sessions: allFreeSessions, isSettled: freeSessionsLoaded } =
+    useFreeSessionsForDates(weekDates, !!weekPlan);
+  const freeSessionsByDate = useMemo(() => {
+    const map: Record<string, Array<Record<string, unknown>>> = {};
+    for (const fs of allFreeSessions as Array<Record<string, unknown>>) {
+      const d = fs.date as string | undefined;
+      if (d) (map[d] ??= []).push(fs);
+    }
+    return map;
+  }, [allFreeSessions]);
 
   const totalWeeks = macrocycle?.total_weeks ?? 0;
 
@@ -843,14 +846,9 @@ export default function WeekPage() {
                   onDeleteFreeSession={async (sessionId: string) => {
                     try {
                       await deleteFreeSession(sessionId);
-                      setFreeSessionsByDate((prev) => {
-                        const copy = { ...prev };
-                        for (const d in copy) {
-                          copy[d] = copy[d].filter((s) => s.id !== sessionId);
-                          if (copy[d].length === 0) delete copy[d];
-                        }
-                        return copy;
-                      });
+                      // A245 F-5: cache-owned now — invalidate instead of
+                      // hand-editing a local map that no longer exists.
+                      qc.invalidateQueries({ queryKey: queryKeys.freeSessionHistoryAll });
                     } catch { /* ignore */ }
                   }}
                 />

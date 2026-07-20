@@ -124,7 +124,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "isometric",
     difficulty: "hard",
     requires_bar: true,
-    image: "32_front_lever_tuck.png",
+    image: "32_front_lever_tuck.jpeg",
   },
 
   // ── Anti-Rotation (resist twisting — key for barn-door prevention) ──
@@ -197,7 +197,7 @@ export const CORE_EXERCISES: CircuitExercise[] = [
     type: "dynamic",
     difficulty: "hard",
     requires_bar: true,
-    image: "33_hanging_wipers.png",
+    image: "33_hanging_wipers.jpeg",
   },
 
   // ── Anti-Lateral Flexion (sides — resist sideways bending) ──────────

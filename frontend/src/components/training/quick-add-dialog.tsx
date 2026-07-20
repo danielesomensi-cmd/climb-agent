@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Mountain, ArrowLeft, Dumbbell, Grip, Wrench } from "lucide-react";
 import { getSuggestedSessions, getSessions, getOutdoorSpots, addOutdoorSpot, getCustomSessions } from "@/lib/api";
 import type { SessionMeta, OutdoorSpot, CustomSessionSummary } from "@/lib/types";
+import { formatDateShort } from "@/lib/format";
 
 interface Gym {
   gym_id?: string;
@@ -64,17 +65,6 @@ const INTENSITY_COLORS: Record<string, string> = {
 };
 
 /** Format date as "15 Feb" */
-function formatDateLabel(dateStr: string): string {
-  const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-  ];
-  const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
-  const day = parseInt(parts[2], 10);
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  return `${day} ${months[monthIdx] ?? parts[1]}`;
-}
 
 export function QuickAddDialog({
   open,
@@ -303,7 +293,7 @@ export function QuickAddDialog({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-md max-h-[75dvh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Add session — {formatDateLabel(date)}</DialogTitle>
+          <DialogTitle>Add session — {formatDateShort(date)}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2 overflow-y-auto min-h-0 flex-1">

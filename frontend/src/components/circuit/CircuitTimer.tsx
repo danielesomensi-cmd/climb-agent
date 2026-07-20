@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { getAudioContext, unlockAudio } from "@/lib/audio-unlock";
+import { unlockAudio } from "@/lib/audio-unlock";
+import { countdownTick, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
 import {
   type CircuitExercise,
@@ -45,26 +47,7 @@ const PHASE_RING: Record<CircuitPhase, string> = {
 
 // ── Audio ──────────────────────────────────────────────────────────────
 
-async function beep(freq: number, duration: number, volume: number) {
-  try {
-    const ctx = getAudioContext();
-    if (ctx.state !== "running") await ctx.resume();
-    if (ctx.state !== "running") return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(volume, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + duration);
-  } catch { /* silent */ }
-}
 
-function countdownTick() { beep(660, 0.08, 0.25); }
-function transitionBeep() { beep(880, 0.2, 0.4); }
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -587,9 +570,13 @@ export function CircuitTimer({
             {/* Exercise info */}
             <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
               {displayExercise.image && (
-                <img
+                <Image
                   src={`/exercises/core/${displayExercise.image}`}
                   alt={displayExercise.name}
+                  width={560}
+                  height={280}
+                  sizes="(max-width: 640px) 100vw, 384px"
+                  priority
                   className="mx-auto mb-2 max-h-[140px] w-full object-contain rounded-xl"
                 />
               )}
@@ -619,9 +606,13 @@ export function CircuitTimer({
           <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
             <p className="text-xs text-center text-white/50 uppercase tracking-wider mb-2">First up</p>
             {sequence[0].image && (
-              <img
+              <Image
                 src={`/exercises/core/${sequence[0].image}`}
                 alt={sequence[0].name}
+                width={560}
+                height={280}
+                sizes="(max-width: 640px) 100vw, 384px"
+                priority
                 className="mx-auto mb-2 max-h-[140px] w-full object-contain rounded-xl"
               />
             )}
