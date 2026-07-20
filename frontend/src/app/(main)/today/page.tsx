@@ -55,6 +55,7 @@ import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressS
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
 import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession, GuidedExercise } from "@/lib/types";
 import { hasOtherActivity } from "@/lib/other-activity";
+import { completeOtherActivityEvent, removeOtherActivityEvent, removeOutdoorEvent, undoOtherActivityEvent, undoOutdoorEvent } from "@/lib/week-events";
 
 /** Full weekday names */
 const WEEKDAY_FULL: Record<number, string> = {
@@ -553,14 +554,11 @@ function TodayContent() {
   /** Complete an other-activity (complementary sport) with feedback + optional duration */
   async function handleCompleteOtherActivity(date: string, slot: string | undefined, feedback: string, durationMinutes?: number) {
     if (!weekPlan) return;
+    // A245 G-5 (F19): /week clears a stale error before retrying and /today
+    // did not — one of the real divergences the duplication had already produced.
+    setError(null);
     try {
-      const ev: Record<string, unknown> = {
-        event_type: "complete_other_activity",
-        date,
-        feedback,
-      };
-      if (slot) ev.slot = slot;
-      if (durationMinutes != null) ev.duration_minutes = durationMinutes;
+      const ev = completeOtherActivityEvent(date, slot, feedback, durationMinutes);
       const result = await applyEvents({
         events: [ev],
         week_plan: weekPlan,
@@ -588,15 +586,12 @@ function TodayContent() {
   /** Undo other-activity completion (B276: per-slot) */
   async function handleUndoOtherActivity(date: string, slot?: string) {
     if (!weekPlan) return;
+    // A245 G-5 (F19): /week clears a stale error before retrying and /today
+    // did not — one of the real divergences the duplication had already produced.
+    setError(null);
     try {
       const result = await applyEvents({
-        events: [
-          {
-            event_type: "undo_other_activity",
-            date,
-            ...(slot ? { slot } : {}),
-          },
-        ],
+        events: [undoOtherActivityEvent(date, slot)],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -608,9 +603,12 @@ function TodayContent() {
   /** Remove other activity from a day (B276: per-slot) */
   async function handleRemoveOtherActivity(date: string, slot?: string) {
     if (!weekPlan) return;
+    // A245 G-5 (F19): /week clears a stale error before retrying and /today
+    // did not — one of the real divergences the duplication had already produced.
+    setError(null);
     try {
       const result = await applyEvents({
-        events: [{ event_type: "remove_other_activity", date, ...(slot ? { slot } : {}) }],
+        events: [removeOtherActivityEvent(date, slot)],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -890,9 +888,12 @@ function TodayContent() {
   /** Undo outdoor completion */
   async function handleUndoOutdoor(date: string) {
     if (!weekPlan) return;
+    // A245 G-5 (F19): /week clears a stale error before retrying and /today
+    // did not — one of the real divergences the duplication had already produced.
+    setError(null);
     try {
       const result = await applyEvents({
-        events: [{ event_type: "undo_outdoor", date }],
+        events: [undoOutdoorEvent(date)],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);
@@ -904,9 +905,12 @@ function TodayContent() {
   /** Remove an outdoor session from a day */
   async function handleRemoveOutdoor(date: string) {
     if (!weekPlan) return;
+    // A245 G-5 (F19): /week clears a stale error before retrying and /today
+    // did not — one of the real divergences the duplication had already produced.
+    setError(null);
     try {
       const result = await applyEvents({
-        events: [{ event_type: "remove_outdoor", date }],
+        events: [removeOutdoorEvent(date)],
         week_plan: weekPlan,
       });
       updateWeekCache(result.week_plan);

@@ -1016,3 +1016,14 @@ export interface Weather {
   date: string | null;
   source: string;
 }
+
+/**
+ * A245 G-4 (F52) — periodic retest reminder emitted by `GET /api/week/{n}`.
+ *
+ * Shape mirrors `should_show_test_reminder()` in `backend/engine/planner_v2.py`.
+ */
+export interface TestReminder {
+  type: "test_week_reminder";
+  message: string;
+  options: Array<"confirm" | "postpone_1_week" | "skip_cycle">;
+}
