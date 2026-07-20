@@ -173,7 +173,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/replanner/override` | Apply day override (intent-based, equipment-aware) |
 | POST | `/api/replanner/events` | Apply events (done/skipped) to week plan |
 | GET | `/api/replanner/suggest-sessions` | Suggest sessions for quick-add |
-| POST | `/api/replanner/quick-add` | Add extra session to a day |
+| POST | `/api/replanner/quick-add` | Add extra session to a day (B287: runs `_reconcile` — 48h finger gap + hard cap enforced, seeded with the previous week's trailing days; returns `adjustments[]` describing any downshift) |
 | POST | `/api/feedback` | Submit session feedback |
 | GET | `/api/outdoor/spots` | List outdoor spots |
 | POST | `/api/outdoor/spots` | Add outdoor spot |

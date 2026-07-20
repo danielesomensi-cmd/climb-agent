@@ -147,7 +147,7 @@ def test_add_appends_to_existing_day():
     if free_slot is None:
         return  # All slots occupied, skip
 
-    updated, warnings = apply_day_add(
+    updated, warnings, _ = apply_day_add(
         plan,
         session_id="regeneration_easy",
         target_date=date,
@@ -168,7 +168,7 @@ def test_add_on_rest_day():
         plan["weeks"][0]["days"][-1]["sessions"] = []
         rest_day = plan["weeks"][0]["days"][-1]
 
-    updated, warnings = apply_day_add(
+    updated, warnings, _ = apply_day_add(
         plan,
         session_id="flexibility_full",
         target_date=rest_day["date"],
@@ -211,7 +211,7 @@ def test_add_hard_ripple_day1():
         has_hard_next = any((s.get("tags") or {}).get("hard") for s in next_day.get("sessions", []))
         free_slots = [sl for sl in ("morning", "lunch", "evening") if sl not in {s["slot"] for s in day["sessions"]}]
         if has_hard_next and free_slots:
-            updated, _ = apply_day_add(
+            updated, _, _ = apply_day_add(
                 plan,
                 session_id="strength_long",
                 target_date=day["date"],
@@ -228,7 +228,7 @@ def test_add_hard_ripple_day1():
     day = days[0]
     free_slots = [sl for sl in ("morning", "lunch", "evening") if sl not in {s["slot"] for s in day["sessions"]}]
     if free_slots:
-        updated, _ = apply_day_add(
+        updated, _, _ = apply_day_add(
             plan,
             session_id="strength_long",
             target_date=day["date"],
@@ -254,7 +254,7 @@ def test_add_no_ripple_day2():
     if not free_slots:
         return
 
-    updated, _ = apply_day_add(
+    updated, _, _ = apply_day_add(
         plan,
         session_id="strength_long",
         target_date=days[0]["date"],
@@ -297,7 +297,7 @@ def test_add_exceeding_cap_warns():
         if not free_slots:
             break
         try:
-            current_plan, warnings = apply_day_add(
+            current_plan, warnings, _ = apply_day_add(
                 current_plan,
                 session_id="strength_long",
                 target_date=target_day["date"],
@@ -312,17 +312,37 @@ def test_add_exceeding_cap_warns():
     for day in current_plan["weeks"][0]["days"]:
         free_slots = [sl for sl in ("morning", "lunch", "evening") if sl not in {s["slot"] for s in day["sessions"]}]
         if free_slots:
-            updated, warnings = apply_day_add(
+            updated, warnings, adjustments = apply_day_add(
                 current_plan,
                 session_id="power_contact_gym",
                 target_date=day["date"],
                 slot=free_slots[0],
                 location="gym",
             )
-            # Session should be added regardless of warnings
+            # The slot is always filled: quick-add never silently drops the add.
             td = next(d for d in updated["weeks"][0]["days"] if d["date"] == day["date"])
-            assert any(s["session_id"] == "power_contact_gym" for s in td["sessions"])
-            # If cap exceeded, there should be a warning
+            added = next(s for s in td["sessions"] if s["slot"] == free_slots[0])
+
+            # B287/R-5: over the cap, _reconcile now DOWNSHIFTS the session
+            # instead of only warning (48h finger gap / hard cap are injury
+            # protection). The change must never be silent: it is reported both
+            # in `adjustments` and in the session's own constraints_applied.
+            if added["session_id"] != "power_contact_gym":
+                assert added["session_id"] == "regeneration_easy"
+                mine = [
+                    a for a in adjustments
+                    if a["date"] == day["date"] and a["slot"] == free_slots[0]
+                ]
+                assert mine, "downshift must be reported in adjustments"
+                assert mine[0]["action"] == "downgraded"
+                assert mine[0]["previous_session_id"] == "power_contact_gym"
+                # power_contact_gym is both hard and finger, so either enforcer
+                # may claim it (finger spacing runs first). Whichever did, the
+                # reported reason and the stamped constraint must agree.
+                assert mine[0]["reason"] in {"hard_cap_downshift", "finger_spacing_downshift"}
+                assert mine[0]["reason"] in (added.get("constraints_applied") or [])
+
+            # The pre-reconciliation cap warning is still emitted.
             hard_count = sum(
                 1 for d in updated["weeks"][0]["days"]
                 if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions", []))
@@ -344,7 +364,7 @@ def test_add_logs_adaptation():
     if free_slot is None:
         return
 
-    updated, _ = apply_day_add(
+    updated, _, _ = apply_day_add(
         plan,
         session_id="regeneration_easy",
         target_date=day["date"],
@@ -366,7 +386,7 @@ def test_add_sorts_by_slot_order():
     for day in plan["weeks"][0]["days"]:
         slots = {s["slot"] for s in day["sessions"]}
         if "evening" in slots and "morning" not in slots:
-            updated, _ = apply_day_add(
+            updated, _, _ = apply_day_add(
                 plan,
                 session_id="regeneration_easy",
                 target_date=day["date"],
@@ -383,7 +403,7 @@ def test_add_sorts_by_slot_order():
     # Fallback: just ensure sorting works on any day with free morning
     for day in plan["weeks"][0]["days"]:
         if "morning" not in {s["slot"] for s in day["sessions"]}:
-            updated, _ = apply_day_add(
+            updated, _, _ = apply_day_add(
                 plan,
                 session_id="regeneration_easy",
                 target_date=day["date"],
@@ -404,7 +424,7 @@ def test_quick_add_test_session_has_test_tag():
         plan["weeks"][0]["days"][-1]["sessions"] = []
         rest_day = plan["weeks"][0]["days"][-1]
 
-    updated, _ = apply_day_add(
+    updated, _, _ = apply_day_add(
         plan,
         session_id="test_max_hang_7s",
         target_date=rest_day["date"],
@@ -463,7 +483,7 @@ def test_quick_add_explicit_gym_id_overrides_plan_default():
         day = plan["weeks"][0]["days"][-1]
         free_slot = "evening"
 
-    updated, _ = apply_day_add(
+    updated, _, _ = apply_day_add(
         plan,
         session_id="heavy_conditioning_gym",
         target_date=day["date"],
@@ -490,7 +510,7 @@ def test_quick_add_no_gym_id_falls_back_to_plan_default():
         day = plan["weeks"][0]["days"][-1]
         free_slot = "evening"
 
-    updated, _ = apply_day_add(
+    updated, _, _ = apply_day_add(
         plan,
         session_id="regeneration_easy",
         target_date=day["date"],

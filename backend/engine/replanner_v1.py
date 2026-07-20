@@ -367,8 +367,19 @@ def apply_day_add(
     location: str,
     phase_id: Optional[str] = None,
     gym_id: Optional[str] = None,
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
 ) -> tuple:
-    """Append a session to an existing day (quick-add). Returns (updated_plan, warnings)."""
+    """Append a session to an existing day (quick-add).
+
+    Returns ``(updated_plan, warnings, adjustments)``.
+
+    B287/R-5: this path used to skip ``_reconcile`` entirely — the 48h finger
+    gap and the weekly hard cap were reported as warnings but never enforced, so
+    a quick-add could put two finger sessions back to back. Reconciliation now
+    runs, and every downshift it makes is returned in *adjustments* so the
+    caller can tell the user what happened: enforcement must never be silent on
+    a session the user explicitly added.
+    """
     # --- Input validation ---
     if not session_id:
         raise ValueError("apply_day_add: session_id must be a non-empty string")
@@ -460,7 +471,8 @@ def apply_day_add(
                     next_sessions.append(session)
             ripple_day["sessions"] = next_sessions
 
-    # Warnings (don't block)
+    # Warnings (don't block) — computed BEFORE reconciliation so the cap warning
+    # still reflects what the user asked for, not the already-corrected plan.
     warnings: List[str] = []
     hard_cap = _safe_hard_cap(updated.get("profile_snapshot"))
     hard_count = sum(
@@ -470,14 +482,18 @@ def apply_day_add(
     if hard_count > hard_cap:
         warnings.append(f"Hard session count ({hard_count}) exceeds weekly cap ({hard_cap})")
 
+    # B287/R-5: enforce spacing + caps (with cross-week seeding), never silently.
+    adjustments = _reconcile(updated, prev_days=prev_days)
+
     updated["adaptations"].append({
         "type": "quick_add",
         "target_date": target_date,
         "session_id": session_id,
         "slot": slot,
+        "adjustments": adjustments,
     })
 
-    return (updated, warnings)
+    return (updated, warnings, adjustments)
 
 
 def _recompute_day_status(day: Dict[str, Any]) -> None:
@@ -517,6 +533,27 @@ def _is_preservable(session: Dict[str, Any]) -> bool:
     if "quick_add" in (session.get("constraints_applied") or []):
         return True
     return False
+
+
+def _preserve_floor(plan: Dict[str, Any], today: Optional[str] = None) -> str:
+    """B287: canonical ``preserve_before`` floor for in-place regenerations.
+
+    ``max(today, plan.start_date)`` — days strictly before this floor are copied
+    wholesale from the old plan and can never be rewritten:
+
+    - regenerating the CURRENT week → floor is today, so Mon..yesterday are frozen
+      and only the remaining days are re-planned;
+    - regenerating a FUTURE week → floor is that week's Monday (no day precedes
+      it), so nothing is force-copied, while the session-level merge still keeps
+      any day the user completed ahead of time (``_is_preservable``).
+
+    Past weeks never reach this helper: they are rejected upstream by the B257
+    guard on ``/override`` and ``/events``.
+    """
+    today_str = today or datetime.now().strftime("%Y-%m-%d")
+    start = plan.get("start_date") or ""
+    # Both operands are ISO dates → lexicographic max is chronological max.
+    return max(today_str, start) if start else today_str
 
 
 def merge_prev_week_sessions(
@@ -570,35 +607,50 @@ def merge_prev_week_sessions(
             continue
 
         # --- Hard guard: days before preserve_before → copy wholesale ---
+        #
+        # B287/R-4: EXACT DATE ONLY. The weekday fallback used to apply here too
+        # and then re-stamped copied["date"], moving another day's completed
+        # sessions onto this date — fabricated training history, and
+        # _attach_feedback would then bind the wrong feedback via its
+        # (date, session_id) key. When the date ranges don't overlap we now
+        # leave the regenerated past day untouched: the immutable records
+        # (session_completion_log, feedback logs, outdoor JSONL) remain the
+        # source of truth for what actually happened.
         if preserve_date and day_date < preserve_date:
             prev_day = prev_by_date.get(day_date_str)
-            if not prev_day:
-                wd = day_date.weekday()
-                prev_day = prev_by_wd.get(wd)
             if prev_day:
-                copied = deepcopy(prev_day)
-                copied["date"] = day_date_str  # keep the new date
-                (result.get("weeks") or [{}])[0]["days"][i] = copied
+                # Same date by construction → no date rewrite happens.
+                (result.get("weeks") or [{}])[0]["days"][i] = deepcopy(prev_day)
+            elif prev_by_wd.get(day_date.weekday()):
+                logger.warning(
+                    "merge_prev_week_sessions: no same-date match for past day %s "
+                    "(date ranges don't overlap) — skipping weekday fallback to "
+                    "avoid re-stamping another day's history",
+                    day_date_str,
+                )
             continue
 
         # --- Days >= preserve_before: merge preservable sessions ---
+        # The weekday fallback stays allowed here (B114: macrocycle start_date
+        # shifted) because this path only merges preservable sessions into the
+        # freshly generated day and never rewrites a date.
         prev_day = prev_by_date.get(day_date_str)
+        same_date_match = prev_day is not None
         if not prev_day:
             wd = day_date.weekday()
             prev_day = prev_by_wd.get(wd)
         if not prev_day:
             continue
 
-        # Bug 2: if today has any completed session or outdoor log → copy wholesale
-        if preserve_date and day_date == preserve_date:
+        # Bug 2: if today has any completed session or outdoor log → copy wholesale.
+        # B287/R-4: wholesale copy requires a same-date match, for the reason above.
+        if preserve_date and day_date == preserve_date and same_date_match:
             has_completed = any(
                 s.get("status") == "done" for s in prev_day.get("sessions", [])
             )
             has_outdoor = prev_day.get("outdoor_session_status") == "done"
             if has_completed or has_outdoor:
-                copied = deepcopy(prev_day)
-                copied["date"] = day_date_str
-                (result.get("weeks") or [{}])[0]["days"][i] = copied
+                (result.get("weeks") or [{}])[0]["days"][i] = deepcopy(prev_day)
                 continue
 
         to_merge = [s for s in prev_day.get("sessions", []) if _is_preservable(s)]
@@ -753,7 +805,25 @@ def regenerate_preserving_completed(
     return result
 
 
-def _enforce_caps(plan: Dict[str, Any]) -> None:
+def _adjustment(day_date: str, session: Dict[str, Any], previous_id: str, reason: str) -> Dict[str, Any]:
+    """B287/R-5: machine-readable record of a reconciliation downshift.
+
+    ``reason`` reuses the exact ``constraints_applied`` vocabulary already
+    stamped on the session, so caller and payload share one source of truth.
+    """
+    return {
+        "date": day_date,
+        "slot": session.get("slot"),
+        "action": "downgraded",
+        "reason": reason,
+        "previous_session_id": previous_id,
+        "session_id": session.get("session_id"),
+    }
+
+
+def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Downshift hard sessions beyond the weekly cap. Returns what it changed."""
+    adjustments: List[Dict[str, Any]] = []
     hard_cap = _safe_hard_cap(plan.get("profile_snapshot"))
     days = plan["weeks"][0]["days"]
     hard_days = [d for d in days if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions") or [])]
@@ -761,8 +831,15 @@ def _enforce_caps(plan: Dict[str, Any]) -> None:
         for day in reversed(hard_days[hard_cap:]):
             for session in day.get("sessions") or []:
                 tags = session.get("tags") or {}
+                # B287/R-8: never rewrite a completed or skipped session. The
+                # day-level selection above already ignores done sessions, but
+                # this inner loop used to downshift every hard session on the
+                # day — including one the user had already trained.
+                if session.get("status") in ("done", "skipped"):
+                    continue
                 if tags.get("hard"):
                     recovery_meta = _meta_for("regeneration_easy")
+                    _previous_id = session.get("session_id")
                     session.update(
                         {
                             "session_id": "regeneration_easy",
@@ -772,35 +849,102 @@ def _enforce_caps(plan: Dict[str, Any]) -> None:
                             "explain": ["hard cap exceeded after replanning", "deterministic downshift"],
                         }
                     )
+                    adjustments.append(
+                        _adjustment(day.get("date", ""), session, _previous_id, "hard_cap_downshift")
+                    )
+    return adjustments
 
 
-def _enforce_no_consecutive_finger(plan: Dict[str, Any]) -> None:
+def _seed_finger_date(prev_days: Optional[Sequence[Dict[str, Any]]]) -> Optional[Any]:
+    """B287/R-5: latest finger day in the *preceding* week, for cross-week spacing.
+
+    The in-week scan ignores ``status == "done"`` sessions, but the seed must
+    NOT: a finger session actually performed last Sunday is exactly the one that
+    has to block Monday. The 48h gap is injury protection — what happened counts
+    more than what is still planned.
+    """
+    latest = None
+    for day in prev_days or []:
+        if not any((s.get("tags") or {}).get("finger") for s in day.get("sessions") or []):
+            continue
+        try:
+            d = _parse_date(day["date"])
+        except (KeyError, ValueError):
+            continue
+        if latest is None or d > latest:
+            latest = d
+    return latest
+
+
+def _enforce_no_consecutive_finger(
+    plan: Dict[str, Any],
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Enforce the finger recovery gap. Returns what it changed.
+
+    *prev_days* seeds the scan with the trailing days of the previous week so
+    the Sunday→Monday boundary is checked too (the planner already seeds itself
+    this way; the replanner used to start every scan blind at Monday).
+    """
+    adjustments: List[Dict[str, Any]] = []
     days = plan["weeks"][0]["days"]
-    last_finger_date = None
+    last_finger_date = _seed_finger_date(prev_days)
     for day in days:
         cur = _parse_date(day["date"])
-        has_finger = any((s.get("tags") or {}).get("finger") and s.get("status") != "done" for s in day.get("sessions") or [])
-        if has_finger and last_finger_date and (cur - last_finger_date).days <= _recovery_gap(plan):
-            for session in day.get("sessions") or []:
-                if (session.get("tags") or {}).get("finger"):
-                    recovery_meta = _meta_for("regeneration_easy")
-                    session.update(
-                        {
-                            "session_id": "regeneration_easy",
-                            "intensity": recovery_meta["intensity"],
-                            "tags": {"hard": False, "finger": False},
-                            "constraints_applied": ["finger_spacing_downshift"],
-                            "explain": ["no consecutive finger days", "deterministic downshift"],
-                        }
-                    )
-            has_finger = False
-        if has_finger:
+        finger_sessions = [s for s in day.get("sessions") or [] if (s.get("tags") or {}).get("finger")]
+
+        # B287/R-8: a finger session that was actually PERFORMED constrains the
+        # following days exactly like a planned one — the tendons don't care
+        # whether the entry is ticked. The old scan excluded status == "done"
+        # from the whole computation, so a finger session completed on Tuesday
+        # never became the anchor and a Wednesday quick-add sailed through the
+        # 48h gap. Skipped sessions never happened, so they constrain nothing.
+        constrains = [s for s in finger_sessions if s.get("status") != "skipped"]
+        # ...but only sessions that are neither done nor skipped may be REWRITTEN.
+        # The inner loop used to downshift every finger session on the day,
+        # completed ones included, silently rewriting immutable history.
+        downshiftable = [s for s in finger_sessions if s.get("status") not in ("done", "skipped")]
+
+        violates = bool(constrains) and last_finger_date is not None \
+            and (cur - last_finger_date).days <= _recovery_gap(plan)
+
+        if violates and downshiftable:
+            for session in downshiftable:
+                recovery_meta = _meta_for("regeneration_easy")
+                _previous_id = session.get("session_id")
+                session.update(
+                    {
+                        "session_id": "regeneration_easy",
+                        "intensity": recovery_meta["intensity"],
+                        "tags": {"hard": False, "finger": False},
+                        "constraints_applied": ["finger_spacing_downshift"],
+                        "explain": ["no consecutive finger days", "deterministic downshift"],
+                    }
+                )
+                adjustments.append(
+                    _adjustment(day.get("date", ""), session, _previous_id, "finger_spacing_downshift")
+                )
+            # The day stops being an anchor only if nothing finger-ish survived:
+            # an immutable done session on this day still constrains what follows.
+            if not any(s.get("status") == "done" for s in constrains):
+                continue
+
+        if constrains:
             last_finger_date = cur
+    return adjustments
 
 
-def _reconcile(plan: Dict[str, Any]) -> None:
-    _enforce_no_consecutive_finger(plan)
-    _enforce_caps(plan)
+def _reconcile(
+    plan: Dict[str, Any],
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Run both enforcers. Returns the aggregated list of downshifts.
+
+    Existing callers ignore the return value — behaviour is unchanged for them.
+    """
+    adjustments = _enforce_no_consecutive_finger(plan, prev_days=prev_days)
+    adjustments.extend(_enforce_caps(plan))
+    return adjustments
 
 
 def apply_events(
@@ -1192,7 +1336,11 @@ def apply_events(
                 _weights_map = _BASE_WEIGHTS_BOULDER if discipline == "boulder" else _BASE_WEIGHTS
                 base_weights = _weights_map.get(phase_id, _weights_map["base"])
                 domain_weights = snapshot.get("domain_weights", base_weights)
-                session_pool = _build_session_pool(phase_id)
+                # B287/R-3: the pool must follow the discipline, exactly like
+                # generate_macrocycle does (macrocycle_v1.py). Before this fix the
+                # call defaulted to discipline="lead", so a boulder user got
+                # boulder domain weights combined with a LEAD session pool.
+                session_pool = _build_session_pool(phase_id, discipline=discipline)
                 regenerated = generate_phase_week(
                     phase_id=phase_id,
                     domain_weights=domain_weights,
@@ -1205,7 +1353,16 @@ def apply_events(
                     default_gym_id=((planning_prefs or {}).get("default_gym_id")),
                     gyms=gyms,
                 )
-                updated["weeks"] = regenerated["weeks"]
+                # B287/R-1: NEVER replace weeks wholesale. Before this fix the
+                # regenerated plan overwrote updated["weeks"] with no preserve
+                # step, so every done/skipped session in the week was destroyed —
+                # a direct violation of the past-session immutability pillar.
+                # Route through the same helper every other regeneration path
+                # uses, with the standard preserve floor.
+                merged = regenerate_preserving_completed(
+                    updated, regenerated, preserve_before=_preserve_floor(updated),
+                )
+                updated["weeks"] = merged["weeks"]
                 updated["profile_snapshot"] = regenerated["profile_snapshot"]
 
         elif event_type == "add_custom_session":

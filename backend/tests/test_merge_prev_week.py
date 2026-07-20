@@ -537,7 +537,7 @@ class TestPlannedLoadPreservation:
         plan["weekly_load_summary"] = {"planned_load": 300, "total_load": 300}
         plan["profile_snapshot"] = {"phase_id": "base"}
 
-        result, _ = apply_day_add(
+        result, _, _ = apply_day_add(
             plan, session_id="finger_strength_home",
             target_date="2026-02-23", slot="evening", location="home",
         )

@@ -968,7 +968,7 @@ class TestReplannerImmutabilityGuards:
             self._day("2026-03-10", [self._session(sid="planned_s", status="planned", hard=False)]),
             self._day("2026-03-11", [self._session(sid="done_hard", status="done", hard=True)]),
         ])
-        result, _ = apply_day_add(
+        result, _, _ = apply_day_add(
             plan,
             target_date="2026-03-10",
             session_id="strength_long",
