@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/macrocycle", tags=["macrocycle"])
 
 
-@router.post("/generate")
+@router.post("/generate", dependencies=[Depends(require_active_subscription)])
 def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Generate a macrocycle and save it into state.
 
@@ -96,7 +96,17 @@ def generate(req: MacrocycleRequest, user_id: Optional[str] = Depends(get_user_i
             from_phase=from_phase,
         )
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
+        # A245 E-2 (B15): the engine's exception text describes internal
+        # structures and reached the user verbatim. Log it, return something
+        # actionable.
+        logger.error("Macrocycle generation failed", exc_info=True)
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "We couldn't build a plan from your current profile and goal. "
+                "Check your target grade, deadline and availability, then try again."
+            ),
+        ) from e
 
     state["macrocycle"] = macrocycle
     # A223: incremental regen keeps start_date + total_weeks; the cumulative pause
@@ -266,7 +276,17 @@ def start_new_cycle(
             from_phase=None,
         )
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
+        # A245 E-2 (B15): the engine's exception text describes internal
+        # structures and reached the user verbatim. Log it, return something
+        # actionable.
+        logger.error("Macrocycle generation failed", exc_info=True)
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "We couldn't build a plan from your current profile and goal. "
+                "Check your target grade, deadline and availability, then try again."
+            ),
+        ) from e
 
     new_state["macrocycle"] = macrocycle
 
