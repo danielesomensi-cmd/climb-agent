@@ -6,12 +6,12 @@ import json
 import logging
 import os
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state
+from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state, week_num_to_phase_context
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.planner_v2 import _SESSION_META
@@ -80,6 +80,29 @@ def _get_supplementary_sessions(location: str) -> list:
 _REGENERATING_EVENT_TYPES = frozenset({"set_availability"})
 
 
+def _prev_week_days(state: dict, start_date: Optional[str]) -> Optional[list]:
+    """B287/R-5: days of the week preceding *start_date*, for cross-week spacing.
+
+    Hot-store only: N-1 is inside the hot window by design (A221), and a missing
+    neighbour simply means no seed → the previous, Monday-blind behaviour.
+    """
+    if not start_date:
+        return None
+    try:
+        prev_monday = (
+            datetime.strptime(start_date, "%Y-%m-%d").date() - timedelta(days=7)
+        ).isoformat()
+    except (ValueError, TypeError):
+        return None
+    prev_plan = (state.get("week_plans") or {}).get(prev_monday)
+    if not prev_plan:
+        return None
+    try:
+        return (prev_plan.get("weeks") or [{}])[0].get("days") or None
+    except (IndexError, AttributeError):
+        return None
+
+
 def persist_week_plan(updated: dict, state: dict, user_id) -> None:
     """Save modified plan to per-week cache and (if current) to legacy cache.
 
@@ -93,16 +116,20 @@ def persist_week_plan(updated: dict, state: dict, user_id) -> None:
         state["week_plans"] = {}
     state["week_plans"][start_key] = updated
 
-    # Also update legacy current_week_plan if this IS the current week
+    # Also update legacy current_week_plan if this IS the current week.
+    # B287/R-6: the anchor must be pause-aware. This used to recompute it from
+    # the RAW macrocycle start_date, so with a pause offset > 0 (A223) it never
+    # matched the real current week — current_week_plan stayed stale until the
+    # next GET /api/week/0, and its readers (feedback step 1, suggest-sessions,
+    # adaptive replan) served an outdated plan. week_num_to_phase_context goes
+    # through _effective_anchor, the single pause-aware definition.
     macrocycle = state.get("macrocycle")
     if macrocycle and macrocycle.get("phases"):
-        from datetime import datetime, timedelta
-
-        mc_start = datetime.strptime(macrocycle["start_date"], "%Y-%m-%d").date()
-        pi, wi = current_phase_and_week(macrocycle)
-        cumulative = sum(p.get("duration_weeks", 1) for p in macrocycle["phases"][:pi])
-        current_start = (mc_start + timedelta(weeks=cumulative + wi)).isoformat()
-        if start_key == current_start:
+        try:
+            current_start = week_num_to_phase_context(macrocycle, 0)["start_date"]
+        except (ValueError, KeyError):
+            current_start = None
+        if current_start and start_key == current_start:
             state["current_week_plan"] = updated
     else:
         state["current_week_plan"] = updated
@@ -115,7 +142,16 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
 
     B120: completed/skipped sessions with cached resolved data are never
     re-resolved — this protects past sessions from device-switch corruption.
+
+    B287/R-7: the phase is taken from the plan being resolved, not from the
+    calendar. The resolver derives it from date.today() when phase is None
+    (resolve_session.py, A121 phase-aware ordering), so an override or quick-add
+    on a FUTURE week that sits in a different phase used to order its exercises
+    with today's phase. Per-session phase_id (stamped by the planner and by
+    quick-add) with the plan snapshot as fallback — the week router passes its
+    own ctx["phase_id"] the same way.
     """
+    _plan_phase = (week_plan.get("profile_snapshot") or {}).get("phase_id")
     # B268: exercise_ids planned on EARLIER days this week, fed into the
     # resolver as recency so a session repeated on a later day varies.
     planned_recent: list = []
@@ -159,6 +195,7 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None) -
                         "date": day_entry.get("date"),
                     }
                     resolved = resolve_session(
+                        phase=session_entry.get("phase_id") or _plan_phase,
                         repo_root=str(REPO_ROOT),
                         session_path=session_path,
                         templates_dir=TEMPLATES_DIR,
@@ -304,7 +341,7 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
         )
 
     try:
-        updated, warnings = apply_day_add(
+        updated, warnings, adjustments = apply_day_add(
             week_plan,
             session_id=req.session_id,
             target_date=req.target_date,
@@ -312,6 +349,9 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
             location=req.location,
             phase_id=req.phase_id,
             gym_id=req.gym_id,
+            # B287/R-5: trailing days of the preceding week, so the Sunday→Monday
+            # finger gap is checked instead of the scan starting blind at Monday.
+            prev_days=_prev_week_days(state, week_plan.get("start_date")),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -323,7 +363,9 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
 
     _auto_resolve(updated, state, user_id)
 
-    return {"week_plan": updated, "warnings": warnings}
+    # B287/R-5: `adjustments` tells the client exactly what reconciliation changed
+    # about the session it just added (empty list = nothing was touched).
+    return {"week_plan": updated, "warnings": warnings, "adjustments": adjustments}
 
 
 @router.post("/events", dependencies=[Depends(require_active_subscription)])

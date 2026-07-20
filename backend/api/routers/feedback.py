@@ -33,6 +33,7 @@ from backend.api.deps import (
     load_state,
     require_active_subscription,
     save_state,
+    week_num_to_phase_context,
 )
 from backend.api.rate_limit import limiter
 from backend.api.models import FeedbackRequest
@@ -61,17 +62,20 @@ def _monday_for_date(iso_date: str) -> Optional[str]:
 
 
 def _is_current_macrocycle_monday(state: dict, candidate_monday: str) -> bool:
-    """True iff *candidate_monday* is the Monday of the current macrocycle week."""
+    """True iff *candidate_monday* is the Monday of the current macrocycle week.
+
+    B287/R-6: computed through week_num_to_phase_context, which anchors on
+    _effective_anchor (start_date + pause offset, A223). The previous inline
+    arithmetic used the RAW start_date, so after a pause this never matched and
+    current_week_plan was left stale for its readers.
+    """
     mc = state.get("macrocycle") or {}
     if not mc.get("phases") or not mc.get("start_date"):
         return False
     try:
-        mc_start = datetime.strptime(mc["start_date"], "%Y-%m-%d").date()
-    except ValueError:
+        current_start = week_num_to_phase_context(mc, 0)["start_date"]
+    except (ValueError, KeyError):
         return False
-    pi, wi = current_phase_and_week(mc)
-    cumulative = sum(p.get("duration_weeks", 1) for p in mc["phases"][:pi])
-    current_start = (mc_start + timedelta(weeks=cumulative + wi)).isoformat()
     return candidate_monday == current_start
 
 

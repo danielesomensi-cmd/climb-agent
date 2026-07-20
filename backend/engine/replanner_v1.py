@@ -367,8 +367,19 @@ def apply_day_add(
     location: str,
     phase_id: Optional[str] = None,
     gym_id: Optional[str] = None,
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
 ) -> tuple:
-    """Append a session to an existing day (quick-add). Returns (updated_plan, warnings)."""
+    """Append a session to an existing day (quick-add).
+
+    Returns ``(updated_plan, warnings, adjustments)``.
+
+    B287/R-5: this path used to skip ``_reconcile`` entirely — the 48h finger
+    gap and the weekly hard cap were reported as warnings but never enforced, so
+    a quick-add could put two finger sessions back to back. Reconciliation now
+    runs, and every downshift it makes is returned in *adjustments* so the
+    caller can tell the user what happened: enforcement must never be silent on
+    a session the user explicitly added.
+    """
     # --- Input validation ---
     if not session_id:
         raise ValueError("apply_day_add: session_id must be a non-empty string")
@@ -460,7 +471,8 @@ def apply_day_add(
                     next_sessions.append(session)
             ripple_day["sessions"] = next_sessions
 
-    # Warnings (don't block)
+    # Warnings (don't block) — computed BEFORE reconciliation so the cap warning
+    # still reflects what the user asked for, not the already-corrected plan.
     warnings: List[str] = []
     hard_cap = _safe_hard_cap(updated.get("profile_snapshot"))
     hard_count = sum(
@@ -470,14 +482,18 @@ def apply_day_add(
     if hard_count > hard_cap:
         warnings.append(f"Hard session count ({hard_count}) exceeds weekly cap ({hard_cap})")
 
+    # B287/R-5: enforce spacing + caps (with cross-week seeding), never silently.
+    adjustments = _reconcile(updated, prev_days=prev_days)
+
     updated["adaptations"].append({
         "type": "quick_add",
         "target_date": target_date,
         "session_id": session_id,
         "slot": slot,
+        "adjustments": adjustments,
     })
 
-    return (updated, warnings)
+    return (updated, warnings, adjustments)
 
 
 def _recompute_day_status(day: Dict[str, Any]) -> None:
@@ -789,7 +805,25 @@ def regenerate_preserving_completed(
     return result
 
 
-def _enforce_caps(plan: Dict[str, Any]) -> None:
+def _adjustment(day_date: str, session: Dict[str, Any], previous_id: str, reason: str) -> Dict[str, Any]:
+    """B287/R-5: machine-readable record of a reconciliation downshift.
+
+    ``reason`` reuses the exact ``constraints_applied`` vocabulary already
+    stamped on the session, so caller and payload share one source of truth.
+    """
+    return {
+        "date": day_date,
+        "slot": session.get("slot"),
+        "action": "downgraded",
+        "reason": reason,
+        "previous_session_id": previous_id,
+        "session_id": session.get("session_id"),
+    }
+
+
+def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Downshift hard sessions beyond the weekly cap. Returns what it changed."""
+    adjustments: List[Dict[str, Any]] = []
     hard_cap = _safe_hard_cap(plan.get("profile_snapshot"))
     days = plan["weeks"][0]["days"]
     hard_days = [d for d in days if any((s.get("tags") or {}).get("hard") and s.get("status") != "done" for s in d.get("sessions") or [])]
@@ -799,6 +833,7 @@ def _enforce_caps(plan: Dict[str, Any]) -> None:
                 tags = session.get("tags") or {}
                 if tags.get("hard"):
                     recovery_meta = _meta_for("regeneration_easy")
+                    _previous_id = session.get("session_id")
                     session.update(
                         {
                             "session_id": "regeneration_easy",
@@ -808,11 +843,46 @@ def _enforce_caps(plan: Dict[str, Any]) -> None:
                             "explain": ["hard cap exceeded after replanning", "deterministic downshift"],
                         }
                     )
+                    adjustments.append(
+                        _adjustment(day.get("date", ""), session, _previous_id, "hard_cap_downshift")
+                    )
+    return adjustments
 
 
-def _enforce_no_consecutive_finger(plan: Dict[str, Any]) -> None:
+def _seed_finger_date(prev_days: Optional[Sequence[Dict[str, Any]]]) -> Optional[Any]:
+    """B287/R-5: latest finger day in the *preceding* week, for cross-week spacing.
+
+    The in-week scan ignores ``status == "done"`` sessions, but the seed must
+    NOT: a finger session actually performed last Sunday is exactly the one that
+    has to block Monday. The 48h gap is injury protection — what happened counts
+    more than what is still planned.
+    """
+    latest = None
+    for day in prev_days or []:
+        if not any((s.get("tags") or {}).get("finger") for s in day.get("sessions") or []):
+            continue
+        try:
+            d = _parse_date(day["date"])
+        except (KeyError, ValueError):
+            continue
+        if latest is None or d > latest:
+            latest = d
+    return latest
+
+
+def _enforce_no_consecutive_finger(
+    plan: Dict[str, Any],
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Enforce the finger recovery gap. Returns what it changed.
+
+    *prev_days* seeds the scan with the trailing days of the previous week so
+    the Sunday→Monday boundary is checked too (the planner already seeds itself
+    this way; the replanner used to start every scan blind at Monday).
+    """
+    adjustments: List[Dict[str, Any]] = []
     days = plan["weeks"][0]["days"]
-    last_finger_date = None
+    last_finger_date = _seed_finger_date(prev_days)
     for day in days:
         cur = _parse_date(day["date"])
         has_finger = any((s.get("tags") or {}).get("finger") and s.get("status") != "done" for s in day.get("sessions") or [])
@@ -820,6 +890,7 @@ def _enforce_no_consecutive_finger(plan: Dict[str, Any]) -> None:
             for session in day.get("sessions") or []:
                 if (session.get("tags") or {}).get("finger"):
                     recovery_meta = _meta_for("regeneration_easy")
+                    _previous_id = session.get("session_id")
                     session.update(
                         {
                             "session_id": "regeneration_easy",
@@ -829,14 +900,26 @@ def _enforce_no_consecutive_finger(plan: Dict[str, Any]) -> None:
                             "explain": ["no consecutive finger days", "deterministic downshift"],
                         }
                     )
+                    adjustments.append(
+                        _adjustment(day.get("date", ""), session, _previous_id, "finger_spacing_downshift")
+                    )
             has_finger = False
         if has_finger:
             last_finger_date = cur
+    return adjustments
 
 
-def _reconcile(plan: Dict[str, Any]) -> None:
-    _enforce_no_consecutive_finger(plan)
-    _enforce_caps(plan)
+def _reconcile(
+    plan: Dict[str, Any],
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Run both enforcers. Returns the aggregated list of downshifts.
+
+    Existing callers ignore the return value — behaviour is unchanged for them.
+    """
+    adjustments = _enforce_no_consecutive_finger(plan, prev_days=prev_days)
+    adjustments.extend(_enforce_caps(plan))
+    return adjustments
 
 
 def apply_events(

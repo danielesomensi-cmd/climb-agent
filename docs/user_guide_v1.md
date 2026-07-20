@@ -282,6 +282,8 @@ From the **Today** or **Week** view, tap the **+** button to open the Quick-Add 
 
 These are full engine sessions — they get resolved with exercises, loads, and prescriptions just like planned sessions. Their load counts toward your weekly total.
 
+**Recovery rules still apply.** A quick-added session is checked against the same safety constraints as a planned one: the minimum recovery gap between finger-intensive sessions (including one you did at the end of the previous week) and your weekly cap on hard days. If the session you add would break one of them, it is automatically downshifted to an easy regeneration session rather than being scheduled as-is — finger recovery is injury protection, not a preference. The slot you chose is still filled.
+
 ### Supplementary Training
 
 The Quick-Add dialog also offers supplementary sessions — non-climbing work you can add any time:
