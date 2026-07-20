@@ -586,7 +586,7 @@ export function GuidedExerciseStep({
                     key={opt.value}
                     type="button"
                     onClick={() => setFeedback(opt.value)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all ${
                       feedback === opt.value
                         ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -877,7 +877,7 @@ export function GuidedExerciseStep({
                     key={opt.value}
                     type="button"
                     onClick={() => setFeedback(opt.value)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all ${
                       feedback === opt.value
                         ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ring-${opt.color.replace("bg-", "")}`
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -1030,17 +1030,15 @@ export function GuidedExerciseStep({
         {/* Action buttons */}
         <div className="flex items-center gap-2 pt-2">
           <Button
-            size="sm"
             variant="outline"
-            className="text-muted-foreground"
+            className="min-h-[44px] text-muted-foreground"
             onClick={onSkip}
           >
             <SkipForward className="size-4 mr-1" />
             Skip
           </Button>
           <Button
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white flex-1"
+            className="min-h-[44px] bg-green-600 hover:bg-green-700 text-white flex-1"
             onClick={handleDone}
           >
             <Check className="size-4 mr-1" />

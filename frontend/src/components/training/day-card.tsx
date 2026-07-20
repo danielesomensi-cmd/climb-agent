@@ -254,7 +254,7 @@ function OtherActivityBlock({
                     <button
                       key={opt.value}
                       type="button"
-                      className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+                      className={`min-h-[44px] rounded-md border px-3 text-sm font-medium transition-colors ${
                         editFeedback === opt.value
                           ? opt.color + " ring-1 ring-offset-1"
                           : "border-muted text-muted-foreground"
@@ -313,7 +313,7 @@ function OtherActivityBlock({
               <button
                 key={opt.value}
                 type="button"
-                className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${opt.color} hover:opacity-80`}
+                className={`min-h-[44px] rounded-md border px-3 text-sm font-medium transition-colors ${opt.color} hover:opacity-80`}
                 onClick={() => {
                   const dur = parseInt(otherDurationStr, 10);
                   setFeedbackPicking(false);
