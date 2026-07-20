@@ -8,12 +8,38 @@ B15: `total_weeks` had no bounds, and a generation failure returned the engine's
 own exception text to the user.
 """
 
+import json
+import shutil
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from backend.api import deps
 from backend.api.main import app
+from backend.engine import storage
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+FIXTURE_STATE = REPO_ROOT / "backend" / "tests" / "fixtures" / "test_user_state.json"
+
+
+@pytest.fixture(autouse=True)
+def isolate_state(tmp_path, monkeypatch):
+    """Each test gets its own state file.
+
+    Without this the API calls below write into the REAL
+    ``backend/data/user_state.json`` — caught while reviewing the E-6 diff,
+    which showed that file dirty. Same class of leak as B-TEST-COACH-ISOLATION.
+    """
+    tmp_state = tmp_path / "user_state.json"
+    if FIXTURE_STATE.exists():
+        shutil.copy2(FIXTURE_STATE, tmp_state)
+    else:
+        tmp_state.write_text(json.dumps(deps.EMPTY_TEMPLATE, indent=2))
+    monkeypatch.setattr(storage, "STATE_PATH", tmp_state)
+    monkeypatch.setattr(deps, "STATE_PATH", tmp_state)
+    yield tmp_state
 
 USER = "00000000-0000-4000-8000-0000000002a4"
 EXPIRED = {
