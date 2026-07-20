@@ -49,6 +49,9 @@ export default function StartWeekPage() {
   const [selected, setSelected] = useState("0");
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
+  // A245 C-6 (F28) — true when we fell back to the default option because the
+  // state fetch failed; the user must know their phases weren't loaded.
+  const [loadFailed, setLoadFailed] = useState(false);
 
   // A-ACTIVATION-TIMING: route to /today if already trialing/active,
   // /subscribe otherwise. Previous unconditional /subscribe redirect
@@ -61,15 +64,25 @@ export default function StartWeekPage() {
   // B155: gate on Clerk readiness
   useEffect(() => {
     if (!authReady) return;
-    getState().then((state) => {
-      const phases = state.macrocycle?.phases ?? [];
-      if (phases.length > 0) {
-        setOptions(buildPhaseOptions(phases));
-      } else {
+    getState()
+      .then((state) => {
+        const phases = state.macrocycle?.phases ?? [];
+        if (phases.length > 0) {
+          setOptions(buildPhaseOptions(phases));
+        } else {
+          setOptions([{ offset: 0, label: "Start fresh — Week 1" }]);
+        }
+      })
+      // A245 C-6 (F28) — this promise had no .catch, so going offline right
+      // after submitting onboarding left `ready` false forever and the page
+      // rendered `return null`: a white screen at the very last step of the
+      // funnel, with no way forward. Degrade to the default option instead.
+      .catch((err) => {
+        console.error("start-week: could not load state, using default option:", err);
         setOptions([{ offset: 0, label: "Start fresh — Week 1" }]);
-      }
-      setReady(true);
-    });
+        setLoadFailed(true);
+      })
+      .finally(() => setReady(true));
   }, [authReady]);
 
   const handleContinue = async () => {
@@ -100,6 +113,14 @@ export default function StartWeekPage() {
             If you&apos;ve already been following a structured training plan, you can
             skip ahead and start from a later phase.
           </p>
+
+          {loadFailed && (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-400">
+              We couldn&apos;t load your plan phases just now. You can continue
+              from Week 1 — you can always change where you start later in
+              Settings.
+            </p>
+          )}
 
           <RadioGroup value={selected} onValueChange={setSelected}>
             {options.map((opt) => (

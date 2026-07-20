@@ -30,6 +30,8 @@ import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { flush as flushOutbox } from "@/lib/outbox";
 import { queryKeys } from "@/lib/query-keys";
+import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
+import { toast } from "sonner";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import { TodayHeroCTA, type NextSessionInfo } from "@/components/training/today-hero-cta";
 import { formatPauseDate } from "@/lib/hooks/use-plan-pause";
@@ -821,17 +823,23 @@ function TodayContent() {
 
   /** Open outdoor log form — check for existing session first (B186) */
   async function handleLogOutdoor(date: string) {
-    const spotsData = await getOutdoorSpots().catch(() => ({ spots: [] }));
-    setOutdoorSpots(spotsData.spots);
-    try {
-      const existing = await getOutdoorLogByDate(date);
-      // Session already exists for this date → open edit dialog
-      setOutdoorEditData(existing.session);
-      setOutdoorEditDate(date);
-    } catch {
-      // No session yet → open new log dialog
-      setOutdoorLogDate(date);
+    // A245 C-5 (F37): only a real 404 means "no log yet" — see
+    // lib/outdoor-log-target.ts for why the old bare catch was wrong.
+    const target = await resolveOutdoorLogTarget(date);
+    if (target.kind === "unavailable") {
+      toast.error(target.message, { duration: 8000 });
+      return;
     }
+    setOutdoorSpots(target.spots);
+    if (target.kind === "edit") {
+      setOutdoorEditData(target.session);
+      setOutdoorEditDate(date);
+      return;
+    }
+    if (target.spotsFailed) {
+      toast("Couldn't load your spots — you can still log the session.", { duration: 6000 });
+    }
+    setOutdoorLogDate(date);
   }
 
   /** After outdoor routes are logged, verify data persisted, then mark complete (D134) */
