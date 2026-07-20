@@ -30,18 +30,24 @@ function localToday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Cheap gate: route plausibly-adhoc turns to the compose endpoint. Biased
- * toward routing (a false positive just costs one cheap extraction that returns
- * {adhoc:false} → chat fallback; a false negative gives the outdated "I can't
- * build sessions" text reply, which is worse). Covers EN + IT (B280). */
-const ADHOC_RE = new RegExp(
+/** Cheap gate: route plausibly-adhoc turns to the compose endpoint (B282).
+ *
+ * Stem-based, message-level co-occurrence — NOT a list of conjugations.
+ * Italian polite questions conjugate in -i ("mi prepari…?", "mi crei…?",
+ * "manda tu…") and a fixed verb list loses whack-a-mole against morphology
+ * (B280/B281 field failures). A session-noun anywhere + a build-verb STEM
+ * anywhere routes to the composer; clitic forms ("crearla", "mandamela") carry
+ * the noun inside the verb and count alone. Heavily biased toward routing: a
+ * false positive costs one cheap extraction returning {adhoc:false} → chat
+ * fallback; a false negative gives a wrong "I can't build sessions" reply. */
+const ADHOC_NOUN_RE =
+  /\b(sessione|allenament\w*|workout|seduta|scheda|circuito|session|routine)\b/i;
+const ADHOC_STEM_RE =
+  /\b(cre\w*|prepar\w*|costruis\w*|componi\w*|comporre|gener\w*|fammi|farmi|faresti|fai|d[aà]mmi|darmi|dai|proponi\w*|propor\w*|organizz\w*|mont\w*|mett\w*|aggiung\w*|mand\w*|invi\w*|salv\w*|vorrei|voglio|serve|servirebbe|build\w*|creat\w*|make|compose|design|plan|give|need|want|put together|add)\b/i;
+const ADHOC_STANDALONE_RE = new RegExp(
   [
-    // EN: build/create/make/… + session/workout/routine (either order, nearby)
-    "\\b(build|compose|create|make|give|design|plan|put together)\\b[^.?!\\n]{0,40}\\b(session|workout|routine|circuit)\\b",
-    "\\b(session|workout|routine)\\b[^.?!\\n]{0,40}\\b(build|compose|create|make|design)\\b",
-    // IT: componi/creami/fammi/preparami/… + sessione/allenamento/seduta/scheda
-    "\\b(componi|costruisci|creami|crea|creare|fammi|fai|preparami|prepara|dammi|proponimi|proponi|montami|mettimi|generami|genera|organizzami)\\b[^.?!\\n]{0,40}\\b(sessione|allenamento|workout|routine|seduta|scheda|circuito)\\b",
-    "\\b(sessione|allenamento|seduta|scheda)\\b[^.?!\\n]{0,40}\\b(componi|creami|crea|fammi|preparami|dammi|proponimi|generami)\\b",
+    // clitic object forms — the session-noun lives inside the verb
+    "\\b(crearl[ao]|creal[ao]|prepararl[ao]|preparal[ao]|mandarl[ao]|mandal[ao]|salvarl[ao]|salval[ao]|aggiungerl[ao]|aggiungil[ao]|inviarl[ao]|invial[ao]|creamel[ao]|preparamel[ao]|mandamel[ao]|rifall[ao]|rifarl[ao])\\b",
     // being at a gym is a strong signal on its own (EN + IT)
     "\\bat the (regular |commercial )?gym\\b",
     "\\b(in|alla|dalla|nella|della) palestra\\b",
@@ -55,7 +61,10 @@ const ADHOC_RE = new RegExp(
 );
 
 function looksLikeAdhoc(text: string): boolean {
-  return ADHOC_RE.test(text);
+  return (
+    ADHOC_STANDALONE_RE.test(text) ||
+    (ADHOC_NOUN_RE.test(text) && ADHOC_STEM_RE.test(text))
+  );
 }
 
 function exerciseLine(ex: AdhocSessionPreview["exercises"][number]): string {
