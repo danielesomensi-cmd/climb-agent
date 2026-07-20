@@ -26,6 +26,7 @@ import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
+import { writeWeekCache } from "@/lib/week-cache";
 import { buildDialogFeedbackItems, extractFeedbackExercises } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
@@ -88,9 +89,8 @@ export default function WeekPage() {
   /** Update the cached week plan after a mutation. */
   const updateWeekCache = useCallback(
     (newWeekPlan: WeekPlan) => {
-      qc.setQueryData(queryKeys.week(weekNum), (old: { week_num: number; phase_id?: string | null; week_plan: WeekPlan } | undefined) =>
-        old ? { ...old, week_plan: newWeekPlan } : { week_num: weekNum, week_plan: newWeekPlan },
-      );
+      // A245 G-2 (F34): keeps week(0) and week(<server num>) in step.
+      writeWeekCache(qc, weekNum, newWeekPlan);
     },
     [qc, weekNum],
   );
@@ -102,6 +102,9 @@ export default function WeekPage() {
   const refetchAll = useCallback(() => {
     qc.invalidateQueries({ queryKey: queryKeys.state });
     qc.invalidateQueries({ queryKey: queryKeys.week(weekNum) });
+    // A245 G-3 (F36): progression rewrites working_loads, so any resolved
+    // session in cache is now showing pre-feedback numbers.
+    qc.invalidateQueries({ queryKey: queryKeys.sessionResolveAll });
   }, [qc, weekNum]);
   const [replanDate, setReplanDate] = useState<string | null>(null);
   const [replanSessionIndex, setReplanSessionIndex] = useState<number | undefined>(undefined);

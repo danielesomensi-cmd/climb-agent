@@ -34,6 +34,7 @@ import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { flush as flushOutbox } from "@/lib/outbox";
 import { queryKeys } from "@/lib/query-keys";
+import { writeWeekCache } from "@/lib/week-cache";
 import {
   buildDialogFeedbackItems,
   buildGuidedFeedbackItems,
@@ -188,9 +189,8 @@ function TodayContent() {
 
   /** Helper: write a fresh week_plan into the React Query cache (instant UI update) */
   const updateWeekCache = useCallback((newWeekPlan: WeekPlan) => {
-    qc.setQueryData(queryKeys.week(0), (old: { week_num?: number; phase_id?: string; week_plan: WeekPlan } | undefined) =>
-      old ? { ...old, week_plan: newWeekPlan } : { week_num: 0, week_plan: newWeekPlan },
-    );
+    // A245 G-2 (F34): keeps week(0) and week(<server num>) in step.
+    writeWeekCache(qc, 0, newWeekPlan);
   }, [qc]);
 
   /** F6 — done/skip/undo passano da qui: coda FIFO + snapshot fresco. */
@@ -200,6 +200,9 @@ function TodayContent() {
   const refetchAll = useCallback(() => {
     qc.invalidateQueries({ queryKey: queryKeys.weekAll });
     qc.invalidateQueries({ queryKey: queryKeys.state });
+    // A245 G-3 (F36): progression rewrites working_loads, so any resolved
+    // session in cache is now showing pre-feedback numbers.
+    qc.invalidateQueries({ queryKey: queryKeys.sessionResolveAll });
   }, [qc]);
 
   const [error, setError] = useState<string | null>(null);
@@ -346,6 +349,8 @@ function TodayContent() {
           if (sent > 0) {
             qc.invalidateQueries({ queryKey: queryKeys.weekAll });
             qc.invalidateQueries({ queryKey: queryKeys.state });
+            // A245 G-3 (F36): a flushed feedback moved the loads too.
+            qc.invalidateQueries({ queryKey: queryKeys.sessionResolveAll });
           }
         })
         .catch((err) => console.error("[outbox] flush failed:", err));

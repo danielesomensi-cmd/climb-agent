@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { ResolvedSession } from "@/lib/types";
 import { formatSessionName } from "@/lib/format";
+import { queryKeys } from "@/lib/query-keys";
 
 
 /** Format rest seconds into a readable string */
@@ -35,7 +36,7 @@ function SessionPageInner() {
   // A187: cache resolveSession by sessionId — deterministic per session_id,
   // safe to cache for the session lifetime so back/forward navigation is instant.
   const sessionQuery = useQuery({
-    queryKey: ["session", "resolve", sessionId],
+    queryKey: queryKeys.sessionResolve(sessionId),
     queryFn: () => resolveSession(sessionId),
     enabled: authReady && !!sessionId,
     staleTime: 5 * 60_000,

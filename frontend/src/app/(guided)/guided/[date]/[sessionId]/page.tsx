@@ -392,6 +392,8 @@ export default function GuidedSessionPage() {
           await qc.refetchQueries({ queryKey: queryKeys.weekAll });
         }
         qc.invalidateQueries({ queryKey: queryKeys.state });
+        // A245 G-3 (F36): loads just changed — drop cached resolutions.
+        qc.invalidateQueries({ queryKey: queryKeys.sessionResolveAll });
       } catch {
         // Feedback POST failed — save for retry
         setState((prev) => prev ? { ...prev, submitStatus: "feedback_pending" } : prev);
