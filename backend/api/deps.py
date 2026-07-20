@@ -86,13 +86,46 @@ def invalidate_future_week_cache(state: Dict[str, Any]) -> None:
     }
 
 
+def _legacy_header_allowed() -> bool:
+    """Whether the ``X-User-ID`` dev fallback is explicitly enabled (B285).
+
+    Read at call time (not import) so tests can flip it. Default OFF — the
+    fallback is a development convenience and must never be reachable in a
+    production-like configuration without an explicit opt-in.
+    """
+    return os.environ.get("ALLOW_LEGACY_HEADER", "").strip().lower() in (
+        "1", "true", "yes", "on",
+    )
+
+
+def _auth_enforced() -> bool:
+    """True when real authentication is mandatory (B285 — fail-closed).
+
+    Production-like means: Clerk is configured OR the Supabase backend is in
+    use. In that configuration an unauthenticated request must be rejected
+    with 401 rather than silently resolving to ``None`` (which would read and
+    write the shared ``__legacy__`` bucket) or trusting a client-supplied
+    ``X-User-ID`` header (full IDOR).
+
+    ``ALLOW_LEGACY_HEADER=1`` restores the pre-B285 behavior for local dev.
+    pytest and local file-backend dev are unaffected: Clerk is unconfigured and
+    STORAGE_BACKEND defaults to 'file'.
+    """
+    if _legacy_header_allowed():
+        return False
+    from backend.api.auth import is_clerk_configured
+    if is_clerk_configured():
+        return True
+    return os.environ.get("STORAGE_BACKEND", "file") == "supabase"
+
+
 def get_user_id(request: Request) -> Optional[str]:
     """Extract user_id from request, trying Clerk JWT first, then X-User-ID.
 
     Priority:
     1. Authorization: Bearer <clerk_jwt> → verify → lookup/create user_id
-    2. X-User-ID header (dev/test fallback)
-    3. None (legacy local dev without header)
+    2. X-User-ID header — dev/test only, rejected when _auth_enforced() (B285)
+    3. None — dev only; 401 when _auth_enforced() (B285)
     """
     # 1. Try Clerk JWT
     auth_header = request.headers.get("Authorization")
@@ -106,15 +139,39 @@ def get_user_id(request: Request) -> Optional[str]:
             except Exception as e:
                 raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
-    # 2. Fallback: X-User-ID (dev/test)
+    enforced = _auth_enforced()
+
+    # 2. Fallback: X-User-ID (dev/test only)
     header = request.headers.get("X-User-ID")
-    if header is None:
-        return None
-    try:
-        _uuid.UUID(header, version=4)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid X-User-ID: must be a valid UUID v4")
-    return header
+    if header is not None:
+        if enforced:
+            # SEC-1: accepting this header in production is a full IDOR —
+            # any UUID would grant read/write/delete on that user's account.
+            raise HTTPException(
+                status_code=401,
+                detail={
+                    "error": "authentication_required",
+                    "message": "X-User-ID is not accepted; sign in to continue.",
+                },
+            )
+        try:
+            _uuid.UUID(header, version=4)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid X-User-ID: must be a valid UUID v4")
+        return header
+
+    # 3. No credentials at all
+    if enforced:
+        # SEC-2/SEC-5: returning None here would let the request through on the
+        # shared '__legacy__' bucket (and past the subscription guard).
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "error": "authentication_required",
+                "message": "Sign in to continue.",
+            },
+        )
+    return None
 
 
 def _user_state_path(user_id: Optional[str]) -> Path:
