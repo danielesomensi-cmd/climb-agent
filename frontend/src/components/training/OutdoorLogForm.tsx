@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import type {
   OutdoorSpot,
   OutdoorRoute,
@@ -98,8 +99,12 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     setRoutes(updated);
   };
 
-  // Issue 4: cycle attempt through sent → fell → removed
-  const cycleAttempt = (rIdx: number, aIdx: number) => {
+  /**
+   * F39 (A245) — era un ciclo sent → fell → RIMOZIONE: un doppio tap
+   * accidentale sul badge cancellava il tentativo. Ora è un toggle puro; la
+   * rimozione ha il suo ✕ dedicato con undo.
+   */
+  const toggleAttempt = (rIdx: number, aIdx: number) => {
     const updated = [...routes];
     const attempt = updated[rIdx].attempts[aIdx];
     if (attempt.result === "sent") {
@@ -109,14 +114,35 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       if (!anySent) {
         delete (updated[rIdx] as unknown as Record<string, unknown>).style;
       }
-    } else if (attempt.result === "fell") {
-      // Remove this attempt entirely
-      updated[rIdx].attempts = updated[rIdx].attempts.filter((_, i) => i !== aIdx);
     } else {
-      // Any other state → sent
       updated[rIdx].attempts[aIdx] = { ...attempt, result: "sent" };
     }
     setRoutes(updated);
+  };
+
+  /** F39 — rimozione esplicita di un tentativo, con undo di 10s. */
+  const removeAttempt = (rIdx: number, aIdx: number) => {
+    const removed = routes[rIdx].attempts[aIdx];
+    setRoutes((cur) =>
+      cur.map((r, i) =>
+        i === rIdx ? { ...r, attempts: r.attempts.filter((_, j) => j !== aIdx) } : r,
+      ),
+    );
+    toast("Attempt removed", {
+      duration: 10_000,
+      action: {
+        label: "Undo",
+        onClick: () =>
+          setRoutes((cur) =>
+            cur.map((r, i) => {
+              if (i !== rIdx) return r;
+              const attempts = [...r.attempts];
+              attempts.splice(Math.min(aIdx, attempts.length), 0, removed);
+              return { ...r, attempts };
+            }),
+          ),
+      },
+    });
   };
 
   const addAttempt = (rIdx: number) => {
@@ -306,25 +332,34 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
                   <option value="project">⚪ PRJ</option>
                 </select>
 
-                {/* Issue 4: tap cycles sent→fell→removed */}
+                {/* F39: il badge fa solo toggle Sent⇄Fell; il ✕ rimuove (con undo) */}
                 {route.attempts.map((a, aIdx) => (
-                  <button
-                    key={aIdx}
-                    onClick={() => cycleAttempt(rIdx, aIdx)}
-                    className={`rounded px-2.5 py-1 text-xs font-medium ${
-                      a.result === "sent"
-                        ? "bg-green-600 text-white"
-                        : "bg-red-600 text-white"
-                    }`}
-                    title="Tap: Sent → Fell → Remove"
-                  >
-                    {a.result === "sent" ? "Sent" : "Fell"}
-                  </button>
+                  <span key={aIdx} className="inline-flex overflow-hidden rounded">
+                    <button
+                      onClick={() => toggleAttempt(rIdx, aIdx)}
+                      className={`min-h-[44px] px-3 text-sm font-medium ${
+                        a.result === "sent"
+                          ? "bg-green-600 text-white"
+                          : "bg-red-600 text-white"
+                      }`}
+                      title="Tap to switch Sent ⇄ Fell"
+                    >
+                      {a.result === "sent" ? "Sent" : "Fell"}
+                    </button>
+                    <button
+                      onClick={() => removeAttempt(rIdx, aIdx)}
+                      aria-label={`Remove attempt ${aIdx + 1}`}
+                      className="min-h-[44px] border-l border-black/20 bg-muted px-2.5 text-sm text-muted-foreground hover:text-foreground"
+                    >
+                      ✕
+                    </button>
+                  </span>
                 ))}
 
                 <button
                   onClick={() => addAttempt(rIdx)}
-                  className="rounded border px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+                  aria-label="Add attempt"
+                  className="min-h-[44px] rounded border px-3 text-sm text-muted-foreground hover:text-foreground"
                 >
                   +
                 </button>
