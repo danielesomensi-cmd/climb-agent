@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { Button } from "@/components/ui/button";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -102,6 +103,19 @@ export default function AvailabilityPage() {
       return s.available && s.preferred_location !== "other_sport";
     })
   ).length;
+
+  /**
+   * A245 Phase D (F30) — the gate accepted a slot marked `other_sport`, but
+   * `availableDays` above deliberately EXCLUDES those. So marking only "Other
+   * sport" unlocked Next with zero climbing days, `target_training_days_per_week`
+   * stayed at its default of 4, and the user got a plan with no climbing in it —
+   * discovered only afterwards. The gate now agrees with the counter.
+   *
+   * F18: expressed as blockers rather than a disabled button.
+   */
+  const availabilityBlockers = availableDays === 0
+    ? ["Mark at least one slot you can train in (an 'Other sport' slot doesn't count as a training day)"]
+    : [];
 
   const trainingDaysMax = Math.max(1, availableDays);
   const hardDaysMax = Math.max(1, planningPrefs.target_training_days_per_week);
@@ -338,22 +352,11 @@ export default function AvailabilityPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/locations")}
-        >
-          Back
-        </Button>
-        <Button
-          disabled={!Object.values(availability).some(day =>
-            day && Object.values(day).some((s: SlotData) => s.available || s.preferred_location === "other_sport")
-          )}
-          onClick={() => router.push("/onboarding/trips")}
-        >
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/locations"
+        nextHref="/onboarding/trips"
+        blockers={availabilityBlockers}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { Button } from "@/components/ui/button";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface WeaknessItem {
@@ -157,8 +158,13 @@ export default function WeaknessesPage() {
     });
   };
 
-  const isValid =
-    selfEval.primary_weakness !== "" && selfEval.secondary_weakness !== "";
+  // A245 Phase D (F18) — secondary was REQUIRED, and its card only appeared
+  // after picking a primary: the user saw a grey Next with no idea a second
+  // card was even coming. It is now optional (the engine's _weakness_penalty
+  // simply finds no match for an empty value).
+  const blockers = selfEval.primary_weakness === ""
+    ? ["Pick your primary weakness"]
+    : [];
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -187,7 +193,10 @@ export default function WeaknessesPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
-              Secondary weakness
+              Secondary weakness{" "}
+              <span className="text-sm font-normal text-muted-foreground">
+                (optional)
+              </span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -204,20 +213,11 @@ export default function WeaknessesPage() {
         </Card>
       )}
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/goals")}
-        >
-          Back
-        </Button>
-        <Button
-          disabled={!isValid}
-          onClick={() => router.push("/onboarding/tests")}
-        >
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/goals"
+        nextHref="/onboarding/tests"
+        blockers={blockers}
+      />
     </div>
   );
 }

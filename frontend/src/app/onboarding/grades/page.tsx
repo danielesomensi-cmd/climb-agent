@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { Button } from "@/components/ui/button";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -107,9 +108,18 @@ export default function GradesPage() {
   };
 
   // Validation: required fields must be filled
-  const leadValid = !leadRequired || (grades.lead_max_rp !== "" && grades.lead_max_os !== "");
-  const boulderValid = !boulderRequired || ((grades.boulder_max_rp ?? "") !== "" && (grades.boulder_max_os ?? "") !== "");
-  const isValid = leadValid && boulderValid;
+  // A245 Phase D (F18) — onsight used to be required with no "I don't know"
+  // option. It is genuinely optional to the engine: assessment_v1 falls back to
+  // a neutral gap_score of 50 when either grade is missing (see
+  // _compute_power_endurance / _compute_technique), so demanding it only cost
+  // us abandonment. Redpoint stays required — that one anchors the plan.
+  const blockers: string[] = [];
+  if (leadRequired && grades.lead_max_rp === "") {
+    blockers.push("Enter your lead redpoint grade");
+  }
+  if (boulderRequired && (grades.boulder_max_rp ?? "") === "") {
+    blockers.push("Enter your boulder redpoint grade");
+  }
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -261,20 +271,11 @@ export default function GradesPage() {
         </details>
       )}
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/discipline")}
-        >
-          Back
-        </Button>
-        <Button
-          disabled={!isValid}
-          onClick={() => router.push("/onboarding/goals")}
-        >
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/discipline"
+        nextHref="/onboarding/goals"
+        blockers={blockers}
+      />
     </div>
   );
 }

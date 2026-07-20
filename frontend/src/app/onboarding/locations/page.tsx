@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { getOnboardingDefaults } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -22,10 +23,43 @@ interface EquipmentItem {
   description: string;
 }
 
+/** Surfaces that make climbing possible. Mirrors CLIMBING_EQUIPMENT in review. */
+const CLIMBING_SURFACES = new Set([
+  "gym_boulder", "gym_routes", "spraywall",
+  "board_moonboard", "board_kilter", "campus_board",
+]);
+
 export default function LocationsPage() {
   const router = useRouter();
   const { data, update } = useOnboarding();
   const equipment = data.equipment;
+
+  /**
+   * A245 Phase D (F29) — the copy said "At least one climbing area is required
+   * for climbing sessions" while the gate only checked that gyms had names.
+   * With zero gyms you sailed through, and the review step's warning is
+   * conditioned on `gyms.length > 0` so it never fired either: the user found
+   * out by receiving a plan with no climbing in it.
+   *
+   * Validation now matches the promise. Home-only setups with a climbing
+   * surface (spraywall, board) still qualify — the rule is "somewhere to
+   * climb", not "a commercial gym".
+   */
+  const locationBlockers = useMemo(() => {
+    const out: string[] = [];
+    if (equipment.gyms.some((g) => !g.name.trim())) {
+      out.push("Give every gym a name");
+    }
+    const hasClimbingSurface =
+      equipment.gyms.some((g) => g.equipment.some((eq) => CLIMBING_SURFACES.has(eq))) ||
+      (equipment.home_enabled && equipment.home.some((eq) => CLIMBING_SURFACES.has(eq)));
+    if (!hasClimbingSurface) {
+      out.push(
+        "Add at least one place with a climbing wall or board — without one we can't schedule any climbing",
+      );
+    }
+    return out;
+  }, [equipment]);
   const outdoorSpots = data.outdoor_spots;
 
   const [homeEquipment, setHomeEquipment] = useState<EquipmentItem[]>([]);
@@ -357,20 +391,11 @@ export default function LocationsPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/limitations")}
-        >
-          Back
-        </Button>
-        <Button
-          disabled={equipment.gyms.some((g) => !g.name.trim())}
-          onClick={() => router.push("/onboarding/availability")}
-        >
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/limitations"
+        nextHref="/onboarding/availability"
+        blockers={locationBlockers}
+      />
     </div>
   );
 }
