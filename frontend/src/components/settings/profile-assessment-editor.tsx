@@ -176,6 +176,7 @@ export function ProfileAssessmentEditor({
                     <Input
                       id="pa-weight"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="30"
                       max="200"
@@ -189,6 +190,7 @@ export function ProfileAssessmentEditor({
                     <Input
                       id="pa-height"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="100"
                       max="250"
@@ -276,6 +278,7 @@ export function ProfileAssessmentEditor({
                           <Input
                             id="pa-lp-right"
                             type="number"
+                            inputMode="decimal"
                             step="0.5"
                             placeholder="e.g. 35"
                             value={lpRight}
@@ -287,6 +290,7 @@ export function ProfileAssessmentEditor({
                           <Input
                             id="pa-lp-left"
                             type="number"
+                            inputMode="decimal"
                             step="0.5"
                             placeholder="e.g. 33"
                             value={lpLeft}
@@ -301,6 +305,7 @@ export function ProfileAssessmentEditor({
                       <Input
                         id="pa-maxhang"
                         type="number"
+                        inputMode="decimal"
                         step="0.5"
                         placeholder="e.g. 90"
                         value={maxHang}
@@ -313,6 +318,7 @@ export function ProfileAssessmentEditor({
                     <Input
                       id="pa-pullup"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       placeholder="e.g. 100"
                       value={weightedPullup}
@@ -324,6 +330,7 @@ export function ProfileAssessmentEditor({
                     <Input
                       id="pa-bwpullups"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       placeholder="e.g. 12"
@@ -336,6 +343,7 @@ export function ProfileAssessmentEditor({
                     <Input
                       id="pa-repeater"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       placeholder="e.g. 15"
@@ -348,6 +356,7 @@ export function ProfileAssessmentEditor({
                     <Input
                       id="pa-hangduration"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       placeholder="e.g. 65"
@@ -360,6 +369,7 @@ export function ProfileAssessmentEditor({
                     <Input
                       id="pa-lsit"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       placeholder="e.g. 20"
@@ -372,6 +382,7 @@ export function ProfileAssessmentEditor({
                     <Input
                       id="pa-hipflex"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       placeholder="e.g. 120"

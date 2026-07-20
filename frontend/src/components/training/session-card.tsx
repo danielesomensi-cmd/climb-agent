@@ -557,6 +557,7 @@ function AddExerciseDialog({
                   <Label className="text-xs">Sets</Label>
                   <Input
                     type="number"
+                    inputMode="numeric"
                     min={1}
                     max={20}
                     value={sets}
@@ -568,6 +569,7 @@ function AddExerciseDialog({
                     <Label className="text-xs">Duration (s)</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       max={600}
                       value={workSeconds ?? 0}
@@ -579,6 +581,7 @@ function AddExerciseDialog({
                     <Label className="text-xs">Reps</Label>
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       max={100}
                       value={reps}
@@ -590,6 +593,7 @@ function AddExerciseDialog({
                   <Label className="text-xs">Additional weight (kg)</Label>
                   <Input
                     type="number"
+                    inputMode="decimal"
                     min={0}
                     step={0.5}
                     value={loadKg ?? 0}

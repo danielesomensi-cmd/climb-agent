@@ -131,6 +131,7 @@ export function FeedbackDialog({
               <Input
                 id="session-duration"
                 type="number"
+                inputMode="numeric"
                 min={1}
                 max={600}
                 step={5}

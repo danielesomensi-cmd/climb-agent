@@ -243,6 +243,7 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
         <label className="block text-sm text-muted-foreground mb-1">Duration (min)</label>
         <input
           type="number"
+          inputMode="numeric"
           value={duration}
           onChange={e => setDuration(Number(e.target.value))}
           min={1}

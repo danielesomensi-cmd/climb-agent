@@ -270,6 +270,7 @@ function OtherActivityBlock({
                 <label className="text-[10px] text-muted-foreground">Duration (min)</label>
                 <input
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   max={600}
                   value={editDuration}
@@ -329,6 +330,7 @@ function OtherActivityBlock({
             <Clock className="size-3 text-muted-foreground" />
             <input
               type="number"
+              inputMode="numeric"
               min={1}
               max={600}
               value={otherDurationStr}

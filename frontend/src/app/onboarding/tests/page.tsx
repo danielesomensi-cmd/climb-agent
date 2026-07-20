@@ -307,6 +307,7 @@ export default function TestsPage() {
                         <Input
                           id={`field-${section.key}-right`}
                           type="number"
+                          inputMode="decimal"
                           min={0}
                           step={section.unit === "kg" ? 0.5 : 1}
                           value={tests[section.fieldKeyRight as keyof typeof tests] ?? ""}
@@ -320,6 +321,7 @@ export default function TestsPage() {
                         <Input
                           id={`field-${section.key}-left`}
                           type="number"
+                          inputMode="decimal"
                           min={0}
                           step={section.unit === "kg" ? 0.5 : 1}
                           value={tests[section.fieldKeyLeft as keyof typeof tests] ?? ""}
@@ -335,6 +337,7 @@ export default function TestsPage() {
                       <Input
                         id={`field-${section.key}`}
                         type="number"
+                        inputMode="decimal"
                         min={0}
                         step={section.unit === "kg" ? 0.5 : 1}
                         value={tests[section.fieldKey as keyof typeof tests] ?? ""}

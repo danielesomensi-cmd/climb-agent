@@ -508,6 +508,7 @@ export function GuidedExerciseStep({
               <Input
                 id="measurement-input"
                 type="number"
+                inputMode="decimal"
                 step={exercise.testUnit === "cm" ? "1" : "0.5"}
                 min="0"
                 value={measurementInput}
@@ -550,6 +551,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="test-left-meas"
                     type="number"
+                    inputMode="numeric"
                     step="1"
                     min="0"
                     value={loadInputLeft}
@@ -566,6 +568,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="test-right-meas"
                     type="number"
+                    inputMode="numeric"
                     step="1"
                     min="0"
                     value={loadInputRight}
@@ -701,6 +704,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="sets-input"
                     type="number"
+                    inputMode="numeric"
                     step="1"
                     min="0"
                     value={setsInput}
@@ -723,6 +727,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="repeater-load-input"
                     type="number"
+                    inputMode="decimal"
                     step="0.5"
                     min="0"
                     value={loadInput}
@@ -766,6 +771,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="lp-rep-reps-right"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       value={repsInputRight}
@@ -782,6 +788,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="lp-rep-reps-left"
                       type="number"
+                      inputMode="numeric"
                       step="1"
                       min="0"
                       value={repsInputLeft}
@@ -800,6 +807,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="lp-rep-load-right"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={loadInputRight}
@@ -815,6 +823,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="lp-rep-load-left"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={loadInputLeft}
@@ -839,6 +848,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="test-left"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={loadInputLeft}
@@ -855,6 +865,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="test-right"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       min="0"
                       value={loadInputRight}
@@ -900,6 +911,7 @@ export function GuidedExerciseStep({
                   <Input
                     id="external-load-input"
                     type="number"
+                    inputMode="decimal"
                     step="0.5"
                     min="0"
                     value={loadInput}
@@ -935,6 +947,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="load-left"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       value={loadInputLeft}
                       onChange={(e) => setLoadInputLeft(e.target.value)}
@@ -947,6 +960,7 @@ export function GuidedExerciseStep({
                     <Input
                       id="load-right"
                       type="number"
+                      inputMode="decimal"
                       step="0.5"
                       value={loadInputRight}
                       onChange={(e) => setLoadInputRight(e.target.value)}
@@ -967,6 +981,7 @@ export function GuidedExerciseStep({
                 <Input
                   id="load-input"
                   type="number"
+                  inputMode="decimal"
                   step="0.5"
                   min={0}
                   value={loadInput}
