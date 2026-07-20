@@ -32,11 +32,19 @@ class MemoryStorage {
 let storage: MemoryStorage;
 
 function signedInAs(userId: string | null) {
+  vi.stubGlobal("navigator", { onLine: true });
   const Clerk = userId
     ? { session: {}, user: { id: userId }, loaded: true }
     : { session: null, user: null, loaded: true };
   vi.stubGlobal("window", { localStorage: storage, Clerk });
   vi.stubGlobal("localStorage", storage);
+}
+
+/** B292b — offline: Clerk.js comes from the network, so it never initialises. */
+function offline() {
+  vi.stubGlobal("window", { localStorage: storage, Clerk: undefined });
+  vi.stubGlobal("localStorage", storage);
+  vi.stubGlobal("navigator", { onLine: false });
 }
 
 beforeEach(() => {
@@ -57,13 +65,13 @@ describe("persisted React Query cache", () => {
       buster: "",
       clientState: { mutations: [], queries: [] },
     });
-    expect(storage.keys().length).toBe(1);
+    expect(storage.keys().filter((k) => k.startsWith("climb-agent-rq-cache")).length).toBe(1);
 
     purgePersistedCache();
 
     // The assertion that matters: the purger targeted the key that was
     // actually written, not a key it assumed was written.
-    expect(storage.keys()).toEqual([]);
+    expect(storage.keys().filter((k) => k.startsWith("climb-agent-rq-cache"))).toEqual([]);
   });
 
   it("refuses to persist anything when no user is identified", async () => {
@@ -92,7 +100,10 @@ describe("persisted React Query cache", () => {
     const restored = await mod.createPersister().restoreClient();
 
     expect(restored).toBeUndefined();
-    expect(storage.keys()).toEqual([]); // and the mismatched payload is dropped
+    // The mismatched payload is dropped. The only key left is the non-sensitive
+    // "last user on this device" marker (B292b) — it is not a credential and is
+    // what lets the cache survive an offline start, where Clerk cannot load.
+    expect(storage.keys().filter((k) => k.startsWith("climb-agent-rq-cache"))).toEqual([]);
   });
 });
 
@@ -135,5 +146,94 @@ describe("offline outbox", () => {
     expect(outboxB.pendingCount()).toBe(0);
     // user_1's entry is still on the device, untouched, under its own key.
     expect(storage.keys().some((k) => k.includes("user_1"))).toBe(true);
+  });
+});
+
+/**
+ * B292b — the offline cold start, which is the entire point of the persisted
+ * cache and the one case the original guard destroyed.
+ *
+ * Clerk.js is fetched from the network. With no connection it never
+ * initialises, so `window.Clerk` is undefined, the user id resolves to null,
+ * and the old code read that as "a different user" → purge. Every offline open
+ * deleted the plan it was supposed to be showing.
+ */
+describe("offline cold start", () => {
+  async function persistAs(userId: string) {
+    signedInAs(userId);
+    const mod = await import("@/lib/query-persist");
+    await mod.createPersister().persistClient({
+      timestamp: Date.now(),
+      buster: "",
+      clientState: { mutations: [], queries: [] },
+    });
+    // Restoring once online is what records "last user on this device".
+    await mod.createPersister().restoreClient();
+  }
+
+  it("restores the cache when Clerk cannot load", async () => {
+    await persistAs("user_1");
+
+    vi.resetModules();
+    offline();
+    const mod = await import("@/lib/query-persist");
+    const restored = await mod.createPersister().restoreClient();
+
+    expect(restored).toBeDefined();
+  });
+
+  it("does NOT purge the cache when it cannot identify the user", async () => {
+    await persistAs("user_1");
+
+    vi.resetModules();
+    offline();
+    const mod = await import("@/lib/query-persist");
+    await mod.createPersister().restoreClient();
+
+    // The regression: an offline open used to wipe this.
+    expect(storage.keys().some((k) => k.startsWith("climb-agent-rq-cache"))).toBe(true);
+  });
+
+  it("does not stall waiting for Clerk when the browser knows it is offline", async () => {
+    await persistAs("user_1");
+
+    vi.resetModules();
+    offline();
+    const mod = await import("@/lib/query-persist");
+
+    const started = Date.now();
+    await mod.createPersister().restoreClient();
+    // Was 3s of blank screen on every single offline open.
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+
+  it("survives repeated offline opens", async () => {
+    await persistAs("user_1");
+
+    vi.resetModules();
+    offline();
+    const mod = await import("@/lib/query-persist");
+    await mod.createPersister().restoreClient();
+    await mod.createPersister().restoreClient();
+    await mod.createPersister().restoreClient();
+
+    expect(await mod.createPersister().restoreClient()).toBeDefined();
+  });
+
+  it("still refuses to restore across a real user switch", async () => {
+    await persistAs("user_1");
+
+    vi.resetModules();
+    signedInAs("user_2"); // Clerk ANSWERED: genuinely someone else
+    const mod = await import("@/lib/query-persist");
+
+    expect(await mod.createPersister().restoreClient()).toBeUndefined();
+    expect(storage.keys().filter((k) => k.startsWith("climb-agent-rq-cache"))).toEqual([]);
+  });
+
+  it("does not restore anything on a device that was never signed in", async () => {
+    offline();
+    const mod = await import("@/lib/query-persist");
+    expect(await mod.createPersister().restoreClient()).toBeUndefined();
   });
 });

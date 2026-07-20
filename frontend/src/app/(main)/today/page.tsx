@@ -118,8 +118,16 @@ function TodayContent() {
 
   // A187 — React Query hooks for cached reads
   const qc = useQueryClient();
+  // B292b — `authReady` gates the NETWORK, not the display. Clerk.js is fetched
+  // from the network, so offline it never initialises and `authReady` stays
+  // false forever. Keeping the queries disabled is right (a request without a
+  // token would only 401), but React Query still serves the persisted cache
+  // through a disabled query — which is exactly what makes /today usable in
+  // falesia. Nothing below may gate rendering on `authReady`.
   const stateQuery = useUserState(authReady);
   const weekQuery = useWeekPlan(0, authReady);
+  /** True when Clerk answered. False offline — "we could not ask", not "no one". */
+  const identityKnown = authReady;
 
   const weekPlan: WeekPlan | null = weekQuery.data?.week_plan ?? null;
   const phaseId: string | null = weekQuery.data?.phase_id ?? null;
@@ -162,6 +170,21 @@ function TodayContent() {
 
   const loading = stateQuery.isLoading || weekQuery.isLoading;
   const queryError = stateQuery.error || weekQuery.error;
+
+  /**
+   * B292c — the onboarding prompt may ONLY appear when the server positively
+   * told us this account has no plan.
+   *
+   * The old condition was `!loading && !error && ...`, where `error` is the
+   * LOCAL mutation-error state — it never reflects a failed `getState()`. So a
+   * failed state fetch rendered the red "Load failed" box AND "Welcome to
+   * climb-agent! Complete your onboarding" at the same time, to a user with
+   * months of training behind them.
+   *
+   * `isSuccess && !isFetching` covers every way we might not know yet: in
+   * flight, errored, or disabled with nothing cached.
+   */
+  const stateLoadedOk = stateQuery.isSuccess && !stateQuery.isFetching;
 
   /** Helper: write a fresh week_plan into the React Query cache (instant UI update) */
   const updateWeekCache = useCallback((newWeekPlan: WeekPlan) => {
@@ -1030,7 +1053,7 @@ function TodayContent() {
         {/* Loading state */}
         {/* A245 F-6 (F14): a skeleton that reserves the real height, not a
             centred spinner that lets the page snap from empty to full. */}
-        {loading && <TodaySkeleton />}
+        {(loading || (stateQuery.isFetching && !hasMacrocycle)) && <TodaySkeleton />}
 
         {/* Error state */}
         {(error || queryError) && !loading && (
@@ -1046,8 +1069,34 @@ function TodayContent() {
         )}
 
 
-        {/* No macrocycle — prompt to start onboarding (true new user only) */}
-        {!loading && !error && !weekPlan && !hasMacrocycle && (
+        {/* B292b — offline, with nothing cached for this device yet.
+         *
+         * Clerk cannot initialise without the network, so we genuinely do not
+         * know who this is and there is no cached plan to fall back on. Say so.
+         * Before this, the page sat blank (or, worse, invited an established
+         * user to redo their onboarding). */}
+        {!loading && !identityKnown && !weekPlan && !hasMacrocycle && (
+          <div className="rounded-lg border border-dashed p-8 text-center">
+            <p className="text-lg font-medium">You&apos;re offline</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              We can&apos;t verify your session without a connection, and this
+              device hasn&apos;t saved your plan yet. Connect once and it will be
+              available offline from then on.
+            </p>
+          </div>
+        )}
+
+        {/* No macrocycle — prompt to start onboarding (true new user only).
+         *
+         * B292 — `loading` is `isLoading`, which is FALSE as soon as any cached
+         * value exists, including a restored-but-empty one (A245 B-2 added
+         * cache persistence). An established user could therefore be told
+         * "Welcome to climb-agent! Complete your onboarding" while the real
+         * state was still in flight — the worst possible message for someone
+         * who has been training for months.
+         *
+         * Never claim the user has no plan while we are still asking. */}
+        {stateLoadedOk && identityKnown && !weekPlan && !hasMacrocycle && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-lg font-medium">Welcome to climb-agent!</p>
             <p className="mt-2 text-sm text-muted-foreground">

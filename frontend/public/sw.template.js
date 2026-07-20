@@ -8,13 +8,21 @@
 const CACHE_NAME = "climb-agent-__BUILD_ID__";
 
 // A245 B-1 (F1) — the precache used to be just ["/", "/manifest.json"], so a
-// cold start with no network could not reach any real screen. The app shell is
-// now precached: /today and /week are the two views that must open in falesia.
+// cold start with no network could not reach any real screen.
+//
+// B292 — but `/today` and `/week` must NOT be precached here. They are behind
+// Clerk, and at install time the request answered 404, so `cache.add()` failed
+// for exactly the two screens the whole feature exists for. Worse, the failure
+// was swallowed per-URL, so the install "succeeded" with an empty shell and the
+// PWA still would not open offline.
+//
+// Only genuinely public documents are precached now. `/today` and `/week` are
+// cached by the fetch handler the first time the signed-in user visits them,
+// which is both correct and enough: you cannot need them offline before you
+// have opened them online at least once.
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
-  "/today",
-  "/week",
   "/offline",
 ];
 
@@ -33,7 +41,13 @@ self.addEventListener("install", (event) => {
       Promise.all(
         STATIC_ASSETS.map((url) =>
           cache.add(url).catch((err) => {
-            console.warn(`[sw] precache skipped ${url}:`, err);
+            // B292: this used to be a console.warn nobody reads, which is how
+            // an empty app shell shipped. Still non-fatal (one bad URL must not
+            // abort the whole install), but loud.
+            console.error(
+              `[sw] PRECACHE FAILED for ${url} — the app will not open offline:`,
+              err
+            );
           })
         )
       )

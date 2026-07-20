@@ -38,24 +38,85 @@ type Envelope = {
   client: PersistedClient;
 };
 
+/**
+ * B292b — the last user id we positively identified on this device.
+ *
+ * Clerk.js is loaded FROM THE NETWORK. With no connection it never initialises,
+ * so `window.Clerk.user.id` is unavailable exactly when the offline cache
+ * matters most. Remembering the id locally gives us identity without a network
+ * round trip; it is not a credential and grants nothing on its own (every API
+ * call still needs a real Clerk token).
+ */
+const LAST_USER_KEY = "climb-agent-last-user";
+
 function currentUserId(): string | null {
   if (typeof window === "undefined") return null;
   return window.Clerk?.user?.id ?? null;
 }
 
-/**
- * Restore runs at mount, when Clerk may still be bootstrapping. Reading the
- * user id too early would return null and we would throw away a perfectly good
- * cache on every cold start — so wait, but bounded.
- */
-async function waitForClerk(): Promise<string | null> {
+function rememberUser(userId: string): void {
+  try {
+    window.localStorage.setItem(LAST_USER_KEY, userId);
+  } catch {
+    /* private mode */
+  }
+}
+
+function lastKnownUserId(): string | null {
   if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(LAST_USER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function forgetLastUser(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(LAST_USER_KEY);
+  } catch {
+    /* nothing to forget */
+  }
+}
+
+type Identity =
+  /** Clerk answered: this is definitively who is signed in. */
+  | { known: true; userId: string | null }
+  /** Clerk never initialised (offline, script blocked): we do NOT know. */
+  | { known: false; userId: string | null };
+
+/**
+ * Restore runs at mount, when Clerk may still be bootstrapping. Reading the id
+ * too early returns null, and treating that as "a different user" is what made
+ * the offline cache delete itself: with no network Clerk NEVER loads, so the
+ * timeout always expired, the ids never matched and we purged.
+ *
+ * The distinction that fixes it: "Clerk says nobody" is not the same fact as
+ * "we could not ask Clerk".
+ */
+async function resolveIdentity(): Promise<Identity> {
+  if (typeof window === "undefined") return { known: false, userId: null };
+
+  // B292b — when the browser already knows there is no connection, waiting for
+  // Clerk is 3 seconds of guaranteed-blank screen on EVERY offline open, which
+  // is exactly the moment the app has to feel instant. Go straight to the
+  // remembered id.
+  if (navigator.onLine === false && !window.Clerk?.loaded) {
+    return { known: false, userId: lastKnownUserId() };
+  }
+
   const deadline = Date.now() + CLERK_READY_TIMEOUT_MS;
   while (Date.now() < deadline) {
-    if (window.Clerk?.loaded) return currentUserId();
+    if (window.Clerk?.loaded) {
+      const id = currentUserId();
+      if (id) rememberUser(id);
+      return { known: true, userId: id };
+    }
     await new Promise((r) => setTimeout(r, CLERK_POLL_MS));
   }
-  return currentUserId();
+  // Could not ask. Fall back to the last id we saw on this device.
+  return { known: false, userId: lastKnownUserId() };
 }
 
 /** Wipe the persisted cache. Called on sign-out and on any user mismatch. */
@@ -71,9 +132,11 @@ export function purgePersistedCache(): void {
 export function createPersister(): Persister {
   return {
     persistClient(client: PersistedClient) {
-      const userId = currentUserId();
-      // No identified user (signed out, or Clerk still loading) → persisting
-      // would produce a payload we could never safely attribute on restore.
+      // B292b: fall back to the remembered id so a cache written while offline
+      // (e.g. after an outbox flush) still carries an owner.
+      const userId = currentUserId() ?? lastKnownUserId();
+      // No identified user at all → persisting would produce a payload we could
+      // never safely attribute on restore.
       if (!userId) return;
       try {
         const payload = JSON.stringify({ userId, client } satisfies Envelope);
@@ -99,15 +162,20 @@ export function createPersister(): Persister {
       }
       if (!raw) return undefined;
 
-      const userId = await waitForClerk();
+      const identity = await resolveIdentity();
       try {
         const envelope = JSON.parse(raw) as Partial<Envelope>;
-        // Unscoped legacy payload, or a different user: never hand it over.
-        if (!envelope.userId || !envelope.client || envelope.userId !== userId) {
-          purgePersistedCache();
+        if (!envelope.userId || !envelope.client) {
+          purgePersistedCache(); // unscoped legacy payload
           return undefined;
         }
-        return envelope.client;
+        if (envelope.userId === identity.userId) return envelope.client;
+
+        // Mismatch. Purge ONLY when Clerk actually told us someone else is
+        // signed in. When we could not ask (offline), leave the cache alone —
+        // deleting it is precisely how the PWA lost its offline data.
+        if (identity.known) purgePersistedCache();
+        return undefined;
       } catch {
         purgePersistedCache();
         return undefined;
