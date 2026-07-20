@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -99,9 +99,13 @@ const ANDROID_STEPS = [
   },
 ];
 
-export default function InstallPage() {
+function InstallPageInner() {
   const router = useRouter();
+  const params = useSearchParams();
   const [platform, setPlatform] = useState<Platform>("iphone");
+  // Where to go once done. Whitelisted: this comes from a URL.
+  const requested = params.get("next");
+  const nextHref = requested === "/subscribe" ? "/subscribe" : "/today";
 
   const steps = platform === "iphone" ? IPHONE_STEPS : ANDROID_STEPS;
 
@@ -157,22 +161,30 @@ export default function InstallPage() {
 
           {/* Hint */}
           <p className="text-xs text-muted-foreground text-center">
-            Already installed? Just tap Next.
+            Already installed? Just tap Continue.
           </p>
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/welcome")}
-        >
-          Back
-        </Button>
-        <Button onClick={() => router.push("/onboarding/profile")}>
-          Next
+      {/* A245 Phase D (F38) — this screen used to be step 2 of 14: the very
+          first thing asked after sign-up, before the user had seen a single
+          thing the app does. Asking for a home-screen install before any
+          perceived value is the classic way to lose people at the top of the
+          funnel. It now runs after the plan exists, so the ask lands when
+          there is something worth coming back to. */}
+      <div className="flex justify-end">
+        <Button className="min-h-[44px]" onClick={() => router.push(nextHref)}>
+          Continue
         </Button>
       </div>
     </div>
+  );
+}
+
+export default function InstallPage() {
+  return (
+    <Suspense fallback={null}>
+      <InstallPageInner />
+    </Suspense>
   );
 }

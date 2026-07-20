@@ -58,7 +58,11 @@ export default function StartWeekPage() {
   // trapped paying users re-entering the onboarding flow.
   const routeNext = () => {
     if (subLoading) return;
-    router.push(canInteract ? "/today" : "/subscribe");
+    // A245 Phase D (F38) — the home-screen install ask now happens HERE, once
+    // the plan exists and the user has a reason to come back, instead of being
+    // the first thing they saw after signing up.
+    const dest = canInteract ? "/today" : "/subscribe";
+    router.push(`/onboarding/install?next=${dest}`);
   };
 
   // B155: gate on Clerk readiness

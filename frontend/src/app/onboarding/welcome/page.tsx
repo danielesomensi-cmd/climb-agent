@@ -32,5 +32,5 @@ export default async function WelcomePage() {
   }
 
   if (hasMacrocycle) redirect("/today");
-  redirect("/onboarding/install");
+  redirect("/onboarding/profile");
 }

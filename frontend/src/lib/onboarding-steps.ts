@@ -7,7 +7,8 @@
  * as "you already missed one".
  */
 export const ONBOARDING_STEPS = [
-  "install",
+  // A245 Phase D (F38): `install` is no longer part of the wizard — it now
+  // runs AFTER the plan exists (see start-week), so it is not counted here.
   "profile",
   "experience",
   "discipline",

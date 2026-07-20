@@ -67,7 +67,7 @@ export function WelcomeContent() {
         </Card>
 
         <div className="flex flex-col items-end gap-3">
-          <SignUpButton mode="redirect" forceRedirectUrl="/onboarding/install">
+          <SignUpButton mode="redirect" forceRedirectUrl="/onboarding/profile">
             <Button>Start assessment</Button>
           </SignUpButton>
           <button

@@ -59,7 +59,7 @@ export function describeSubmitError(err: unknown): SubmitFailure {
     case status === 422 || status === 400:
       return {
         message:
-          "We couldn't build a plan from these answers. Check the summary below — especially your grades, locations and availability — then try again.",
+          "We couldn't build a plan from these answers. Your answers are saved — check the summary below, especially your grades, locations and availability, then try again.",
         retryable: true,
       };
     case status != null && status >= 500:
