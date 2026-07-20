@@ -179,3 +179,52 @@ class TestInstructionBlock:
         assert "RPE/RIR only" in block
         assert "NEVER absolute kilograms" in block
         assert "Session Builder" in block
+
+
+# ── B283: catalog display enrichment for the real guided player ─────────
+
+
+class TestCustomSessionEnrichment:
+    def test_build_session_enriches_display_fields(self):
+        from backend.api.models import CustomSessionExerciseEntry
+        from backend.api.routers.custom_session import _build_session, _load_exercises_catalog
+
+        catalog = _load_exercises_catalog()
+        entry = CustomSessionExerciseEntry(
+            exercise_id="bench_press", sets=3, reps=5,
+            rest_between_sets_seconds=120, load_kg=40,
+        )
+        s = _build_session("cs_x", "Test", [], [entry], catalog, "2026-07-20T00:00:00Z")
+        ex = s["exercises"][0]
+        assert ex["name"] == "Bench Press"
+        assert ex["cues"], "catalog cues missing"
+        assert ex["load_model"] == "external_load"
+        assert ex.get("video_url")
+        # catalog technique notes fill empty user notes
+        assert isinstance(ex.get("notes"), (str, type(None)))
+
+    def test_user_notes_win_over_catalog_notes(self):
+        from backend.api.models import CustomSessionExerciseEntry
+        from backend.api.routers.custom_session import _build_session, _load_exercises_catalog
+
+        catalog = _load_exercises_catalog()
+        entry = CustomSessionExerciseEntry(
+            exercise_id="elbow_wrist_extensor_eccentric", sets=3, reps=12, notes="my note",
+        )
+        s = _build_session("cs_y", "Test", [], [entry], catalog, "2026-07-20T00:00:00Z")
+        assert s["exercises"][0]["notes"] == "my note"
+
+    def test_read_path_backfills_legacy_sessions(self):
+        from backend.api.routers.custom_session import enrich_custom_sessions_for_play
+
+        legacy = [{
+            "id": "cs_old", "name": "Old", "exercises": [
+                {"exercise_id": "frenchies", "sets": 3, "reps": 5, "load_kg": 0, "notes": ""},
+            ],
+        }]
+        out = enrich_custom_sessions_for_play(legacy)
+        ex = out[0]["exercises"][0]
+        assert ex.get("name") and ex["name"] != "frenchies"
+        assert "cues" in ex
+        # original objects untouched (read-path only)
+        assert "cues" not in legacy[0]["exercises"][0]

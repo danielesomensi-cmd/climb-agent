@@ -21,6 +21,7 @@ import {
   type AdhocSessionPreview,
   type CoachMessage,
 } from "@/lib/api";
+import { buildGuidedStateFromExercises, saveGuidedState } from "@/lib/guided-session-utils";
 
 const PAGE_SIZE = 50;
 
@@ -322,7 +323,16 @@ export default function CoachPage() {
           ],
           week_plan: week.week_plan,
         });
-        router.push(`/session-builder/${created.id}/play?date=${encodeURIComponent(today)}`);
+        // B283: run through the REAL guided player (progress, navigation,
+        // cues, loads) — the minimal A211 playback page is retired.
+        const guidedState = buildGuidedStateFromExercises(
+          `custom_${created.id}`,
+          created.name,
+          today,
+          (created.exercises ?? []) as unknown as Array<Record<string, unknown>>,
+        );
+        if (guidedState) saveGuidedState(guidedState);
+        router.push(`/guided/${today}/custom_${created.id}`);
       } catch (e) {
         setError(e instanceof Error ? e.message : friendlyError(e));
         setAddingAdhoc(false);

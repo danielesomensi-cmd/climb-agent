@@ -77,6 +77,25 @@ def _validate_tags(tags: list) -> None:
             raise HTTPException(status_code=422, detail=f"Tag too long (max 30 chars): {tag!r}")
 
 
+def _enrich_exercise_display(ex: dict, catalog: dict) -> dict:
+    """B283: attach catalog display data (name, cues, video, load_model,
+    category, technique notes) to a stored custom exercise so the REAL guided
+    player can render it like any planned session — the minimal A211 player is
+    retired. User-entered ``notes`` win; the catalog's prescription notes fill
+    the gap otherwise (that's the technique text real sessions show)."""
+    cat_ex = catalog.get(ex.get("exercise_id") or "") or {}
+    defaults = cat_ex.get("prescription_defaults") or {}
+    ex["name"] = cat_ex.get("name") or str(ex.get("exercise_id") or "").replace("_", " ").title()
+    ex["cues"] = cat_ex.get("cues") or []
+    ex["load_model"] = cat_ex.get("load_model") or ""
+    ex["category"] = cat_ex.get("category") or ""
+    if cat_ex.get("video_url"):
+        ex["video_url"] = cat_ex["video_url"]
+    if not ex.get("notes") and defaults.get("notes"):
+        ex["notes"] = defaults["notes"]
+    return ex
+
+
 def _build_session(
     session_id: str,
     name: str,
@@ -87,7 +106,7 @@ def _build_session(
 ) -> dict:
     """Build a full custom session dict with computed fields."""
     now = datetime.now(timezone.utc).isoformat()
-    ex_dicts = [ex.model_dump() for ex in exercises]
+    ex_dicts = [_enrich_exercise_display(ex.model_dump(), catalog) for ex in exercises]
     exercise_ids = [ex.exercise_id for ex in exercises]
     return {
         "id": session_id,
@@ -259,6 +278,23 @@ def get_blocks(user_id: Optional[str] = Depends(get_user_id)):
     return result
 
 
+def enrich_custom_sessions_for_play(sessions: list) -> list:
+    """B283: backfill catalog display fields on stored custom sessions that
+    predate the enrichment (older saves lack name/cues/video). Read-path only —
+    does not persist. Used by GET detail and by the replanner-events router
+    before add_custom_session copies exercises into a week-plan slot."""
+    catalog = _load_exercises_catalog()
+    out = []
+    for s in sessions:
+        s = dict(s)
+        s["exercises"] = [
+            _enrich_exercise_display(dict(ex), catalog) if not ex.get("cues") else dict(ex)
+            for ex in (s.get("exercises") or [])
+        ]
+        out.append(s)
+    return out
+
+
 @router.get("/{session_id}", dependencies=[Depends(require_active_subscription)])
 def get_session(session_id: str, user_id: Optional[str] = Depends(get_user_id)):
     """Get full custom session detail."""
@@ -266,7 +302,8 @@ def get_session(session_id: str, user_id: Optional[str] = Depends(get_user_id)):
     sessions = _get_custom_sessions(state)
     for s in sessions:
         if s.get("id") == session_id:
-            return s
+            # B283: backfill display fields for pre-enrichment saves.
+            return enrich_custom_sessions_for_play([s])[0]
     raise HTTPException(status_code=404, detail=f"Custom session not found: {session_id}")
 
 

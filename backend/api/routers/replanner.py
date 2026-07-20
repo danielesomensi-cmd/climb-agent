@@ -335,7 +335,11 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     availability = state.get("availability")
     planning_prefs = state.get("planning_prefs")
     gyms = (state.get("equipment") or {}).get("gyms")
-    custom_sessions = state.get("custom_sessions") or []
+    # B283: enrich with catalog display fields (name/cues/video/load_model) so
+    # the week-plan slot that add_custom_session copies carries what the real
+    # guided player renders. Read-path only; replanner_v1 logic untouched.
+    from backend.api.routers.custom_session import enrich_custom_sessions_for_play
+    custom_sessions = enrich_custom_sessions_for_play(state.get("custom_sessions") or [])
 
     # For complete_outdoor events, compute outdoor load score from JSONL log
     for ev in req.events:
