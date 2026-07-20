@@ -639,6 +639,27 @@ export interface MonthlyReport {
   suggestions: string[];
 }
 
+// A236 (A-GAMIFY-03): monthly heatmap — rest-positive day cells.
+export type HeatmapDayStatus =
+  | "done"
+  | "planned"
+  | "skipped"
+  | "rest"
+  | "rest_planned"
+  | "none";
+
+export interface HeatmapDay {
+  date: string;
+  status: HeatmapDayStatus;
+  load: number;
+}
+
+export interface MonthlyHeatmapData {
+  month: string;
+  today: string;
+  days: HeatmapDay[];
+}
+
 // -----------------------------------------------------------------------
 // Quotes
 // -----------------------------------------------------------------------

@@ -16,6 +16,7 @@ export { useCatalogSessions, useCatalogExercises } from "./use-catalog";
 export {
   useDailyQuote,
   useDailyTip,
+  useMonthlyHeatmap,
   useOnboardingDefaults,
   useSubscriptionStatus,
   useWeeklyReport,
