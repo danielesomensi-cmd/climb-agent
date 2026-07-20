@@ -30,10 +30,29 @@ function localToday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Cheap gate: only route plausibly-adhoc turns to the compose endpoint (the
- * backend extraction is the authority and returns {adhoc:false} to fall back). */
-const ADHOC_RE =
-  /\b(build|compose|make|give)\b.*\b(session|workout|routine)\b|\b(session|workout|routine)\b.*\b(build|compose|make|give)\b|componi|costruisci|allenamento|at the (regular |commercial )?gym|in palestra|sono in palestra|quick (core|session|workout)/i;
+/** Cheap gate: route plausibly-adhoc turns to the compose endpoint. Biased
+ * toward routing (a false positive just costs one cheap extraction that returns
+ * {adhoc:false} → chat fallback; a false negative gives the outdated "I can't
+ * build sessions" text reply, which is worse). Covers EN + IT (B280). */
+const ADHOC_RE = new RegExp(
+  [
+    // EN: build/create/make/… + session/workout/routine (either order, nearby)
+    "\\b(build|compose|create|make|give|design|plan|put together)\\b[^.?!\\n]{0,40}\\b(session|workout|routine|circuit)\\b",
+    "\\b(session|workout|routine)\\b[^.?!\\n]{0,40}\\b(build|compose|create|make|design)\\b",
+    // IT: componi/creami/fammi/preparami/… + sessione/allenamento/seduta/scheda
+    "\\b(componi|costruisci|creami|crea|creare|fammi|fai|preparami|prepara|dammi|proponimi|proponi|montami|mettimi|generami|genera|organizzami)\\b[^.?!\\n]{0,40}\\b(sessione|allenamento|workout|routine|seduta|scheda|circuito)\\b",
+    "\\b(sessione|allenamento|seduta|scheda)\\b[^.?!\\n]{0,40}\\b(componi|creami|crea|fammi|preparami|dammi|proponimi|generami)\\b",
+    // being at a gym is a strong signal on its own (EN + IT)
+    "\\bat the (regular |commercial )?gym\\b",
+    "\\b(in|alla|dalla|nella|della) palestra\\b",
+    "sono in palestra",
+    "\\bal gym\\b",
+    // short "quick X" / "sessione veloce"
+    "\\bquick (core|session|workout|pull|push|leg|finger)\\b",
+    "\\b(sessione|allenamento) (veloce|rapid[oa])\\b",
+  ].join("|"),
+  "i",
+);
 
 function looksLikeAdhoc(text: string): boolean {
   return ADHOC_RE.test(text);
