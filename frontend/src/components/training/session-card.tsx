@@ -633,7 +633,8 @@ function ExerciseItemWrapper({ children, canEdit, onRemove }: {
       {children}
       {canEdit && onRemove && (
         <button
-          className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full text-muted-foreground/30 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+          aria-label="Remove exercise"
+          className="absolute top-0 right-0 flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground/30 hover:text-red-500 hover:bg-red-500/10 transition-colors"
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
         >
           <Trash2 className="size-3.5" />

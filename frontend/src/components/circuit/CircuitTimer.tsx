@@ -476,6 +476,12 @@ export function CircuitTimer({
         <div
           className="relative w-36 h-36 shrink-0 cursor-pointer"
           onClick={handlePauseToggle}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter") handlePauseToggle();
+          }}
+          aria-label={paused ? "Resume timer" : "Pause timer"}
         >
           <svg viewBox="0 0 220 220" className="w-full h-full -rotate-90">
             <circle
@@ -556,6 +562,12 @@ export function CircuitTimer({
       <div
         className="flex flex-1 min-h-0 flex-col items-center px-4 pt-2 overflow-y-auto cursor-pointer"
         onClick={handlePauseToggle}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") handlePauseToggle();
+        }}
+        aria-label={paused ? "Resume timer" : "Pause timer"}
       >
         {/* Exercise card with back/next arrows */}
         {phase !== "prepare" && (

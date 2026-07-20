@@ -905,6 +905,12 @@ export default function TabataPage() {
             <div
               className="flex flex-1 w-full flex-col items-center justify-center gap-4 cursor-pointer"
               onClick={handlePauseToggle}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") handlePauseToggle();
+              }}
+              aria-label={paused ? "Resume timer" : "Pause timer"}
             >
               {/* Phase label */}
               <span className={cn("text-lg font-bold uppercase tracking-[0.2em]", PHASE_TEXT_COLOR[phase])}>
@@ -950,6 +956,7 @@ export default function TabataPage() {
             <div className="flex items-center gap-4 pb-8">
               <button
                 onClick={(e) => { e.stopPropagation(); handlePauseToggle(); }}
+                aria-label={paused ? "Resume timer" : "Pause timer"}
                 className="flex h-14 w-14 items-center justify-center rounded-full border border-muted-foreground/30 text-muted-foreground hover:text-foreground transition-colors"
               >
                 {paused ? (
@@ -960,6 +967,7 @@ export default function TabataPage() {
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); handleStop(); }}
+                aria-label="Stop timer"
                 className="flex h-14 w-14 items-center justify-center rounded-full border border-red-500/50 text-red-400 hover:text-red-300 hover:border-red-400 transition-colors"
               >
                 <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
@@ -986,6 +994,12 @@ export default function TabataPage() {
           <div
             className="flex flex-1 flex-col items-center justify-center cursor-pointer"
             onClick={handlePauseToggle}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === " " || e.key === "Enter") handlePauseToggle();
+            }}
+            aria-label={paused ? "Resume timer" : "Pause timer"}
           >
             <div className="relative w-72 h-72">
               {/* SVG ring */}

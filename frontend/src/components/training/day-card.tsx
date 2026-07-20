@@ -446,6 +446,19 @@ export function DayCard({
                     hasExpandableOutdoor && "cursor-pointer"
                   )}
                   onClick={hasExpandableOutdoor ? () => setOutdoorExpanded(v => !v) : undefined}
+                  {...(hasExpandableOutdoor && {
+                    // F40 — un div cliccabile senza semantica: niente focus,
+                    // niente tastiera, invisibile agli screen reader.
+                    role: "button",
+                    tabIndex: 0,
+                    "aria-expanded": outdoorExpanded,
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        setOutdoorExpanded((v) => !v);
+                      }
+                    },
+                  })}
                 >
                   <Mountain className="size-4 text-green-500" />
                   <span className="font-medium">{day.outdoor_spot_name}</span>
