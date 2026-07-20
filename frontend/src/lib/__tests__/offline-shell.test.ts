@@ -73,9 +73,34 @@ describe("empty-state guard on /today", () => {
     "utf8",
   );
 
-  it("never shows the onboarding prompt while state is still being fetched", () => {
+  const condition = (() => {
     const block = today.slice(today.indexOf("No macrocycle — prompt to start onboarding"));
-    const condition = block.slice(0, block.indexOf("&& ("));
-    expect(condition).toContain("!stateQuery.isFetching");
+    const jsx = block.slice(block.indexOf("*/") + 2);
+    return jsx.slice(0, jsx.indexOf("&& ("));
+  })();
+
+  /**
+   * B292c — the prompt may only appear when the server positively said this
+   * account has no plan. The old condition used the LOCAL mutation-error state,
+   * which never reflects a failed `getState()`, so a failed fetch rendered the
+   * red "Load failed" box AND "Complete your onboarding" together.
+   */
+  it("requires a successful, settled state fetch", () => {
+    expect(condition).toContain("stateLoadedOk");
+  });
+
+  it("requires a known identity — not just 'Clerk did not answer'", () => {
+    expect(condition).toContain("identityKnown");
+  });
+
+  it("derives stateLoadedOk from isSuccess, not from the local error state", () => {
+    const decl = today.slice(today.indexOf("const stateLoadedOk"));
+    const line = decl.slice(0, decl.indexOf(";"));
+    expect(line).toContain("isSuccess");
+    expect(line).toContain("!stateQuery.isFetching");
+  });
+
+  it("offers an offline explanation instead of a blank page", () => {
+    expect(today).toContain("You&apos;re offline");
   });
 });

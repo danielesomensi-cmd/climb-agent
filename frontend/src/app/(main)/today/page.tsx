@@ -171,6 +171,21 @@ function TodayContent() {
   const loading = stateQuery.isLoading || weekQuery.isLoading;
   const queryError = stateQuery.error || weekQuery.error;
 
+  /**
+   * B292c — the onboarding prompt may ONLY appear when the server positively
+   * told us this account has no plan.
+   *
+   * The old condition was `!loading && !error && ...`, where `error` is the
+   * LOCAL mutation-error state — it never reflects a failed `getState()`. So a
+   * failed state fetch rendered the red "Load failed" box AND "Welcome to
+   * climb-agent! Complete your onboarding" at the same time, to a user with
+   * months of training behind them.
+   *
+   * `isSuccess && !isFetching` covers every way we might not know yet: in
+   * flight, errored, or disabled with nothing cached.
+   */
+  const stateLoadedOk = stateQuery.isSuccess && !stateQuery.isFetching;
+
   /** Helper: write a fresh week_plan into the React Query cache (instant UI update) */
   const updateWeekCache = useCallback((newWeekPlan: WeekPlan) => {
     qc.setQueryData(queryKeys.week(0), (old: { week_num?: number; phase_id?: string; week_plan: WeekPlan } | undefined) =>
@@ -1081,7 +1096,7 @@ function TodayContent() {
          * who has been training for months.
          *
          * Never claim the user has no plan while we are still asking. */}
-        {!loading && !stateQuery.isFetching && identityKnown && !error && !weekPlan && !hasMacrocycle && (
+        {stateLoadedOk && identityKnown && !weekPlan && !hasMacrocycle && (
           <div className="rounded-lg border border-dashed p-8 text-center">
             <p className="text-lg font-medium">Welcome to climb-agent!</p>
             <p className="mt-2 text-sm text-muted-foreground">
