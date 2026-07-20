@@ -8,20 +8,29 @@ exercise catalog and never picks exercises or loads — the deterministic
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from backend.coach import llm_client
 from backend.engine.adhoc_builder import ADHOC_ENERGY, ADHOC_EQUIPMENT_SETS, ADHOC_FOCUS
+
+# B281: how many recent chat messages give the extractor context. Without this,
+# a follow-up like "riprovi a crearla?" loses everything the user specified in
+# earlier turns (place, focus, minutes) and composition falls back to defaults.
+CONTEXT_MESSAGES = 6
 
 _SYSTEM = (
     "You extract the intent behind a climber's request to build an ad-hoc "
     "training session (e.g. 'I'm at a commercial gym, build me a 45-min pulling "
     "session', 'quick core workout at home'). Call the tool once. Set "
-    "is_adhoc_request=false if the message is NOT asking you to compose/build a "
-    "session (a question, a plan tweak, small talk). When true, infer the slots "
-    "from the message; use sensible defaults when unstated (equipment_set=home, "
-    "focus=general_strength, minutes=45, energy=medium). Never guess exercises "
-    "or loads — only these slots."
+    "is_adhoc_request=false if the LATEST message is NOT asking to compose/build "
+    "a session (a question, a plan tweak, small talk). When true, infer the "
+    "slots from the latest message AND the recent conversation — earlier turns "
+    "often carry the place, focus or minutes a short follow-up like 'retry' or "
+    "'crearla tu?' refers to. A named climbing/bouldering gym counts as "
+    "equipment_set=gym. If the user asks for two focuses (e.g. core and "
+    "technique), pick the dominant one. Use sensible defaults only when truly "
+    "unstated (equipment_set=home, focus=general_strength, minutes=45, "
+    "energy=medium). Never guess exercises or loads — only these slots."
 )
 
 _TOOL: Dict[str, Any] = {
@@ -59,11 +68,39 @@ _TOOL: Dict[str, Any] = {
 }
 
 
-def extract_intent(message: str) -> Optional[Dict[str, Any]]:
+def build_extraction_content(
+    message: str, history: Optional[List[Dict[str, str]]] = None
+) -> str:
+    """Latest message + a compact recent-transcript block (B281).
+
+    ``history``: chronological ``{role, content}`` dicts; only the last
+    ``CONTEXT_MESSAGES`` are included, truncated per message.
+    """
+    if not history:
+        return message
+    lines = []
+    for m in history[-CONTEXT_MESSAGES:]:
+        role = "User" if m.get("role") == "user" else "Coach"
+        content = str(m.get("content") or "").strip().replace("\n", " ")
+        if content:
+            lines.append(f"{role}: {content[:400]}")
+    if not lines:
+        return message
+    return (
+        "Recent conversation (context for slot inference):\n"
+        + "\n".join(lines)
+        + f"\n\nLatest message (classify THIS): {message}"
+    )
+
+
+def extract_intent(
+    message: str, history: Optional[List[Dict[str, str]]] = None
+) -> Optional[Dict[str, Any]]:
     """Return ``{equipment_set, focus, minutes, energy}`` or None if the message
     is not an adhoc-session request. Raises the same errors as llm_client.extract.
     """
-    slots = llm_client.extract(_SYSTEM, message, _TOOL)
+    content = build_extraction_content(message, history)
+    slots = llm_client.extract(_SYSTEM, content, _TOOL)
     if not slots.get("is_adhoc_request"):
         return None
     return {

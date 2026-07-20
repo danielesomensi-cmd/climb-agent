@@ -280,6 +280,18 @@ export default function SessionPlayPage() {
     completeSession();
   }, [currentExercise, currentSet, currentExerciseIndex, exercises.length, completeSession]);
 
+  /** B281: skip the CURRENT exercise entirely (all remaining sets). Never trap
+   * the user — long timed drills made sessions feel broken without this. */
+  const handleSkipExercise = useCallback(() => {
+    if (currentExerciseIndex < exercises.length - 1) {
+      setCurrentExerciseIndex((i) => i + 1);
+      setCurrentSet(1);
+      setStage("exercise_active");
+      return;
+    }
+    completeSession();
+  }, [currentExerciseIndex, exercises.length, completeSession]);
+
   /** Called when rest timer reaches target + user taps Start next, or skips early. */
   const handleRestDone = useCallback(() => {
     if (!currentExercise) return;
@@ -486,13 +498,25 @@ export default function SessionPlayPage() {
         )}
 
         {stage === "exercise_active" && currentExercise && (
-          <CustomExerciseStep
-            key={`${currentExerciseIndex}-${currentSet}`}
-            exercise={currentExercise}
-            exerciseName={formatExerciseName(currentExercise.exercise_id, catalogNameMap)}
-            currentSet={currentSet}
-            onSetDone={handleSetDone}
-          />
+          <>
+            <CustomExerciseStep
+              key={`${currentExerciseIndex}-${currentSet}`}
+              exercise={currentExercise}
+              exerciseName={formatExerciseName(currentExercise.exercise_id, catalogNameMap)}
+              currentSet={currentSet}
+              onSetDone={handleSetDone}
+            />
+            {/* B281: always reachable exit from the current exercise. */}
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={handleSkipExercise}
+                className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+              >
+                Skip exercise →
+              </button>
+            </div>
+          </>
         )}
 
         {stage === "resting" &&
