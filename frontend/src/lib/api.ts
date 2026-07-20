@@ -931,7 +931,14 @@ export interface AdhocSessionPreview {
   explanation: string;
   effort_band: string | null;
   phase: string | null;
-  intent: { equipment_set: string; focus: string; minutes: number; energy: string };
+  intent: {
+    equipment_set: string;
+    focus: string;
+    secondary_focus?: string | null;
+    gym_name?: string | null;
+    minutes: number;
+    energy: string;
+  };
 }
 
 export const coachAdhocSession = (message: string) =>

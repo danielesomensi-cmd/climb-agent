@@ -201,6 +201,23 @@ def _to_custom_exercise(
     }
 
 
+def match_gym(user_state: Dict[str, Any], gym_name: Optional[str]) -> Optional[Dict[str, Any]]:
+    """B284: resolve a user-mentioned gym name ("bkl", "al Bkl") to the user's
+    gym entry, case-insensitive, substring-tolerant. None when no match."""
+    gyms = (user_state.get("equipment") or {}).get("gyms") or []
+    if not gym_name:
+        # Single-gym users: "gym" can only mean that one.
+        return gyms[0] if len(gyms) == 1 else None
+    needle = str(gym_name).strip().lower()
+    if not needle:
+        return None
+    for g in gyms:
+        name = str(g.get("name") or "").strip().lower()
+        if name and (name == needle or needle in name or name in needle):
+            return g
+    return None
+
+
 def _current_phase(user_state: Dict[str, Any]) -> Optional[str]:
     from backend.api.deps import current_phase_and_week
 
@@ -250,6 +267,11 @@ def compose_adhoc_session(
 
     equipment_set = intent.get("equipment_set") if intent.get("equipment_set") in ADHOC_EQUIPMENT_SETS else "home"
     focus = intent.get("focus") if intent.get("focus") in FOCUS_DOMAINS else "general_strength"
+    # B284: optional secondary focus — "core e tecnica" gets a guaranteed block
+    # for the second ask instead of losing it to the dominant-focus pick.
+    secondary_focus = intent.get("secondary_focus")
+    if secondary_focus not in FOCUS_DOMAINS or secondary_focus == focus:
+        secondary_focus = None
     energy = intent.get("energy") if intent.get("energy") in ADHOC_ENERGY else "medium"
     try:
         minutes = int(intent.get("minutes") or 45)
@@ -257,10 +279,16 @@ def compose_adhoc_session(
         minutes = 45
     minutes = max(MIN_MINUTES, min(MAX_MINUTES, minutes))
 
-    equipment = resolve_equipment_mode(equipment_set, user_state)
+    # B284: a named gym ("al Bkl") restricts equipment to THAT gym. Without it,
+    # multi-gym users got the union of all their gyms — the composer believed a
+    # bench existed at the bouldering gym. No name + single gym → that gym.
+    gym = match_gym(user_state, intent.get("gym_name")) if equipment_set == "gym" else None
+    if gym is not None:
+        equipment = resolve_equipment_mode("gym", user_state, gym_id=gym.get("gym_id"))
+    else:
+        equipment = resolve_equipment_mode(equipment_set, user_state)
     phase = _current_phase(user_state)
     recent = set(_recent_exercise_ids(user_state))
-    domains = FOCUS_DOMAINS[focus]
 
     chosen: List[Dict[str, Any]] = []
     used: set = set(recent)  # avoid recents AND avoid duplicates within the session
@@ -284,30 +312,53 @@ def compose_adhoc_session(
         chosen.append(warmups[0])
         used.add(str(warmups[0].get("id")))
 
-    # 2. Main focus blocks — as many as the minutes budget allows (min 1),
-    # with movement-pattern diversity (B281: max MAX_PER_PATTERN per pattern —
-    # no more five-pull-up-variants sessions).
-    mains = _candidates(catalog_by_id, domains=domains, equipment=equipment, exclude=used)
-    # exclude warmup/cooldown/test-role picks from the main pool
-    mains = [e for e in mains if not ({"warmup", "cooldown", "test"} & set(_roles_of(e)))]
-    mains.sort(key=lambda e: _rank_key(e, phase, recent))
-
-    def _append_within_budget(candidate: Dict[str, Any]) -> bool:
-        trial = chosen + [candidate]
-        exs = [_to_custom_exercise(e, catalog_by_id, user_state, phase, energy, today) for e in trial]
-        return estimate_custom_session_duration(exs) <= minutes
-
-    pattern_counts: Dict[str, int] = {}
-
     def _pattern_of(ex: Dict[str, Any]) -> str:
         p = ex.get("pattern")
         if isinstance(p, list):
             p = p[0] if p else None
         return str(p or ex.get("recency_group") or ex.get("id") or "")
 
+    def _pool(focus_key: str) -> List[Dict[str, Any]]:
+        pool = _candidates(
+            catalog_by_id, domains=FOCUS_DOMAINS[focus_key], equipment=equipment, exclude=used
+        )
+        pool = [e for e in pool if not ({"warmup", "cooldown", "test"} & set(_roles_of(e)))]
+        pool.sort(key=lambda e: _rank_key(e, phase, recent))
+        return pool
+
+    def _estimate(exs: List[Dict[str, Any]]) -> int:
+        return estimate_custom_session_duration(
+            [_to_custom_exercise(e, catalog_by_id, user_state, phase, energy, today) for e in exs]
+        )
+
+    # 2a. B284: secondary-focus block reserved FIRST — "core e tecnica" keeps a
+    # guaranteed 2-3 exercise block for the second ask instead of losing it.
+    secondary_picks: List[Dict[str, Any]] = []
+    if secondary_focus:
+        sec_counts: Dict[str, int] = {}
+        for c in _pool(secondary_focus):
+            if len(secondary_picks) >= 3:
+                break
+            pat = _pattern_of(c)
+            if sec_counts.get(pat, 0) >= MAX_PER_PATTERN:
+                continue
+            secondary_picks.append(c)
+            used.add(str(c.get("id")))
+            sec_counts[pat] = sec_counts.get(pat, 0) + 1
+    reserved_minutes = _estimate(secondary_picks) if secondary_picks else 0
+    max_primary_total = MAX_EXERCISES - len(secondary_picks)
+
+    # 2b. Primary focus blocks — as many as the remaining budget allows (min 1),
+    # with movement-pattern diversity (B281: max MAX_PER_PATTERN per pattern).
+    mains = _pool(focus)
+
+    def _append_within_budget(candidate: Dict[str, Any]) -> bool:
+        return _estimate(chosen + [candidate]) + reserved_minutes <= minutes
+
+    pattern_counts: Dict[str, int] = {}
     main_picks: List[Dict[str, Any]] = []
     for m in mains:
-        if len(chosen) >= MAX_EXERCISES:
+        if len(chosen) >= max_primary_total:
             break
         mid = str(m.get("id"))
         if mid in used:
@@ -338,16 +389,18 @@ def compose_adhoc_session(
         )
     )
     warm_part = [c for c in chosen if c not in main_picks]
-    chosen = warm_part + main_picks
+    chosen = warm_part + main_picks + secondary_picks
 
-    # 3. Core finisher (1) — spine-safe core, distinct from mains.
+    # 3. Core finisher (1) — spine-safe core, distinct from mains. Skipped when
+    # core already exists as primary or secondary block.
     finishers = _candidates(catalog_by_id, categories=["core"], equipment=equipment, exclude=used)
     finishers.sort(key=lambda e: _rank_key(e, phase, recent))
     if (
         focus != "core"
+        and secondary_focus != "core"
         and finishers
         and len(chosen) < MAX_EXERCISES
-        and _append_within_budget(finishers[0])
+        and _estimate(chosen + [finishers[0]]) <= minutes
     ):
         chosen.append(finishers[0])
         used.add(str(finishers[0].get("id")))
@@ -361,18 +414,25 @@ def compose_adhoc_session(
     harmonization = _harmonization_note(user_state, today)
     phase_label = (phase or "off-plan").replace("_", " ")
     focus_label = focus.replace("_", " ")
+    gym_label = str(gym.get("name")) if gym and gym.get("name") else None
+    place_label = gym_label or equipment_set
+    combo_label = (
+        f"{focus_label} + {secondary_focus.replace('_', ' ')}" if secondary_focus else focus_label
+    )
     explanation_parts = [
-        f"A ~{minutes}-min {focus_label} session for a {equipment_set} setup",
+        f"A ~{minutes}-min {combo_label} session for {place_label}",
         f"tuned to your {phase_label} phase" if phase else "off-plan support work",
     ]
     explanation = ", ".join(explanation_parts) + "."
+    if gym_label:
+        explanation += f" Only exercises doable with {gym_label}'s equipment."
     if harmonization:
         explanation += " " + harmonization
 
     return {
         "adhoc": True,
-        "name": f"Adhoc {focus_label} ({equipment_set})",
-        "tags": [focus, equipment_set],
+        "name": f"Adhoc {combo_label} @ {place_label}" if gym_label else f"Adhoc {combo_label} ({equipment_set})",
+        "tags": [t for t in [focus, secondary_focus, equipment_set] if t],
         "exercises": exercises,
         "estimated_load_score": compute_custom_session_load(exercise_ids, catalog_by_id),
         "estimated_duration_minutes": estimate_custom_session_duration(exercises),
@@ -383,6 +443,8 @@ def compose_adhoc_session(
         "intent": {
             "equipment_set": equipment_set,
             "focus": focus,
+            "secondary_focus": secondary_focus,
+            "gym_name": gym_label,
             "minutes": minutes,
             "energy": energy,
         },
