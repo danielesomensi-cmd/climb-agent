@@ -9,9 +9,29 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from backend.api.deps import REPO_ROOT, get_user_id, load_state, require_active_subscription, save_state
+from backend.api.deps import (
+    REPO_ROOT,
+    current_phase_and_week,
+    get_user_id,
+    load_state,
+    require_active_subscription,
+    save_state,
+)
 from backend.api.models import CustomSessionCreateRequest, CustomSessionUpdateRequest
+from backend.engine.adhoc_prescription import propose_exercise_prescription
 from backend.engine.custom_session import compute_custom_session_load, estimate_custom_session_duration
+
+
+def _current_phase_id(state: dict) -> Optional[str]:
+    """Canonical phase_id of the user's current macrocycle week, or None."""
+    mc = state.get("macrocycle") or {}
+    phases = mc.get("phases") or []
+    if not phases:
+        return None
+    pi, _ = current_phase_and_week(mc)
+    if 0 <= pi < len(phases):
+        return phases[pi].get("phase_id") or phases[pi].get("id")
+    return None
 
 router = APIRouter(prefix="/api/custom-session", tags=["custom-session"])
 
@@ -117,10 +137,14 @@ def list_exercises(
     catalog = _load_exercises_catalog()
     exercises = list(catalog.values())
 
+    # A242: always load state (read-only) — the per-exercise proposal reads
+    # working_loads (last logged load) and the current macrocycle phase.
+    state = load_state(user_id)
+    phase = _current_phase_id(state)
+
     # Equipment filter: load user equipment and filter
     user_equipment: Optional[set] = None
     if equipment:
-        state = load_state(user_id)
         eq = state.get("equipment", {})
         user_equipment = set(eq.get("available", []))
 
@@ -162,6 +186,8 @@ def list_exercises(
             "prescription_defaults": ex.get("prescription_defaults", {}),
             "fatigue_cost": ex.get("fatigue_cost", 0),
             "load_model": ex.get("load_model"),
+            # A242: deterministic starting proposal + last-logged memory (C.2/C.3).
+            "proposal": propose_exercise_prescription(ex["id"], catalog, state, phase),
         })
 
     # Sort by domain (first entry), then name

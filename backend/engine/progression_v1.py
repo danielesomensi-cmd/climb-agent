@@ -485,14 +485,19 @@ def _find_working_load_entry(user_state: Dict[str, Any], exercise_id: str, setup
     return new_item
 
 
-def _best_entry(user_state: Dict[str, Any], exercise_id: str, setup: Dict[str, Any], date_value: str, freshness_days: int = 60) -> Optional[Dict[str, Any]]:
+def _best_entry(user_state: Dict[str, Any], exercise_id: str, setup: Dict[str, Any], date_value: str, freshness_days: Optional[int] = 60) -> Optional[Dict[str, Any]]:
     _, key = _progression_setup_and_key(exercise_id, setup)
     fresh_matching: List[Dict[str, Any]] = []
     fresh_by_exercise: List[Dict[str, Any]] = []
-    for item in _working_entries(user_state):
+    # A242: non-mutating read (no setdefault) so read-only GET callers never
+    # touch user_state; freshness_days=None disables the recency filter — the
+    # builder proposal surfaces remembered loads regardless of age (dated, for a
+    # human to review), while progression callers keep the default 60-day gate.
+    entries = (user_state.get("working_loads") or {}).get("entries") or []
+    for item in entries:
         if str(item.get("exercise_id") or "") != exercise_id:
             continue
-        if not _is_fresh(item.get("updated_at"), date_value, freshness_days):
+        if freshness_days is not None and not _is_fresh(item.get("updated_at"), date_value, freshness_days):
             continue
         fresh_by_exercise.append(item)
         if str(item.get("key") or "") == key:
