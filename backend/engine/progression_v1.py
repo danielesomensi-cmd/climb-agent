@@ -230,6 +230,14 @@ def canonical_feedback_label(item: Dict[str, Any]) -> str:
     return "ok"
 
 
+def _first_not_none(*values: Any) -> Any:
+    """First value that is not None — unlike `a or b`, keeps a legitimate 0."""
+    for value in values:
+        if value is not None:
+            return value
+    return None
+
+
 def _round_half_step(value: float) -> float:
     return round(value / 0.5) * 0.5
 
@@ -1511,7 +1519,13 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     max_hang_easy = 0
 
         elif fb_load_model == "external_load" and not fb_unilateral:
-            used_load = item.get("used_external_load_kg") or item.get("used_load_kg")
+            # B288: `a or b` treated a legitimate 0kg as missing and dropped the
+            # whole item — "I did it with no added weight" is a real answer
+            # (band-only Pallof press, bodyweight variant of a loaded exercise),
+            # and silently discarding it left the memory on the previous load.
+            used_load = _first_not_none(
+                item.get("used_external_load_kg"), item.get("used_load_kg")
+            )
             if used_load is None:
                 continue
             base = float(used_load)
@@ -1561,7 +1575,10 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         elif fb_load_model == "external_load" and fb_unilateral:
             # Unilateral: feedback includes hand field
             hand = str(item.get("hand") or "right").lower()
-            used_load = item.get("used_external_load_kg") or item.get("used_load_kg")
+            # B288: same falsy-0 bug as the bilateral branch above.
+            used_load = _first_not_none(
+                item.get("used_external_load_kg"), item.get("used_load_kg")
+            )
             if used_load is None:
                 continue
             base = float(used_load)
