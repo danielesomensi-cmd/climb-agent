@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getDailyQuote,
   getDailyTip,
+  getMilestones,
   getMonthlyHeatmap,
   getOnboardingDefaults,
   getSubscriptionStatus,
@@ -65,6 +66,15 @@ export function useMonthlyHeatmap(month: string, enabled = true) {
     queryFn: () => getMonthlyHeatmap(month),
     staleTime: 60_000,
     enabled: enabled && !!month,
+  });
+}
+
+export function useMilestones(enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.milestones,
+    queryFn: getMilestones,
+    staleTime: 5 * 60_000,
+    enabled,
   });
 }
 

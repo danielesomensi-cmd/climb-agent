@@ -6,6 +6,7 @@ import { useAuth } from "@clerk/nextjs";
 import { TopBar } from "@/components/layout/top-bar";
 import { RadarChart } from "@/components/onboarding/radar-chart";
 import { MacrocycleTimeline } from "@/components/training/macrocycle-timeline";
+import { MilestonesCard } from "@/components/training/milestones-card";
 import { PausedBanner } from "@/components/training/paused-banner";
 import { useUserState } from "@/lib/hooks/use-state";
 import { generateMacrocycle, getStateStatus, getWeek } from "@/lib/api";
@@ -385,6 +386,9 @@ export default function PlanPage() {
                 );
               })}
             </div>
+
+            {/* A239: milestone gallery */}
+            <MilestonesCard />
           </>
         )}
       </main>

@@ -13,6 +13,7 @@ import { DayCard } from "@/components/training/day-card";
 import { DailyCueBanner } from "@/components/training/daily-cue-banner";
 import { DailyTipCard } from "@/components/training/daily-tip-card";
 import { PhaseCelebration } from "@/components/training/phase-celebration";
+import { MilestoneToast } from "@/components/training/milestone-toast";
 import { WeatherCard } from "@/components/training/weather-card";
 import { CoachCard } from "@/components/training/coach-card";
 import { FeedbackDialog } from "@/components/training/feedback-dialog";
@@ -1270,6 +1271,9 @@ function TodayContent() {
       {isViewingToday && !loading && (
         <PhaseCelebration state={stateQuery.data} />
       )}
+
+      {/* A239: milestone unlock toasts */}
+      {isViewingToday && !loading && <MilestoneToast />}
 
       {/* Post-session feedback dialog */}
       <FeedbackDialog
