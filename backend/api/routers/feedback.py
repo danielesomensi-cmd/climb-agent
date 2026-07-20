@@ -189,6 +189,20 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                 _is_body_part_session = True
                 break
 
+    # A240: adhoc/custom sessions are off-plan support work. They DO write
+    # working_loads (apply_feedback below runs unconditionally) but must NEVER
+    # feed the macrocycle closed-loop (stimulus_recency / fatigue_proxy). The
+    # custom player omits resolved_day, so the resolved_day gate at step 3
+    # already skips the closed-loop; this explicit guard enforces the boundary
+    # server-side even if a future caller passes resolved_day for a custom
+    # session. Mirrors the _is_body_part_session pattern (A213).
+    _is_custom_session = str(target_sid or "").startswith("custom_")
+    if not _is_custom_session and req.resolved_day:
+        for _s in req.resolved_day.get("sessions", []):
+            if _s.get("session_id") == target_sid and _s.get("is_custom"):
+                _is_custom_session = True
+                break
+
     # 2. Apply progression feedback (updates working loads)
     try:
         state = apply_feedback(req.log_entry, state)
@@ -197,7 +211,7 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
         raise HTTPException(status_code=500, detail="Feedback application failed. Please try again.")
 
     # 3. Apply closed-loop state update (stimulus recency, fatigue proxy)
-    if req.resolved_day and not _is_body_part_session:
+    if req.resolved_day and not _is_body_part_session and not _is_custom_session:
         try:
             state = apply_day_result_to_user_state(
                 state,
@@ -219,65 +233,60 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
         if _notes is not None:
             _item["notes"] = str(_notes)[:500] if _notes else None
 
-    # 4b. A139: Persist raw actual exercise data in session slot
-    if _fb_items:
-        _wp = state.get("current_week_plan") or {}
-        for _week_block in _wp.get("weeks", []):
-            for _day_entry in _week_block.get("days", []):
-                if _day_entry.get("date") != target_date:
-                    continue
-                for _sess in _day_entry.get("sessions", []):
-                    if _sess.get("session_id") == target_sid:
-                        _sess["actual_exercises"] = _fb_items
-                        break
-        # B136b: Also sync to week_plans cache so GET /api/week/0 sees it
-        _wp_start = _wp.get("start_date", "")
-        if _wp_start:
-            _cached = (state.get("week_plans") or {}).get(_wp_start)
-            if _cached and _cached is not _wp and _cached.get("weeks"):
-                for _week_block_c in _cached["weeks"]:
-                    for _day_c in _week_block_c.get("days", []):
-                        if _day_c.get("date") != target_date:
-                            continue
-                        for _sess_c in _day_c.get("sessions", []):
-                            if _sess_c.get("session_id") == target_sid:
-                                _sess_c["actual_exercises"] = _fb_items
-                                break
-
-    # 4b-bis. B217: Persist session_duration_seconds on the session slot so
-    # the POST response carries the measured duration directly. Without this,
-    # the frontend cache after setQueryData has no duration field and falls
-    # back to the hardcoded slot-table (lunch:35/morning:60/evening:90) until
-    # the next GET /api/week refetch runs _attach_feedback. Separate from the
-    # 4b actual_exercises block because duration is session-wide, not per-ex,
-    # and the payload may omit exercise_feedback_v1.
+    # 4b. A139 / B217 / A240: Persist raw actual exercise data + the measured
+    # session_duration_seconds onto the session slot. Applied to every plan
+    # object that could hold the session: the legacy current_week_plan, its
+    # week_plans cache entry (B136b, so GET /api/week/0 sees it), AND
+    # week_plans[monday(target_date)] — the last covers A240 custom sessions
+    # that live in a *future* week, where current_week_plan does not contain
+    # them (the B216 mark_done retry already relies on the same cache).
+    #
+    # Persisting duration here also lets the POST response carry it directly, so
+    # the frontend cache after setQueryData isn't forced back onto the hardcoded
+    # slot-table (lunch:35/morning:60/evening:90) until the next GET /api/week.
     _dur_new = req.log_entry.get("session_duration_seconds")
-    if _dur_new is not None and target_date and target_sid:
-        _wp_d = state.get("current_week_plan") or {}
+    if (_fb_items or _dur_new is not None) and target_date and target_sid:
 
-        def _apply_dur(plan: dict) -> None:
-            for wk in plan.get("weeks", []):
-                for day in wk.get("days", []):
-                    if day.get("date") != target_date:
+        def _apply_actual_and_dur(plan: dict) -> None:
+            for _week_block in plan.get("weeks", []):
+                for _day_entry in _week_block.get("days", []):
+                    if _day_entry.get("date") != target_date:
                         continue
-                    for sess in day.get("sessions", []):
-                        if sess.get("session_id") != target_sid:
+                    for _sess in _day_entry.get("sessions", []):
+                        if _sess.get("session_id") != target_sid:
                             continue
-                        # B197-style guard: never regress a measured duration
-                        _prev = sess.get("session_duration_seconds")
-                        sess["session_duration_seconds"] = (
-                            max(_prev, _dur_new)
-                            if isinstance(_prev, (int, float))
-                            else _dur_new
-                        )
+                        if _fb_items:
+                            _sess["actual_exercises"] = _fb_items
+                        if _dur_new is not None:
+                            # B197-style guard: never regress a measured duration.
+                            _prev = _sess.get("session_duration_seconds")
+                            _sess["session_duration_seconds"] = (
+                                max(_prev, _dur_new)
+                                if isinstance(_prev, (int, float))
+                                else _dur_new
+                            )
                         return
 
-        _apply_dur(_wp_d)
-        _wp_d_start = _wp_d.get("start_date", "")
-        if _wp_d_start:
-            _cached_d = (state.get("week_plans") or {}).get(_wp_d_start)
-            if _cached_d and _cached_d is not _wp_d:
-                _apply_dur(_cached_d)
+        _plans_cache = state.get("week_plans") or {}
+        _candidate_plans: list = []
+        _seen_plan_ids: set = set()
+
+        def _add_candidate(_p) -> None:
+            if isinstance(_p, dict) and _p.get("weeks") and id(_p) not in _seen_plan_ids:
+                _seen_plan_ids.add(id(_p))
+                _candidate_plans.append(_p)
+
+        _cwp = state.get("current_week_plan") or {}
+        _add_candidate(_cwp)
+        _cwp_start = _cwp.get("start_date", "")
+        if _cwp_start:
+            _add_candidate(_plans_cache.get(_cwp_start))
+        _target_monday = _monday_for_date(target_date)
+        if _target_monday:
+            _add_candidate(_plans_cache.get(_target_monday))
+
+        for _p in _candidate_plans:
+            _apply_actual_and_dur(_p)
 
     # 4c. D172-04: Stale exercise guard — warn if feedback exercise_ids don't match
     # the resolved session (session removed from catalog or exercises changed)
