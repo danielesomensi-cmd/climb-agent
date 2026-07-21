@@ -9,7 +9,7 @@ Methodology: Hörst 4-3-2-1 adaptive periodization with DUP (Daily Undulating Pe
 <!-- STATUS_TABLE_START -->
 | Metric | Count |
 |--------|-------|
-| Tests (passing) | 2720 |
+| Tests (passing) | 2723 |
 | Exercises | 254 |
 | Sessions (active) | 35 |
 | Templates | 19 |
@@ -73,4 +73,4 @@ Auto-deploy on push to main (~2-3 min).
 | Service | Platform | URL |
 |---------|----------|-----|
 | Backend | Railway | https://web-production-fb1e9.up.railway.app |
-| Frontend | Vercel | https://climb-agent.vercel.app |
+| Frontend | Vercel | https://climbagent.app |

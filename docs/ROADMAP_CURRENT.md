@@ -72,6 +72,10 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ---
 
+## Recently closed (2026-07-21)
+
+- **A248 — DOMAIN-MIGRATION: climbagent.app dominio canonico di produzione** ✅ (infra + frontend/backend, branch `brief/A248-domain-migration` → preview Vercel → OK Daniele → merge). Dominio `climbagent.app` (Namecheap, 2026-07-21) collegato al progetto Vercel via CLI: apex + `www` aggiunti, **308 redirect** configurati via API (`www.climbagent.app` → apex, legacy `climb-agent.vercel.app` → apex) così i link già condivisi coi beta tester continuano a funzionare. DNS su Namecheap (manuale, Daniele): A `@` e `www` → `76.76.21.21`. **Codice:** CORS backend allarga a `https://climbagent.app` + `www` (legacy origin mantenuto durante la transizione — PWA shell cached possono ancora chiamare dal vecchio origin; rimozione in un cleanup brief futuro); default `FRONTEND_BASE_URL` (Stripe success/cancel) → `https://climbagent.app`; `layout.tsx` `metadataBase` + `openGraph.url` via `NEXT_PUBLIC_APP_URL` (default nuovo dominio); dev page `/dev/today-states` blocca su tutti gli hostname prod. Clerk sign-in/up URL già relativi (nessun tocco); `manifest.json` `start_url` relativo (nessun tocco). **Dashboard-side (Daniele):** Namecheap DNS, Clerk allowed origins, verifica Stripe. Test: +3 CORS (canonical, www, legacy, lookalike rejection). Fuori scope: rimozione legacy origin, migrazione istanza Clerk dev→prod, email domain.
+
 ## Recently closed (2026-07-20)
 
 
