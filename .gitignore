@@ -51,3 +51,4 @@ frontend/tsconfig.tsbuildinfo
 
 # A221: local state backups (real user data — never commit)
 _backups/
+scripts/clerk_migration_backup.json
