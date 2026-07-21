@@ -24,6 +24,7 @@ const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog")
 const MoveSessionDialog = dynamic(() => import("@/components/training/move-session-dialog").then((m) => m.MoveSessionDialog), { ssr: false });
 const GymPickerDialog = dynamic(() => import("@/components/training/gym-picker-dialog").then((m) => m.GymPickerDialog), { ssr: false });
 import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
+import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
 import { applyEvents, postFeedback, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
@@ -138,6 +139,8 @@ function TodayContent() {
   // macrocycle has ended), which now fails closed with week_plan: null rather
   // than regenerating an immutable past week.
   const hasMacrocycle = !!(stateQuery.data?.macrocycle);
+  // A246 (F52): the reminder rides on the week payload.
+  const testReminder = weekQuery.data?.test_reminder ?? null;
   const pastWeekUnavailable = weekQuery.data?.past_week_unavailable ?? false;
 
   // Derived from /api/state — memoised to avoid re-renders
@@ -1137,6 +1140,14 @@ function TodayContent() {
         {/* Week progress bar */}
         {!loading && !error && weekPlan && (
           <WeekProgressBar weekPlan={weekPlan} freeSessions={weekFreeSessions} freeSessionsLoaded={weekFreeSessionsLoaded} outdoorLoad={weekOutdoorLoad} />
+        )}
+
+        {/* A246 (F52) — periodic retest reminder. The backend has emitted this
+            every ~6 weeks since it was built; until now nothing rendered it, so
+            the recalibration it triggers never happened for anyone. Placed
+            above the check-in because it decides what NEXT week contains. */}
+        {!loading && !error && isViewingToday && testReminder && (
+          <TestReminderCard reminder={testReminder} onResponded={refetchAll} />
         )}
 
         {/* Weekly check-in card (Sunday / Monday morning grace) */}

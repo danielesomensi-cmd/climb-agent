@@ -201,6 +201,14 @@ Two things worth knowing:
 
 Every **~6 weeks**, the system schedules test sessions. These are critical — they re-measure your baseline numbers and update your 5-axis profile.
 
+When it's time, a **"Time to retest"** card appears on **Today** with three choices:
+
+- **Schedule test week** — a test session is added to next week's plan
+- **Next week** — you'll be asked again in 7 days
+- **Not this cycle** — you'll be asked again in about 6 weeks
+
+There's no way to dismiss the card without choosing: each option tells the engine something different, and skipping the decision entirely is how baselines quietly go stale. If you keep postponing, your prescriptions stay anchored to numbers that no longer describe you.
+
 **The tests:**
 
 - **Max Hang (7s)**: Maximum weight you can hang for 7 seconds on a 20mm edge. Measures finger max strength.

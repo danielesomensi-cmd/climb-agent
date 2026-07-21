@@ -1052,8 +1052,10 @@ export interface Weather {
  *
  * Shape mirrors `should_show_test_reminder()` in `backend/engine/planner_v2.py`.
  */
+export type TestReminderOption = "confirm" | "postpone_1_week" | "skip_cycle";
+
 export interface TestReminder {
   type: "test_week_reminder";
   message: string;
-  options: Array<"confirm" | "postpone_1_week" | "skip_cycle">;
+  options: TestReminderOption[];
 }

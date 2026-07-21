@@ -27,6 +27,7 @@ import type {
   WarmupCooldownBlock,
   Weather,
   TestReminder,
+  TestReminderOption,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -325,6 +326,22 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
     test_reminder?: TestReminder;
   }>(`/api/week/${weekNum}${qs ? `?${qs}` : ""}`);
 };
+
+/**
+ * A246 — answer the periodic retest reminder.
+ *
+ * The endpoint has existed since the reminder was built; nothing ever called
+ * it, because no UI ever showed the reminder (A245 G-4 / F52).
+ *
+ * - `confirm`         → next week generation injects the test session
+ * - `postpone_1_week` → ask again next week
+ * - `skip_cycle`      → ask again in 6 weeks
+ */
+export const respondToTestReminder = (option: TestReminderOption) =>
+  request<{ status: string; action: string; next_reminder_week?: number }>(
+    "/api/week/test-reminder-response",
+    { method: "POST", body: JSON.stringify({ option }) },
+  );
 
 // Session
 export const resolveSession = (
