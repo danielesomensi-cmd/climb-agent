@@ -238,6 +238,29 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 > Constraint: solo founder, zero marketing budget, feature freeze for 30 days.
 > Stripe status: LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
 
+### GTM log — re-lancio climbagent.app (2026-07-21, post-A248/A249/A250/A251)
+
+**✅ FATTO (2026-07-21):**
+- **Email win-back INVIATE** (manuali, Gmail): 8 destinatari — Christie (personalizzata,
+  la più ingaggiata), Cesar + Arthur (con nota Forgot-password), David + Edoardo (in
+  italiano), Tabitha, Paolo, Agustin, Rowene (`woween@gmail.com`). Contenuto: trial
+  attivo fino al **5 agosto** senza carta (A251), pitch AI coach, mobility/stretching,
+  nuovo dominio + reinstallazione PWA, leva Founding Climber $4.99.
+- **Welcome email INVIATA** al nuovo utente organico (`xbox.live.marionumber0001@`,
+  iscritto 21/07, trial fino al 5/08).
+- **Reddit modmail pre-approvazione** (policy value-first): r/indoorbouldering +
+  r/bouldering — chiesta approvazione mod prima di postare, link
+  `climbagent.app/onboarding/welcome`, offerto ai mod il trial gratuito per feedback.
+- Esclusi come da piano: arnaud + pippin (gestiti a parte).
+
+**⏳ PENDING:**
+- [ ] Attendere risposta mod r/indoorbouldering + r/bouldering → postare dopo approvazione
+- [ ] Domani (22/07): modmail r/climbharder (variante honest prior-removal, già in bozza);
+      valutare r/griptraining; post diretti r/ClaudeAI + r/SideProject
+- [ ] Email activation-nudge a Donato (`odlan3@`) — NON ancora inviata
+- [ ] Monitorare le conversioni win-back prima della scadenza trial del **5 agosto**
+      (dashboard admin: chi rientra, chi completa sessioni, chi aggiunge la carta)
+
 ### Timeline
 
 - **Week 0 (archived, ~2026-04-01):** Beta testers using the app (4-5 users). Founder dry-run. Stripe LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
