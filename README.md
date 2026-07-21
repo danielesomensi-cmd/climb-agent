@@ -73,4 +73,4 @@ Auto-deploy on push to main (~2-3 min).
 | Service | Platform | URL |
 |---------|----------|-----|
 | Backend | Railway | https://web-production-fb1e9.up.railway.app |
-| Frontend | Vercel | https://climb-agent.vercel.app |
+| Frontend | Vercel | https://climbagent.app |

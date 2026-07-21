@@ -267,7 +267,8 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 
 ## Deployment
 
-- **Frontend**: Next.js PWA on Vercel — https://climb-agent.vercel.app
+- **Frontend**: Next.js PWA on Vercel — **https://climbagent.app** (canonical, A248)
+  - `www.climbagent.app` and the legacy `https://climb-agent.vercel.app` 308-redirect to the apex (configured in Vercel; DNS on Namecheap: A `@`/`www` → 76.76.21.21)
   - Auto-deploys on push to main. Root directory: `frontend/`
   - Env: `NEXT_PUBLIC_API_URL=https://web-production-fb1e9.up.railway.app`
 
@@ -300,7 +301,7 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
   | STRIPE_PRICE_ID_STANDARD | Stripe Price ID for standard plan ($9.99/mo) |
   | STRIPE_PRICE_ID_FOUNDER | Stripe Price ID for Founding Climber plan ($4.99/mo) |
   | STRIPE_PORTAL_ENABLED | `true` to enable Customer Portal (default: true) |
-  | FRONTEND_BASE_URL | Base URL for Stripe redirect (default: Vercel prod URL) |
+  | FRONTEND_BASE_URL | Base URL for Stripe redirect (default: `https://climbagent.app`, A248) |
   | BYPASS_USER_IDS | Comma-separated user UUIDs that bypass subscription checks (founder, beta testers). Managed via Railway dashboard — no code change needed to add/remove. Read at import-time: changing it requires a service restart (Railway redeploy or manual restart). |
   | TELEGRAM_BOT_TOKEN | Bot token (@BotFather) for founder alerts. Unset → `notify()` is a silent no-op (A222). |
   | TELEGRAM_CHAT_ID | Destination chat id for founder alerts (new onboarding / trial started). Unset → no-op. |
