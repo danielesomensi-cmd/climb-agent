@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { MapPin } from "lucide-react";
 import { getWeather } from "@/lib/api";
 import type { Weather } from "@/lib/types";
 import { ConditionsPanel, type ConditionsData } from "@/components/shared/conditions-panel";
@@ -67,16 +68,14 @@ export function WeatherCard() {
   const [weather, setWeather] = useState<Weather | null>(() =>
     typeof window === "undefined" ? null : readCache(),
   );
+  // B293 — the iOS geolocation permission popup must never fire on mount
+  // without a user gesture (it used to stack with the first-login toasts and
+  // modals). "cta" renders a tap-to-load affordance; auto-fetch happens only
+  // when the Permissions API says the permission is ALREADY granted (no popup).
+  const [mode, setMode] = useState<"idle" | "cta" | "loading" | "hidden">("idle");
 
-  useEffect(() => {
+  const fetchViaGeolocation = useCallback((onUnavailable: () => void) => {
     let cancelled = false;
-
-    // Fresh cache already seeded the state → nothing to fetch.
-    if (readCache()) return;
-
-    // No geolocation support → silently skip (card stays hidden).
-    if (typeof navigator === "undefined" || !navigator.geolocation) return;
-
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
@@ -89,21 +88,86 @@ export function WeatherCard() {
             /* sessionStorage full / unavailable — non-fatal */
           }
         } catch {
-          /* provider unreachable / 503 — keep the card hidden */
+          /* provider unreachable / 503 */
+          if (!cancelled) onUnavailable();
         }
       },
       () => {
-        /* permission denied or position unavailable — keep the card hidden */
+        /* permission denied or position unavailable */
+        if (!cancelled) onUnavailable();
       },
       { timeout: 8000, maximumAge: 15 * 60 * 1000 },
     );
-
     return () => {
       cancelled = true;
     };
   }, []);
 
-  if (!weather) return null;
+  useEffect(() => {
+    // Fresh cache already seeded the state → nothing to fetch or ask.
+    if (readCache()) return;
 
-  return <ConditionsPanel data={weatherToPanel(weather)} ariaLabel="Current weather conditions" />;
+    // No geolocation support → silently skip (card stays hidden).
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setMode("hidden");
+      return;
+    }
+
+    let cancelFetch: (() => void) | undefined;
+    let disposed = false;
+
+    if (typeof navigator.permissions?.query === "function") {
+      navigator.permissions
+        .query({ name: "geolocation" })
+        .then((status) => {
+          if (disposed) return;
+          if (status.state === "granted") {
+            // Already granted — no popup possible, safe to fetch on mount.
+            setMode("loading");
+            cancelFetch = fetchViaGeolocation(() => setMode("hidden"));
+          } else if (status.state === "denied") {
+            setMode("hidden");
+          } else {
+            setMode("cta");
+          }
+        })
+        .catch(() => {
+          if (!disposed) setMode("cta");
+        });
+    } else {
+      // Permissions API unavailable — we cannot know without prompting, so
+      // wait for the gesture.
+      setMode("cta");
+    }
+
+    return () => {
+      disposed = true;
+      cancelFetch?.();
+    };
+  }, [fetchViaGeolocation]);
+
+  const handleShowConditions = () => {
+    setMode("loading");
+    fetchViaGeolocation(() => setMode("hidden"));
+  };
+
+  if (weather) {
+    return <ConditionsPanel data={weatherToPanel(weather)} ariaLabel="Current weather conditions" />;
+  }
+
+  if (mode === "cta" || mode === "loading") {
+    return (
+      <button
+        type="button"
+        disabled={mode === "loading"}
+        onClick={handleShowConditions}
+        className="flex w-full items-center gap-2 rounded-lg border border-dashed px-3 py-2.5 text-left text-sm text-muted-foreground hover:bg-accent transition-colors disabled:opacity-60"
+      >
+        <MapPin className="size-4 shrink-0" />
+        {mode === "loading" ? "Checking conditions..." : "Show outdoor conditions (uses your location)"}
+      </button>
+    );
+  }
+
+  return null;
 }

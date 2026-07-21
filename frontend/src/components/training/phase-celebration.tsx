@@ -24,6 +24,11 @@ import { parseISODateLocal } from "@/lib/dates";
 
 interface PhaseCelebrationProps {
   state: UserState | undefined;
+  /** B293 (interruption queue): fired once, as soon as the component knows
+   * whether it will show. `false` → the next interruption may proceed now. */
+  onSettled?: (willShow: boolean) => void;
+  /** B293: fired when the modal is dismissed — the queue moves on. */
+  onClosed?: () => void;
 }
 
 /**
@@ -38,7 +43,7 @@ interface PhaseCelebrationProps {
  * marked silently (no modal queue for users returning after weeks away).
  * Never shown for the first phase, while paused, or after cycle end.
  */
-export function PhaseCelebration({ state }: PhaseCelebrationProps) {
+export function PhaseCelebration({ state, onSettled, onClosed }: PhaseCelebrationProps) {
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState<{
     prevLabel: string;
@@ -50,17 +55,23 @@ export function PhaseCelebration({ state }: PhaseCelebrationProps) {
 
   useEffect(() => {
     if (checkedRef.current) return;
-    const macrocycle = state?.macrocycle as Macrocycle | undefined;
-    if (!macrocycle?.phases?.length || !macrocycle.start_date) return;
+    // Still loading — don't settle the queue until we can actually decide.
+    if (!state) return;
+    const macrocycle = state.macrocycle as Macrocycle | undefined;
     checkedRef.current = true;
 
-    if (macrocycle.pause?.active_since) return; // paused → not a celebration moment
-    if (parseISODateLocal(macrocycle.start_date).getTime() > Date.now()) return;
-    if (isCycleEnded(macrocycle)) return;
+    // B293 (interruption queue): every no-show path must release the gate so
+    // lower-priority interruptions (milestone toasts) are not blocked forever.
+    const settleNoShow = () => onSettled?.(false);
+
+    if (!macrocycle?.phases?.length || !macrocycle.start_date) return settleNoShow();
+    if (macrocycle.pause?.active_since) return settleNoShow(); // paused → not a celebration moment
+    if (parseISODateLocal(macrocycle.start_date).getTime() > Date.now()) return settleNoShow();
+    if (isCycleEnded(macrocycle)) return settleNoShow();
 
     const week = computeCurrentWeek(macrocycle);
     const current = getPhaseAtWeek(macrocycle, week);
-    if (!current) return;
+    if (!current) return settleNoShow();
 
     const prefs = (state?.preferences ?? {}) as Record<string, unknown>;
     const seen: string[] = Array.isArray(prefs.phase_celebrations_seen)
@@ -72,7 +83,7 @@ export function PhaseCelebration({ state }: PhaseCelebrationProps) {
       .slice(0, current.index + 1)
       .map((p) => celebrationKey(macrocycle, p.phase_id));
     const unseen = dueKeys.filter((k) => !seen.includes(k));
-    if (unseen.length === 0) return;
+    if (unseen.length === 0) return settleNoShow();
 
     const currentKey = celebrationKey(macrocycle, current.phase.phase_id);
     const celebrate = current.index > 0 && unseen.includes(currentKey);
@@ -84,7 +95,7 @@ export function PhaseCelebration({ state }: PhaseCelebrationProps) {
       () => {}, // best-effort — worst case the modal shows once more
     );
 
-    if (!celebrate) return;
+    if (!celebrate) return settleNoShow();
     const prev = macrocycle.phases[current.index - 1];
     const discipline = getDiscipline(
       (state?.goal as { goal_type?: string } | undefined)?.goal_type,
@@ -96,12 +107,18 @@ export function PhaseCelebration({ state }: PhaseCelebrationProps) {
       expect: PHASE_RATIONALES[current.phase.phase_id]?.what_to_expect,
     });
     setOpen(true);
-  }, [state]);
+    onSettled?.(true);
+  }, [state, onSettled]);
+
+  const close = () => {
+    setOpen(false);
+    onClosed?.();
+  };
 
   if (!content) return null;
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { if (!v) close(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl">🎉</DialogTitle>
@@ -122,7 +139,7 @@ export function PhaseCelebration({ state }: PhaseCelebrationProps) {
             <p className="mt-1 text-sm text-muted-foreground">{content.expect}</p>
           )}
         </div>
-        <Button onClick={() => setOpen(false)} className="w-full">
+        <Button onClick={close} className="w-full">
           Let&apos;s go
         </Button>
       </DialogContent>

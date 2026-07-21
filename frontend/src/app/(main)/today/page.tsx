@@ -143,6 +143,14 @@ function TodayContent() {
   const testReminder = weekQuery.data?.test_reminder ?? null;
   const pastWeekUnavailable = weekQuery.data?.past_week_unavailable ?? false;
 
+  // B293 — first-load interruption queue: phase modal first, milestone toasts
+  // only after it settled (won't show) or was dismissed. One overlay at a time.
+  const [phaseGateOpen, setPhaseGateOpen] = useState(false);
+  const handlePhaseSettled = useCallback((willShow: boolean) => {
+    if (!willShow) setPhaseGateOpen(true);
+  }, []);
+  const handlePhaseClosed = useCallback(() => setPhaseGateOpen(true), []);
+
   // Derived from /api/state — memoised to avoid re-renders
   const gyms = useMemo<Array<{ gym_id?: string; name: string; equipment: string[] }>>(() => {
     const eq = stateQuery.data?.equipment as Record<string, unknown> | undefined;
@@ -1341,13 +1349,23 @@ function TodayContent() {
         )}
       </main>
 
-      {/* A235: one-time phase-transition celebration */}
+      {/* A235: one-time phase-transition celebration.
+          B293: first in the interruption queue — the milestone toast below
+          waits for this to settle (no-show) or be dismissed. */}
       {isViewingToday && !loading && (
-        <PhaseCelebration state={stateQuery.data} />
+        <PhaseCelebration
+          state={stateQuery.data}
+          onSettled={handlePhaseSettled}
+          onClosed={handlePhaseClosed}
+        />
       )}
 
-      {/* A239: milestone unlock toasts */}
-      {isViewingToday && !loading && <MilestoneToast />}
+      {/* A239: milestone unlock toasts (B293: gated behind the phase modal;
+          if user state failed to load the modal can never settle — let the
+          toast through rather than suppressing it forever) */}
+      {isViewingToday && !loading && (
+        <MilestoneToast enabled={phaseGateOpen || stateQuery.isError} />
+      )}
 
       {/* Post-session feedback dialog */}
       <FeedbackDialog

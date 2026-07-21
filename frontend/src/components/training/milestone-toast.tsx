@@ -10,13 +10,18 @@ import { useMilestones } from "@/lib/hooks/queries";
  * milestones. Anti-spam rule: a retroactive first evaluation can unlock many
  * at once — more than 2 unseen collapse into one summary toast pointing to
  * the Plan gallery; all get marked seen either way. Renders nothing.
+ *
+ * B293 (interruption queue): `enabled` gates firing — /today keeps it false
+ * until the phase-celebration modal has settled/closed, so the toast never
+ * stacks on top of it. Unseen milestones are not lost: they stay unseen and
+ * fire on the next enabled mount.
  */
-export function MilestoneToast() {
+export function MilestoneToast({ enabled = true }: { enabled?: boolean }) {
   const { data } = useMilestones();
   const firedRef = useRef(false);
 
   useEffect(() => {
-    if (firedRef.current || !data) return;
+    if (!enabled || firedRef.current || !data) return;
     const unseen = data.milestones.filter((m) => m.unlocked && !m.seen);
     if (unseen.length === 0) return;
     firedRef.current = true;
@@ -38,7 +43,7 @@ export function MilestoneToast() {
     for (const m of unseen) {
       markMilestoneSeen(m.id).catch(() => {});
     }
-  }, [data]);
+  }, [data, enabled]);
 
   return null;
 }
