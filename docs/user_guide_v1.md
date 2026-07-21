@@ -581,7 +581,7 @@ In **Settings**, you can:
 
 ## 18b. Subscription & Free Trial
 
-Your first 15 days are a **free trial — no card required**. Start it from the Subscribe page and train normally right away.
+Your first 15 days are a **free trial — no card required**. It starts automatically the moment you finish onboarding: you land on Today with the trial already running, nothing to click.
 
 - While trialing, a banner shows how many days remain. If you haven't added a payment method, the banner offers **Add payment method** — it opens Stripe's secure billing portal.
 - If the trial ends **without** a card on file, nothing is charged: access to training actions simply locks, and you can subscribe whenever you're ready. **Your training data is safe** — plans, history, and logs are all preserved.

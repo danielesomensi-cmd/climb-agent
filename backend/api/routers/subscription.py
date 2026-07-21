@@ -13,8 +13,10 @@ from pydantic import BaseModel
 from backend.api.deps import get_user_id
 from backend.engine.subscription_guard import (
     _ACTIVE_STATUSES,
+    _parse_ts,
     check_subscription,
     get_subscription_row,
+    is_local_trial,
     upsert_subscription,
 )
 
@@ -96,12 +98,17 @@ def create_checkout_session(
     # Check if user already has a stripe_customer_id
     row = get_subscription_row(user_id)
 
+    # A250: a local trial (auto-started at onboarding, no Stripe objects) must
+    # NOT short-circuit — checkout is exactly how that user subscribes/adds a
+    # card. Stripe-managed trialing/active rows keep the B212 short-circuit.
+    local_trial = is_local_trial(row)
+
     # B212: short-circuit if user is already trialing/active.  Prevents the
     # incondizional "pending_checkout" upsert below from clobbering a live
     # trial/subscription when the frontend re-hits /checkout (e.g. after
     # Reset & Restart or a misrouted /subscribe tap).  Users with past_due
     # or canceled can still proceed to checkout.
-    if row and row.get("status") in _ACTIVE_STATUSES:
+    if row and row.get("status") in _ACTIVE_STATUSES and not local_trial:
         return {
             "already_active": True,
             "status": row.get("status"),
@@ -120,7 +127,19 @@ def create_checkout_session(
         # where invoice events arrive before checkout.session.completed.
         "metadata": {"user_id": user_id},
     }
-    if not trial_already_used:
+    if local_trial:
+        # A250: carry the REMAINING local-trial days into the Stripe
+        # subscription (no double trial, no lost days). Stripe Checkout
+        # requires trial_end ≥ 48h in the future — with less than that left,
+        # the subscription starts immediately (no trial), same as expired.
+        from datetime import datetime, timedelta, timezone
+        trial_end = _parse_ts(row.get("trial_end"))
+        if trial_end and trial_end > datetime.now(timezone.utc) + timedelta(hours=48):
+            subscription_data["trial_end"] = int(trial_end.timestamp())
+            subscription_data["trial_settings"] = {
+                "end_behavior": {"missing_payment_method": "cancel"},
+            }
+    elif not trial_already_used:
         subscription_data["trial_period_days"] = 15
         subscription_data["trial_settings"] = {
             "end_behavior": {"missing_payment_method": "cancel"},
@@ -170,8 +189,12 @@ def create_checkout_session(
     except stripe.StripeError as exc:
         raise HTTPException(status_code=502, detail=f"Stripe error: {exc.user_message}")
 
-    # Mark subscription as pending_checkout (row created here if not yet existing)
-    upsert_subscription(user_id, {"status": "pending_checkout"})
+    # Mark subscription as pending_checkout (row created here if not yet existing).
+    # A250: NOT for a local trial — abandoning the checkout must not demote a
+    # running trial to pending_checkout (the webhook overwrites the row anyway
+    # when the checkout completes).
+    if not local_trial:
+        upsert_subscription(user_id, {"status": "pending_checkout"})
 
     return {"checkout_url": session.url}
 
@@ -190,6 +213,41 @@ def create_billing_portal(user_id: Optional[str] = Depends(get_user_id)):
 
     row = get_subscription_row(user_id)
     customer_id = row.get("stripe_customer_id") if row else None
+
+    # A250: a local trial has no Stripe customer yet — "Add payment method"
+    # from the trial banner lands here. Serve a Checkout session instead of a
+    # portal: it collects the card (payment_method_collection=always, the
+    # user's explicit intent) and carries over the remaining trial days, so
+    # completing it converts the local trial into a Stripe-managed one.
+    if not customer_id and is_local_trial(row):
+        if not _STRIPE_PRICE_ID_STANDARD:
+            raise HTTPException(status_code=503, detail="Stripe price not configured")
+        from datetime import datetime, timedelta, timezone
+        subscription_data: dict = {"metadata": {"user_id": user_id}}
+        trial_end = _parse_ts(row.get("trial_end"))
+        if trial_end and trial_end > datetime.now(timezone.utc) + timedelta(hours=48):
+            subscription_data["trial_end"] = int(trial_end.timestamp())
+            subscription_data["trial_settings"] = {
+                "end_behavior": {"missing_payment_method": "cancel"},
+            }
+        client = _stripe_client()
+        try:
+            session = client.checkout.sessions.create({
+                "mode": "subscription",
+                "line_items": [{"price": _STRIPE_PRICE_ID_STANDARD, "quantity": 1}],
+                "subscription_data": subscription_data,
+                "success_url": f"{_FRONTEND_BASE}/settings?billing=updated",
+                "cancel_url": f"{_FRONTEND_BASE}/settings",
+                "allow_promotion_codes": True,
+                "payment_method_types": ["card"],
+                "payment_method_collection": "always",
+                "client_reference_id": user_id,
+                "metadata": {"user_id": user_id},
+            })
+        except stripe.StripeError as exc:
+            raise HTTPException(status_code=502, detail=f"Stripe error: {exc.user_message}")
+        return {"portal_url": session.url}
+
     if not customer_id:
         raise HTTPException(
             status_code=404,

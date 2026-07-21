@@ -121,6 +121,63 @@ def find_subscription_by_stripe_subscription_id(
 
 
 # ---------------------------------------------------------------------------
+# Local trial (A250)
+# ---------------------------------------------------------------------------
+
+TRIAL_DAYS = 15
+
+
+def is_local_trial(row: Optional[Dict[str, Any]]) -> bool:
+    """A250: a trial provisioned server-side at onboarding — no Stripe objects
+    behind it. Stripe-managed rows always carry stripe_subscription_id."""
+    return bool(
+        row
+        and row.get("status") == "trialing"
+        and not row.get("stripe_subscription_id")
+    )
+
+
+def start_trial_if_new(user_id: str) -> bool:
+    """A250: auto-start the 15-day free trial at onboarding completion.
+
+    No Stripe objects are created — the row alone drives check_subscription.
+    Stripe enters the picture only when the user adds a payment method /
+    subscribes (checkout carries over the remaining trial days). Expiry is
+    enforced lazily by check_subscription (no webhook exists for local rows).
+
+    Idempotent and conservative: never overwrites an existing row (a returning
+    user who re-onboards keeps their consumed/canceled trial — A232 one trial
+    per user, ever). Returns True only when a fresh trial row was created.
+    """
+    if not _stripe_enabled() or not _supabase_enabled():
+        return False  # dev/test: guard bypasses anyway
+    if get_subscription_row(user_id) is not None:
+        return False
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    upsert_subscription(user_id, {
+        "status": "trialing",
+        "trial_start": now.isoformat(),
+        "trial_end": (now + timedelta(days=TRIAL_DAYS)).isoformat(),
+        "has_payment_method": False,
+    })
+    return True
+
+
+def _parse_ts(value: Any) -> Optional[datetime]:
+    """Parse an ISO timestamp from the DB, normalizing Z and naive values."""
+    if not value or not isinstance(value, str):
+        return None
+    try:
+        if value.endswith("Z"):
+            value = value[:-1] + "+00:00"
+        ts = datetime.fromisoformat(value)
+        return ts.replace(tzinfo=timezone.utc) if ts.tzinfo is None else ts
+    except ValueError:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # Core check
 # ---------------------------------------------------------------------------
 
@@ -181,6 +238,23 @@ def check_subscription(user_id: Optional[str]) -> Dict[str, Any]:
         return _DENY_ALL.copy()
 
     status = row.get("status", "none")
+
+    # A250 lazy expiry: local trials have no Stripe subscription behind them,
+    # so no webhook will ever flip the status — enforce trial_end here.
+    # Stripe-managed rows (stripe_subscription_id set) are excluded: their
+    # transitions belong to webhooks, and a lagging webhook must not lock out
+    # a user whose trial just converted to active.
+    if is_local_trial(row):
+        trial_end = _parse_ts(row.get("trial_end"))
+        if trial_end is None or trial_end <= datetime.now(timezone.utc):
+            return {
+                "status": "expired",
+                "is_active": False,
+                "trial_days_remaining": 0,
+                "can_interact": False,
+                "has_payment_method": False,
+            }
+
     is_active = status in _ACTIVE_STATUSES
 
     trial_days_remaining: Optional[int] = None

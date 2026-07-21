@@ -514,6 +514,18 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
     invalidate_week_cache(state)
     save_state(state, user_id)
 
+    # A250: auto-start the 15-day free trial — the user lands on /today with
+    # a running trial instead of a paywall. No Stripe involved yet (card only
+    # when they subscribe). Never overwrites an existing row, never breaks
+    # onboarding on failure (worst case: user hits /subscribe as before).
+    trial_started = False
+    if user_id:
+        try:
+            from backend.engine.subscription_guard import start_trial_if_new
+            trial_started = start_trial_if_new(user_id)
+        except Exception:
+            logger.exception("A250 trial auto-start failed for user_id=%s", user_id)
+
     # Founder alert (fire-and-forget): a new user completed onboarding.
     try:
         from backend.api.notifications import notify
@@ -522,6 +534,7 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
         notify(
             "🧗 Nuovo iscritto — onboarding completato\n"
             f"Disciplina: {discipline} · grado: {grade or '?'}\n"
+            f"Trial auto-start: {'✅' if trial_started else '— (riga esistente o non applicabile)'}\n"
             f"User: {user_id}"
         )
     except Exception:  # never let an alert break onboarding

@@ -158,7 +158,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/catalog/exercises` | List all exercises |
 | GET | `/api/catalog/sessions` | List all session metadata |
 | GET | `/api/onboarding/defaults` | Option lists for onboarding form |
-| POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle (B293: profile bounds → 422) |
+| POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle (B293: profile bounds → 422). A250: auto-starts the 15-day LOCAL trial (subscriptions row `trialing`, no Stripe objects; lazy expiry in guard; checkout/portal convert it carrying remaining days) |
 | POST | `/api/onboarding/start-week` | Shift macrocycle start_date back N weeks |
 | GET | `/api/onboarding/draft` | Server-side wizard draft for the user, or null (B293) |
 | PUT | `/api/onboarding/draft` | Save wizard draft (replace wholesale; wiped on complete; ignored if macrocycle exists) |
@@ -239,7 +239,7 @@ user_state.assessment + user_state.goal
 | DELETE | `/api/admin/users/{uuid}` | Delete a user (protected, X-Admin-Key) |
 | GET | `/api/subscription/status` | Current subscription status + trial days remaining |
 | POST | `/api/subscription/checkout` | Create Stripe Checkout Session → returns hosted URL |
-| POST | `/api/subscription/portal` | Create Stripe Customer Portal session (manage/cancel) |
+| POST | `/api/subscription/portal` | Create Stripe Customer Portal session (manage/cancel). A250: for a local trial (no Stripe customer) returns a card-collecting Checkout session instead |
 | POST | `/api/stripe/webhook` | Stripe webhook receiver (signature-verified) |
 | GET | `/api/weather` | Live conditions (lat/lon) or forecast-by-date; returns metrics + composite friction_score/band (prime/good/ok/poor), per-metric qualifiers, headline, best_window (A238) |
 
