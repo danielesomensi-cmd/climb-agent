@@ -10,6 +10,7 @@ import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer, Play, 
 import type { GuidedExercise } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
+import { tapFeedback } from "@/lib/haptics";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
@@ -593,7 +594,8 @@ export function GuidedExerciseStep({
                     key={opt.value}
                     type="button"
                     onClick={() => setFeedback(opt.value)}
-                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all ${
+                    onPointerDown={tapFeedback}
+                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
                       feedback === opt.value
                         ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
                         : "bg-muted text-muted-foreground hover:bg-muted/80"
@@ -892,7 +894,8 @@ export function GuidedExerciseStep({
                     key={opt.value}
                     type="button"
                     onClick={() => setFeedback(opt.value)}
-                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all ${
+                    onPointerDown={tapFeedback}
+                    className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
                       feedback === opt.value
                         ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
                         : "bg-muted text-muted-foreground hover:bg-muted/80"

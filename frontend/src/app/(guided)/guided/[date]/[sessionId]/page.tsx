@@ -269,7 +269,6 @@ export default function GuidedSessionPage() {
     const idx = state.currentIndex;
 
     updateExercise(idx, { status: "skipped", feedbackLabel: "ok" });
-
     const nextIdx = idx + 1;
     if (nextIdx >= state.exercises.length) {
       setState((prev) => prev ? { ...prev, currentIndex: idx } : prev);
@@ -278,6 +277,49 @@ export default function GuidedSessionPage() {
       setState((prev) => prev ? { ...prev, currentIndex: nextIdx } : prev);
     }
   }, [state, updateExercise]);
+
+  // A247 — anchors for the scroll-on-advance effect below.
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * A247 — bring the new exercise's TITLE into view.
+   *
+   * Tapping Done at the BOTTOM of a long card advanced `currentIndex`, the card
+   * re-rendered with the next exercise... and the scroll position stayed put.
+   * You were left staring at the bottom of a different exercise, usually at
+   * another Done button, with no way to tell whether your tap had registered.
+   *
+   * First fix scrolled to page top — not enough: on an iPhone the sticky
+   * header plus the "Today's focus" banner pushed the exercise title below the
+   * fold, so you still could not see WHAT you had to do next. Now we scroll
+   * the exercise card itself to sit right under the sticky header; whatever
+   * lives above it (process cue banner, resume banner) may go off-screen —
+   * intended, the title is the anchor.
+   *
+   * Smooth, guarded on `prefers-reduced-motion` → instant jump. Also fires on
+   * the last-exercise → summary transition so the summary heading is visible.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Wait one frame so the new card has rendered and layout is final —
+    // scrolling before that targets a stale position.
+    const raf = requestAnimationFrame(() => {
+      const content = contentRef.current;
+      if (!content) return;
+      const headerHeight = headerRef.current?.offsetHeight ?? 0;
+      const top =
+        content.getBoundingClientRect().top + window.scrollY - headerHeight - 8;
+      const reduceMotion = window.matchMedia?.(
+        "(prefers-reduced-motion: reduce)"
+      )?.matches;
+      window.scrollTo({
+        top: Math.max(0, top),
+        behavior: reduceMotion ? "auto" : "smooth",
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [state?.currentIndex, showSummary]);
 
   const handleNavigate = useCallback(
     (index: number) => {
@@ -462,7 +504,7 @@ export default function GuidedSessionPage() {
   return (
     <div className="mx-auto max-w-2xl">
       {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 space-y-3">
+      <div ref={headerRef} className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 space-y-3">
         {/* Top row: back + timer + session name */}
         <div className="flex items-center justify-between gap-2">
           <button
@@ -525,27 +567,33 @@ export default function GuidedSessionPage() {
         )}
 
         {showSummary ? (
-          <GuidedSummary
-            exercises={state.exercises}
-            sessionName={sessionName}
-            startedAt={state.startedAt}
-            onMarkRemainingOk={handleMarkRemainingOk}
-            onSkipRemaining={handleSkipRemaining}
-            onSubmit={handleSubmit}
-            submitting={submitting}
-          />
+          <div ref={contentRef}>
+            <GuidedSummary
+              exercises={state.exercises}
+              sessionName={sessionName}
+              startedAt={state.startedAt}
+              onMarkRemainingOk={handleMarkRemainingOk}
+              onSkipRemaining={handleSkipRemaining}
+              onSubmit={handleSubmit}
+              submitting={submitting}
+            />
+          </div>
         ) : currentExercise ? (
           <>
-            <GuidedExerciseStep
-              key={`${state.currentIndex}-${currentExercise.exerciseId}`}
-              exercise={currentExercise}
-              isTestSession={state.isTestSession}
-              bodyweightKg={state.bodyweightKg}
-              onDone={handleDone}
-              onSkip={handleSkip}
-              onSetChange={handleSetChange}
-              onNotesChange={handleNotesChange}
-            />
+            {/* A247: contentRef marks the scroll anchor — the card starts with
+                the exercise title, so "card under the header" == "title visible". */}
+            <div ref={contentRef}>
+              <GuidedExerciseStep
+                key={`${state.currentIndex}-${currentExercise.exerciseId}`}
+                exercise={currentExercise}
+                isTestSession={state.isTestSession}
+                bodyweightKg={state.bodyweightKg}
+                onDone={handleDone}
+                onSkip={handleSkip}
+                onSetChange={handleSetChange}
+                onNotesChange={handleNotesChange}
+              />
+            </div>
 
             {/* Finish early button */}
             <Button

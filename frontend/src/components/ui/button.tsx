@@ -3,9 +3,10 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { Slot } from "radix-ui"
 
 import { cn } from "@/lib/utils"
+import { tapFeedback } from "@/lib/haptics"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all duration-100 ease-out outline-none active:scale-[0.97] active:brightness-95 active:duration-0 motion-reduce:active:scale-100 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -43,6 +44,7 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  onPointerDown,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -50,12 +52,29 @@ function Button({
   }) {
   const Comp = asChild ? Slot.Root : "button"
 
+  /**
+   * A247 — one tick per tap, from one place.
+   *
+   * Deliberately here and not per-screen: a single source means no double-buzz
+   * when a page also reacts, and every button in the app behaves the same.
+   * On `pointerdown`, not `click`: the tick must land while the finger is
+   * still on the glass — after lift-off it reads as lag, not confirmation.
+   * On iOS it rides the 17.4+ switch-toggle trick (see lib/haptics), which is
+   * exactly why the `active:` visual state above is still not optional — on
+   * older iPhones that IS the feedback.
+   */
+  const handlePointerDown: React.PointerEventHandler<HTMLButtonElement> = (event) => {
+    tapFeedback()
+    onPointerDown?.(event)
+  }
+
   return (
     <Comp
       data-slot="button"
       data-variant={variant}
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
+      onPointerDown={handlePointerDown}
       {...props}
     />
   )

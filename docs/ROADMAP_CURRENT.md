@@ -72,6 +72,14 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ---
 
+## Recently closed (2026-07-21)
+
+| ID | Titolo | Tipo | Effort | Stato | Note |
+|----|--------|------|--------|-------|------|
+| A247 | **Feedback al tocco: si capisce che il bottone e' stato premuto** | A | S | ✅ Done | Segnalato da Daniele usando l'app: nella guided session premi Done e non capisci se ha funzionato. **Due cause indipendenti, stesso sintomo.** (1) Nessuna gestione dello scroll nel flusso guided: premendo Done in fondo a una card lunga l'indice avanzava e la card cambiava, ma la posizione di scroll restava in fondo — ti ritrovavi in fondo a un ALTRO esercizio, di solito davanti a un altro bottone Done. **Round 2 dopo field test di Daniele:** lo scroll ora ancora il **titolo** del nuovo esercizio subito sotto l'header sticky (offset misurato via ref, `requestAnimationFrame` prima di misurare, smooth con guard `prefers-reduced-motion`, copre anche la transizione ultimo esercizio → summary) — `scrollTo(0)` non bastava perché header + banner spingevano il titolo sotto la piega. (2) Il `Button` base dichiarava solo `hover:`, che **su touchscreen non scatta mai**: il tocco era invisibile. Aggiunti `active:scale`/`active:brightness` con press istantaneo e rilascio ~100ms (`motion-reduce` rispettato) e un tick aptico su `pointerdown` da un solo punto — il componente base — per non avere doppi buzz. **Aptico su iPhone:** `navigator.vibrate` e' no-op su iOS, ma da iOS 17.4 il `label.click()` su un `<input type="checkbox" switch>` nascosto (visually-hidden, mai `display:none`) genera il tick nativo — implementato come fallback in `lib/haptics.ts`; su Android resta `vibrate`. Coperti anche i bottoni raw della guided fuori dal `Button` base: controlli timer (cerchio, frecce fase, Done set/rep, Reset, Start, Expand, chiusura enlarged), chip feedback, dot di navigazione della progress bar. 22 test. |
+
+---
+
 ## Recently closed (2026-07-20)
 
 | ID | Titolo | Tipo | Effort | Stato | Note |

@@ -4,6 +4,7 @@ import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, CheckCircle2, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
+import { tapFeedback } from "@/lib/haptics";
 import { countdownTick, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
 
@@ -577,7 +578,8 @@ function ExerciseTimerImpl({
           {/* Close button */}
           <button
             onClick={() => setEnlarged(false)}
-            className="absolute top-4 right-4 flex items-center justify-center w-12 h-12 rounded-lg border border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
+            onPointerDown={tapFeedback}
+            className="absolute top-4 right-4 flex items-center justify-center w-12 h-12 rounded-lg border border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100 transition-colors"
             aria-label="Exit enlarged timer"
           >
             <X className="size-6" />
@@ -587,6 +589,7 @@ function ExerciseTimerImpl({
           <div
             className="flex flex-col items-center justify-center gap-4 w-full flex-1 cursor-pointer"
             onClick={handleCircleTap}
+            onPointerDown={() => { if (isActive) tapFeedback(); }}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
@@ -656,10 +659,11 @@ function ExerciseTimerImpl({
             {/* ‹ Back */}
             <button
               onClick={(e) => { e.stopPropagation(); handlePhaseBack(); }}
+              onPointerDown={tapFeedback}
               className={cn(
                 "flex items-center justify-center w-14 h-14 rounded-full border transition-colors",
                 isActive
-                  ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95"
+                  ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100"
                   : "border-transparent text-transparent cursor-default"
               )}
               disabled={!isActive}
@@ -672,7 +676,8 @@ function ExerciseTimerImpl({
             {phase === "work" && isManual && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleDoneManual(); }}
-                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-base font-medium text-white hover:bg-green-700 transition-colors"
+                onPointerDown={tapFeedback}
+                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 text-base font-medium text-white hover:bg-green-700 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
               >
                 <CheckCircle2 className="size-5" />
                 {hasManualRepLoop ? "Done rep" : "Done set"}
@@ -683,7 +688,8 @@ function ExerciseTimerImpl({
             {phase !== "idle" && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleReset(); setEnlarged(false); }}
-                className="inline-flex items-center gap-2 rounded-lg border border-muted-foreground/30 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
+                onPointerDown={tapFeedback}
+                className="inline-flex items-center gap-2 rounded-lg border border-muted-foreground/30 px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100 transition-colors"
                 aria-label="Reset timer"
               >
                 <RotateCcw className="size-5" />
@@ -694,10 +700,11 @@ function ExerciseTimerImpl({
             {/* › Forward */}
             <button
               onClick={(e) => { e.stopPropagation(); handlePhaseForward(); }}
+              onPointerDown={tapFeedback}
               className={cn(
                 "flex items-center justify-center w-14 h-14 rounded-full border transition-colors",
                 isActive
-                  ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95"
+                  ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100"
                   : "border-transparent text-transparent cursor-default"
               )}
               disabled={!isActive}
@@ -725,10 +732,11 @@ function ExerciseTimerImpl({
         {/* ‹ Back phase arrow — always visible when active */}
         <button
           onClick={handlePhaseBack}
+          onPointerDown={tapFeedback}
           className={cn(
             "flex items-center justify-center w-12 h-12 rounded-full border transition-colors",
             isActive
-              ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95"
+              ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100"
               : "border-transparent text-transparent cursor-default"
           )}
           disabled={!isActive}
@@ -741,10 +749,11 @@ function ExerciseTimerImpl({
         <div
           className={cn(
             "relative w-40 h-40 cursor-pointer select-none transition-transform",
-            isActive && "active:scale-95",
+            isActive && "active:scale-95 motion-reduce:active:scale-100",
             flash && "ring-2 ring-primary/50 rounded-full"
           )}
           onClick={handleCircleTap}
+          onPointerDown={() => { if (isActive) tapFeedback(); }}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
@@ -784,7 +793,8 @@ function ExerciseTimerImpl({
             {phase === "idle" && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleStart(); }}
-                className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+                onPointerDown={tapFeedback}
+                className="flex flex-col items-center gap-1 text-muted-foreground hover:text-foreground active:scale-95 motion-reduce:active:scale-100 transition-all"
               >
                 <Play className="size-8" />
                 <span className="text-xs font-medium">Start</span>
@@ -873,10 +883,11 @@ function ExerciseTimerImpl({
         {/* › Forward phase arrow — always visible when active */}
         <button
           onClick={handlePhaseForward}
+          onPointerDown={tapFeedback}
           className={cn(
             "flex items-center justify-center w-12 h-12 rounded-full border transition-colors",
             isActive
-              ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95"
+              ? "border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100"
               : "border-transparent text-transparent cursor-default"
           )}
           disabled={!isActive}
@@ -890,7 +901,8 @@ function ExerciseTimerImpl({
       {isActive && (
         <button
           onClick={() => setEnlarged(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border-2 border-muted-foreground/40 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/60 transition-colors min-h-[44px] min-w-[44px]"
+          onPointerDown={tapFeedback}
+          className="inline-flex items-center gap-1.5 rounded-lg border-2 border-muted-foreground/40 px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:border-foreground/60 active:scale-95 motion-reduce:active:scale-100 transition-colors min-h-[44px] min-w-[44px]"
           aria-label="Expand timer"
         >
           <Maximize2 className="size-5" />
@@ -912,7 +924,8 @@ function ExerciseTimerImpl({
           {phase === "work" && isManual && (
             <button
               onClick={(e) => { e.stopPropagation(); handleDoneManual(); }}
-              className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+              onPointerDown={tapFeedback}
+              className="inline-flex items-center gap-1.5 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
             >
               <CheckCircle2 className="size-4" />
               {hasManualRepLoop ? "Done rep" : "Done set"}
@@ -921,7 +934,8 @@ function ExerciseTimerImpl({
           {phase !== "idle" && (
             <button
               onClick={handleReset}
-              className="inline-flex items-center gap-1.5 rounded-md border border-muted-foreground/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors"
+              onPointerDown={tapFeedback}
+              className="inline-flex items-center gap-1.5 rounded-md border border-muted-foreground/30 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100 transition-colors"
               aria-label="Reset timer"
             >
               <RotateCcw className="size-4" />
