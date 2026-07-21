@@ -13,17 +13,23 @@ sezione "Nuovi iscritti" (`utm_source/utm_campaign` → hostname referrer →
 
 ## Landing page: quale path usare
 
-⚠️ **Il traffico freddo (chi non ha un account) DEVE atterrare su `/demo`.**
-**MAI linkare la root `/` in un canale di acquisizione**: per un visitatore
+⚠️ **MAI linkare la root `/` in un canale di acquisizione**: per un visitatore
 anonimo la root fa redirect client-side a `/sign-in` (Clerk) — un curl
 restituisce 200 e sembra ok, ma nel browser l'utente atterra sul form di
 login e rimbalza. Verificato su prod il 2026-07-21 (A249-pre).
+La root va bene SOLO per utenti esistenti (es. email win-back).
 
-Il funnel freddo è: `/demo` (cattura UTM via `captureUtmOnMount`) → CTA →
-`/onboarding/welcome` (pubblica, B293) → sign-up.
+Regola (decisione Daniele, 2026-07-21):
 
-La root `/` va bene SOLO per utenti esistenti (es. email win-back): chi ha
-già l'account passa dal login e prosegue normalmente.
+- **Link SENZA contesto** (QR volantino: scan a freddo in palestra, il link
+  deve vendere da solo) → **`/demo`**: mostra una sessione reale, poi CTA
+  verso l'onboarding.
+- **Link CON contesto** (post Reddit/Instagram, messaggio personale: chi
+  clicca ha già visto screenshot e descrizione) → **`/onboarding/welcome`**:
+  un hop in meno verso il sign-up.
+
+Entrambe le pagine sono pubbliche e catturano gli UTM (`AttributionCapture`
+è nel root layout → first-touch su qualsiasi pagina di atterraggio).
 
 ## Convenzione UTM per i canali
 
@@ -32,12 +38,12 @@ copia-incollabili):
 
 | Canale | Pubblico | Link |
 |--------|----------|------|
-| Volantino QR (palestra X) | freddo | `https://climbagent.app/demo?utm_source=flyer&utm_campaign=<palestra>` |
-| Reddit r/SideProject | freddo | `https://climbagent.app/demo?utm_source=reddit&utm_campaign=sideproject` |
-| Reddit r/ClaudeAI | freddo | `https://climbagent.app/demo?utm_source=reddit&utm_campaign=claudeai` |
-| Instagram bio/post | freddo | `https://climbagent.app/demo?utm_source=instagram&utm_campaign=<post>` |
+| Volantino QR (palestra X) | freddo, zero contesto | `https://climbagent.app/demo?utm_source=flyer&utm_campaign=<palestra>` |
+| Reddit r/SideProject | freddo, con contesto | `https://climbagent.app/onboarding/welcome?utm_source=reddit&utm_campaign=sideproject` |
+| Reddit r/ClaudeAI | freddo, con contesto | `https://climbagent.app/onboarding/welcome?utm_source=reddit&utm_campaign=claudeai` |
+| Instagram bio/post | freddo, con contesto | `https://climbagent.app/onboarding/welcome?utm_source=instagram&utm_campaign=<post>` |
 | Email win-back (utenti esistenti) | esistente | `https://climbagent.app/?utm_source=email&utm_campaign=winback-<data>` |
-| Passaparola con link personale | freddo | `https://climbagent.app/demo?utm_source=referral&utm_campaign=<nome>` |
+| Passaparola con link personale | freddo, con contesto | `https://climbagent.app/onboarding/welcome?utm_source=referral&utm_campaign=<nome>` |
 
 Regole:
 - `utm_source` minuscolo, un solo valore per canale (niente varianti tipo
