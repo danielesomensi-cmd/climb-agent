@@ -146,7 +146,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-90 endpoints total (88 router + 2 app-level: health check + stripe webhook).
+92 endpoints total (90 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -158,8 +158,10 @@ user_state.assessment + user_state.goal
 | GET | `/api/catalog/exercises` | List all exercises |
 | GET | `/api/catalog/sessions` | List all session metadata |
 | GET | `/api/onboarding/defaults` | Option lists for onboarding form |
-| POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle |
+| POST | `/api/onboarding/complete` | Atomic: save state + assessment + macrocycle (B293: profile bounds → 422) |
 | POST | `/api/onboarding/start-week` | Shift macrocycle start_date back N weeks |
+| GET | `/api/onboarding/draft` | Server-side wizard draft for the user, or null (B293) |
+| PUT | `/api/onboarding/draft` | Save wizard draft (replace wholesale; wiped on complete; ignored if macrocycle exists) |
 | POST | `/api/assessment/compute` | Recompute 5-axis profile |
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
 | POST | `/api/macrocycle/start-new-cycle` | Start fresh macrocycle (atomic: archive → goal review → generate → flag tests). Subscription-gated. |

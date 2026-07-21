@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
+import { sessionResolutionState } from "@/lib/session-resolution";
 import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -672,6 +675,26 @@ export function SessionCard({
   // A210: effective resolved session — override takes precedence over the planned one
   const effectiveResolved = (boulderOverride ?? session.resolved) as Record<string, unknown> | undefined;
 
+  // B293 — never render a completable card with zero resolved exercises.
+  const resolutionState = sessionResolutionState({
+    is_custom: session.is_custom,
+    resolve_error: session.resolve_error,
+    resolved: effectiveResolved ?? null,
+  });
+  const completable = resolutionState === "ok";
+  const qc = useQueryClient();
+  const [retryingResolve, setRetryingResolve] = useState(false);
+  const retryResolve = useCallback(async () => {
+    // Resolved payloads of non-completed sessions are never persisted, so a
+    // week refetch re-runs resolution server-side — that IS the retry.
+    setRetryingResolve(true);
+    try {
+      await qc.invalidateQueries({ queryKey: queryKeys.weekAll });
+    } finally {
+      setRetryingResolve(false);
+    }
+  }, [qc]);
+
   // Exercise instances from effective resolved session
   const exerciseInstances = useMemo(() => {
     const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
@@ -995,9 +1018,30 @@ export function SessionCard({
               const allInstances = exerciseInstances;
 
               if (allInstances.length === 0 && allBlocks.length === 0) {
+                // B293 — explanatory, never a bare completable card. `error`
+                // means the backend marked a transient resolution failure
+                // (resolve_error, A245 E-3/B17); `empty` means it resolved to
+                // genuinely zero exercises. Both offer a retry: unresolved
+                // sessions are re-resolved on every week refetch.
                 return (
-                  <div className="rounded-md border border-dashed p-3 text-center text-xs text-muted-foreground">
-                    No exercises resolved
+                  <div className="space-y-3 rounded-md border border-dashed p-4 text-center">
+                    <p className="text-xs text-muted-foreground">
+                      {resolutionState === "error"
+                        ? "This session couldn't be prepared — it's usually temporary."
+                        : "No exercises could be selected for this session right now."}
+                    </p>
+                    <Button
+                      variant="outline"
+                      className="min-h-[44px] text-sm"
+                      disabled={retryingResolve}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void retryResolve();
+                      }}
+                    >
+                      <RefreshCw className={`size-3.5 mr-1 ${retryingResolve ? "animate-spin" : ""}`} />
+                      {retryingResolve ? "Retrying..." : "Retry"}
+                    </Button>
                   </div>
                 );
               }
@@ -1102,10 +1146,12 @@ export function SessionCard({
                     Start session
                   </Button>
                 )}
+                {/* B293: a session with zero resolved exercises must never be
+                    completable — the buttons wait for a successful resolution. */}
                 {onMarkDone && (
                   <Button
                     variant="outline"
-                    disabled={marking}
+                    disabled={marking || !completable}
                     className="min-h-[44px] text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1119,7 +1165,7 @@ export function SessionCard({
                 {onMarkSkipped && (
                   <Button
                     variant="outline"
-                    disabled={marking}
+                    disabled={marking || !completable}
                     className="min-h-[44px] text-muted-foreground"
                     onClick={(e) => {
                       e.stopPropagation();

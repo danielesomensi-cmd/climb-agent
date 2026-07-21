@@ -95,6 +95,9 @@ export interface SessionSlot {
   status?: "planned" | "done" | "skipped";
   tags?: Record<string, boolean>;
   resolved?: Record<string, unknown> | null;
+  // A245 E-3 (B17) / B293: set by the backend when resolution threw — lets the
+  // client tell a transient failure apart from a legitimately empty session.
+  resolve_error?: boolean;
   estimated_load_score?: number;
   session_load_score?: number;
   intensity?: string;

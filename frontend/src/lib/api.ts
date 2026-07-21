@@ -240,6 +240,20 @@ export const setStartWeek = (offsetWeeks: number) =>
     { method: "POST", body: JSON.stringify({ offset_weeks: offsetWeeks }) }
   );
 
+// B293 — server-side wizard draft (survives a forced re-auth mid-wizard)
+export type OnboardingDraft = {
+  data: OnboardingData;
+  deepest_step: number;
+  saved_at: number | null;
+};
+export const getOnboardingDraft = () =>
+  request<{ draft: OnboardingDraft | null }>("/api/onboarding/draft");
+export const putOnboardingDraft = (draft: OnboardingDraft) =>
+  request<{ status: string }>("/api/onboarding/draft", {
+    method: "PUT",
+    body: JSON.stringify(draft),
+  });
+
 // Assessment
 export const computeAssessment = (
   assessment?: Record<string, unknown>,
