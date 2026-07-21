@@ -498,8 +498,9 @@ Affects:
 |------------|-----------------|--------|
 | `total_load` | `suggested_total_load_kg`, `suggested_external_load_kg`, `suggested_rep_scheme` | baselines.hangboard / baselines.pulling → working_loads |
 | `external_load` | `suggested_external_load_kg`, `suggested_rep_scheme` | working_loads → transfer → baselines.pulling → BW% fallback |
-| `grade_relative` | `suggested_grade`, `grade_ref`, `grade_offset` | assessment.grades + prescription_defaults |
-| `grade_relative` (limit_bouldering) | `suggested_boulder_target` (with surface) | special surface-aware logic |
+| `grade_relative` (endurance: `climbing_intervals`/`climbing_continuous`) | `suggested_grade`, `grade_ref`, `grade_offset`, `grade_source` | working_loads memory (B289) → assessment.grades + prescription_defaults |
+| `grade_relative` (limit family: pattern `climbing_limit_boulder`) | `suggested_boulder_target` (with surface) | surface-keyed working_loads memory → boulder_max_rp anchor (B289 extends beyond limit_bouldering) |
+| `grade_relative` (technique: pattern `technique_drill`) | `suggested_grade` (static only) | assessment.grades + prescription_defaults — no memory by design (B289 group C) |
 | `bodyweight_only` | — | no suggestion needed |
 
 #### Feedback fields required per load_model (UI-24)
@@ -510,7 +511,9 @@ When submitting `exercise_feedback_v1`, the frontend must include load/grade dat
 |------------|------------------------|-------|
 | `total_load` | `used_total_load_kg` **or** `used_external_load_kg` | engine derives the other from bodyweight |
 | `external_load` | `used_external_load_kg` | — |
-| `grade_relative` (limit_bouldering) | `used_grade`, `surface_selected` | — |
+| `grade_relative` (limit family) | `used_grade`, `surface_selected` | surface-keyed entry, steps ±1/±2 per feedback |
+| `grade_relative` (endurance) | `used_grade` | exercise_id-keyed entry; target steps ±1 only after 2 consecutive concordant feedbacks (B289) |
+| `grade_relative` (technique drills) | — | `used_grade` accepted but deliberately not stored (B289 group C: the drill grade is comfort terrain, not a progression lever) |
 | `bodyweight_only` | — | feedback_label only |
 
 If these fields are missing, `apply_feedback` does a silent skip (no crash, no update).

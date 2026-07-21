@@ -295,7 +295,7 @@ def _relevant_setup(exercise_id: str, source: Dict[str, Any]) -> Dict[str, Any]:
             "grip": source.get("grip"),
             "load_method": source.get("load_method"),
         }
-    if exercise_id == "limit_bouldering":
+    if _is_limit_grade_exercise(exercise_id):
         return {"surface": source.get("surface_selected") or source.get("surface")}
     return {}
 
@@ -312,7 +312,7 @@ def _setup_key(exercise_id: str, setup: Dict[str, Any]) -> str:
             ("grip", setup.get("grip")),
             ("load_method", setup.get("load_method")),
         ]
-    elif exercise_id == "limit_bouldering":
+    elif _is_limit_grade_exercise(exercise_id):
         pairs = [("surface", setup.get("surface"))]
     else:
         pairs = []
@@ -362,7 +362,11 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
         with open(catalog_path) as f:
             data = _json.load(f)
         _CATALOG_CACHE = {
-            e["id"]: {"load_model": e.get("load_model"), "unilateral": bool(e.get("unilateral"))}
+            e["id"]: {
+                "load_model": e.get("load_model"),
+                "unilateral": bool(e.get("unilateral")),
+                "pattern": e.get("pattern"),
+            }
             for e in data.get("exercises", [])
         }
     except FileNotFoundError:
@@ -380,6 +384,41 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
 def _load_catalog_load_models() -> Dict[str, Optional[str]]:
     """Return exercise_id → load_model mapping from catalog."""
     return {eid: info["load_model"] for eid, info in _load_catalog_cache().items()}
+
+
+def _grade_relative_group(exercise_id: str) -> Optional[str]:
+    """B289: classify a grade_relative exercise by progression semantics.
+
+    - ``"limit"`` (pattern climbing_limit_boulder): max-grade work — memory
+      keyed on surface, per-feedback grade steps (±1/±2), boulder_max_rp anchor.
+    - ``"endurance"`` (climbing_intervals / climbing_continuous): the grade is
+      an intensity target — memory keyed on exercise_id alone, and the target
+      steps only after 2 consecutive concordant feedbacks (endurance grades
+      move slowly; a single easy/hard session is noise).
+    - ``"technique"`` (pattern technique_drill): the grade is comfort terrain
+      for the drill, NOT a progression lever — used_grade is deliberately
+      never stored.
+
+    Returns None when the exercise is unknown or not grade_relative.
+    """
+    info = _load_catalog_cache().get(exercise_id) or {}
+    if info.get("load_model") != "grade_relative":
+        return None
+    pattern = info.get("pattern")
+    if pattern == "climbing_limit_boulder":
+        return "limit"
+    if pattern == "technique_drill":
+        return "technique"
+    return "endurance"
+
+
+def _is_limit_grade_exercise(exercise_id: str) -> bool:
+    """True for the limit-boulder family (surface-keyed grade memory).
+
+    Falls back on the historical hardcoded id so limit_bouldering keeps its
+    behaviour even if the catalog cache is unavailable (test fixtures).
+    """
+    return exercise_id == "limit_bouldering" or _grade_relative_group(exercise_id) == "limit"
 
 
 def _extract_grade_benchmark(user_state: Dict[str, Any]) -> str:
@@ -952,7 +991,10 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 if load_source:
                     suggested["load_source"] = load_source
 
-            if ex_id == "limit_bouldering":
+            # B289 group A: the whole limit-boulder family (limit_bouldering,
+            # board_limit_boulders, spray_wall_limit, system_board_limit)
+            # shares the surface-keyed grade memory below.
+            if _is_limit_grade_exercise(ex_id):
                 options = _surface_options(user_state, session.get("gym_id"))
                 selected_surface = _select_surface(preferred=None, options=options, gym_id=session.get("gym_id"), user_state=user_state)
                 # B260: anchor to the catalog grade_ref (boulder_max_rp) from
@@ -993,9 +1035,10 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     boulder_target["rest_guidance"] = boulder_info["rest_guidance"]
                 suggested["suggested_boulder_target"] = boulder_target
 
-            # Grade-relative exercises with grade_ref (excludes limit_bouldering which has its own logic above)
+            # Grade-relative exercises with grade_ref (excludes the limit-boulder
+            # family, which has its own logic above)
             grade_ref = prescription.get("grade_ref")
-            if grade_ref and ex_id != "limit_bouldering":
+            if grade_ref and not _is_limit_grade_exercise(ex_id):
                 grades = ((user_state.get("assessment") or {}).get("grades") or {})
                 ref_grade_raw = grades.get(grade_ref)
                 if ref_grade_raw is not None:
@@ -1006,6 +1049,16 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     suggested["suggested_grade"] = suggested_grade
                     suggested["grade_ref"] = grade_ref
                     suggested["grade_offset"] = grade_offset
+                # B289 group B: a remembered endurance target (written by
+                # apply_feedback after 2 concordant feedbacks) overrides the
+                # static assessment anchor. 60-day freshness gate as for every
+                # grade entry.
+                if _grade_relative_group(ex_id) == "endurance":
+                    mem_entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
+                    if mem_entry and normalize_font_grade(mem_entry.get("next_target_grade")):
+                        suggested["suggested_grade"] = mem_entry["next_target_grade"]
+                        suggested["grade_ref"] = grade_ref
+                        suggested["grade_source"] = "working_loads"
 
             # External load exercises — data-driven from load_model (ARCH-2)
             if load_model == "external_load" and not is_unilateral:
@@ -1545,7 +1598,9 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 }
             )
 
-        elif fb_load_model == "grade_relative" and exercise_id == "limit_bouldering":
+        elif fb_load_model == "grade_relative" and _is_limit_grade_exercise(exercise_id):
+            # B289 group A: whole climbing_limit_boulder family (was
+            # limit_bouldering only). Surface-keyed memory, per-feedback steps.
             used_grade = normalize_font_grade(item.get("used_grade"))
             if not used_grade:
                 continue
@@ -1571,6 +1626,58 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     "updated_at": date_value,
                 }
             )
+
+        elif fb_load_model == "grade_relative" and _grade_relative_group(exercise_id) == "endurance":
+            # B289 group B (intervals/continuous): the grade is an intensity
+            # target, not a max — one easy/hard session is noise. The target
+            # steps ±1 whole grade only after 2 CONSECUTIVE CONCORDANT
+            # feedbacks (easy/very_easy up, hard/very_hard down); "ok" resets
+            # the streak and re-anchors the target to the grade actually used.
+            # Memory keyed on exercise_id alone (no setup: the circuit grade
+            # is gym-relative, but per-surface splits would fragment the
+            # little signal endurance work produces).
+            used_grade = normalize_font_grade(item.get("used_grade"))
+            if not used_grade:
+                continue
+            if feedback_label in {"easy", "very_easy"}:
+                direction = 1
+            elif feedback_label in {"hard", "very_hard"}:
+                direction = -1
+            else:
+                direction = 0
+            entry = _find_working_load_entry(updated, exercise_id, {})
+            prev_dir = int(entry.get("grade_streak_direction") or 0)
+            prev_count = int(entry.get("grade_streak_count") or 0)
+            if direction == 0:
+                streak_dir, streak_count = 0, 0
+                next_grade = used_grade
+            else:
+                streak_count = prev_count + 1 if direction == prev_dir else 1
+                if streak_count >= 2:
+                    next_grade = step_grade(used_grade, direction)
+                    streak_dir, streak_count = 0, 0
+                else:
+                    next_grade = used_grade
+                    streak_dir = direction
+            entry.update(
+                {
+                    "exercise_id": exercise_id,
+                    "key": exercise_id,
+                    "setup": {},
+                    "last_feedback_label": feedback_label,
+                    "last_used_grade": used_grade,
+                    "next_target_grade": next_grade,
+                    "grade_streak_direction": streak_dir,
+                    "grade_streak_count": streak_count,
+                    "updated_at": date_value,
+                }
+            )
+
+        # B289 group C (technique_drill): used_grade is DELIBERATELY not
+        # stored. On a drill the grade is the comfort terrain the drill runs
+        # on, not a progression lever — progressing it would push users to
+        # "harder drills" instead of better movement (decision Daniele,
+        # 2026-07-21). No branch here is intentional, not an oversight.
 
         elif fb_load_model == "external_load" and fb_unilateral:
             # Unilateral: feedback includes hand field

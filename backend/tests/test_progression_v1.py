@@ -365,8 +365,10 @@ def test_b260_limit_bouldering_falls_back_to_benchmark_when_grade_missing():
 
 
 def test_b260_other_limit_exercises_unchanged():
-    """Regression: the other 3 limit/max-recruitment boulder exercises already
-    used the catalog grade_ref path and must still yield 7C (boulder_max_rp+0)."""
+    """B260 regression, updated by B289 group A: the other 3 limit boulder
+    exercises now share limit_bouldering's rich suggested_boulder_target path
+    (surface-keyed memory) instead of the flat suggested_grade. Anchor is
+    unchanged: boulder_max_rp + 0 → 7C."""
     us = _state_with_assessment_grades()
     for ex in ("board_limit_boulders", "spray_wall_limit", "system_board_limit"):
         day = {
@@ -381,7 +383,10 @@ def test_b260_other_limit_exercises_unchanged():
         }
         out = inject_targets(day, deepcopy(us))
         sug = out["sessions"][0]["exercise_instances"][0]["suggested"]
-        assert sug["suggested_grade"] == "7C", ex
+        assert "suggested_grade" not in sug, ex  # B289: no more flat path
+        bt = sug["suggested_boulder_target"]
+        assert bt["target_grade"] == "7C", ex
+        assert bt["target_grade_low"] == "7B", ex
 
 
 def test_b260_rich_boulder_target_payload_intact():
