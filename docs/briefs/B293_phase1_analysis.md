@@ -1,6 +1,6 @@
 # B293 — Phase 1 Analysis: Onboarding Funnel (entry points + regressioni)
 
-**Data:** 2026-07-21 · **Tipo:** B (multi-issue) con fase D obbligatoria · **Stato:** OK ricevuto (tutte le sotto-fasi) — Phase 2 implementata (2A–2E), in attesa di verifica preview Vercel
+**Data:** 2026-07-21 · **Tipo:** B (multi-issue) con fase D obbligatoria · **Stato:** ✅ Chiuso — Phase 2 (2A–2E) mergiata in `main` (e07e4a9) e verificata in prod da Daniele il 2026-07-21
 
 Contesto: walkthrough manuale UX del 2026-07-21 su iPhone (Safari incognito + account loggato). Sei failure collegati. Questo documento è read-only: nessuna modifica al codice è stata fatta.
 
