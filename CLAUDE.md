@@ -285,7 +285,8 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 
 - **Stripe**: sk_live keys configured in Railway + Vercel. **LIVE** since 2026-04-16. Pricing: USD $9.99/month Standard (15-day free trial) + USD $4.99/month Founding Climber (locked forever, first 20 users — two separate Stripe Price objects, not coupon). Customer Portal configured. B202 fail-closed guard active. Webhook handles (B226 hardened): checkout.session.completed, customer.subscription.updated, customer.subscription.deleted, customer.deleted, invoice.payment_succeeded, invoice.payment_failed. Handler exceptions return 500 → Stripe retries with backoff. In-memory LRU dedup of event.id (1024 entries) short-circuits duplicate deliveries.
 
-- **Auth**: Clerk (Next.js native). Backend resolves `clerk_id` → internal `user_id` (UUID). Supabase `users` table with `clerk_id` column. In-memory LRU cache for `clerk_id → user_id` mapping. Without Clerk header → fallback to legacy UUID system (local dev only).
+- **Auth**: Clerk (Next.js native). **Production instance since A249 (2026-07-21)** — Frontend API `https://clerk.climbagent.app`, accounts portal `https://accounts.climbagent.app`, 5 CNAME records on Namecheap. The dev instance (`funky-monarch-83`) survives for local dev + Vercel previews (pk_test/sk_test keys scoped to Preview/Development on Vercel). Backend resolves `clerk_id` → internal `user_id` (UUID) via `CLERK_JWKS_URL`. Supabase `users` table with `clerk_id` column (remapped to prod ids by `scripts/migrate_clerk_prod.py`, backup in `scripts/clerk_migration_backup.json`). In-memory LRU cache for `clerk_id → user_id` mapping. Without Clerk header → fallback to legacy UUID system (local dev only).
+  - **Testing as a user in prod**: Clerk BAPI `POST /v1/sessions` is dev-only. On prod: `POST /v1/sign_in_tokens` (BAPI) → `POST https://clerk.climbagent.app/v1/client/sign_ins?_is_native=true` with `strategy=ticket` (FAPI) → session JWT in `client.sessions[0].last_active_token.jwt`.
 
 - **Environment variables (Railway)**:
   | Variable | Description |
@@ -295,7 +296,8 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
   | STORAGE_BACKEND | `supabase` (production) or `file` (pytest/dev) |
   | SUPABASE_URL | Supabase project URL |
   | SUPABASE_SERVICE_KEY | Supabase service role key (never commit) |
-  | CLERK_SECRET_KEY | Clerk backend secret (never commit) |
+  | CLERK_SECRET_KEY | Clerk backend secret (never commit). NOTE: the backend code does NOT read it — auth uses only CLERK_JWKS_URL. Kept on Railway for completeness. |
+  | CLERK_JWKS_URL | Clerk JWKS endpoint for JWT verification — the ONLY Clerk var the backend reads. Prod (A249): `https://clerk.climbagent.app/.well-known/jwks.json` |
   | STRIPE_SECRET_KEY | Stripe secret key — `sk_live_*` in prod (never commit) |
   | STRIPE_WEBHOOK_SECRET | Stripe webhook signing secret — `whsec_*` (never commit) |
   | STRIPE_PRICE_ID_STANDARD | Stripe Price ID for standard plan ($9.99/mo) |
@@ -333,7 +335,7 @@ curl -s -H "Authorization: Bearer $CLERK_SECRET_KEY" \
   https://api.clerk.com/v1/users/{clerk_user_id}
 ```
 
-Key location: `.env` in repo root (gitignored, never commit).
+Key location: `.env` in repo root (gitignored, never commit). Since A249 `CLERK_SECRET_KEY` in `.env` is the **production** instance (`sk_live_*`, i.e. the real users); the old dev instance is under `CLERK_DEV_SECRET_KEY`.
 
 ### Stripe read-only queries (debug/audit)
 
