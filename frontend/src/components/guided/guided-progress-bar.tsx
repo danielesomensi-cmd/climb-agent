@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { tapFeedback } from "@/lib/haptics";
 import type { GuidedExercise } from "@/lib/types";
 
 interface GuidedProgressBarProps {
@@ -24,12 +25,13 @@ export function GuidedProgressBar({
             key={i}
             type="button"
             onClick={() => onNavigate(i)}
-            className="flex min-h-[44px] items-center justify-center px-1"
+            onPointerDown={tapFeedback}
+            className="group flex min-h-[44px] items-center justify-center px-1"
             aria-label={`Exercise ${i + 1}: ${ex.name} (${ex.status})`}
           >
             <span
               className={cn(
-                "block size-3 rounded-full transition-colors",
+                "block size-3 rounded-full transition-all group-active:scale-125 motion-reduce:group-active:scale-100",
                 ex.status === "done" && "bg-green-500",
                 ex.status === "skipped" && "bg-red-400",
                 ex.status === "pending" && i === currentIndex && "bg-primary ring-2 ring-primary/40",
