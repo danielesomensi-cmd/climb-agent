@@ -12,6 +12,7 @@ function ex(overrides: Partial<CustomSessionExercise>): CustomSessionExercise {
     rest_between_sets_seconds: null,
     rest_between_reps_seconds: null,
     load_kg: 0,
+    notes: "",
     ...overrides,
   };
 }

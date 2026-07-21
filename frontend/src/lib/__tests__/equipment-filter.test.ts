@@ -13,7 +13,6 @@ function makeExercise(
     name: "Test Exercise",
     domain: ["strength"],
     role: "primary",
-    equipment_required: [],
     prescription_defaults: {},
     ...overrides,
   };
