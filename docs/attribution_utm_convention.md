@@ -11,18 +11,33 @@ Lettura: `scripts/admin_dashboard.py` mostra la colonna **Origine** nella
 sezione "Nuovi iscritti" (`utm_source/utm_campaign` → hostname referrer →
 `direct`; `—` = utente pre-A233).
 
+## Landing page: quale path usare
+
+⚠️ **Il traffico freddo (chi non ha un account) DEVE atterrare su `/demo`.**
+**MAI linkare la root `/` in un canale di acquisizione**: per un visitatore
+anonimo la root fa redirect client-side a `/sign-in` (Clerk) — un curl
+restituisce 200 e sembra ok, ma nel browser l'utente atterra sul form di
+login e rimbalza. Verificato su prod il 2026-07-21 (A249-pre).
+
+Il funnel freddo è: `/demo` (cattura UTM via `captureUtmOnMount`) → CTA →
+`/onboarding/welcome` (pubblica, B293) → sign-up.
+
+La root `/` va bene SOLO per utenti esistenti (es. email win-back): chi ha
+già l'account passa dal login e prosegue normalmente.
+
 ## Convenzione UTM per i canali
 
-Ogni link/QR pubblicato DEVE avere almeno `utm_source`. Schema:
+Ogni link/QR pubblicato DEVE avere almeno `utm_source`. Schema (link completi,
+copia-incollabili):
 
-| Canale | Link |
-|--------|------|
-| Volantino QR (palestra X) | `https://climbagent.app/demo?utm_source=flyer&utm_campaign=<palestra>` |
-| Reddit r/SideProject | `https://climbagent.app/?utm_source=reddit&utm_campaign=sideproject` |
-| Reddit r/ClaudeAI | `https://climbagent.app/?utm_source=reddit&utm_campaign=claudeai` |
-| Instagram bio/post | `?utm_source=instagram&utm_campaign=<post>` |
-| Email win-back | `?utm_source=email&utm_campaign=winback-<data>` |
-| Passaparola con link personale | `?utm_source=referral&utm_campaign=<nome>` |
+| Canale | Pubblico | Link |
+|--------|----------|------|
+| Volantino QR (palestra X) | freddo | `https://climbagent.app/demo?utm_source=flyer&utm_campaign=<palestra>` |
+| Reddit r/SideProject | freddo | `https://climbagent.app/demo?utm_source=reddit&utm_campaign=sideproject` |
+| Reddit r/ClaudeAI | freddo | `https://climbagent.app/demo?utm_source=reddit&utm_campaign=claudeai` |
+| Instagram bio/post | freddo | `https://climbagent.app/demo?utm_source=instagram&utm_campaign=<post>` |
+| Email win-back (utenti esistenti) | esistente | `https://climbagent.app/?utm_source=email&utm_campaign=winback-<data>` |
+| Passaparola con link personale | freddo | `https://climbagent.app/demo?utm_source=referral&utm_campaign=<nome>` |
 
 Regole:
 - `utm_source` minuscolo, un solo valore per canale (niente varianti tipo
