@@ -17,9 +17,9 @@ Ogni link/QR pubblicato DEVE avere almeno `utm_source`. Schema:
 
 | Canale | Link |
 |--------|------|
-| Volantino QR (palestra X) | `https://climb-agent.vercel.app/demo?utm_source=flyer&utm_campaign=<palestra>` |
-| Reddit r/SideProject | `https://climb-agent.vercel.app/?utm_source=reddit&utm_campaign=sideproject` |
-| Reddit r/ClaudeAI | `https://climb-agent.vercel.app/?utm_source=reddit&utm_campaign=claudeai` |
+| Volantino QR (palestra X) | `https://climbagent.app/demo?utm_source=flyer&utm_campaign=<palestra>` |
+| Reddit r/SideProject | `https://climbagent.app/?utm_source=reddit&utm_campaign=sideproject` |
+| Reddit r/ClaudeAI | `https://climbagent.app/?utm_source=reddit&utm_campaign=claudeai` |
 | Instagram bio/post | `?utm_source=instagram&utm_campaign=<post>` |
 | Email win-back | `?utm_source=email&utm_campaign=winback-<data>` |
 | Passaparola con link personale | `?utm_source=referral&utm_campaign=<nome>` |
@@ -33,3 +33,8 @@ Regole:
   browser, quindi gli UTM restano obbligatori sui link che controlliamo.
 - I QR già stampati senza UTM continuano a funzionare: appariranno come
   `direct` con landing `/demo` (che di fatto identifica il volantino).
+- **Dominio canonico da A248 (2026-07-21): `https://climbagent.app`.** I link
+  già pubblicati col vecchio `climb-agent.vercel.app` restano validi: il 308
+  redirect di Vercel preserva path e query string, quindi gli UTM
+  sopravvivono (verificato). I nuovi link vanno pubblicati SOLO col dominio
+  nuovo.

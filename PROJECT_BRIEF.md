@@ -27,7 +27,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Frontend components | 100 |
 <!-- STATUS_TABLE_END -->
 
-**Current phase:** Paid launch prep. Stripe LIVE (sk_live keys on Railway + Vercel). B202 fail-closed subscription guard deployed. Founding Climber ($4.99/mo) and Standard ($9.99/mo) plans active. 4 beta testers (Christie, Cesar, Paolo, Agustin) — will need to subscribe after B202.
+**Current phase:** Paid launch prep. Production live at **https://climbagent.app** (canonical domain since A248, 2026-07-21 — legacy `climb-agent.vercel.app` 308-redirects with query preserved). Stripe LIVE (sk_live keys on Railway + Vercel). B202 fail-closed subscription guard deployed. Founding Climber ($4.99/mo) and Standard ($9.99/mo) plans active. 4 beta testers (Christie, Cesar, Paolo, Agustin) — will need to subscribe after B202.
 
 **Persistence:** Supabase JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions). RLS enabled on all 6 tables (no policies, service role key bypasses).
 
