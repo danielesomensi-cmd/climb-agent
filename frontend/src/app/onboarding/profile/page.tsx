@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { profileErrors, fieldBoundError } from "@/lib/profile-validation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,11 +24,11 @@ export default function ProfilePage() {
     update("profile", { ...profile, [field]: value });
   };
 
-  const isValid =
-    profile.name.trim() !== "" &&
-    profile.age > 0 &&
-    profile.weight_kg > 0 &&
-    profile.height_cm > 0;
+  // B293: shared sanity bounds (mirrored server-side) — reject, never clamp.
+  const isValid = profileErrors(profile).length === 0;
+  const ageError = fieldBoundError("age", profile.age);
+  const weightError = fieldBoundError("weight_kg", profile.weight_kg);
+  const heightError = fieldBoundError("height_cm", profile.height_cm);
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -75,6 +76,7 @@ export default function ProfilePage() {
               value={profile.age || ""}
               onChange={(e) => set("age", Number(e.target.value))}
             />
+            {ageError && <p className="text-xs text-danger">{ageError}</p>}
           </div>
 
           {/* Weight */}
@@ -89,6 +91,7 @@ export default function ProfilePage() {
               value={profile.weight_kg || ""}
               onChange={(e) => set("weight_kg", Number(e.target.value))}
             />
+            {weightError && <p className="text-xs text-danger">{weightError}</p>}
           </div>
 
           {/* Height */}
@@ -102,6 +105,7 @@ export default function ProfilePage() {
               value={profile.height_cm || ""}
               onChange={(e) => set("height_cm", Number(e.target.value))}
             />
+            {heightError && <p className="text-xs text-danger">{heightError}</p>}
           </div>
 
         </CardContent>

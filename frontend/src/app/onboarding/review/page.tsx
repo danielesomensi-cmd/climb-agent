@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { submitOnboarding } from "@/lib/onboarding-submit";
+import { profileErrors } from "@/lib/profile-validation";
 import { getAttribution } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import {
@@ -118,6 +119,11 @@ export default function ReviewPage() {
     }
     return count;
   }, [data.availability]);
+
+  // B293 — the summary is the last gate before submit. A draft corrupted by a
+  // mid-wizard re-auth used to sail through here as "0y, 0kg, 0cm" and poison
+  // the engine baselines. Same bounds as the profile step + server guard.
+  const profileProblems = useMemo(() => profileErrors(data.profile), [data.profile]);
 
   // Cross-validation warnings
   const hasGradeExperienceMismatch = useMemo(() => {
@@ -314,6 +320,28 @@ export default function ReviewPage() {
         </CardContent>
       </Card>
 
+      {/* B293 — blocking: profile data missing or out of bounds */}
+      {profileProblems.length > 0 && (
+        <div
+          role="alert"
+          className="space-y-3 rounded-md border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+        >
+          <p className="font-medium">Your profile needs fixing before we can build a plan:</p>
+          <ul className="list-disc pl-5 space-y-0.5">
+            {profileProblems.map((p) => (
+              <li key={p}>{p}</li>
+            ))}
+          </ul>
+          <Button
+            variant="outline"
+            className="min-h-[44px] w-full text-sm"
+            onClick={() => router.push("/onboarding/profile?from=review")}
+          >
+            Fix profile
+          </Button>
+        </div>
+      )}
+
       {/* Warnings */}
       {hasGradeExperienceMismatch && (
         <div className="rounded-md border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
@@ -369,14 +397,14 @@ export default function ReviewPage() {
           <Button
             variant="outline"
             className="min-h-[44px] text-sm px-3"
-            disabled={loading}
+            disabled={loading || profileProblems.length > 0}
             onClick={handleGenerate}
           >
             {loading ? "Generating..." : "Start training now"}
           </Button>
           <Button
             className="min-h-[44px] text-sm px-3"
-            disabled={loading}
+            disabled={loading || profileProblems.length > 0}
             onClick={handleTestWeek}
           >
             {loading ? "Generating..." : "Run a test week first"}

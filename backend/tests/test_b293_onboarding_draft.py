@@ -114,3 +114,42 @@ def test_draft_size_cap():
     fat["data"]["blob"] = "x" * 200_000
     r = client.put("/api/onboarding/draft", json=fat)
     assert r.status_code == 422
+
+
+# ── B293 2C: profile sanity bounds on /complete (reject, never clamp) ──────
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("weight_kg", 0),
+        ("weight_kg", 20),
+        ("weight_kg", 400),
+        ("height_cm", 0),
+        ("height_cm", 100),
+        ("height_cm", 300),
+        ("age", 0),
+        ("weight_kg", None),
+    ],
+)
+def test_complete_rejects_out_of_bounds_profile(field, value):
+    payload = _complete_payload()
+    payload["profile"][field] = value
+    r = client.post("/api/onboarding/complete", json=payload)
+    assert r.status_code == 422
+    assert field in r.json()["detail"]
+    # Nothing must have been persisted for this user.
+    assert client.get("/api/state").json().get("macrocycle") is None
+
+
+def test_complete_rejects_empty_name():
+    payload = _complete_payload()
+    payload["profile"]["name"] = "   "
+    r = client.post("/api/onboarding/complete", json=payload)
+    assert r.status_code == 422
+    assert "name" in r.json()["detail"]
+
+
+def test_complete_accepts_valid_profile():
+    r = client.post("/api/onboarding/complete", json=_complete_payload())
+    assert r.status_code == 200

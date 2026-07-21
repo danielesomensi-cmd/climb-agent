@@ -199,6 +199,34 @@ def _validate_equipment_keys(equipment: Dict[str, Any]) -> None:
         raise ValueError(f"Unknown equipment key(s): {', '.join(hints)}")
 
 
+# B293 — sanity bounds for the profile. Reject outside, never clamp silently:
+# weight/height feed the engine (assessment ratios, hangboard added-load =
+# target_total - bodyweight), so a 0 here becomes a corrupted baseline or a
+# dangerous prescription downstream.
+_PROFILE_BOUNDS: Dict[str, tuple] = {
+    "weight_kg": (30, 150),
+    "height_cm": (120, 220),
+    "age": (1, 99),
+}
+
+
+def _validate_profile(profile: Dict[str, Any]) -> None:
+    """Validate onboarding profile fields. Raises ValueError listing every problem."""
+    problems = []
+    if not str(profile.get("name") or "").strip():
+        problems.append("name is required")
+    for key, (lo, hi) in _PROFILE_BOUNDS.items():
+        raw = profile.get(key)
+        try:
+            val = float(raw)
+        except (TypeError, ValueError):
+            val = None
+        if val is None or not (lo <= val <= hi):
+            problems.append(f"{key} must be between {lo} and {hi}")
+    if problems:
+        raise ValueError("Invalid profile: " + "; ".join(problems))
+
+
 def _recovery_multiplier_for_age(age: int | None) -> float:
     """B165b: compute default recovery multiplier from age.
 
@@ -373,8 +401,9 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
     Always generates a full macrocycle. When test_week_requested=True, sets
     initial_tests_requested flag so that test sessions are injected into week 1.
     """
-    # 0. Validate equipment keys before anything else
+    # 0. Validate profile + equipment keys before anything else
     try:
+        _validate_profile(data.profile)
         _validate_equipment_keys(data.equipment)
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
