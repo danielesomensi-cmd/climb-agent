@@ -25,10 +25,36 @@ def _preflight(origin: str):
     )
 
 
-def test_cors_allows_production_origin():
+def test_cors_allows_canonical_production_origin():
+    """A248: climbagent.app is the canonical production domain."""
+    res = _preflight("https://climbagent.app")
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == "https://climbagent.app"
+
+
+def test_cors_allows_www_production_origin():
+    """A248: www 308-redirects to the apex, but the origin stays allowed for
+    any client that hits the API before the redirect settles."""
+    res = _preflight("https://www.climbagent.app")
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == "https://www.climbagent.app"
+
+
+def test_cors_allows_legacy_production_origin():
+    """Old Vercel URL kept during the domain transition (cached PWA shells)."""
     res = _preflight("https://climb-agent.vercel.app")
     assert res.status_code == 200
     assert res.headers.get("access-control-allow-origin") == "https://climb-agent.vercel.app"
+
+
+def test_cors_rejects_lookalike_of_canonical_domain():
+    """`climbagent.app.evil.com` and `evilclimbagent.app` must not match."""
+    for origin in (
+        "https://climbagent.app.evil.com",
+        "https://evilclimbagent.app",
+    ):
+        res = _preflight(origin)
+        assert res.headers.get("access-control-allow-origin") != origin
 
 
 def test_cors_allows_localhost_dev():

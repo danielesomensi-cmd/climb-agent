@@ -30,7 +30,7 @@ _STRIPE_PORTAL_ENABLED = os.environ.get("STRIPE_PORTAL_ENABLED", "true").lower()
 _ALLOWED_PRICE_IDS = {pid for pid in (_STRIPE_PRICE_ID_STANDARD, _STRIPE_PRICE_ID_FOUNDER) if pid}
 
 _FRONTEND_BASE = os.environ.get(
-    "FRONTEND_BASE_URL", "https://climb-agent.vercel.app"
+    "FRONTEND_BASE_URL", "https://climbagent.app"
 )
 
 

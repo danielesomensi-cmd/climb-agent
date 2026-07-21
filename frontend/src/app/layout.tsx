@@ -14,7 +14,10 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://climbagent.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: "climb-agent",
   description:
     "AI-powered climbing training planner. 80+ research papers, one personalized plan.",
@@ -31,7 +34,7 @@ export const metadata: Metadata = {
     title: "climb-agent",
     description:
       "AI-powered climbing training planner. 80+ research papers, one personalized plan.",
-    url: "https://climb-agent.vercel.app",
+    url: APP_URL,
     siteName: "climb-agent",
     type: "website",
   },

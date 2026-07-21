@@ -8,7 +8,7 @@
  *
  * Access control:
  *   - Accessible in local dev (npm run dev) and on Vercel preview branches.
- *   - Blocked on the production domain (climb-agent.vercel.app).
+ *   - Blocked on the production domains (climbagent.app + legacy vercel.app URL).
  *
  * Note: Vercel preview builds run with NODE_ENV="production" (same as prod),
  * so a pure NODE_ENV check would hide the page on previews — exactly where
@@ -20,7 +20,11 @@
 import { useEffect, useState } from "react";
 import { TodayHeroCTA } from "@/components/training/today-hero-cta";
 
-const PROD_HOSTNAME = "climb-agent.vercel.app";
+const PROD_HOSTNAMES = [
+  "climbagent.app",
+  "www.climbagent.app",
+  "climb-agent.vercel.app",
+];
 
 function isoDaysFromToday(offset: number): string {
   const d = new Date();
@@ -49,7 +53,7 @@ export default function DevTodayStatesPage() {
       setAllowed(true);
       return;
     }
-    setAllowed(window.location.hostname !== PROD_HOSTNAME);
+    setAllowed(!PROD_HOSTNAMES.includes(window.location.hostname));
   }, []);
 
   if (allowed === null) return null;

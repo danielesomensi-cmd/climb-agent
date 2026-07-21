@@ -103,6 +103,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
+        # A248: climbagent.app is the canonical production domain. The old
+        # climb-agent.vercel.app origin stays during the transition (Vercel
+        # 308-redirects it, but cached PWA shells may still call from it).
+        "https://climbagent.app",
+        "https://www.climbagent.app",
         "https://climb-agent.vercel.app",
     ],
     allow_origin_regex=r"https://climb-agent-[a-z0-9-]+-danielesomensi-cmds-projects\.vercel\.app",
