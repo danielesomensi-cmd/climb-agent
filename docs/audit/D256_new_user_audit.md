@@ -27,7 +27,7 @@ inservibile come proxy di attività: il remap di oggi l'ha toccato per tutti.
 | Assessment | ✅ Completato (con l'onboarding). Profilo 5 assi: finger 59 · pulling 55 · power-endurance 53 · technique 50 · endurance 43 |
 | Macrocycle | ✅ Generato: 16 settimane, start 2026-07-20 (lunedì corrente) → **settimana 1/16, fase base** |
 | Sessioni | 0 done / 0 skipped — iscritto oggi, nessuna sessione ancora affrontata |
-| Ultima attività | 13:12 UTC di oggi (stava ancora navigando ~1h dopo l'onboarding) |
+| Ultima attività | **Rettifica post-verifica:** il timestamp 13:12 UTC è il remap A249 (l'UPDATE su clerk_id tocca `updated_at`), NON attività utente. Sessione reale: 12:08 → ≤13:05 UTC (il cutover Clerk delle 13:05 ha invalidato la sua sessione; se era ancora in app è stato sloggato) |
 | Stripe | ❌ **Nessuna riga subscription** → trial MAI avviato, nessuna carta. Non è mai passato dal checkout (nemmeno `pending_checkout`) |
 | Equipment | ✅ Configurato: palestra "Radium" (`gym_boulder`) + home (foam_roller) |
 
@@ -86,10 +86,15 @@ mail di cortesia: è di fatto il **re-lancio** del prodotto sul nuovo dominio.
    mostra "Iscritto 21/07" per tutti e "Ultimo login: mai". *Candidato fix:*
    il dashboard dovrebbe preferire `users.created_at` (Supabase) per la data
    iscrizione.
-2. **Ultimo iscritto senza riga subscription** — onboarding completo ma mai
-   passato dal checkout: da verificare cosa vede in app (guard B202
-   fail-closed → probabile paywall subito dopo l'onboarding). Se è così, il
-   funnel "onboarding finito → paywall" merita un occhio (conversione).
+2. **Ultimo iscritto senza riga subscription — flusso verificato nel codice:**
+   a fine onboarding un utente senza subscription viene routato a `/subscribe`
+   (`start-week/page.tsx:64`); se non clicca "Start free trial" può vedere
+   `/today` e `/plan` (non gated) ma ogni azione rimanda al paywall (client) e
+   il backend risponde 402 su 12 router (B202). `POST /checkout` scrive
+   `pending_checkout` alla prima chiamata: l'assenza totale di riga prova che
+   **il CTA non è mai stato cliccato**. Funnel: 14 min di onboarding investiti
+   → paywall → stop. Opzioni (brief separati): trial auto-start server-side al
+   complete, oppure UX paywall post-onboarding più esplicita.
 3. **Riga orfana `80ad598d`** (creata 20/06, `clerk_id NULL`, state vuoto) —
    residuo pre-migrazione di un flusso legacy/anonimo. Candidata a cleanup
    manuale (admin delete), nessuna urgenza.
