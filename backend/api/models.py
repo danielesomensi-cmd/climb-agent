@@ -169,6 +169,19 @@ class OnboardingData(BaseModel):
     attribution: Optional[Dict[str, Any]] = None
 
 
+class OnboardingDraftEnvelope(BaseModel):
+    """Body for PUT /api/onboarding/draft (B293).
+
+    Server-side copy of the wizard draft, keyed to the authenticated user, so
+    a forced re-auth mid-wizard cannot lose entered data. ``saved_at`` is the
+    client epoch-ms timestamp — newer-wins when reconciling with the local
+    draft on the client.
+    """
+    data: Dict[str, Any]
+    deepest_step: int = Field(default=0, ge=0)
+    saved_at: Optional[float] = None
+
+
 class TestReminderResponse(BaseModel):
     """Body for POST /api/week/test-reminder-response."""
     option: str  # "confirm" | "postpone_1_week" | "skip_cycle"

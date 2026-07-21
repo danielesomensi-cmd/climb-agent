@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { usePathname } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { stepIndexOf } from "@/lib/onboarding-steps";
-import { getState } from "@/lib/api";
+import { getState, getOnboardingDraft, putOnboardingDraft } from "@/lib/api";
 import type { OnboardingData } from "@/lib/types";
 
 const DEFAULT_DATA: OnboardingData = {
@@ -169,13 +169,44 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   // step page: the provider wraps them all and the route already says where we
   // are. Monotonic, so going Back doesn't lower the resume point.
   const deepestRef = useRef(0);
+
+  // B293 — server-side draft push. Debounced while typing (update below),
+  // flushed on step navigation: reaching the next step is the natural
+  // "this step is complete" moment. Fire-and-forget: a failed push never
+  // blocks the wizard, the local draft remains the safety net.
+  const dataRef = useRef(data);
+  dataRef.current = data;
+  const loadedRef = useRef(false);
+  loadedRef.current = loaded;
+  const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pushServerDraft = useCallback(() => {
+    if (!userIdRef.current || !loadedRef.current) return;
+    putOnboardingDraft({
+      data: dataRef.current,
+      deepest_step: deepestRef.current,
+      saved_at: Date.now(),
+    }).catch(() => {});
+  }, []);
+  useEffect(
+    () => () => {
+      if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     const idx = stepIndexOf(pathname);
     if (idx > deepestRef.current) {
       deepestRef.current = idx;
       setDeepestStep(idx);
     }
-  }, [pathname]);
+    // B293: flush the pending draft to the server on every step change.
+    if (pushTimerRef.current) {
+      clearTimeout(pushTimerRef.current);
+      pushTimerRef.current = null;
+    }
+    pushServerDraft();
+  }, [pathname, pushServerDraft]);
 
   // Pre-populate: local draft first, then backend state as fallback.
   //
@@ -192,27 +223,30 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     startedRef.current = true;
     const uid = clerkUserId ?? null;
 
-    const draft = loadDraft(uid);
     // A245 Phase D (F16) — the old guard was `draft.profile.name`, so a draft
     // from anyone who hadn't reached (or filled) the name field was silently
     // discarded. Any stored draft is now honoured.
-    if (draft) {
-      setData(draft.data);
-      deepestRef.current = draft.deepestStep;
-      setDeepestStep(draft.deepestStep);
-      // Adopt a pre-signup anonymous draft under the user's own key.
-      if (uid) saveDraft(draft.data, draft.deepestStep, uid);
-      setLoaded(true);
-      return;
-    }
+    const local = loadDraft(uid);
+
+    const applyEnvelope = (env: DraftEnvelope) => {
+      // Shallow-merge over defaults so a draft written by an older build
+      // (missing a later-added section) can never render undefined sections.
+      setData({ ...DEFAULT_DATA, ...env.data });
+      deepestRef.current = env.deepestStep;
+      setDeepestStep(env.deepestStep);
+      // Mirror under the user's own key (adopts pre-signup anonymous drafts
+      // and keeps the local copy in sync with a server-won reconcile).
+      if (uid) saveDraft(env.data, env.deepestStep, uid);
+    };
 
     if (!uid) {
-      // Anonymous: nothing to restore, and no API call to make.
+      // Anonymous: local draft or defaults — and no API call to make.
+      if (local) applyEnvelope(local);
       setLoaded(true);
       return;
     }
 
-    getState()
+    const prefillFromState = () => getState()
       .then((state) => {
         const d = { ...DEFAULT_DATA };
         const u = state.user as Record<string, unknown> | undefined;
@@ -283,6 +317,42 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       })
       .catch((err) => { console.error("Failed to load draft state from API:", err); })
       .finally(() => setLoaded(true));
+
+    // B293 — signed in: reconcile the server-side draft with the local one.
+    // Newer `savedAt` wins: a re-auth (or another device) must restore what
+    // the server has, but fresher local edits that never reached the server
+    // must not be rolled back either.
+    getOnboardingDraft()
+      .then(({ draft: server }) => {
+        const serverEnv: DraftEnvelope | null = server?.data
+          ? {
+              data: server.data,
+              deepestStep: server.deepest_step ?? 0,
+              savedAt: server.saved_at ?? 0,
+            }
+          : null;
+        const chosen =
+          serverEnv && local
+            ? (serverEnv.savedAt ?? 0) > (local.savedAt ?? 0)
+              ? serverEnv
+              : local
+            : serverEnv ?? local;
+        if (chosen) {
+          applyEnvelope(chosen);
+          setLoaded(true);
+          return;
+        }
+        void prefillFromState();
+      })
+      .catch(() => {
+        // Draft endpoint unreachable — the local draft still lets the wizard go on.
+        if (local) {
+          applyEnvelope(local);
+          setLoaded(true);
+          return;
+        }
+        void prefillFromState();
+      });
   }, [authLoaded, clerkUserId]);
 
   const update = useCallback(<K extends keyof OnboardingData>(key: K, value: OnboardingData[K]) => {
@@ -291,7 +361,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       saveDraft(next, deepestRef.current, userIdRef.current);
       return next;
     });
-  }, []);
+    // B293: debounced server push (2s after the last edit).
+    if (userIdRef.current) {
+      if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
+      pushTimerRef.current = setTimeout(pushServerDraft, 2000);
+    }
+  }, [pushServerDraft]);
 
   const clearDraft = useCallback(() => clearOnboardingDraft(), []);
 

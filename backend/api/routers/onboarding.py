@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import REPO_ROOT, build_current_level, ensure_monday, get_user_id, invalidate_week_cache, load_state, next_monday, this_monday, save_state
 from backend.api.rate_limit import limiter
-from backend.api.models import OnboardingData, StartWeekRequest
+from backend.api.models import OnboardingData, OnboardingDraftEnvelope, StartWeekRequest
 from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
 from backend.engine.grade_mapping import BOULDER_TO_LEAD
 from backend.engine.macrocycle_v1 import generate_macrocycle
@@ -329,6 +329,42 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
     return state
 
 
+# B293 — server-side wizard draft. One draft per user, stored inside
+# user_state under ``onboarding_draft``. Lifecycle: written on step
+# navigation / debounced edits while the wizard is in flight; wiped by a
+# successful /complete (the state is rebuilt from scratch there); ignored
+# once a macrocycle exists (a completed user re-visiting the wizard is
+# pre-populated from real state, not from a stale draft). Size is a few KB
+# per user, bounded by _DRAFT_MAX_BYTES.
+_DRAFT_MAX_BYTES = 100_000
+
+
+@router.get("/draft")
+def get_onboarding_draft(user_id: Optional[str] = Depends(get_user_id)):
+    """Return the saved wizard draft for this user, or null."""
+    state = load_state(user_id)
+    return {"draft": state.get("onboarding_draft")}
+
+
+@router.put("/draft")
+def put_onboarding_draft(body: OnboardingDraftEnvelope, user_id: Optional[str] = Depends(get_user_id)):
+    """Save (replace wholesale) the wizard draft for this user."""
+    import json as _json
+    if len(_json.dumps(body.data)) > _DRAFT_MAX_BYTES:
+        raise HTTPException(status_code=422, detail="Draft too large")
+    state = load_state(user_id)
+    if state.get("macrocycle"):
+        # Onboarding already completed — never resurrect a wizard draft.
+        return {"status": "ignored"}
+    state["onboarding_draft"] = {
+        "data": body.data,
+        "deepest_step": body.deepest_step,
+        "saved_at": body.saved_at,
+    }
+    save_state(state, user_id)
+    return {"status": "ok"}
+
+
 @router.post("/complete")
 @limiter.limit("3/minute")
 def onboarding_complete(request: Request, data: OnboardingData, user_id: Optional[str] = Depends(get_user_id)):
@@ -344,6 +380,10 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
         raise HTTPException(status_code=422, detail=str(e))
 
     # 1. Build user state
+    # B293: a failed complete must not destroy the server-side wizard draft —
+    # the user is still mid-wizard and may reload. A SUCCESSFUL complete wipes
+    # it implicitly: the state is rebuilt from scratch without the draft key.
+    prev_draft = load_state(user_id).get("onboarding_draft")
     state = _build_user_state_from_onboarding(data)
 
     # 1b. A233: persist first-touch attribution (sanitized). Written before any
@@ -395,6 +435,8 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
     try:
         profile = compute_assessment_profile(assessment, goal)
     except Exception as e:
+        if prev_draft:
+            state["onboarding_draft"] = prev_draft
         save_state(state, user_id)
         raise HTTPException(status_code=422, detail=f"Assessment computation failed: {e}")
 
@@ -434,6 +476,8 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
             start = ensure_monday(strict_next_monday(today))
             macrocycle = generate_macrocycle(goal, profile, state, start, total_weeks)
     except Exception as e:
+        if prev_draft:
+            state["onboarding_draft"] = prev_draft
         save_state(state, user_id)
         raise HTTPException(status_code=422, detail=f"Macrocycle generation failed: {e}")
 
