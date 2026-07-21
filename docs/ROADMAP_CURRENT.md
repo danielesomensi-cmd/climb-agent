@@ -72,6 +72,14 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ---
 
+## Recently closed (2026-07-21)
+
+| ID | Titolo | Tipo | Effort | Stato | Note |
+|----|--------|------|--------|-------|------|
+| A247 | **Feedback al tocco: si capisce che il bottone e' stato premuto** | A | S | ✅ Done | Segnalato da Daniele usando l'app: nella guided session premi Done e non capisci se ha funzionato. **Due cause indipendenti, stesso sintomo.** (1) Nessuna gestione dello scroll nel flusso guided: premendo Done in fondo a una card lunga l'indice avanzava e la card cambiava, ma la posizione di scroll restava in fondo — ti ritrovavi in fondo a un ALTRO esercizio, di solito davanti a un altro bottone Done. Ora `scrollTo` istantaneo a ogni cambio di `currentIndex` (istantaneo e non smooth: un'animazione da 300ms si legge come «la pagina si sta ancora assestando», l'opposto di una conferma). (2) Il `Button` base dichiarava solo `hover:`, che **su touchscreen non scatta mai**: il tocco era invisibile. Aggiunti `active:scale`/`active:brightness` (con `motion-reduce`) e un tick aptico via `navigator.vibrate`, da un solo punto — il componente base — per non avere doppi buzz. Nota: `vibrate` e' no-op su iOS Safari (Apple non espone il taptic engine al web), quindi su iPhone la conferma e' lo stato visivo + lo scroll: l'aptico e' un extra per Android, mai l'unico segnale. 11 test. |
+
+---
+
 ## Recently closed (2026-07-20)
 
 | ID | Titolo | Tipo | Effort | Stato | Note |

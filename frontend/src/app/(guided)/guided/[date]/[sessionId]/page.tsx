@@ -269,7 +269,6 @@ export default function GuidedSessionPage() {
     const idx = state.currentIndex;
 
     updateExercise(idx, { status: "skipped", feedbackLabel: "ok" });
-
     const nextIdx = idx + 1;
     if (nextIdx >= state.exercises.length) {
       setState((prev) => prev ? { ...prev, currentIndex: idx } : prev);
@@ -278,6 +277,24 @@ export default function GuidedSessionPage() {
       setState((prev) => prev ? { ...prev, currentIndex: nextIdx } : prev);
     }
   }, [state, updateExercise]);
+
+  /**
+   * A247 — bring the new exercise into view.
+   *
+   * Tapping Done at the BOTTOM of a long card advanced `currentIndex`, the card
+   * re-rendered with the next exercise... and the scroll position stayed put.
+   * You were left staring at the bottom of a different exercise, usually at
+   * another Done button, with no way to tell whether your tap had registered.
+   *
+   * `instant`, not `smooth`: a 300ms animation reads as "the page is still
+   * settling", which is the opposite of the confirmation we want. Guarded on
+   * `prefers-reduced-motion` regardless, since instant is also the safe choice
+   * there.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined" || showSummary) return;
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, [state?.currentIndex, showSummary]);
 
   const handleNavigate = useCallback(
     (index: number) => {
