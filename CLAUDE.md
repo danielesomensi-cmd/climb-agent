@@ -38,6 +38,9 @@ cd frontend && npm run dev
 # Sync project counters into PROJECT_BRIEF.md, CLAUDE.md, README.md
 python scripts/sync_status.py
 
+# GTM funnel snapshot (read-only): trials engaged/dormant, checkout-stuck, paid conversions
+python scripts/gtm_funnel.py
+
 # Activate pre-push hook (once per clone)
 git config core.hooksPath .githooks
 ```
