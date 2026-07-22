@@ -27,7 +27,8 @@ import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
-import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
+import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
+import { ForceHardDialog } from "@/components/training/force-hard-dialog";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
 import { useFreeSessionHistory, useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
@@ -225,6 +226,8 @@ function TodayContent() {
   const [replanDate, setReplanDate] = useState<string | null>(null);
   const [replanSessionIndex, setReplanSessionIndex] = useState<number | undefined>(undefined);
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
+  // A254: retry to run when the user confirms forcing a hard finger session.
+  const [forceRetry, setForceRetry] = useState<(() => void) | null>(null);
   const [moveSession, setMoveSession] = useState<{
     date: string;
     slot: string;
@@ -686,22 +689,41 @@ function TodayContent() {
   }) {
     if (!weekPlan || !quickAddDate) return;
     setError(null);
+    // A254: capture the pre-add plan + args so a force retry re-runs from the
+    // ORIGINAL plan (the cache now holds the eased session in that slot).
+    const preAddPlan = weekPlan;
+    const baseArgs = {
+      session_id: rdata.session_id,
+      target_date: quickAddDate,
+      slot: rdata.slot,
+      location: rdata.location,
+      gym_id: rdata.gym_id,
+      phase_id: phaseId ?? undefined,
+    };
     try {
-      const result = await quickAddSession({
-        session_id: rdata.session_id,
-        target_date: quickAddDate,
-        slot: rdata.slot,
-        location: rdata.location,
-        gym_id: rdata.gym_id,
-        phase_id: phaseId ?? undefined,
-        week_plan: weekPlan,
-      });
+      const result = await quickAddSession({ ...baseArgs, week_plan: preAddPlan });
       updateWeekCache(result.week_plan);
       if (result.warnings?.length > 0) {
         setError(result.warnings.join("; "));
       }
       const note = describeQuickAddAdjustments(result.adjustments);
-      if (note) toast("Session adjusted", { description: note, duration: 8000 });
+      if (note && result.adjustments?.length) {
+        const doForce = async () => {
+          try {
+            const forced = await quickAddSession({ ...baseArgs, week_plan: preAddPlan, force: true });
+            updateWeekCache(forced.week_plan);
+            toast("Hard session added", { description: "Train smart — listen to your body.", duration: 6000 });
+          } catch (err) {
+            setError(err instanceof Error ? err.message : "Couldn't add the hard session.");
+          }
+        };
+        // Finger downshift is injury protection → the action opens an explicit
+        // confirm. A cap-only downshift is just volume → force straight away.
+        const onForce = quickAddHasFingerRisk(result.adjustments)
+          ? () => setForceRetry(() => doForce)
+          : doForce;
+        toast("Session adjusted", { description: note, duration: 10000, action: { label: "Add hard anyway", onClick: onForce } });
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to add session";
       if (msg.includes("already occupied")) {
@@ -1405,6 +1427,13 @@ function TodayContent() {
           router.push(`/free-session?context=standalone&date=${quickAddDate || targetDate}`);
         }}
         onApplyCustom={handleQuickAddCustomApply}
+      />
+
+      {/* A254: explicit confirm before forcing a hard finger session past the 48h gap */}
+      <ForceHardDialog
+        open={forceRetry !== null}
+        onOpenChange={(v) => { if (!v) setForceRetry(null); }}
+        onConfirm={() => { forceRetry?.(); setForceRetry(null); }}
       />
 
       {/* Move session dialog */}

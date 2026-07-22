@@ -355,6 +355,7 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
             location=req.location,
             phase_id=req.phase_id,
             gym_id=req.gym_id,
+            force=req.force,  # A254: keep the hard session, at the user's own risk
             # B287/R-5: trailing days of the preceding week, so the Sunday→Monday
             # finger gap is checked instead of the scan starting blind at Monday.
             prev_days=_prev_week_days(state, week_plan.get("start_date")),

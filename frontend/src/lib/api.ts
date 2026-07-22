@@ -470,6 +470,13 @@ export function describeQuickAddAdjustments(adjustments: QuickAddAdjustment[] | 
   return `Eased to a lighter session ${parts.join(" and ")}.`;
 }
 
+// A254: a finger downshift is injury protection (48h tendon/pulley recovery) —
+// forcing past it warrants an explicit confirm. A cap-only downshift is just
+// volume, so a one-tap toast action is enough.
+export function quickAddHasFingerRisk(adjustments: QuickAddAdjustment[] | undefined): boolean {
+  return !!adjustments?.some((a) => a.reason === "finger_spacing_downshift");
+}
+
 export const quickAddSession = (data: {
   session_id: string;
   target_date: string;
@@ -478,6 +485,7 @@ export const quickAddSession = (data: {
   phase_id?: string;
   week_plan: WeekPlan;
   gym_id?: string;
+  force?: boolean; // A254: keep the hard session past the finger gap / hard cap
 }) =>
   request<{ week_plan: WeekPlan; warnings: string[]; adjustments: QuickAddAdjustment[] }>(
     "/api/replanner/quick-add",
