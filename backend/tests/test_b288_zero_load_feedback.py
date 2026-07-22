@@ -89,11 +89,16 @@ def test_zero_load_legacy_key_is_recorded():
 
 
 def test_zero_load_unilateral_is_recorded():
-    """Unilateral branch had the same `or` chain — one entry per hand."""
+    """Per-hand branch had the same `or` chain — one entry per hand.
+
+    C-LOADMODEL-MISTAG: the per-hand write path is gated on genuine finger
+    loading-pin equipment (not raw unilaterality), so this uses a real
+    loading-pin exercise id (``lp_max_lift_5s``) rather than a synthetic one.
+    """
     updated = apply_feedback(
         _log([
             {
-                "exercise_id": "loading_pin_lift",
+                "exercise_id": "lp_max_lift_5s",
                 "feedback_label": "ok",
                 "completed": True,
                 "hand": hand,
@@ -106,7 +111,7 @@ def test_zero_load_unilateral_is_recorded():
         _state(),
     )
     for hand in ("right", "left"):
-        entry = _entry(updated, f"loading_pin_lift:{hand}")
+        entry = _entry(updated, f"lp_max_lift_5s:{hand}")
         assert entry is not None, f"{hand} hand entry missing — 0 kg was dropped"
         assert entry["last_external_load_kg"] == 0.0
 

@@ -94,7 +94,7 @@
         "Pain-free range only — mild discomfort acceptable"
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
-      "load_model": "bodyweight_only",
+      "load_model": "external_load",
       "alt_sides": true
     },
     {
@@ -7085,7 +7085,7 @@
         "Stop if medial elbow pain increases — this is rehab work, not through-pain training"
       ],
       "video_url": "https://trainingforclimbing.com/treating-climbers-elbow-medial-epicondylitis/",
-      "load_model": "bodyweight_only",
+      "load_model": "external_load",
       "alt_sides": true
     },
     {
@@ -8303,7 +8303,7 @@
         "For load: place dumbbell or plate across hip crease"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "external_load"
     },
     {
       "id": "finger_extensor_band",
@@ -9344,7 +9344,7 @@
         "Lower slowly below step level for full range of motion",
         "Hold a wall or rail for balance if needed"
       ],
-      "load_model": "bodyweight_only",
+      "load_model": "external_load",
       "video_url": null,
       "unilateral": true,
       "alt_sides": true
@@ -10151,7 +10151,7 @@
       "contraindications": [
         "knee_injury"
       ],
-      "load_model": "bodyweight_only",
+      "load_model": "external_load",
       "unilateral": true,
       "alt_sides": true,
       "prescription_defaults": {
@@ -10773,7 +10773,7 @@
         "Descend slowly (3s), push up with control — do not bounce out of the bottom"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only",
+      "load_model": "external_load",
       "unilateral": true,
       "alt_sides": true
     },
@@ -10867,7 +10867,7 @@
         "Lower with control over 2-3 seconds — do not drop hips"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only",
+      "load_model": "external_load",
       "unilateral": true,
       "alt_sides": true
     },
@@ -10916,7 +10916,7 @@
         "To load: hold a dumbbell in the hand OPPOSITE the working leg"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only",
+      "load_model": "external_load",
       "unilateral": true,
       "alt_sides": true
     },
@@ -10967,7 +10967,7 @@
         "Complete all reps on one leg before switching"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only",
+      "load_model": "external_load",
       "unilateral": true,
       "alt_sides": true
     },
