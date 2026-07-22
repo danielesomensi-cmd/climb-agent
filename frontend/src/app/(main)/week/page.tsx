@@ -9,6 +9,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { WeekGrid } from "@/components/training/week-grid";
 import { PausedBanner } from "@/components/training/paused-banner";
 import { DayCard } from "@/components/training/day-card";
+import { SkippedTestsCard } from "@/components/training/skipped-tests-card";
 const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
 const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
 const MoveSessionDialog = dynamic(() => import("@/components/training/move-session-dialog").then((m) => m.MoveSessionDialog), { ssr: false });
@@ -785,6 +786,14 @@ export default function WeekPage() {
             onDayClick={handleDayClick}
           />
         )}
+
+        {/* B297 (D211-F9): tests the planner couldn't fit this week */}
+        {!loading && !error && weekPlan?.skipped_tests?.length ? (
+          <SkippedTestsCard
+            skipped={weekPlan.skipped_tests}
+            weekKey={weekPlan.weeks[0]?.days[0]?.date ?? String(weekNum)}
+          />
+        ) : null}
 
         {/* Weekly report link */}
         {!loading && !error && weekPlan && (() => {

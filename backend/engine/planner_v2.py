@@ -1349,6 +1349,10 @@ def generate_phase_week(
             _filtered_schedule.append((test_sid, _required))
 
         test_placed_offsets: set = set()
+        # B297 (D211-F9): pass 1 below is the historical replace-only logic,
+        # untouched — weeks it can serve stay byte-identical. Tests it cannot
+        # place land in _unplaced_tests for pass 2 / skipped_tests reporting.
+        _unplaced_tests: List[Tuple[str, Dict[str, Any], bool]] = []
         for test_sid, _required in _filtered_schedule:
             test_meta = _SESSION_META.get(test_sid)
             if test_meta is None:
@@ -1416,6 +1420,72 @@ def generate_phase_week(
                     finger_day_offsets.append(offset)
                 test_placed_offsets.add(offset)
                 placed = True
+            if not placed:
+                _unplaced_tests.append((test_sid, test_meta, bool(_required)))
+
+        # B297 (D211-F9) pass 2: a REQUIRED test that pass 1 could not place by
+        # replacement may occupy an empty available day (volume +1 accepted by
+        # design — losing a baseline test is worse than one extra session).
+        # Optional tests stay replace-only. Same spacing/cap gates as pass 1;
+        # on an empty day day_has_finger/day_has_hard are trivially False, so
+        # the spacing checks apply unconditionally.
+        _still_unplaced: List[Tuple[str, Dict[str, Any], bool]] = []
+        for test_sid, test_meta, _required in _unplaced_tests:
+            placed = False
+            if _required:
+                for offset in range(7):
+                    if placed:
+                        break
+                    if offset in test_placed_offsets:
+                        continue
+                    if day_sessions[offset]:
+                        continue  # pass 2 targets empty days only
+                    if day_is_outdoor[offset]:
+                        continue
+                    if day_dates[offset] in pretrip_set:
+                        continue  # tests are hard/max work — never on pre-trip deload days
+                    if test_meta["finger"] and finger_day_offsets and any(
+                        abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
+                    ):
+                        continue
+                    if test_meta["hard"] and hard_day_offsets and any(
+                        abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets
+                    ):
+                        continue
+                    if test_meta["hard"] and hard_days >= effective_hard_cap:
+                        continue
+                    day_avail = normalized[day_keys[offset]]
+                    result = _find_best_slot(day_avail, test_meta, locations, prefer_evening=True,
+                                             home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
+                    if result is None:
+                        continue
+                    slot, slot_info = result
+                    test_entry = _make_session_entry(
+                        slot, test_sid, test_meta, slot_info, locations,
+                        phase_id, day_keys[offset],
+                        default_gym_id, gyms or [], "pass3:test_session_empty_day",
+                        home_equipment=home_equipment,
+                    )
+                    day_sessions[offset].append(test_entry)
+                    if test_meta["hard"]:
+                        hard_days += 1
+                        hard_day_offsets.append(offset)
+                    if test_meta["finger"]:
+                        finger_day_offsets.append(offset)
+                    test_placed_offsets.add(offset)
+                    placed = True
+            if not placed:
+                _still_unplaced.append((test_sid, test_meta, _required))
+
+        # B297: placement failures are reported, never silently dropped —
+        # the week view surfaces these so the user can free up a day.
+        for test_sid, test_meta, _required in _still_unplaced:
+            skipped_tests.append({
+                "test_id": test_sid,
+                "axis": _test_type_map.get(test_sid),
+                "reason": "no_placement_slot",
+                "required": _required,
+            })
 
     # Build plan_days
     plan_days: List[Dict[str, Any]] = []
