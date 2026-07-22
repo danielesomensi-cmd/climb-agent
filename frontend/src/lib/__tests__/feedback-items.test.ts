@@ -169,3 +169,35 @@ describe("buildGuidedFeedbackItems", () => {
     expect(items).toHaveLength(0);
   });
 });
+
+describe("hasLoadInput — B298 (loadable is always loggable, even first time)", () => {
+  it("a loadable exercise with NO suggested load still takes a load", () => {
+    // The reported bug: adhoc Back Squat, never logged → no suggestion → the
+    // field was hidden and the load could not be recorded at all.
+    expect(
+      hasLoadInput({ exercise_id: "back_squat", name: "Back Squat", loadModel: "external_load" }),
+    ).toBe(true);
+    expect(
+      hasLoadInput({ exercise_id: "weighted_pullup", name: "Weighted Pull-up", loadModel: "total_load" }),
+    ).toBe(true);
+  });
+
+  it("a suggested load is not required (but still works)", () => {
+    expect(
+      hasLoadInput({ exercise_id: "bench_press", name: "Bench Press", loadModel: "external_load", suggestedExternalLoadKg: 40 }),
+    ).toBe(true);
+  });
+
+  it("bodyweight exercises get no load field (unless opted in)", () => {
+    expect(hasLoadInput({ exercise_id: "plank", name: "Plank", loadModel: "bodyweight_only" })).toBe(false);
+    expect(
+      hasLoadInput({ exercise_id: "pallof_press", name: "Pallof Press", loadModel: "bodyweight_only", allowLoadLogging: true }),
+    ).toBe(true);
+  });
+
+  it("unilateral loadable exercises are excluded (per-hand handled elsewhere)", () => {
+    expect(
+      hasLoadInput({ exercise_id: "lp_max_lift_5s", name: "LP Max Lift", loadModel: "external_load", unilateral: true }),
+    ).toBe(false);
+  });
+});
