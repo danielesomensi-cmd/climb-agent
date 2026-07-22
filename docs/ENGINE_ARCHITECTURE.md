@@ -59,12 +59,8 @@ sort_exercises_by_phase()             ← exercise_ordering.py
     ▼
 apply_feedback()                      ← progression_v1.py
     │  reads: exercise outcomes (difficulty, actual loads)
-    │  writes: user_state.baselines, test results
-    ▼
-record_cluster_cooldown()             ← adaptation/closed_loop.py
-    │  ⚠ NOT WIRED — nothing calls this today (A245 E-4)
-    │  would read:  per-exercise difficulty
-    │  would write: user_state.cooldowns.per_cluster
+    │  writes: user_state.baselines, test results, working_loads (per-exercise
+    │          load progression — the reactive load adjustment)
     ▼
 [next week → generate_phase_week() uses updated user_state]
 ```
@@ -449,38 +445,29 @@ Processes post-session exercise feedback:
 
 ---
 
-## 8. Closed-Loop Adaptation (`adaptation/closed_loop.py`)
+## 8. Closed-Loop Adaptation
 
-> **STATUS (A245 E-4, 2026-07-20): per-cluster cooldown is implemented and
-> tested, but NOT yet wired to the feedback path.**
+The **only** closed-loop adaptation in the engine is per-exercise load
+progression: `progression_v1.apply_feedback` reads each exercise's difficulty +
+actual load and adjusts `user_state.working_loads` (see §7). There is no
+separate adaptation module.
+
+> **REMOVED (B299, 2026-07-22):** a dormant per-cluster cooldown system
+> (`adaptation/closed_loop.py` → `record_cluster_cooldown`, plus the resolver's
+> `cluster_cooldown_fallback` / `cluster_cooldown_downshift` branches and
+> `user_state.cooldowns.per_cluster`) was deleted. It never had a production
+> caller — the writer was never invoked, so the reader never found an entry and
+> the two branches never fired for any user. Rather than wire it (which would
+> have double-penalised after a `fail`: the load cut from `apply_feedback` **and**
+> a cluster substitution/×0.9 downshift), the mechanism was removed to simplify
+> the P0 resolver. The reactive-recovery need it targeted is already covered by
+> the proactive schedule (finger 48h hard gap, DUP spacing, hard caps) and the
+> live load progression; injury spacing for fingers lives in
+> `replanner_v1._enforce_finger_gap` and is untouched.
 >
-> Nothing calls `record_cluster_cooldown()`, so `cooldowns.per_cluster` is always
-> empty in production and the resolver's `cluster_cooldown_fallback` /
-> `cluster_cooldown_downshift` branches have never fired for a user. This page
-> previously described the whole module as active — it was not, and had not been
-> since it was written. Activation is tracked as `A-CLOSED-LOOP-ACTIVATION`.
->
-> The **live** per-exercise adaptation is `progression_v1.apply_feedback`, which
-> adjusts `working_loads`. See §7.
->
-> A245 E-4 also removed a multiplier system (`adjustments.per_exercise`,
-> `compute_next_multiplier`, `apply_multiplier`) that used to be documented here:
-> it had zero readers in production and its `adjustments` key collided by name
-> with the unrelated `adjustments[]` list the replanner returns (B287).
-
-**Entry point:** `record_cluster_cooldown(user_state, exercise_id, outcome, *, exercises_by_id, feedback_date) → Dict`
-
-### Cooldown system
-
-When difficulty is `fail` or `too_hard`: 2-day cooldown on the exercise's cluster.
-When `hard`: 1-day cooldown.
-
-Cooldowns are stored in `user_state.cooldowns.per_cluster[cluster_key]`:
-```python
-{"until_date": "2026-03-27", "reason": "difficulty:too_hard", "last_updated": "2026-03-25"}
-```
-
-The resolver checks cooldowns via `_cooldown_until_date()` and swaps to a cluster fallback or applies a 0.9 downshift — **that reader is live, but it never finds an entry**, because the writer above is not called from the feedback path (A245 E-4).
+> A245 E-4 had earlier removed a separate multiplier system
+> (`adjustments.per_exercise`, `compute_next_multiplier`, `apply_multiplier`)
+> from the same module for the same reason (zero production readers).
 
 ---
 
@@ -780,25 +767,10 @@ user_state["week_plans"]["2026-03-24"] = {
 }
 ```
 
-### Adaptation multiplier structure
-
-```python
-user_state["adjustments"]["per_exercise"]["max_hang_7s"] = {
-    "multiplier": 1.025,      // 0.85 – 1.15 range
-    "streak": 0,               // consecutive hard-difficulty count
-    "last_update": "2026-03-25T18:30:00"
-}
-```
-
-### Cooldown structure
-
-```python
-user_state["cooldowns"]["per_cluster"]["finger_strength|isometric_hang|hangboard"] = {
-    "until_date": "2026-03-27",
-    "reason": "difficulty:too_hard",
-    "last_updated": "2026-03-25"
-}
-```
+> The `adjustments.per_exercise` multiplier structure (A245 E-4) and the
+> `cooldowns.per_cluster` structure (B299) that used to be documented here were
+> both removed — neither was ever written in production. Reactive adaptation is
+> `working_loads` load progression alone (see the `suggested` block above and §7).
 
 ---
 
@@ -818,7 +790,7 @@ replanner_v1.py
 
 resolve_session.py
   ├── equipment_utils.expand_equipment
-  ├── cluster_utils.{cluster_key_for_exercise, parse_date}
+  ├── cluster_utils.parse_date
   ├── progression_v1.inject_targets
   └── exercise_ordering.{sort_exercises_by_phase, enforce_ordering_constraints}  (lazy import)
 
@@ -827,9 +799,6 @@ macrocycle_v1.py
 
 progression_v1.py
   └── assessment_v1.{grade_index, brzycki_1rm, ...}
-
-adaptation/closed_loop.py
-  └── cluster_utils.{cluster_key_for_exercise, parse_date}
 
 exercise_ordering.py
   └── (no engine imports — standalone)
@@ -864,8 +833,7 @@ assessment_v1.py
 | `macrocycle_v1` | `goal`, `trips`, `macrocycle` (for from_phase) | — (returns macrocycle) |
 | `planner_v2` | `availability`, `equipment`, `planning_prefs`, `preferences` | — (returns week plan) |
 | `resolve_session` | `equipment`, `context`, `baselines`, `limitations`, `preferences`, `overrides`, `week_plans`, `body`, `assessment` | — (returns resolved session) |
-| `progression_v1` | `baselines`, `assessment`, `adjustments`, `body` | `baselines`, `tests` (via apply_feedback) |
-| `closed_loop.py` ⚠ not wired | `cooldowns` | `cooldowns.per_cluster` (would; see §8) |
+| `progression_v1` | `baselines`, `assessment`, `working_loads`, `body` | `baselines`, `tests`, `working_loads` (via apply_feedback) |
 | `replanner_v1` | Full user_state (passes to planner) | — (modifies plan in-place) |
 
 All engine modules receive `user_state` as a parameter — none read it directly from disk (that happens in the API layer).

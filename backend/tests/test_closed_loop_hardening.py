@@ -1,7 +1,8 @@
 """Closed-loop test hardening — covers crash paths, idempotency,
-session classification, log building, and adaptation edge cases.
+session classification, and log building.
 
-Origin: D-BE audit found closed_loop_v1 + adaptation/closed_loop under-tested.
+Origin: D-BE audit found closed_loop_v1 under-tested. (The per-cluster cooldown
+tests were removed in B299 along with the dormant mechanism they covered.)
 """
 from __future__ import annotations
 
@@ -16,7 +17,6 @@ from backend.engine.closed_loop_v1 import (
     build_log_entry,
     ensure_planning_defaults,
 )
-from backend.engine.adaptation.closed_loop import record_cluster_cooldown
 
 
 # ---------------------------------------------------------------------------
@@ -269,43 +269,9 @@ class TestEnsurePlanningDefaults:
 # ===================================================================
 
 
-class TestClusterCooldown:
-    """A245 E-4: only the cooldown branch survives — see closed_loop.py."""
-
-    def test_cooldown_set_on_fail(self):
-        exercises_by_id = {
-            "weighted_pullup": {
-                "id": "weighted_pullup",
-                "domain": ["strength_general"],
-                "recency_group": "pulling_weighted",
-            },
-        }
-        state = {}
-        outcome = {"difficulty": "fail", "date": "2026-02-10"}
-        state = record_cluster_cooldown(
-            state, "weighted_pullup", outcome,
-            exercises_by_id=exercises_by_id, feedback_date="2026-02-10",
-        )
-        cooldowns = state.get("cooldowns", {}).get("per_cluster", {})
-        assert len(cooldowns) > 0
-        # Cooldown should be 2 days for fail
-        cluster_vals = list(cooldowns.values())
-        assert "2026-02-12" in cluster_vals[0]["until_date"]
-
-    def test_no_cooldown_on_ok(self):
-        exercises_by_id = {
-            "weighted_pullup": {
-                "id": "weighted_pullup",
-                "domain": ["strength_general"],
-                "recency_group": "pulling_weighted",
-            },
-        }
-        state = {}
-        outcome = {"difficulty": "ok", "date": "2026-02-10"}
-        state = record_cluster_cooldown(
-            state, "weighted_pullup", outcome,
-            exercises_by_id=exercises_by_id, feedback_date="2026-02-10",
-        )
-        cooldowns = state.get("cooldowns", {}).get("per_cluster", {})
-        assert len(cooldowns) == 0
+# B299: TestClusterCooldown removed — the per-cluster cooldown mechanism
+# (record_cluster_cooldown + the resolver fallback/downshift branches) was
+# never wired to any caller and has been deleted. The finger 48h recovery gap
+# (replanner_v1._enforce_finger_gap) and per-exercise load progression are
+# unaffected.
 

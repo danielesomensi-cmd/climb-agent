@@ -25,15 +25,6 @@ def sorted_join(value: Any) -> str:
     return "+".join(items)
 
 
-def cluster_key_for_exercise(exercise: Dict[str, Any]) -> str:
-    domain = sorted_join(exercise.get("domain"))
-    role = sorted_join(exercise.get("role") or exercise.get("roles"))
-    equipment = sorted_join(exercise.get("equipment_required"))
-    pattern_value = exercise.get("pattern") if "pattern" in exercise else exercise.get("movement")
-    pattern = sorted_join(pattern_value)
-    return f"domain={domain}|role={role}|eq={equipment}|pattern={pattern}"
-
-
 def parse_date(value: Optional[str]) -> Optional[datetime.date]:
     if not value:
         return None

@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from backend.engine.equipment_utils import expand_equipment
 
-from backend.engine.cluster_utils import cluster_key_for_exercise, parse_date
+from backend.engine.cluster_utils import parse_date
 from backend.engine.progression_v1 import inject_targets
 
 logger = logging.getLogger(__name__)
@@ -911,62 +911,6 @@ def load_recent_exercise_ids(
     return recent[-100:]
 
 
-def _cooldown_until_date(user_state: Optional[Dict[str, Any]], cluster_key: str) -> Optional[str]:
-    if not user_state:
-        return None
-    cooldowns = user_state.get("cooldowns") or {}
-    per_cluster = cooldowns.get("per_cluster") or {}
-    entry = per_cluster.get(cluster_key) or {}
-    return entry.get("until_date")
-
-
-def _find_cooldown_fallback(
-    exercises: List[Dict[str, Any]],
-    current_ex: Dict[str, Any],
-    available_equipment: List[str],
-) -> Optional[Dict[str, Any]]:
-    current_domain = sorted(norm_list_str(current_ex.get("domain")))
-    current_eq = sorted(norm_list_str(current_ex.get("equipment_required")))
-    current_eq_any = sorted(norm_list_str(current_ex.get("equipment_required_any")))
-    current_pattern = sorted(ex_patterns(current_ex))
-
-    avail = set(norm_list_str(available_equipment))
-
-    def same_domain_equipment(ex: Dict[str, Any]) -> bool:
-        if sorted(norm_list_str(ex.get("domain"))) != current_domain:
-            return False
-        if sorted(norm_list_str(ex.get("equipment_required"))) != current_eq:
-            return False
-        if sorted(norm_list_str(ex.get("equipment_required_any"))) != current_eq_any:
-            return False
-        req = set(ex_equipment_required(ex))
-        if req and not req.issubset(avail):
-            return False
-        req_any = ex_equipment_required_any(ex)
-        return not req_any or not set(req_any).isdisjoint(avail)
-
-    def same_cluster(ex: Dict[str, Any]) -> bool:
-        if not same_domain_equipment(ex):
-            return False
-        return sorted(ex_patterns(ex)) == current_pattern
-
-    candidates = [
-        ex for ex in exercises
-        if same_cluster(ex) and "main" not in set(ex_roles(ex))
-    ]
-    if not candidates:
-        candidates = [
-            ex for ex in exercises
-            if same_domain_equipment(ex) and set(ex_roles(ex)) & {"assistant", "secondary"}
-        ]
-
-    if not candidates:
-        return None
-
-    candidates.sort(key=lambda e: norm_str(get_ex_id(e)))
-    return candidates[0]
-
-
 # ---------------------------
 # Filtering + Scoring
 # ---------------------------
@@ -1226,34 +1170,6 @@ def _resolve_inline_block(
 
         chosen_by = "p0_inline_block"
 
-    # Cooldown fallback (same logic as template blocks)
-    replanner_note = None
-    if selected_ex and norm_str(module_role) in ("primary", "main") and target_date:
-        cluster_key = cluster_key_for_exercise(selected_ex)
-        until_date_value = _cooldown_until_date(user_state, cluster_key)
-        until_date = parse_date(until_date_value)
-        if until_date and target_date <= until_date:
-            fallback_ex = _find_cooldown_fallback(
-                exercises=exercises,
-                current_ex=selected_ex,
-                available_equipment=available_equipment,
-            )
-            if fallback_ex:
-                replanner_note = {
-                    "cooldown_cluster": cluster_key,
-                    "until_date": until_date.isoformat(),
-                    "fallback_exercise_id": get_ex_id(fallback_ex),
-                    "reason": "cluster_cooldown_fallback",
-                }
-                selected_ex = fallback_ex
-            else:
-                replanner_note = {
-                    "cooldown_cluster": cluster_key,
-                    "until_date": until_date.isoformat(),
-                    "reason": "cluster_cooldown_downshift",
-                    "multiplier": 0.9,
-                }
-
     selected_list: List[Dict[str, Any]] = []
     if selected_ex:
         instance_counter += 1
@@ -1273,10 +1189,6 @@ def _resolve_inline_block(
         # B174: selection.primary.prescription_overrides take highest priority
         if isinstance(primary_overrides, dict):
             merged.update(primary_overrides)
-
-        if replanner_note and replanner_note.get("reason") == "cluster_cooldown_downshift":
-            merged.setdefault("multiplier", 1.0)
-            merged["multiplier"] = float(merged["multiplier"]) * 0.9
 
         merged = _apply_load_override(
             merged,
@@ -1306,8 +1218,6 @@ def _resolve_inline_block(
                 "block_id": block_id,
             },
         }
-        if replanner_note:
-            inst["replanner"] = replanner_note
         if ex_attrs.get("intensity_pct") is not None:
             sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
             if sug:
@@ -1734,33 +1644,6 @@ def resolve_session(
                     chosen_by = "p0_hard_filters"
 
 
-            replanner_note = None
-            if selected_ex and norm_str(block_type) == "main" and target_date:
-                cluster_key = cluster_key_for_exercise(selected_ex)
-                until_date_value = _cooldown_until_date(user_state, cluster_key)
-                until_date = parse_date(until_date_value)
-                if until_date and target_date <= until_date:
-                    fallback_ex = _find_cooldown_fallback(
-                        exercises=exercises,
-                        current_ex=selected_ex,
-                        available_equipment=available_equipment,
-                    )
-                    if fallback_ex:
-                        replanner_note = {
-                            "cooldown_cluster": cluster_key,
-                            "until_date": until_date.isoformat(),
-                            "fallback_exercise_id": get_ex_id(fallback_ex),
-                            "reason": "cluster_cooldown_fallback",
-                        }
-                        selected_ex = fallback_ex
-                    else:
-                        replanner_note = {
-                            "cooldown_cluster": cluster_key,
-                            "until_date": until_date.isoformat(),
-                            "reason": "cluster_cooldown_downshift",
-                            "multiplier": 0.9,
-                        }
-
             if selected_ex:
                 instance_counter += 1
                 instance_id = f"{block_id}_{instance_counter:02d}"
@@ -1777,10 +1660,6 @@ def resolve_session(
                     merged.update(prescription)
                 # B263: don't bleed device-specific prescription onto a non-device substitute
                 _strip_device_prescription(merged, prescription, ex_defaults, selected_ex)
-
-                if replanner_note and replanner_note.get("reason") == "cluster_cooldown_downshift":
-                    merged.setdefault("multiplier", 1.0)
-                    merged["multiplier"] = float(merged["multiplier"]) * 0.9
 
                 merged = _apply_load_override(
                     merged,
@@ -1810,8 +1689,6 @@ def resolve_session(
                         "block_id": block_id
                     }
                 }
-                if replanner_note:
-                    inst["replanner"] = replanner_note
                 if ex_attrs.get("intensity_pct") is not None:
                     sug = suggest_max_hang_load(user_state, merged, exercise_attrs=ex_attrs)
                     if sug:
