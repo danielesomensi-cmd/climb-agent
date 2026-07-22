@@ -57,6 +57,11 @@ EXTERNAL_LOAD_FALLBACK_FIXED_KG: dict[str, float] = {
     "wrist_curl": 3.0,                   # wrist flexion
     "reverse_wrist_curl": 2.0,           # wrist extension
     "pallof_press": 10.0,                # A229: cable/band anti-rotation cold-start
+    # C-LOADMODEL-MISTAG: forearm/wrist eccentrics are external_load (dumbbell
+    # required) but light — without a fixed seed the 0.15×BW default (~10 kg)
+    # is dangerously heavy for prehab.
+    "elbow_wrist_extensor_eccentric": 1.5,
+    "stick_pronation_supination_eccentric": 1.0,
 }
 
 # Similarity groups for cross-exercise load transfer (B90).
@@ -347,9 +352,15 @@ _CATALOG_CACHE: Optional[Dict[str, Dict[str, Any]]] = None
 def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
     """Load exercise catalog keyed by id (cached, ARCH-2).
 
-    Returns dict: exercise_id → {"load_model": str, "unilateral": bool}.
-    Used as fallback when exercise_instance doesn't carry load_model
-    (e.g. in test fixtures or legacy resolved data).
+    Returns dict: exercise_id → {"load_model", "unilateral", "pattern",
+    "loading_pin"}. Used as fallback when exercise_instance doesn't carry
+    load_model (e.g. in test fixtures or legacy resolved data).
+
+    ``loading_pin`` (C-LOADMODEL-MISTAG) marks genuine finger loading-pin work
+    (per-hand, independent L/R max) — the ONLY external_load exercises that must
+    route through ``_loading_pin_suggested``. Previously the per-hand path was
+    gated on ``unilateral`` alone, which mis-routed unilateral LEG accessories
+    (split_squat, and post-brief bulgarian/cossack) into the finger baseline.
     """
     global _CATALOG_CACHE
     if _CATALOG_CACHE is not None:
@@ -366,6 +377,9 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 "load_model": e.get("load_model"),
                 "unilateral": bool(e.get("unilateral")),
                 "pattern": e.get("pattern"),
+                "loading_pin": "loading_pin" in (
+                    (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
+                ),
             }
             for e in data.get("exercises", [])
         }
@@ -934,7 +948,10 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             suggested: Dict[str, Any] = dict(inst.get("suggested") or {})
 
             load_model = inst.get("load_model") or catalog_lm.get(ex_id)
-            is_unilateral = inst.get("unilateral") if "unilateral" in inst else (_load_catalog_cache().get(ex_id, {}).get("unilateral", False))
+            # C-LOADMODEL-MISTAG: per-hand load routing keys on genuine finger
+            # loading-pin equipment, NOT raw unilaterality (leg accessories are
+            # unilateral but load a single dumbbell, not independent L/R maxes).
+            is_loading_pin = _load_catalog_cache().get(ex_id, {}).get("loading_pin", False)
 
             # --- total_load: special-case exercises with unique logic ---
             if ex_id in ("max_hang_5s", "max_hang_7s"):
@@ -1061,7 +1078,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         suggested["grade_source"] = "working_loads"
 
             # External load exercises — data-driven from load_model (ARCH-2)
-            if load_model == "external_load" and not is_unilateral:
+            if load_model == "external_load" and not is_loading_pin:
                 # B288: widened freshness window for external_load. For
                 # prehab/accessory work the remembered load is "which dumbbell
                 # did I pick up", not a physiological test — a real observation
@@ -1138,7 +1155,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     )
 
             # Loading pin exercises (unilateral, external_load) — data-driven (ARCH-2)
-            if load_model == "external_load" and is_unilateral:
+            if load_model == "external_load" and is_loading_pin:
                 lp_sug = _loading_pin_suggested(user_state, ex_id, prescription, exercise_attrs=inst.get("attributes"))
                 suggested.update(lp_sug)
                 # Override from working_loads per-hand
@@ -1523,9 +1540,9 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         planned_target = (((planned_inst.get("suggested") or {}).get("suggested_boulder_target") or {}) if planned_inst else {})
         catalog_info = _load_catalog_cache().get(exercise_id, {})
         fb_load_model = (planned_inst.get("load_model") if planned_inst else None) or item.get("load_model") or catalog_info.get("load_model")
-        fb_unilateral = (planned_inst.get("unilateral") if planned_inst and "unilateral" in planned_inst else None)
-        if fb_unilateral is None:
-            fb_unilateral = item.get("unilateral") if "unilateral" in item else catalog_info.get("unilateral", False)
+        # C-LOADMODEL-MISTAG: per-hand write keys on loading-pin equipment, not
+        # raw unilaterality — mirror of the read-side is_loading_pin gate.
+        fb_loading_pin = catalog_info.get("loading_pin", False)
 
         if fb_load_model == "total_load":
             used_total = item.get("used_total_load_kg")
@@ -1571,7 +1588,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     max_hang_hard = 0
                     max_hang_easy = 0
 
-        elif fb_load_model == "external_load" and not fb_unilateral:
+        elif fb_load_model == "external_load" and not fb_loading_pin:
             # B288: `a or b` treated a legitimate 0kg as missing and dropped the
             # whole item — "I did it with no added weight" is a real answer
             # (band-only Pallof press, bodyweight variant of a loaded exercise),
@@ -1679,8 +1696,8 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         # "harder drills" instead of better movement (decision Daniele,
         # 2026-07-21). No branch here is intentional, not an oversight.
 
-        elif fb_load_model == "external_load" and fb_unilateral:
-            # Unilateral: feedback includes hand field
+        elif fb_load_model == "external_load" and fb_loading_pin:
+            # Loading-pin (finger, per-hand): feedback includes hand field
             hand = str(item.get("hand") or "right").lower()
             # B288: same falsy-0 bug as the bilateral branch above.
             used_load = _first_not_none(

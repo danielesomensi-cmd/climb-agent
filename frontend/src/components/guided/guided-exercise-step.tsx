@@ -157,6 +157,17 @@ export function GuidedExerciseStep({
   const isTestMeasurement = exercise.category === "test_measurement" && !!exercise.testField;
   const isUnilateral = exercise.unilateral === true;
 
+  // C-LOADMODEL-MISTAG: per-hand LOAD logging (independent L/R max, e.g. finger
+  // loading-pin) is signalled by per-hand suggested loads — NOT by raw
+  // unilaterality. Unilateral LEG accessories (bulgarian/cossack/split squat)
+  // are external_load but load a single dumbbell → single field + single
+  // progression, so they must NOT render the L/R hand inputs. Mirrors the
+  // backend is_loading_pin gate (which routes only loading-pin work per-hand).
+  const isPerHandLoad = isUnilateral && (
+    exercise.suggested.rightHand?.externalLoadKg != null ||
+    exercise.suggested.leftHand?.externalLoadKg != null
+  );
+
   // B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand)
   const isUnilateralTestMeasurement = isTestSession && isUnilateral && !!exercise.testField && !!exercise.testUnit;
 
@@ -367,8 +378,9 @@ export function GuidedExerciseStep({
       onDone(feedback, usedExternal, undefined, usedTotal);
       return;
     }
-    // Unilateral exercises: pass per-hand loads
-    if (isUnilateral) {
+    // Loading-pin (finger, independent L/R): pass per-hand loads. Unilateral
+    // leg accessories fall through to the single-load path below (C-LOADMODEL-MISTAG).
+    if (isPerHandLoad) {
       const right = loadInputRight ? parseFloat(loadInputRight) : undefined;
       const left = loadInputLeft ? parseFloat(loadInputLeft) : undefined;
       onDone(feedback, undefined, undefined, undefined, undefined, { right, left });
@@ -617,8 +629,8 @@ export function GuidedExerciseStep({
           </div>
         ) : (
           <>
-            {/* Suggested load/grade — unilateral (per-hand) */}
-            {isUnilateral && (exercise.suggested.rightHand?.externalLoadKg != null || exercise.suggested.leftHand?.externalLoadKg != null) && (
+            {/* Suggested load/grade — per-hand (finger loading-pin) */}
+            {isPerHandLoad && (exercise.suggested.rightHand?.externalLoadKg != null || exercise.suggested.leftHand?.externalLoadKg != null) && (
               <div className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 p-3">
                 <Lightbulb className="size-4 text-primary mt-0.5 shrink-0" />
                 <div className="text-sm space-y-0.5 w-full">
@@ -640,8 +652,8 @@ export function GuidedExerciseStep({
               </div>
             )}
 
-            {/* Suggested load/grade — bilateral */}
-            {!isUnilateral && (exercise.suggested.externalLoadKg != null ||
+            {/* Suggested load/grade — single (bilateral + unilateral leg accessories) */}
+            {!isPerHandLoad && (exercise.suggested.externalLoadKg != null ||
               exercise.suggested.totalLoadKg != null ||
               exercise.suggested.grade != null) && (
               <div className="flex items-start gap-2 rounded-md bg-primary/5 border border-primary/20 p-3">
@@ -950,8 +962,8 @@ export function GuidedExerciseStep({
               </div>
             )}
 
-            {/* Editable load fields — unilateral (per-hand), not shown for unilateral tests or bodyweight exercises */}
-            {isUnilateral && !isTestMeasurement && !isUnilateralTest && exercise.loadModel !== "bodyweight_only" && (
+            {/* Editable load fields — per-hand (finger loading-pin), not shown for unilateral tests or bodyweight exercises */}
+            {isPerHandLoad && !isTestMeasurement && !isUnilateralTest && exercise.loadModel !== "bodyweight_only" && (
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">
                   Actual load used (kg)
@@ -987,8 +999,8 @@ export function GuidedExerciseStep({
               </div>
             )}
 
-            {/* Editable load field — bilateral (non-test sessions) */}
-            {hasLoadField && !isUnilateral && (
+            {/* Editable load field — single (bilateral + unilateral leg accessories, non-test) */}
+            {hasLoadField && !isPerHandLoad && (
               <div className="space-y-1.5">
                 <Label htmlFor="load-input" className="text-xs text-muted-foreground">
                   {exercise.allowLoadLogging ? "Weight used (kg) — optional" : "Actual load used (kg)"}
