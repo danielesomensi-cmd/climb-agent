@@ -149,13 +149,37 @@ def handle_adhoc_compose(
     session = compose_adhoc_session(intent, state, catalog)
 
     storage.append_coach_message(user_id, "user", message)
+    summary = build_adhoc_summary(session, intent)
+    storage.append_coach_message(user_id, "assistant", summary)
+
+    return {"adhoc": True, "session": session, "summary": summary}
+
+
+def build_adhoc_summary(
+    session: Dict[str, Any], intent: Dict[str, Any]
+) -> str:
+    """A243/A252 — the assistant's chat reply for a composed adhoc session.
+
+    Pure + deterministic (no I/O) so it is unit-testable. When the user asked
+    for MULTIPLE separate sessions (A252 / audit A1), the builder made only the
+    sooner one — so we say so explicitly and invite them to ask again for the
+    rest, rather than silently dropping the second session.
+    """
     summary = (
         f"I built you a session — {session['name']} "
         f"(~{session['estimated_duration_minutes']} min). {session['explanation']}"
     )
-    storage.append_coach_message(user_id, "assistant", summary)
-
-    return {"adhoc": True, "session": session, "summary": summary}
+    if intent.get("multi_session_requested"):
+        hint = (intent.get("deferred_session_hint") or "").strip()
+        summary += (
+            " Heads up: you asked for more than one session — I build one at a "
+            "time, so this is just the first."
+        )
+        if hint:
+            summary += f" For the other one ({hint}), message me again and I'll prepare it."
+        else:
+            summary += " Message me again for the other one and I'll prepare it."
+    return summary
 
 
 def handle_chat(

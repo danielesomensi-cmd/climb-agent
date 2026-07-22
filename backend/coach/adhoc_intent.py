@@ -11,7 +11,12 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from backend.coach import llm_client
-from backend.engine.adhoc_builder import ADHOC_ENERGY, ADHOC_EQUIPMENT_SETS, ADHOC_FOCUS
+from backend.engine.adhoc_builder import (
+    ADHOC_BODY_PARTS,
+    ADHOC_ENERGY,
+    ADHOC_EQUIPMENT_SETS,
+    ADHOC_FOCUS,
+)
 
 # B281: how many recent chat messages give the extractor context. Without this,
 # a follow-up like "riprovi a crearla?" loses everything the user specified in
@@ -29,8 +34,23 @@ _SYSTEM = (
     "'crearla tu?' refers to. A named climbing/bouldering gym counts as "
     "equipment_set=gym AND its name goes in gym_name verbatim (e.g. 'al Bkl' → "
     "gym_name='Bkl') — this is critical: it selects which equipment is "
-    "available. If the user asks for two focuses (e.g. 'core e tecnica'), put "
-    "the dominant one in focus and the other in secondary_focus. Use sensible "
+    "available. "
+    "MUSCLE-LEVEL REQUESTS: when the user names specific muscles/body-parts "
+    "(chest, triceps, biceps, back, lats, legs, quads, glutes, hips, calves, "
+    "shoulders, delts, abs, core, forearms, fingers), list them in body_parts "
+    "using these exact ids: chest, triceps, biceps, back_pulling (back/lats), "
+    "legs, glutes, hips, shoulders, core (abs/core), forearms, fingers. "
+    "body_parts is MORE specific than focus: prefer it whenever muscles are "
+    "named, and leave focus at its default. "
+    "TWO FOCUSES in ONE session (e.g. 'core e tecnica' at the same place/time): "
+    "put the dominant one in focus and the other in secondary_focus. "
+    "MULTIPLE SEPARATE SESSIONS (e.g. 'one at lunch at work AND another tonight "
+    "at home'): the builder makes ONE session per request. Extract the slots for "
+    "the session happening SOONER (earlier in the day, or first mentioned) into "
+    "the main slots, set multi_session_requested=true, and put a short plain "
+    "description of the OTHER session(s) NOT built in deferred_session_hint "
+    "(e.g. 'tonight at home: core and biceps'). "
+    "Use sensible "
     "defaults only when truly unstated (equipment_set=home, "
     "focus=general_strength, minutes=45, energy=medium). Never guess exercises "
     "or loads — only these slots."
@@ -60,6 +80,19 @@ _TOOL: Dict[str, Any] = {
                 "type": "string",
                 "enum": list(ADHOC_FOCUS),
                 "description": "Second focus when the user asks for two (e.g. 'core e tecnica' → focus=technique, secondary_focus=core). Omit otherwise.",
+            },
+            "body_parts": {
+                "type": "array",
+                "items": {"type": "string", "enum": list(ADHOC_BODY_PARTS)},
+                "description": "Specific muscles/body-parts named by the user (e.g. 'chest + abs + triceps' → ['chest','core','triceps']). More specific than focus — use whenever muscles are named. Omit when the user gave only a coarse focus.",
+            },
+            "multi_session_requested": {
+                "type": "boolean",
+                "description": "True when the user asked for TWO OR MORE separate sessions (different place/time). The builder makes only the SOONER one; the rest go in deferred_session_hint.",
+            },
+            "deferred_session_hint": {
+                "type": "string",
+                "description": "Short plain description of the session(s) NOT built when multi_session_requested=true (e.g. 'tonight at home: core and biceps'). Omit otherwise.",
             },
             "gym_name": {
                 "type": "string",
@@ -108,8 +141,10 @@ def build_extraction_content(
 def extract_intent(
     message: str, history: Optional[List[Dict[str, str]]] = None
 ) -> Optional[Dict[str, Any]]:
-    """Return ``{equipment_set, focus, minutes, energy}`` or None if the message
-    is not an adhoc-session request. Raises the same errors as llm_client.extract.
+    """Return the intent slots ``{equipment_set, focus, secondary_focus,
+    body_parts, gym_name, minutes, energy, multi_session_requested,
+    deferred_session_hint}`` or None if the message is not an adhoc-session
+    request. Raises the same errors as llm_client.extract.
     """
     content = build_extraction_content(message, history)
     slots = llm_client.extract(_SYSTEM, content, _TOOL)
@@ -119,7 +154,11 @@ def extract_intent(
         "equipment_set": slots.get("equipment_set"),
         "focus": slots.get("focus"),
         "secondary_focus": slots.get("secondary_focus"),
+        "body_parts": slots.get("body_parts") or [],
         "gym_name": slots.get("gym_name"),
         "minutes": slots.get("minutes"),
         "energy": slots.get("energy"),
+        # A252: consumed by the coach response layer (service), not the builder.
+        "multi_session_requested": bool(slots.get("multi_session_requested")),
+        "deferred_session_hint": slots.get("deferred_session_hint"),
     }

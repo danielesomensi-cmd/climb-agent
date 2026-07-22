@@ -28,8 +28,11 @@ from backend.engine.adhoc_prescription import (
     propose_exercise_prescription,
 )
 from backend.engine.body_part_picker import (
+    BODY_PART_CATEGORIES,
+    BODY_PART_ORDER,
     _exercise_fits_equipment,
     _recent_exercise_ids,
+    build_body_part_index,
     resolve_equipment_mode,
 )
 from backend.engine.custom_session import (
@@ -54,6 +57,13 @@ FOCUS_DOMAINS: Dict[str, List[str]] = {
 ADHOC_FOCUS = sorted(FOCUS_DOMAINS.keys())
 ADHOC_EQUIPMENT_SETS = ("home", "gym")
 ADHOC_ENERGY = ("low", "medium", "high")
+
+# A252: muscle-level targeting axis. Reuses the existing closed body-part
+# taxonomy (body_part_picker) instead of inventing a parallel one — so "chest +
+# abs + triceps" composes chest/abs/triceps work, not the coarse
+# general_strength soup (squat/row). The LLM emits a subset of these ids; the
+# builder constrains the main block to their catalog membership.
+ADHOC_BODY_PARTS = tuple(BODY_PART_ORDER)
 
 # Bounds — the composer never trusts an out-of-range minutes value.
 MIN_MINUTES = 20
@@ -254,9 +264,12 @@ def compose_adhoc_session(
 ) -> Dict[str, Any]:
     """Compose an adhoc custom_session preview (NOT persisted, no id).
 
-    ``intent``: {equipment_set, focus, minutes, energy}. ``catalog``: id→exercise
-    dict (as ``_load_exercises_catalog`` returns). Returns a custom_session-
-    shaped dict plus ``adhoc: True``, ``explanation``, and display metadata.
+    ``intent``: {equipment_set, focus, secondary_focus?, body_parts?, minutes,
+    energy}. When ``body_parts`` (a subset of the closed body-part taxonomy) is
+    present it drives the main block and supersedes the coarse focus path (A252).
+    ``catalog``: id→exercise dict (as ``_load_exercises_catalog`` returns).
+    Returns a custom_session-shaped dict plus ``adhoc: True``, ``explanation``,
+    and display metadata.
     """
     today = today or _date.today().isoformat()
     catalog_by_id = {
@@ -272,6 +285,18 @@ def compose_adhoc_session(
     secondary_focus = intent.get("secondary_focus")
     if secondary_focus not in FOCUS_DOMAINS or secondary_focus == focus:
         secondary_focus = None
+    # A252: muscle-level targeting. When present it drives the main block and
+    # supersedes the coarse focus/secondary_focus path (a muscle request is more
+    # specific than "general_strength"). Validated against the closed taxonomy,
+    # de-duplicated, order preserved.
+    raw_parts = intent.get("body_parts") or []
+    if isinstance(raw_parts, str):
+        raw_parts = [raw_parts]
+    body_parts: List[str] = []
+    for p in raw_parts:
+        if p in BODY_PART_ORDER and p not in body_parts:
+            body_parts.append(p)
+    use_body_parts = bool(body_parts)
     energy = intent.get("energy") if intent.get("energy") in ADHOC_ENERGY else "medium"
     try:
         minutes = int(intent.get("minutes") or 45)
@@ -331,54 +356,112 @@ def compose_adhoc_session(
             [_to_custom_exercise(e, catalog_by_id, user_state, phase, energy, today) for e in exs]
         )
 
-    # 2a. B284: secondary-focus block reserved FIRST — "core e tecnica" keeps a
-    # guaranteed 2-3 exercise block for the second ask instead of losing it.
     secondary_picks: List[Dict[str, Any]] = []
-    if secondary_focus:
-        sec_counts: Dict[str, int] = {}
-        for c in _pool(secondary_focus):
-            if len(secondary_picks) >= 3:
-                break
-            pat = _pattern_of(c)
-            if sec_counts.get(pat, 0) >= MAX_PER_PATTERN:
-                continue
-            secondary_picks.append(c)
-            used.add(str(c.get("id")))
-            sec_counts[pat] = sec_counts.get(pat, 0) + 1
-    reserved_minutes = _estimate(secondary_picks) if secondary_picks else 0
-    max_primary_total = MAX_EXERCISES - len(secondary_picks)
-
-    # 2b. Primary focus blocks — as many as the remaining budget allows (min 1),
-    # with movement-pattern diversity (B281: max MAX_PER_PATTERN per pattern).
-    mains = _pool(focus)
+    reserved_minutes = 0
+    pattern_counts: Dict[str, int] = {}
+    main_picks: List[Dict[str, Any]] = []
+    parts_with_picks: set = set()  # A252: which requested body-parts contributed
 
     def _append_within_budget(candidate: Dict[str, Any]) -> bool:
         return _estimate(chosen + [candidate]) + reserved_minutes <= minutes
 
-    pattern_counts: Dict[str, int] = {}
-    main_picks: List[Dict[str, Any]] = []
-    for m in mains:
-        if len(chosen) >= max_primary_total:
-            break
-        mid = str(m.get("id"))
-        if mid in used:
-            continue
-        pat = _pattern_of(m)
-        if pattern_counts.get(pat, 0) >= MAX_PER_PATTERN:
-            continue
-        if _append_within_budget(m):
-            chosen.append(m)
-            main_picks.append(m)
-            used.add(mid)
-            pattern_counts[pat] = pattern_counts.get(pat, 0) + 1
-        # keep scanning — a later, shorter exercise may still fit
-    # Guarantee at least one main even if the budget is tiny.
-    if not main_picks and mains:
-        first_main = next((m for m in mains if str(m.get("id")) not in used), None)
-        if first_main:
-            chosen.append(first_main)
-            main_picks.append(first_main)
-            used.add(str(first_main.get("id")))
+    if use_body_parts:
+        # A252: muscle-level main block. Constrain to the requested body-parts'
+        # catalog membership (reusing body_part_picker's classification) and
+        # round-robin across parts so each requested muscle gets representation —
+        # "chest + abs + triceps" yields chest AND abs AND triceps, never three
+        # chest picks nor unrelated squat/row padding. Same budget + pattern caps.
+        index = build_body_part_index(list(catalog_by_id.values()))
+
+        def _bodypart_candidates(part: str) -> List[Dict[str, Any]]:
+            pool = [
+                catalog_by_id[eid]
+                for eid in index.get(part, set())
+                if eid in catalog_by_id
+            ]
+            pool = [
+                e for e in pool
+                if str(e.get("id")) not in used
+                and _is_active(e) and _is_spine_safe(e)
+                and _exercise_fits_equipment(e, equipment)
+                and not ({"warmup", "cooldown", "test"} & set(_roles_of(e)))
+            ]
+            pool.sort(key=lambda e: _rank_key(e, phase, recent))
+            return pool
+
+        part_pools = {p: _bodypart_candidates(p) for p in body_parts}
+        # No MAX_PER_PATTERN cap here (unlike the coarse-focus path): a
+        # muscle-isolation ask is inherently single-pattern — every triceps move
+        # is tagged "push", every biceps move "elbow_flexion" — so the catalog's
+        # coarse pattern field can't distinguish isolation variants, and a
+        # pattern cap would starve a dedicated triceps/biceps session down to 2
+        # moves. Monotony is what the user asked for. `used` prevents exact
+        # dupes; the round-robin keeps requested muscles balanced; MAX_EXERCISES
+        # and the time budget bound the total.
+        progressed = True
+        while progressed and len(chosen) < MAX_EXERCISES:
+            progressed = False
+            for p in body_parts:
+                if len(chosen) >= MAX_EXERCISES:
+                    break
+                pool = part_pools[p]
+                while pool:
+                    cand = pool.pop(0)
+                    cid = str(cand.get("id"))
+                    if cid in used:
+                        continue
+                    # Guarantee at least one main even on a tiny budget; after
+                    # that, respect the time budget. Never pad unrelated muscles.
+                    if main_picks and not _append_within_budget(cand):
+                        continue
+                    chosen.append(cand)
+                    main_picks.append(cand)
+                    used.add(cid)
+                    parts_with_picks.add(p)
+                    progressed = True
+                    break
+    else:
+        # 2a. B284: secondary-focus block reserved FIRST — "core e tecnica" keeps
+        # a guaranteed 2-3 exercise block for the second ask instead of losing it.
+        if secondary_focus:
+            sec_counts: Dict[str, int] = {}
+            for c in _pool(secondary_focus):
+                if len(secondary_picks) >= 3:
+                    break
+                pat = _pattern_of(c)
+                if sec_counts.get(pat, 0) >= MAX_PER_PATTERN:
+                    continue
+                secondary_picks.append(c)
+                used.add(str(c.get("id")))
+                sec_counts[pat] = sec_counts.get(pat, 0) + 1
+        reserved_minutes = _estimate(secondary_picks) if secondary_picks else 0
+        max_primary_total = MAX_EXERCISES - len(secondary_picks)
+
+        # 2b. Primary focus blocks — as many as the remaining budget allows
+        # (min 1), with movement-pattern diversity (B281: max MAX_PER_PATTERN).
+        mains = _pool(focus)
+        for m in mains:
+            if len(chosen) >= max_primary_total:
+                break
+            mid = str(m.get("id"))
+            if mid in used:
+                continue
+            pat = _pattern_of(m)
+            if pattern_counts.get(pat, 0) >= MAX_PER_PATTERN:
+                continue
+            if _append_within_budget(m):
+                chosen.append(m)
+                main_picks.append(m)
+                used.add(mid)
+                pattern_counts[pat] = pattern_counts.get(pat, 0) + 1
+            # keep scanning — a later, shorter exercise may still fit
+        # Guarantee at least one main even if the budget is tiny.
+        if not main_picks and mains:
+            first_main = next((m for m in mains if str(m.get("id")) not in used), None)
+            if first_main:
+                chosen.append(first_main)
+                main_picks.append(first_main)
+                used.add(str(first_main.get("id")))
 
     # Order the main block deterministically: compound strength first, then
     # accessories, then drills — instead of the alphabetical soup (B281).
@@ -392,11 +475,14 @@ def compose_adhoc_session(
     chosen = warm_part + main_picks + secondary_picks
 
     # 3. Core finisher (1) — spine-safe core, distinct from mains. Skipped when
-    # core already exists as primary or secondary block.
+    # core already exists as primary/secondary block, AND skipped entirely in
+    # muscle-level mode (A252) — appending core to a "chest + triceps" request
+    # would be padding an unrequested muscle group.
     finishers = _candidates(catalog_by_id, categories=["core"], equipment=equipment, exclude=used)
     finishers.sort(key=lambda e: _rank_key(e, phase, recent))
     if (
-        focus != "core"
+        not use_body_parts
+        and focus != "core"
         and secondary_focus != "core"
         and finishers
         and len(chosen) < MAX_EXERCISES
@@ -413,12 +499,19 @@ def compose_adhoc_session(
 
     harmonization = _harmonization_note(user_state, today)
     phase_label = (phase or "off-plan").replace("_", " ")
-    focus_label = focus.replace("_", " ")
     gym_label = str(gym.get("name")) if gym and gym.get("name") else None
     place_label = gym_label or equipment_set
-    combo_label = (
-        f"{focus_label} + {secondary_focus.replace('_', ' ')}" if secondary_focus else focus_label
-    )
+    if use_body_parts:
+        # A252: label off the requested muscles, using the taxonomy's display
+        # labels ("Back / Pulling", "Core", …).
+        combo_label = " + ".join(BODY_PART_CATEGORIES[p]["label"] for p in body_parts)
+        tags = [*body_parts, equipment_set]
+    else:
+        focus_label = focus.replace("_", " ")
+        combo_label = (
+            f"{focus_label} + {secondary_focus.replace('_', ' ')}" if secondary_focus else focus_label
+        )
+        tags = [t for t in [focus, secondary_focus, equipment_set] if t]
     explanation_parts = [
         f"A ~{minutes}-min {combo_label} session for {place_label}",
         f"tuned to your {phase_label} phase" if phase else "off-plan support work",
@@ -426,13 +519,22 @@ def compose_adhoc_session(
     explanation = ", ".join(explanation_parts) + "."
     if gym_label:
         explanation += f" Only exercises doable with {gym_label}'s equipment."
+    # A252: be honest when a requested muscle had no equipment-compatible work.
+    if use_body_parts:
+        missing = [p for p in body_parts if p not in parts_with_picks]
+        if missing:
+            miss_labels = ", ".join(BODY_PART_CATEGORIES[p]["label"] for p in missing)
+            explanation += (
+                f" No equipment-compatible {miss_labels} exercises were available, "
+                "so that was skipped."
+            )
     if harmonization:
         explanation += " " + harmonization
 
     return {
         "adhoc": True,
         "name": f"Adhoc {combo_label} @ {place_label}" if gym_label else f"Adhoc {combo_label} ({equipment_set})",
-        "tags": [t for t in [focus, secondary_focus, equipment_set] if t],
+        "tags": tags,
         "exercises": exercises,
         "estimated_load_score": compute_custom_session_load(exercise_ids, catalog_by_id),
         "estimated_duration_minutes": estimate_custom_session_duration(exercises),
@@ -444,6 +546,7 @@ def compose_adhoc_session(
             "equipment_set": equipment_set,
             "focus": focus,
             "secondary_focus": secondary_focus,
+            "body_parts": body_parts,
             "gym_name": gym_label,
             "minutes": minutes,
             "energy": energy,
