@@ -219,6 +219,8 @@ There's no way to dismiss the card without choosing: each option tells the engin
 
 If you use a **loading pin** instead of a hangboard, the system automatically substitutes the finger tests with loading pin variants (LP Max 5s and LP Repeater).
 
+If you only have a couple of training days a week, a test week can run out of room — a test needs to respect the same rest spacing as your hard sessions. When that happens you'll see a **"Couldn't schedule a test this week"** note on **Week**: free up an available day or move a session, then use **Replan** to fit the test in.
+
 **Why they matter**: Without fresh test data, the system keeps using your old baselines. Your loads won't progress accurately, and your plan won't adapt to your real improvements. Tests are not optional extras — they're the system recalibrating itself.
 
 **After a test session**: Your profile radar updates, working loads recalculate, and the remaining macrocycle adjusts its emphasis based on your new strengths and weaknesses.
