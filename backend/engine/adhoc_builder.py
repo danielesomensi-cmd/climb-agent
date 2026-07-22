@@ -24,6 +24,7 @@ from datetime import date as _date
 from typing import Any, Dict, List, Optional, Sequence
 
 from backend.engine.adhoc_prescription import (
+    anchor_adhoc_load,
     effort_band_for_phase,
     propose_exercise_prescription,
 )
@@ -195,7 +196,14 @@ def _to_custom_exercise(
         sets = max(1, sets - 1)
     elif energy == "high" and not is_warmup:
         sets = min(6, sets + 1)
-    load = p.get("load_kg")
+    load_val = float(load) if isinstance((load := p.get("load_kg")), (int, float)) else 0
+    # A253: no remembered load → try a GENUINE max-derived anchor (scoped to
+    # fingers/hangboard + weighted-pull; read-only). Crude fallbacks stay empty
+    # (B298). Memory always wins when present.
+    if not load_val:
+        anchored = anchor_adhoc_load(ex, user_state, phase)
+        if anchored:
+            load_val = anchored
     return {
         "exercise_id": eid,
         # Display name for the coach card; dropped by CustomSessionExerciseEntry
@@ -206,7 +214,7 @@ def _to_custom_exercise(
         "work_seconds": _int_or_none(p.get("work_seconds")),
         "rest_between_sets_seconds": _int_or_none(p.get("rest_between_sets_seconds")),
         "rest_between_reps_seconds": _int_or_none(p.get("rest_between_reps_seconds")),
-        "load_kg": float(load) if isinstance(load, (int, float)) else 0,
+        "load_kg": load_val,
         # B298: carry load_model so the runner knows the exercise is loadable and
         # always renders an (initially empty) kg field — a loadable exercise the
         # user has never logged has load_kg=0 and no suggested load, and the card
