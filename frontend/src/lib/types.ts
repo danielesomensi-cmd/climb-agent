@@ -149,9 +149,18 @@ export interface DayPlan {
   outdoor_load_score?: number;
 }
 
+export interface SkippedTest {
+  test_id: string;
+  axis: string | null;
+  reason: string;  // "no_placement_slot" (B297) | phase/freshness gating reasons
+  required?: boolean;
+  weeks_since_last?: number | null;
+}
+
 export interface WeekPlan {
   weeks: Array<{ days: DayPlan[] }>;
   profile_snapshot?: Record<string, unknown>;
+  skipped_tests?: SkippedTest[];
   weekly_load_summary?: {
     planned_load?: number;
     total_load?: number;  // deprecated — use planned_load

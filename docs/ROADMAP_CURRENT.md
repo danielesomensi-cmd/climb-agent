@@ -221,7 +221,7 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 | F6 | **`macrocycle.phases[].weeks` is `null`** — consumers iterating `phases[].weeks` see `null`; sum via `start_week` deltas works. | LOW | P3 | D+B | XS | Audit consumers; drop the field from schema if all compute from `start_week` deltas, else populate at generation. |
 | F7 | **`goal.deadline` empty while `total_weeks=12`** — onboarding writes `deadline=""` when deadline is derived from `total_weeks`. | LOW | P3 | B | XS | Cosmetic. Compute ISO date from `total_weeks + start_date`, or drop the field. |
 | F8 | **`assessment.tests.last_test_date = 2026-04-16`** (3 days before macrocycle start) — writer not traced in D211. | COSMETIC | P3 | D | XS | Grep writer site; likely legacy path in `progression_v1.py`. |
-| F9 | **Pass 3 test placement requires non-empty day** (`planner_v2.py:1360`: `if not day_sessions[offset]: continue`). Tests can only replace existing sessions — users with few available days silently lose tests. | MEDIUM | P2 | B | S | Loosen empty-day rule for test sessions, or order `required=True` first across axes. |
+| F9 | **Pass 3 test placement requires non-empty day** — ✅ chiuso da [[B297]] (branch `brief/B297-f9-test-placement`, **in attesa di verifica preview Vercel**). Two-pass: pass 1 replace-only invariato (settimane servibili → piano byte-identico), pass 2 piazza i test `required` non piazzati su giorni vuoti disponibili (spacing/cap/outdoor/pretrip rispettati; volume +1 by design), non piazzati → `skipped_tests` con `reason=no_placement_slot`. Frontend: card ambra dismissibile su `/week`. | MEDIUM | P2 | B | S | ✅ B297 |
 
 ---
 
