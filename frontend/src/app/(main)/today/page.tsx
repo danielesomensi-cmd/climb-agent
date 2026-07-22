@@ -27,7 +27,7 @@ import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
-import { applyEvents, postFeedback, applyOverride, quickAddSession, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
+import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
 import { useFreeSessionHistory, useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
@@ -700,6 +700,8 @@ function TodayContent() {
       if (result.warnings?.length > 0) {
         setError(result.warnings.join("; "));
       }
+      const note = describeQuickAddAdjustments(result.adjustments);
+      if (note) toast("Session adjusted", { description: note, duration: 8000 });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to add session";
       if (msg.includes("already occupied")) {
