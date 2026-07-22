@@ -900,7 +900,13 @@ export function SessionCard({
               </Badge>
             )}
             {!isDone && !isSkipped && (() => {
-              const targetMin = (effectiveResolved as Record<string, Record<string, unknown>> | undefined)?.session?.target_duration_min as number | undefined;
+              // B298: custom/adhoc sessions carry their estimate at the top level
+              // (`target_duration_min`), not under resolved.session — read that as
+              // a fallback so the custom card shows the duration badge too instead
+              // of looking impoverished next to planned cards.
+              const targetMin =
+                ((effectiveResolved as Record<string, Record<string, unknown>> | undefined)?.session?.target_duration_min as number | undefined)
+                ?? (session.is_custom ? session.target_duration_min : undefined);
               if (!targetMin) return null;
               return (
                 <Badge variant="outline" className="text-[10px] text-slate-400">

@@ -38,12 +38,13 @@ export interface FeedbackDialogExercise {
  */
 export function hasLoadInput(ex: FeedbackDialogExercise): boolean {
   if (ex.unilateral) return false;
-  if (ex.loadModel === "bodyweight_only") return !!ex.allowLoadLogging;
-  return (
-    ex.suggestedExternalLoadKg != null ||
-    ex.suggestedTotalLoadKg != null ||
-    !!ex.allowLoadLogging
-  );
+  // B298: mirror guided-exercise-step's hasLoadField — a kg-loadable exercise
+  // (external_load / total_load) always takes a load, even before any is
+  // suggested, so a never-logged loadable exercise is loggable (and the two
+  // surfaces stay in agreement). bodyweight/band stay opt-in via allowLoadLogging.
+  const isKgLoadable =
+    ex.loadModel === "external_load" || ex.loadModel === "total_load";
+  return isKgLoadable || !!ex.allowLoadLogging;
 }
 
 /**

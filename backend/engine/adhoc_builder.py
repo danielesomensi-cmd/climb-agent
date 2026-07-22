@@ -207,6 +207,13 @@ def _to_custom_exercise(
         "rest_between_sets_seconds": _int_or_none(p.get("rest_between_sets_seconds")),
         "rest_between_reps_seconds": _int_or_none(p.get("rest_between_reps_seconds")),
         "load_kg": float(load) if isinstance(load, (int, float)) else 0,
+        # B298: carry load_model so the runner knows the exercise is loadable and
+        # always renders an (initially empty) kg field — a loadable exercise the
+        # user has never logged has load_kg=0 and no suggested load, and the card
+        # must NOT infer "loadable" from a non-zero value. (createCustomSession's
+        # _build_session re-derives this from the catalog on persist; emitting it
+        # here keeps the pre-persist preview self-consistent too.)
+        "load_model": ex.get("load_model"),
         "notes": "",
     }
 

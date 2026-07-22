@@ -175,12 +175,20 @@ export function GuidedExerciseStep({
   // Test session total_load exercises get two mandatory fields
   const isTestLoadExercise = !isTestMeasurement && !isRepeaterTest && !isLpRepeaterTest && !isUnilateralTest && isTestSession && exercise.loadModel === "total_load";
 
-  // Determine which kind of editable field to show
+  // Determine which kind of editable field to show.
+  //
+  // B298: a kg-loadable exercise (external_load / total_load) ALWAYS gets the
+  // field, even with no suggested load — a loadable exercise the user has never
+  // logged has no suggestion yet, and gating on one hid the field entirely
+  // (adhoc Back Squat rendered with no way to log a weight at all). The field
+  // just starts empty in that case. Loadability comes from load_model, never
+  // from a non-zero resolved value.
+  const isKgLoadable =
+    exercise.loadModel === "external_load" || exercise.loadModel === "total_load";
   const hasLoadField =
     !isTestLoadExercise &&
     !isTestMeasurement &&
-    ((exercise.loadModel !== "bodyweight_only" &&
-      (exercise.suggested.externalLoadKg != null || exercise.suggested.totalLoadKg != null)) ||
+    (isKgLoadable ||
       // A228: catalog opt-in (e.g. Pallof Press) — record-only optional weight,
       // no suggested load and no engine consumption (D249).
       !!exercise.allowLoadLogging);
