@@ -265,7 +265,11 @@ Triggers on the last week of `base` or `strength_power` phase, or when `inject_t
 
 **Freshness filter (B128):** Tests completed within `TEST_FRESHNESS_DAYS` = 42 days are skipped.
 
-Tests **replace** existing sessions (prefer complementary targets, fall back to last session on the day). Tests bypass the phase intensity cap.
+Tests bypass the phase intensity cap. Placement is **two-pass** (B297 / D211-F9):
+- **Pass 1 — replace:** a test replaces an existing session (prefer complementary targets, fall back to last session on the day). This is the historical path, unchanged.
+- **Pass 2 — empty-day fill (`required` only):** a `required` test that Pass 1 could not place may occupy an empty available day (adds a session, +1 weekly volume), still honoring finger/hard spacing, the hard cap, and outdoor/pre-trip exclusions. Optional tests stay replace-only.
+
+Any test that still cannot be placed is recorded in `week_plan.skipped_tests` with `reason="no_placement_slot"` (plus `required`), instead of being silently dropped. The `/week` view surfaces the `required` ones so the user can free up a day.
 
 ### Availability normalization
 
