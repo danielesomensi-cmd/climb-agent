@@ -367,11 +367,18 @@ def apply_day_add(
     location: str,
     phase_id: Optional[str] = None,
     gym_id: Optional[str] = None,
+    force: bool = False,
     prev_days: Optional[Sequence[Dict[str, Any]]] = None,
 ) -> tuple:
     """Append a session to an existing day (quick-add).
 
     Returns ``(updated_plan, warnings, adjustments)``.
+
+    A254: when *force* is true the added session is pinned — the reconcile
+    enforcers skip downshifting THIS session (the user keeps the hard session at
+    their own risk). Everything else the user did not force still reconciles
+    normally, and a forced finger session still anchors the following days'
+    spacing (the injury clock runs whether or not the session was forced).
 
     B287/R-5: this path used to skip ``_reconcile`` entirely — the 48h finger
     gap and the weekly hard cap were reported as warnings but never enforced, so
@@ -413,9 +420,11 @@ def apply_day_add(
         "phase_id": effective_phase,
         "intensity": meta["intensity"],
         "estimated_load_score": _INTENSITY_TO_LOAD.get(meta["intensity"], 40),
-        "constraints_applied": ["quick_add"],
+        "constraints_applied": ["quick_add"] + (["user_forced"] if force else []),
         "tags": {"hard": meta["hard"], "finger": meta["finger"], **({"test": True} if meta.get("test") else {})},
         "explain": ["user quick-add session", f"added_session={session_id}"],
+        # A254: persisted so later reconciles (e.g. a second quick-add) keep the pin.
+        **({"forced": True} if force else {}),
     }
 
     target_day.setdefault("sessions", []).append(new_session)
@@ -837,6 +846,11 @@ def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
                 # day — including one the user had already trained.
                 if session.get("status") in ("done", "skipped"):
                     continue
+                # A254: a user-forced hard session stays past the cap, at their
+                # own risk — but it still counts as a hard day above, so the cap
+                # is genuinely honoured for everything else.
+                if session.get("forced"):
+                    continue
                 if tags.get("hard"):
                     recovery_meta = _meta_for("regeneration_easy")
                     _previous_id = session.get("session_id")
@@ -903,7 +917,12 @@ def _enforce_no_consecutive_finger(
         # ...but only sessions that are neither done nor skipped may be REWRITTEN.
         # The inner loop used to downshift every finger session on the day,
         # completed ones included, silently rewriting immutable history.
-        downshiftable = [s for s in finger_sessions if s.get("status") not in ("done", "skipped")]
+        # A254: a user-forced session is likewise exempt from rewriting (kept at
+        # the user's own risk) — but it still constrains the following days below.
+        downshiftable = [
+            s for s in finger_sessions
+            if s.get("status") not in ("done", "skipped") and not s.get("forced")
+        ]
 
         violates = bool(constrains) and last_finger_date is not None \
             and (cur - last_finger_date).days <= _recovery_gap(plan)
@@ -925,8 +944,10 @@ def _enforce_no_consecutive_finger(
                     _adjustment(day.get("date", ""), session, _previous_id, "finger_spacing_downshift")
                 )
             # The day stops being an anchor only if nothing finger-ish survived:
-            # an immutable done session on this day still constrains what follows.
-            if not any(s.get("status") == "done" for s in constrains):
+            # an immutable done session — or an A254-forced one — on this day
+            # still constrains what follows (the tendons don't care that the hard
+            # session was forced).
+            if not any(s.get("status") == "done" or s.get("forced") for s in constrains):
                 continue
 
         if constrains:

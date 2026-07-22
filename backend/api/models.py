@@ -126,6 +126,9 @@ class QuickAddRequest(BaseModel):
     phase_id: Optional[str] = None
     week_plan: Optional[Dict[str, Any]] = None
     gym_id: Optional[str] = None
+    # A254: user explicitly keeps the hard session they picked, at their own risk
+    # (skips the 48h finger gap / weekly hard-cap downshift for THIS session only).
+    force: bool = False
 
 
 # --------------------------------------------------------------------------- #

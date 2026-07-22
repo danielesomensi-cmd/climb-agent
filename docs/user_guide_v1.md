@@ -313,7 +313,9 @@ From the **Today** or **Week** view, tap the **+** button to open the Quick-Add 
 
 These are full engine sessions — they get resolved with exercises, loads, and prescriptions just like planned sessions. Their load counts toward your weekly total.
 
-**Recovery rules still apply.** A quick-added session is checked against the same safety constraints as a planned one: the minimum recovery gap between finger-intensive sessions (including one you did at the end of the previous week) and your weekly cap on hard days. If the session you add would break one of them, it is automatically downshifted to an easy regeneration session rather than being scheduled as-is — finger recovery is injury protection, not a preference. The slot you chose is still filled.
+**Recovery rules still apply.** A quick-added session is checked against the same safety constraints as a planned one: the minimum recovery gap between finger-intensive sessions (including one you did at the end of the previous week) and your weekly cap on hard days. If the session you add would break one of them, it is automatically downshifted to an easy regeneration session rather than being scheduled as-is, and a short note tells you why. The slot you chose is still filled.
+
+**Forcing it anyway.** When a session is eased, the note has an **"Add hard anyway"** action — you can keep the hard session you picked, at your own risk. If it was eased only for your weekly hard-day cap, one tap adds it. If it was eased for **finger recovery** (a hard finger session within 48h), you'll get an explicit confirm first — finger overreach (tendons/pulleys) is the most common climbing injury, so only force it if you're sure your fingers are ready. Forcing keeps *that* session hard but still protects the days around it.
 
 ### Supplementary Training
 

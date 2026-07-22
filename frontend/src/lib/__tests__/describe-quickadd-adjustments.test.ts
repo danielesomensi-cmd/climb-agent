@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { describeQuickAddAdjustments, type QuickAddAdjustment } from "@/lib/api";
+import { describeQuickAddAdjustments, quickAddHasFingerRisk, type QuickAddAdjustment } from "@/lib/api";
 
 function adj(reason: string): QuickAddAdjustment {
   return { date: "2026-07-22", slot: "evening", action: "downgraded", reason };
@@ -45,5 +45,21 @@ describe("describeQuickAddAdjustments (B-QUICKADD-ADJUSTMENTS)", () => {
     const note = describeQuickAddAdjustments([adj("some_future_reason")]);
     expect(note).toContain("Eased to a lighter session");
     expect(note).toContain("balanced");
+  });
+});
+
+describe("quickAddHasFingerRisk (A254)", () => {
+  it("is false when nothing was adjusted", () => {
+    expect(quickAddHasFingerRisk(undefined)).toBe(false);
+    expect(quickAddHasFingerRisk([])).toBe(false);
+  });
+
+  it("is true when a finger downshift is present (needs explicit confirm)", () => {
+    expect(quickAddHasFingerRisk([adj("finger_spacing_downshift")])).toBe(true);
+    expect(quickAddHasFingerRisk([adj("hard_cap_downshift"), adj("finger_spacing_downshift")])).toBe(true);
+  });
+
+  it("is false for a cap-only downshift (toast action is enough)", () => {
+    expect(quickAddHasFingerRisk([adj("hard_cap_downshift")])).toBe(false);
   });
 });
