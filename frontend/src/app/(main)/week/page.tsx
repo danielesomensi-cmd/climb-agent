@@ -20,7 +20,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide-react";
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
-import { applyOverride, quickAddSession, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
+import { applyOverride, quickAddSession, describeQuickAddAdjustments, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
@@ -275,6 +275,8 @@ export default function WeekPage() {
       if (result.warnings?.length > 0) {
         setError(result.warnings.join("; "));
       }
+      const note = describeQuickAddAdjustments(result.adjustments);
+      if (note) toast("Session adjusted", { description: note, duration: 8000 });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to add session";
       if (msg.includes("already occupied")) {

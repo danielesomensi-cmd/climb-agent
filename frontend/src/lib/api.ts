@@ -440,6 +440,36 @@ export const getSuggestedSessions = (targetDate: string, location: string) =>
     }>;
   }>(`/api/replanner/suggest-sessions?target_date=${targetDate}&location=${location}`);
 
+// B287/R-5: quick-add runs _reconcile, so an added session can be eased
+// (downgraded) to respect the 48h finger gap or the weekly hard-session cap.
+// The backend describes each change here so the UI can explain it.
+export type QuickAddAdjustment = {
+  date: string;
+  slot?: string;
+  action: string; // "downgraded"
+  reason: string; // "finger_spacing_downshift" | "hard_cap_downshift"
+  previous_session_id?: string;
+  session_id?: string;
+};
+
+// B-QUICKADD-ADJUSTMENTS: turn the machine-readable downshift reasons into one
+// plain-language line, so the user understands why the session they added came
+// back lighter than the one they picked (instead of silently getting a
+// different card). Returns null when nothing was adjusted.
+export function describeQuickAddAdjustments(adjustments: QuickAddAdjustment[] | undefined): string | null {
+  if (!adjustments || adjustments.length === 0) return null;
+  const reasons = new Set(adjustments.map((a) => a.reason));
+  const parts: string[] = [];
+  if (reasons.has("finger_spacing_downshift")) {
+    parts.push("to protect finger recovery (a hard finger session was within 48h)");
+  }
+  if (reasons.has("hard_cap_downshift")) {
+    parts.push("to stay within your weekly hard-session limit");
+  }
+  if (parts.length === 0) parts.push("to keep your week balanced"); // unknown reason fallback
+  return `Eased to a lighter session ${parts.join(" and ")}.`;
+}
+
 export const quickAddSession = (data: {
   session_id: string;
   target_date: string;
@@ -449,10 +479,13 @@ export const quickAddSession = (data: {
   week_plan: WeekPlan;
   gym_id?: string;
 }) =>
-  request<{ week_plan: WeekPlan; warnings: string[] }>("/api/replanner/quick-add", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+  request<{ week_plan: WeekPlan; warnings: string[]; adjustments: QuickAddAdjustment[] }>(
+    "/api/replanner/quick-add",
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    },
+  );
 
 // Feedback
 export const postFeedback = (data: {
