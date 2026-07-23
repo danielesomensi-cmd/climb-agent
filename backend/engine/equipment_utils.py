@@ -30,6 +30,15 @@ WEIGHT_SUBTYPES: frozenset[str] = frozenset({
     "barbell",
 })
 
+# The full free-weight family. For planning purposes these are interchangeable:
+# a strength session gated on "dumbbell" (heavy_conditioning_gym, lower_body_gym)
+# is doable with plates, a barbell or a kettlebell just as well. Presence of ANY
+# of these implies BOTH the generic "weight" tag AND the concrete "dumbbell" tag
+# the strength sessions filter on — so a user who only ticked "Weight plates"
+# ("weight") is no longer excluded from the strength work. (decision Daniele
+# 2026-07-23: "weight ≡ dumbbell, sono quasi sinonimi")
+WEIGHT_FAMILY: frozenset[str] = WEIGHT_SUBTYPES | frozenset({"weight"})
+
 # Any of these implies "pullup_bar" is available. A hangboard is always mounted
 # on either a doorframe pullup bar or a dedicated bar — the two cannot be
 # separated in practice. loading_pin is NOT included: it is a ground-based
@@ -71,8 +80,14 @@ def expand_equipment(equipment: Collection[str]) -> List[str]:
     if eq_set & BOULDER_SURFACES and "gym_boulder" not in eq_set:
         eq.append("gym_boulder")
 
-    if eq_set & WEIGHT_SUBTYPES and "weight" not in eq_set:
-        eq.append("weight")
+    if eq_set & WEIGHT_FAMILY:
+        # Any free weight (plates / dumbbell / kettlebell / barbell) satisfies
+        # both the generic "weight" tag and the concrete "dumbbell" tag the
+        # strength sessions gate on — they are interchangeable for planning.
+        if "weight" not in eq_set:
+            eq.append("weight")
+        if "dumbbell" not in eq_set:
+            eq.append("dumbbell")
 
     if eq_set & PULLUP_BAR_IMPLIERS and "pullup_bar" not in eq_set:
         eq.append("pullup_bar")
