@@ -82,7 +82,15 @@ export default function LocationsPage() {
   }, []);
 
   const toggleHomeEnabled = (checked: boolean) => {
-    update("equipment", { ...equipment, home_enabled: checked });
+    // A255: seed the two near-universal home items (hangboard + pull-up bar) the
+    // first time home is enabled, so users don't silently ship a home setup with
+    // no finger/pull training — the home twin of Mario's empty-Radium bug. Only
+    // when home is still empty; never clobber a deliberate selection on re-toggle.
+    const home =
+      checked && equipment.home.length === 0
+        ? ["hangboard", "pullup_bar"]
+        : equipment.home;
+    update("equipment", { ...equipment, home_enabled: checked, home });
   };
 
   const toggleHomeItem = (id: string, checked: boolean) => {
@@ -96,7 +104,11 @@ export default function LocationsPage() {
     const nextIndex = equipment.gyms.length + 1;
     update("equipment", {
       ...equipment,
-      gyms: [...equipment.gyms, { gym_id: crypto.randomUUID().slice(0, 8), name: `Gym ${nextIndex}`, equipment: [] }],
+      // A255: a new gym starts with the near-universal kit pre-checked
+      // (hangboard, pull-up bar, weights) so the strength + finger work is
+      // reachable by default. The user still must add their climbing surface
+      // (gym_boulder / gym_routes) — that's discipline-specific, not assumed.
+      gyms: [...equipment.gyms, { gym_id: crypto.randomUUID().slice(0, 8), name: `Gym ${nextIndex}`, equipment: ["hangboard", "pullup_bar", "weight"] }],
     });
   };
 
