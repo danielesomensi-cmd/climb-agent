@@ -260,6 +260,10 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 
 `/onboarding/welcome` is the **public entry page**: it renders `WelcomeContent` when unauthenticated (no auth wall) and redirects authenticated users onward. It's the recommended landing for cold acquisition traffic with context — see `docs/attribution_utm_convention.md` (cold zero-context traffic still prefers `/demo`).
 
+**Where the auth wall sits (A256)** — the whole 12-step wizard is public (`PUBLIC_ROUTES` derives them from `ONBOARDING_STEPS`, so a new step is public by default), plus `/onboarding/recover`. The account is requested **only at the submit CTA on `/onboarding/review`**, once the user can see their own summary. The tapped CTA travels back as `?complete=generate|test` in the Clerk `redirect_url`, and `/review` auto-submits on return. `/onboarding/start-week` and `/onboarding/install` stay gated — they run after a plan exists.
+
+Answers typed before signing up live in `localStorage` under `climb_onboarding_draft_anon` and are **adopted** by `loadDraft()` at sign-in. That key must be cleared on submit alongside the user-scoped one, or the next anonymous visitor on a shared device inherits it (regression guard: `onboarding-draft-scope.test.ts`).
+
 - `/today` — Today's sessions, mark done/skipped, post-session feedback
 - `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details

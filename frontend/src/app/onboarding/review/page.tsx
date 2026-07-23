@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@clerk/nextjs";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { submitOnboarding } from "@/lib/onboarding-submit";
 import { profileErrors } from "@/lib/profile-validation";
@@ -13,6 +14,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+/**
+ * A256 — which CTA the user tapped before being sent to sign-up, carried in the
+ * return URL so it survives the full document reload Clerk performs.
+ */
+type SubmitIntent = "generate" | "test";
+const COMPLETE_PARAM = "complete";
 
 const LEAD_GRADES_ORDERED = [
   "5a","5a+","5b","5b+","5c","5c+",
@@ -79,7 +87,11 @@ function SummaryRow({
 
 export default function ReviewPage() {
   const router = useRouter();
-  const { data, clearDraft } = useOnboarding();
+  const { data, clearDraft, loaded } = useOnboarding();
+  // A256 — `isLoaded` matters as much as `isSignedIn`: while Clerk is still
+  // booting, `isSignedIn` is false, and acting on that would bounce a
+  // legitimately signed-in user to sign-up on every hard refresh of this page.
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -162,8 +174,64 @@ export default function ReviewPage() {
     setTimeout(() => router.push(opts.destination), 1500);
   };
 
-  const handleGenerate = () => submit({ destination: "/onboarding/start-week" });
-  const handleTestWeek = () => submit({ testWeek: true, destination: "/plan" });
+  /**
+   * A256 — this is the auth wall now, and the only one in the funnel.
+   *
+   * A signed-out user has just filled in 12 steps and is looking at their own
+   * summary. Sending them to sign-up here reads as "save this", which is a very
+   * different ask from the sign-up wall that used to sit on step 1.
+   *
+   * The chosen CTA travels in the return URL rather than in storage: it is one
+   * bit of state, it must survive a full document reload (Clerk redirects), and
+   * a stale value in localStorage could silently submit the wrong variant on a
+   * later visit.
+   */
+  const requireAccount = (intent: SubmitIntent): boolean => {
+    // Clerk still booting: block rather than guess. The CTAs are disabled in
+    // this window anyway, so this is belt-and-braces against a stray tap.
+    if (!authLoaded) return true;
+    if (isSignedIn) return false;
+    const back = encodeURIComponent(`/onboarding/review?${COMPLETE_PARAM}=${intent}`);
+    router.push(`/sign-up?redirect_url=${back}`);
+    return true;
+  };
+
+  const handleGenerate = () => {
+    if (requireAccount("generate")) return;
+    return submit({ destination: "/onboarding/start-week" });
+  };
+  const handleTestWeek = () => {
+    if (requireAccount("test")) return;
+    return submit({ testWeek: true, destination: "/plan" });
+  };
+
+  /**
+   * A256 — resume the submit the user already asked for, once they come back
+   * signed in. Without this they would land on the summary a second time and
+   * have to find the same button again, having already tapped it.
+   *
+   * Guards, in order: the intent must be present, Clerk must have loaded and
+   * confirmed a session, the draft must be loaded (otherwise we would submit
+   * DEFAULT_DATA over their real answers), the profile must pass the same
+   * bounds check the button enforces, and the ref makes it fire exactly once
+   * even under React's double-invoked effects in dev.
+   */
+  const autoSubmittedRef = useRef(false);
+  useEffect(() => {
+    if (autoSubmittedRef.current) return;
+    if (!authLoaded || !isSignedIn || !loaded) return;
+    const intent = new URLSearchParams(window.location.search).get(COMPLETE_PARAM);
+    if (intent !== "generate" && intent !== "test") return;
+    if (profileProblems.length > 0) return;
+    autoSubmittedRef.current = true;
+    // Drop the param so a reload (or the browser Back button) cannot re-fire a
+    // submit against a plan that now exists.
+    window.history.replaceState({}, "", "/onboarding/review");
+    void (intent === "test"
+      ? submit({ testWeek: true, destination: "/plan" })
+      : submit({ destination: "/onboarding/start-week" }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoaded, isSignedIn, loaded, profileProblems.length]);
 
   // Test values summary
   const testValues = useMemo(() => {
@@ -397,14 +465,14 @@ export default function ReviewPage() {
           <Button
             variant="outline"
             className="min-h-[44px] text-sm px-3"
-            disabled={loading || profileProblems.length > 0}
+            disabled={loading || !authLoaded || profileProblems.length > 0}
             onClick={handleGenerate}
           >
             {loading ? "Generating..." : "Start training now"}
           </Button>
           <Button
             className="min-h-[44px] text-sm px-3"
-            disabled={loading || profileProblems.length > 0}
+            disabled={loading || !authLoaded || profileProblems.length > 0}
             onClick={handleTestWeek}
           >
             {loading ? "Generating..." : "Run a test week first"}

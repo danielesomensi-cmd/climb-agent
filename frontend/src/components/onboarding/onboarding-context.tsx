@@ -52,7 +52,7 @@ type DraftEnvelope = {
  * back to a near-empty `getState()` and then SAVE those defaults over the good
  * draft once Clerk finished loading. That was the mid-wizard data loss.
  */
-function draftKey(userId?: string | null): string {
+export function draftKey(userId?: string | null): string {
   const uid =
     userId !== undefined
       ? userId
@@ -115,6 +115,13 @@ export function clearOnboardingDraft(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(draftKey());
+    // A256 — the anonymous draft must go too. It only ever gets adopted (see
+    // loadDraft) and never cleared, so before this brief it survived submit as
+    // an orphan under `_anon`. Harmless while the wizard was auth-walled and
+    // nobody could produce one; a leak the moment the wizard went public — the
+    // next visitor on a shared phone (gym tablet, a friend's device) starts the
+    // wizard anonymously and gets the previous person's answers pre-filled.
+    localStorage.removeItem(draftKey(null));
     sessionStorage.removeItem(LEGACY_SESSION_KEY);
   } catch {
     // Nothing to clear.
