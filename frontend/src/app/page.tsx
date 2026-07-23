@@ -25,8 +25,13 @@ export default function Home() {
     // Wait for Clerk to finish loading before making any decisions
     if (!isLoaded) return;
 
+    // B300 — a cold visitor from an ad/flyer QR who types climbagent.app used
+    // to hit the bare /sign-in form (a login wall, no pitch). Send them to the
+    // public welcome landing instead: hero + value props + "Start assessment"
+    // CTA, with a "Recover access" link for returning users. Signed-in users
+    // still route straight to /today below (no double hop).
     if (!isSignedIn) {
-      router.replace("/sign-in");
+      router.replace("/onboarding/welcome");
       return;
     }
 
