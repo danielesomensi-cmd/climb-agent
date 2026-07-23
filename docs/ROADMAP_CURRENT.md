@@ -290,6 +290,17 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 - [ ] Monitorare le conversioni win-back prima della scadenza trial del **5 agosto**
       (dashboard admin: chi rientra, chi completa sessioni, chi aggiunge la carta)
 
+**✅ FATTO (2026-07-23):**
+- **r/indoorbouldering** — postato intro climb-agent nel thread mensile *Simple
+  Questions* (canale mod-approved, nessun post dedicato consentito). Link:
+  `climbagent.app`. Angle: training planner + coach chat, focus lead dichiarato.
+  Pricing non menzionato nel post.
+- **r/bouldering** — outreach rifiutato. **Canale chiuso, non riprovare.**
+
+**⏳ PENDING (2026-07-23):**
+- [ ] Monitorare le risposte ai commenti su r/indoorbouldering → rispondere entro 24h
+- [ ] Canned reply pronta per la domanda "free or paid?"
+
 ### Timeline
 
 - **Week 0 (archived, ~2026-04-01):** Beta testers using the app (4-5 users). Founder dry-run. Stripe LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
