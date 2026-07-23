@@ -13,11 +13,24 @@ sezione "Nuovi iscritti" (`utm_source/utm_campaign` → hostname referrer →
 
 ## Landing page: quale path usare
 
-⚠️ **MAI linkare la root `/` in un canale di acquisizione**: per un visitatore
-anonimo la root fa redirect client-side a `/sign-in` (Clerk) — un curl
-restituisce 200 e sembra ok, ma nel browser l'utente atterra sul form di
-login e rimbalza. Verificato su prod il 2026-07-21 (A249-pre).
-La root va bene SOLO per utenti esistenti (es. email win-back).
+**Dove atterra un visitatore anonimo sulla root `/`** — dal 2026-07-23 (B300)
+la root fa redirect client-side a **`/onboarding/welcome`** (la landing pubblica
+col pitch + CTA), NON più a `/sign-in`. Quindi linkare la root non è più un
+errore: un anonimo vede comunque il pitch. Storia: fino a B300 la root
+rimbalzava sul form di login Clerk (`/sign-in`) — un muro senza contesto,
+pessimo per la pubblicità (verificato su prod 2026-07-21, A249-pre). Un utente
+già loggato dalla root va sempre dritto a `/today`.
+
+Detta la preferenza, non l'obbligo:
+- **`/demo`** resta il migliore per il traffico a freddo zero-contesto (mostra
+  una sessione reale prima di chiedere il sign-up).
+- **`/onboarding/welcome`** è un hop in meno per chi ha già contesto.
+- La root `/` è ora accettabile come fallback (atterra su welcome), ma preferisci
+  sempre il path esplicito così l'URL pubblicato dice dove porta.
+
+Nota UTM: il redirect client-side della root NON preserva la query string, ma
+`AttributionCapture` (nel root layout) salva la first-touch in localStorage
+**prima** del redirect → gli UTM sopravvivono comunque anche linkando la root.
 
 Regola (decisione Daniele, 2026-07-21):
 

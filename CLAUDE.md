@@ -252,6 +252,14 @@ Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-
 
 **Pages (46):** 14 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
 
+**Entry-point routing (B300, `src/app/page.tsx`)** — the root `/` is a smart dispatcher, not a page:
+- **Signed-out** (cold ad/flyer visitor) → `/onboarding/welcome` (public marketing landing: hero + value props + "Start assessment" CTA + a visible "Sign in" link + "Recover with a code"). Before B300 it sent them to the bare `/sign-in` login wall — a bad ad landing.
+- **Signed-in with a macrocycle** → `/today`.
+- **Signed-in, no macrocycle** → `/onboarding/welcome` (→ wizard).
+- **Offline** → last known destination from localStorage (A245), never a forced re-onboard.
+
+`/onboarding/welcome` is the **public entry page**: it renders `WelcomeContent` when unauthenticated (no auth wall) and redirects authenticated users onward. It's the recommended landing for cold acquisition traffic with context — see `docs/attribution_utm_convention.md` (cold zero-context traffic still prefers `/demo`).
+
 - `/today` — Today's sessions, mark done/skipped, post-session feedback
 - `/week` — 7-day grid, day detail cards, replan dialog, multi-week navigation
 - `/plan` — Assessment radar chart + macrocycle timeline + phase details
