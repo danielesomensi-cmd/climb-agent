@@ -233,8 +233,11 @@ export default function AvailabilityPage() {
                             </button>
                           </div>
 
-                          {/* gym selector or nothing — no-gym banner is shown at page level */}
-                          {s.preferred_location === "gym" && gyms.length > 0 && (
+                          {/* gym selector or nothing — no-gym banner is shown at page level.
+                              B303: only offer a choice when there's more than one gym;
+                              with a single gym the planner already defaults to it, so a
+                              "Which?" dropdown with one option is pure noise. */}
+                          {s.preferred_location === "gym" && gyms.length > 1 && (
                             <Select
                               value={s.gym_id ?? ""}
                               onValueChange={(v) => setGymId(day.key, slot.key, v)}
