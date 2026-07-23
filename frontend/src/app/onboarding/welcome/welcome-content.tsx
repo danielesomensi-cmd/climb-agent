@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { SignUpButton } from "@clerk/nextjs";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -70,11 +70,19 @@ export function WelcomeContent() {
           <SignUpButton mode="redirect" forceRedirectUrl="/onboarding/profile">
             <Button>Start assessment</Button>
           </SignUpButton>
+          {/* B300 — a returning, signed-out user (new device, cleared cookies)
+              needs an obvious way back in now that the root routes here instead
+              of straight to /sign-in. */}
+          <SignInButton mode="redirect" forceRedirectUrl="/">
+            <button className="text-sm font-medium text-primary underline underline-offset-2 hover:text-primary/80">
+              Already have an account? Sign in
+            </button>
+          </SignInButton>
           <button
             onClick={() => router.push("/onboarding/recover")}
             className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
           >
-            Already have an account? Recover access
+            Lost access? Recover with a code
           </button>
         </div>
       </div>
