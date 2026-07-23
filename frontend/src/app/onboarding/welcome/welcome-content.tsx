@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -67,9 +67,13 @@ export function WelcomeContent() {
         </Card>
 
         <div className="flex flex-col items-end gap-3">
-          <SignUpButton mode="redirect" forceRedirectUrl="/onboarding/profile">
-            <Button>Start assessment</Button>
-          </SignUpButton>
+          {/* A256 — was a <SignUpButton>: the very first tap on the landing
+              page opened a sign-up form, before the visitor had seen anything
+              the product does. The wizard is public now; the account is asked
+              for on the review page, where there is something to save. */}
+          <Button onClick={() => router.push("/onboarding/profile")}>
+            Start assessment
+          </Button>
           {/* B300 — a returning, signed-out user (new device, cleared cookies)
               needs an obvious way back in now that the root routes here instead
               of straight to /sign-in. */}

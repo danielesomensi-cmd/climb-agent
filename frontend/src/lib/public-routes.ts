@@ -1,3 +1,25 @@
+import { ONBOARDING_STEPS } from "@/lib/onboarding-steps";
+
+/**
+ * A256 — the wizard itself is public.
+ *
+ * Before: only `/onboarding/welcome` was public, so the "Start assessment" CTA
+ * landed straight on a sign-up wall at step 1 of 12. We asked a cold visitor
+ * from a flyer to create an account BEFORE showing a single output of the
+ * product. The account is now requested at the submit CTA on `/review`, once
+ * the user has answered everything and can see their own summary — "sign up to
+ * save this", not "sign up to start".
+ *
+ * Derived from ONBOARDING_STEPS so a newly added step is public by default:
+ * the failure mode of forgetting one here is a mid-wizard auth wall, which is
+ * exactly the bug this brief removes.
+ *
+ * Deliberately NOT public: `/onboarding/start-week` and `/onboarding/install`
+ * both run AFTER the plan exists (A245 F38), so they have a real user by
+ * definition.
+ */
+const ONBOARDING_WIZARD_ROUTES = ONBOARDING_STEPS.map((s) => `/onboarding/${s}`);
+
 export const PUBLIC_ROUTES = [
   "/",
   "/sign-in(.*)",
@@ -5,6 +27,11 @@ export const PUBLIC_ROUTES = [
   "/legal",
   "/demo(.*)",
   "/onboarding/welcome",
+  ...ONBOARDING_WIZARD_ROUTES,
+  // A256 — linked from the public welcome page ("Lost access? Recover with a
+  // code"), so gating it behind auth sent exactly the people who cannot sign
+  // in to the sign-in page.
+  "/onboarding/recover",
   // B292 — both were auth-protected and answered 404 to anyone not signed in.
   //
   // `/offline` is the service worker's navigation fallback: it can only ever be
