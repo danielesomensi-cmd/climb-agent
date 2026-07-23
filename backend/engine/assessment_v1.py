@@ -9,7 +9,11 @@ from typing import Any, Dict, List, Optional, Tuple
 # ---------------------------------------------------------------------------
 
 GRADE_ORDER: List[str] = [
-    "5a", "5b", "5c",
+    # B302: 5a+/5b+/5c+ were missing while the grade picker (LEAD_GRADES) offers
+    # them — a lead climber selecting one crashed grade_index → assessment failed
+    # → no profile → no plan. Every consumer uses these indices RELATIVELY (gaps,
+    # ranking), so inserting is safe; outdoor_log pins its own weights (see there).
+    "5a", "5a+", "5b", "5b+", "5c", "5c+",
     "6a", "6a+", "6b", "6b+", "6c", "6c+",
     "7a", "7a+", "7b", "7b+", "7c", "7c+",
     "8a", "8a+", "8b", "8b+", "8c", "8c+",

@@ -9,7 +9,6 @@ import math
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from backend.engine.assessment_v1 import GRADE_ORDER, grade_index
 from backend.engine import storage
 
 
@@ -34,7 +33,27 @@ VALID_CONDITION_BANDS = {"prime", "ok", "poor_hot_humid", "poor_cold_dry"}
 # Outdoor load score helpers
 # ---------------------------------------------------------------------------
 
-_GRADE_WEIGHT: Dict[str, int] = {g: grade_index(g) + 3 for g in GRADE_ORDER}
+# Outdoor load weight per grade. Anchored to the PRE-B302 grade spacing so the
+# ladder fix (which inserted 5a+/5b+/5c+ into GRADE_ORDER) does not perturb
+# historical outdoor load: the new grade-5 half-steps share their base grade's
+# weight, and every grade from 6a up keeps its original weight.
+# NOTE: this weight is ABSOLUTE per grade, not relative to the climber's max —
+# a 6a weighs the same for an 8a and a 6a climber. Making it relative to ability
+# is tracked separately as B-OUTDOOR-RELATIVE-LOAD.
+_OUTDOOR_WEIGHT_ANCHOR: List[str] = [
+    "5a", "5b", "5c",
+    "6a", "6a+", "6b", "6b+", "6c", "6c+",
+    "7a", "7a+", "7b", "7b+", "7c", "7c+",
+    "8a", "8a+", "8b", "8b+", "8c", "8c+",
+    "9a", "9a+",
+]
+_GRADE_WEIGHT: Dict[str, int] = {g: i + 3 for i, g in enumerate(_OUTDOOR_WEIGHT_ANCHOR)}
+# Fold the newly-added grade-5 half-steps onto their base grade's weight.
+_GRADE_WEIGHT.update({
+    "5a+": _GRADE_WEIGHT["5a"],
+    "5b+": _GRADE_WEIGHT["5b"],
+    "5c+": _GRADE_WEIGHT["5c"],
+})
 _UNKNOWN_GRADE_WEIGHT = 10
 
 _STYLE_MODIFIER: Dict[str, float] = {

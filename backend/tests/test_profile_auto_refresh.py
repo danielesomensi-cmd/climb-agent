@@ -60,8 +60,9 @@ class TestEnsureProfileFresh(unittest.TestCase):
         state = _base_state(with_tests=False)
         _ensure_profile_fresh(state)
         profile = state["assessment"]["profile"]
-        assert profile["finger_strength"] == 66  # proxy: (16/17)*70
-        assert profile["pulling_strength"] == 61  # proxy: (16/17)*65
+        # B302: ladder gained 5a+/5b+/5c+, so 8a+/8b indices shifted 16/17 → 19/20.
+        assert profile["finger_strength"] == 66  # proxy: (19/20)*70 = 66.5 → 66
+        assert profile["pulling_strength"] == 62  # proxy: (19/20)*65 = 61.75 → 62
 
     def test_updates_profile_when_tests_added(self):
         state = _base_state(with_tests=False)
