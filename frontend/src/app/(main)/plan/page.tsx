@@ -57,6 +57,14 @@ export default function PlanPage() {
   const profile = state?.assessment?.profile ?? null;
   const currentWeek = macrocycle ? computeCurrentWeek(macrocycle) : undefined;
   const discipline = getDiscipline((state?.goal as Record<string, unknown>)?.goal_type as string | undefined);
+  // B304: axis scores are readiness-for-goal, not absolute — surface the goal
+  // grade so every number on the radar reads in context.
+  const goalObj = (state?.goal as Record<string, unknown>) ?? {};
+  const targetGrade =
+    (goalObj.target_grade as string) ||
+    (goalObj.target_boulder_grade as string) ||
+    ((macrocycle?.goal_snapshot as Record<string, unknown> | undefined)?.target_grade as string) ||
+    null;
 
   const checkStale = useCallback(async () => {
     try {
@@ -148,9 +156,14 @@ export default function PlanPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Assessment profile</CardTitle>
+                  {targetGrade && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Readiness for {targetGrade}
+                    </p>
+                  )}
                 </CardHeader>
                 <CardContent className="flex justify-center">
-                  <RadarChart profile={profile} discipline={discipline} />
+                  <RadarChart profile={profile} discipline={discipline} targetGrade={targetGrade} />
                 </CardContent>
               </Card>
             )}
