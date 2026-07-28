@@ -402,15 +402,22 @@ def _read_all_coach_messages(user_id: Optional[str]) -> List[Dict[str, Any]]:
 
 
 def append_coach_message(
-    user_id: Optional[str], role: str, content: str
+    user_id: Optional[str], role: str, content: str,
+    adhoc_session: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Append a coach chat message. Returns the stored row."""
-    row = {
+    """Append a coach chat message. Returns the stored row.
+
+    ``adhoc_session`` (B306): composed adhoc-session payload — persisted so the
+    history can re-render the card with its CTA after a reload.
+    """
+    row: Dict[str, Any] = {
         "id": uuid4().hex,
         "role": role,
         "content": content,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    if adhoc_session is not None:
+        row["adhoc_session"] = adhoc_session
     log_dir = _log_dir(user_id)
     os.makedirs(log_dir, exist_ok=True)
     with open(_coach_messages_path(user_id), "a", encoding="utf-8") as f:

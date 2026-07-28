@@ -386,16 +386,20 @@ def delete_all_outdoor_logs(user_id: Optional[str]) -> int:
 # ---------------------------------------------------------------------------
 
 def append_coach_message(
-    user_id: Optional[str], role: str, content: str
+    user_id: Optional[str], role: str, content: str,
+    adhoc_session: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Insert a coach chat message. Returns the stored row."""
+    """Insert a coach chat message. Returns the stored row.
+
+    ``adhoc_session`` (B306): the composed adhoc-session preview payload for
+    assistant turns that built one — persisted so the history can re-render
+    the card (with its CTA) after a reload instead of only the text summary.
+    """
     uid = _require_user_id(user_id)
-    r = (
-        _sb()
-        .table("coach_messages")
-        .insert({"user_id": uid, "role": role, "content": content})
-        .execute()
-    )
+    row: Dict[str, Any] = {"user_id": uid, "role": role, "content": content}
+    if adhoc_session is not None:
+        row["adhoc_session"] = adhoc_session
+    r = _sb().table("coach_messages").insert(row).execute()
     if r.data:
         return r.data[0]
     return {"role": role, "content": content}
@@ -412,7 +416,7 @@ def read_coach_messages(
     q = (
         _sb()
         .table("coach_messages")
-        .select("id, role, content, created_at")
+        .select("id, role, content, created_at, adhoc_session")
         .eq("user_id", uid)
     )
     if since:

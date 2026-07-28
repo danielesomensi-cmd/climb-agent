@@ -23,7 +23,7 @@ import anthropic
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "claude-sonnet-4-6"
+DEFAULT_MODEL = "claude-sonnet-5"
 MAX_TOKENS = 1024
 
 # A244 — tool-use loop guards. MAX_TOOL_CALLS bounds provider/OWM cost per coach

@@ -150,7 +150,10 @@ def handle_adhoc_compose(
 
     storage.append_coach_message(user_id, "user", message)
     summary = build_adhoc_summary(session, intent)
-    storage.append_coach_message(user_id, "assistant", summary)
+    # B306: persist the composed payload with the turn so the history endpoint
+    # can re-render the card (with CTA) after a reload — before this, the card
+    # lived only in client state and a PWA refresh reduced it to bare text.
+    storage.append_coach_message(user_id, "assistant", summary, adhoc_session=session)
 
     return {"adhoc": True, "session": session, "summary": summary}
 
