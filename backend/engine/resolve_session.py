@@ -1284,11 +1284,15 @@ def _inject_prehab_for_limitations(
         if prehab_domain in existing_prehab:
             continue
 
+        # B305/C-EQUIPMENT: honor equipment_required_any (OR) like the main P0
+        # filter — before this, elbow_eccentric_curl (any=[weight, band]) could
+        # be injected at a location with neither.
         candidates = [
             e for e in exercises
             if prehab_domain in norm_list_str(e.get("domain"))
             and (not ex_location_allowed(e) or loc in set(ex_location_allowed(e)))
             and set(ex_equipment_required(e)).issubset(avail)
+            and (not ex_equipment_required_any(e) or set(ex_equipment_required_any(e)) & avail)
         ]
         if not candidates:
             continue

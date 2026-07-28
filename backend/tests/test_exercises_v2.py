@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 254  # C258: +12 general-gym (commercial-gym) exercises on top of C256's 242
+    assert len(exercise_list) == 255  # C260: +bar_dead_hang (fingers-adjacent with just a pull-up bar) on top of C258's 254
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):

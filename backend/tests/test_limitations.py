@@ -483,3 +483,47 @@ class TestCheckExerciseLimitation:
     def test_empty_map_returns_none(self):
         ex = {"id": "max_hang_5s", "contraindications": ["elbow_sensitive"]}
         assert _check_exercise_limitation(ex, {}) is None
+
+
+# ===================================================================
+# 10. Prehab injection honors equipment_required_any (B305 / C-EQUIPMENT)
+# ===================================================================
+class TestPrehabInjectionEquipmentAny:
+    def _prehab_ex(self):
+        return {
+            "id": "elbow_eccentric_curl",
+            "name": "Elbow Eccentric Curl",
+            "role": ["prehab"],
+            "domain": ["prehab_elbow"],
+            "location_allowed": ["gym", "home"],
+            "equipment_required": [],
+            "equipment_required_any": ["weight", "resistance_band"],
+            "prescription_defaults": {"sets": 3, "reps": 10},
+        }
+
+    def test_skipped_when_no_any_equipment_available(self):
+        instances, blocks = [], []
+        counter = _inject_prehab_for_limitations(
+            exercise_instances=instances,
+            blocks_out=blocks,
+            limitation_map={"elbow": "monitor"},
+            exercises=[self._prehab_ex()],
+            location="home",
+            available_equipment=["pullup_bar"],
+            instance_counter=1,
+        )
+        assert instances == []
+        assert counter == 1
+
+    def test_injected_when_one_any_equipment_available(self):
+        instances, blocks = [], []
+        _inject_prehab_for_limitations(
+            exercise_instances=instances,
+            blocks_out=blocks,
+            limitation_map={"elbow": "monitor"},
+            exercises=[self._prehab_ex()],
+            location="home",
+            available_equipment=["resistance_band"],
+            instance_counter=1,
+        )
+        assert [i["exercise_id"] for i in instances] == ["elbow_eccentric_curl"]

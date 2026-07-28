@@ -13182,6 +13182,56 @@
       ],
       "video_url": null,
       "load_model": "external_load"
+    },
+    {
+      "id": "bar_dead_hang",
+      "name": "Bar Dead Hang",
+      "category": "endurance",
+      "time_min": 8,
+      "role": [
+        "main",
+        "accessory"
+      ],
+      "domain": [
+        "finger_aerobic_endurance"
+      ],
+      "pattern": "hang",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "bar_hang",
+      "equipment_required": [
+        "pullup_bar"
+      ],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "contraindications": [
+        "shoulder_sensitive"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 30,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 90,
+        "notes": "Active hang, shoulders engaged. Progress duration 20-45s; single-arm assisted for advanced."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Timed dead hang on a pull-up bar — grip and forearm endurance plus shoulder health when no hangboard is available (travel, minimal home setup). Active shoulders (scapular engagement), full-crimp-free by nature. The only finger-adjacent option with just a bar.",
+      "cues": [
+        "Shoulders active and depressed — no passive hanging",
+        "Full grip around the bar, thumb wrapped",
+        "Breathe steadily through the hold",
+        "Stop at form breakdown, not at total failure"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only"
     }
   ]
 }
