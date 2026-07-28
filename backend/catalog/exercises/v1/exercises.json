@@ -1181,7 +1181,8 @@
         "main"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",
@@ -1231,7 +1232,8 @@
         "accessory"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "medium",
@@ -1334,7 +1336,8 @@
         "accessory"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": "pull_horizontal",
       "intensity_level": "medium",
@@ -1384,7 +1387,8 @@
         "accessory"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "medium",
@@ -2355,7 +2359,8 @@
         "main"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",
@@ -2819,7 +2824,8 @@
         "main"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",
@@ -2871,7 +2877,8 @@
       ],
       "domain": [
         "strength_general",
-        "core"
+        "core",
+        "strength_pulling"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",
@@ -2921,7 +2928,9 @@
         "main"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling",
+        "lock_off_endurance"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",
@@ -2973,7 +2982,9 @@
         "main"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling",
+        "lock_off_endurance"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",
@@ -3023,7 +3034,9 @@
         "main"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling",
+        "lock_off_endurance"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "max",
@@ -3076,7 +3089,8 @@
         "accessory"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": "pull_horizontal",
       "intensity_level": "medium",
@@ -3124,7 +3138,9 @@
         "main"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling",
+        "lock_off_endurance"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "high",
@@ -3480,7 +3496,9 @@
       "intensity_level": "medium",
       "fatigue_cost": 5,
       "recency_group": "core_anti_extension",
-      "equipment_required": [],
+      "equipment_required": [
+        "ab_wheel"
+      ],
       "location_allowed": [
         "home",
         "gym"
@@ -9075,7 +9093,9 @@
       "intensity_level": "low",
       "fatigue_cost": 1,
       "recency_group": "warmup_foam_rolling",
-      "equipment_required": [],
+      "equipment_required": [
+        "foam_roller"
+      ],
       "location_allowed": [
         "home",
         "gym"
@@ -9163,7 +9183,8 @@
         "accessory"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": "pull_vertical",
       "intensity_level": "medium",
@@ -11181,7 +11202,8 @@
         "main"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "strength_pulling"
       ],
       "pattern": [
         "pull_vertical",
@@ -12982,7 +13004,9 @@
       "intensity_level": "low",
       "fatigue_cost": 4,
       "recency_group": "core_extension",
-      "equipment_required": [],
+      "equipment_required": [
+        "bench"
+      ],
       "location_allowed": [
         "gym"
       ],

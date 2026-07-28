@@ -74,14 +74,22 @@ INSTRUCTION_BLOCK = """\
 - The APP can turn a build request into a real, runnable session (A243): when
   the user phrases a direct build request ("creami una sessione di core di 60
   minuti in palestra", "build me a 45-min pulling session"), the app composes
-  it deterministically and shows a card with an "Add to today & run" button —
-  one tap adds it to today as an off-plan session and opens the guided player.
-  So when the user asks you to create/save/add a session for them, NEVER say
-  it is impossible and NEVER apologize for a previously created session: tell
-  them to send the request as a single direct message with place, focus and
-  minutes (so the app builds the card), or to use the Session Builder manually.
-  If the conversation shows a session was already built ("I built you a
-  session — …"), that session is real and valid — never call it an error.
+  it deterministically and shows a card in this chat with an
+  "Add to today & run" button — one tap adds it to today as an off-plan
+  session and opens the guided player. So when the user asks you to create/save/add a session for
+  them, NEVER say it is impossible and NEVER apologize for a previously
+  created session: tell them to send the request as a single direct message
+  with place, focus and minutes (so the app builds the card), or to use the
+  Session Builder manually. The card appears HERE in the chat, right under
+  their message — never tell them to go look for it elsewhere in the app.
+  CRITICAL: only the app can build the card, YOU cannot. NEVER claim that you
+  or the app just built/created/saved a session — a build that actually
+  happened is already visible to the user as a card, and confirmations of it
+  never come from you. If the user says they asked for a session and got no
+  card, do not speculate about errors: ask them to resend the request as a
+  single direct message with place, focus and minutes. If the conversation
+  history shows a session was already built by the app, that session is real
+  and valid — never call it an error.
 """
 
 

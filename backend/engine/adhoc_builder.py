@@ -510,6 +510,30 @@ def compose_adhoc_session(
         _to_custom_exercise(e, catalog_by_id, user_state, phase, energy, today)
         for e in chosen
     ]
+
+    # B305: fill the requested time budget. MAX_EXERCISES caps the list well
+    # below a long ask with default set counts (a "60 minuti" request composed
+    # ~30 min), so scale volume instead of adding moves: +1 set round-robin on
+    # non-warmup exercises (cap 6, same bound as the energy modulation) while
+    # the estimate stays within the requested minutes. Deterministic; a bump
+    # that would overshoot the budget is rolled back and that exercise skipped.
+    def _is_warmup_entry(ce: Dict[str, Any]) -> bool:
+        ex = catalog_by_id.get(ce["exercise_id"]) or {}
+        return "warmup" in _roles_of(ex)
+
+    bumpable = [ce for ce in exercises if not _is_warmup_entry(ce)]
+    progressed = True
+    while progressed and estimate_custom_session_duration(exercises) < minutes:
+        progressed = False
+        for ce in bumpable:
+            if ce["sets"] >= 6:
+                continue
+            ce["sets"] += 1
+            if estimate_custom_session_duration(exercises) > minutes:
+                ce["sets"] -= 1
+                continue
+            progressed = True
+
     exercise_ids = [e["exercise_id"] for e in exercises]
 
     harmonization = _harmonization_note(user_state, today)

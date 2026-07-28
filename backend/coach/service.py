@@ -165,20 +165,42 @@ def build_adhoc_summary(
     sooner one — so we say so explicitly and invite them to ask again for the
     rest, rather than silently dropping the second session.
     """
-    summary = (
-        f"I built you a session — {session['name']} "
-        f"(~{session['estimated_duration_minutes']} min). {session['explanation']}"
-    )
+    lang = intent.get("language") if intent.get("language") in ("en", "it") else "en"
+    if lang == "it":
+        # The explanation string stays English (it can carry A252 honesty notes
+        # — e.g. a requested muscle with no equipment-compatible exercises —
+        # that must not be dropped); the frame is localized.
+        summary = (
+            f"Ti ho preparato una sessione — {session['name']} "
+            f"(~{session['estimated_duration_minutes']} min). "
+            f"{session['explanation']} "
+            f"La card è qui sotto: un tap su \"Add to today & run\" e parte."
+        )
+    else:
+        summary = (
+            f"I built you a session — {session['name']} "
+            f"(~{session['estimated_duration_minutes']} min). {session['explanation']}"
+        )
     if intent.get("multi_session_requested"):
         hint = (intent.get("deferred_session_hint") or "").strip()
-        summary += (
-            " Heads up: you asked for more than one session — I build one at a "
-            "time, so this is just the first."
-        )
-        if hint:
-            summary += f" For the other one ({hint}), message me again and I'll prepare it."
+        if lang == "it":
+            summary += (
+                " Occhio: hai chiesto più di una sessione — ne preparo una alla "
+                "volta, questa è la prima."
+            )
+            if hint:
+                summary += f" Per l'altra ({hint}), riscrivimi e te la preparo."
+            else:
+                summary += " Riscrivimi per l'altra e te la preparo."
         else:
-            summary += " Message me again for the other one and I'll prepare it."
+            summary += (
+                " Heads up: you asked for more than one session — I build one at a "
+                "time, so this is just the first."
+            )
+            if hint:
+                summary += f" For the other one ({hint}), message me again and I'll prepare it."
+            else:
+                summary += " Message me again for the other one and I'll prepare it."
     return summary
 
 

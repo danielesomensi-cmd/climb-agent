@@ -50,6 +50,8 @@ _SYSTEM = (
     "the main slots, set multi_session_requested=true, and put a short plain "
     "description of the OTHER session(s) NOT built in deferred_session_hint "
     "(e.g. 'tonight at home: core and biceps'). "
+    "Always set language to the language the user writes in ('it' for "
+    "Italian, otherwise 'en'). "
     "Use sensible "
     "defaults only when truly unstated (equipment_set=home, "
     "focus=general_strength, minutes=45, energy=medium). Never guess exercises "
@@ -107,8 +109,13 @@ _TOOL: Dict[str, Any] = {
                 "enum": list(ADHOC_ENERGY),
                 "description": "How fresh the climber feels.",
             },
+            "language": {
+                "type": "string",
+                "enum": ["en", "it"],
+                "description": "Language the user is writing in (closest match; default en). Drives the app's confirmation message language.",
+            },
         },
-        "required": ["is_adhoc_request"],
+        "required": ["is_adhoc_request", "language"],
     },
 }
 
@@ -161,4 +168,6 @@ def extract_intent(
         # A252: consumed by the coach response layer (service), not the builder.
         "multi_session_requested": bool(slots.get("multi_session_requested")),
         "deferred_session_hint": slots.get("deferred_session_hint"),
+        # B305: drives the localized confirmation message (service layer).
+        "language": slots.get("language"),
     }

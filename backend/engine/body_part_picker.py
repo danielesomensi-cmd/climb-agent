@@ -396,21 +396,23 @@ def resolve_equipment_mode(
 def _exercise_fits_equipment(
     exercise: Dict[str, Any], equipment: Sequence[str]
 ) -> bool:
-    # TODO(equipment_any): light resolver only checks equipment_required (AND).
-    # Full resolver also honors equipment_required_any (OR) — see
-    # resolve_session.py:389-391. Current divergence: 4 exercises
-    # (suitcase_carry, elbow_eccentric_curl, turkish_getup, farmers_carry) are
-    # over-included by the light path because they have equipment_required=[].
-    # B224 role=main filter makes this inert (3 are accessory/conditioning,
-    # 1 is prehab). Revisit if future body-part selection ever picks
-    # accessory/prehab roles as primary.
+    # B305: honor BOTH equipment_required (AND) and equipment_required_any (OR),
+    # matching the full resolver (resolve_session). The old light path ignored
+    # equipment_required_any — inert for body-part picking (B224 role filter)
+    # but live in adhoc_builder, where board-only exercises (equipment_required
+    # =[] + equipment_required_any=[boards]) leaked into home sessions.
+    eq_set = set(equipment)
     req = exercise.get("equipment_required") or []
     if isinstance(req, str):
         req = [req]
-    if not req:
-        return True
-    eq_set = set(equipment)
-    return set(req).issubset(eq_set)
+    if req and not set(req).issubset(eq_set):
+        return False
+    req_any = exercise.get("equipment_required_any") or []
+    if isinstance(req_any, str):
+        req_any = [req_any]
+    if req_any and not (set(req_any) & eq_set):
+        return False
+    return True
 
 
 # ── Availability for /options endpoint ────────────────────────────────────
