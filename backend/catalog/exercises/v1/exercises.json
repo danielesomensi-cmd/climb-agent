@@ -12710,7 +12710,7 @@
       "fatigue_cost": 3,
       "recency_group": "lower_body_quad",
       "equipment_required": [
-        "weight"
+        "leg_press"
       ],
       "location_allowed": [
         "gym"
@@ -12759,7 +12759,7 @@
       "fatigue_cost": 3,
       "recency_group": "lower_body_posterior",
       "equipment_required": [
-        "weight"
+        "leg_press"
       ],
       "location_allowed": [
         "gym"
@@ -12906,7 +12906,7 @@
       "fatigue_cost": 2,
       "recency_group": "push_tricep",
       "equipment_required": [
-        "weight"
+        "cable_machine"
       ],
       "location_allowed": [
         "home",
@@ -13052,7 +13052,7 @@
       "fatigue_cost": 4,
       "recency_group": "core_rotation",
       "equipment_required": [
-        "weight"
+        "cable_machine"
       ],
       "location_allowed": [
         "home",

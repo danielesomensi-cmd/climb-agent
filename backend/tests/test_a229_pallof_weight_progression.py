@@ -81,17 +81,26 @@ def test_adjusted_weight_feeds_next_suggestion():
 
 
 # 5 — eligibility: selectable with a band OR a cable, not without either
+#
+# C260-bis: this used to assert pallof_press is the WINNER with a cable. That
+# conflated "eligible" with "top-ranked": once cable_woodchop stopped claiming
+# equipment_required=["weight"] (it needs a cable, not a dumbbell) it became
+# eligible at a cable-only location and outranks pallof there. The invariant
+# the test name states — pallof survives the equipment filter with either
+# implement — is asserted directly, so the P0 ranking is free to change.
 def test_eligible_with_band_or_cable():
-    def picks_pallof(equipment):
+    def pallof_eligible(equipment):
         ex, _ = pick_best_exercise_p0(
-            exercises=ALL_EXERCISES, location="gym", available_equipment=equipment,
+            exercises=[e for e in ALL_EXERCISES if e.get("id") == "pallof_press"],
+            location="gym", available_equipment=equipment,
             role_req=["accessory"], domain_req=["core"], pattern_req=["anti_rotation"],
-            recent_ex_ids=["copenhagen_plank", "plank_shoulder_tap"], recent_recency_groups=set(),
+            recent_ex_ids=[], recent_recency_groups=set(),
         )
         return (ex or {}).get("id") == "pallof_press"
 
-    assert picks_pallof(["resistance_band"])               # band only
-    assert picks_pallof(["cable_machine"])                 # cable only
+    assert pallof_eligible(["resistance_band"])            # band only
+    assert pallof_eligible(["cable_machine"])              # cable only
+    assert not pallof_eligible(["pullup_bar"])             # neither → filtered out
     # neither band nor cable → pallof filtered out, a no-equipment sibling wins
     ex, _ = pick_best_exercise_p0(
         exercises=ALL_EXERCISES, location="gym", available_equipment=["pullup_bar"],
