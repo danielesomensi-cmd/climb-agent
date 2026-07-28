@@ -22,6 +22,7 @@ import {
   type CoachMessage,
 } from "@/lib/api";
 import { buildGuidedStateFromExercises, saveGuidedState } from "@/lib/guided-session-utils";
+import { shouldRouteToAdhoc } from "@/lib/adhoc-gate";
 
 const PAGE_SIZE = 50;
 
@@ -31,41 +32,14 @@ function localToday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Cheap gate: route plausibly-adhoc turns to the compose endpoint (B282).
- *
- * Stem-based, message-level co-occurrence — NOT a list of conjugations.
- * Italian polite questions conjugate in -i ("mi prepari…?", "mi crei…?",
- * "manda tu…") and a fixed verb list loses whack-a-mole against morphology
- * (B280/B281 field failures). A session-noun anywhere + a build-verb STEM
- * anywhere routes to the composer; clitic forms ("crearla", "mandamela") carry
- * the noun inside the verb and count alone. Heavily biased toward routing: a
- * false positive costs one cheap extraction returning {adhoc:false} → chat
- * fallback; a false negative gives a wrong "I can't build sessions" reply. */
-const ADHOC_NOUN_RE =
-  /\b(sessione|allenament\w*|workout|seduta|scheda|circuito|session|routine)\b/i;
-const ADHOC_STEM_RE =
-  /\b(cre\w*|prepar\w*|costruis\w*|componi\w*|comporre|gener\w*|fammi|farmi|faresti|fai|d[aà]mmi|darmi|dai|proponi\w*|propor\w*|organizz\w*|mont\w*|mett\w*|aggiung\w*|mand\w*|invi\w*|salv\w*|vorrei|voglio|serve|servirebbe|build\w*|creat\w*|make|compose|design|plan|give|need|want|put together|add)\b/i;
-const ADHOC_STANDALONE_RE = new RegExp(
-  [
-    // clitic object forms — the session-noun lives inside the verb
-    "\\b(crearl[ao]|creal[ao]|prepararl[ao]|preparal[ao]|mandarl[ao]|mandal[ao]|salvarl[ao]|salval[ao]|aggiungerl[ao]|aggiungil[ao]|inviarl[ao]|invial[ao]|creamel[ao]|preparamel[ao]|mandamel[ao]|rifall[ao]|rifarl[ao])\\b",
-    // being at a gym is a strong signal on its own (EN + IT)
-    "\\bat the (regular |commercial )?gym\\b",
-    "\\b(in|alla|dalla|nella|della) palestra\\b",
-    "sono in palestra",
-    "\\bal gym\\b",
-    // short "quick X" / "sessione veloce"
-    "\\bquick (core|session|workout|pull|push|leg|finger)\\b",
-    "\\b(sessione|allenamento) (veloce|rapid[oa])\\b",
-  ].join("|"),
-  "i",
-);
+// B282/B306 — gate logic lives in lib/adhoc-gate.ts (unit-tested); B306 adds
+// short-follow-up routing ("Si", "Crea!") when the recent turns are
+// adhoc-flavored, closing the 2026-07-28 fake-build-confirmation failure.
 
-function looksLikeAdhoc(text: string): boolean {
-  return (
-    ADHOC_STANDALONE_RE.test(text) ||
-    (ADHOC_NOUN_RE.test(text) && ADHOC_STEM_RE.test(text))
-  );
+// B306 — history rows persist the composed payload as `adhoc_session`
+// (snake_case from the API); the renderer keys off `adhocSession`.
+function hydrateAdhocCard(msg: CoachMessage): CoachMessage {
+  return msg.adhoc_session ? { ...msg, adhocSession: msg.adhoc_session } : msg;
 }
 
 function exerciseLine(ex: AdhocSessionPreview["exercises"][number]): string {
@@ -206,7 +180,7 @@ export default function CoachPage() {
   useEffect(() => {
     getCoachHistory(PAGE_SIZE)
       .then((data) => {
-        setMessages(data.messages);
+        setMessages(data.messages.map(hydrateAdhocCard));
         setHasMore(data.has_more);
       })
       .catch((e) => setError(friendlyError(e)))
@@ -247,7 +221,7 @@ export default function CoachPage() {
     setLoadingEarlier(true);
     try {
       const data = await getCoachHistory(PAGE_SIZE, oldest);
-      setMessages((prev) => [...data.messages, ...prev]);
+      setMessages((prev) => [...data.messages.map(hydrateAdhocCard), ...prev]);
       setHasMore(data.has_more);
     } catch (e) {
       setError(friendlyError(e));
@@ -265,9 +239,14 @@ export default function CoachPage() {
       setMessages((prev) => [...prev, { role: "user", content: text }]);
       setSending(true);
       try {
-        // A243: route plausibly-adhoc turns to the deterministic composer. The
+        // A243/B306: route plausibly-adhoc turns (and short follow-ups in an
+        // adhoc-flavored conversation) to the deterministic composer. The
         // backend is the authority — {adhoc:false} means fall back to chat.
-        if (looksLikeAdhoc(text)) {
+        const gateContext = messages.map((m) => ({
+          content: m.content,
+          hasAdhocCard: Boolean(m.adhocSession),
+        }));
+        if (shouldRouteToAdhoc(text, gateContext)) {
           const res = await coachAdhocSession(text);
           if (res.adhoc && res.session) {
             setMessages((prev) => [
@@ -289,7 +268,7 @@ export default function CoachPage() {
         inputRef.current?.focus();
       }
     },
-    [sending]
+    [sending, messages]
   );
 
   const send = useCallback(() => sendText(input), [input, sendText]);
