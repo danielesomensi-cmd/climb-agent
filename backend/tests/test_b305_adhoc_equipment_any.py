@@ -149,3 +149,23 @@ class TestSummaryLocalization:
         )
         assert "stasera a casa: core" in s
         assert "una alla volta" in s
+
+
+# ── 4. honesty note for empty coarse-focus pools (B305 follow-up) ────────
+
+
+class TestEmptyFocusHonesty:
+    def test_technique_at_home_says_so(self):
+        intent = {"equipment_set": "home", "focus": "technique", "minutes": 45}
+        state = {
+            "equipment": {"home": ["pullup_bar"], "gyms": []},
+            "macrocycle": {"start_date": "2026-07-06", "phases": [{"phase_id": "base", "duration_weeks": 3}]},
+            "recent_sessions": [],
+        }
+        session = compose_adhoc_session(intent, state, _catalog())
+        assert "No equipment-compatible technique exercises" in session["explanation"]
+
+    def test_populated_focus_has_no_note(self):
+        intent = {"equipment_set": "home", "focus": "pull", "minutes": 45}
+        session = compose_adhoc_session(intent, _state(), _catalog())
+        assert "lighter than asked" not in session["explanation"]

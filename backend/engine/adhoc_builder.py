@@ -567,6 +567,19 @@ def compose_adhoc_session(
                 f" No equipment-compatible {miss_labels} exercises were available, "
                 "so that was skipped."
             )
+    else:
+        # B305: same honesty for the coarse-focus path — a "technique at home"
+        # ask has an empty pool and silently composed a warmup+finisher stub.
+        if not main_picks:
+            explanation += (
+                f" No equipment-compatible {focus.replace('_', ' ')} exercises "
+                "were available here, so the session is lighter than asked."
+            )
+        if secondary_focus and not secondary_picks:
+            explanation += (
+                f" No equipment-compatible {secondary_focus.replace('_', ' ')} "
+                "exercises were available here, so that block was skipped."
+            )
     if harmonization:
         explanation += " " + harmonization
 
