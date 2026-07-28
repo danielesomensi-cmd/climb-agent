@@ -1099,7 +1099,10 @@ export interface CoachMessage {
   role: "user" | "assistant";
   content: string;
   created_at?: string;
-  // A243 — structured adhoc-session card payload (client-only, not persisted).
+  // B306 — persisted adhoc-session payload as returned by /coach/history
+  // (null/absent on plain turns); hydrated into `adhocSession` on load.
+  adhoc_session?: AdhocSessionPreview | null;
+  // A243 — structured adhoc-session card payload (client render key).
   adhocSession?: AdhocSessionPreview;
 }
 
