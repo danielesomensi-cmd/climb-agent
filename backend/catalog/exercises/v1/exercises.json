@@ -4459,6 +4459,10 @@
       "phase_affinity": [
         "base",
         "deload"
+      ],
+      "equipment_required_any": [
+        "band",
+        "resistance_band"
       ]
     },
     {
@@ -8969,6 +8973,10 @@
       "video_url": null,
       "phase_affinity": [
         "deload"
+      ],
+      "equipment_required_any": [
+        "band",
+        "resistance_band"
       ]
     },
     {
