@@ -15,6 +15,7 @@ import {
   coachAdhocSession,
   coachChat,
   createCustomSession,
+  deleteCustomSession,
   getCoachHistory,
   getCoachSuggestions,
   getWeek,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/api";
 import { buildGuidedStateFromExercises, saveGuidedState } from "@/lib/guided-session-utils";
 import { shouldRouteToAdhoc } from "@/lib/adhoc-gate";
+import { findDay, firstFreeSlot } from "@/lib/day-slots";
 
 const PAGE_SIZE = 50;
 
@@ -281,27 +283,48 @@ export default function CoachPage() {
       setAddingAdhoc(true);
       setError(null);
       try {
-        const created = await createCustomSession({
-          name: session.name,
-          tags: session.tags,
-          exercises: session.exercises,
-        });
         const today = localToday();
         const week = await getWeek(0);
         if (!week.week_plan) {
           throw new Error("No current week plan — open This Week once, then retry.");
         }
-        await applyEvents({
-          events: [
-            {
-              event_type: "add_custom_session",
-              custom_session_id: created.id,
-              target_date: today,
-              slot: "evening",
-            },
-          ],
-          week_plan: week.week_plan,
+        // B309: resolve a FREE slot before creating anything. The CTA used to
+        // hardcode "evening"; on a day whose evening was already planned the
+        // insert 422'd ("Slot 'evening' already occupied") AFTER the custom
+        // session had been persisted, leaving it orphaned and invisible.
+        const day = findDay(week.week_plan, today);
+        if (!day) {
+          throw new Error("Today isn't in the current week plan — open This Week once, then retry.");
+        }
+        const slot = firstFreeSlot(day);
+        if (!slot) {
+          throw new Error(
+            "Today is fully booked (morning, lunch and evening). Free a slot from This Week, then retry."
+          );
+        }
+        const created = await createCustomSession({
+          name: session.name,
+          tags: session.tags,
+          exercises: session.exercises,
         });
+        try {
+          await applyEvents({
+            events: [
+              {
+                event_type: "add_custom_session",
+                custom_session_id: created.id,
+                target_date: today,
+                slot,
+              },
+            ],
+            week_plan: week.week_plan,
+          });
+        } catch (e) {
+          // Never leave a session saved but unplanned — that is exactly the
+          // state that made the coach look like it had silently done nothing.
+          await deleteCustomSession(created.id).catch(() => {});
+          throw e;
+        }
         // B283: run through the REAL guided player (progress, navigation,
         // cues, loads) — the minimal A211 playback page is retired.
         const guidedState = buildGuidedStateFromExercises(
@@ -313,7 +336,14 @@ export default function CoachPage() {
         if (guidedState) saveGuidedState(guidedState);
         router.push(`/guided/${today}/custom_${created.id}`);
       } catch (e) {
-        setError(e instanceof Error ? e.message : friendlyError(e));
+        const msg = e instanceof Error ? e.message : friendlyError(e);
+        // B309: the engine's raw slot-conflict text is not actionable for a
+        // user who never picked a slot — mirror what /week and /today show.
+        setError(
+          msg.includes("already occupied")
+            ? "Today is fully booked. Free a slot from This Week, then retry."
+            : msg
+        );
         setAddingAdhoc(false);
       }
     },
