@@ -12,10 +12,16 @@
     "notes": "4x4 bouldering, linked boulders, or route intervals. Lead-climber focused. Submaximal finger repeaters post-climbing."
   },
   "compatibility": {
-    "slot": ["long"],
-    "sports": ["climbing"]
+    "slot": [
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
   },
-  "required_equipment": ["gym_boulder"],
+  "required_equipment": [
+    "gym_boulder"
+  ],
   "boulder_fallback": null,
   "time_budget": {
     "target_duration_min": 90,
@@ -37,10 +43,19 @@
       "selection": {
         "primary": {
           "filters": {
-            "role": ["main"],
-            "domain": ["power_endurance", "anaerobic_capacity"],
-            "pattern": ["climbing_intervals"],
-            "equipment": ["gym_routes"]
+            "role": [
+              "main"
+            ],
+            "domain": [
+              "power_endurance",
+              "anaerobic_capacity"
+            ],
+            "pattern": [
+              "climbing_intervals"
+            ],
+            "equipment": [
+              "gym_routes"
+            ]
           }
         }
       }
@@ -54,9 +69,16 @@
       "selection": {
         "primary": {
           "filters": {
-            "role": ["main"],
-            "domain": ["power_endurance", "anaerobic_capacity"],
-            "pattern": ["climbing_intervals"]
+            "role": [
+              "main"
+            ],
+            "domain": [
+              "power_endurance",
+              "anaerobic_capacity"
+            ],
+            "pattern": [
+              "climbing_intervals"
+            ]
           }
         }
       }
@@ -70,11 +92,46 @@
       "selection": {
         "primary": {
           "filters": {
-            "role": ["main"],
-            "domain": ["finger_strength_endurance", "finger_aerobic_endurance"],
-            "pattern": ["repeater_hang"]
+            "role": [
+              "main"
+            ],
+            "domain": [
+              "finger_strength_endurance",
+              "finger_aerobic_endurance"
+            ],
+            "pattern": [
+              "repeater_hang"
+            ]
           }
         }
+      }
+    },
+    {
+      "block_id": "pulling_maintenance",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "Mantenimento forza di trazione. Volume basso, intensita' alta — non e' una seduta di sviluppo.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": [
+              "main"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "pull_vertical"
+            ]
+          }
+        }
+      },
+      "prescription": {
+        "sets": 2,
+        "reps": 4,
+        "rest_between_sets_seconds": 180,
+        "notes": "2 serie pesanti, recupero pieno. Se sei stanco dal lavoro specifico, togli una ripetizione — mai il carico."
       }
     },
     {

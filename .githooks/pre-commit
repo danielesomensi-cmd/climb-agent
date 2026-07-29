@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Isolamento fra sessioni Claude parallele (C261, dopo il terzo incidente).
+#
+# Perche' esiste: piu' sessioni condividono UN working tree, UN index e UN HEAD.
+# La regola in CLAUDE.md era condizionale ("worktree SE il tree e' sporco"), quindi
+# due sessioni che trovano il tree pulito restano entrambe nell'albero condiviso;
+# poi la prima che fa `git checkout -b` sposta HEAD sotto i piedi dell'altra, che
+# committa sul branch sbagliato. E' successo il 2026-07-19, il 2026-07-20 e il
+# 2026-07-29.
+#
+# La regola qui e' semplice e verificabile: nel worktree PRIMARIO si committa solo
+# su main. Il lavoro di brief vive su un branch, e un branch vive in un worktree
+# suo (scripts/start_brief.py) — dove questo controllo non si applica.
+#
+# Scavalcabile di proposito:  ALLOW_PRIMARY_BRANCH_COMMIT=1 git commit ...
+
+set -euo pipefail
+
+primary="$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')"
+here="$(git rev-parse --show-toplevel)"
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+[ "$here" = "$primary" ] || exit 0                     # sono in un worktree: ok
+[ "$branch" = "main" ] && exit 0                       # main nel primario: ok
+[ "${ALLOW_PRIMARY_BRANCH_COMMIT:-}" = "1" ] && exit 0 # override esplicito
+
+cat >&2 <<MSG
+
+⛔ Commit bloccato: sei sul branch '$branch' nel worktree PRIMARIO.
+
+   Il lavoro di brief va in un worktree dedicato, altrimenti un'altra sessione
+   Claude che cambia branch sposta HEAD anche per te — e il tuo commit finisce
+   sul branch sbagliato (successo 3 volte: D252/B279, B288/A245-D, B308/B309).
+
+   Crea il worktree:
+       python scripts/start_brief.py <BRIEF-ID> <slug>
+
+   Se il tuo lavoro e' gia' committato qui, spostalo senza toccare gli altri:
+       git worktree add ../climb-agent-<brief> --detach origin/main
+       cd ../climb-agent-<brief> && git cherry-pick <sha> && git push origin HEAD:main
+
+   Override consapevole:  ALLOW_PRIMARY_BRANCH_COMMIT=1 git commit ...
+
+MSG
+exit 1

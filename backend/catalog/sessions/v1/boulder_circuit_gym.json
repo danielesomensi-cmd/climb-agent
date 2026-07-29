@@ -4,14 +4,24 @@
   "version": "1.0",
   "intent": {
     "primary_goal": "volume_climbing",
-    "secondary_goals": ["aerobic_capacity", "technique_footwork", "core"],
+    "secondary_goals": [
+      "aerobic_capacity",
+      "technique_footwork",
+      "core"
+    ],
     "notes": "Circuit bouldering at -3/-4 from boulder flash grade. Continuous movement, linked problems, focus on movement quality and aerobic base on boulders. Medium intensity, high volume."
   },
   "compatibility": {
-    "slot": ["long"],
-    "sports": ["climbing"]
+    "slot": [
+      "long"
+    ],
+    "sports": [
+      "climbing"
+    ]
   },
-  "required_equipment": ["gym_boulder"],
+  "required_equipment": [
+    "gym_boulder"
+  ],
   "boulder_fallback": null,
   "time_budget": {
     "target_duration_min": 85,
@@ -33,11 +43,48 @@
       "selection": {
         "primary": {
           "filters": {
-            "role": ["main"],
-            "domain": ["aerobic_capacity", "power_endurance"],
-            "pattern": ["climbing_limit_boulder", "climbing_continuous", "climbing_intervals"]
+            "role": [
+              "main"
+            ],
+            "domain": [
+              "aerobic_capacity",
+              "power_endurance"
+            ],
+            "pattern": [
+              "climbing_limit_boulder",
+              "climbing_continuous",
+              "climbing_intervals"
+            ]
           }
         }
+      }
+    },
+    {
+      "block_id": "pulling_maintenance",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "Mantenimento forza di trazione. Volume basso, intensita' alta — non e' una seduta di sviluppo.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": [
+              "main"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "pull_vertical"
+            ]
+          }
+        }
+      },
+      "prescription": {
+        "sets": 2,
+        "reps": 4,
+        "rest_between_sets_seconds": 180,
+        "notes": "2 serie pesanti, recupero pieno. Se sei stanco dal lavoro specifico, togli una ripetizione — mai il carico."
       }
     },
     {
