@@ -1686,7 +1686,8 @@
         "accessory"
       ],
       "domain": [
-        "strength_general"
+        "strength_general",
+        "handstand_skill"
       ],
       "pattern": "push",
       "intensity_level": "medium",
@@ -1725,7 +1726,8 @@
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
       "load_model": "bodyweight_only",
       "phase_affinity": [
-        "base"
+        "base",
+        "power_endurance"
       ]
     },
     {
@@ -7457,7 +7459,7 @@
       "category": "endurance",
       "time_min": 25,
       "role": [
-        "cooldown"
+        "main"
       ],
       "domain": [
         "regeneration"
@@ -14164,6 +14166,202 @@
       "phase_affinity": [
         "base",
         "deload"
+      ]
+    },
+    {
+      "id": "frog_stand",
+      "name": "Frog Stand (Crow Pose)",
+      "category": "complementary",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "handstand_skill"
+      ],
+      "pattern": "handstand",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "handstand_entry",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": null,
+        "work_seconds": 20,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Ginocchia appoggiate sui tricipiti, peso avanti sulle mani. 4x15-30s."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Primo gradino della progressione handstand: bilanciamento statico sulle mani con le ginocchia appoggiate ai tricipiti. Costruisce forza di polsi e dita e il controllo del peso in avanti senza andare sottosopra — accessibile anche a chi non ha mai fatto verticale. Molto utile per l'arrampicata: allena la compressione e il carico dei polsi in chiusura.",
+      "cues": [
+        "Mani a larghezza spalle, dita ben aperte e attive",
+        "Ginocchia appoggiate in alto sui tricipiti, non sui gomiti",
+        "Sposta il peso in avanti finché i piedi si staccano",
+        "Sguardo leggermente avanti, non sotto di te",
+        "Scarica i polsi fra le serie"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
+    },
+    {
+      "id": "handstand_kick_up_wall",
+      "name": "Handstand Kick-up (a Muro)",
+      "category": "complementary",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "handstand_skill"
+      ],
+      "pattern": "handstand",
+      "intensity_level": "medium",
+      "fatigue_cost": 3,
+      "recency_group": "handstand_entry",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 5,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 60,
+        "notes": "Slancio controllato in verticale al muro. Cerca il punto di equilibrio, non la potenza."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "L'abilità di ingresso in verticale: slancio controllato di una gamba con l'altra che segue, fermandosi al muro. Complementare al wall walk-up (che entra dal basso) — qui si allena il controllo dello slancio, che è ciò che serve per la verticale libera. Insegna a dosare la spinta invece di 'sperare' di arrivarci.",
+      "cues": [
+        "Mani a terra a 20-25 cm dal muro",
+        "Gamba di slancio tesa, l'altra spinge da terra",
+        "Frena con gli addominali quando i piedi toccano il muro",
+        "Spalle sempre sopra le mani, braccia bloccate",
+        "Scendi controllato, non lasciarti cadere"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
+    },
+    {
+      "id": "heel_pulls_chest_to_wall",
+      "name": "Heel Pulls (Petto al Muro)",
+      "category": "complementary",
+      "time_min": 8,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "handstand_skill"
+      ],
+      "pattern": "handstand",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "handstand_freestanding",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "prescription_defaults": {
+        "sets": 4,
+        "reps": 4,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "Petto al muro, stacca un tallone alla volta cercando l'equilibrio. 4x3-5 tentativi."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "medium",
+        "skin": "none"
+      },
+      "description": "Il drill canonico per passare dalla verticale al muro a quella libera: petto al muro, si staccano i talloni uno alla volta cercando la linea di equilibrio. È il ponte che oggi manca fra il wall hold e la pratica freestanding — allena a trovare il bilanciamento con le dita, non a resistere appoggiati.",
+      "cues": [
+        "Petto e cosce a contatto col muro, corpo in linea",
+        "Stacca un tallone, poi l'altro: cerca il punto morto",
+        "Correggi con la pressione delle dita, non con le spalle",
+        "Bacino in retroversione, costole chiuse",
+        "Se cadi in avanti, esci di lato — non inarcare"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
+    },
+    {
+      "id": "wall_handstand_shrugs",
+      "name": "Handstand Shrugs (Scapolari al Muro)",
+      "category": "complementary",
+      "time_min": 6,
+      "role": [
+        "accessory"
+      ],
+      "domain": [
+        "handstand_skill",
+        "strength_general"
+      ],
+      "pattern": "handstand",
+      "intensity_level": "medium",
+      "fatigue_cost": 4,
+      "recency_group": "handstand_holds",
+      "equipment_required": [],
+      "location_allowed": [
+        "home",
+        "gym"
+      ],
+      "prescription_defaults": {
+        "sets": 3,
+        "reps": 8,
+        "work_seconds": null,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": 75,
+        "notes": "In verticale al muro, eleva e deprimi le scapole a braccia tese. 3x8-10."
+      },
+      "stress_tags": {
+        "fingers": "low",
+        "elbow": "low",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Elevazione e depressione scapolare mantenendo la verticale al muro a braccia tese. Costruisce la forza di elevazione della spalla che regge la verticale — la ragione più comune per cui un hold cede non è la mancanza di equilibrio ma la spalla che collassa. Trasferisce anche ai movimenti di spinta sopra la testa in arrampicata.",
+      "cues": [
+        "Braccia sempre tese: il movimento è solo scapolare",
+        "Spingi il pavimento via da te per elevare",
+        "Range completo ma controllato, senza rimbalzi",
+        "Corpo in linea, non inarcare la schiena per compensare"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
       ]
     }
   ]

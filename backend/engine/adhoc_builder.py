@@ -54,7 +54,19 @@ FOCUS_DOMAINS: Dict[str, List[str]] = {
     "endurance": ["power_endurance", "aerobic_capacity", "anaerobic_capacity"],
     "core": ["core"],
     "general_strength": ["strength_general"],
-    "technique": ["technique_footwork", "technique_movement", "technique_body_position", "technique_boulder", "technique_lead"],
+    # D262: `technique_constraint` (one-hand climbing, three-limb drill…) e
+    # `technique_relaxation` esistevano nel catalogo ma nessun focus li mappava:
+    # 5 esercizi vivi nel planner e invisibili al coach.
+    "technique": [
+        "technique_footwork", "technique_movement", "technique_body_position",
+        "technique_boulder", "technique_lead", "technique_constraint",
+        "technique_relaxation",
+    ],
+    # D262: stessa ragione + richiesta esplicita di Daniele. `handstand_skill`
+    # merita un focus proprio invece di essere annegato in `technique`: è una
+    # progressione a sé (ingresso → hold → equilibrio → spinta) e chi la chiede
+    # la chiede per nome.
+    "handstand": ["handstand_skill"],
     "mobility": ["mobility", "flexibility", "regeneration"],
     "prehab": ["prehab_shoulder", "prehab_elbow", "prehab_wrist", "prehab_finger"],
 }
@@ -80,6 +92,9 @@ MAX_MINUTES = 120
 MAX_EXERCISES = 8
 MAX_PER_PATTERN = 2
 MAX_WARMUP_WORK_SECONDS = 300
+# D262: un blocco a tempo già lungo (pratica di abilità: "10 minuti di
+# verticale") non è un volume da raddoppiare per riempire il budget.
+MAX_BUMPABLE_WORK_SECONDS = 300
 
 # Deterministic ordering of the main block: heavy compound work first, then
 # accessories, then everything else (technique/endurance drills).
@@ -543,7 +558,20 @@ def compose_adhoc_session(
         ex = catalog_by_id.get(ce["exercise_id"]) or {}
         return "warmup" in _roles_of(ex)
 
-    bumpable = [ce for ce in exercises if not _is_warmup_entry(ce)]
+    def _is_long_block(ce: Dict[str, Any]) -> bool:
+        """D262: a set that is already a long timed block must not be doubled.
+
+        `freestanding_handstand_practice` declares one 600s skill block; the
+        bump turned it into 2×600s — 20 of a 59-minute session on a single
+        drill. Long blocks are prescribed as "practice for N minutes", so their
+        set count is not a volume dial.
+        """
+        return (ce.get("work_seconds") or 0) >= MAX_BUMPABLE_WORK_SECONDS
+
+    bumpable = [
+        ce for ce in exercises
+        if not _is_warmup_entry(ce) and not _is_long_block(ce)
+    ]
     progressed = True
     while progressed and estimate_custom_session_duration(exercises) < minutes:
         progressed = False
