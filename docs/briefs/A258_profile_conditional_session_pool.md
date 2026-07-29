@@ -68,12 +68,7 @@ E il `profile_snapshot` salvato nei week_plans **non contiene il profilo d'asses
 
 **Conseguenza se non gestito:** un utente con tirata debole genera il ciclo e ottiene `pulling_strength_gym` nel pool; poi modifica la disponibilità → il replanner ricostruisce il pool **senza profilo** → la sessione **sparisce** dal piano rigenerato. Incoerenza silenziosa fra piano generato e replanificato.
 
-**Tre opzioni, da decidere prima della Fase 2:**
-- (a) aggiungere il profilo a `profile_snapshot` (nuovo campo — attenzione ai piani già salvati, che non ce l'hanno: serve fallback);
-- (b) far leggere al replanner il profilo dallo `user_state` corrente invece che dallo snapshot (più semplice, ma il pool seguirebbe il profilo *di oggi* mentre i pesi restano quelli *dello snapshot* — incoerenza di segno opposto);
-- (c) leggere il pool dalla **fase del macrociclo** (`phase["session_pool"]`, dove è già memorizzato) invece di ricostruirlo — **la più pulita**: elimina la divergenza alla radice, perché il pool congelato è già la fonte di verità che `deps.py:581` usa per la generazione normale.
-
-**Propendo per (c).** Nota storica che la sostiene: il commento a quella riga documenta B287/R-3, un bug in cui *proprio quella ricostruzione* aveva perso la disciplina dando a un boulderista un pool da lead. È un punto già dimostratosi fragile: smettere di ricostruire lì è un miglioramento indipendente da questo brief.
+**Soluzione raccomandata: memorizzare il pool in `profile_snapshot`** — vedi §7.3 per la motivazione completa e per l'opzione che ho dovuto scartare dopo la verifica (leggere dalla fase del macrociclo **non è praticabile**: `apply_events` non riceve né `user_state` né macrociclo).
 
 **Test:** ~25 file chiamano `_build_session_pool`. Con il parametro opzionale e default `None` dovrebbero restare tutti verdi; i più esposti sono `test_macrocycle_v1.py`, `test_discipline_all_round.py`, `test_macrocycle_boulder.py`, `test_b287_replanner_immutability.py`.
 
@@ -85,12 +80,36 @@ E il `profile_snapshot` salvato nei week_plans **non contiene il profilo d'asses
 - **Boulder e all_round**: la regola va decisa anche per `_SESSION_POOL_BOULDER`, oppure limitata esplicitamente a lead con motivazione.
 - **Nessun aumento del carico**: la sessione entra come `available`, il conteggio giorni duri non deve salire.
 
-## 7. Domande aperte per Daniele
+## 7. Raccomandazioni
 
-1. **Soglia a 50?** È il valore proposto dal KB e coincide con la soglia `< 50` già usata da `_adjust_domain_weights` per gli assi deboli — coerenza a favore. Confermi?
-2. **Solo lead o anche boulder/all_round?**
-3. **Come chiudere la divergenza del replanner?** Verificata reale (§5). Opzioni (a)/(b)/(c) lì elencate; **raccomando (c)**: leggere il pool già memorizzato nella fase invece di ricostruirlo.
-4. **Generalizzare o no?** Oggi la regola sarebbe hard-coded su `pulling_strength_gym`. Le altre 4 sessioni orfane (`heavy_conditioning_gym`, `legs_strength`, `lower_body_gym`, `upper_body_weights`) hanno lo stesso problema. Una mappa `asse debole → sessione` sarebbe più generale ma è più superficie: **propongo di partire dal solo caso pulling** e generalizzare se funziona.
+**1. Soglia a 50 — SÌ.** Coincide con la soglia `< 50` che `_adjust_domain_weights` usa già per definire "asse debole". Riusarla significa **una sola definizione di debolezza** in tutto il motore: se un domani si sposta, si sposta in un punto solo. Inventare una seconda soglia qui creerebbe due nozioni di "debole" che divergono silenziosamente.
+
+**2. Anche boulder — SÌ, e non è un di più: il buco è identico.** Verificato sul pool boulder:
+
+| fase (boulder) | peso `pulling_strength` | sessioni che lo coprono |
+|---|---|---|
+| base | 0.15 | 1 (`complementary_conditioning`, solo `available`) |
+| strength_power | 0.25 | 4 |
+| **power_endurance** | **0.15** | **0** ⚠️ |
+| performance | 0.10 | 2 |
+| deload | 0.05 | 0 (benigno) |
+
+In `power_endurance` il boulder ha peso **0.15** contro lo 0.10 del lead, quindi il buco è **più grave**. Limitare la regola al lead lascerebbe scoperto proprio il caso peggiore.
+
+**3. Divergenza del replanner — RACCOMANDAZIONE CORRETTA dopo verifica: memorizzare il pool in `profile_snapshot`.**
+
+Nel brief avevo proposto di leggere il pool dalla fase del macrociclo. **Non è praticabile**: `apply_events` (`replanner_v1.py:971`) riceve solo `plan, events, availability, planning_prefs, gyms, custom_sessions` — **nessun `user_state`, nessun macrociclo**. Leggerlo lì richiederebbe di allargare la firma di una funzione pubblica con molti chiamanti.
+
+La soluzione pulita è **simmetrica a quella che il progetto usa già**: `profile_snapshot` porta `domain_weights` esattamente perché il replanner non debba ricalcolarli. Aggiungere `session_pool` allo snapshot lo fa seguire lo stesso schema, con lo stesso fallback:
+
+```python
+domain_weights = snapshot.get("domain_weights", base_weights)          # oggi
+session_pool   = snapshot.get("session_pool") or _build_session_pool(...)  # proposto
+```
+
+Il fallback copre i piani già salvati, che il campo non ce l'hanno. Beneficio collaterale: elimina la ricostruzione che in B287/R-3 aveva già perso la disciplina.
+
+**4. Partire dal solo caso tirata — SÌ.** Verificato cosa allenano le altre 4 sessioni orfane: `heavy_conditioning_gym`, `legs_strength`, `lower_body_gym`, `upper_body_weights` dichiarano **tutte** un solo dominio, `strength_general`, che nell'assessment **non è un asse**. Non esiste un punteggio "forza generale" su cui condizionare: servirebbe prima decidere *quale* asse le governa, cioè una domanda di training design che al KB non abbiamo posto. La tirata invece ha un asse proprio, un test dedicato e una risposta del KB già in mano. **Generalizzare adesso significherebbe impacchettare una decisione non istruita dentro una istruita.**
 
 ## 8. Ordine consigliato
 
