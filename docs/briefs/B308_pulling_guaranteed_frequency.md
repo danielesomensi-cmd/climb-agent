@@ -61,11 +61,13 @@ Consumatori del piano prodotto: `/api/week/{n}`, il replanner, i report settiman
 - **`from_phase="current"`** nelle chiamate a `generate_macrocycle`: non toccato da questo brief, ma da riverificare perché siamo in area planner.
 - **Deload intatto**: nessuna sessione di tirata iniettata in deload.
 
-## 6. Domande aperte per Daniele
+## 6. Decisioni
 
-1. **Cadenza settimanale o 7-10 giorni?** (settimanale = più semplice e più conservativa; 7-10 gg = più fedele al KB ma richiede lettura dello storico)
-2. **Quale sessione collocare** quando manca la tirata? Dipende dall'esito di [[A258]]: se `pulling_strength_gym` entra nei pool è il candidato naturale; altrimenti serve che le sessioni di `base`/`power_endurance` abbiano un blocco di tirata (l'azione 2 della raccomandazione KB, effort S, da fare **prima** di questo brief).
-3. **Fallimento silenzioso o visibile?** Propendo per registrarlo nel piano e mostrarlo, coerente con `skipped_tests`.
+**1. Cadenza — DECISO: settimanale.** ✅ OK di Daniele 2026-07-29 ("sui 7 giorni ok, se è semplice"). È l'opzione semplice: il planner genera una settimana per volta e il controllo "questa qualità è presente nel piano?" si fa sui dati già in mano, senza leggere lo storico. Più conservativa della finestra 7-10 giorni, mai meno frequente.
+
+**2. Fallimento silenzioso o visibile — RACCOMANDO: visibile.** Registrarlo nel piano sul modello di `skipped_tests`, che già esiste per lo stesso motivo. La ragione non è cosmetica: [[D263]] è rimasto invisibile per mesi proprio perché l'assenza di uno stimolo non produce alcun segnale. Uno stimolo dichiarato "garantito" che silenziosamente non viene erogato ricrea esattamente la classe di bug che questo brief chiude. Costo: un campo nel plan + una riga di UI (opzionale, si può anche solo loggare in prima battuta).
+
+**3. Quale sessione collocare** quando manca la tirata: dipende dall'azione 2 del KB (blocco di tirata in `base`/`power_endurance`) — vedi §7. Se [[A258]] è già in produzione e l'utente ha la tirata debole, `pulling_strength_gym` è il candidato naturale; per tutti gli altri serve il blocco nelle sessioni esistenti.
 
 ## 7. Ordine consigliato
 
