@@ -130,6 +130,20 @@ Nell'ordine: **Opzione 3** (chiude il sintomo riportato, mezz'ora, rischio minim
 
 **Non fare l'Opzione 4.**
 
-## 7. Cosa NON è stato toccato
+## 7. Esito
 
-Nessuna modifica applicata. `git status` pulito all'apertura e alla chiusura dell'audit. Le misure di §2, §3 e §4 sono riproducibili con lo stato prod di Daniele e il catalogo a 255 esercizi (commit `9f8529c`).
+**OK di Daniele il 2026-07-29 su Opzione 3 + Opzione 2** → implementate in [[B307]] (backend-only). Opzione 1 (popolare `phase_affinity`) **resta aperta** come brief di dominio: finché non è fatta, il tie-break dentro ogni bucket rimane alfabetico — i focus più stretti introdotti qui mascherano il sintomo, non lo curano.
+
+Verifica end-to-end con estrazione LLM reale e stato prod, sul messaggio originale del 28/07:
+
+| richiesta | prima | dopo |
+|---|---|---|
+| "core e bloccaggi monobraccio, 60 min, casa" | trazioni assistite + row, **zero bloccaggi** | core + Archer + **Frenchies** + **Lock-off Isometric** |
+| "45 min di soli bloccaggi" | non esprimibile (annegava in `pull`) | Archer, Lock-off Isometric, One-Arm, Typewriter, Frenchies, Uneven-Grip |
+| "sessione di trazioni" (controllo non-regressione) | archer, band-assisted, barbell row, inverted row | idem + lock-off e frenchies, 4 famiglie invece di 2 |
+
+Opzione 4 (split di `pull_vertical`) **non** eseguita, come raccomandato: i tre blocchi di `pulling_strength_compound` continuano a filtrare `pull_vertical` e il baseline del §4 è invariato.
+
+## 8. Cosa NON è stato toccato dall'audit
+
+L'audit in sé (§1-§6) non ha modificato nulla: `git status` pulito all'apertura e alla chiusura. Le misure sono riproducibili con lo stato prod di Daniele e il catalogo a 255 esercizi (commit `9f8529c`). Le modifiche descritte al §7 sono di [[B307]], commit successivo.

@@ -7539,7 +7539,7 @@
       "pattern": "pull_vertical",
       "intensity_level": "high",
       "fatigue_cost": 7,
-      "recency_group": "vertical_pull",
+      "recency_group": "pullup_lock_off",
       "equipment_required": [
         "pullup_bar"
       ],
@@ -7593,7 +7593,7 @@
       "pattern": "pull_vertical",
       "intensity_level": "high",
       "fatigue_cost": 6,
-      "recency_group": "vertical_pull",
+      "recency_group": "pullup_one_arm",
       "equipment_required": [
         "pullup_bar"
       ],
@@ -9189,7 +9189,7 @@
       "pattern": "pull_vertical",
       "intensity_level": "medium",
       "fatigue_cost": 5,
-      "recency_group": "pulling_vertical",
+      "recency_group": "pullup_variants",
       "equipment_required": [
         "pullup_bar"
       ],

@@ -47,6 +47,9 @@ from backend.engine.custom_session import (
 FOCUS_DOMAINS: Dict[str, List[str]] = {
     "fingers": ["finger_strength", "finger_max_strength", "finger_strength_endurance", "finger_aerobic_endurance"],
     "pull": ["strength_pulling", "contact_strength", "power", "lock_off_endurance"],
+    # D261 opzione 3: "bloccaggi"/"lock-offs" è una richiesta specifica che nel
+    # bucket `pull` (33 candidati) veniva annegata. I domini esistono già (B305).
+    "lock_off": ["lock_off_endurance"],
     "power": ["power", "contact_strength"],
     "endurance": ["power_endurance", "aerobic_capacity", "anaerobic_capacity"],
     "core": ["core"],
@@ -353,10 +356,24 @@ def compose_adhoc_session(
         used.add(str(warmups[0].get("id")))
 
     def _pattern_of(ex: Dict[str, Any]) -> str:
+        """Diversity axis for MAX_PER_PATTERN.
+
+        D261 opzione 2: `recency_group` first, NOT `pattern`. `pattern` is too
+        coarse to express "same thing" — 12 of the 14 pulling exercises are
+        `pull_vertical`, so the cap threw out a lock-off (a genuinely different
+        stimulus) as if it were a fifth pull-up variant. `recency_group` is the
+        catalog's existing "same family" axis (B159b) and already separates
+        lock-offs, one-arm work and plain pull-ups. Falls back to `pattern`
+        for exercises with no group, then to the id (never collapse two
+        unrelated exercises onto an empty key).
+        """
+        rg = ex.get("recency_group")
+        if rg:
+            return str(rg)
         p = ex.get("pattern")
         if isinstance(p, list):
             p = p[0] if p else None
-        return str(p or ex.get("recency_group") or ex.get("id") or "")
+        return str(p or ex.get("id") or "")
 
     def _pool(focus_key: str) -> List[Dict[str, Any]]:
         pool = _candidates(
