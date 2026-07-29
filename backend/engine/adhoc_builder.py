@@ -128,15 +128,20 @@ def _phase_match(ex: Dict[str, Any], phase: Optional[str]) -> bool:
     return phase in (aff or [])
 
 
-def _rank_key(ex: Dict[str, Any], phase: Optional[str], recent: set) -> tuple:
-    """Deterministic ranking: phase-affinity first, then not-recent, then id.
+def _rank_key(ex: Dict[str, Any], phase: Optional[str]) -> tuple:
+    """Deterministic ranking: phase-affinity first, then id as tie-break.
 
-    All booleans are negated so Python's ascending sort puts preferred first.
+    A-ADHOC-PHASE-AFFINITY: the "unseen recently" term that used to sit in the
+    middle was dead code — every caller filters candidates through
+    ``exclude=used`` and ``used`` starts as ``set(recent)``, so a recent id can
+    never reach the sort. Removed rather than left to imply a discrimination
+    that never happened (D261 §2).
+
+    The boolean is negated so Python's ascending sort puts preferred first.
     """
     return (
-        not _phase_match(ex, phase),      # phase-affinity matches rank first
-        str(ex.get("id") or "") in recent,  # unseen-recently ranks before recent
-        str(ex.get("id") or ""),           # stable tie-break → determinism
+        not _phase_match(ex, phase),   # phase-appropriate exercises rank first
+        str(ex.get("id") or ""),       # stable tie-break → determinism
     )
 
 
@@ -380,7 +385,7 @@ def compose_adhoc_session(
             catalog_by_id, domains=FOCUS_DOMAINS[focus_key], equipment=equipment, exclude=used
         )
         pool = [e for e in pool if not ({"warmup", "cooldown", "test"} & set(_roles_of(e)))]
-        pool.sort(key=lambda e: _rank_key(e, phase, recent))
+        pool.sort(key=lambda e: _rank_key(e, phase))
         return pool
 
     def _estimate(exs: List[Dict[str, Any]]) -> int:
@@ -418,7 +423,7 @@ def compose_adhoc_session(
                 and _exercise_fits_equipment(e, equipment)
                 and not ({"warmup", "cooldown", "test"} & set(_roles_of(e)))
             ]
-            pool.sort(key=lambda e: _rank_key(e, phase, recent))
+            pool.sort(key=lambda e: _rank_key(e, phase))
             return pool
 
         part_pools = {p: _bodypart_candidates(p) for p in body_parts}
@@ -511,7 +516,7 @@ def compose_adhoc_session(
     # muscle-level mode (A252) — appending core to a "chest + triceps" request
     # would be padding an unrequested muscle group.
     finishers = _candidates(catalog_by_id, categories=["core"], equipment=equipment, exclude=used)
-    finishers.sort(key=lambda e: _rank_key(e, phase, recent))
+    finishers.sort(key=lambda e: _rank_key(e, phase))
     if (
         not use_body_parts
         and focus != "core"

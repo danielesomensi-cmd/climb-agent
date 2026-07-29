@@ -46,7 +46,11 @@
         "If using a hangboard, start with 4-finger open grip on the largest edge"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "elbow_wrist_extensor_eccentric",
@@ -95,7 +99,11 @@
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "band_external_rotation",
@@ -143,7 +151,11 @@
       ],
       "video_url": "https://trainingforclimbing.com/rotator-cuff-training-for-climbers/",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "finger_recruitment_pulls",
@@ -195,7 +207,11 @@
         "Focus on rate of force development and intent to pull hard, not hold duration"
       ],
       "video_url": "https://www.youtube.com/watch?v=gHDmBqLfBWc",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "dead_hang_easy",
@@ -249,7 +265,11 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "max_hang_5s",
@@ -305,7 +325,10 @@
         "Add weight in 2.5-5kg increments",
         "Fully warmed up (15-20 min progressive)"
       ],
-      "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/"
+      "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "max_hang_7s",
@@ -362,7 +385,10 @@
         "53-second rest optimizes PCr recovery",
         "Last set should be very hard but perfect form"
       ],
-      "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/"
+      "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "max_hang_ladder",
@@ -418,7 +444,10 @@
         "3-5 full ladders per grip (half-crimp, open, pinch)",
         "3-5 min rest between full ladder sets"
       ],
-      "video_url": "https://www.youtube.com/watch?v=bdbLgWQ4JqM"
+      "video_url": "https://www.youtube.com/watch?v=bdbLgWQ4JqM",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "repeater_hang_7_3",
@@ -472,7 +501,11 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "horst_7_53",
@@ -527,7 +560,10 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "repeater_15_15",
@@ -581,7 +617,10 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "power_endurance"
+      ]
     },
     {
       "id": "density_hangs",
@@ -635,7 +674,11 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "open_hand"
-      }
+      },
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "long_duration_hang",
@@ -687,7 +730,10 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "min_edge_hang",
@@ -744,7 +790,10 @@
         "Shoulders packed, body still",
         "Progress by reducing edge depth week-to-week"
       ],
-      "video_url": "https://www.youtube.com/watch?v=rUUPw9o1OJ4"
+      "video_url": "https://www.youtube.com/watch?v=rUUPw9o1OJ4",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "pinch_block_training",
@@ -799,7 +848,10 @@
         "edge_mm": null,
         "grip": "pinch"
       },
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "one_arm_hang_assisted",
@@ -857,7 +909,10 @@
         "grip": "half_crimp"
       },
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "lopez_subhangs",
@@ -909,7 +964,10 @@
       "attributes": {
         "edge_mm": 22,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "power_endurance"
+      ]
     },
     {
       "id": "gym_arc_easy_volume",
@@ -963,7 +1021,11 @@
         "Breathing stays conversational throughout — you should be able to talk normally"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "gym_technique_boulder_drills",
@@ -1019,7 +1081,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/footwork-drills",
       "load_model": "grade_relative",
-      "focus": null
+      "focus": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "split_squat",
@@ -1070,7 +1136,10 @@
       "video_url": "https://www.youtube.com/watch?v=1V4ypd3YBbA",
       "load_model": "external_load",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "pistol_squat_progression",
@@ -1122,7 +1191,10 @@
       "video_url": null,
       "load_model": "bodyweight_only",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "romanian_deadlift",
@@ -1170,7 +1242,10 @@
         "3-second controlled eccentric — no bouncing at the bottom"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "pullup",
@@ -1221,7 +1296,10 @@
         "Controlled 2-3s lowering — no dropping"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "chinup",
@@ -1273,7 +1351,10 @@
         "Quality over quantity: stop set when form breaks"
       ],
       "video_url": "https://www.hoopersbeta.com/library/pull-ups-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "scapular_pullup",
@@ -1325,7 +1406,11 @@
         "Do before every climbing session as part of warm-up"
       ],
       "video_url": "https://trainingforclimbing.com/the-best-climbing-exercise-youre-not-doing/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "inverted_row",
@@ -1376,7 +1461,10 @@
         "To increase difficulty: raise feet, use rings, add pause at top"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "band_assisted_pullup",
@@ -1427,7 +1515,10 @@
         "Goal: eliminate band entirely. Transition test: can you do 3 unassisted reps?"
       ],
       "video_url": "https://www.hoopersbeta.com/library/pull-ups-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "dip",
@@ -1476,7 +1567,10 @@
         "Full lockout at top without hyperextending elbows"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "weighted_dip",
@@ -1526,7 +1620,10 @@
         "Add weight so the final rep is hard with perfect form"
       ],
       "video_url": null,
-      "load_model": "total_load"
+      "load_model": "total_load",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "pushup",
@@ -1575,7 +1672,10 @@
         "Quality: 3-second lower. If reps degrade to half-ROM, stop the set"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "pike_pushup",
@@ -1623,7 +1723,10 @@
         "If wrists are uncomfortable, use push-up handles or fists"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "bench_press",
@@ -1672,7 +1775,10 @@
         "Dumbbells: allow natural arc rather than forcing a straight bar path"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "overhead_press",
@@ -1722,7 +1828,10 @@
         "Seated dumbbell variation is shoulder-health-friendly alternative if bar feels uncomfortable"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "plank",
@@ -1768,7 +1877,11 @@
         "Progress by moving elbows forward past shoulder line for longer lever"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "core_hollow_hold",
@@ -1814,7 +1927,11 @@
         "Stop the set the moment lower back lifts — form over duration"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "core_l_sit",
@@ -1862,7 +1979,11 @@
         "Engage quads aggressively — soft legs kill the position"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "mobility_thoracic_shoulders_flow",
@@ -1909,7 +2030,11 @@
         "Do not force range: the goal is controlled quality rotation, not maximum stretch"
       ],
       "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "general_pulse_raise",
@@ -1954,7 +2079,11 @@
         "Keep easy — this is preparation, not training"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "pangullich_ladders_easy",
@@ -2010,7 +2139,10 @@
       "focus": "body_position",
       "experience_minimum_years": 2,
       "age_minimum": 16,
-      "difficulty_tier": 3
+      "difficulty_tier": 3,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "campus_laddering_feet_off",
@@ -2065,7 +2197,10 @@
       "load_model": "bodyweight_only",
       "experience_minimum_years": 2,
       "age_minimum": 16,
-      "difficulty_tier": 2
+      "difficulty_tier": 2,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "campus_laddering_feet_on",
@@ -2118,7 +2253,10 @@
       "load_model": "bodyweight_only",
       "experience_minimum_years": 1,
       "age_minimum": 16,
-      "difficulty_tier": 1
+      "difficulty_tier": 1,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "campus_bumps",
@@ -2175,7 +2313,10 @@
       "age_minimum": 16,
       "difficulty_tier": 4,
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "campus_double_dyno",
@@ -2231,7 +2372,10 @@
       "load_model": "bodyweight_only",
       "experience_minimum_years": 3,
       "age_minimum": 16,
-      "difficulty_tier": 5
+      "difficulty_tier": 5,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "limit_bouldering",
@@ -2292,7 +2436,11 @@
         "Stop session if power clearly dropping"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ]
     },
     {
       "id": "board_limit_boulders",
@@ -2348,6 +2496,9 @@
         "board_kilter",
         "board_moonboard",
         "board_other"
+      ],
+      "phase_affinity": [
+        "strength_power"
       ]
     },
     {
@@ -2399,7 +2550,10 @@
         "If reps slow down — rest longer or end set"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "four_by_four_bouldering",
@@ -2456,7 +2610,11 @@
         "Reduce grade if unable to finish all 4 problems in a round"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "linked_boulders",
@@ -2508,7 +2666,11 @@
         "Rest 4-5 min between full link circuits"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "route_intervals",
@@ -2557,7 +2719,11 @@
         "3-5 intervals per session, progressive overload via rest reduction"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "arc_training",
@@ -2611,7 +2777,11 @@
         "After the set, hold arms above heart for 10-15s then shake out to clear blood"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "threshold_climbing",
@@ -2660,7 +2830,10 @@
         "6 sets total. Sets 5-6 will feel harder — that metabolic accumulation is the training stimulus"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "power_endurance"
+      ]
     },
     {
       "id": "continuity_climbing",
@@ -2714,7 +2887,11 @@
         "After 4-6 weeks of continuity, transition to ARC for longer continuous sets"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "easy_route_laps",
@@ -2761,7 +2938,11 @@
         "~10 min per lap. 2 min rest between laps. Total 4 laps = ~50 min gentle movement"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "arc_easy_traverse",
@@ -2813,7 +2994,11 @@
         "Hands near heart level on vertical sections — on slab traverses this is automatic"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "weighted_pullup",
@@ -2865,7 +3050,10 @@
         "Reduce weight or stop if shoulder/elbow pain"
       ],
       "video_url": "https://trainingforclimbing.com/hypergravity-pull-up-training-for-increased-strength-power-and-endurance/",
-      "load_model": "total_load"
+      "load_model": "total_load",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "l_sit_pullup",
@@ -2917,7 +3105,12 @@
         "Assisted L-sit (band under feet) acceptable for progression"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "archer_pullup",
@@ -2971,7 +3164,10 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/one-arm-pull-up-progressions",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "lock_off_isometric",
@@ -3023,7 +3219,10 @@
         "Time under tension: 5-10s per hold, progress duration"
       ],
       "video_url": "https://trainingforclimbing.com/4-pull-up-variations-to-amp-up-your-workouts/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "one_arm_pullup_assisted",
@@ -3078,7 +3277,10 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/one-arm-pull-up-progressions",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "barbell_row",
@@ -3127,7 +3329,10 @@
         "If lower back fatigues before upper back, reduce load or switch to dumbbell single-arm row"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "typewriter_pullup",
@@ -3180,7 +3385,10 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/one-arm-pull-up-progressions",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "ring_pushup",
@@ -3231,7 +3439,10 @@
         "Pause 2 seconds at top in full support position for shoulder stability benefit"
       ],
       "video_url": "https://www.hoopersbeta.com/library/antagonist-training",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "face_pull",
@@ -3280,7 +3491,11 @@
         "No shrugging the traps — keep shoulders away from ears"
       ],
       "video_url": "https://www.hoopersbeta.com/library/external-rotator-levels-1-25",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "front_lever_one_leg",
@@ -3331,7 +3546,12 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "front_lever_straddle",
@@ -3381,7 +3601,12 @@
         "Stop 1-2s before form breaks — distribute effort across all sets"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "front_lever_tuck",
@@ -3431,7 +3656,12 @@
         "Stop 1-2s before complete failure on each set — distribute effort across all sets"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "hanging_leg_raise",
@@ -3479,7 +3709,11 @@
         "Progression: bent-knee raises → straight-leg parallel → toes to bar"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "ab_wheel_rollout",
@@ -3527,7 +3761,11 @@
         "Exhale on the roll-out (braces core), inhale on return"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "pallof_press",
@@ -3579,7 +3817,11 @@
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "side_plank",
@@ -3629,7 +3871,11 @@
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
       "load_model": "bodyweight_only",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "suitcase_carry",
@@ -3681,7 +3927,11 @@
       "video_url": null,
       "load_model": "total_load",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "dead_bug",
@@ -3729,7 +3979,11 @@
         "Progress: add light dumbbell in hand or resistance band on foot"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "kneeling_superman",
@@ -3778,7 +4032,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "windshield_wipers",
@@ -3827,7 +4085,12 @@
         "Reduce range to 45° if form breaks at full rotation"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "toes_to_bar",
@@ -3875,7 +4138,12 @@
         "If too hard: progress from hanging knee raises → straight-leg raises → toes to bar"
       ],
       "video_url": "https://trainingforclimbing.com/video-advanced-core-training-for-climbers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "knees_to_elbows",
@@ -3925,7 +4193,11 @@
         "Progress to toes_to_bar when you can do 3x10 clean reps"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "v_up",
@@ -3973,7 +4245,11 @@
         "Exhale on the way up, inhale on the way down"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "wrist_curl",
@@ -4022,7 +4298,11 @@
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "reverse_wrist_curl",
@@ -4071,7 +4351,11 @@
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "forearm_pronation_supination",
@@ -4118,7 +4402,11 @@
       ],
       "video_url": "https://trainingforclimbing.com/treating-climbers-elbow-medial-epicondylitis/",
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "finger_extensor_training",
@@ -4165,7 +4453,11 @@
         "Combine with wrist extension work (reverse curl) for full extensor training"
       ],
       "video_url": "https://trainingforclimbing.com/training-the-wrist-stabilizers/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "elbow_eccentric_curl",
@@ -4218,6 +4510,10 @@
       "equipment_required_any": [
         "weight",
         "resistance_band"
+      ],
+      "phase_affinity": [
+        "base",
+        "deload"
       ]
     },
     {
@@ -4268,7 +4564,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "silent_feet_drill",
@@ -4323,7 +4623,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "focus": "footwork"
+      "focus": "footwork",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "no_readjust_drill",
@@ -4378,7 +4682,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "focus": "footwork"
+      "focus": "footwork",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "downclimbing_drill",
@@ -4433,7 +4741,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "focus": "movement"
+      "focus": "movement",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "slow_climbing",
@@ -4485,7 +4797,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "grade_relative",
-      "focus": "movement"
+      "focus": "movement",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "flag_practice",
@@ -4540,7 +4856,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "grade_relative",
-      "focus": "body_position"
+      "focus": "body_position",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "breathing_awareness",
@@ -4597,7 +4917,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "foothold_stare",
@@ -4654,7 +4978,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "hip_rotation_drill",
@@ -4711,7 +5039,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "hover_hands",
@@ -4768,7 +5100,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "one_hand_climbing",
@@ -4826,7 +5162,11 @@
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
       "attributes": {},
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "sloth_monkey",
@@ -4883,7 +5223,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "sticky_feet",
@@ -4940,7 +5284,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "straight_arms",
@@ -4997,7 +5345,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tap_and_place",
@@ -5054,7 +5406,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "three_limb_drill",
@@ -5111,7 +5467,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library",
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "hip_opener_flow",
@@ -5160,7 +5520,11 @@
         "Never force rotation — explore the end of easy range, then breathe"
       ],
       "video_url": "https://www.youtube.com/watch?v=rMRGNHbxLPc",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "shoulder_stretch_flow",
@@ -5209,7 +5573,11 @@
         "After hard climbing session: focus extra time on posterior shoulder and pec minor"
       ],
       "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "forearm_stretches",
@@ -5259,7 +5627,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/forearm-stretching",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "full_body_stretch_flow",
@@ -5306,7 +5678,11 @@
         "Add breathing practice: 4-7-8 pattern (inhale 4, hold 7, exhale 8) during long holds"
       ],
       "video_url": "https://www.hoopersbeta.com/library/flexibility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "active_hip_mobility",
@@ -5355,7 +5731,11 @@
         "If hips pop or click without pain: normal. If click with pain: reduce range"
       ],
       "video_url": "https://www.hoopersbeta.com/library/hip-mobility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "wall_handstand_hold",
@@ -5406,7 +5786,11 @@
         "20s hold is the entry target — build to 60s before progressing"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "wall_walk_up",
@@ -5456,7 +5840,11 @@
         "2 reps = 1 up and 1 down controlled"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "handstand_shoulder_taps",
@@ -5505,7 +5893,11 @@
         "If hips rotate during taps, reduce rep count and focus on core tension first"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "freestanding_handstand_practice",
@@ -5554,7 +5946,11 @@
         "Track freestanding seconds per session — improvement is measured in seconds, not minutes"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "handstand_pushup_wall",
@@ -5605,7 +6001,12 @@
         "Pike push-up is the direct regression if reps are not achievable"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "jump_rope",
@@ -5653,7 +6054,11 @@
         "No jump rope? Simulate: same footwork and arm motion without rope — nearly equal HR benefit"
       ],
       "video_url": "https://www.youtube.com/watch?v=FJmRQ5iTXKE",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "turkish_getup",
@@ -5709,7 +6114,11 @@
       ],
       "video_url": "https://www.youtube.com/watch?v=0bR6bDCiMpg",
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "farmers_carry",
@@ -5762,7 +6171,11 @@
         "Single-arm variation: one side at a time trains anti-lateral-flexion more specifically"
       ],
       "video_url": "https://www.youtube.com/watch?v=rt17lmnaLSM",
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "bear_crawl",
@@ -5812,7 +6225,11 @@
         "Harder variant: backwards bear crawl, or with weight vest"
       ],
       "video_url": "https://www.youtube.com/watch?v=kNOSiZrxbMI",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "band_pull_apart",
@@ -5862,7 +6279,11 @@
         "Keep elbows straight throughout the movement"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "route_redpoint_attempt",
@@ -5910,7 +6331,10 @@
         "Plan attempts around peak freshness: first or second attempt of the session is usually best"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "performance"
+      ]
     },
     {
       "id": "cooldown_forearm_wrist_stretch",
@@ -5959,7 +6383,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/forearm-stretching",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "cooldown_hip_pigeon",
@@ -6008,7 +6436,11 @@
       ],
       "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "cooldown_hip_frog",
@@ -6057,7 +6489,11 @@
         "Breathe into the tension: exhale and allow further release"
       ],
       "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "cooldown_shoulder_chest",
@@ -6106,7 +6542,11 @@
       ],
       "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "cooldown_hamstring_fold",
@@ -6154,7 +6594,11 @@
         "To deepen: straighten legs progressively as flexibility improves"
       ],
       "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "cooldown_spinal_twist",
@@ -6203,7 +6647,11 @@
       ],
       "video_url": "https://www.youtube.com/watch?v=7Nhm4r_Kv9Y",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "cooldown_deep_squat_hold",
@@ -6251,7 +6699,11 @@
         "Hold 30-60s. If it feels easy, walk feet slightly closer together"
       ],
       "video_url": "https://www.hoopersbeta.com/library/hip-mobility-for-climbers",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "flexibility_cossack_squat",
@@ -6299,7 +6751,11 @@
       ],
       "video_url": "https://www.youtube.com/watch?v=tpczTeSkHz0",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "flexibility_active_leg_raise",
@@ -6346,7 +6802,11 @@
       ],
       "video_url": "https://www.youtube.com/watch?v=tpczTeSkHz0",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "flexibility_ninety_ninety",
@@ -6394,7 +6854,11 @@
       ],
       "video_url": "https://www.youtube.com/watch?v=rMRGNHbxLPc",
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "max_hang_10s",
@@ -6450,7 +6914,10 @@
         "3-minute rest between sets for full phosphocreatine recovery"
       ],
       "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/",
-      "active": false
+      "active": false,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "campus_touches",
@@ -6504,7 +6971,10 @@
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
       "experience_minimum_years": 1,
       "age_minimum": 16,
-      "difficulty_tier": 1
+      "difficulty_tier": 1,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "campus_max_ladders",
@@ -6560,7 +7030,10 @@
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
       "experience_minimum_years": 3,
       "age_minimum": 16,
-      "difficulty_tier": 4
+      "difficulty_tier": 4,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "campus_switches",
@@ -6613,7 +7086,10 @@
       "video_url": "https://trainingforclimbing.com/5-campus-board-exercises-to-train-contact-strength-for-climbing/",
       "experience_minimum_years": 2,
       "age_minimum": 16,
-      "difficulty_tier": 2
+      "difficulty_tier": 2,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "campus_sprint_endurance",
@@ -6667,7 +7143,12 @@
       "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/",
       "experience_minimum_years": 2,
       "age_minimum": 16,
-      "difficulty_tier": 3
+      "difficulty_tier": 3,
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "emom_bouldering",
@@ -6725,7 +7206,11 @@
         "When round 8-12 starts to feel hard, that's the training stimulus — don't reduce grade unless you'll fail",
         "Progress: 12 rounds → 15 rounds → 1 level harder at 12 rounds"
       ],
-      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
+      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "otm_bouldering",
@@ -6783,7 +7268,11 @@
         "If problems are taking >35 seconds, they are too hard: switch to lower grade",
         "Progress: add 1 problem per session, not 1 grade. Volume before intensity."
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "linked_boulders_circuit",
@@ -6841,7 +7330,11 @@
         "5 min rest between circuits: this is a minimum. Take more if needed to restore quality",
         "Sets 2-3 will feel much harder than set 1 — that metabolic accumulation is the point"
       ],
-      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
+      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "arc_training_progressive",
@@ -6895,7 +7388,11 @@
         "Keep a timer visible: knowing the remaining time helps pace the effort mentally",
         "300s rest between sets is a minimum — take more if needed to fully recover"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "threshold_long_intervals",
@@ -6948,7 +7445,11 @@
         "60s rest: walk, shake out, breathe deeply. Partial recovery is intentional",
         "Same set count and rest structure as threshold_climbing — sessions are interchangeable in programming"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "regeneration_climbing",
@@ -7001,7 +7502,10 @@
         "After a hard session: use this to flush lactate and restore forearm blood flow before leaving the gym",
         "Duration flexible: 20 min minimum, but 30+ min gives a stronger aerobic stimulus"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "deload"
+      ]
     },
     {
       "id": "pronator_terres_isometric_hold",
@@ -7051,7 +7555,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "stick_pronation_supination_eccentric",
@@ -7104,7 +7612,11 @@
       ],
       "video_url": "https://trainingforclimbing.com/treating-climbers-elbow-medial-epicondylitis/",
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "heel_hook_specific_drill",
@@ -7157,7 +7669,11 @@
         "Reset and repeat on each attempt — quality of movement, not speed"
       ],
       "video_url": "https://www.hoopersbeta.com/library",
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "grip_transitions_half_to_open",
@@ -7211,7 +7727,10 @@
         "Breathe out slowly during the transition"
       ],
       "video_url": "https://trainingforclimbing.com/climbing-training-protocol-for-stronger-finger-tendons-and-pulleys/",
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "wall_slide",
@@ -7261,7 +7780,11 @@
         "Slow and controlled: 5s up, 5s down"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "active_finger_curls",
@@ -7313,7 +7836,11 @@
         "Adapted from Tyler Nelson (PIMA) and Hörst (protective finger rolls)"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "copenhagen_plank",
@@ -7364,7 +7891,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "plank_shoulder_tap",
@@ -7412,7 +7943,11 @@
         "Brace deep core and glutes throughout — the goal is anti-rotation, not speed"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "hangboard_moving_hangs",
@@ -7465,7 +8000,11 @@
         "For strength-endurance: choose a hold where mild pump builds by 3-4 min",
         "After dismounting: hold arms above heart level for 10s, then shake out slowly"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "thirty_thirty_intervals",
@@ -7522,7 +8061,11 @@
         "10 min rest between rounds: PCr system needs full recovery to deliver max quality",
         "Stop if a round is clearly failing before 30s — quality over quantity in every session"
       ],
-      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/"
+      "video_url": "https://trainingforclimbing.com/power-endurance-training-protocols-for-climbers/",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "frenchies",
@@ -7576,7 +8119,10 @@
         "5 full minutes rest between sets — less rest compromises quality severely",
         "Elbow warning: if lateral or medial elbow pain during holds, stop immediately"
       ],
-      "video_url": "https://trainingforclimbing.com/4-pull-up-variations-to-amp-up-your-workouts/"
+      "video_url": "https://trainingforclimbing.com/4-pull-up-variations-to-amp-up-your-workouts/",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "uneven_grip_pullup",
@@ -7631,7 +8177,10 @@
         "To increase climbing specificity: high hand uses palms-away (pronated) grip"
       ],
       "video_url": "https://trainingforclimbing.com/develop-one-arm-lock-off-strength-with-uneven-grip-pull-ups/",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "one_on_one_off_intervals",
@@ -7684,7 +8233,11 @@
         "If pump builds by round 6-7, you are too hard: grade down next session",
         "1 min rest: arms below heart level, shake out, breathe. Full but not excessive"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "aerobic_pyramid_intervals",
@@ -7740,7 +8293,11 @@
         "Beginners: do 1-2-3 only (no descent) — ~12 min total, build from there",
         "After the session: arms felt lightly worked, not pumped. If pumped, grade too hard"
       ],
-      "video_url": "https://trainingforclimbing.com/aerobic-versus-anaerobic-training-for-climbing-beat-the-burn-and-climb-all-day/"
+      "video_url": "https://trainingforclimbing.com/aerobic-versus-anaerobic-training-for-climbing-beat-the-burn-and-climb-all-day/",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "hip_flexor_couch_stretch",
@@ -7793,7 +8350,11 @@
         "After: squeeze glute of stretched leg to reinforce hip extension pattern"
       ],
       "video_url": "https://www.youtube.com/watch?v=wC5_iobGlmg",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "lat_overhead_stretch",
@@ -7844,7 +8405,11 @@
         "Option A note: fingers and pulleys take load — avoid if fingers are injured; use Option B or C instead"
       ],
       "video_url": "https://www.hoopersbeta.com/library/shoulder-mobility-for-climbers",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "dumbbell_bench_press",
@@ -7893,7 +8458,10 @@
         "Press to full lockout without losing scapular retraction",
         "Control the eccentric: 2-3s lowering, no bouncing"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "bicep_curl",
@@ -7943,7 +8511,11 @@
         "Supinated (palms-up) grip throughout",
         "2s concentric, 2-3s eccentric — no momentum"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "lateral_raise",
@@ -7993,7 +8565,11 @@
         "Do NOT raise above shoulder height — impingement risk",
         "Control the lowering: 2-3s eccentric, no dropping"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "test_max_hang_duration_20mm",
@@ -8047,7 +8623,10 @@
         "Hang until you cannot hold on — record total seconds",
         "One attempt only"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "test_l_sit_hold",
@@ -8129,7 +8708,11 @@
         "Hold until form breaks — record total seconds",
         "One attempt only, fully rested"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ]
     },
     {
       "id": "test_hip_flexibility",
@@ -8177,7 +8760,11 @@
         "Measure distance between inner heels in cm",
         "Warm up before testing — do not force"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "test_max_pullup_bw",
@@ -8229,7 +8816,10 @@
         "Count reps until form breaks",
         "One attempt only, fully rested"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "goblet_squat",
@@ -8276,7 +8866,10 @@
         "Drive through full foot to stand, squeeze glutes at top"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "glute_bridge",
@@ -8321,7 +8914,11 @@
         "For load: place dumbbell or plate across hip crease"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "finger_extensor_band",
@@ -8367,7 +8964,10 @@
         "Pain-free range only"
       ],
       "load_model": "bodyweight_only",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "deload"
+      ]
     },
     {
       "id": "finger_tendon_glides",
@@ -8414,7 +9014,10 @@
         "Move slowly between positions, hold each 2-3 seconds"
       ],
       "load_model": "bodyweight_only",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "deload"
+      ]
     },
     {
       "id": "lp_max_lift_5s",
@@ -8470,7 +9073,10 @@
         "Hold for exactly 5 seconds, controlled release",
         "Complete all sets one hand, then switch — rest 3 min between sets"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "lp_max_lift_7s",
@@ -8526,7 +9132,10 @@
         "Complete all sets one hand, then switch",
         "Last set should be very hard but with perfect form"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "lp_max_lift_10s",
@@ -8582,7 +9191,10 @@
         "Body completely still — controlled isometric hold",
         "3-minute rest between sets for full phosphocreatine recovery"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "lp_short_lifts",
@@ -8638,7 +9250,10 @@
         "Complete all sets one hand, then switch",
         "Focus on maximal force production, not duration"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "lp_density_lifts",
@@ -8694,7 +9309,10 @@
         "3 min rest between sets of 3",
         "Complete all sets one hand, then switch"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "power_endurance"
+      ]
     },
     {
       "id": "lp_repeater_lifts",
@@ -8749,7 +9367,10 @@
         "2 minutes rest between sets",
         "Complete all sets one hand, then switch"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "power_endurance"
+      ]
     },
     {
       "id": "lp_max_test_5s",
@@ -8804,7 +9425,10 @@
         "Rest 3-5 minutes between max attempts",
         "Record right-hand and left-hand values separately"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "lp_repeater_test",
@@ -8862,7 +9486,10 @@
         "Record total completed reps per hand when done",
         "Test right hand first, rest 5 minutes, then left hand"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "power_endurance"
+      ]
     },
     {
       "id": "test_repeater_7_3_to_failure",
@@ -8919,7 +9546,10 @@
         "A partial hang (<7s) does NOT count as a rep",
         "Record total completed reps when done"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "power_endurance"
+      ]
     },
     {
       "id": "lp_duration_test",
@@ -8978,7 +9608,10 @@
         "Test right hand first, rest 5 minutes, then left hand",
         "One attempt only per hand"
       ],
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "dynamic_mobility_flow",
@@ -9026,7 +9659,11 @@
         "Ankles: ankle circles, calf raises"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "hang_rampup_progressive",
@@ -9075,7 +9712,11 @@
         "Stop well short of max — this is warm-up, not training"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "foam_rolling_general",
@@ -9124,7 +9765,11 @@
         "Gentle pressure — avoid bony areas and joints"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "warmup_repeaters_large",
@@ -9171,7 +9816,10 @@
         "Focus on shoulder engagement: active hang, scapulae pulled down"
       ],
       "load_model": "bodyweight_only",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "deload"
+      ]
     },
     {
       "id": "eccentric_pullup",
@@ -9222,7 +9870,10 @@
         "Stop if you feel sharp shoulder pain"
       ],
       "load_model": "bodyweight_only",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "campus_laddering_down",
@@ -9276,7 +9927,10 @@
       "load_model": "bodyweight_only",
       "video_url": null,
       "experience_minimum_years": 2,
-      "difficulty_tier": 2
+      "difficulty_tier": 2,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "nordic_curl",
@@ -9322,7 +9976,10 @@
         "If too hard, reduce range of motion — even partial reps are effective"
       ],
       "load_model": "bodyweight_only",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "single_leg_calf_raise",
@@ -9368,7 +10025,11 @@
       "load_model": "external_load",
       "video_url": null,
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "step_ups",
@@ -9414,7 +10075,10 @@
       ],
       "load_model": "external_load",
       "video_url": null,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "hip_flexor_strengthening",
@@ -9460,7 +10124,11 @@
       ],
       "load_model": "bodyweight_only",
       "video_url": null,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "freeze_drill",
@@ -9513,7 +10181,11 @@
         "Great drill for learning where your center of gravity should be"
       ],
       "load_model": "grade_relative",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "twist_lock_drill",
@@ -9566,7 +10238,11 @@
         "Works best on vertical to slightly overhanging terrain"
       ],
       "load_model": "grade_relative",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "timed_route_preview",
@@ -9614,7 +10290,10 @@
         "After climbing: what did you miss? What surprised you?"
       ],
       "load_model": "grade_relative",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "deload"
+      ]
     },
     {
       "id": "fall_practice",
@@ -9722,7 +10401,11 @@
         "If fingers still feel cold after moderate boulders, add one more"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "spray_wall_limit",
@@ -9776,7 +10459,11 @@
         "Stop after 45-60 min or when attempt quality drops"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "strength_power",
+        "performance"
+      ]
     },
     {
       "id": "system_board_limit",
@@ -9831,7 +10518,10 @@
         "Stop after 45-60 min or when power drops noticeably"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "route_linked_laps",
@@ -9879,7 +10569,11 @@
         "Full rest (6-8 min) between sets of linked laps"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "route_on_the_minute",
@@ -9930,7 +10624,11 @@
         "Stop the session if you start a set already pumped from the previous one — recovery is failing"
       ],
       "video_url": null,
-      "load_model": "grade_relative"
+      "load_model": "grade_relative",
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "sub_max_capacity_hang",
@@ -9984,7 +10682,10 @@
       "attributes": {
         "edge_mm": 25,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "repeater_sub_max_endurance",
@@ -10039,7 +10740,10 @@
       "attributes": {
         "edge_mm": 20,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "intermittent_dead_hangs",
@@ -10093,7 +10797,10 @@
       "attributes": {
         "edge_mm": 22,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "long_interval_repeaters",
@@ -10147,7 +10854,11 @@
       "attributes": {
         "edge_mm": 28,
         "grip": "half_crimp"
-      }
+      },
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "reverse_lunge",
@@ -10196,7 +10907,10 @@
         "To progress: hold dumbbells at sides (5–15 kg) or use a barbell"
       ],
       "description": "Unilateral lower-body strength exercise targeting quads, glutes, and balance. The reverse (stepping-back) variant is more knee-friendly than forward lunges and transfers well to climbing footwork and high-step control.",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "overcoming_isometric_pull",
@@ -10252,7 +10966,10 @@
         "Safer than campus: same neural recruitment, zero ballistic/impact component"
       ],
       "description": "Overcoming isometric protocol for contact strength/RFD. Trains maximum neural recruitment on hangboard without ballistic risk. Primary hangboard fallback for campus board exercises.",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "rfd_explosive_pulls",
@@ -10309,7 +11026,10 @@
         "Stop the set if you feel speed dropping — quality over quantity"
       ],
       "description": "RFD/stiffness component for contact strength. Very short explosive pulls targeting rate of force development. Secondary hangboard fallback for campus board exercises.",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "power_slap_drill",
@@ -10361,7 +11081,10 @@
         "Use large holds only — the goal is explosive power, not finger strength on small crimps"
       ],
       "description": "Explosive deadpoint/power slap drill on boulder wall. Trains contact timing and RFD in a climbing-specific context.",
-      "video_url": null
+      "video_url": null,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "side_lying_hip_abduction",
@@ -10407,7 +11130,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "standing_hip_adduction_band",
@@ -10455,7 +11182,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "copenhagen_adductor_plank",
@@ -10505,7 +11236,10 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "clamshell",
@@ -10552,7 +11286,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "seated_leg_raise_hip_flexor",
@@ -10598,7 +11336,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "incline_pushup",
@@ -10646,7 +11388,11 @@
         "Higher surface = easier; lower surface = harder. Progress toward a floor push-up."
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "dumbbell_fly",
@@ -10696,7 +11442,10 @@
         "Start with 30-40% of your press load — the lever is much longer"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "overhead_tricep_extension",
@@ -10746,7 +11495,11 @@
         "Keep torso tall and ribs down throughout — no hyperextension in the lower back"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "cossack_squat",
@@ -10796,7 +11549,10 @@
       "video_url": null,
       "load_model": "external_load",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "hip_90_90_switch",
@@ -10842,7 +11598,11 @@
         "Progress by adding a pause + lean forward at the end-range of the front leg"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "single_leg_glute_bridge",
@@ -10890,7 +11650,10 @@
       "video_url": null,
       "load_model": "external_load",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "single_leg_rdl",
@@ -10939,7 +11702,10 @@
       "video_url": null,
       "load_model": "external_load",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "bulgarian_split_squat",
@@ -10990,7 +11756,10 @@
       "video_url": null,
       "load_model": "external_load",
       "unilateral": true,
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "supinated_inverted_row",
@@ -11039,7 +11808,10 @@
         "To progress: elevate feet on a bench, add a pause at the top, or move under a lower bar"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "wrist_roller",
@@ -11091,7 +11863,10 @@
         "Alternate forward/reverse rolling for full forearm coverage"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "wide_pinch_extended_wrist_hold",
@@ -11141,7 +11916,10 @@
         "Breathe through the hold"
       ],
       "video_url": null,
-      "load_model": "total_load"
+      "load_model": "total_load",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "heavy_reverse_wrist_curl",
@@ -11191,7 +11969,10 @@
         "Strength-range loading: heavy enough for 6-10 reps"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "weighted_chinup",
@@ -11245,7 +12026,10 @@
         "Add weight so final rep is hard but form perfect"
       ],
       "video_url": null,
-      "load_model": "total_load"
+      "load_model": "total_load",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "hammer_curl",
@@ -11293,7 +12077,10 @@
         "Alternate arms or both together (both together = more control)"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "reverse_barbell_curl",
@@ -11342,7 +12129,10 @@
         "Controlled tempo — 2 up, 2 down"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "tech_applied_strength",
@@ -11397,7 +12187,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_banded_climber",
@@ -11452,7 +12246,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_diagonal_drill",
@@ -11505,7 +12303,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_five_step",
@@ -11557,7 +12359,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_matchy_matchy",
@@ -11612,7 +12418,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_surface_of_the_shoe",
@@ -11663,7 +12473,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_talon_feet",
@@ -11718,7 +12532,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_barn_door_2000",
@@ -11772,7 +12590,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_climb_it_backwards",
@@ -11828,7 +12650,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_deadpoint_roll_through",
@@ -11882,7 +12708,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_foot_to_hand",
@@ -11936,7 +12766,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_single_leg_climbing",
@@ -11992,7 +12826,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_trust_the_eyes",
@@ -12046,7 +12884,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_contrast_bouldering",
@@ -12102,7 +12944,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_foot_flyaways",
@@ -12158,7 +13004,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_green_light_red_light",
@@ -12214,7 +13064,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_hard_target",
@@ -12268,7 +13122,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_hips_first",
@@ -12322,7 +13180,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "tech_hop_and_skip",
@@ -12376,7 +13238,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "tech_pogo",
@@ -12430,7 +13296,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_smooth_is_fast",
@@ -12486,7 +13356,11 @@
       ],
       "video_url": null,
       "load_model": "grade_relative",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_the_bump",
@@ -12540,7 +13414,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "tech_throwing_the_shoe",
@@ -12594,7 +13472,11 @@
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
-      "attributes": {}
+      "attributes": {},
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "back_squat",
@@ -12644,7 +13526,10 @@
         "3-second controlled descent — no bouncing out of the bottom"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base"
+      ]
     },
     {
       "id": "deadlift",
@@ -12692,7 +13577,10 @@
         "Reset each rep; do not bounce off the floor for touch-and-go under heavy load"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "strength_power"
+      ]
     },
     {
       "id": "leg_extension",
@@ -12741,7 +13629,11 @@
         "Keep the lower back against the pad; do not thrust the hips"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "leg_curl",
@@ -12788,7 +13680,11 @@
         "Point toes toward shins for more hamstring, away for more calf involvement"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "standing_calf_raise_loaded",
@@ -12836,7 +13732,11 @@
         "Add load only once full range and a clean top pause are owned"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "skullcrusher",
@@ -12888,7 +13788,11 @@
         "Drop the load at the first sign of elbow discomfort — this is elbow-sensitive"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "triceps_cable_pushdown",
@@ -12938,7 +13842,11 @@
         "Keep the wrists neutral; do not lean the bodyweight into the bar"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "dumbbell_external_rotation",
@@ -12987,7 +13895,11 @@
       ],
       "video_url": null,
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "back_extension",
@@ -13034,7 +13946,11 @@
         "Move smoothly; no jerking or ballistic swinging at the top"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     },
     {
       "id": "cable_woodchop",
@@ -13084,7 +14000,11 @@
       ],
       "video_url": null,
       "load_model": "external_load",
-      "alt_sides": true
+      "alt_sides": true,
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "weighted_hanging_leg_raise",
@@ -13133,7 +14053,12 @@
         "Start with light ankle weights; only add load once form holds for all reps"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "strength_power",
+        "power_endurance",
+        "performance"
+      ]
     },
     {
       "id": "weighted_plank",
@@ -13181,7 +14106,11 @@
         "Progress load only while a clean neutral spine is held for the full time"
       ],
       "video_url": null,
-      "load_model": "external_load"
+      "load_model": "external_load",
+      "phase_affinity": [
+        "base",
+        "power_endurance"
+      ]
     },
     {
       "id": "bar_dead_hang",
@@ -13231,7 +14160,11 @@
         "Stop at form breakdown, not at total failure"
       ],
       "video_url": null,
-      "load_model": "bodyweight_only"
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     }
   ]
 }

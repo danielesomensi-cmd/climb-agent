@@ -91,12 +91,30 @@ class TestComposeAdhocSession:
         assert s["estimated_duration_minutes"] <= 30
 
     def test_equipment_filter_differs_home_vs_gym(self):
+        # A-ADHOC-PHASE-AFFINITY: era `assert "bench_press" in gym_ids`, cioè si
+        # appoggiava a QUALE esercizio vincesse il ranking. Da quando
+        # `phase_affinity` è popolata, bench_press (intensity=medium → affinità
+        # `base`) è giustamente retrocesso in fase strength_power e il test
+        # cadeva pur essendo il filtro equipment perfettamente funzionante.
+        # Riscritto sull'invariante che il nome dichiara: la palestra attinge a
+        # esercizi che a casa sono impossibili. Casa a corpo libero (solo sbarra)
+        # perché con `weight` anche a casa la distinzione non esiste.
         cat, st = _catalog(), _state()
+        st["equipment"]["home"] = ["pullup_bar"]
         gym = compose_adhoc_session({"equipment_set": "gym", "focus": "general_strength", "minutes": 45, "energy": "medium"}, st, cat, today="2026-07-20")
         home = compose_adhoc_session({"equipment_set": "home", "focus": "general_strength", "minutes": 45, "energy": "medium"}, st, cat, today="2026-07-20")
         gym_ids = {e["exercise_id"] for e in gym["exercises"]}
-        # gym has bench + cable → picks up bench_press etc. that home (no bench) can't.
-        assert "bench_press" in gym_ids
+        home_ids = {e["exercise_id"] for e in home["exercises"]}
+
+        gym_only = gym_ids - home_ids
+        assert gym_only, "la palestra deve attingere a esercizi impossibili a casa"
+        # e ognuno di quelli deve richiedere attrezzatura che a casa non c'è
+        for eid in gym_only:
+            req = set(cat[eid].get("equipment_required") or [])
+            assert req - {"pullup_bar"}, (eid, req)
+        # simmetria: nulla di scelto a casa può eccedere l'attrezzatura di casa
+        for eid in home_ids:
+            assert set(cat[eid].get("equipment_required") or []) <= {"pullup_bar"}, eid
 
     def test_spine_safe_no_forbidden_ids(self):
         cat, st = _catalog(), _state()

@@ -102,11 +102,24 @@ class TestAnchorFunction:
 
 
 class TestComposedSession:
+    # A-ADHOC-PHASE-AFFINITY: questi test verificano il PLUMBING del carico
+    # (anchor e memoria arrivano fino alla sessione composta), non il ranking.
+    # Da quando `phase_affinity` è popolata, `barbell_row` (intensity=medium →
+    # affinità `base`) è giustamente retrocesso in una fase strength_power a
+    # favore dei compound ad alta intensità. La fase `base` è quella in cui il
+    # rematore è metodologicamente appropriato — e l'anchor è identico (18.0 in
+    # entrambe le fasi, verificato), quindi l'intento del test è preservato.
+    @staticmethod
+    def _base_phase_state():
+        st = _state()
+        st["macrocycle"]["phases"] = [{"phase_id": "base", "duration_weeks": 3}]
+        return st
+
     def test_barbell_row_prefilled_in_pull_session(self):
         s = compose_adhoc_session(
             {"equipment_set": "gym", "focus": "general_strength", "body_parts": ["back_pulling"],
              "minutes": 60, "energy": "medium"},
-            _state(), CAT, today="2026-07-20",
+            self._base_phase_state(), CAT, today="2026-07-20",
         )
         row = next((e for e in s["exercises"] if e["exercise_id"] == "barbell_row"), None)
         assert row is not None and row["load_kg"] == 18.0
@@ -121,7 +134,7 @@ class TestComposedSession:
                 assert e["load_kg"] == 0
 
     def test_memory_wins_over_anchor(self):
-        st = _state()
+        st = self._base_phase_state()
         st["working_loads"] = {"entries": [{
             "exercise_id": "barbell_row", "key": "barbell_row",
             "last_external_load_kg": 45.0, "next_external_load_kg": 45.0,
