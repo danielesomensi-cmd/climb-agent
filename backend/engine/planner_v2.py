@@ -36,10 +36,10 @@ WEEKDAYS: Tuple[str, ...] = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 # hard: counts against hard_cap; finger: needs 48h gap; intensity: max/high/medium/low
 # climbing: True for climbing-related sessions (placed first in pass 1)
 _SESSION_META: Dict[str, Dict[str, Any]] = {
-    "strength_long": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym", "home"), "required_equipment": ["hangboard"]},
+    "strength_long": {"pulling": True, "hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym", "home"), "required_equipment": ["hangboard"]},
     "power_contact_gym": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
-    "limit_boulder_gym": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
-    "power_endurance_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"], "preferred_equipment": ["gym_routes"]},
+    "limit_boulder_gym": {"pulling": True, "hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
+    "power_endurance_gym": {"pulling": True, "hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"], "preferred_equipment": ["gym_routes"]},
     "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_routes"]},
     "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "finger_strength_home": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
@@ -60,13 +60,13 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "easy_climbing_deload": {"hard": False, "finger": False, "intensity": "low", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
     "finger_maintenance_gym": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["hangboard"]},
     "route_endurance_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"]},
-    "pulling_strength_gym": {"hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("gym",), "required_equipment": ["pullup_bar"]},
-    "heavy_conditioning_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
+    "pulling_strength_gym": {"pulling": True, "hard": True, "finger": False, "intensity": "high", "climbing": False, "location": ("gym",), "required_equipment": ["pullup_bar"]},
+    "heavy_conditioning_gym": {"pulling": True, "hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
     "lower_body_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym",), "required_equipment": ["dumbbell"]},
     "finger_aerobic_base": {"hard": False, "finger": True, "intensity": "low", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "deload_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym"), "max_per_week": 2},
     "finger_endurance_short": {"hard": False, "finger": True, "intensity": "medium", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
-    "boulder_circuit_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_boulder"]},
+    "boulder_circuit_gym": {"pulling": True, "hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_boulder"]},
     "route_projecting_gym": {"hard": True, "finger": True, "intensity": "max", "climbing": True, "location": ("gym",), "required_equipment": ["gym_routes"], "max_per_week": 2},
     "upper_body_weights": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
     "legs_strength": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("gym", "home"), "required_equipment": [], "max_per_week": 2},
@@ -1280,6 +1280,99 @@ def generate_phase_week(
                             fm_placed = True
                             break
 
+    # ── PASS 2.6 (B308): guarantee a weekly pulling stimulus ──
+    #
+    # Why: a domain weight does not guarantee a dose — it makes a session more
+    # likely to be picked, which is not the same thing. Measured on a real plan
+    # (D263), pulling strength went untrained for 8 of 12 weeks: past the ~4-week
+    # detraining window for maximal strength (Mujika & Padilla 2000), and in
+    # contradiction with the DUP model the project documents ("phase weights
+    # shift gradually, not binary on/off for any quality").
+    #
+    # Maintenance needs guaranteed FREQUENCY, so this pass forces one session
+    # that trains pulling when the week has none. Same shape as PASS 2.5 above:
+    # empty day first, otherwise replace a COMPLEMENTARY session (never a
+    # primary one), and never at the cost of a safety constraint — if the only
+    # way to place it would breach the hard-day cap or the finger gap, we do not
+    # place it and say so (B308: silence is what let D263 hide for months).
+    #
+    # Deload is exempt by design (KB: zero pulling in a deload week is correct).
+    unmet_stimulus: list = []
+    if phase_id != "deload":
+        _has_pulling = any(
+            _SESSION_META.get(s.get("session_id", ""), {}).get("pulling")
+            for day_list in day_sessions for s in day_list
+        )
+        if not _has_pulling:
+            _pull_candidates = [
+                (sid, _SESSION_META.get(sid))
+                for sid in filtered_pool
+                if _SESSION_META.get(sid, {}).get("pulling")
+                and not _SESSION_META.get(sid, {}).get("test")
+            ]
+            _placed = False
+            for offset in range(7):
+                if _placed or not _pull_candidates:
+                    break
+                if not day_has_available_slot[offset] or day_is_outdoor[offset]:
+                    continue
+                day_avail = normalized[day_keys[offset]]
+                for _sid, _meta in _pull_candidates:
+                    if _meta is None:
+                        continue
+                    # Never breach the hard-day cap to satisfy a maintenance dose.
+                    if _meta.get("hard") and hard_days >= effective_hard_cap:
+                        continue
+                    if _meta.get("hard") and any(
+                        abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets
+                    ):
+                        continue
+                    if _meta.get("finger") and any(
+                        abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
+                    ):
+                        continue
+                    result = _find_best_slot(
+                        day_avail, _meta, locations, prefer_evening=False,
+                        home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id,
+                    )
+                    if not result:
+                        continue
+                    slot, slot_info = result
+                    entry = _make_session_entry(
+                        slot, _sid, _meta, slot_info, locations, phase_id, day_keys[offset],
+                        default_gym_id, gyms or [], "pass2.6:pulling_maintenance",
+                        home_equipment=home_equipment,
+                    )
+                    if day_sessions[offset]:
+                        # Replace a complementary session, never a primary one.
+                        _victim = next(
+                            (i for i, e in enumerate(day_sessions[offset])
+                             if not _is_primary_session(_SESSION_META.get(e.get("session_id", ""), {}))),
+                            None,
+                        )
+                        if _victim is None:
+                            continue
+                        day_sessions[offset][_victim] = entry
+                    else:
+                        day_sessions[offset].append(entry)
+                        days_with_sessions += 1
+                    if _meta.get("hard"):
+                        hard_days += 1
+                        hard_day_offsets.append(offset)
+                    if _meta.get("finger"):
+                        finger_day_offsets.append(offset)
+                    _placed = True
+                    break
+            if not _placed:
+                unmet_stimulus.append({
+                    "stimulus": "pulling",
+                    "phase_id": phase_id,
+                    "reason": (
+                        "no session training pulling could be placed without breaching "
+                        "the hard-day cap, the recovery gaps or the available slots"
+                    ),
+                })
+
     # ── PASS 3 (optional): Inject test sessions ──
     # Triggers on: last week of base/strength_power, OR explicitly via inject_tests
     skipped_tests: list = []  # B191: populated by phase-gating logic below
@@ -1556,6 +1649,11 @@ def generate_phase_week(
             }
         ],
         "skipped_tests": skipped_tests,  # B191: tests gated by phase (D92); empty if Pass 3 didn't run
+        # B308: guaranteed stimuli that could NOT be placed this week. Empty is
+        # the normal case. Reported rather than swallowed — an undelivered
+        # "guaranteed" stimulus that fails silently is the exact bug class D263
+        # took months to surface.
+        "unmet_stimulus": unmet_stimulus,
     }
 
     if phase_id == "deload":
