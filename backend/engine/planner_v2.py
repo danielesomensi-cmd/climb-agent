@@ -42,14 +42,14 @@ _SESSION_META: Dict[str, Dict[str, Any]] = {
     "power_endurance_gym": {"pulling": True, "hard": True, "finger": False, "intensity": "high", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"], "preferred_equipment": ["gym_routes"]},
     "endurance_aerobic_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "max_per_week": 2, "required_equipment": ["gym_routes"]},
     "technique_focus_gym": {"hard": False, "finger": False, "intensity": "medium", "climbing": True, "location": ("gym",), "required_equipment": ["gym_boulder"]},
-    "finger_strength_home": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
+    "finger_strength_home": {"pulling": True, "hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home",), "required_equipment": ["hangboard"]},
     "prehab_maintenance": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym")},
     "flexibility_full": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym"), "max_per_week": 2},
     "yoga_recovery": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home",), "max_per_week": 2},
     "handstand_practice": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "complementary_conditioning": {"hard": False, "finger": False, "intensity": "medium", "climbing": False, "location": ("home", "gym")},
     "regeneration_easy": {"hard": False, "finger": False, "intensity": "low", "climbing": False, "location": ("home", "gym", "outdoor"), "required_equipment": ["gym_boulder"]},
-    "finger_maintenance_home": {"hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",), "required_equipment": ["hangboard"]},
+    "finger_maintenance_home": {"pulling": True, "hard": False, "finger": True, "intensity": "medium", "climbing": True, "location": ("home",), "required_equipment": ["hangboard"]},
     "test_max_hang_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
     "test_max_hang_7s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["hangboard"]},
     "test_lp_max_5s": {"hard": True, "finger": True, "intensity": "high", "climbing": False, "location": ("home", "gym"), "test": True, "required_equipment": ["loading_pin"]},
@@ -1625,6 +1625,14 @@ def generate_phase_week(
         "profile_snapshot": {
             "phase_id": phase_id,
             "domain_weights": domain_weights,
+            # A258: the pool travels with the week, exactly like domain_weights
+            # already did. The replanner used to REBUILD it from
+            # (phase_id, discipline) alone — which silently dropped anything the
+            # pool depends on beyond those two. That already cost a bug once
+            # (B287/R-3: a boulderer got a lead pool), and with
+            # profile-conditional sessions it would make a session vanish from a
+            # replanned week. Carrying it removes the divergence at the root.
+            "session_pool": list(session_pool),
             "intensity_cap": cap,
             "allowed_locations": locations,
             "hard_cap_per_week": effective_hard_cap,

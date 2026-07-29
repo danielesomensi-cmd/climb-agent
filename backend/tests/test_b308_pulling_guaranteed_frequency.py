@@ -123,13 +123,31 @@ class TestSafetyConstraintsWin:
                 assert b - a >= 2, (phase, offsets)
 
     def test_does_not_force_when_there_is_no_room(self):
-        """Utente solo-casa senza palestra: in `base` nessuna sessione di tirata
-        è eseguibile. Il pass NON deve inventare nulla — deve dichiararlo."""
+        """Quando nessuna sessione di tirata è eseguibile, il pass NON deve
+        inventare nulla — deve dichiararlo.
+
+        Scenario: casa senza palestra **e senza hangboard** (solo elastici).
+        Prima di [[A258]] bastava "casa senza palestra": le sessioni di dita
+        casalinghe non avevano un blocco di tirata, quindi un utente con
+        hangboard restava scoperto. Quel buco è stato chiuso
+        (HOME-ONLY-PULLING-GAP) — vedi `TestHomeCoverage` — e il caso limite
+        ora è più stretto: senza hangboard non c'è nessun portatore.
+        """
         plan = _plan("base", availability=_avail(("mon", "wed", "fri"), location="home"),
-                     gyms=[], home=["hangboard", "pullup_bar", "weight"])
+                     gyms=[], home=["band", "resistance_band"])
         assert not _has_pulling(plan)
         unmet = plan.get("unmet_stimulus") or []
         assert unmet and unmet[0]["stimulus"] == "pulling", unmet
+
+    def test_home_user_with_a_hangboard_is_covered(self):
+        """HOME-ONLY-PULLING-GAP (A258): l'hangboard implica la sbarra
+        (`PULLUP_BAR_IMPLIERS`), quindi le sessioni di dita casalinghe possono
+        portare il blocco di tirata — e un utente senza palestra non resta più
+        scoperto in `base`."""
+        plan = _plan("base", availability=_avail(("mon", "wed", "fri"), location="home"),
+                     gyms=[], home=["hangboard", "pullup_bar", "weight"])
+        assert _has_pulling(plan), (_session_ids(plan), plan.get("unmet_stimulus"))
+        assert (plan.get("unmet_stimulus") or []) == []
 
 
 # ── 4. non tocca il lavoro primario ─────────────────────────────────────

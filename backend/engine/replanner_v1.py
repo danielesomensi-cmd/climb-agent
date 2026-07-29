@@ -1361,7 +1361,16 @@ def apply_events(
                 # generate_macrocycle does (macrocycle_v1.py). Before this fix the
                 # call defaulted to discipline="lead", so a boulder user got
                 # boulder domain weights combined with a LEAD session pool.
-                session_pool = _build_session_pool(phase_id, discipline=discipline)
+                # A258: prefer the pool the week was BUILT with. Rebuilding it
+                # from (phase_id, discipline) silently drops anything else the
+                # pool depends on — it already did, in B287/R-3, and would now
+                # make a profile-conditional session vanish from a replanned
+                # week. `apply_events` has no user_state in scope, so the
+                # snapshot is the only honest source. Fallback keeps weeks
+                # planned before A258 working.
+                session_pool = snapshot.get("session_pool") or _build_session_pool(
+                    phase_id, discipline=discipline
+                )
                 regenerated = generate_phase_week(
                     phase_id=phase_id,
                     domain_weights=domain_weights,

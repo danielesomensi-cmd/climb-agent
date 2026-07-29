@@ -18,7 +18,9 @@
       "climbing"
     ]
   },
-  "required_equipment": ["hangboard"],
+  "required_equipment": [
+    "hangboard"
+  ],
   "time_budget": {
     "target_duration_min": 35,
     "hard_cap_min": 45
@@ -33,8 +35,12 @@
       "selection": {
         "primary": {
           "filters": {
-            "role": ["warmup"],
-            "domain": ["finger_strength"],
+            "role": [
+              "warmup"
+            ],
+            "domain": [
+              "finger_strength"
+            ],
             "intensity_max": "low"
           }
         }
@@ -48,6 +54,34 @@
       "notes": "Max hangs or repeaters. Primary stimulus."
     },
     {
+      "block_id": "pulling_maintenance",
+      "required": false,
+      "priority": 70,
+      "module_role": "secondary",
+      "notes": "Mantenimento forza di trazione. Volume basso, intensita' alta.",
+      "selection": {
+        "primary": {
+          "filters": {
+            "role": [
+              "main"
+            ],
+            "domain": [
+              "strength_general"
+            ],
+            "pattern": [
+              "pull_vertical"
+            ]
+          }
+        }
+      },
+      "prescription": {
+        "sets": 2,
+        "reps": 4,
+        "rest_between_sets_seconds": 180,
+        "notes": "2 serie pesanti, recupero pieno. Se sei stanco dalle sospensioni, togli una ripetizione — mai il carico."
+      }
+    },
+    {
       "block_id": "finger_extensor_prehab",
       "required": false,
       "priority": 55,
@@ -56,9 +90,15 @@
       "selection": {
         "primary": {
           "filters": {
-            "role": ["prehab"],
-            "domain": ["prehab_wrist"],
-            "pattern": ["wrist_extension"],
+            "role": [
+              "prehab"
+            ],
+            "domain": [
+              "prehab_wrist"
+            ],
+            "pattern": [
+              "wrist_extension"
+            ],
             "intensity_max": "low"
           }
         }

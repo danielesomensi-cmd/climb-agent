@@ -460,11 +460,73 @@ def _adjust_domain_weights(
     return adjusted
 
 
-def _build_session_pool(phase_id: str, discipline: str = "lead") -> List[str]:
+# A258 — pool condizionati al profilo. Il peso di dominio si adatta già alle
+# debolezze (`_adjust_domain_weights`), l'appartenenza al pool no: uno scalatore
+# con la tirata a 20/100 riceveva la stessa dose quasi nulla di uno a 100/100
+# (D263 punto 4, CRITICO). Qui la sessione dedicata entra SOLO per chi ne ha
+# bisogno, e come `available` — compete per uno slot invece di aggiungersi al
+# carico ("in sostituzione, non in aggiunta", raccomandazione KB).
+#
+# La soglia è la stessa che `_adjust_domain_weights` usa per "asse debole": una
+# sola definizione di debolezza in tutto il motore.
+WEAK_AXIS_THRESHOLD = 50
+
+_PROFILE_CONDITIONAL_SESSIONS: Dict[str, Dict[str, Any]] = {
+    "pulling_strength_gym": {
+        "axis": "pulling_strength",
+        # Solo `strength_power`. Il KB indicava anche `base`, ma la sessione è
+        # `intensity: high` mentre `base` ha `PHASE_INTENSITY_CAP = medium`:
+        # il planner la scarta prima ancora di considerarla, quindi metterla
+        # nel pool di base sarebbe una dichiarazione senza effetto. In base la
+        # tirata arriva comunque come MANTENIMENTO dal blocco C261. Il lavoro
+        # di SVILUPPO in base richiederebbe di alzare il tetto d'intensità
+        # della fase — decisione metodologica, non un dettaglio di pool
+        # (tracciata come BASE-PULLING-INTENSITY-CAP in roadmap).
+        "phases": ("strength_power",),
+        # `primary`, non `available`: misurato, da `available` la sessione non
+        # viene MAI collocata (perde contro le primarie e la settimana si
+        # riempie prima). Da `primary` entra al posto di un'altra seduta dura —
+        # che è esattamente il "in sostituzione, non in aggiunta" del KB: il
+        # conteggio dei giorni duri resta invariato (verificato: 3/4 prima e
+        # dopo, con `strength_long` che cede il posto).
+        "role": "primary",
+    },
+}
+
+
+def _profile_conditional_additions(
+    phase_id: str, assessment_profile: Optional[Dict[str, Any]]
+) -> Dict[str, str]:
+    """Sessions unlocked by a weak axis in ``assessment_profile``.
+
+    ``None`` (or a profile without the axis) → nothing added, i.e. exactly the
+    behaviour before A258. That default keeps every caller that has no profile
+    in scope — including the replanner fallbacks — working unchanged.
+    """
+    if not assessment_profile:
+        return {}
+    out: Dict[str, str] = {}
+    for sid, rule in _PROFILE_CONDITIONAL_SESSIONS.items():
+        if phase_id not in rule["phases"]:
+            continue
+        score = assessment_profile.get(rule["axis"])
+        if isinstance(score, (int, float)) and score < WEAK_AXIS_THRESHOLD:
+            out[sid] = rule["role"]
+    return out
+
+
+def _build_session_pool(
+    phase_id: str,
+    discipline: str = "lead",
+    assessment_profile: Optional[Dict[str, Any]] = None,
+) -> List[str]:
     """Return the ordered session pool for a phase.
 
     For ``all_round``, merge lead and boulder pools: a session that is
     "primary" in either pool stays primary; otherwise "available".
+
+    ``assessment_profile`` (A258, optional): unlocks profile-conditional
+    sessions for weak axes. Omitted → identical behaviour to before A258.
     """
     if discipline in ("both", "all_round"):
         lead_def = _SESSION_POOL.get(phase_id, {})
@@ -479,6 +541,13 @@ def _build_session_pool(phase_id: str, discipline: str = "lead") -> List[str]:
     else:
         pool_map = _SESSION_POOL_BOULDER if discipline == "boulder" else _SESSION_POOL
         pool_def = pool_map.get(phase_id, {})
+    # A258: additions apply to every discipline — il buco della tirata è
+    # identico nel pool boulder e in `power_endurance` è pure più grave
+    # (peso 0.15 vs 0.10 del lead), quindi limitarlo al lead lascerebbe
+    # scoperto proprio il caso peggiore.
+    extra = _profile_conditional_additions(phase_id, assessment_profile)
+    if extra:
+        pool_def = {**pool_def, **extra}
     # Primary sessions first, then available
     primary = sorted(k for k, v in pool_def.items() if v == "primary")
     available = sorted(k for k, v in pool_def.items() if v == "available")
@@ -624,7 +693,9 @@ def generate_macrocycle(
         weights_map = _BASE_WEIGHTS_BOULDER if discipline == "boulder" else _BASE_WEIGHTS
         base_weights = weights_map[phase_id]
         domain_weights = _adjust_domain_weights(base_weights, assessment_profile)
-        session_pool = _build_session_pool(phase_id, discipline=discipline)
+        session_pool = _build_session_pool(
+            phase_id, discipline=discipline, assessment_profile=assessment_profile
+        )
 
         pretrip_trips = _check_pretrip_overlap(
             trips,
