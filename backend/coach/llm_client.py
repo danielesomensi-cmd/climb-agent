@@ -24,7 +24,14 @@ import anthropic
 logger = logging.getLogger(__name__)
 
 DEFAULT_MODEL = "claude-sonnet-5"
-MAX_TOKENS = 1024
+
+# B311 — output cap. 1024 was set against the design's "300-800 tokens" target,
+# which was measured in English; Italian costs roughly 2.3 chars/token, so a
+# structured Italian answer with a table hits the cap at ~2,300 characters and
+# stops mid-sentence (`stop_reason=max_tokens`). The D266 re-run found 10 of 28
+# regression answers truncated that way. Env-overridable so the ceiling can be
+# tuned without a deploy.
+MAX_TOKENS = int(os.environ.get("COACH_MAX_TOKENS", "2048"))
 
 # A244 — tool-use loop guards. MAX_TOOL_CALLS bounds provider/OWM cost per coach
 # message; MAX_ITERATIONS is a hard backstop so a misbehaving model can never
@@ -68,6 +75,12 @@ def _log_usage(response: Any) -> None:
         _model(), usage.input_tokens, usage.output_tokens,
         cache_read, cache_created,
     )
+    if getattr(response, "stop_reason", None) == "max_tokens":
+        logger.warning(
+            "coach answer hit MAX_TOKENS=%s (stop_reason=max_tokens) — the user "
+            "saw a reply cut mid-sentence; raise COACH_MAX_TOKENS or tighten L1",
+            MAX_TOKENS,
+        )
     if cache_read == 0 and cache_created == 0:
         logger.warning(
             "coach prompt cache INACTIVE (cache_read=0, cache_creation=0) — "
