@@ -6,7 +6,11 @@ to the query, ranked by keyword-match count.
 
 Algorithm (BM25-style, no embeddings — sufficient for v1.0):
   1. Lowercase + tokenize the query (alphanumerics + simple multi-word phrases
-     for keywords containing spaces, like "no hangboard").
+     for keywords containing spaces, like "no hangboard"). A keyword ending in
+     `*` is a stem: it matches any token starting with it (B310 — Italian is
+     inflected, so `dormire` never matches the token the user actually types,
+     `dormo`; `dorm*` matches both. Same for English plurals: `drill` vs
+     `drills`).
   2. For each L3 row in the index, count distinct keywords matched (any
      occurrence counts as +1; multiple occurrences of the same keyword count
      once).
@@ -46,7 +50,8 @@ _KEYWORD_LINE_RE = re.compile(
     r"^\|\s*(?P<keywords>[^|]+?)\s*\|\s*`(?P<path>L3/[^`]+\.md)`"
 )
 _QUOTED_KEYWORD_RE = re.compile(r'"([^"]+)"')
-_WORD_TOKEN_RE = re.compile(r"[a-z0-9+×x]+")
+# B310: accented vowels included — without them "perché" tokenizes to "perch".
+_WORD_TOKEN_RE = re.compile(r"[a-z0-9+×xàáèéìíòóùú]+")
 
 
 @dataclass(frozen=True)
@@ -56,6 +61,9 @@ class RoutingRow:
     path: Path
     keywords: tuple[str, ...]
     multi_word_keywords: tuple[str, ...] = field(default=())
+    # B310: stems (index keywords written with a trailing `*`, stored without
+    # it) matched as token prefixes instead of whole tokens.
+    stems: tuple[str, ...] = field(default=())
 
 
 @lru_cache(maxsize=1)
@@ -95,14 +103,19 @@ def _load_routing_table() -> tuple[RoutingRow, ...]:
         if not raw_keywords:
             continue
 
-        single_word = tuple(kw for kw in raw_keywords if " " not in kw and "-" not in kw)
-        multi_word = tuple(kw for kw in raw_keywords if " " in kw or "-" in kw)
+        stems = tuple(
+            kw.rstrip("*") for kw in raw_keywords if kw.endswith("*") and len(kw) > 3
+        )
+        plain = [kw for kw in raw_keywords if not kw.endswith("*")]
+        single_word = tuple(kw for kw in plain if " " not in kw and "-" not in kw)
+        multi_word = tuple(kw for kw in plain if " " in kw or "-" in kw)
 
         rows.append(
             RoutingRow(
                 path=KNOWLEDGE_DIR / path_field,
                 keywords=single_word,
                 multi_word_keywords=multi_word,
+                stems=stems,
             )
         )
 
@@ -122,6 +135,9 @@ def _score_row(query_lower: str, query_tokens: set[str], row: RoutingRow) -> int
             score += 1
     for kw in row.multi_word_keywords:
         if kw in query_lower:
+            score += 1
+    for stem in row.stems:
+        if any(token.startswith(stem) for token in query_tokens):
             score += 1
     return score
 

@@ -310,3 +310,54 @@ def test_singleword_keywords_survive_tokenization():
                 f"single-word keyword {kw!r} in {row.path.name} is not "
                 "recoverable by the query tokenizer (accented/unsupported char)"
             )
+
+
+# ---------------------------------------------------------------------------
+# B310 — Italian inflection: the regression set showed 7/28 real Italian
+# questions falling back because the index carried lemmas ("dormire") while
+# users type inflected forms ("dormo"). Stems (`dorm*`) close that gap.
+# ---------------------------------------------------------------------------
+
+# One entry per question that used to fall back (D265 scoring), plus the two
+# whose routing was silently incomplete. Value = file that MUST be loaded.
+ITALIAN_INFLECTED_CASES = [
+    ("Bechtel ha alcuni drills che non conosco?", "06_technique_movement.md"),
+    ("Ho letto della dieta low-carb. Funziona per climbing?", "08_nutrition.md"),
+    ("Devo allenare diversamente durante il ciclo?", "14_female_age_youth.md"),
+    ("Quanto warm-up serve prima di bouldering hard?", "10_injuries_fingers.md"),
+    ("Ho saltato 2 settimane per influenza. Riprendo da dove?", "20_return_to_training.md"),
+    ("Voglio dimagrire per migliorare il rapporto peso/forza", "08_nutrition.md"),
+    ("Dormo 6 ore per lavoro. Compromette il mio allenamento?", "09_recovery_sleep.md"),
+    ("Mi sento stanca oggi, mi alleno?", "17_readiness_overtraining.md"),
+    ("Sono fermo da un mese, come riparto?", "20_return_to_training.md"),
+    ("Quanto mi devo scaldare?", "10_injuries_fingers.md"),
+]
+
+
+@pytest.mark.parametrize("query,expected", ITALIAN_INFLECTED_CASES)
+def test_inflected_italian_reaches_the_right_file(query, expected):
+    assert expected in _names(route_query(query))
+
+
+def test_macrocycle_question_still_reaches_periodization():
+    # "ciclo" is genuinely ambiguous in Italian (menstrual vs macrocycle), so
+    # it sits on both rows. Guard: the periodization sense must never be lost.
+    assert "01_periodization.md" in _names(route_query("Quanto dura il mio ciclo di allenamento?"))
+
+
+def test_stems_are_prefix_matched_not_substring_matched():
+    # `dorm*` must match "dormo" (prefix) but not "addormentato" (infix) —
+    # otherwise stems would fire on unrelated words containing the stem.
+    rows = {r.path.name: r for r in routing._load_routing_table()}
+    sleep_row = rows["09_recovery_sleep.md"]
+    assert "dorm" in sleep_row.stems
+    assert routing._score_row("dormo poco", routing._tokenize("dormo poco"), sleep_row) > 0
+    assert routing._score_row("mi sono addormentato", routing._tokenize("mi sono addormentato"), sleep_row) == 0
+
+
+def test_stems_are_not_stored_as_plain_keywords():
+    # A stem must never leak into `keywords` with its asterisk, or the
+    # tokenizer invariant test above would pass while matching nothing.
+    for row in routing._load_routing_table():
+        for kw in row.keywords + row.multi_word_keywords:
+            assert not kw.endswith("*"), f"{kw!r} in {row.path.name} kept its asterisk"
