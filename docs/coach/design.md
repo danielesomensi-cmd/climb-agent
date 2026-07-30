@@ -119,6 +119,8 @@ Per audit §5.
 
 **Routing algorithm:** see `backend/coach/routing.py` (Step 8 of this brief). BM25-style keyword counting against the routing table in `backend/coach/knowledge/_index.md`. Top-N by match count, ties broken by row order in `_index.md`, hard cap at 3 files.
 
+**Inflection (B310).** A keyword written with a trailing `*` in `_index.md` is a **stem**, matched as a token prefix (min 4 chars). This is not cosmetic: the D265 regression scoring found **7 of 28 real Italian questions falling through to the fallback** because the index carried lemmas (`dormire`) while users type inflected forms (`dormo`) — and a query that reaches the model without its L3 file gets answered from parametric knowledge, which is how three fabricated citations entered that run. Write the stem whenever a keyword has common inflected forms, in either language (`drill*` also fixes the English plural). After B310: 1 of 28 falls back, and that one ("Ho 30 minuti oggi, cosa faccio?") correctly lands on `01_periodization` via the fallback pair.
+
 **Cross-file co-load rule:** if a query routes to `10_injuries_fingers` AND mentions a finger-training exercise or test, additionally co-load `02_finger_strength` (within the 3-file cap). Codified in `_index.md` §"Routing rules" rule 6.
 
 **Fallback:** zero keyword match → load `01_periodization` + `15_goal_setting_motivation` as generic defaults. Documented in `_index.md` rule 5; replicated in `routing.py`.
@@ -258,6 +260,6 @@ Per audit §6.2 (verbatim alignment required).
 
 5. **Lattice 2024 lifting-edge / MXEdge protocol.** Mentioned as a gap in files 02 and 18. Lattice reports ~30% of their plans now use this approach; the protocol details are not yet in the KB. v1.1 task: distill from Lattice public sources and integrate as a protocol variant in `02_finger_strength.md`.
 
-6. **Routing upgrade — embeddings.** v1.0 uses BM25 keyword matching. If beta data shows >10% of queries fall through to the fallback (no keyword match), upgrade to a small embedding model (e.g. `text-embedding-3-small` or open-weights equivalent) with cosine similarity against per-file summaries. Out of scope for v1.0; threshold-triggered.
+6. **Routing upgrade — embeddings.** v1.0 uses BM25 keyword matching plus stems (B310). If beta data shows >10% of queries fall through to the fallback (no keyword match), upgrade to a small embedding model (e.g. `text-embedding-3-small` or open-weights equivalent) with cosine similarity against per-file summaries. Out of scope for v1.0; threshold-triggered.
 
 7. **Provider abstraction.** When A-COACH-V1a ships, wrap the LLM call in a provider interface so Sonnet can be swapped without touching prompt-assembly logic. Not a KB concern, but listed here because the KB design assumes a Sonnet-class context window — if a smaller model becomes the target, the always-loaded budget needs to drop.
