@@ -40,13 +40,13 @@ The protocol is the most rigorously specified in the climbing literature (consen
 | Self-test | Pass talk test, can nose-breathe | Universal |
 | Frequency | 2-4×/week typical (up to 6× because low fatigue) | Bechtel: "3× is plenty, could do 6×" |
 | Progression | **Increase duration** (20→30→40→45 min), not intensity | All sources |
-| Minimum cycle | **≥6 weeks (D44, hard floor)** | Mujika 2012 mitochondrial biogenesis |
+| Cycle length | **Engine: 4 wk Base (lead), 2 wk (boulder)**. Literature optimum ~6 wk — D44 deferred, see below | Mujika 2012 mitochondrial biogenesis |
 | Modality | Continuous laps, traverse, auto-belay, treadwall | Various |
 | Phase | Primary in Base; maintenance in others | Hörst 4-3-2-1 |
 
 The **<25% MVC ceiling (D45, L0)** is non-negotiable. Above 25% MVC, forearm vascular occlusion begins (full occlusion at >50% MVC, Hörst T4C); the stimulus converts to a glycolytic adaptation that doesn't build capillaries. The coach should never relent on this cap, even when the user reports the work "feels too easy". *That's the point.*
 
-The **6-week minimum floor (D44, hard)** comes from Mujika 2012's mitochondrial biogenesis timeline. Capillaries and mitochondria adapt over weeks of repeated sub-occlusive flow — there's no shortcut by going harder. This is *the* most common user pushback the coach handles (see "When user asks…" below).
+**On the 6-week figure (D44): it is the literature optimum, not an engine floor.** Mujika 2012's mitochondrial biogenesis timeline says capillaries and mitochondria keep adapting for ~6 weeks of repeated sub-occlusive flow, and there's no shortcut by going harder — that part is solid and worth explaining. But **D44 was never implemented** (deferred; see `[[01_periodization]]` §2 D44 note): the engine ships a 4-week Base for lead and 2 for boulder, because the macrocycle is deadline-capped at 16 weeks. Quote the 6 weeks as *where the adaptation saturates*, never as *what your plan should say*.
 
 ### 3. The flash-pump trap
 
@@ -99,7 +99,7 @@ Cycling + finger curls is a partial substitute, not an equivalent. Frame as: "yo
 ## How the engine applies this
 
 - **D45 hard cap (L0):** ARC sessions are bounded at <25% MVC and pump scale ≤1-2. The closed-loop layer flags ARC sessions where user-reported pump exceeds 2 — that's a "too hard" signal, not a "too easy" complaint.
-- **D44 hard floor (L0 §D71):** the Base phase is ≥6 weeks. Engine cannot generate a macrocycle with Base <6 weeks regardless of user request.
+- **D44 is deferred, not enforced:** Base is 4 weeks (lead) / 2 weeks (boulder) in `macrocycle_v1.py`. The engine has never had a 6-week Base floor. Do not tell the user it does.
 - **D15 progressive ARC:** the catalog includes progressive ARC duration prescriptions (week 1: 2×20 min, week 2: 2×25 min, … through week 6 at 2×40-45 min). Users early in Base see shorter durations; users late in Base see the full progression.
 - **D17 G-Tox cue:** surfaces in route_endurance, route_projecting, and any session with explicit rest-on-route prompts.
 - **D26 energy systems model:** the engine treats intermittent climbing as aerobic-dominant (60% per Maciejczyk 2021), which is why ARC is maintained at ~10-20% volume across non-Base phases instead of dropped entirely.
@@ -115,7 +115,7 @@ No (D45, hard cap). If it feels easy, it's working. The capillary and mitochondr
 
 **"Why is my Base phase 6 weeks long? Can I skip ahead?"**
 
-Cite D44 + Mujika 2012: mitochondrial biogenesis runs on a 6+ week clock that's time-locked, not effort-locked. Pushing harder doesn't shorten the timeline. Skipping Base costs the Build and Performance phases a smaller aerobic engine — diminished returns later, not now. The engine won't generate a macrocycle with Base <6 weeks. Don't relent.
+Check the plan first — Base is 4 weeks for lead, 2 for boulder. Then cite Mujika 2012: mitochondrial biogenesis runs on a clock that's time-locked, not effort-locked, so pushing harder doesn't shorten it. Skipping or compressing Base costs the later phases a smaller aerobic engine — the bill arrives in Performance, not now. Base is already at the engine's floor (for lead, floor == cap), so there is nothing left to trim: don't relent, and don't imply the plan is short of a requirement.
 
 **"My pulse is high during ARC, even though intensity is low. What's wrong?"**
 
@@ -142,7 +142,7 @@ Mechanism. Capillary angiogenesis and mitochondrial biogenesis are both **contin
 ## Sources
 
 - López-Rivera E 2014c. Progressive ARC volume protocol.
-- Mujika I 2012. Mitochondrial biogenesis timeline (cited for D44 6-wk floor).
+- Mujika I 2012. Mitochondrial biogenesis timeline (the ~6-wk saturation figure behind D44 — proposed floor, deferred, never implemented).
 - Maciejczyk M et al. 2021. Climbing-specific exercise tests, energy systems. *Front Physiol* 12:787902.
 - MacLeod D et al. 2007. Forearm re-oxygenation predicts endurance performance. *J Sports Sci* 25:1433-1443.
 - Fryer S et al. 2015a, 2016. Forearm muscle oxidative capacity and climbing performance.

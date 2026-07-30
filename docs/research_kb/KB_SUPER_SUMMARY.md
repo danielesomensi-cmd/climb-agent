@@ -72,7 +72,7 @@
 
 **Engine model:** Hörst 4-3-2-1 hybrid = sequential phases (Base → Strength → PE → Performance → Deload) + concurrent DUP within each phase. Well-supported by evidence.
 
-**Phase structure:** Base (≥6 wk per D44), Strength (2–3 wk), PE (2–3 wk), Performance (1–2 wk), Deload (1 wk). Total ~10–13 wk.
+**Phase structure as implemented:** Base (4 wk lead / 2 wk boulder — D44's ≥6 wk was **deferred, never implemented**), Strength (2–3 wk), PE (2–3 wk), Performance (1–2 wk), Deload (1 wk). Total 11–16 wk lead, 8–16 boulder, hard cap 16.
 
 **Taper science:** Reduce volume 60–90%, maintain intensity, reduce frequency ≤20%. Progressive nonlinear taper > step taper. Produces ~2–6% performance improvement (Mujika & Padilla 2003).
 
