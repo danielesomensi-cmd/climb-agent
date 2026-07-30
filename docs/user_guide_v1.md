@@ -299,6 +299,12 @@ Within the guided session, you can skip any exercise. If you consistently skip a
 
 If the prescribed load isn't available (e.g., you don't have the exact weight plate), adjust within the guided session. The system will adapt based on your feedback at the end.
 
+### Boulder only (today)
+
+Ropes busy, closed, or no partner? Open the session's **⋯** menu and tap **Boulder only (today)**. The session is rebuilt for the boulder wall — either swapping to the boulder equivalent the catalog declares for it, or re-running the same session without the rope wall — and an amber banner marks the card. What you see is what the guided player runs and what your feedback is recorded against.
+
+It applies to that day only and never touches the rest of your plan. **Undo** in the banner restores the planned session. If your gym has no boulder wall, the app says so rather than handing you a session that is boulder in name only.
+
 ### Session-Level Changes
 
 For bigger changes (wrong session type, wrong day), use the **Replan** feature instead of modifying the session — see [Section 10](#10-replanning-your-week).

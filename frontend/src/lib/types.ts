@@ -104,7 +104,12 @@ export interface SessionSlot {
   feedback_summary?: string;
   exercise_feedback?: Record<string, string>;
   session_duration_seconds?: number;
+  session_load_actual?: number;
   actual_exercises?: ActualExercise[];
+  // B313: "Boulder only (today)" — persisted on the slot, so the guided player
+  // and the feedback payload see the adapted session, not the planned one.
+  surface_override?: "boulder" | null;
+  surface_override_from?: string | null;
   process_cue?: { id: string; text: string } | null;
   // A207: custom (user-built) session fields — inline-resolved, no catalog lookup.
   is_custom?: boolean;

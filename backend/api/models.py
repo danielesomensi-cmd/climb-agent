@@ -93,6 +93,18 @@ class RemoveExerciseRequest(BaseModel):
     week_plan: Optional[Dict[str, Any]] = None
 
 
+class SurfaceOverrideRequest(BaseModel):
+    """Body for POST /api/session/surface-override (B313).
+
+    `surface: "boulder"` adapts a rope-dependent session to the boulder wall for
+    this day only; `surface: null` reverts it to the planned session.
+    """
+    date: str
+    session_index: int = 0
+    surface: Optional[Literal["boulder"]] = None
+    week_plan: Optional[Dict[str, Any]] = None
+
+
 
 # --------------------------------------------------------------------------- #
 # Replanner

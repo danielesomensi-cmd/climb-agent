@@ -395,6 +395,23 @@ export const removeExerciseFromSession = (data: {
     body: JSON.stringify(data),
   });
 
+/**
+ * B313 — "Boulder only (today)": adapt a rope session to the boulder wall, or
+ * revert it with `surface: null`. The server writes the adapted session onto
+ * the slot, so the card, the guided player and the feedback all read the same
+ * thing (in A210 the override lived in React state and the player never saw it).
+ */
+export const setSessionSurface = (data: {
+  date: string;
+  session_index: number;
+  surface: "boulder" | null;
+  week_plan: WeekPlan;
+}) =>
+  request<{ week_plan: WeekPlan }>("/api/session/surface-override", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+
 
 // Replanner
 export const applyOverride = (data: {
