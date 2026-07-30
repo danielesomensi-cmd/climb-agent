@@ -47,13 +47,13 @@ These 11 are summarized concisely here for lookup. Full rule + push-back templat
 
 **D20**: Overreach + taper before Performance phase. The intensity spike in late Build is intentional (supercompensation), not a planning error. → If user is alarmed at the spike: explain Mujika 2003 taper logic. The drop into Performance is the payoff.
 
-**D21**: Phase minimums: Base ≥6 wk, Build ≥3 wk, Peak ≥2 wk. → If user wants to shorten any phase: explain time-locked vs effort-locked adaptations. Base ≥6 wk specifically because mitochondrial biogenesis runs on a 6+ week clock (Mujika 2012). Other phases are negotiable; Base is not.
+**D21**: Phase minimums **as implemented**: Base 4 wk lead (floor == cap) / 2 wk boulder, Strength & Power ≥2 wk, PE ≥2 wk lead / ≥1 boulder, Performance ≥2 wk, Deload 1 wk (`macrocycle_v1.py`). The ≥6 wk Base figure that used to sit here came from D44, which is **deferred** — see D44 below. → If the user wants to shorten a phase: explain time-locked vs effort-locked adaptations (mitochondrial biogenesis runs on a 6+ week clock, Mujika 2012, which is why Base is already at its floor and not negotiable downward).
 
 **D33**: Full warm-up protocol — joint mobilization → light cardio → ROM → activation (silent feet, hand patterns) → specific (warm-up repeaters on 40 mm edge). 15-20 min minimum. → High-frequency question. Coach offers the full sequence; flags CUE-02 (no flexor static stretching) and D74 (silent feet).
 
 **D34**: Effort Level (EL/RPE) is the primary intensity metric, not %1RM. → If user asks "why no %1RM in my plan?": climbing intensity depends on grip type, hold geometry, body position; %1RM is unstable across these. EL captures effort under varied geometry better.
 
-**D44**: ARC / Base phase minimum 6 weeks (Mujika 2012 mitochondrial biogenesis). → If user wants to skip Base ("I just want to do projects"): explain the engine the ARC builds — every later phase costs more without it.
+**D44** *(deferred — proposed, never implemented)*: a ≥6-week Base floor was proposed from Mujika 2012 (mitochondrial biogenesis). The engine ships **4 weeks Base for lead (floor == cap), 2 for boulder** — the 16-week macrocycle cap makes 6 too expensive. → If the user wants to skip or shorten Base: explain the engine the ARC builds — every later phase costs more without it. → Never state or imply that the plan must have 6 weeks of Base, or that a 4-week Base breaks a rule. See `[[01_periodization]]` §2.
 
 ---
 

@@ -155,7 +155,7 @@ The **implementation** lives in a separate Claude Code project.
 | `DESIGN_GOAL_MACROCICLO_v1_1.md` lines 30, 44, 144, 157, 283 | "4×4" references | D47 | ❌ D47 deferred |
 | `DESIGN_GOAL_MACROCICLO_v1_1.md` line 142 | Base "3-4 wk" (now ≥6 wk) | D21/D44 | ❌ D44 deferred |
 | `PROJECT_BRIEF.md` line 64 | "6-axis profile" (now 5-axis) | D01 | ✅ Session 1 implemented D01 |
-| `04_periodization.md` lines 254, 268 | Base "3-4 weeks" | D21/D44 | ❌ D44 deferred |
+| `04_periodization.md` lines 254, 268 | Base "3-4 weeks" | D21/D44 | ❌ D44 deferred — **and the engine agrees** (4 wk lead / 2 wk boulder). The coach KB, which had promoted D44 to an enforced floor, was realigned to the engine in C263 (2026-07-30). If D44 is ever implemented, `backend/tests/test_c263_kb_engine_coherence.py` fails until the KB is updated too. |
 | `02_finger_strength.md` line 206 | "Add full crimp cautiously" — ambiguous | D72 | ❌ D72 deferred |
 | `knowledge_base_roadmap.md` | Says "PLANNING" — Topics 01-10 Step 1 all done | — | ⚠️ Content stale |
 

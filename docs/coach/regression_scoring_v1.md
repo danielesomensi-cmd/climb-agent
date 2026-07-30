@@ -37,12 +37,14 @@ A questo si sommavano **lacune di copertura vere**: `dieta`/`low-carb`, `dimagri
 
 Nota difensiva che invece ha funzionato: Q-28 (dimagrimento) era finita in fallback e la hard rule **D64 ha tenuto lo stesso**, perché L0/L1 sono sempre in contesto. Le regole di sicurezza stanno nel posto giusto.
 
-### Causa 2 — il KB e il motore non concordano sulla durata della fase Base
+### Causa 2 — il KB e il motore non concordavano sulla durata della fase Base ✅ risolta da [[C263]]
 
 | Fonte | Valore |
 |---|---|
 | KB `L3/01_periodization.md:38,45` | Base **≥6 settimane**, dichiarato *hard floor* (D44, Mujika 2012), con istruzione al coach: «Don't relent» |
 | Engine `macrocycle_v1.py:246-260` | Lead: base **4** (`floor == cap`, commento: *"base is locked at 4"*). Boulder: base **2** |
+
+> **Risolta (C263, 2026-07-30): allineato il KB al motore, su decisione di Daniele.** D44 (≥6 settimane) risultava già **deferred** nel registro (`docs/research_kb/00_INDEX_v3.md`, Stale References Log) — il KB del coach l'aveva promossa a *hard floor* per conto suo, arrivando ad affermare il falso: «Engine cannot generate a macrocycle with Base <6 weeks». Ora `01_periodization`, `05_aerobic_endurance_arc` e `L2_decision_index` dichiarano i numeri veri (4 lead / 2 boulder) e citano il ~6 settimane **solo come punto di saturazione della letteratura**, non come requisito del piano: la scienza non è stata riscritta, è stata separata da ciò che il motore fa. Guardia anti-ri-divergenza: `backend/tests/test_c263_kb_engine_coherence.py` legge il numero dal KB e lo confronta con `_PHASE_FLOORS_LEAD`/`_PHASE_FLOORS_BOULDER`.
 
 Il coach vede entrambi e prova a conciliarli, producendo frasi come «il minimo assoluto del sistema è 6 settimane, ma il tuo piano è tarato su 4, che è già il floor per la tua situazione» (Q-01) e, in Q-02, un invito all'utente a «verificare le impostazioni» per un valore che l'utente non può cambiare. Costa punti su due risposte, ma il problema vero non è lo scoring: **il coach sta dicendo a un utente pagante che il suo piano viola una regola del metodo.** O il floor del motore sale, o il KB va allineato a ciò che il motore fa davvero.
 

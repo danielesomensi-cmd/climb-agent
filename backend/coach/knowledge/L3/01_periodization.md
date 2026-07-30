@@ -35,18 +35,22 @@ The engine ships a Hörst 4-3-2-1 backbone with concurrent (DUP) elements within
 
 | Phase | Duration | Primary stimulus | Secondary | Coach framing |
 |---|---|---|---|---|
-| **Base** | **≥6 wk (D44, hard floor)** | ARC + technique + general conditioning | Submaximal hangboard, climbing volume | "Build the engine. ARC adaptations are time-locked." |
+| **Base** | **4 wk lead (floor == cap) / 2 wk boulder** — see D44 note below | ARC + technique + general conditioning | Submaximal hangboard, climbing volume | "Build the engine. This is the phase you don't get to skip." |
 | **Strength & Power** | 2-3 wk (≥3 wk D21) | Max hangs, limit bouldering, pulling | Maintenance ARC, technique drills | "Build the peak. Neural recruitment + tendon density." |
 | **Power Endurance** | 2-3 wk | Varied-intensity intervals (D47), repeaters, route circuits | Maintenance hangboard, technique | "Bridge strength to performance under pump." |
 | **Performance** | 1-2 wk (≥2 wk D21) | Project climbing, redpoint attempts | Maintenance only on rest days | "Convert fitness to sends. Don't add new stimulus." |
 | **Deload** | 1 wk | Active recovery, easy climbing, mobility | Light prehab | "Adaptation happens here, not during the hard week." |
 
-**Phase floors (D21, hard):**
-- Base ≥6 weeks (D44, mitochondrial biogenesis timeline, Mujika 2012).
-- Build ≥3 weeks (neural adaptations).
-- Peak ≥2 weeks (specificity + recovery).
+**Phase floors as the engine actually implements them** (`macrocycle_v1.py`, `_PHASE_FLOORS_LEAD` / `_PHASE_FLOORS_BOULDER`):
+- **Base: 4 weeks (lead), 2 weeks (boulder).** For lead, floor == cap: 4 is fixed, surplus weeks never go to Base.
+- Strength & Power ≥2 weeks, Power Endurance ≥2 (lead) / ≥1 (boulder), Performance ≥2, Deload 1.
+- Totals: lead 11-16 weeks, boulder 8-16, hard cap 16 (A-MACRO-CAPS).
 
-These are floors, not ceilings. The engine extends them when user data suggests adaptation is incomplete.
+**The D44 note — read this before answering any "why is my Base only N weeks" question.**
+
+D44 proposed a ≥6-week Base floor from Mujika 2012's mitochondrial biogenesis timeline. **D44 is deferred and was never implemented** (`docs/research_kb/00_INDEX_v3.md`, Stale References Log: "❌ D44 deferred"). The engine ships 4 weeks for lead and 2 for boulder, deliberately: a macrocycle is deadline-driven and capped at 16 weeks, so weeks spent in Base are weeks taken from Strength, PE and Performance — and the surplus-allocation priority puts them there instead.
+
+**The literature is unchanged and still true:** capillarization and mitochondrial density keep improving past week 4; ~6 weeks is where the adaptation saturates. So a 4-week Base is a **deliberate trade-off, not the physiological optimum**. Say exactly that if asked. What the coach must NOT do is tell the user their plan violates a rule of the method — it doesn't; the rule was never adopted. If a user wants the fuller aerobic build, the honest levers are: run a second cycle with an endurance goal, or move the deadline out so the total budget grows.
 
 ### 3. DUP within each phase ("concurrent" element)
 
@@ -184,7 +188,7 @@ Beginners get less internal complexity because they don't need it yet — climbi
 
 ## How the engine applies this
 
-- **Macrocycle generation** creates a Hörst 4-3-2-1 + DUP plan with phase durations bounded by D21/D44 floors. Default total: 11-16 weeks (lead floor 11, boulder floor 8, total cap 16 per A-MACRO-CAPS).
+- **Macrocycle generation** creates a Hörst 4-3-2-1 + DUP plan with phase durations bounded by the floors above (D44 is *not* among them — see the D44 note in §2). Default total: 11-16 weeks (lead floor 11, boulder floor 8, total cap 16 per A-MACRO-CAPS).
 - **Phase weights** (per §3 above) are baked into session selection — the planner picks sessions from the catalog weighted by phase, not by absolute prescriptions.
 - **Deload** is scheduled at the end of each macrocycle. Adaptive mini-deload fires when fatigue proxy exceeds threshold.
 - **Overreach + taper** triggers 1 week before Performance phase begins (D20).
@@ -195,13 +199,15 @@ Beginners get less internal complexity because they don't need it yet — climbi
 
 ## When user asks…
 
-**"Why is my Base phase 6 weeks? I want to shorten it."**
+**"Why is my Base phase N weeks? I want to shorten it."**
 
-Cite D44 + Mujika 2012: mitochondrial biogenesis and capillarization run on a 6+ week clock that's time-locked, not effort-locked. Pushing intensity doesn't shorten the timeline; it converts the stimulus to a different (less useful) adaptation. The engine respects this as a floor, not a target. If the user insists, explain the trade: shortening Base costs the Build and Peak phases a smaller aerobic engine — diminished returns later, not now. Don't relent.
+First: read the user's actual plan before answering — Base is **4 weeks for lead, 2 for boulder**, never 6. Answering with a number the plan doesn't contain is how the coach ends up telling a paying user their plan is wrong (this happened; see `docs/coach/regression_scoring_v1.md` Q-01/Q-02).
+
+Then: capillarization and mitochondrial density are **time-locked, not effort-locked** (Mujika 2012) — pushing intensity doesn't compress the clock, it converts the stimulus to a different and less useful adaptation. That's why Base is fixed at 4 for lead (floor == cap) and surplus weeks go to the later phases instead: shortening it further would cost Strength and Performance a smaller aerobic engine, with the bill arriving later, not now. **Don't relent on shortening it, and don't apologise for it being 4** — it's a deliberate budget choice inside a 16-week cap, not a shortfall.
 
 **"I'm a boulderer. Why is my Base phase so long / why is there ARC at all?"**
 
-Acknowledge the boulder/lead distinction: yes, the engine gives boulderers a shorter ARC and longer Strength & Power than it gives lead climbers. But Base ≥6 weeks remains a floor because mitochondrial density is the foundation under contact-strength work too — boulder PE on circuits and density work both require the aerobic engine ARC builds. The boulder Base differs in *content* (more board climbing, more density hangs alongside ARC) more than in *duration*.
+Acknowledge the boulder/lead distinction: yes, the engine gives boulderers a shorter Base (2 weeks vs 4) and a longer Strength & Power than it gives lead climbers. But the phase doesn't disappear, because mitochondrial density is the foundation under contact-strength work too — boulder PE on circuits and density work both need the aerobic engine ARC builds. So the boulder Base differs in **both** duration (2 vs 4 weeks) and content (more board climbing and density hangs alongside ARC). If a boulderer with a lead goal in their profile is seeing a lead-shaped Base, that's worth checking: phase durations follow the goal discipline in user state, which the user can change in settings.
 
 **"DUP vs linear — which is better for me?"**
 

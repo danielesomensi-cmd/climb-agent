@@ -14,6 +14,7 @@
 - **D44:** ARC/endurance phase specifically needs ≥6 weeks (Mujika 2012: mitochondrial biogenesis timeline)
 - **Tension:** D21 was left as a general constraint without a specific number. D44 now gives a hard floor for the Base/ARC phase.
 - **Resolution:** D44 overrides D21 for endurance/ARC phases. Other phases (Build, Peak) can have shorter minimums. **D21 should be updated: Base/ARC phase min = 6 weeks; Build phase min = 3 weeks; Peak/Realisation min = 2 weeks.**
+- **Status 2026-07-30 (C263):** this resolution was **never implemented**. The engine ships Base = 4 wk (lead, floor == cap) / 2 wk (boulder), because the 16-week macrocycle cap makes a 6-week Base too expensive against Strength/PE/Performance. D44 stays deferred; the coach KB now states the engine's numbers and quotes the ~6 wk figure only as the literature saturation point. Reopening this means changing `_PHASE_FLOORS_LEAD` (high-risk, `macrocycle_v1`) and the total-weeks budget — a product decision, not a doc fix.
 
 ### T2: D19 (beginner simple linear) vs D27 (reverse periodization for beginners)
 - **D19:** Simplified linear periodization for beginners (from Topic 04)
