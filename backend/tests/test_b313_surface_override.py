@@ -235,6 +235,25 @@ class TestGuards:
         _seed(wp)
         _override(wp, expect=422)
 
+    def test_board_or_spraywall_counts_as_a_boulder_wall(self):
+        """B314: plenty of gyms have no marked boulder area but a Kilter and a
+        spray wall — which is bouldering. The guard goes through
+        expand_equipment, where every BOULDER_SURFACE implies gym_boulder; this
+        test is here so nobody "simplifies" it to a literal gym_boulder check.
+        """
+        state = deps.load_state(None)
+        state["equipment"]["gyms"] = [{
+            "gym_id": "wall", "name": "Board Gym", "priority": 1,
+            "equipment": ["gym_routes", "spraywall", "board_kilter", "hangboard", "pullup_bar"],
+        }]
+        deps.save_state(state, None)
+
+        wp = _week_plan("route_endurance_gym")
+        _seed(wp)
+        slot = _slot(_override(wp))
+        assert slot["surface_override"] == "boulder"
+        assert not _needs_rope(slot)
+
     def test_no_boulder_wall_fails_loudly(self):
         """A gym with ropes only: better a 422 than a card with zero exercises."""
         state = deps.load_state(None)

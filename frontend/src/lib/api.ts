@@ -194,6 +194,33 @@ async function _send<T>(
   return res.json() as Promise<T>;
 }
 
+/**
+ * The server's own explanation for a failed call, for UI that would otherwise
+ * have to guess (B314).
+ *
+ * `request()` packs generic failures as `API 422: {"detail":"..."}` — fine for
+ * a log, useless in a card. Guessing instead is worse: B313's surface override
+ * showed "is there a boulder wall at this gym?" for *every* error, so a plain
+ * 404 (backend not deployed yet) read as a gym-equipment problem and sent us
+ * hunting for a bug that did not exist.
+ */
+export function apiErrorDetail(err: unknown, fallback: string): string {
+  if (!(err instanceof ApiError)) return fallback;
+  if (err.status === 404) {
+    return "This feature needs a newer version of the app — reload the page and try again.";
+  }
+  const body = /\{[\s\S]*\}\s*$/.exec(err.message);
+  if (body) {
+    try {
+      const detail = (JSON.parse(body[0]) as { detail?: unknown }).detail;
+      if (typeof detail === "string" && detail) return detail;
+    } catch {
+      /* not JSON — fall through */
+    }
+  }
+  return fallback;
+}
+
 /** Error thrown by `request()` with the HTTP status attached (B272) — lets
  * callers branch on status without parsing the message string. */
 export class ApiError extends Error {

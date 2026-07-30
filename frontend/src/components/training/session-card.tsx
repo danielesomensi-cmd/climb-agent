@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
-import { getExercises, addExerciseToSession, removeExerciseFromSession, setSessionSurface } from "@/lib/api";
+import { getExercises, addExerciseToSession, removeExerciseFromSession, setSessionSurface, apiErrorDetail } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 import { walkResolvedBlocks } from "@/lib/session-blocks";
@@ -781,11 +781,15 @@ export function SessionCard({
       onSessionUpdated?.(result.week_plan);
     } catch (err) {
       console.error("[B313] surface override failed:", err);
-      setBoulderOverrideError(
+      // B314: say what the server said. The previous copy blamed the gym's
+      // equipment for every failure, including a 404 from a backend that had
+      // not finished deploying.
+      setBoulderOverrideError(apiErrorDetail(
+        err,
         surface === null
           ? "Could not restore the planned session. Try again."
-          : "Could not adapt this session — is there a boulder wall at this gym?",
-      );
+          : "Could not adapt this session. Try again.",
+      ));
     } finally {
       setBoulderOverrideLoading(false);
     }
