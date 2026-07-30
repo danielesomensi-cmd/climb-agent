@@ -1065,6 +1065,7 @@ def apply_events(
                         "feedback_summary",
                         "exercise_feedback",
                         "session_duration_seconds",
+                        "session_load_actual",  # B312: also feedback-derived
                     ):
                         s.pop(_k, None)
                     matched = True

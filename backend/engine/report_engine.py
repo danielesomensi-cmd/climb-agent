@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from backend.engine import storage
 from backend.engine.closed_loop_v1 import STIMULUS_CATEGORIES, _session_categories
 from backend.engine.other_activity_v1 import normalize_other_activities
+from backend.engine.load_score import effective_session_load
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions
 
 # Difficulty label→score mapping (mirrors adaptive_replan.py)
@@ -254,8 +255,13 @@ def _build_load(
                 if not (since <= d <= until):
                     continue
                 sessions = day.get("sessions") or []
+                # B312: effective_session_load prefers session_load_actual (what
+                # was really done, skipped exercises excluded) and reads the
+                # prescribed score from the resolved payload, where it actually
+                # lives — pre-B312 this looked it up on the slot only, so every
+                # session silently fell back to estimated_load_score.
                 day_load_actual = sum(
-                    s.get("session_load_score") or s.get("estimated_load_score", 0)
+                    effective_session_load(s)
                     for s in sessions
                     if s.get("status") == "done"
                 )
@@ -1170,7 +1176,7 @@ def _heatmap_day_cell(
             scheduled = True
             if s.get("status") == "done":
                 done = True
-                load += s.get("session_load_score") or s.get("estimated_load_score") or 0
+                load += effective_session_load(s)  # B312
         if day.get("outdoor_slot") or day.get("outdoor_spot_name"):
             scheduled = True
         if day.get("outdoor_session_status") == "done":

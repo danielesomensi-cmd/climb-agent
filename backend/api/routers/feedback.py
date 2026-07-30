@@ -45,6 +45,7 @@ from backend.engine.adaptive_replan import (
     load_exercises_by_id,
 )
 from backend.engine.closed_loop_v1 import apply_day_result_to_user_state
+from backend.engine.load_score import compute_actual_load_score, fatigue_map_by_id
 from backend.engine.progression_v1 import apply_feedback, canonical_feedback_label
 from backend.engine.replanner_v1 import apply_events
 from backend.engine.resolve_session import normalize_limitations, _check_exercise_limitation
@@ -251,6 +252,8 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     _dur_new = req.log_entry.get("session_duration_seconds")
     if (_fb_items or _dur_new is not None) and target_date and target_sid:
 
+        _fatigue_map = fatigue_map_by_id(exercises_by_id)
+
         def _apply_actual_and_dur(plan: dict) -> None:
             for _week_block in plan.get("weeks", []):
                 for _day_entry in _week_block.get("days", []):
@@ -261,6 +264,22 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                             continue
                         if _fb_items:
                             _sess["actual_exercises"] = _fb_items
+                            # B312: the load the user actually earned. Skipped
+                            # exercises (completed: false, sent by the guided
+                            # player) no longer credit their fatigue_cost, so the
+                            # weekly report and the heatmap stop showing a full
+                            # load for a half-done session. None → no usable
+                            # signal, leave the prescribed score alone.
+                            _actual_load = compute_actual_load_score(
+                                _fb_items,
+                                (
+                                    (_sess.get("resolved") or {}).get("resolved_session")
+                                    or {}
+                                ).get("exercise_instances"),
+                                _fatigue_map,
+                            )
+                            if _actual_load is not None:
+                                _sess["session_load_actual"] = _actual_load
                         if _dur_new is not None:
                             # B197-style guard: never regress a measured duration.
                             _prev = _sess.get("session_duration_seconds")

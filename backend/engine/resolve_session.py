@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from backend.engine.equipment_utils import expand_equipment
 
 from backend.engine.cluster_utils import parse_date
+from backend.engine.load_score import fatigue_map_from_catalog, load_score_from_ids
 from backend.engine.progression_v1 import inject_targets
 
 logger = logging.getLogger(__name__)
@@ -1833,13 +1834,13 @@ def resolve_session(
         b.get("status") == "failed" for b in blocks
     ) else "success"
 
-    # B4: session load score from exercise fatigue_cost (D151: rescaled ×1.5, cap 85)
-    ex_fatigue = {e.get("id"): e.get("fatigue_cost", 0) for e in exercises}
-    raw_fatigue = sum(
-        ex_fatigue.get(inst.get("exercise_id"), 0)
-        for inst in exercise_instances
+    # B4: session load score from exercise fatigue_cost (D151: rescaled ×1.5, cap 85).
+    # B312: formula centralised in engine/load_score.py — this is the *prescribed*
+    # load; the actual one is derived at feedback time from completed flags.
+    session_instance["session_load_score"] = load_score_from_ids(
+        (inst.get("exercise_id") for inst in exercise_instances),
+        fatigue_map_from_catalog(exercises),
     )
-    session_instance["session_load_score"] = round(min(85, raw_fatigue * 1.5))
 
     # B38: force deload if 2+ zones are severe
     if limitation_map:

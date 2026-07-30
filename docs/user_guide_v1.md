@@ -484,7 +484,7 @@ The Outdoor page shows: per-spot breakdown, grade histogram, and session history
 The **Weekly Report** (Reports tab) gives you a snapshot of your training week:
 
 - **Adherence**: How many planned sessions you completed vs. skipped
-- **Load**: Total training load for the week (engine sessions + free sessions + supplementary)
+- **Load**: Total training load for the week (engine sessions + free sessions + supplementary). It counts what you **actually did**: if you skip exercises inside a guided session, only the ones you completed contribute, so a half-done session no longer shows as a full one.
 - **Difficulty Distribution**: How exercises felt across the week (histogram of feedback)
 - **Progression Table**: Which exercises progressed, regressed, or stayed flat
 - **Free Climbing Summary**: If you had free sessions — number of climbs, max grade, send rate, duration
