@@ -15,6 +15,7 @@ from backend.api.models import (
     RemoveExerciseRequest,
     SessionResolveRequest,
 )
+from backend.engine.load_score import fatigue_map_by_id, load_score_from_ids
 from backend.engine.resolve_session import resolve_session
 
 import logging
@@ -145,13 +146,11 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     exercise_instances.append(new_instance)
     resolved_session["exercise_instances"] = exercise_instances
 
-    # Recalculate session_load_score (D151: rescaled ×1.5, cap 85)
-    fatigue_map = {e_id: catalog[e_id].get("fatigue_cost", 0) for e_id in catalog}
-    raw_fatigue = sum(
-        fatigue_map.get(inst.get("exercise_id"), 0)
-        for inst in exercise_instances
+    # Recalculate session_load_score (D151: rescaled ×1.5, cap 85 — B312: shared helper)
+    resolved["session_load_score"] = load_score_from_ids(
+        (inst.get("exercise_id") for inst in exercise_instances),
+        fatigue_map_by_id(catalog),
     )
-    resolved["session_load_score"] = round(min(85, raw_fatigue * 1.5))
 
     # B153b: mark session so _auto_resolve skips re-resolution
     session["_user_edited"] = True
@@ -192,13 +191,10 @@ def _find_session(week_plan: dict, date: str, session_index: int):
 
 def _recalc_load_score(resolved: dict, exercise_instances: list) -> None:
     """Recalculate session_load_score after exercise list changes."""
-    catalog = _load_exercises_catalog()
-    fatigue_map = {e_id: catalog[e_id].get("fatigue_cost", 0) for e_id in catalog}
-    raw_fatigue = sum(
-        fatigue_map.get(inst.get("exercise_id"), 0)
-        for inst in exercise_instances
+    resolved["session_load_score"] = load_score_from_ids(
+        (inst.get("exercise_id") for inst in exercise_instances),
+        fatigue_map_by_id(_load_exercises_catalog()),
     )
-    resolved["session_load_score"] = round(min(85, raw_fatigue * 1.5))
 
 
 @router.post("/remove-exercise", dependencies=[Depends(require_active_subscription)])

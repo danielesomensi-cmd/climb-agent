@@ -326,8 +326,25 @@ resolve_session(
 9. **Prehab injection (B38):** `_inject_prehab_for_limitations()` auto-adds one prehab exercise per limitation zone if not already present.
 10. **Progression injection:** `inject_targets()` enriches instances with suggested loads, target grades.
 11. **Phase-aware ordering (A121):** `sort_exercises_by_phase()` + `enforce_ordering_constraints()`.
-12. **Load score:** Sum of `fatigue_cost` × 1.5, capped at 85.
+12. **Load score:** Sum of `fatigue_cost` × 1.5, capped at 85 — formula in `engine/load_score.py` (B312: single source of truth, shared with the add/remove-exercise router).
 13. **Force deload:** If 2+ zones are `severe`, flag the session.
+
+### Prescribed vs actual load (B312)
+
+Two numbers, never conflated:
+
+| Field | Where | Written by | Meaning |
+|-------|-------|-----------|---------|
+| `session_load_score` | `slot["resolved"]` | `resolve_session`, add/remove-exercise | **Prescribed.** Frozen once the session starts — the denominator of `load_ratio`. |
+| `session_load_actual` | `slot` (next to `actual_exercises`) | `POST /api/feedback` | **Actual.** Same formula over the exercises whose feedback item says `completed: true`. |
+
+`effective_session_load()` is the only reader any consumer should use (weekly
+report, monthly heatmap, coach prompt): it cascades actual → prescribed →
+`estimated_load_score` and looks each key up on the slot *and* on the resolved
+payload. Absent a `completed` flag nothing is subtracted (the `/today` and
+`/week` dialogs carry no skip signal); an explicit `completed: false` is the only
+thing that lowers the load. A `session_load_actual` of 0 is honoured; a
+*prescribed* 0 means the resolver produced no instances and still falls through.
 
 ### Output structure
 

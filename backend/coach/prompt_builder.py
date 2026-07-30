@@ -24,6 +24,7 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from backend.coach.routing import KNOWLEDGE_DIR, route_query
+from backend.engine.load_score import effective_session_load
 
 logger = logging.getLogger(__name__)
 
@@ -328,6 +329,23 @@ def _week_section(
         lines.append(
             f"- Planned training load this week: {planned_load} "
             "(engine load units)"
+        )
+    # B312: the load actually earned so far — sessions marked done, with skipped
+    # exercises subtracted. Without this the coach only saw the prescription and
+    # could not tell a fully executed week from a half-done one.
+    actual_load = round(
+        sum(
+            effective_session_load(s)
+            for day in days
+            for s in (day.get("sessions") or [])
+            if s.get("status") == "done"
+        )
+    )
+    if actual_load or planned_load is not None:
+        lines.append(
+            f"- Actual training load completed so far this week: {actual_load} "
+            "(engine load units; excludes exercises the user skipped inside a "
+            "session, and outdoor/free sessions)"
         )
     return "\n".join(lines)
 
