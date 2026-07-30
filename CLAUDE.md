@@ -175,6 +175,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/session/resolve` | Resolve a single session to exercises |
 | POST | `/api/session/add-exercise` | Add exercise to resolved session |
 | POST | `/api/session/remove-exercise` | Remove exercise from resolved session |
+| POST | `/api/session/surface-override` | B313: adapt a rope session to the boulder wall for the day (`surface: "boulder"`), or revert (`surface: null`). Writes the adapted session onto the slot (`surface_override` + `_user_edited`) so card, guided player and feedback read one source. Server picks the mechanism: catalog `boulder_fallback` swap, else same session re-resolved without `gym_routes` — the rope is stripped from the equipment in **both** cases. 422 if the location has no boulder wall or the primary block does not survive. |
 | POST | `/api/replanner/override` | Apply day override (intent-based, equipment-aware) |
 | POST | `/api/replanner/events` | Apply events (done/skipped) to week plan |
 | GET | `/api/replanner/suggest-sessions` | Suggest sessions for quick-add |

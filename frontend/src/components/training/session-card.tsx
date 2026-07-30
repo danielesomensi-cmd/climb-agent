@@ -38,7 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
-import { getExercises, addExerciseToSession, removeExerciseFromSession, resolveSession } from "@/lib/api";
+import { getExercises, addExerciseToSession, removeExerciseFromSession, setSessionSurface } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 import { walkResolvedBlocks } from "@/lib/session-blocks";
@@ -652,8 +652,8 @@ export function SessionCard({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
   const [exerciseToRemove, setExerciseToRemove] = useState<{ index: number; name: string } | null>(null);
-  // A210: ephemeral "Boulder only" override (React state only, never persisted)
-  const [boulderOverride, setBoulderOverride] = useState<Record<string, unknown> | null>(null);
+  // A210 → B313: the "Boulder only" override lives on the slot now, not here.
+  // Only the in-flight/error state is local.
   const [boulderOverrideLoading, setBoulderOverrideLoading] = useState(false);
   const [boulderOverrideError, setBoulderOverrideError] = useState<string | null>(null);
   const router = useRouter();
@@ -672,8 +672,13 @@ export function SessionCard({
     [marking],
   );
 
-  // A210: effective resolved session — override takes precedence over the planned one
-  const effectiveResolved = (boulderOverride ?? session.resolved) as Record<string, unknown> | undefined;
+  // B313: one resolved session, period. When "Boulder only" is on, the server
+  // has already swapped `session.resolved` for the adapted one — which is also
+  // what handleStartGuided hands to the player and what the feedback is scored
+  // against. Pre-B313 this line picked a React-state override the player could
+  // not see, so the preview showed boulder and the session ran the rope plan.
+  const effectiveResolved = session.resolved as Record<string, unknown> | undefined;
+  const boulderOverrideActive = session.surface_override === "boulder";
 
   // B293 — never render a completable card with zero resolved exercises.
   const resolutionState = sessionResolutionState({
@@ -747,64 +752,57 @@ export function SessionCard({
     return instances.some((i) => String(i.exercise_id ?? "").startsWith("lp_"));
   })();
 
-  // A210: trigger detection — based on the ORIGINAL resolved session, not the override.
-  // Button shows iff a rope-dependent exercise was scheduled for this planned session.
-  const originalResolved = session.resolved as Record<string, unknown> | undefined;
-  const originalSessionMeta = originalResolved?.session as Record<string, unknown> | undefined;
-  const boulderFallbackId = (originalSessionMeta?.boulder_fallback as string | null | undefined) ?? null;
-  const originalSessionId = (originalSessionMeta?.session_id as string | undefined) ?? session.session_id;
+  // A210: trigger detection — the button shows iff this session, as planned,
+  // schedules a rope-dependent exercise. B313: which mechanism adapts it (swap
+  // to the catalog's boulder_fallback, or re-resolve without the rope wall) is
+  // the server's call now — the client only asks for "boulder".
   const hasRopeExercise = useMemo(() => {
-    const rs = originalResolved?.resolved_session as Record<string, unknown> | undefined;
+    const rs = effectiveResolved?.resolved_session as Record<string, unknown> | undefined;
     const instances = (rs?.exercise_instances ?? []) as Array<Record<string, unknown>>;
     return instances.some((ex) => {
       const eq = (ex.equipment_required ?? []) as string[];
       return Array.isArray(eq) && eq.includes("gym_routes");
     });
-  }, [originalResolved]);
+  }, [effectiveResolved]);
   const canSwitchToBoulder =
-    boulderOverride === null &&
-    !isFinalized &&
-    hasRopeExercise &&
-    (boulderFallbackId !== null || !!availableEquipment);
+    !boulderOverrideActive && !isFinalized && !session.is_custom && hasRopeExercise && !!weekPlan;
 
-  const handleBoulderOnly = useCallback(async () => {
+  const setSurface = useCallback(async (surface: "boulder" | null) => {
+    if (!weekPlan) return;
     setBoulderOverrideLoading(true);
     setBoulderOverrideError(null);
     try {
-      if (boulderFallbackId) {
-        // Mechanism A: session_id swap to dedicated boulder session
-        const result = await resolveSession(boulderFallbackId);
-        setBoulderOverride(result.resolved as unknown as Record<string, unknown>);
-      } else {
-        // Mechanism B: equipment override — same session_id, strip gym_routes
-        const override = availableEquipment
-          ? Array.from(availableEquipment).filter((e) => e !== "gym_routes")
-          : [];
-        const result = await resolveSession(originalSessionId, undefined, override);
-        setBoulderOverride(result.resolved as unknown as Record<string, unknown>);
-      }
+      const result = await setSessionSurface({
+        date,
+        session_index: sessionIndex,
+        surface,
+        week_plan: weekPlan,
+      });
+      onSessionUpdated?.(result.week_plan);
     } catch (err) {
-      console.error("[A210] boulder override failed:", err);
-      setBoulderOverrideError("Could not adapt this session. Try again.");
+      console.error("[B313] surface override failed:", err);
+      setBoulderOverrideError(
+        surface === null
+          ? "Could not restore the planned session. Try again."
+          : "Could not adapt this session — is there a boulder wall at this gym?",
+      );
     } finally {
       setBoulderOverrideLoading(false);
     }
-  }, [boulderFallbackId, availableEquipment, originalSessionId]);
+  }, [weekPlan, date, sessionIndex, onSessionUpdated]);
 
-  const handleUndoBoulderOverride = useCallback(() => {
-    setBoulderOverride(null);
-    setBoulderOverrideError(null);
-  }, []);
+  const handleBoulderOnly = useCallback(() => setSurface("boulder"), [setSurface]);
+  const handleUndoBoulderOverride = useCallback(() => setSurface(null), [setSurface]);
 
   // A210: copy variant — route_projecting → limit_boulder is an equivalent stimulus,
   // aerobic/endurance swaps trade aerobic capacity for volume bouldering.
   const boulderCopyVariant: "equivalent" | "volume_swap" =
-    originalSessionId === "route_projecting_gym" ? "equivalent" : "volume_swap";
+    session.surface_override_from === "route_projecting_gym" ? "equivalent" : "volume_swap";
 
   return (
     <>
       <div className="relative">
-      {boulderOverride !== null && (
+      {boulderOverrideActive && (
         <div className="mb-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-100 flex items-start gap-2">
           <Mountain className="size-4 shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -816,7 +814,8 @@ export function SessionCard({
             )}
           </div>
           <button
-            className="text-amber-200 hover:text-white underline text-xs shrink-0"
+            className="text-amber-200 hover:text-white underline text-xs shrink-0 disabled:opacity-50"
+            disabled={boulderOverrideLoading}
             onClick={handleUndoBoulderOverride}
           >
             Undo
@@ -846,7 +845,7 @@ export function SessionCard({
                   Custom
                 </Badge>
               )}
-              {boulderOverride !== null && (
+              {boulderOverrideActive && (
                 <Badge className="bg-amber-600 hover:bg-amber-600 text-white text-[10px] gap-1 px-1.5 py-0">
                   <Mountain className="size-2.5" />
                   Boulder
