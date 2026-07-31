@@ -15,6 +15,7 @@ from backend.engine.adhoc_builder import (
     ADHOC_BODY_PARTS,
     ADHOC_ENERGY,
     ADHOC_EQUIPMENT_SETS,
+    ADHOC_EXCLUSIONS,
     ADHOC_FOCUS,
 )
 
@@ -49,6 +50,12 @@ _SYSTEM = (
     "one-arm / monobraccio → 'lock_off'; trazioni / pull-ups / rematore → "
     "'pull'; sospensioni / hangboard / dita → 'fingers'; verticale / handstand "
     "/ equilibrio sulle mani / pike push-up → 'handstand'. "
+    "REFUSALS: when the user rules something out ('niente trazioni', 'no "
+    "stretching', 'senza pesi', 'evita le dita'), list the matching labels in "
+    "`exclude`. This is not optional decoration — a refusal that does not reach "
+    "`exclude` WILL be violated by the composition. Note that 'niente trazioni' "
+    "means pull-ups only: lock-offs and isometric holds are a different thing "
+    "and must NOT be excluded. "
     "TWO FOCUSES in ONE session (e.g. 'core e tecnica' at the same place/time): "
     "put the dominant one in focus and the other in secondary_focus. "
     "MULTIPLE SEPARATE SESSIONS (e.g. 'one at lunch at work AND another tonight "
@@ -94,6 +101,17 @@ _TOOL: Dict[str, Any] = {
                 "type": "array",
                 "items": {"type": "string", "enum": list(ADHOC_BODY_PARTS)},
                 "description": "Specific muscles/body-parts named by the user (e.g. 'chest + abs + triceps' → ['chest','core','triceps']). More specific than focus — use whenever muscles are named. Omit when the user gave only a coarse focus.",
+            },
+            "exclude": {
+                "type": "array",
+                "items": {"type": "string", "enum": list(ADHOC_EXCLUSIONS)},
+                "description": (
+                    "What the athlete explicitly refused. 'niente trazioni' → "
+                    "['pullups'] (pull-ups only — NOT lock-offs); 'no stretching' "
+                    "→ ['stretching']; 'senza pesi' → ['weights']; 'niente dita/"
+                    "sospensioni' → ['hangboard']; 'no gambe' → ['legs']. Omit "
+                    "when nothing was ruled out."
+                ),
             },
             "multi_session_requested": {
                 "type": "boolean",
@@ -169,6 +187,9 @@ def extract_intent(
         "focus": slots.get("focus"),
         "secondary_focus": slots.get("secondary_focus"),
         "body_parts": slots.get("body_parts") or [],
+        # A259: negative constraints — the composer removes these from the pool
+        # before either path (LLM or deterministic) gets to choose.
+        "exclude": slots.get("exclude") or [],
         "gym_name": slots.get("gym_name"),
         "minutes": slots.get("minutes"),
         "energy": slots.get("energy"),
