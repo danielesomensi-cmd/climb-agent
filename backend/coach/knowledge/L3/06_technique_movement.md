@@ -7,7 +7,7 @@
 > **Source files distilled:** `docs/research_kb/08_technique_movement_route_reading.md` (T08), `horst_ch4_technique_skill_synthesis.md`, decision consolidation D73-D76.
 > **Audit anchor:** `docs/research_kb/coach_kb_v1_audit.md` §4.6 (file-by-file table).
 
-> **v1.0 coverage gap:** Bechtel *Climb Strong: Drills Manual* (pp. 31-90) and Mobråten drill catalogs are not yet integrated — Daniele owns the physical sources, photo extraction pending. v1.1 will expand the drill catalog with their boulder-specific and power/coordination drills. v1.0 covers movement *principles* and the Hörst + coaching-community drill set comprehensively; what's missing is *more* drills, not foundational content.
+> **v1.0 coverage gap:** the Bechtel *Climb Strong: Drills Manual* (pp. 31-90) and Mobråten drill catalogs are not part of v1.0; a later version will add their boulder-specific and power/coordination drills. v1.0 covers movement *principles* and the Hörst + coaching-community drill set comprehensively; what's missing is *more* drills, not foundational content. **To the user, say only that those drills aren't in the engine yet** — never who owns which book, nor how or when the material gets added (B315).
 
 ---
 

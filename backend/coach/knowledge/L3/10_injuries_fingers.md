@@ -7,7 +7,7 @@
 > **Source files distilled:** `docs/research_kb/07_overtraining_injury_load.md` (T07), `horst_ch13_injury_synthesis.md` (finger sections), decision consolidation D68, D71, D72, D80.
 > **Audit anchor:** `docs/research_kb/coach_kb_v1_audit.md` §4.6 (file-by-file table).
 
-> **v1.0 coverage gap:** Christophersen *Managing Injuries* Part 2 (lumbrical-specific rehab progressions, A2 graded loading protocols) is not yet integrated — physical source not yet acquired. v1.1 will expand the rehab-loading prescription detail with their grade-by-grade timelines and specific loading milestones. v1.0 covers diagnosis recognition, triage, prevention, and conservative initial management; what's missing is the post-medical-clearance graded loading protocol detail, not foundational content. **Operative principle:** Coach never prescribes a rehab return timeline without medical clearance — see "When user asks" and the protocol qualifiers throughout.
+> **v1.0 coverage gap:** Christophersen *Managing Injuries* Part 2 (lumbrical-specific rehab progressions, A2 graded loading protocols) is not part of v1.0. v1.1 will expand the rehab-loading prescription detail with their grade-by-grade timelines and specific loading milestones. v1.0 covers diagnosis recognition, triage, prevention, and conservative initial management; what's missing is the post-medical-clearance graded loading protocol detail, not foundational content. **Operative principle:** Coach never prescribes a rehab return timeline without medical clearance — see "When user asks" and the protocol qualifiers throughout.
 
 ---
 
