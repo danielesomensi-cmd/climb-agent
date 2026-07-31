@@ -88,6 +88,14 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--user", default=DEFAULT_USER)
     ap.add_argument("--out", default=str(DEFAULT_OUT))
+    ap.add_argument(
+        "--only",
+        default="",
+        help="comma-separated question ids (e.g. Q-26,Q-27) — re-run just those "
+             "instead of all 28. Answers already collected under the same code "
+             "and user state do not need regenerating; re-running them only adds "
+             "model variance to a set you already scored.",
+    )
     args = ap.parse_args()
 
     if not os.environ.get("ANTHROPIC_API_KEY"):
@@ -103,6 +111,14 @@ def main() -> int:
     questions = parse_questions()
     if len(questions) != 28:
         print(f"WARNING: parsed {len(questions)} questions, expected 28")
+    if args.only:
+        wanted = {q.strip() for q in args.only.split(",") if q.strip()}
+        questions = [(qid, q) for qid, q in questions if qid in wanted]
+        missing = wanted - {qid for qid, _ in questions}
+        if missing:
+            print(f"ERROR: unknown question ids: {sorted(missing)}")
+            return 1
+        print(f"Running {len(questions)} of 28 questions: {sorted(wanted)}")
 
     corpus = kb_corpus()
     client = TestClient(app)
@@ -150,7 +166,7 @@ def main() -> int:
             f"**Routed:** {', '.join(routed) or '(none)'}",
             f"**Firewall:** {'⚠️ ' + ', '.join(leaked) if leaked else 'clean'}  |  "
             f"**Citations not in KB:** {'⚠️ ' + ', '.join(unknown) if unknown else 'none'}  |  "
-            f"**Truncated:** {'⚠️ yes' if truncated else 'no'}",
+            f"**Truncated:** {'⚠️ yes' if truncated else 'no'} ({len(reply)} chars)",
             "",
             "**A:**",
             "",
