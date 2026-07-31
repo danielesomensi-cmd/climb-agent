@@ -7,7 +7,7 @@
 > **Source files distilled:** `docs/research_kb/08_technique_movement_route_reading.md` (T08), `horst_ch4_technique_skill_synthesis.md`, decision consolidation D73-D76.
 > **Audit anchor:** `docs/research_kb/coach_kb_v1_audit.md` §4.6 (file-by-file table).
 
-> **v1.0 coverage gap:** the Bechtel *Climb Strong: Drills Manual* (pp. 31-90) and Mobråten drill catalogs are not part of v1.0; a later version will add their boulder-specific and power/coordination drills. v1.0 covers movement *principles* and the Hörst + coaching-community drill set comprehensively; what's missing is *more* drills, not foundational content. **To the user, say only that those drills aren't in the engine yet** — never who owns which book, nor how or when the material gets added (B315).
+> **v1.0 coverage gap:** the Mobråten (*The Climbing Bible*) drill catalog is not part of v1.0. **The Bechtel *Climb Strong: Drills Manual* IS integrated** — 23 drills shipped in the exercise catalog as `tech_*` (C240 + C255 + C256, integration closed 2026-07-13), listed in §8 below. This note used to claim the opposite and the coach repeated it to a user, denying a feature that exists (C264): **check §8 before telling anyone a drill isn't in the engine.** When something genuinely is missing, say only that it isn't in the engine yet — never who owns which book, nor how or when material gets added (B315).
 
 ---
 
@@ -92,7 +92,19 @@ This maps directly onto how the engine sequences a session — warm-up + new-ski
 
 ### 8. The drill catalog (v1)
 
-Drills covered in current research files + Hörst Ch.4. These are the v1 drill set; Bechtel/Mobråten will expand it but not replace it.
+Drills covered in current research files + Hörst Ch.4, **plus the 23 Bechtel drills already in the exercise catalog** (see "Bechtel drill set" below). Mobråten's catalog would expand this further; it is not in v1.0.
+
+**Bechtel drill set (in the catalog since 2026-07-13 — the engine can prescribe every one of these)**
+
+| Focus | Drills (catalog id) |
+|---|---|
+| Footwork | Five Step (`tech_five_step`), Foot Flyaways (`tech_foot_flyaways`), Foot to Hand (`tech_foot_to_hand`), Hard Target (`tech_hard_target`), Surface of the Shoe (`tech_surface_of_the_shoe`), Talon Feet (`tech_talon_feet`) |
+| Body position | Applied Strength (`tech_applied_strength`), Banded Climber (`tech_banded_climber`), Barn Door 2000 (`tech_barn_door_2000`), Diagonal Drill (`tech_diagonal_drill`), Hips First (`tech_hips_first`), Matchy Matchy (`tech_matchy_matchy`) |
+| Movement / momentum | Climb It Backwards (`tech_climb_it_backwards`), Contrast Bouldering (`tech_contrast_bouldering`), Deadpoint Roll-Through (`tech_deadpoint_roll_through`), Hop and Skip (`tech_hop_and_skip`), Smooth Is Fast (`tech_smooth_is_fast`), The Bump (`tech_the_bump`), Trust the Eyes (`tech_trust_the_eyes`) |
+| Reaction / explosive | Green Light Red Light (`tech_green_light_red_light`), Pogo (`tech_pogo`), Throwing The Shoe (`tech_throwing_the_shoe`) |
+| Constraint | Single Leg Climbing (`tech_single_leg_climbing`) |
+
+These sit alongside the Hörst/Anderson/Matros set below — they expand it, they don't replace it.
 
 **Footwork precision**
 - **Silent feet** — climb at 2-3 grades below onsight; place each foot so silently no sound is audible. If it makes noise, return and retry. Develops awareness and proprioception. Mandatory warm-up drill (D74).
@@ -260,5 +272,5 @@ Measurable and underused. Seifert 2017 showed preview quality directly reduces j
 - Saeterbakken AH et al. 2021. Boulder vs lead training transfer (PMC8100213).
 - Hörst EJ 2022. *Training for Climbing* 3rd ed. — Ch.4 Training Technique and Skill (motor learning, practice taxonomy, drill protocols, fundamental techniques, crack primer).
 - Anderson M & Anderson M 2014. *The Rock Climber's Training Manual* — drill descriptions including tennis ball hands.
-- Bechtel S. *Climb Strong: Drills Manual* (pp. 31-90 pending integration in v1.1).
+- Bechtel S. *Climb Strong: Drills Manual* (pp. 31-91) — **integrated**: 23 drills in the exercise catalog (C240 pilot, C255 movement batch, C256 momentum batch).
 - Mobråten drill catalog (pending integration in v1.1).
