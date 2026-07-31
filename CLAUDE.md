@@ -8,7 +8,11 @@ Author: Daniele **Somensi** (with an S, not Z).
 
 ## What climb-agent is
 
-A deterministic climbing training engine. It generates personalised weekly training plans, resolves abstract sessions into concrete exercises with sets/reps/load, and adapts progression through closed-loop feedback. No LLM is used at runtime — all logic is rule-based and testable. Methodology: Hörst 4-3-2-1 adaptive periodization with DUP. Supports both lead and boulder disciplines.
+A deterministic climbing training engine. It generates personalised weekly training plans, resolves abstract sessions into concrete exercises with sets/reps/load, and adapts progression through closed-loop feedback. **No LLM touches the plan** — planning, resolution, progression and closed-loop are rule-based and testable. Methodology: Hörst 4-3-2-1 adaptive periodization with DUP. Supports both lead and boulder disciplines.
+
+**The one delimited exception (A259).** For a session the user asks for *in words* in the coach chat, the LLM may **select** exercises — from a pool the engine builds (equipment actually available, active, spine-safe, minus what the user refused) — and set sets/reps/rest. Every line is then validated against that pool and the schema bounds before the user sees it; loads always come from the athlete's own `working_loads`, never from the model; too little survives validation and the deterministic `adhoc_builder` composes instead. The result is an **ad-hoc custom session**: outside the macrocycle, outside the closed loop, and shown as a preview the user must confirm with a tap.
+
+The LLM must never generate a plan, invent an exercise outside the catalog, bypass a P0 filter, or set a load. Kill switch: `COACH_LLM_COMPOSER=0`.
 
 ## Non-negotiable principles
 
@@ -236,7 +240,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/mobility/pool` | Mobility/stretching pool by body region (GATE-2 soft warnings) |
 | GET | `/api/mobility/generate` | Deterministic guided stretch flow (regions + minutes + pace + rest) |
 | POST | `/api/coach/chat` | LLM Coach chat turn (subscription-gated, 30 msg/day, suggest-only; optional `lat`/`lon` → passed to the on-demand `get_weather` tool, A244). Weather is native tool use, not a pre-fetch: the model calls `get_weather(location, days_ahead≤5)` only when a turn needs conditions (language-agnostic trigger); non-weather turns pay nothing but the cached tool definition. Executor wraps `cached_conditions()`/`geocode_place()`; loop capped at 2 tool calls/message. |
-| POST | `/api/coach/adhoc-session` | Compose an ad-hoc session PREVIEW from a chat turn (A243). LLM extracts a structured intent via forced tool; deterministic `adhoc_builder` composes. No persistence/plan mutation — client persists + inserts on the "Add to today & run" CTA. `{adhoc:false}` → fall back to `/chat`. Counts toward the 30/day limit only on adhoc:true. |
+| POST | `/api/coach/adhoc-session` | Compose an ad-hoc session PREVIEW from a chat turn (A243). LLM extracts a structured intent via forced tool — including `exclude`, the user's refusals (A259: 'niente trazioni' → `pullups`, which spares lock-offs). **A259**: the session is then composed by the LLM *selecting from an engine-built pool* (`coach/session_composer.py`) and validated line by line; `adhoc_builder` is the fallback on kill switch / tiny pool / provider error / failed validation. Loads always come from `working_loads`, never from the model. The payload carries `composed_by` + `dropped` for audit. No persistence/plan mutation — client persists + inserts on the "Add to today & run" CTA. `{adhoc:false}` → fall back to `/chat`. Counts toward the 30/day limit only on adhoc:true. |
 | GET | `/api/coach/history` | Coach chat history (paginated, `limit` + `before` cursor) |
 | GET | `/api/coach/suggestions` | Context-aware suggested questions (deterministic, no LLM, not rate-limited) |
 | GET | `/api/admin/users` | List all users (protected, X-Admin-Key) |
@@ -326,6 +330,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
   | OPENWEATHER_API_KEY | OpenWeatherMap free-tier key for `/api/weather` (A224) + coach `get_weather` tool & spot geocoding (A-COACH-V1b, on-demand since A244). Unset → endpoint returns 503, `/today` card hides, coach `get_weather` tool returns "unavailable" (model says so, never invents). Commercial use requires visible OpenWeather attribution. |
   | ANTHROPIC_API_KEY | Anthropic API key for the LLM Coach (A-COACH-V1a). Unset → `/api/coach/chat` fails LOUD with 500 `coach_not_configured` (never silent, never commit). |
   | COACH_MODEL | Coach model id (default `claude-sonnet-5` dal 2026-07-28, B306). Swap here for provider/model changes — no code change needed. |
+  | COACH_LLM_COMPOSER | `0` disables the A259 LLM composer — every ad-hoc session then goes through the deterministic `adhoc_builder`. Unset/any other value = enabled. |
   | ALLOW_LEGACY_HEADER | **Dev only.** `1` re-enables the `X-User-ID` auth fallback and anonymous (`user_id=None`) requests. MUST stay unset in production: with Clerk configured or `STORAGE_BACKEND=supabase`, B285 rejects both with 401 (the header was a full IDOR). |
 
 ### Clerk user lookup

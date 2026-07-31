@@ -132,7 +132,7 @@ def handle_adhoc_compose(
     toward the daily limit and keeps the conversation coherent).
     """
     from backend.api.deps import load_state
-    from backend.coach import adhoc_intent
+    from backend.coach import adhoc_intent, session_composer
     from backend.engine.adaptive_replan import load_exercises_by_id
     from backend.engine.adhoc_builder import compose_adhoc_session
 
@@ -146,7 +146,21 @@ def handle_adhoc_compose(
 
     state = load_state(user_id)
     catalog = load_exercises_by_id()
-    session = compose_adhoc_session(intent, state, catalog)
+
+    # A259: the LLM composes from an engine-built pool; the deterministic
+    # builder is the fallback, not the default. It stays reachable on every
+    # failure path (kill switch, tiny pool, provider error, validation) so the
+    # coach can always answer with *a* session.
+    session = None
+    try:
+        session = session_composer.compose(message, intent, state, catalog)
+    except llm_client.CoachConfigError:
+        raise
+    except Exception:
+        logger.exception("adhoc: LLM composer failed — deterministic fallback")
+    if session is None:
+        session = compose_adhoc_session(intent, state, catalog)
+        session.setdefault("composed_by", "deterministic")
 
     storage.append_coach_message(user_id, "user", message)
     summary = build_adhoc_summary(session, intent)

@@ -74,6 +74,85 @@ ADHOC_FOCUS = sorted(FOCUS_DOMAINS.keys())
 ADHOC_EQUIPMENT_SETS = ("home", "gym")
 ADHOC_ENERGY = ("low", "medium", "high")
 
+# A259 — NEGATIVE constraints. Until now the intent could only say what the user
+# wanted, never what they refused: "bloccaggi ma NIENTE trazioni" composed a
+# session containing `l_sit_pullup`, because that exercise is legitimately
+# tagged `core` and nothing carried the refusal. A closed vocabulary, each entry
+# a deterministic predicate over the catalog — the LLM picks labels, the engine
+# decides what they mean.
+#
+# "No pull-ups" is the instructive one, and it resisted two tidy rules in a row:
+#
+#   `pattern == pull_vertical`      — a lock-off IS a vertical pull. This would
+#                                     delete exactly what the athlete asked for.
+#   `recency_group == pullup_variants` — better, but the recency taxonomy groups
+#                                     by TRAINING STIMULUS, not by whether you
+#                                     have to pull yourself up. `frenchies` sits
+#                                     under `pullup_lock_off` (it trains
+#                                     lock-offs) and every rep opens with a full
+#                                     pull to the chin. The first live test
+#                                     composed it into a no-pull-ups session.
+#
+# So the rule is explicit rather than clever: the recency groups whose members
+# all involve a concentric pull, plus the individually named exceptions that
+# live under other groups. `test_a259` walks every `pull_vertical` exercise in
+# the catalog and fails on any that is not consciously classified here — a new
+# pull-up variant cannot be added without deciding which side it is on.
+CONCENTRIC_PULL_GROUPS = frozenset({"pullup_variants", "pullup_one_arm"})
+CONCENTRIC_PULL_IDS = frozenset({
+    "frenchies",        # pullup_lock_off, but each rep starts with a full pull-up
+    "weighted_chinup",  # biceps_pull_compound — a loaded chin-up
+})
+EXCLUSION_PREDICATES: Dict[str, Any] = {
+    # Everything that requires pulling yourself up at least once. See
+    # CONCENTRIC_PULL_GROUPS / CONCENTRIC_PULL_IDS below for why this is not a
+    # single tidy rule.
+    "pullups": lambda ex: (
+        ex.get("recency_group") in CONCENTRIC_PULL_GROUPS
+        or str(ex.get("id") or "") in CONCENTRIC_PULL_IDS
+    ),
+    # Any hangboard / loading-pin work + the finger-strength domains.
+    "hangboard": lambda ex: (
+        bool({"hangboard", "loading_pin", "pinch_block"} & set(_equipment_of(ex)))
+        or bool({"finger_strength", "finger_max_strength",
+                 "finger_strength_endurance", "finger_aerobic_endurance"}
+                & set(_domains_of(ex)))
+    ),
+    # Static stretching and cool-down work — NOT dynamic mobility flows: a
+    # climber who says "no stretching" still wants shoulders and wrists ready.
+    "stretching": lambda ex: (
+        str(ex.get("category") or "") == "flexibility"
+        or "cooldown" in _roles_of(ex)
+        or _pattern_str(ex) in ("static_stretch", "flexibility_passive")
+    ),
+    "campus": lambda ex: (
+        "campus_board" in _equipment_of(ex)
+        or ex.get("recency_group") == "campus_ladders"
+        or _pattern_str(ex) == "campus_ladder"
+    ),
+    "dips": lambda ex: str(ex.get("id") or "") in ("dip", "weighted_dip", "ring_dip"),
+    "legs": lambda ex: _pattern_str(ex) in (
+        "squat", "hinge", "lunge", "calf_raise", "hip_isolation"
+    ),
+    "core": lambda ex: str(ex.get("category") or "") == "core"
+    or "core" in _domains_of(ex),
+    "weights": lambda ex: bool(
+        {"dumbbell", "weight", "cable_machine", "leg_press"} & set(_equipment_of(ex))
+    ),
+    "rings": lambda ex: "rings" in _equipment_of(ex),
+    "climbing": lambda ex: bool(
+        {"gym_boulder", "gym_routes"} & set(_equipment_of(ex))
+    ),
+}
+ADHOC_EXCLUSIONS = tuple(sorted(EXCLUSION_PREDICATES))
+
+# A259 — a specific focus is NOT overridden by body_parts. `general_strength` is
+# the only value vague enough that a named muscle is genuinely more informative
+# (the A252 rationale); `lock_off`, `fingers`, `handstand`… are already precise,
+# and letting "addominali" delete "bloccaggi" is how a session ends up with
+# neither. Named muscles still get a guaranteed block — as the secondary one.
+GENERIC_FOCUSES = frozenset({"general_strength"})
+
 # A252: muscle-level targeting axis. Reuses the existing closed body-part
 # taxonomy (body_part_picker) instead of inventing a parallel one — so "chest +
 # abs + triceps" composes chest/abs/triceps work, not the coarse
@@ -118,6 +197,53 @@ def _roles_of(ex: Dict[str, Any]) -> List[str]:
     if isinstance(r, str):
         return [r]
     return list(r or [])
+
+
+def _equipment_of(ex: Dict[str, Any]) -> List[str]:
+    """A259 — the catalog uses `equipment_required`; a few entries hold a list
+    of lists (OR semantics, B305). Flatten so predicates can just test membership."""
+    raw = ex.get("equipment_required") or ex.get("required_equipment") or []
+    if isinstance(raw, str):
+        return [raw]
+    out: List[str] = []
+    for item in raw:
+        if isinstance(item, (list, tuple, set)):
+            out.extend(str(x) for x in item)
+        else:
+            out.append(str(item))
+    return out
+
+
+def _pattern_str(ex: Dict[str, Any]) -> str:
+    """First movement pattern as a plain string (a handful carry a list)."""
+    p = ex.get("pattern")
+    if isinstance(p, (list, tuple)):
+        return str(p[0]) if p else ""
+    return str(p or "")
+
+
+def excluded_ids(
+    catalog_by_id: Dict[str, Dict[str, Any]], exclusions: Sequence[str]
+) -> set:
+    """Exercise ids ruled out by the user's negative constraints (A259).
+
+    Unknown labels are ignored rather than rejected: a model that invents one
+    must never empty the pool — the session degrades to "constraint not applied",
+    which the caller reports, instead of failing outright.
+    """
+    labels = [x for x in (exclusions or []) if x in EXCLUSION_PREDICATES]
+    if not labels:
+        return set()
+    out = set()
+    for eid, ex in catalog_by_id.items():
+        for label in labels:
+            try:
+                if EXCLUSION_PREDICATES[label](ex):
+                    out.add(str(eid))
+                    break
+            except Exception:  # a malformed catalog entry must not break composition
+                continue
+    return out
 
 
 def _is_active(ex: Dict[str, Any]) -> bool:
@@ -334,7 +460,19 @@ def compose_adhoc_session(
     for p in raw_parts:
         if p in BODY_PART_ORDER and p not in body_parts:
             body_parts.append(p)
-    use_body_parts = bool(body_parts)
+    # A259: body_parts supersede the focus ONLY when the focus is vague. The
+    # A252 rationale ("a muscle is more specific than the focus") holds against
+    # `general_strength`; against `lock_off` it inverted the user's priorities —
+    # "bloccaggi + addominali" produced a core session with zero lock-offs.
+    # A named muscle alongside a precise focus becomes the secondary block.
+    use_body_parts = bool(body_parts) and focus in GENERIC_FOCUSES
+    if body_parts and not use_body_parts and not secondary_focus:
+        # Give the muscle ask a guaranteed block via the existing secondary path
+        # when it maps onto a focus we know (core is the common case).
+        for p in body_parts:
+            if p in FOCUS_DOMAINS and p != focus:
+                secondary_focus = p
+                break
     energy = intent.get("energy") if intent.get("energy") in ADHOC_ENERGY else "medium"
     try:
         minutes = int(intent.get("minutes") or 45)
@@ -355,6 +493,10 @@ def compose_adhoc_session(
 
     chosen: List[Dict[str, Any]] = []
     used: set = set(recent)  # avoid recents AND avoid duplicates within the session
+    # A259: negative constraints ("niente trazioni") are enforced by removing
+    # the ids from every pool up front — `used` is already the exclusion channel
+    # every selection path honours, so this needs no change downstream.
+    used |= excluded_ids(catalog_by_id, intent.get("exclude") or [])
 
     # 1. Warmup (1) — phase-agnostic; equipment-fit; role=warmup. Keep it SHORT
     # (B281): a long mobility flow as the opener kills the session — prefer the
