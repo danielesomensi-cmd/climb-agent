@@ -7,7 +7,7 @@
 > **Source files distilled:** `docs/research_kb/07_overtraining_injury_load.md` (T07), `horst_ch13_injury_synthesis.md` (shoulder + elbow sections), `horst_ch6_mobility_synthesis.md` (rotator cuff + scapular detail), decision consolidation D58, D60, D68, D71.
 > **Audit anchor:** `docs/research_kb/coach_kb_v1_audit.md` §4.6 (file-by-file table).
 
-> **v1.0 coverage gap:** Christophersen *Managing Injuries* Part 1 (sleep, load, and age as modifiable factors in shoulder/elbow tendinopathy) is not yet integrated — physical source not yet acquired. v1.1 will expand the lifestyle-factor and age-stratified rehab guidance. v1.0 covers diagnostic recognition, mechanism, conservative initial management, and the Hörst antagonist-training prevention framework comprehensively; what's missing is the lifestyle-modifier detail, not foundational content. **Operative principle:** Coach never sets a return-to-climb date without medical clearance.
+> **v1.0 coverage gap:** Christophersen *Managing Injuries* Part 1 (sleep, load, and age as modifiable factors in shoulder/elbow tendinopathy) is not part of v1.0. v1.1 will expand the lifestyle-factor and age-stratified rehab guidance. v1.0 covers diagnostic recognition, mechanism, conservative initial management, and the Hörst antagonist-training prevention framework comprehensively; what's missing is the lifestyle-modifier detail, not foundational content. **Operative principle:** Coach never sets a return-to-climb date without medical clearance.
 
 ---
 

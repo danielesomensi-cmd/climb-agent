@@ -36,7 +36,7 @@ Le tre hard-fail hanno guadagnato un punto rispetto al primo run (5/6 → 6/6):
 
 ### Le 3 peggiorate — da guardare
 
-- **Q-08: 2 → 1. Rompe il quarto muro:** «sono materiali fisici che **Daniele** possiede in cartaceo». Il KB annota che quei libri non sono ancora acquisiti e di chi sono; il coach l'ha riferito a un utente che non è Daniele. Su un'app multi-utente è un difetto di professionalità, non un dettaglio → [[COACH-FOURTH-WALL]].
+- **Q-08: 2 → 1 → poi 2 dopo [[B315]]. Rompeva il quarto muro:** «sono materiali fisici che **Daniele** possiede in cartaceo». Il KB annota che quei libri non sono ancora acquisiti e di chi sono; il coach l'ha riferito a un utente che non è Daniele. Su un'app multi-utente è un difetto di professionalità, non un dettaglio → chiuso da [[B315]]: rimossi nome e processo dai file KB, aggiunta la regola in L1, e Q-08 rigirata contro il coach reale risponde ora solo «quei drill non sono nel motore al momento». **Con Q-08 a 2/2 il totale sale a 53/56 (95%)** — l'unica domanda rigirata dopo il verdetto, dichiarata qui per non gonfiare il numero in silenzio.
 - **Q-06: 2 → 1.** Perde il rifiuto esplicito del 4×4 e gli intervalli a intensità variata (D47) che il primo run dava correttamente. Il file `04_power_endurance` era in contesto: è deriva del modello, non retrieval.
 - **Q-19: 2 → 1.** Troncata. Insieme a Q-16 resta il caso non spiegato: **nessun warning `max_tokens` nei log**, quindi il cap a 2048 non è stato raggiunto — il testo si interrompe per un'altra ragione (ipotesi da verificare: un blocco `tool_use` emesso dopo il testo, `_final_text` restituisce solo la parte testuale) → [[COACH-TRUNCATION-RESIDUAL]].
 
