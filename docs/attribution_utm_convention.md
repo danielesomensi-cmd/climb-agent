@@ -57,6 +57,19 @@ copia-incollabili):
 | Instagram bio/post | freddo, con contesto | `https://climbagent.app/onboarding/welcome?utm_source=instagram&utm_campaign=<post>` |
 | Email win-back (utenti esistenti) | esistente | `https://climbagent.app/?utm_source=email&utm_campaign=winback-<data>` |
 | Passaparola con link personale | freddo, con contesto | `https://climbagent.app/onboarding/welcome?utm_source=referral&utm_campaign=<nome>` |
+| **Community di arrampicata** (Reddit, forum, Discord, gruppi FB) | freddo, valore prima del pitch | `https://climbagent.app/assessment?utm_source=reddit` |
+
+**A262 — la landing per le community (decisione Daniele, 2026-08-01).**
+`/assessment` è l'assessment pubblico: nessun account, nessuna email, niente
+salvato, risultato prima del CTA. È la landing giusta dove postare *dà* invece
+di *vendere* — `/demo` mostra una sessione e `/onboarding/welcome` è un pitch,
+entrambi leggibili come pubblicità nei sub che la vietano.
+
+**Un solo link per tutta la tipologia**, deliberatamente: niente `utm_content`
+per distinguere profilo/commento/post. Il costo di sbagliare o dimenticare una
+variante supera il valore di sapere quale dei tre ha portato l'iscritto, finché
+il volume è quello che è. Se un giorno il canale porta numeri veri, si
+differenzia allora.
 
 Regole:
 - `utm_source` minuscolo, un solo valore per canale (niente varianti tipo
