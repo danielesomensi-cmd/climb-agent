@@ -142,6 +142,21 @@ export function isInAppBrowser(): boolean {
   return false;
 }
 
+/**
+ * Major iOS version, or null when the UA does not carry one (iPadOS pretending
+ * to be a Mac reports `Version/17.4` instead of `OS 17_4`).
+ *
+ * B316: this is not trivia — iOS 26 moved Safari's Share button *out of the
+ * toolbar* and into the `•••` menu next to the address bar, so the pre-26
+ * instructions send the user hunting for an icon that is no longer there.
+ * Callers that get null should fall back to the newer wording, since that is
+ * where the installed base is heading.
+ */
+export function getIosMajorVersion(): number | null {
+  const m = ua().match(/(?:iPhone )?OS (\d+)[_.]/);
+  return m ? Number.parseInt(m[1], 10) : null;
+}
+
 /** Human-facing browser name, used only to name the right menu in the steps. */
 export function getIosBrowser(): "safari" | "chrome" | "firefox" | "edge" | "other" {
   const s = ua();
