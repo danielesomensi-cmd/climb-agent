@@ -28,8 +28,6 @@ import json
 import re
 from pathlib import Path
 
-import pytest
-
 CATALOG_ROOT = Path("backend/catalog")
 
 # Fields whose values reach the user's screen (or the coach's context).
@@ -85,21 +83,39 @@ def _italian_hits(value):
 
 
 def _catalog_files():
-    files = sorted(CATALOG_ROOT.rglob("*.json"))
+    """Live catalog JSON.
+
+    `_archive/` is skipped: it is gitignored, so it exists on some checkouts and
+    not others. Parametrising over it would make the collected test count depend
+    on the machine, and `sync_status.py` writes that count into PROJECT_BRIEF.md.
+    Archived content is also explicitly out of scope (CLAUDE.md: do not modify).
+    """
+    files = [
+        p for p in sorted(CATALOG_ROOT.rglob("*.json"))
+        if "_archive" not in p.parts
+    ]
     assert files, f"no catalog JSON found under {CATALOG_ROOT} — wrong cwd?"
     return files
 
 
-@pytest.mark.parametrize("path", _catalog_files(), ids=lambda p: str(p))
-def test_catalog_user_facing_text_is_english(path):
-    data = json.loads(path.read_text(encoding="utf-8"))
-    offenders = [
-        (json_path, value, hits)
-        for json_path, key, value in _iter_strings(data, "")
-        if key in TEXT_KEYS and (hits := _italian_hits(value))
-    ]
+def test_catalog_user_facing_text_is_english():
+    """One case over every catalog file, not one case per file.
+
+    Deliberately not parametrised: the file list comes from the filesystem, so
+    parametrising would let an untracked JSON change how many tests exist. The
+    failure message carries the file path, which is all the granularity the
+    parametrised version bought.
+    """
+    offenders = []
+    for path in _catalog_files():
+        data = json.loads(path.read_text(encoding="utf-8"))
+        offenders += [
+            (path, json_path, value, hits)
+            for json_path, key, value in _iter_strings(data, "")
+            if key in TEXT_KEYS and (hits := _italian_hits(value))
+        ]
     assert not offenders, "Italian text in user-facing catalog fields:\n" + "\n".join(
-        f"  {path}{jp}  {hits}\n    {value}" for jp, value, hits in offenders
+        f"  {p}{jp}  {hits}\n    {value}" for p, jp, value, hits in offenders
     )
 
 
