@@ -6,6 +6,7 @@ import { Toaster } from "sonner";
 import { Providers } from "./providers";
 import { SwUpdateBanner } from "@/components/sw-update-banner";
 import { AttributionCapture } from "@/components/attribution-capture";
+import { InstallCapture } from "@/components/install-capture";
 import { SessionScopeGuard } from "@/components/session-scope-guard";
 import "./globals.css";
 
@@ -68,6 +69,7 @@ export default function RootLayout({
             <Toaster richColors position="top-center" />
             <SwUpdateBanner />
             <AttributionCapture />
+            <InstallCapture />
             <SessionScopeGuard />
           </Providers>
           <Analytics />
