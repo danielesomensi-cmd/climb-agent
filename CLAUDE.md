@@ -153,7 +153,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-93 endpoints total (91 router + 2 app-level: health check + stripe webhook).
+94 endpoints total (92 router + 2 app-level: health check + stripe webhook).
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -170,6 +170,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/onboarding/draft` | Server-side wizard draft for the user, or null (B293) |
 | PUT | `/api/onboarding/draft` | Save wizard draft (replace wholesale; wiped on complete; ignored if macrocycle exists) |
 | POST | `/api/assessment/compute` | Recompute 5-axis profile |
+| POST | `/api/public/assessment` | **Unauthenticated** (A262). 5-axis profile from six answers — acquisition surface for `/assessment`. Stateless: no `get_user_id`, no state read/write, nothing persisted. Rate-limited 20/min (per-IP, no user to key on). Rejects what it cannot score honestly: unknown grade → 422 (never a silent `grade_index` 0), onsight above redpoint → 422, missing grades → 422 instead of the engine's `7a`/`7c+` defaults. Boulder input in Font, mapped through `BOULDER_TO_LEAD` so it is scored against the same benchmarks as lead. Returns `estimated: true` — without measured tests the profile is derived from declared grades and self-report. |
 | POST | `/api/macrocycle/generate` | Generate new macrocycle |
 | POST | `/api/macrocycle/start-new-cycle` | Start fresh macrocycle (atomic: archive → goal review → generate → flag tests). Subscription-gated. |
 | POST | `/api/plan/pause` | Pause active plan (A223 — records pause start; idempotent) |
@@ -281,6 +282,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
 - `/mobility` — Stretching & Mobility guided flow (multi-region setup → auto-advancing timer, Core Circuit UX)
 - `/coach` — LLM Coach chat (plan-aware, KB-grounded, suggest-only; 30 msg/day; weather-aware via on-demand `get_weather` tool with GPS + spot geocoding, personal notes, suggested chips)
+- `/assessment` — **Public** 5-axis assessment (A262). No account, nothing stored: six questions → radar + weakest axis. The acquisition landing meant to be posted publicly; the CTA seeds the answers into the wizard's anonymous draft (`seedDraftFromAssessment`) so nothing is retyped.
 - `/guide` — User guide
 - `/subscribe` — Subscription plans and checkout
 - `/onboarding/*` — 16-step wizard: welcome, install, profile, discipline, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover

@@ -1210,3 +1210,31 @@ export const getCoachHistory = (limit = 50, before?: string) => {
     `/api/coach/history?${sp.toString()}`
   );
 };
+
+// A262 — public 5-axis assessment. The only endpoint here that works signed
+// out: `_getAuthHeaders()` returns {} without a Clerk session, so the same
+// `request` helper is fine.
+export interface PublicAssessmentInput {
+  discipline: "lead" | "boulder";
+  current_grade: string;
+  target_grade: string;
+  max_rp: string;
+  max_os: string;
+  climbing_years: number;
+  primary_weakness?: string | null;
+}
+
+export interface PublicAssessmentResult {
+  profile: AssessmentProfile;
+  weakest_axis: keyof AssessmentProfile;
+  weakest_axis_label: string;
+  target_grade_lead: string;
+  /** Always true today: no measured tests behind a public form. */
+  estimated: boolean;
+}
+
+export const computePublicAssessment = (input: PublicAssessmentInput) =>
+  request<PublicAssessmentResult>("/api/public/assessment", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
