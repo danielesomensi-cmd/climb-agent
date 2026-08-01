@@ -58,7 +58,7 @@
       "required": false,
       "priority": 70,
       "module_role": "secondary",
-      "notes": "Mantenimento forza di trazione. Volume basso, intensita' alta.",
+      "notes": "Pulling strength maintenance. Low volume, high intensity.",
       "selection": {
         "primary": {
           "filters": {
@@ -78,7 +78,7 @@
         "sets": 2,
         "reps": 4,
         "rest_between_sets_seconds": 180,
-        "notes": "2 serie pesanti, recupero pieno. Se sei stanco dalle sospensioni, togli una ripetizione — mai il carico."
+        "notes": "2 heavy sets, full recovery. If the hangs left you tired, drop a rep — never the load."
       }
     },
     {

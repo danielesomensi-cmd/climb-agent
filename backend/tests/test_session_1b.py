@@ -194,7 +194,8 @@ class TestD88_LSitBenchmark:
     def test_benchmarks_labels(self, exercises):
         e = exercises["test_l_sit_hold"]
         labels = [s["label"] for s in e["benchmarks"]["scale"]]
-        assert labels == ["Scarso", "Intermedio", "Avanzato", "Elite"]
+        # C265: catalog content is English-only.
+        assert labels == ["Poor", "Intermediate", "Advanced", "Elite"]
 
 
 # ---------------------------------------------------------------------------
