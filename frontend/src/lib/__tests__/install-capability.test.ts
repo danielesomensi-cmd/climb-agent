@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getCapability,
   getIosBrowser,
+  getIosMajorVersion,
   getPlatform,
   isInAppBrowser,
   isStandalone,
@@ -36,6 +37,8 @@ const UA = {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   ipadOs:
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+  iphone26Safari:
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
 } as const;
 
 /**
@@ -117,6 +120,30 @@ describe("getIosBrowser", () => {
     expect(getIosBrowser()).toBe("firefox");
     setEnv(UA.iphoneSafari);
     expect(getIosBrowser()).toBe("safari");
+  });
+});
+
+describe("getIosMajorVersion", () => {
+  /**
+   * B316: iOS 26 moved Safari's Share button into the ••• menu, so the install
+   * steps branch on this number. Reported from a real device — the pre-26
+   * wording described a toolbar icon that no longer exists.
+   */
+  it("reads the major version from an iPhone UA", () => {
+    setEnv(UA.iphone26Safari);
+    expect(getIosMajorVersion()).toBe(26);
+    setEnv(UA.iphoneSafari);
+    expect(getIosMajorVersion()).toBe(17);
+  });
+
+  it("returns null when the UA carries no OS token (iPadOS posing as a Mac)", () => {
+    setEnv(UA.ipadOs, { touchPoints: 5 });
+    expect(getIosMajorVersion()).toBeNull();
+  });
+
+  it("returns null on desktop", () => {
+    setEnv(UA.desktopChrome);
+    expect(getIosMajorVersion()).toBeNull();
   });
 });
 

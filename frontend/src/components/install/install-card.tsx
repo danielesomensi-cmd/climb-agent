@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useInstall } from "@/lib/hooks/use-install";
-import { getIosBrowser, getPlatform } from "@/lib/install";
+import { getIosBrowser, getIosMajorVersion, getPlatform } from "@/lib/install";
 import { trackEvent } from "@/lib/analytics";
 
 /* iOS share glyph — the square-with-up-arrow Safari puts in its toolbar.
@@ -211,40 +211,61 @@ export function InstallCard({ onDone }: { onDone?: () => void }) {
   if (capability === "ios-manual") {
     const browser = getIosBrowser();
     const isChrome = browser === "chrome";
+    // B316: iOS 26 hid Safari's Share button inside the ••• menu, so the
+    // pre-26 wording sent people hunting for a toolbar icon that is no longer
+    // there (reported from a real device). A null version means the UA carried
+    // no `OS nn_` token — assume the new layout, since that is where the
+    // installed base is going, and step 1 names the fallback either way.
+    // Chrome on iOS keeps its own Share button in the address bar, unaffected.
+    const iosMajor = getIosMajorVersion();
+    const safariHidesShare = !isChrome && (iosMajor === null || iosMajor >= 26);
     return (
       <div className="space-y-6">
         <p className="text-sm text-muted-foreground">
-          iOS doesn&apos;t let a website install itself — it takes two taps in
+          iOS doesn&apos;t let a website install itself — it takes a few taps in
           the {isChrome ? "Chrome" : "Safari"} menu.
         </p>
         <ol className="space-y-5">
-          <Step
-            n={1}
-            icon={<IosShareIcon className="h-6 w-6" />}
-            title="Tap the Share button"
-          >
-            {isChrome
-              ? "In Chrome it's the share icon in the top-right corner."
-              : "In Safari it's the square-with-an-arrow icon in the bottom toolbar."}
-          </Step>
+          {safariHidesShare ? (
+            <Step
+              n={1}
+              icon={<MoreHorizontal className="h-6 w-6" />}
+              title="Tap the ••• button next to the address bar"
+            >
+              iOS 26 moved Share inside this menu — it is no longer an icon in
+              the toolbar. If your Safari still shows the Share icon directly,
+              tap that instead.
+            </Step>
+          ) : (
+            <Step
+              n={1}
+              icon={<IosShareIcon className="h-6 w-6" />}
+              title="Tap the Share button"
+            >
+              {isChrome
+                ? "In Chrome it's in the address bar, top-right corner."
+                : "It's the square-with-an-arrow icon in the bottom toolbar."}
+            </Step>
+          )}
           <Step
             n={2}
-            icon={
-              <div className="flex items-center gap-2">
-                <MoreHorizontal className="h-6 w-6" />
-                <span className="text-muted-foreground">&rarr;</span>
-                <PlusCircle className="h-6 w-6" />
-              </div>
-            }
-            title={'Tap "Add to Home Screen"'}
+            icon={<IosShareIcon className="h-6 w-6" />}
+            title={safariHidesShare ? "Tap Share, then scroll down" : "Scroll the share sheet down"}
           >
-            Scroll the share sheet down to find it. If it isn&apos;t listed, tap
-            &quot;Edit Actions&quot; at the bottom to add it.
+            The list is long: scroll past the apps and the first actions. If you
+            don&apos;t see &quot;Add to Home Screen&quot;, tap &quot;More&quot;
+            (or &quot;Edit Actions&quot;) at the bottom of the list.
           </Step>
           <Step
             n={3}
-            icon={<Check className="h-6 w-6" />}
-            title="Tap Add, then open it from your home screen"
+            icon={
+              <div className="flex items-center gap-2">
+                <PlusCircle className="h-6 w-6" />
+                <span className="text-muted-foreground">&rarr;</span>
+                <Check className="h-6 w-6" />
+              </div>
+            }
+            title={'Tap "Add to Home Screen", then Add'}
           >
             From then on climb-agent opens full-screen, like any other app.
           </Step>
