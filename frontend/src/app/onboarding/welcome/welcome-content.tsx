@@ -5,12 +5,19 @@ import { useRouter } from "next/navigation";
 import { SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { InAppBrowserBanner } from "@/components/install/in-app-browser-banner";
 
 export function WelcomeContent() {
   const router = useRouter();
 
   return (
     <>
+      {/* A261 — above the hero on purpose: inside an Instagram/Facebook webview
+          the "Start assessment" CTA leads to a sign-up that Google will refuse,
+          so the warning has to arrive before the tap, not after. Renders
+          nothing in a normal browser. */}
+      <InAppBrowserBanner />
+
       <section className="relative -mx-4 h-[55vh] overflow-hidden">
         <Image
           src="/hero/onboarding_hero.webp"
