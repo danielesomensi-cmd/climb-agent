@@ -8622,7 +8622,7 @@
       },
       "description": "Maximum duration dead hang on 20mm edge at body weight only. Measures finger endurance baseline.",
       "benchmarks": null,
-      "benchmark_note": "Nessun benchmark pubblicato per BW hang su 20mm. Test informativo: registra il tempo per tracking longitudinale. Se >90s il test perde potere discriminante. In v2 verrà sostituito dal PE test a 60% MVC-7 (D91).",
+      "benchmark_note": "No published benchmarks exist for a bodyweight hang on a 20mm edge. Informative test: record the time for longitudinal tracking. Past 90s the test loses discriminating power. In v2 it will be replaced by the PE test at 60% MVC-7 (D91).",
       "cues": [
         "Use 20mm edge, body weight only (no added weight)",
         "Half-crimp grip, shoulders engaged",
@@ -8675,25 +8675,25 @@
       },
       "description": "Maximum duration L-sit hold with straight legs on parallettes, dip bars, or floor. Measures core and hip flexor strength.",
       "benchmarks": {
-        "source": "Empirici (coaching community, non peer-reviewed)",
+        "source": "Empirical (coaching community, not peer-reviewed)",
         "scale": [
           {
-            "label": "Scarso",
+            "label": "Poor",
             "range_s": [
               0,
               10
             ],
-            "note": "Possibile limitazione di flessibilità, non solo core"
+            "note": "Possible flexibility limitation, not core strength alone"
           },
           {
-            "label": "Intermedio",
+            "label": "Intermediate",
             "range_s": [
               10,
               20
             ]
           },
           {
-            "label": "Avanzato",
+            "label": "Advanced",
             "range_s": [
               20,
               35
@@ -8814,7 +8814,7 @@
         "test_field": "max_pullups_bw",
         "test_unit": "reps"
       },
-      "description": "Test di forza-resistenza trazione. Presa pronata, larghezza spalle, full ROM (braccia quasi distese → mento sopra barra). No kipping, no pause a braccia tese. Contare reps fino a cedimento di forma.",
+      "description": "Pulling strength-endurance test. Pronated grip, shoulder width, full ROM (near-straight arms to chin over the bar). No kipping, no pausing at dead hang. Count reps until form breaks.",
       "cues": [
         "Pronated grip, shoulder width",
         "Full ROM: near-straight arms to chin over bar",
@@ -14202,7 +14202,7 @@
         "work_seconds": 20,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Ginocchia appoggiate sui tricipiti, peso avanti sulle mani. 4x15-30s."
+        "notes": "Knees resting on the triceps, weight shifted forward onto the hands. 4x15-30s."
       },
       "stress_tags": {
         "fingers": "low",
@@ -14210,13 +14210,13 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "Primo gradino della progressione handstand: bilanciamento statico sulle mani con le ginocchia appoggiate ai tricipiti. Costruisce forza di polsi e dita e il controllo del peso in avanti senza andare sottosopra — accessibile anche a chi non ha mai fatto verticale. Molto utile per l'arrampicata: allena la compressione e il carico dei polsi in chiusura.",
+      "description": "First step of the handstand progression: a static balance on the hands with the knees resting on the triceps. Builds wrist and finger strength and the forward weight shift without going upside down — accessible even if you have never held a handstand. Useful for climbing: it trains compression and loaded wrists under body tension.",
       "cues": [
-        "Mani a larghezza spalle, dita ben aperte e attive",
-        "Ginocchia appoggiate in alto sui tricipiti, non sui gomiti",
-        "Sposta il peso in avanti finché i piedi si staccano",
-        "Sguardo leggermente avanti, non sotto di te",
-        "Scarica i polsi fra le serie"
+        "Hands shoulder-width apart, fingers spread and actively gripping",
+        "Knees high on the triceps, not on the elbows",
+        "Shift the weight forward until the feet leave the floor",
+        "Look slightly ahead of your hands, not straight down",
+        "Shake out the wrists between sets"
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
@@ -14227,7 +14227,7 @@
     },
     {
       "id": "handstand_kick_up_wall",
-      "name": "Handstand Kick-up (a Muro)",
+      "name": "Handstand Kick-up (Wall)",
       "category": "complementary",
       "time_min": 8,
       "role": [
@@ -14251,7 +14251,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Slancio controllato in verticale al muro. Cerca il punto di equilibrio, non la potenza."
+        "notes": "Controlled kick-up to a back-to-wall handstand. Quality over volume — stop the set when the entry gets sloppy."
       },
       "stress_tags": {
         "fingers": "low",
@@ -14259,13 +14259,13 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "L'abilità di ingresso in verticale: slancio controllato di una gamba con l'altra che segue, fermandosi al muro. Complementare al wall walk-up (che entra dal basso) — qui si allena il controllo dello slancio, che è ciò che serve per la verticale libera. Insegna a dosare la spinta invece di 'sperare' di arrivarci.",
+      "description": "The handstand entry skill: from standing, hands to the floor and a controlled kick-up with a straight lead leg, finishing with the heels against the wall (back to the wall). Complementary to the wall walk-up, which enters from the floor — here you train the push calibration itself, which is what a freestanding handstand needs. The wall is a brake, not a target: aim to arrive just short of it. For the chest-to-wall balance drill, see Heel Pulls (Chest-to-Wall).",
       "cues": [
-        "Mani a terra a 20-25 cm dal muro",
-        "Gamba di slancio tesa, l'altra spinge da terra",
-        "Frena con gli addominali quando i piedi toccano il muro",
-        "Spalle sempre sopra le mani, braccia bloccate",
-        "Scendi controllato, non lasciarti cadere"
+        "Hands on the floor 20-25 cm from the wall, shoulder-width apart",
+        "Straight lead leg swings up, the other leg pushes off the floor",
+        "Brake with the core as the heels touch the wall — do not slam into it",
+        "Shoulders stacked over the hands, elbows locked",
+        "Come down under control, one leg at a time — never let yourself drop"
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
@@ -14276,7 +14276,7 @@
     },
     {
       "id": "heel_pulls_chest_to_wall",
-      "name": "Heel Pulls (Petto al Muro)",
+      "name": "Heel Pulls (Chest-to-Wall)",
       "category": "complementary",
       "time_min": 8,
       "role": [
@@ -14300,7 +14300,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 75,
-        "notes": "Petto al muro, stacca un tallone alla volta cercando l'equilibrio. 4x3-5 tentativi."
+        "notes": "Chest to the wall, peel one heel off at a time looking for balance. 4x3-5 attempts."
       },
       "stress_tags": {
         "fingers": "low",
@@ -14308,13 +14308,13 @@
         "cns": "medium",
         "skin": "none"
       },
-      "description": "Il drill canonico per passare dalla verticale al muro a quella libera: petto al muro, si staccano i talloni uno alla volta cercando la linea di equilibrio. È il ponte che oggi manca fra il wall hold e la pratica freestanding — allena a trovare il bilanciamento con le dita, non a resistere appoggiati.",
+      "description": "The canonical drill for moving from a wall-supported handstand to a freestanding one: walk up into a chest-to-wall handstand, then peel the heels off the wall one at a time to find the balance line. It is the bridge between the wall hold and freestanding practice — it teaches you to correct with the fingers instead of resting against the wall.",
       "cues": [
-        "Petto e cosce a contatto col muro, corpo in linea",
-        "Stacca un tallone, poi l'altro: cerca il punto morto",
-        "Correggi con la pressione delle dita, non con le spalle",
-        "Bacino in retroversione, costole chiuse",
-        "Se cadi in avanti, esci di lato — non inarcare"
+        "Chest and thighs in contact with the wall, body in one line",
+        "Peel one heel off, then the other: hunt for the balance point",
+        "Correct with finger pressure, not with the shoulders",
+        "Pelvis tucked, ribs closed",
+        "If you fall forward, step out to the side — do not arch"
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
@@ -14325,7 +14325,7 @@
     },
     {
       "id": "wall_handstand_shrugs",
-      "name": "Handstand Shrugs (Scapolari al Muro)",
+      "name": "Handstand Shrugs (Wall)",
       "category": "complementary",
       "time_min": 6,
       "role": [
@@ -14350,7 +14350,7 @@
         "work_seconds": null,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 75,
-        "notes": "In verticale al muro, eleva e deprimi le scapole a braccia tese. 3x8-10."
+        "notes": "In a wall handstand, elevate and depress the scapulae with straight arms. 3x8-10."
       },
       "stress_tags": {
         "fingers": "low",
@@ -14358,12 +14358,12 @@
         "cns": "low",
         "skin": "none"
       },
-      "description": "Elevazione e depressione scapolare mantenendo la verticale al muro a braccia tese. Costruisce la forza di elevazione della spalla che regge la verticale — la ragione più comune per cui un hold cede non è la mancanza di equilibrio ma la spalla che collassa. Trasferisce anche ai movimenti di spinta sopra la testa in arrampicata.",
+      "description": "Scapular elevation and depression while holding a wall handstand with straight arms. Builds the shoulder elevation strength that holds the handstand up — the most common reason a hold collapses is not lack of balance but the shoulder giving way. It also carries over to overhead pressing movements in climbing.",
       "cues": [
-        "Braccia sempre tese: il movimento è solo scapolare",
-        "Spingi il pavimento via da te per elevare",
-        "Range completo ma controllato, senza rimbalzi",
-        "Corpo in linea, non inarcare la schiena per compensare"
+        "Arms stay straight: the movement is scapular only",
+        "Push the floor away from you to elevate",
+        "Full range but controlled, no bouncing",
+        "Body in one line, do not arch the back to compensate"
       ],
       "video_url": null,
       "load_model": "bodyweight_only",
