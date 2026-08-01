@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useInstall } from "@/lib/hooks/use-install";
-import { getIosBrowser, getIosMajorVersion, getPlatform } from "@/lib/install";
+import { getIosBrowser, getPlatform, getSafariMajorVersion } from "@/lib/install";
 import { trackEvent } from "@/lib/analytics";
 
 /* iOS share glyph — the square-with-up-arrow Safari puts in its toolbar.
@@ -213,12 +213,15 @@ export function InstallCard({ onDone }: { onDone?: () => void }) {
     const isChrome = browser === "chrome";
     // B316: iOS 26 hid Safari's Share button inside the ••• menu, so the
     // pre-26 wording sent people hunting for a toolbar icon that is no longer
-    // there (reported from a real device). A null version means the UA carried
-    // no `OS nn_` token — assume the new layout, since that is where the
-    // installed base is going, and step 1 names the fallback either way.
-    // Chrome on iOS keeps its own Share button in the address bar, unaffected.
-    const iosMajor = getIosMajorVersion();
-    const safariHidesShare = !isChrome && (iosMajor === null || iosMajor >= 26);
+    // there (reported from a real device).
+    //
+    // B317: and the version must come from `Version/nn`, NOT from the OS token
+    // — Apple freezes that at `18_6` on iOS 26, so reading it turned this check
+    // off on precisely the devices it targets. Null → assume the new layout;
+    // step 1 names the alternative anyway, which also covers the Bottom/Top
+    // toolbar layouts a user can still choose on iOS 26.
+    const safariMajor = getSafariMajorVersion();
+    const safariHidesShare = !isChrome && (safariMajor === null || safariMajor >= 26);
     return (
       <div className="space-y-6">
         <p className="text-sm text-muted-foreground">

@@ -143,17 +143,25 @@ export function isInAppBrowser(): boolean {
 }
 
 /**
- * Major iOS version, or null when the UA does not carry one (iPadOS pretending
- * to be a Mac reports `Version/17.4` instead of `OS 17_4`).
+ * Major Safari version from the `Version/nn` token, or null.
  *
- * B316: this is not trivia — iOS 26 moved Safari's Share button *out of the
- * toolbar* and into the `•••` menu next to the address bar, so the pre-26
- * instructions send the user hunting for an icon that is no longer there.
- * Callers that get null should fall back to the newer wording, since that is
- * where the installed base is heading.
+ * Why not the OS token — B317, found on a real iPhone running 26.5 that kept
+ * getting the pre-26 instructions. **Since iOS 26 Apple freezes the OS version
+ * in the user agent at `18_6`** to hinder fingerprinting, so a current iPhone
+ * announces `CPU iPhone OS 18_6 like Mac OS X` no matter which iOS it runs.
+ * B316 read that token, got 18, and therefore showed the old Share-button
+ * wording on exactly the devices it was written for.
+ *
+ * `Version/26.0` is not frozen and tracks the real Safari release, which since
+ * 26 shares its major with iOS. It is absent from Chrome on iOS (`CriOS/...`),
+ * but that branch never needs it: Chrome keeps its own Share button in the
+ * address bar regardless of version.
+ *
+ * Callers that get null should assume the newer layout — that is where the
+ * installed base is — and the UI names the alternative either way.
  */
-export function getIosMajorVersion(): number | null {
-  const m = ua().match(/(?:iPhone )?OS (\d+)[_.]/);
+export function getSafariMajorVersion(): number | null {
+  const m = ua().match(/Version\/(\d+)/);
   return m ? Number.parseInt(m[1], 10) : null;
 }
 
