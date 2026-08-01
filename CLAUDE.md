@@ -117,7 +117,7 @@ from backend.engine.planner_v2 import generate_phase_week
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
     adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
-  api/               # FastAPI REST API (25 routers)
+  api/               # FastAPI REST API (26 routers)
     routers/         # state, catalog, onboarding, assessment, macrocycle, plan, week,
                      # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips, milestones
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
@@ -256,7 +256,7 @@ user_state.assessment + user_state.goal
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (46):** 14 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
+**Pages (47):** 14 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
 
 **Entry-point routing (B300, `src/app/page.tsx`)** — the root `/` is a smart dispatcher, not a page:
 - **Signed-out** (cold ad/flyer visitor) → `/onboarding/welcome` (public marketing landing: hero + value props + "Start assessment" CTA + a visible "Sign in" link + "Recover with a code"). Before B300 it sent them to the bare `/sign-in` login wall — a bad ad landing.
