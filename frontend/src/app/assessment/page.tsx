@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,27 +18,39 @@ import {
   computePublicAssessment,
   type PublicAssessmentResult,
 } from "@/lib/api";
-import { BOULDER_GRADE_OPTIONS, LEAD_GRADE_OPTIONS } from "@/lib/gradeUtils";
+import {
+  BOULDER_GRADE_OPTIONS,
+  LEAD_GRADE_OPTIONS,
+  V_SCALE_GRADES,
+  YDS_GRADE_OPTIONS,
+  vScaleToFont,
+  ydsToFrench,
+} from "@/lib/gradeUtils";
 import { captureUtmOnMount, trackEvent } from "@/lib/analytics";
-import { useEffect } from "react";
 
 /**
- * A262 — the public 5-axis assessment.
+ * A262/A263 — the public 5-axis assessment.
  *
- * Everything else in the app is behind an account. This page exists to give
- * something away first: a cold visitor answers six questions and gets the same
- * profile the engine computes internally, with nothing stored and no sign-up.
- * That is what makes the link postable somewhere like r/climbharder without it
- * reading as an ad.
+ * Everything else in the app is behind an account. This page gives something
+ * away first: six questions, the same profile the engine computes internally,
+ * nothing stored and no sign-up. That is what makes the link postable somewhere
+ * like r/climbharder without it reading as an ad.
  *
- * The answers are seeded into the wizard's anonymous draft on the CTA, so
- * someone who continues does not retype what they just told us.
+ * A263 fixed three things that made the first version feel thin:
+ *
+ * - **Grade scale is selectable.** The audience is largely American; a
+ *   French/Font-only picker is unusable for half of it.
+ * - **"Operating at now" was unreadable.** It means the grade you climb
+ *   repeatedly, as distinct from your best ever — now said that way.
+ * - **It asked nothing about fingers** while showing finger strength as the
+ *   first axis. A climber who trains knows their max hang; not asking left the
+ *   most scrutinised number on the page as pure inference.
  */
 
 type Discipline = "lead" | "boulder";
+/** native = French / Font (the engine's own convention), alt = YDS / V-scale. */
+type Scale = "native" | "alt";
 
-/** Mirrors the backend's WEAKNESS_OPTIONS_* — kept short on purpose: this is a
- *  six-question form, not the wizard's dedicated step. */
 const WEAKNESSES: { id: string; label: string }[] = [
   { id: "fingers_give_out", label: "My fingers give out" },
   { id: "cant_hold_hard_moves", label: "Can't hold hard moves" },
@@ -49,6 +61,9 @@ const WEAKNESSES: { id: string; label: string }[] = [
   { id: "cant_read_routes", label: "Can't read routes" },
   { id: "poor_dynamic_movement", label: "Poor dynamic movement" },
 ];
+
+const SELECT_CLASS =
+  "min-h-[44px] w-full rounded-md border border-input bg-background px-3 text-base text-foreground";
 
 function Field({
   label,
@@ -70,18 +85,20 @@ function Field({
   );
 }
 
-const SELECT_CLASS =
-  "min-h-[44px] w-full rounded-md border border-input bg-background px-3 text-base text-foreground";
-
 export default function PublicAssessmentPage() {
   const router = useRouter();
   const [discipline, setDiscipline] = useState<Discipline>("lead");
+  const [scale, setScale] = useState<Scale>("native");
   const [currentGrade, setCurrentGrade] = useState("");
   const [targetGrade, setTargetGrade] = useState("");
   const [maxRp, setMaxRp] = useState("");
   const [maxOs, setMaxOs] = useState("");
   const [years, setYears] = useState("3");
   const [weakness, setWeakness] = useState("");
+  const [showNumbers, setShowNumbers] = useState(false);
+  const [bodyweight, setBodyweight] = useState("");
+  const [maxHang, setMaxHang] = useState("");
+  const [pullup, setPullup] = useState("");
   const [result, setResult] = useState<PublicAssessmentResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,7 +108,19 @@ export default function PublicAssessmentPage() {
     trackEvent("public_assessment_view");
   }, []);
 
-  const grades = discipline === "lead" ? LEAD_GRADE_OPTIONS : BOULDER_GRADE_OPTIONS;
+  const isBoulder = discipline === "boulder";
+
+  const gradeOptions = useMemo(() => {
+    if (isBoulder) return scale === "native" ? BOULDER_GRADE_OPTIONS : V_SCALE_GRADES;
+    return scale === "native" ? LEAD_GRADE_OPTIONS : YDS_GRADE_OPTIONS;
+  }, [isBoulder, scale]);
+
+  /** To the engine's convention (Font for boulder, French for lead) before
+   *  anything leaves this page — the same rule the rest of the app follows. */
+  const toEngine = useMemo(() => {
+    if (scale === "native") return (g: string) => g;
+    return isBoulder ? vScaleToFont : ydsToFrench;
+  }, [scale, isBoulder]);
 
   const complete =
     currentGrade !== "" && targetGrade !== "" && maxRp !== "" && maxOs !== "";
@@ -99,33 +128,44 @@ export default function PublicAssessmentPage() {
   const seed = useMemo(
     () => ({
       discipline,
-      current_grade: currentGrade,
-      target_grade: targetGrade,
-      max_rp: maxRp,
-      max_os: maxOs,
+      current_grade: toEngine(currentGrade),
+      target_grade: toEngine(targetGrade),
+      max_rp: toEngine(maxRp),
+      max_os: toEngine(maxOs),
       climbing_years: Number(years) || 0,
       primary_weakness: weakness || null,
     }),
-    [discipline, currentGrade, targetGrade, maxRp, maxOs, years, weakness],
+    [discipline, toEngine, currentGrade, targetGrade, maxRp, maxOs, years, weakness],
   );
+
+  function resetGrades() {
+    setCurrentGrade("");
+    setTargetGrade("");
+    setMaxRp("");
+    setMaxOs("");
+  }
 
   async function submit() {
     setBusy(true);
     setError(null);
     try {
-      const res = await computePublicAssessment(seed);
+      const res = await computePublicAssessment({
+        ...seed,
+        bodyweight_kg: bodyweight ? Number(bodyweight) : null,
+        max_hang_added_kg: maxHang !== "" ? Number(maxHang) : null,
+        weighted_pullup_added_kg: pullup !== "" ? Number(pullup) : null,
+      });
       setResult(res);
       trackEvent("public_assessment_completed", {
         discipline,
         weakest_axis: res.weakest_axis,
+        measured: res.measured_axes.length,
       });
     } catch (e) {
       // The backend rejects what it cannot score honestly (unknown grade,
-      // onsight above redpoint) — surface its reason rather than a generic
-      // failure, because in every case it tells the user what to fix.
-      setError(
-        e instanceof Error ? e.message : "Could not compute your profile.",
-      );
+      // onsight above redpoint, numbers without a bodyweight) — surface its
+      // reason, because in every case it tells the user what to fix.
+      setError(e instanceof Error ? e.message : "Could not compute your profile.");
     } finally {
       setBusy(false);
     }
@@ -133,6 +173,7 @@ export default function PublicAssessmentPage() {
 
   if (result) {
     const axisScore = result.profile[result.weakest_axis];
+    const measured = result.measured_axes.length;
     return (
       <div className="mx-auto max-w-lg space-y-6 px-4 pb-16 pt-8">
         <InAppBrowserBanner />
@@ -159,29 +200,34 @@ export default function PublicAssessmentPage() {
               Weakest link: {result.weakest_axis_label}
             </CardTitle>
             <CardDescription>
-              It scores {axisScore}/100 against your target. On a periodized
-              plan this is what gets trained first — progress on your weakest
-              axis moves your grade more than more of what you are already good
-              at.
+              It scores {axisScore}/100 against your target. On a periodized plan
+              this is what gets trained first — progress on your weakest axis
+              moves your grade more than more of what you are already good at.
             </CardDescription>
           </CardHeader>
         </Card>
 
-        {result.estimated ? (
-          <p className="text-xs text-muted-foreground">
-            This is an estimate, not a measurement: it is derived from the
-            grades you reported and your own assessment of your weakness. Add
-            hangboard and pull-up test numbers during onboarding and the finger
-            and pulling axes become measured instead of inferred.
-          </p>
-        ) : null}
+        <p className="text-xs text-muted-foreground">
+          {measured > 0 ? (
+            <>
+              {measured === 1 ? "One axis is" : `${measured} axes are`} computed
+              from the numbers you entered, against your bodyweight. The rest are
+              derived from your declared grades and your own read on your
+              weakness — useful, but not a measurement.
+            </>
+          ) : (
+            <>
+              This is an estimate, not a measurement: every axis is derived from
+              the grades you reported and your own read on your weakness. Add a
+              max hang and a weighted pull-up and two of them become measured.
+            </>
+          )}
+        </p>
 
         <div className="space-y-3">
           <Button
             className="min-h-[52px] w-full text-base"
             onClick={() => {
-              // Carry the six answers into the wizard's anonymous draft so the
-              // visitor does not retype them (A256 adopts it at sign-in).
               seedDraftFromAssessment(seed);
               trackEvent("public_assessment_cta");
               router.push("/onboarding/profile");
@@ -228,12 +274,10 @@ export default function PublicAssessmentPage() {
                   type="button"
                   onClick={() => {
                     // Grades belong to a scale; keeping them across a switch
-                    // would send Font values to the lead branch.
+                    // would send Font values into the lead branch.
                     setDiscipline(d);
-                    setCurrentGrade("");
-                    setTargetGrade("");
-                    setMaxRp("");
-                    setMaxOs("");
+                    setScale("native");
+                    resetGrades();
                   }}
                   className={`min-h-[44px] rounded-lg border px-4 text-base font-semibold ${
                     discipline === d
@@ -247,9 +291,37 @@ export default function PublicAssessmentPage() {
             </div>
           </Field>
 
+          <Field label="Grade scale">
+            <div className="grid grid-cols-2 gap-3">
+              {(["native", "alt"] as const).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => {
+                    setScale(s);
+                    resetGrades();
+                  }}
+                  className={`min-h-[44px] rounded-lg border px-4 text-sm font-semibold ${
+                    scale === s
+                      ? "border-primary ring-2 ring-primary/30 text-foreground"
+                      : "border-muted text-muted-foreground"
+                  }`}
+                >
+                  {isBoulder
+                    ? s === "native"
+                      ? "Font (7A)"
+                      : "V-scale (V6)"
+                    : s === "native"
+                      ? "French (7a)"
+                      : "YDS (5.11d)"}
+                </button>
+              ))}
+            </div>
+          </Field>
+
           <Field
-            label="Hardest grade you've redpointed"
-            hint={discipline === "boulder" ? "Fontainebleau scale" : "French scale"}
+            label="Hardest grade you've ever sent"
+            hint="Redpoint — worked over multiple attempts."
           >
             <select
               className={SELECT_CLASS}
@@ -257,15 +329,15 @@ export default function PublicAssessmentPage() {
               onChange={(e) => setMaxRp(e.target.value)}
             >
               <option value="">Select…</option>
-              {grades.map((g) => (
+              {gradeOptions.map((g) => (
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
           </Field>
 
           <Field
-            label={discipline === "boulder" ? "Hardest flash" : "Hardest onsight"}
-            hint="The gap between this and your redpoint is what reveals technique and power endurance."
+            label={isBoulder ? "Hardest flash" : "Hardest onsight"}
+            hint="First try, no prior beta. The gap between this and your redpoint is what reveals technique and power endurance."
           >
             <select
               className={SELECT_CLASS}
@@ -273,33 +345,36 @@ export default function PublicAssessmentPage() {
               onChange={(e) => setMaxOs(e.target.value)}
             >
               <option value="">Select…</option>
-              {grades.map((g) => (
+              {gradeOptions.map((g) => (
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
           </Field>
 
-          <Field label="Grade you're operating at now">
+          <Field
+            label="Grade you climb regularly"
+            hint="What you send on a normal day — not your best ever. Usually a couple of grades below your redpoint."
+          >
             <select
               className={SELECT_CLASS}
               value={currentGrade}
               onChange={(e) => setCurrentGrade(e.target.value)}
             >
               <option value="">Select…</option>
-              {grades.map((g) => (
+              {gradeOptions.map((g) => (
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
           </Field>
 
-          <Field label="Grade you're chasing">
+          <Field label="Grade you're chasing" hint="Your next real target.">
             <select
               className={SELECT_CLASS}
               value={targetGrade}
               onChange={(e) => setTargetGrade(e.target.value)}
             >
               <option value="">Select…</option>
-              {grades.map((g) => (
+              {gradeOptions.map((g) => (
                 <option key={g} value={g}>{g}</option>
               ))}
             </select>
@@ -329,6 +404,85 @@ export default function PublicAssessmentPage() {
               ))}
             </select>
           </Field>
+        </CardContent>
+      </Card>
+
+      {/* A263 — the numbers block. Collapsed by default so the six-question
+          promise holds, but prominent enough that anyone who trains and knows
+          their max hang will open it: those two values are what turn the finger
+          and pulling axes from inference into measurement. */}
+      <Card>
+        <CardContent className="pt-6">
+          {showNumbers ? (
+            <div className="space-y-5">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Your test numbers
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Optional — but with these, finger strength and pulling stop
+                  being inferred from your grades and get measured against
+                  bodyweight, the way the research benchmarks them.
+                </p>
+              </div>
+
+              <Field
+                label="Bodyweight (kg)"
+                hint="Required to score the numbers below."
+              >
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  className={SELECT_CLASS}
+                  value={bodyweight}
+                  onChange={(e) => setBodyweight(e.target.value)}
+                />
+              </Field>
+
+              <Field
+                label="Max hang — 20 mm edge, 7 s, added weight (kg)"
+                hint="Half crimp. Negative if you use assistance (e.g. -8)."
+              >
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  className={SELECT_CLASS}
+                  value={maxHang}
+                  onChange={(e) => setMaxHang(e.target.value)}
+                />
+              </Field>
+
+              <Field
+                label="Weighted pull-up 1RM — added weight (kg)"
+                hint="Negative if assisted."
+              >
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  className={SELECT_CLASS}
+                  value={pullup}
+                  onChange={(e) => setPullup(e.target.value)}
+                />
+              </Field>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setShowNumbers(true);
+                trackEvent("public_assessment_open_numbers");
+              }}
+              className="w-full text-left"
+            >
+              <p className="text-sm font-medium text-foreground">
+                Know your max hang? Add your numbers →
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Optional. Turns finger strength and pulling from estimated into
+                measured.
+              </p>
+            </button>
+          )}
         </CardContent>
       </Card>
 

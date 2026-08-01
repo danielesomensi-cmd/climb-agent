@@ -1222,6 +1222,12 @@ export interface PublicAssessmentInput {
   max_os: string;
   climbing_years: number;
   primary_weakness?: string | null;
+  // A263 — optional numbers that turn finger/pulling from inferred into
+  // measured. Added weight, the way climbers record it (negative = assisted);
+  // the backend adds bodyweight to get the totals the engine wants.
+  bodyweight_kg?: number | null;
+  max_hang_added_kg?: number | null;
+  weighted_pullup_added_kg?: number | null;
 }
 
 export interface PublicAssessmentResult {
@@ -1229,7 +1235,10 @@ export interface PublicAssessmentResult {
   weakest_axis: keyof AssessmentProfile;
   weakest_axis_label: string;
   target_grade_lead: string;
-  /** Always true today: no measured tests behind a public form. */
+  /** Axes backed by a number the user supplied (A263). Everything else is
+   *  derived from declared grades and self-report. */
+  measured_axes: (keyof AssessmentProfile)[];
+  /** True when nothing was measured at all. */
   estimated: boolean;
 }
 

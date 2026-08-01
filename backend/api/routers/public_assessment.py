@@ -62,7 +62,8 @@ _AXIS_LABELS: Dict[str, str] = {
 
 
 class PublicAssessmentRequest(BaseModel):
-    """Six answers. Everything else the engine can read is optional."""
+    """Six required answers, plus the optional numbers that turn two of the five
+    axes from inferred into measured (A263)."""
 
     discipline: Literal["lead", "boulder"] = "lead"
     current_grade: str = Field(min_length=1, max_length=8)
@@ -71,6 +72,16 @@ class PublicAssessmentRequest(BaseModel):
     max_os: str = Field(min_length=1, max_length=8)
     climbing_years: float = Field(ge=0, le=70)
     primary_weakness: Optional[str] = Field(default=None, max_length=40)
+
+    # A263 — optional test numbers. Without them the finger and pulling axes are
+    # derived from declared grades, which is the weakest part of the estimate and
+    # the one this audience is most likely to call out: a climber who trains
+    # knows their max hang. Both are entered as ADDED weight, the way people
+    # actually record them (negative = assisted); the engine wants totals, and
+    # converting here keeps that convention in one place.
+    bodyweight_kg: Optional[float] = Field(default=None, gt=25, le=200)
+    max_hang_added_kg: Optional[float] = Field(default=None, ge=-100, le=150)
+    weighted_pullup_added_kg: Optional[float] = Field(default=None, ge=-100, le=150)
 
 
 def _to_lead(grade: str, discipline: str) -> str:
@@ -113,15 +124,35 @@ def public_assessment(request: Request, body: PublicAssessmentRequest):
             detail="Onsight/flash grade cannot be harder than redpoint grade.",
         )
 
+    # A263 — the engine scores hangboard and pull-up numbers as ratios against
+    # bodyweight, and falls back to 70 kg when it is missing. A stranger's 70 kg
+    # default would silently rescale their own numbers, so tests without a
+    # bodyweight are refused rather than scored against a stand-in.
+    tests: Dict[str, float] = {}
+    measured: list[str] = []
+    has_numbers = (
+        body.max_hang_added_kg is not None or body.weighted_pullup_added_kg is not None
+    )
+    if has_numbers and body.bodyweight_kg is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Bodyweight is required to score hangboard or pull-up numbers.",
+        )
+
+    bw = body.bodyweight_kg
+    if bw is not None and body.max_hang_added_kg is not None:
+        tests["max_hang_20mm_7s_total_kg"] = bw + body.max_hang_added_kg
+        measured.append("finger_strength")
+    if bw is not None and body.weighted_pullup_added_kg is not None:
+        tests["weighted_pullup_1rm_total_kg"] = bw + body.weighted_pullup_added_kg
+        measured.append("pulling_strength")
+
     assessment = {
         "grades": {"lead_max_rp": rp, "lead_max_os": os_},
         "experience": {"climbing_years": body.climbing_years},
         "self_eval": {"primary_weakness": body.primary_weakness},
-        # Empty on purpose: no tests and no bodyweight from a public form. The
-        # engine falls back to its grade-derived estimates, which is exactly the
-        # honest answer for someone who has not measured anything.
-        "body": {},
-        "tests": {},
+        "body": {"weight_kg": bw} if bw is not None else {},
+        "tests": tests,
     }
     goal = {"current_grade": current, "target_grade": target}
 
@@ -140,9 +171,11 @@ def public_assessment(request: Request, body: PublicAssessmentRequest):
         # engine scored against — for a boulderer that is the converted grade,
         # not what they typed.
         "target_grade_lead": target,
-        # A262: said out loud in the payload, not only in the page copy. Without
-        # measured tests this is derived from declared grades and self-report:
+        # A262/A263: said out loud in the payload, not only in the page copy.
+        # `measured_axes` names the axes backed by a number the user supplied;
+        # everything else is derived from declared grades and self-report —
         # useful, not a measurement, and pretending otherwise is how a tool like
         # this loses credibility with the audience it is aimed at.
-        "estimated": True,
+        "measured_axes": measured,
+        "estimated": not measured,
     }

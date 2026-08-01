@@ -72,6 +72,43 @@ export const LEAD_GRADE_OPTIONS = [
   "9a", "9a+",
 ];
 
+/**
+ * YDS (Yosemite Decimal System) → French sport grade.
+ *
+ * A263: added because the target audience for the public assessment is
+ * English-speaking and largely American, and a French-only grade picker is
+ * unusable for half of it.
+ *
+ * Cross-scale conversion is genuinely approximate — published tables disagree,
+ * particularly around 5.11c-5.12a. This one follows the common 8a.nu/IFSC
+ * alignment and is deliberately **monotonic and one-to-one** from 5.10a
+ * upward: twenty YDS grades onto the twenty French grades 6a→9a+, so no two
+ * inputs collapse onto the same score and the ordering a climber expects is
+ * preserved. Below 5.10a the mapping is coarser because the engine's scale
+ * starts at 5a.
+ *
+ * Display-only, exactly like `displayBoulderGrade`: the engine stores and
+ * reasons in French, and conversion happens before anything is sent.
+ */
+const YDS_TO_FRENCH: Record<string, string> = {
+  "5.7": "5b", "5.8": "5c", "5.9": "5c+",
+  "5.10a": "6a", "5.10b": "6a+", "5.10c": "6b", "5.10d": "6b+",
+  "5.11a": "6c", "5.11b": "6c+", "5.11c": "7a", "5.11d": "7a+",
+  "5.12a": "7b", "5.12b": "7b+", "5.12c": "7c", "5.12d": "7c+",
+  "5.13a": "8a", "5.13b": "8a+", "5.13c": "8b", "5.13d": "8b+",
+  "5.14a": "8c", "5.14b": "8c+", "5.14c": "9a", "5.14d": "9a+",
+};
+
+/** Ordered YDS options, matching the keys of YDS_TO_FRENCH. */
+export const YDS_GRADE_OPTIONS = Object.keys(YDS_TO_FRENCH);
+
+/** Convert a YDS grade to its French equivalent. Unknown input passes through
+ *  unchanged, so the backend's grade validation rejects it instead of this
+ *  silently substituting something plausible. */
+export function ydsToFrench(grade: string): string {
+  return YDS_TO_FRENCH[grade] ?? grade;
+}
+
 /** Ordered boulder grade options in Fontainebleau */
 export const BOULDER_GRADE_OPTIONS = [
   "4A", "4B", "4C",

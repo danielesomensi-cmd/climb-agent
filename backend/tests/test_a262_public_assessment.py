@@ -134,3 +134,62 @@ class TestRejectsWhatItCannotScore:
 
     def test_absurd_experience_is_rejected(self):
         assert client.post(URL, json={**VALID, "climbing_years": 999}).status_code == 422
+
+
+class TestOptionalNumbers:
+    """A263 — the tests that turn inferred axes into measured ones.
+
+    Added by Daniele's review of the live page: it showed finger strength as
+    the first axis and asked nothing about fingers, which for this audience is
+    the fastest way to look unserious.
+    """
+
+    def test_max_hang_makes_finger_strength_measured(self):
+        r = client.post(URL, json={
+            **VALID,
+            "primary_weakness": None,
+            "bodyweight_kg": 70,
+            "max_hang_added_kg": 30,
+        })
+        assert r.status_code == 200, r.text
+        assert r.json()["measured_axes"] == ["finger_strength"]
+        assert r.json()["estimated"] is False
+
+    def test_a_stronger_hang_scores_higher(self):
+        """Guards the added→total conversion: if the bodyweight were dropped,
+        both would be scored against the engine's 70 kg fallback and the ratio
+        would be wrong in the same direction for everyone."""
+        weak = client.post(URL, json={
+            **VALID, "primary_weakness": None,
+            "bodyweight_kg": 70, "max_hang_added_kg": 0,
+        }).json()
+        strong = client.post(URL, json={
+            **VALID, "primary_weakness": None,
+            "bodyweight_kg": 70, "max_hang_added_kg": 40,
+        }).json()
+        assert strong["profile"]["finger_strength"] > weak["profile"]["finger_strength"]
+
+    def test_assisted_hang_is_accepted_as_negative_added_weight(self):
+        r = client.post(URL, json={
+            **VALID, "bodyweight_kg": 70, "max_hang_added_kg": -15,
+        })
+        assert r.status_code == 200, r.text
+
+    def test_pullup_makes_pulling_measured(self):
+        r = client.post(URL, json={
+            **VALID, "bodyweight_kg": 70, "weighted_pullup_added_kg": 35,
+        })
+        assert r.json()["measured_axes"] == ["pulling_strength"]
+
+    def test_numbers_without_bodyweight_are_refused(self):
+        """The engine falls back to 70 kg when bodyweight is missing. Scoring a
+        stranger's hang against a stand-in bodyweight silently rescales their
+        own number, so it is refused instead."""
+        r = client.post(URL, json={**VALID, "max_hang_added_kg": 30})
+        assert r.status_code == 422
+        assert "bodyweight" in str(r.json()["detail"]).lower()
+
+    def test_without_numbers_nothing_claims_to_be_measured(self):
+        body = client.post(URL, json=VALID).json()
+        assert body["measured_axes"] == []
+        assert body["estimated"] is True
