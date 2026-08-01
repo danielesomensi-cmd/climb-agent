@@ -9,6 +9,12 @@ import {
   computeTooltipShift,
   shouldFlipAbove,
 } from "@/lib/radarTooltip";
+import {
+  LABEL_LINE_HEIGHT,
+  radarOuterWidth,
+  radarViewBox,
+  splitAxisLabel,
+} from "@/lib/radarLabels";
 
 const AXIS_KEYS: (keyof AssessmentProfile)[] = [
   "finger_strength",
@@ -153,7 +159,18 @@ export function RadarChart({ profile, size = 280, discipline, targetGrade }: Rad
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      {/* B318 — the SVG is now responsive and its box is wider than the
+          drawing. Before, `width={size}` with `viewBox="0 0 size size"` clipped
+          the right-hand axis label ("Pulling Strenç") because the text extended
+          past the coordinate box, and on a viewport narrower than `size` the
+          whole chart overflowed its container instead of scaling. */}
+      <svg
+        width="100%"
+        viewBox={radarViewBox(size)}
+        style={{ maxWidth: radarOuterWidth(size) }}
+        preserveAspectRatio="xMidYMid meet"
+        className="h-auto"
+      >
         {/* Grid circles */}
         {gridLevels.map((level) => {
           const gridPoints = Array.from({ length: n }, (_, i) => point(i, level));
@@ -195,9 +212,16 @@ export function RadarChart({ profile, size = 280, discipline, targetGrade }: Rad
           <circle key={i} cx={x} cy={y} r={4} fill="var(--primary)" />
         ))}
 
-        {/* Labels */}
+        {/* Labels — B318: two-word labels wrap onto two balanced lines, which
+            roughly halves their width. Together with the padded viewBox this
+            keeps every axis name fully visible; abbreviating or truncating was
+            not an option, the axis vocabulary is closed (docs/vocabulary_v1.md). */}
         {AXES.map((axis, i) => {
           const [x, y] = point(i, 120);
+          const lines = splitAxisLabel(axis.label);
+          // Centre the block vertically on the anchor: one line stays put, two
+          // lines straddle it, so the label reads as attached to its axis.
+          const startDy = lines.length === 1 ? 0 : -(LABEL_LINE_HEIGHT / 2);
           return (
             <text
               key={axis.key}
@@ -207,7 +231,15 @@ export function RadarChart({ profile, size = 280, discipline, targetGrade }: Rad
               dominantBaseline="middle"
               className="fill-foreground text-[10px]"
             >
-              {axis.label}
+              {lines.map((line, li) => (
+                <tspan
+                  key={line}
+                  x={x}
+                  dy={li === 0 ? startDy : LABEL_LINE_HEIGHT}
+                >
+                  {line}
+                </tspan>
+              ))}
             </text>
           );
         })}
