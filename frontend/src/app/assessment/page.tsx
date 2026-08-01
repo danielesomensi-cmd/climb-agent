@@ -262,6 +262,12 @@ export default function PublicAssessmentPage() {
           Six questions, no account. You get the same five-axis profile the
           planner uses to decide what you should train.
         </p>
+        {/* B318 — this promise also sits under the submit button, but that is
+            below the fold on a 390px phone: it reassures at the moment the user
+            has already decided, not at the moment they decide. */}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Nothing is saved. No account, no email.
+        </p>
       </div>
 
       <Card>
