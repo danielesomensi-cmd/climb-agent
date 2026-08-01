@@ -29,6 +29,7 @@ from backend.api.routers import (
     onboarding,
     outdoor,
     plan,
+    public_assessment,
     quotes,
     replanner,
     reports,
@@ -137,6 +138,7 @@ app.include_router(state.router)
 app.include_router(catalog.router)
 app.include_router(onboarding.router)
 app.include_router(assessment.router)
+app.include_router(public_assessment.router)
 app.include_router(macrocycle.router)
 app.include_router(plan.router)
 app.include_router(week.router)

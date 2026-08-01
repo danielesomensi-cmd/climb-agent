@@ -45,4 +45,8 @@ export const PUBLIC_ROUTES = [
   // visitors, which is exactly the acquisition surface.
   "/offline",
   "/manifest.json",
+  // A262 — the public 5-axis assessment. The whole point is that it works with
+  // no account: gating it would turn the one page built to be posted publicly
+  // into another sign-in wall.
+  "/assessment",
 ];

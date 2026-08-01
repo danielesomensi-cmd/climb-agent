@@ -110,6 +110,67 @@ function saveDraft(data: OnboardingData, deepestStep: number, userId: string | n
   }
 }
 
+/**
+ * A262 — carry the public assessment's answers into the wizard.
+ *
+ * The public tool asks six questions that map onto five of the wizard's twelve
+ * steps. Making the visitor retype them is the cheapest way to lose them right
+ * after they got a reason to stay, so the answers are written into the same
+ * anonymous draft the wizard already adopts at sign-in (A256).
+ *
+ * Lives here, next to DEFAULT_DATA and saveDraft, on purpose: a caller writing
+ * the envelope itself would have to duplicate the shape, and a partial
+ * OnboardingData that drifts from the default is how the wizard ends up reading
+ * `undefined` mid-flow. Merges over whatever is already stored, so an
+ * in-progress draft is enriched rather than replaced.
+ */
+export function seedDraftFromAssessment(seed: {
+  discipline: string;
+  current_grade: string;
+  target_grade: string;
+  max_rp: string;
+  max_os: string;
+  climbing_years: number;
+  primary_weakness?: string | null;
+}): void {
+  if (typeof window === "undefined") return;
+  const existing = readDraftAt(draftKey(null));
+  const base = existing?.data ?? DEFAULT_DATA;
+  const isBoulder = seed.discipline === "boulder";
+
+  const data: OnboardingData = {
+    ...base,
+    experience: { ...base.experience, climbing_years: seed.climbing_years },
+    grades: {
+      ...base.grades,
+      // Boulder answers stay in Fontainebleau here — the engine's storage
+      // convention — and the lead-calibrated conversion happens server-side
+      // exactly as it does for a normal onboarding. Writing the converted
+      // grade into boulder_max_rp would corrupt the user's own numbers.
+      ...(isBoulder
+        ? { boulder_max_rp: seed.max_rp, boulder_max_os: seed.max_os }
+        : { lead_max_rp: seed.max_rp, lead_max_os: seed.max_os }),
+    },
+    goal: {
+      ...base.goal,
+      discipline: seed.discipline,
+      goal_type: isBoulder ? "boulder_grade" : "lead_grade",
+      current_grade: seed.current_grade,
+      ...(isBoulder ? { target_boulder_grade: seed.target_grade } : {}),
+      target_grade: seed.target_grade,
+    },
+    self_eval: {
+      ...base.self_eval,
+      primary_weakness: seed.primary_weakness || base.self_eval.primary_weakness,
+    },
+  };
+
+  // deepestStep stays where it was: these answers pre-fill steps, they do not
+  // mean the visitor has walked through them, and claiming otherwise would let
+  // the resume prompt skip screens they never saw.
+  saveDraft(data, existing?.deepestStep ?? 0, null);
+}
+
 /** Called on successful submit, and by SessionScopeGuard when the user changes. */
 export function clearOnboardingDraft(): void {
   if (typeof window === "undefined") return;

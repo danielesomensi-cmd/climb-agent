@@ -56,6 +56,22 @@ export function displayBoulderGrade(
   return FONT_TO_V[fontGrade.toUpperCase()] ?? fontGrade;
 }
 
+/**
+ * Ordered French lead grade options.
+ *
+ * A262: exported for the public assessment page. Must stay identical to the
+ * backend's `GRADE_ORDER` (assessment_v1.py) — offering a grade the engine does
+ * not know is the B302 failure mode: `grade_index` misses, the profile is
+ * computed against index 0 and the user gets a confidently wrong answer.
+ */
+export const LEAD_GRADE_OPTIONS = [
+  "5a", "5a+", "5b", "5b+", "5c", "5c+",
+  "6a", "6a+", "6b", "6b+", "6c", "6c+",
+  "7a", "7a+", "7b", "7b+", "7c", "7c+",
+  "8a", "8a+", "8b", "8b+", "8c", "8c+",
+  "9a", "9a+",
+];
+
 /** Ordered boulder grade options in Fontainebleau */
 export const BOULDER_GRADE_OPTIONS = [
   "4A", "4B", "4C",
