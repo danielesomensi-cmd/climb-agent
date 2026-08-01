@@ -132,11 +132,35 @@ export function seedDraftFromAssessment(seed: {
   max_os: string;
   climbing_years: number;
   primary_weakness?: string | null;
+  // B319 — the numbers A263 added to the public page. They were collected and
+  // then dropped here, so the visitor who had just typed their bodyweight and
+  // max hang was asked for both again one screen later, right after being told
+  // "no need to enter them again". That is the most motivated visitor of all —
+  // the one who knows their numbers — and the promise broke precisely for them.
+  bodyweight_kg?: number | null;
+  max_hang_added_kg?: number | null;
+  weighted_pullup_added_kg?: number | null;
 }): void {
   if (typeof window === "undefined") return;
   const existing = readDraftAt(draftKey(null));
   const base = existing?.data ?? DEFAULT_DATA;
   const isBoulder = seed.discipline === "boulder";
+
+  // Added weight → total, the same conversion `public_assessment.py` performs
+  // server-side: the user records what they hung *with*, the engine stores the
+  // whole load. Without a bodyweight the total cannot be formed at all, so the
+  // numbers are dropped rather than combined with a stand-in — the identical
+  // rule the endpoint enforces with a 422.
+  const bw = seed.bodyweight_kg ?? null;
+  const tests: OnboardingData["tests"] = { ...base.tests };
+  if (bw !== null) {
+    if (seed.max_hang_added_kg != null) {
+      tests.max_hang_20mm_7s_total_kg = bw + seed.max_hang_added_kg;
+    }
+    if (seed.weighted_pullup_added_kg != null) {
+      tests.weighted_pullup_1rm_total_kg = bw + seed.weighted_pullup_added_kg;
+    }
+  }
 
   const data: OnboardingData = {
     ...base,
@@ -163,6 +187,15 @@ export function seedDraftFromAssessment(seed: {
       ...base.self_eval,
       primary_weakness: seed.primary_weakness || base.self_eval.primary_weakness,
     },
+    // B319 — bodyweight lands on the profile step, which is where the wizard
+    // asks for it. Side benefit worth naming: it is also the first screen the
+    // user sees after the CTA, so pre-filling it is the first visible proof
+    // that the carry-over promise was true.
+    profile: {
+      ...base.profile,
+      ...(bw !== null ? { weight_kg: bw } : {}),
+    },
+    tests,
   };
 
   // deepestStep stays where it was: these answers pre-fill steps, they do not

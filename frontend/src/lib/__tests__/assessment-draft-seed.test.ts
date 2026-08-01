@@ -127,3 +127,55 @@ describe("seedDraftFromAssessment", () => {
     expect(readAnon(draftKey).deepestStep).toBe(0);
   });
 });
+
+describe("seedDraftFromAssessment — test numbers (B319)", () => {
+  const WITH_NUMBERS = {
+    ...LEAD_SEED,
+    bodyweight_kg: 70,
+    max_hang_added_kg: 30,
+    weighted_pullup_added_kg: 35,
+  };
+
+  it("carries bodyweight onto the profile step", async () => {
+    const { seedDraftFromAssessment, draftKey } = await load();
+    seedDraftFromAssessment(WITH_NUMBERS);
+    expect(readAnon(draftKey).data.profile.weight_kg).toBe(70);
+  });
+
+  it("converts added weight to the totals the engine stores", async () => {
+    /* The user records what they hung WITH; the engine stores the whole load.
+       Same conversion as public_assessment.py — if the two drifted, the wizard
+       would show a different number from the one just scored. */
+    const { seedDraftFromAssessment, draftKey } = await load();
+    seedDraftFromAssessment(WITH_NUMBERS);
+    const { tests } = readAnon(draftKey).data;
+    expect(tests.max_hang_20mm_7s_total_kg).toBe(100);
+    expect(tests.weighted_pullup_1rm_total_kg).toBe(105);
+  });
+
+  it("handles assisted numbers, which arrive negative", async () => {
+    const { seedDraftFromAssessment, draftKey } = await load();
+    seedDraftFromAssessment({ ...WITH_NUMBERS, max_hang_added_kg: -15 });
+    expect(readAnon(draftKey).data.tests.max_hang_20mm_7s_total_kg).toBe(55);
+  });
+
+  it("drops the numbers when there is no bodyweight to add them to", async () => {
+    /* Mirrors the endpoint's 422: a total built on a stand-in bodyweight
+       silently rescales the user's own measurement. Better absent than wrong. */
+    const { seedDraftFromAssessment, draftKey } = await load();
+    seedDraftFromAssessment({
+      ...LEAD_SEED,
+      bodyweight_kg: null,
+      max_hang_added_kg: 30,
+    });
+    const { data } = readAnon(draftKey);
+    expect(data.tests.max_hang_20mm_7s_total_kg).toBeUndefined();
+    expect(data.profile.weight_kg).toBe(0); // untouched default
+  });
+
+  it("leaves tests alone when the user entered no numbers at all", async () => {
+    const { seedDraftFromAssessment, draftKey } = await load();
+    seedDraftFromAssessment(LEAD_SEED);
+    expect(readAnon(draftKey).data.tests).toEqual({});
+  });
+});

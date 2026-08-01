@@ -125,6 +125,9 @@ export default function PublicAssessmentPage() {
   const complete =
     currentGrade !== "" && targetGrade !== "" && maxRp !== "" && maxOs !== "";
 
+  // B319 — one payload for both the request and the wizard draft. They used to
+  // diverge: the numbers were attached only to the API call, so the CTA carried
+  // over everything except the two values the user had worked hardest to enter.
   const seed = useMemo(
     () => ({
       discipline,
@@ -134,8 +137,23 @@ export default function PublicAssessmentPage() {
       max_os: toEngine(maxOs),
       climbing_years: Number(years) || 0,
       primary_weakness: weakness || null,
+      bodyweight_kg: bodyweight ? Number(bodyweight) : null,
+      max_hang_added_kg: maxHang !== "" ? Number(maxHang) : null,
+      weighted_pullup_added_kg: pullup !== "" ? Number(pullup) : null,
     }),
-    [discipline, toEngine, currentGrade, targetGrade, maxRp, maxOs, years, weakness],
+    [
+      discipline,
+      toEngine,
+      currentGrade,
+      targetGrade,
+      maxRp,
+      maxOs,
+      years,
+      weakness,
+      bodyweight,
+      maxHang,
+      pullup,
+    ],
   );
 
   function resetGrades() {
@@ -149,12 +167,7 @@ export default function PublicAssessmentPage() {
     setBusy(true);
     setError(null);
     try {
-      const res = await computePublicAssessment({
-        ...seed,
-        bodyweight_kg: bodyweight ? Number(bodyweight) : null,
-        max_hang_added_kg: maxHang !== "" ? Number(maxHang) : null,
-        weighted_pullup_added_kg: pullup !== "" ? Number(pullup) : null,
-      });
+      const res = await computePublicAssessment(seed);
       setResult(res);
       trackEvent("public_assessment_completed", {
         discipline,
