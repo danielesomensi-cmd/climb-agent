@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getCapability,
   getIosBrowser,
-  getIosMajorVersion,
   getPlatform,
+  getSafariMajorVersion,
   isInAppBrowser,
   isStandalone,
 } from "@/lib/install";
@@ -37,8 +37,13 @@ const UA = {
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   ipadOs:
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+  // B317: the REAL iOS 26 user agent. Note `OS 18_6` — Apple freezes the OS
+  // token there since iOS 26, so only `Version/26.0` reveals the true release.
+  // B316's version of this constant said `OS 26_0`, a string no iPhone ever
+  // sends: the test passed against an invented UA while the feature was broken
+  // on every real device.
   iphone26Safari:
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Mobile/15E148 Safari/604.1",
 } as const;
 
 /**
@@ -123,27 +128,28 @@ describe("getIosBrowser", () => {
   });
 });
 
-describe("getIosMajorVersion", () => {
+describe("getSafariMajorVersion", () => {
   /**
-   * B316: iOS 26 moved Safari's Share button into the ••• menu, so the install
-   * steps branch on this number. Reported from a real device — the pre-26
-   * wording described a toolbar icon that no longer exists.
+   * B316 branched the install steps on the OS token; B317 found out why that
+   * cannot work. Apple freezes `CPU iPhone OS` at 18_6 from iOS 26 onward, so
+   * the check silently failed on every current iPhone — reported by Daniele on
+   * a 26.5 device that kept seeing the pre-26 wording, in a private tab, with
+   * the new build confirmed live.
    */
-  it("reads the major version from an iPhone UA", () => {
+  it("reads 26 from a real iOS 26 UA, whose OS token is frozen at 18_6", () => {
     setEnv(UA.iphone26Safari);
-    expect(getIosMajorVersion()).toBe(26);
+    expect(UA.iphone26Safari).toContain("OS 18_6"); // the trap, made explicit
+    expect(getSafariMajorVersion()).toBe(26);
+  });
+
+  it("still reads pre-26 versions correctly", () => {
     setEnv(UA.iphoneSafari);
-    expect(getIosMajorVersion()).toBe(17);
+    expect(getSafariMajorVersion()).toBe(17);
   });
 
-  it("returns null when the UA carries no OS token (iPadOS posing as a Mac)", () => {
-    setEnv(UA.ipadOs, { touchPoints: 5 });
-    expect(getIosMajorVersion()).toBeNull();
-  });
-
-  it("returns null on desktop", () => {
-    setEnv(UA.desktopChrome);
-    expect(getIosMajorVersion()).toBeNull();
+  it("returns null for Chrome on iOS, which sends no Version/ token", () => {
+    setEnv(UA.iphoneChrome);
+    expect(getSafariMajorVersion()).toBeNull();
   });
 });
 
