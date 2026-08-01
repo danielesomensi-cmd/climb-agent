@@ -77,8 +77,8 @@ in the same selection pools. The progression now reads cleanly across its steps:
 
 ## 4. Guard test — kept
 
-`backend/tests/test_c265_catalog_language.py` (66 cases, one per catalog file plus two
-self-checks). Design decisions, since the brief left the call open:
+`backend/tests/test_c265_catalog_language.py` (3 cases: one sweep over every live catalog file,
+plus two self-checks). Design decisions, since the brief left the call open:
 
 - **Italian function words are the primary signal.** Articles and prepositions are unavoidable in
   Italian prose and essentially absent from English. Domain nouns alone would be weaker — one
@@ -92,6 +92,13 @@ self-checks). Design decisions, since the brief left the call open:
 - The detector is **anchored on a real pre-C265 string**, and a second test asserts it stays quiet
   on the English strings that tripped the drafting heuristics — [[B317]]'s lesson: a test written
   against invented data verifies the function, not the world.
+- **Not parametrised per file, and `_archive/` excluded.** The first draft was one case per catalog
+  file, which looked tidier and was wrong: the file list comes from the filesystem, `_archive/` is
+  gitignored, so the collected test count differed between a fresh clone (64 files) and this
+  machine (85) — and `sync_status.py` writes that count into `PROJECT_BRIEF.md` and `README.md`,
+  where the pre-push hook then compares it. A counter that depends on which machine ran it is worse
+  than no counter. Caught by the sync step reporting 3111 against a suite that had just printed
+  3090.
 
 ## 5. Guardrails verified
 
@@ -105,7 +112,10 @@ self-checks). Design decisions, since the brief left the call open:
 
 ## 6. Verification
 
-- Backend suite: **3090 passed** (3024 + 66 new), 41 subtests.
+- Backend suite: **3027 passed** (3024 + 3 new), 41 subtests.
+- Guard verified by injecting Italian into a live session file and watching the sweep fail with the
+  offending file, path and words named — then restoring it. A guard is only worth its line count if
+  you have seen it fail on the real path, not just on its own unit self-check.
 - Smoke: `compose_adhoc_session(focus="handstand")` composes 8 exercises with the corrected English
   names and unchanged ids; `handstand_practice` resolves `success`.
 - All three sweeps re-run post-fix: zero Italian remaining. Residual hits are false positives
