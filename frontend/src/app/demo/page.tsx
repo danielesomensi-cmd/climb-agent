@@ -11,6 +11,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { captureUtmOnMount, trackEvent } from "@/lib/analytics";
+import { InAppBrowserBanner } from "@/components/install/in-app-browser-banner";
 import { DEMO_SESSION, DEMO_TOTAL_MIN, type DemoBlock, type DemoExercise, type Tier } from "./session-data";
 
 const VARIANT = "editorial_dark" as const;
@@ -923,6 +924,14 @@ export default function DemoPage() {
         position: "relative",
       }}
     >
+      {/* A261 — /demo is the cold-traffic landing (QR, social links), so it is
+          at least as exposed to in-app browsers as /onboarding/welcome. The
+          banner deliberately keeps the app's default styling rather than the
+          editorial palette: it is a warning, and looking like part of the
+          layout would bury it. Renders nothing in a normal browser. */}
+      <div style={{ padding: "1rem 1rem 0" }}>
+        <InAppBrowserBanner />
+      </div>
       <Masthead />
       <SpecCard />
       {firstHalf.map((block) => (
