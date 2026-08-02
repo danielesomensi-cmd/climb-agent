@@ -153,7 +153,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-94 endpoints total (92 router + 2 app-level: health check + stripe webhook).
+92 endpoints total (90 router + 2 app-level: health check + stripe webhook). B320 retired `/api/user/recovery-code` and `/api/user/recover`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -214,8 +214,6 @@ user_state.assessment + user_state.goal
 | POST | `/api/milestones/{milestone_id}/seen` | Mark an unlocked milestone celebration as seen |
 | GET | `/api/user/export` | Download user_state as JSON backup |
 | POST | `/api/user/import` | Import user_state (validates, overwrites) |
-| POST | `/api/user/recovery-code` | Get or create recovery code (CLIMB-XXXX) |
-| POST | `/api/user/recover` | Recover account from recovery code |
 | GET | `/api/weekly-override/{week_start}` | Get weekly availability override |
 | PUT | `/api/weekly-override/{week_start}` | Save weekly availability override |
 | DELETE | `/api/weekly-override/{week_start}` | Delete weekly availability override |
@@ -256,10 +254,10 @@ user_state.assessment + user_state.goal
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (47):** 19 under `(main)` + 2 under `(guided)` (guided session, session-builder play) + 16 under `/onboarding` (index + 15 route dirs) + 2 auth (sign-in, sign-up) + 1 root dispatcher + `/assessment` + `/demo` + `/legal` + `/offline` + 2 dev-only (`/dev/tokens`, `/dev/today-states`). Recount verified against `find frontend/src/app -name page.tsx` (D269, 2026-08-02) — the previous breakdown summed to 36 and omitted the session-builder, body-part-picker, `/demo`, `/offline` and the dev pages.
+**Pages (46):** 19 under `(main)` + 2 under `(guided)` (guided session, session-builder play) + 15 under `/onboarding` (index + 14 route dirs) + 2 auth (sign-in, sign-up) + 1 root dispatcher + `/assessment` + `/demo` + `/legal` + `/offline` + 2 dev-only (`/dev/tokens`, `/dev/today-states`). Recount verified against `find frontend/src/app -name page.tsx` (D269, 2026-08-02; 47 → 46 in B320, which deleted `/onboarding/recover`) — the pre-D269 breakdown summed to 36 and omitted the session-builder, body-part-picker, `/demo`, `/offline` and the dev pages.
 
 **Entry-point routing (B300, `src/app/page.tsx`)** — the root `/` is a smart dispatcher, not a page:
-- **Signed-out** (cold ad/flyer visitor) → `/onboarding/welcome` (public marketing landing: hero + value props + "Start assessment" CTA + a visible "Sign in" link + "Recover with a code"). Before B300 it sent them to the bare `/sign-in` login wall — a bad ad landing.
+- **Signed-out** (cold ad/flyer visitor) → `/onboarding/welcome` (public marketing landing: hero + value props + "Start assessment" CTA + a visible "Sign in" link). Before B300 it sent them to the bare `/sign-in` login wall — a bad ad landing.
 - **Signed-in with a macrocycle** → `/today`.
 - **Signed-in, no macrocycle** → `/onboarding/welcome` (→ wizard).
 - **Offline** → last known destination from localStorage (A245), never a forced re-onboard.
@@ -290,7 +288,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/demo` — Zero-context acquisition landing (no Clerk needed by the page itself — see `A-CLERK-PROVIDER-SCOPE`)
 - `/offline` — Service-worker offline fallback
 - `/dev/tokens`, `/dev/today-states` — Dev-only harnesses (design tokens, `/today` state matrix)
-- `/onboarding/*` — 15 route dirs. **The wizard proper is 12 steps** (`ONBOARDING_STEPS`: profile, experience, discipline, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review). Outside that list: `welcome` (public landing), `install` and `start-week` (run *after* a plan exists, gated), and `recover`. ⚠️ `recover` is currently a 12-line stub that redirects to `/sign-in` — the welcome page still advertises "Recover with a code" and the backend endpoints are still live, so the flow dead-ends (roadmap: `WELCOME-RECOVER-DEAD-END`)
+- `/onboarding/*` — 14 route dirs. **The wizard proper is 12 steps** (`ONBOARDING_STEPS`: profile, experience, discipline, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review). Outside that list: `welcome` (the public landing) plus `install` and `start-week`, which run *after* a plan exists and stay gated. (B320 removed `recover`: recovery-by-code was a pre-Clerk relic — recovery is signing in with the original email.)
 
 ## Deployment
 

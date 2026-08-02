@@ -1638,3 +1638,26 @@ Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Stripe LIVE sin
 | ~~B40~~ | ~~Branch develop/main workflow~~ ✅ **superato da B196** (verificato [[D269]]): la policy branch `brief/<ID>-<slug>` + preview Vercel obbligatoria per ogni tocco a `frontend/` è in CLAUDE.md ed è applicata da un pre-commit hook. Un branch `develop` separato aggiungerebbe un livello che il flusso a preview già copre. | — | — |
 | ~~R160~~ | ~~Audio util dedup~~ ✅ **già fatto** (verificato [[D269]] 2026-08-02): `lib/beep.ts` esporta `beep/countdownTick/transitionBeep/longBeep/halfwayTick` e **tutti e sei** i consumatori lo importano (tabata, CircuitTimer, exercise-timer, MobilityFlowTimer, custom-exercise-step, custom-rest-timer). Nessuna copia locale rimasta. | B160 audit 2026-03-26 |
 
+---
+
+## §B320 — Completed phases (spostate dalla roadmap attiva, 2026-08-02)
+
+> Tabella di riferimento storico: nessun lavoro aperto. Viveva in `ROADMAP_CURRENT.md`
+> come «reference only».
+
+## Completed phases (reference only)
+
+Full details in `docs/ROADMAP_v2.md`.
+
+| Phase | Completed | Highlights |
+|-------|-----------|------------|
+| 0: Catalog | 2026-02 | 102 exercises, 29 sessions, vocabulary |
+| 1: Macrocycle engine | 2026-02 | assessment_v1, macrocycle_v1, planner_v2 |
+| 1.5: Post-E2E fixes | 2026-02 | 14 findings resolved |
+| 1.75: Session enrichment | 2026-02 | Load scores, test scheduling, ripple fix |
+| 2: Tracking + outdoor | 2026-03 | Outdoor logging, reports, quotes |
+| 2.5: Catalog audit | 2026-02 | 10 enrichment patches, grade_ref, working loads |
+| 3: UI (Next.js PWA) | 2026-02 | 14 routers, mobile-first dark PWA |
+| 3.1-3.2: Bug fixes + polish | 2026-02 | 22+ bugs, adaptive replanning, quick-add |
+| 4a: Multi-user + deploy | 2026-02 | UUID multi-user, Railway/Vercel |
+| 4b: Guided session + beta | 2026-03 | Step-by-step timer, settings editors, dirty-state |

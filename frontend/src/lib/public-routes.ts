@@ -28,10 +28,9 @@ export const PUBLIC_ROUTES = [
   "/demo(.*)",
   "/onboarding/welcome",
   ...ONBOARDING_WIZARD_ROUTES,
-  // A256 — linked from the public welcome page ("Lost access? Recover with a
-  // code"), so gating it behind auth sent exactly the people who cannot sign
-  // in to the sign-in page.
-  "/onboarding/recover",
+  // B320 — `/onboarding/recover` was public here (A256) because the welcome
+  // page linked to it. Both the link and the page are gone: recovery is
+  // signing in with the original email, which `/sign-in` already handles.
   // B292 — both were auth-protected and answered 404 to anyone not signed in.
   //
   // `/offline` is the service worker's navigation fallback: it can only ever be

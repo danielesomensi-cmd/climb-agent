@@ -89,12 +89,11 @@ export function WelcomeContent() {
               Already have an account? Sign in
             </button>
           </SignInButton>
-          <button
-            onClick={() => router.push("/onboarding/recover")}
-            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-          >
-            Lost access? Recover with a code
-          </button>
+          {/* B320 — a third link used to sit here, "Lost access? Recover with
+              a code". The code it referred to stopped existing when Clerk took
+              over recovery, so the link led to a page that only bounced to
+              /sign-in. Signing in with the original email IS the recovery
+              path, and that is the link above. */}
         </div>
       </div>
     </>

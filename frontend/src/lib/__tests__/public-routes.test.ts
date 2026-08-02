@@ -18,8 +18,13 @@ describe("PUBLIC_ROUTES", () => {
     }
   });
 
-  it("makes /onboarding/recover public (linked from the public welcome page)", () => {
-    expect(PUBLIC_ROUTES).toContain("/onboarding/recover");
+  /**
+   * B320 retired recovery-by-code. The route is gone, so listing it here would
+   * open a path that no longer exists — and re-adding it would be the first
+   * symptom of the dead feature coming back.
+   */
+  it("no longer exposes /onboarding/recover (B320: feature retired)", () => {
+    expect(PUBLIC_ROUTES).not.toContain("/onboarding/recover");
   });
 
   /**

@@ -467,23 +467,10 @@ def append_event(user_id: Optional[str], entry: Dict[str, Any]) -> None:
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
-# ---------------------------------------------------------------------------
-# Recovery codes (global, not per-user)
-# ---------------------------------------------------------------------------
-
-_CODES_PATH = DATA_DIR / "recovery_codes.json"
-
-
-def load_recovery_codes() -> Dict[str, Any]:
-    """Read recovery_codes.json.  Returns empty dict if missing."""
-    if _CODES_PATH.exists():
-        return json.loads(_CODES_PATH.read_text(encoding="utf-8"))
-    return {}
-
-
-def save_recovery_codes(codes: Dict[str, Any]) -> None:
-    """Write recovery_codes.json (atomic)."""
-    _atomic_write_text(_CODES_PATH, json.dumps(codes, ensure_ascii=False, indent=2) + "\n")
+# B320: the recovery-code reader/writer lived here. Both are gone with the
+# endpoints that were their only callers; `recovery_codes.json` on disk (and the
+# Supabase table) is left untouched — retiring the feature is not a reason to
+# delete data a user might still be identified by.
 
 
 # ---------------------------------------------------------------------------

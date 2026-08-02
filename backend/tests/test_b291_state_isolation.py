@@ -52,8 +52,14 @@ class TestWriteSinksAreRedirected:
     def test_users_dir_is_isolated(self):
         assert _is_isolated(storage_file.USERS_DIR)
 
-    def test_recovery_codes_path_is_isolated(self):
-        assert _is_isolated(storage_file._CODES_PATH)
+    def test_recovery_codes_path_is_gone(self):
+        """B320 retired the recovery-code feature — nothing writes that file.
+
+        Kept as an assertion rather than deleted: if `_CODES_PATH` ever comes
+        back, it comes back as an unisolated write sink into the real
+        ``backend/data/``, which is exactly the leak this module guards.
+        """
+        assert not hasattr(storage_file, "_CODES_PATH")
 
 
 class TestAnonymousWritesStayOutOfTheRepo:

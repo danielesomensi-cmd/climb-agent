@@ -13,7 +13,7 @@ import type { Persister, PersistedClient } from "@tanstack/react-query-persist-c
  * convention was `guided_session_${userId}_` where `userId` was the LITERAL
  * string "clerk" (never the real id). Harmless while it only held guided
  * progress on a single-user browser — but persisting `state` and `week` under
- * an unscoped key means that after an account switch or a recovery-code import
+ * an unscoped key means that after an account switch or a state import
  * user A's training plan renders for user B. Every persisted payload therefore
  * carries the real Clerk user id and is dropped on mismatch.
  */
