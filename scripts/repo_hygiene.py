@@ -5,7 +5,12 @@ import os
 import subprocess
 from pathlib import Path
 
-LAST_AUDIT_DATE = "2026-05-11"  # D237 full repo hygiene audit (docs/audit/D237_repo_hygiene_2026-05-11.md)
+# D269 (2026-08-02) — docs + roadmap audit: `docs/audit/D269_roadmap_docs_audit.md`.
+# Covered: roadmap pruning against the code, doc alignment (CLAUDE.md / PROJECT_BRIEF /
+# user guide), archival of closed audit reports. NOT covered: a full code review —
+# for that the last one is still D254 (2026-07-20).
+# Previous hygiene audit: D237, now at `_archive/docs/audit/D237_repo_hygiene_2026-05-11.md`.
+LAST_AUDIT_DATE = "2026-08-02"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"
@@ -17,6 +22,11 @@ ROOT_WHITELIST = {
     # AUTH_AUDIT.md: deliberately kept at root (auth reference for the external
     # Kilter-Up project); referenced by D236/D237 audit docs — do not relocate.
     "AUTH_AUDIT.md",
+    # AGENTS.md: instructions for non-Claude agents. Untracked on purpose
+    # (listed in .git/info/exclude), so it is never a repo-hygiene problem —
+    # but it does sit on disk, and flagging it every run trained us to ignore
+    # the warning (D269).
+    "AGENTS.md",
 }
 
 COMPLETED_MARKERS = {"CLOSED", "FINAL", "COMPLETED", "Done", "✅ Done"}

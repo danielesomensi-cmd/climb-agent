@@ -1439,3 +1439,202 @@ Eventi una tantum sbloccabili. Niente ricorrenza — solo "first time" celebrati
 | F2 | **Onboarding input validation — RESIDUO post-B293** (verificato 2026-07-21): weight 30-150 e height 120-220 ✅ chiusi da B293 (`_PROFILE_BOUNDS`, reject con 422). Restano: (a) age bound 1-99 lascia passare il caso audit "age=3" (B293 deliberato — decidere se stringere a ~10-80); (b) max_hang ≤ 3× BW soft-warn assente (3.5× BW satura ancora il radar). Il soft-warn richiede una superficie frontend (B293 è reject-only). | MEDIUM→LOW | P3 | B | S | Scope ridotto: solo age + max_hang warn. |
 | F9 | **Pass 3 test placement requires non-empty day** — ✅ **chiuso e mergiato** in `main` da [[B297]] (2026-07-22, preview Vercel approvata da Daniele). Two-pass: pass 1 replace-only invariato (settimane servibili → piano byte-identico), pass 2 piazza i test `required` non piazzati su giorni vuoti disponibili (spacing/cap/outdoor/pretrip rispettati; volume +1 by design), non piazzati → `skipped_tests` con `reason=no_placement_slot`. Frontend: card ambra dismissibile su `/week`. | MEDIUM | P2 | B | S | ✅ B297 |
 
+---
+
+## §D269 — Sezioni archiviate dalla roadmap attiva (2026-08-02)
+
+> Rimosse da `ROADMAP_CURRENT.md` dal brief D269 dopo verifica contro il codice. Non sono state
+> cancellate: il debito che risultava ancora reale è rimasto in roadmap (vedi il riassunto in
+> §"Priority 1.25–1.28"), qui c'è il testo integrale di ciò che risultava chiuso, scaduto o vuoto.
+
+### D269.1 — Audit Remediation P1.25 / P1.26 / P1.27 / P1.28 (testo integrale)
+
+## Priority 1.25 — Audit Remediation (D163 + D164)
+
+> Full reports: `docs/audit/D164/` (138 findings) and `_archive/docs/frontend_audit_D163.md` (67 findings)
+> Date: 2026-03-28
+> Combined: 205 findings (20 P1, 71 P2, 102 P3, 12 P4)
+
+### P2 highlights (not individually tracked — see full reports)
+
+**Engine (D164 Agents 3-5):** Phase duration sum mismatch for 9-11 week macrocycles (P2), deload weights sum 0.40 not 1.0 (P2), `move_session` doesn't validate spacing (P2), `_reconcile()` enforces finger but not hard-day spacing (P2), streak field saved but unused in multiplier (P2).
+
+**Frontend (D164 Agent 1 + D163):** PHASE_LABELS duplicated 4 files, `window.location.href` instead of router.push, console.warn/error in prod, eslint-disable on hooks deps, hardcoded email, session-card 1081 lines, tap targets <44px (6 instances), missing aria-labels (5 instances) → partially covered by B165c, rest deferred to R141/R144/R145.
+
+**Catalog (D164 Agents 7-8):** 10 campus exercises use non-canonical `age_under_16` contraindication, `easy_climbing_deload` legacy schema, `deload_recovery` missing fields, 8 orphan templates, 11 generic placeholder video URLs → covered by B165e.
+
+**Docs (D164 Agent 6):** Intent counts wrong in CLAUDE.md (13+3 vs actual 15+4), `closed_loop_v1.py` filename stale, session "active" label mismatch in sync_status.py, `grip_transition` missing from vocabulary → vocabulary fix in B165a, rest are P2 doc fixes (standalone).
+
+**API contract (D164 Agent 9):** `POST /api/outdoor/convert-slot` response shape mismatch.
+
+**Test coverage (D164 Agent 10):** 9 API endpoints lack integration tests, no full-pipeline E2E test (R150), `cluster_utils` 5/6 functions untested, test fixtures duplicated inline.
+
+### P3 items (102 total) — see full reports, not individually tracked in roadmap
+
+---
+
+## Priority 1.26 — Audit Remediation (D170 + D172)
+
+> Full breakdown: tracked inline in this roadmap (see P1.26 priority list below). The file `D172_findings_tracker.md` was planned but never created.
+> Audits: D170 (gym_id propagation, 24 findings, 2026-03-31), D172 (all other fields: session_id / template_id / equipment / slot / phase / API validation, 25 findings, 2026-03-31)
+> Combined: 49 findings — 13 fixed in B173, 2 P1 hotfixes pending (B174/B175), 21 deferred to B176
+
+### Post-launch (P2)
+
+| ID | Title | Type | Effort | Notes |
+|----|-------|------|--------|-------|
+| **B176** | D172 consolidated remediation — 21 remaining findings (P2+P3) | B | L | 5 groups: type safety (D172-05,11,12), equipment validation (D172-07,08,22), event/input validation (D172-09,13,14,25), logging (D172-10,15,17-20,23,24), structural/deferred (D172-16,21). Supabase migration already complete — no longer a prerequisite. |
+
+### Deferred from B173 (need API refactoring)
+
+| Title | Priority | Effort | Notes |
+|-------|----------|--------|-------|
+| `apply_day_add` doesn't receive `gyms` parameter (D170 P1-04) | P3 | M | Needs signature refactoring. Frontend fix in B173 covers the main user-facing path. |
+
+---
+
+## Priority 1.27 — Audit Remediation (D211 / D-TESTUSER-VERIFY residuals)
+
+> Origin: `docs/audit/D-TESTUSER-VERIFY_report.md` §5 (2026-04-19)
+> F1 (HIGH) + F3 (HIGH) closed by D214 (`assessment.tests_source` sidecar). Residuals below parked post-launch.
+
+### Post-launch (P2/P3)
+
+| ID | Title | Severity | Priority | Type | Effort | Notes |
+|----|-------|----------|----------|------|--------|-------|
+| F4 | **Stale cached week plan across deploys** — no regeneration trigger on deploy; users onboarded within ~5 min of a push keep pre-push output. | LOW | P3 | B | XS | Accept (deploy-window artifact). Users can force-regenerate via Settings. Document in user guide. |
+| F5 | **`goal.primary_weakness`/`secondary_weakness` are absent** — actual storage at `assessment.self_eval.*`. Consumers reading `goal.*` see `None`. | LOW | P3 | D+B | XS | Grep consumers; if any read `goal.*` for weaknesses, fix read site (not write). Spec-drift only. |
+| F6 | **`macrocycle.phases[].weeks` is `null`** — consumers iterating `phases[].weeks` see `null`; sum via `start_week` deltas works. | LOW | P3 | D+B | XS | Audit consumers; drop the field from schema if all compute from `start_week` deltas, else populate at generation. |
+| F7 | **`goal.deadline` empty while `total_weeks=12`** — onboarding writes `deadline=""` when deadline is derived from `total_weeks`. | LOW | P3 | B | XS | Cosmetic. Compute ISO date from `total_weeks + start_date`, or drop the field. |
+| F8 | **`assessment.tests.last_test_date = 2026-04-16`** (3 days before macrocycle start) — writer not traced in D211. | COSMETIC | P3 | D | XS | Grep writer site; likely legacy path in `progression_v1.py`. |
+
+---
+
+## Priority 1.28 — Audit Remediation (D236)
+
+> Tracking docs: `docs/audit/D236/00_remediation_plan.md` (piano completo, 6 Group), `docs/audit/D236/00_findings.md` (47 finding deduplicati su 78 raw).
+> Audit: D236 read-only cleanup, completato 2026-05-09 (47 findings: 6 P0, 22 P1, 13 P2, 6 P3).
+> Group 0 chiuso da B-SYNC-FIX (2026-05-10). Group 1-6 aperti come C-brief indipendenti.
+>
+> **Ordine raccomandato**: Group 3 → Group 1 → Group 6 → Group 4 → Group 2 → Group 5.
+> Razionale: Group 3 fixa code-ref errati in CLAUDE.md (F-15 closed_loop path, F-16 planner_v1→v2) — file letto da ogni istanza Claude Code, alta probabilità di morsicare in brief macrocycle/engine. Group 1 chiude P0 Stripe/pricing lies in PROJECT_BRIEF e ROADMAP. Group 6 sblocca KB anchors per D33/CUE-02. Resto è cleanup.
+
+| Group | Title | Type | Effort | Status | Notes |
+|---|---|---|---|---|---|
+
+---
+
+### D269.2 — Go-to-Market Sprint: log di luglio, timeline di aprile, raccomandazioni del Council
+
+## Priority 1.75 — Go-to-Market Sprint
+
+> Origin: Strategic Advisory Council (2× runs, 5 advisors each, 2026-04-01)
+> Key insight: distribution + onboarding friction are the real blockers, not features.
+> Constraint: solo founder, zero marketing budget, feature freeze for 30 days.
+> Stripe status: LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
+
+### GTM log — re-lancio climbagent.app (2026-07-21, post-A248/A249/A250/A251)
+
+**✅ FATTO (2026-07-21):**
+- **Email win-back INVIATE** (manuali, Gmail): 8 destinatari — Christie (personalizzata,
+  la più ingaggiata), Cesar + Arthur (con nota Forgot-password), David + Edoardo (in
+  italiano), Tabitha, Paolo, Agustin, Rowene (`woween@gmail.com`). Contenuto: trial
+  attivo fino al **5 agosto** senza carta (A251), pitch AI coach, mobility/stretching,
+  nuovo dominio + reinstallazione PWA, leva Founding Climber $4.99.
+- **Welcome email INVIATA** al nuovo utente organico (`xbox.live.marionumber0001@`,
+  iscritto 21/07, trial fino al 5/08).
+- **Reddit modmail pre-approvazione** (policy value-first): r/indoorbouldering +
+  r/bouldering — chiesta approvazione mod prima di postare, link
+  `climbagent.app/onboarding/welcome`, offerto ai mod il trial gratuito per feedback.
+- Esclusi come da piano: arnaud + pippin (gestiti a parte).
+
+**⏳ PENDING:**
+- [ ] Attendere risposta mod r/indoorbouldering + r/bouldering → postare dopo approvazione
+- [ ] Domani (22/07): modmail r/climbharder (variante honest prior-removal, già in bozza);
+      valutare r/griptraining; post diretti r/ClaudeAI + r/SideProject
+- [ ] Email activation-nudge a Donato (`odlan3@`) — NON ancora inviata
+- [ ] Monitorare le conversioni win-back prima della scadenza trial del **5 agosto**
+      (dashboard admin: chi rientra, chi completa sessioni, chi aggiunge la carta)
+
+**✅ FATTO (2026-07-23):**
+- **r/indoorbouldering** — postato intro climb-agent nel thread mensile *Simple
+  Questions* (canale mod-approved, nessun post dedicato consentito). Link:
+  `climbagent.app`. Angle: training planner + coach chat, focus lead dichiarato.
+  Pricing non menzionato nel post.
+- **r/bouldering** — outreach rifiutato. **Canale chiuso, non riprovare.**
+
+**⏳ PENDING (2026-07-23):**
+- [ ] Monitorare le risposte ai commenti su r/indoorbouldering → rispondere entro 24h
+- [ ] Canned reply pronta per la domanda "free or paid?"
+
+### Timeline
+
+- **Week 0 (archived, ~2026-04-01):** Beta testers using the app (4-5 users). Founder dry-run. Stripe LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
+- **Week 1-2:** Collect beta feedback + fix onboarding blockers from dry-run.
+- **Week 2-3:** Pricing decision → activate Stripe live → soft launch on r/climbharder.
+- **Week 3-6:** Feature freeze. Only fix bugs from paying/trialing users. Measure.
+
+### Phase 0 — Onboarding dry-run + beta feedback (week 0-2)
+
+| ID | Title | Type | Effort | Status | Notes |
+|----|-------|------|--------|--------|-------|
+| GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Cesar, Paolo, Agustin on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay $9.99/mo Standard (or $4.99/mo as a Founding Climber). |
+
+### Phase 1 — Pricing + Stripe go-live (week 2-3)
+
+| ID | Title | Type | Effort | Status | Notes |
+|----|-------|------|--------|--------|-------|
+| B205 | **Verify cancel_at_period_end grace period** | B | XS-S | 🔁 Rolled into B226 | Targeted test added inside B226 (`stripe_webhook.py` is opened once for fail-loud + customer.deleted + cancel_at_period_end). Marginal cost. |
+| GTM-STRIPE-TAX | **Stripe Tax registration** | Config | S | 🟡 Deferred | Reactivate when **either** condition met: (a) 10+ paying EU customers, OR (b) €5k cumulative EU revenue, OR (c) approaching €10k OSS threshold. Below these, IT domestic VAT rules apply (regime forfettario or ordinario per Daniele's setup), Stripe Tax is scope creep. When reactivating: 4 dashboard steps + 4-line code change in `subscription.py:108-124` (`automatic_tax: {enabled: true}` + `tax_id_collection` + `billing_address_collection: 'required'`). Decide now: prices $9.99/$4.99 are **net** (exclusive — VAT added on top at activation) — document this so future activation is consistent. |
+| GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
+| B228 | **Frontend 402 global handler in `api.ts`** | B | S | Open P2 | Audit F4. Centralize 402 → router.push('/subscribe') + sonner toast. Frontend branch + Vercel preview. After both P1. |
+
+### Phase 2 — Measure + iterate (week 3-6)
+
+| ID | Title | Type | Effort | Status | Notes |
+|----|-------|------|--------|--------|-------|
+| GTM-06 | **Feature freeze** — zero new features for 30 days, only fix bugs reported by paying/trialing users | — | — | Open | Starts when first non-beta user signs up. |
+| GTM-07 | **Success metric** — 3-5 paying users by end of April 2026 | — | — | Open | 0 paying after 30 days → reassess PMF. 3+ paying → validate and continue. |
+| D230 | **Frontend lint hygiene — 30 errors / 38 warnings** | D | M | Open P3 | Audit F5. Mostly `react-hooks/set-state-in-effect` from React Compiler in Next 16. CI does not enforce, but debt accumulating. One afternoon, branch + preview. After GTM stability window. |
+
+### Council recommendations (reference)
+
+**Convergence across both runs (high confidence):**
+- Launch NOW — Supabase migration is not a blocker (JSONB handles ~260KB/year/user)
+- r/climbharder is the #1 acquisition channel
+- Zero new features for 30 days post-launch
+- Onboarding is the critical blind spot — no advisor caught it initially, both chairmen flagged it
+- Don't build Kilter/Capacitor/LLM Coach before validating willingness to pay
+
+**Divergence (Daniele decides after beta feedback):**
+- Price: €14.99/mo (Run 1) vs €9.99/mo Founding Climber lock-in (Run 2)
+- Synthesis: €14.99 standard + €9.99 Founding Climber for first 20-30 users
+
+---
+
+### D269.3 — Priority 2: Auth + Payments + DB (tutti ✅ da mesi)
+
+## Priority 2 — Auth + Payments + DB (go-to-market blockers)
+
+Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Stripe LIVE since 2026-04-16.
+
+- **Supabase migration** ✅ — JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions)
+- **A159 — Stripe subscriptions** ✅ — **LIVE** (sk_live keys on Railway + Vercel). Two-tier pricing ($9.99 Standard + $4.99 Founding Climber). B202 fail-closed guard active. B226 hardening done: fail-loud (500 → Stripe retries), LRU event dedup, customer.deleted handled. No known gaps.
+  - Backend: `subscription_guard.py`, 4 endpoints (status/checkout/portal/webhook), guards on 10 POST endpoints
+  - Frontend: `useSubscription()` hook, `TrialBanner`, `/subscribe` page, settings portal link, guided session gate
+  - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)
+  - SQL migration: `_archive/docs/migrations/subscriptions_table.sql` — ✅ run in Supabase (confirmed 2026-03-31)
+
+### Archived from ROADMAP_CURRENT.md — 2026-08-02
+
+- **B304 — Tooltip viewport clamping + presentazione target-relative degli assi** ✅ (frontend, branch `brief/B304-tooltip-axis-relabel` → preview Vercel; worktree isolato). Chiude [[D260]] Scope A + la metà **presentazionale** di Scope B. **Part 1 (Scope A):** il popover ⓘ del radar (`AxisTooltip` in `radar-chart.tsx`) era un box a larghezza fissa `w-72` centrato sulla cella con `translateX(-50%)` senza collision detection → gli assi in colonna sinistra sforavano il bordo sinistro sotto ~400px (iPhone). Ora clampa orizzontalmente al viewport (shift + `env(safe-area-inset-*)`, margine ≥12px) e **flippa sopra** la bottom tab bar quando servirebbe; `max-width: min(288px, 100vw-24px)`. La matematica di posizionamento è estratta in `lib/radarTooltip.ts` come funzioni pure con unit test a 320/390/768/1280 (il posizionamento DOM misura poi muta lo stile del nodo direttamente — nessun setState-in-effect). Nessuna libreria di posizionamento aggiunta (unico consumer: `/plan`, verificato). **Part 2 (Scope B, solo presentazione):** sottotitolo del radar **"Readiness for {target}"**, badge **"✓ At target"** al posto del 100 nudo sugli assi saturi (geometria del grafico invariata), e le 5 copy dei tooltip riscritte per rendere **esplicito** il framing target-relative ("Scored against what {target} typically demands — 100 means you're already there") + low-line riformulata come **roadmap** invece di verdetto. **Zero** modifiche a engine/formule/anchor/score/DB; solo frontend; sessioni passate intatte (nessun percorso di rigenerazione toccato). Test: +26 frontend (`radar-tooltip.test.ts`: clamping, flip, interpolazione grade, budget 300 char, copertura 5 assi lead+boulder). Suite frontend 34 file / 386 test verdi; tsc + eslint + `next build` OK.
+- **A256 — Wizard di onboarding pubblico: il muro della registrazione si sposta a valle** ✅ (frontend, branch `brief/A256-public-onboarding-wizard` → preview Vercel; worktree isolato). **Problema:** `/onboarding/welcome` era pubblico ma lo **step 1 di 12** (`/onboarding/profile`) no, e il CTA "Start assessment" era un `<SignUpButton>` → il visitatore freddo da flyer/Reddit doveva creare un account **prima di vedere un solo output del prodotto**. **Fix:** i 12 step del wizard + `/onboarding/recover` (linkato dalla welcome pubblica) diventano pubblici, derivati da `ONBOARDING_STEPS` così un nuovo step nasce pubblico; l'account viene chiesto **sul CTA finale in `/review`**, dopo che l'utente ha visto il proprio riepilogo ("salva questo", non "iscriviti per iniziare"). Ritorno post-signup con **auto-submit**: l'intent (`generate`|`test`) viaggia in `?complete=` nel `redirect_url` (sopravvive al full reload di Clerk), guardie su `authLoaded`/`isSignedIn`/`loaded`/`profileProblems` + ref anti-doppio-invio + `replaceState` per non ri-sparare al reload. `start-week` e `install` restano gated (girano a piano esistente). **Zero perdita dati:** B293 aveva già predisposto tutto (bozza `_anon` in localStorage, nessuna `getState()` da anonimo, adozione anon→user in `loadDraft`); `SessionScopeGuard` non tocca le bozze onboarding; UTM già in localStorage → attribution intatta; `/api/onboarding/defaults` (unico endpoint chiamato dal wizard, da `/locations`) è senza `Depends(get_user_id)` → 200 da anonimo, verificato in prod. **Leak chiuso nello stesso brief:** `clearOnboardingDraft()` puliva solo `_user_XXX` e lasciava `_anon` orfano sul device — innocuo finché nessuno poteva produrne una, un leak dal momento in cui il wizard diventa pubblico (device condiviso → il visitatore successivo si ritrovava precompilati i dati del precedente). Test: +3 frontend (`onboarding-draft-scope.test.ts`, verificato che fallisce senza il fix) + `public-routes.test.ts` riscritto (l'asserzione B292 "solo /welcome è pubblico" era diventata falsa per design). Frontend 355 → **360**. Backend invariato (2815).
+- **B303 — Onboarding disponibilità: niente selettore "Which gym?" con una sola palestra** ✅ (frontend, branch `brief/B303-gym-selector-single` → preview Vercel). In `availability/page.tsx` il dropdown gym compariva con `gyms.length > 0`, quindi anche con **una sola** palestra mostrava un select con un'unica opzione — rumore inutile. Ora condizionato a `gyms.length > 1`. Nessuna perdita di funzione: con una gym il planner usa già quella di default (`gym_id` undefined → `default_gym_id`). Modifica di una riga, zero backend.
+- **B302 — Ladder gradi lead priva di 5a+/5b+/5c+: assessment/piano crashavano per i principianti** ✅ (backend-only, tocca `assessment_v1` → feeds `macrocycle_v1`: Fase 1 analisi + OK Daniele). **Bug:** il picker frontend (`LEAD_GRADES`) offre `5a+/5b+/5c+` ma `assessment_v1.GRADE_ORDER` li saltava → `grade_index('5c+')` sollevava *"Unknown grade"* → `compute_assessment_profile` crashava → nessun profilo → nessun piano. **Scoperto su `daniele.somensi@ferrero.com`** (max 5a+, target 5c+, `profile: null`) ma sistemico: qualsiasi principiante lead che seleziona quei gradi non poteva generare il piano. **Fix:** inseriti `5a+/5b+/5c+` in `GRADE_ORDER`. Blast radius verificato: tutti i consumer usano gli indici **relativamente** (`grade_gap`, ranking milestone, distanze) tranne il proxy euristico `(current_idx/target_idx)×axis_max` di assessment — shift atteso di ~1 punto su utenti senza test (8a+/8b: 16/17→19/20; `pulling_strength` 61→62, test aggiornato). **outdoor_log reso behavior-preserving:** `_GRADE_WEIGHT` ancorato allo spacing pre-B302 (i + del grado 5 ereditano il peso base, i 6a+ invariati) → il load outdoor storico non si muove; bonus, un 5c+ outdoor non pesa più 10 (era `_UNKNOWN`, mis-pesato come un 6c). `BOULDER_GRADE_ORDER` allineato al picker (5A+/5B+/5C+). `BOULDER_TO_LEAD` già completo (boulder non crashava). Test: +10 (`test_b302_grade_ladder.py`). Suite 2815 → **2825**. ferrero si sblocca ricalcolando assessment → rigenerando.
+- **A255 — Onboarding: equipment di default preselezionato per home e nuove palestre** ✅ (frontend, branch `brief/A255-onboarding-equipment-defaults` → preview Vercel). **Root cause di Mario:** in `locations/page.tsx` una nuova gym nasceva con `equipment: []` e l'attivazione "train at home" non preselezionava nulla → l'utente doveva spuntare tutto a mano e chi dimenticava l'hangboard perdeva i test dita + le sessioni forza in silenzio (Radium finita con solo `gym_boulder`). **Fix:** `addGym` ora parte con `["hangboard", "pullup_bar", "weight"]` preselezionati; `toggleHomeEnabled` semina `["hangboard", "pullup_bar"]` alla prima attivazione (solo se `home` è ancora vuoto → non sovrascrive scelte deliberate al re-toggle). La **superficie di arrampicata** (gym_boulder/gym_routes) resta a carico dell'utente perché è disciplina-specifica (il gate `locationBlockers` la richiede comunque). Combinato con [[B301]], un tag `weight` di default sblocca subito la forza. Nessun tocco al backend/planner. Verificato su preview.
+- **B301 — `weight` ≡ `dumbbell`: le sessioni di forza sono raggiungibili con qualsiasi peso libero** ✅ (backend-only, STOP-gate `equipment_utils`/pipeline planning: Fase 1 analisi + OK Daniele → Opzione A). **Bug:** l'espansione equipment in `equipment_utils.expand_equipment` era **monodirezionale** — `dumbbell/kettlebell/barbell → weight`, ma chi spuntava solo "Weight plates" (`weight`) non otteneva mai `dumbbell`, e le **2 sole sessioni** gated su `["dumbbell"]` (`heavy_conditioning_gym`, `lower_body_gym`) restavano irraggiungibili. **Fix (Opzione A):** `WEIGHT_FAMILY = {weight, dumbbell, kettlebell, barbell}`; la presenza di uno qualsiasi implica **sia `weight` sia `dumbbell`** → plates-only / barbell-only / kettlebell-only sbloccano la forza. **Blast radius minimo:** 0 esercizi filtrano su dumbbell/weight (gating solo a livello sessione), quindi nessun rischio di sessione svuotata in resolve. Choke point unico condiviso da planner/resolver/replanner/body_part_picker → fix uniforme. Regressione: un utente con `dumbbell` produce output byte-identico (aggiunge `dumbbell` che già aveva → no-op). Test: +8 (`test_b301_weight_dumbbell_equivalence.py`), B159 invariati. Suite 2807 → **2815**. **Scoperto durante l'analisi utente di Mario** (palestra Radium registrata a mano con solo `gym_boulder`).
+- **B300 — La root manda i visitatori sloggati alla welcome landing, non al login wall** ✅ (frontend, branch `brief/B300-root-welcome-landing` → preview Vercel → OK Daniele → merge in `main`; deploy prod forzato via API perché il webhook Vercel non era scattato sulla push). **Problema di funnel:** un visitatore freddo da pubblicità/QR che digitava `climbagent.app` sbatteva su `/sign-in` (form di login nudo, zero pitch) invece che sulla pagina che vende il prodotto. **Fix chirurgico (1 riga in `src/app/page.tsx`):** il ramo "non loggato" della root passa da `/sign-in` a `/onboarding/welcome` (la landing pubblica: hero "Periodized training" + value props + CTA "Start assessment"). Nessuna regressione — utente loggato resta dritto a `/today` (nessun doppio hop), logica offline `readLastDestination` (A245) intatta. **Secondo commit:** aggiunto link **"Already have an account? Sign in"** ben visibile (colore primary, sotto la CTA) con Clerk `SignInButton` che dopo il login torna alla root → smista al piano; il recover declassato a "Lost access? Recover with a code". **Doc aggiornata:** `docs/attribution_utm_convention.md` (la vecchia regola "MAI linkare la root / → /sign-in" era ora superata) + sezione "Entry-point routing" in `CLAUDE.md`. Nessun test nuovo (routing puro, verificato su prod da Daniele: sloggato→welcome, Sign in→/today, loggato→/today).
+| Bechtel — Climb Strong: Drills Manual (pp. 31-91) | ✅ **Integrato** (C240 + C255 + C256, chiuso 2026-07-13): 23 drill `tech_*` nel catalogo | Topic 08 drills |
+| ~~B40~~ | ~~Branch develop/main workflow~~ ✅ **superato da B196** (verificato [[D269]]): la policy branch `brief/<ID>-<slug>` + preview Vercel obbligatoria per ogni tocco a `frontend/` è in CLAUDE.md ed è applicata da un pre-commit hook. Un branch `develop` separato aggiungerebbe un livello che il flusso a preview già copre. | — | — |
+| ~~R160~~ | ~~Audio util dedup~~ ✅ **già fatto** (verificato [[D269]] 2026-08-02): `lib/beep.ts` esporta `beep/countdownTick/transitionBeep/longBeep/halfwayTick` e **tutti e sei** i consumatori lo importano (tabata, CircuitTimer, exercise-timer, MobilityFlowTimer, custom-exercise-step, custom-rest-timer). Nessuna copia locale rimasta. | B160 audit 2026-03-26 |
+

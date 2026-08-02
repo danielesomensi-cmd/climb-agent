@@ -412,6 +412,16 @@ The **Stretching & Mobility** card in Free Sessions works like the Core Circuit:
 - **Forearm protection** — if you still have a climbing session planned today, forearm-flexor stretches are automatically left out of the flow (static finger-flexor stretching can reduce grip strength for up to an hour). The setup screen tells you what was skipped and why.
 - **No training load** — mobility sessions are logged in your history but always count as zero load: stretching is recovery, and it will never inflate your weekly load numbers.
 
+### Session Builder
+
+Reached from **Free Sessions**, the Session Builder is for a workout you want to keep and repeat — as opposed to Body Part Training, which generates one on the spot and forgets it.
+
+- **Build it** — give the session a name, then pick exercises from the full catalog (searchable and filterable) and set sets, reps and rest for each. Warm-up and cool-down blocks are resolved for you into concrete exercises, so you don't have to design them.
+- **Save it** — your custom sessions are stored on your account and listed on the builder's home screen. Open one to view it read-only, edit it, or delete it.
+- **Run it** — a saved session plays back in the same guided runner as a planned session, with the timer, the load fields and the per-exercise cues.
+
+Custom sessions sit **outside the macrocycle**: running one logs the work and updates your working loads, but it does not feed the closed loop or alter your planned progression.
+
 ---
 
 ## 12. Confirming Next Week's Availability
@@ -575,11 +585,11 @@ If this happens, give honest feedback ("Hard" / "Very Hard") and the closed-loop
 
 ## 18. Backup & Recovery
 
-### Recovery Code
+### Getting back in
 
-Your account has a recovery code (format: `CLIMB-XXXX-XXXX`). Find it in **Settings**. **Save it somewhere safe** — if you lose access to the app (e.g., iOS PWA reinstall clears data), this code is how you get your data back.
+Your account is tied to the email address you signed up with, and your training data lives on the server — not on the phone. If you reinstall the app, switch device, or the iOS PWA clears its local data, **sign in with the same email** and everything is there.
 
-To recover: open the app → on the onboarding screen, tap "Recover existing account" → enter your code.
+> **Note (2026-08-02):** earlier versions of this guide described a `CLIMB-XXXX-XXXX` recovery code stored in Settings. That flow was replaced by email sign-in and the code is no longer shown anywhere in the app. The "Recover with a code" link still visible on the welcome screen is a leftover and currently just sends you to the sign-in page — it is tracked as a bug (`WELCOME-RECOVER-DEAD-END`). If you are locked out, use sign-in with your original email, or the export file below.
 
 ### Export / Import
 
