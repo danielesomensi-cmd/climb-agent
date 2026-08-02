@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-07-20 (A239 — milestone system. Piano gamification: A-GAMIFY-00 approvato → A234 daily tips, A235 phase progress, A236 heatmap, A239 milestones. Restano A-GAMIFY-04 (opzionale) e A-DAILYTIP-V2.)
+> Last updated: 2026-08-02 ([[D269]] — potatura e riallineamento: quattro sezioni di Audit Remediation verificate contro il codice e chiuse, GTM riscritto sullo stato reale del funnel, tre finding nuovi in Open. Archiviato in `ROADMAP_v2.md` §D269.)
 > Archived history: `docs/ROADMAP_v2.md`
 > Project status: `PROJECT_BRIEF.md`
 
@@ -12,7 +12,9 @@
 
 **COACH-TRUNCATION-RESIDUAL — 2 risposte ancora tagliate senza raggiungere il cap (da [[D266]], 2026-07-30)** 🟡 — Q-16 (taper, 1.962 char) e Q-19 (30 minuti, 715 char) si interrompono a metà parola, ma **nessun warning `max_tokens` compare nei log**, quindi il cap a 2048 non è stato raggiunto. Ipotesi da verificare: il modello emette un blocco `tool_use` (weather) dopo il testo e `_final_text()` restituisce solo la parte testuale, facendola sembrare tagliata. Da chiudere registrando `stop_reason` nel raw del runner — a quel punto la causa è visibile in un solo run.
 
-**~~COACH-FOURTH-WALL~~** ✅ **Chiuso da [[B315]]** (2026-07-31, backend-only). In Q-08 il coach aveva risposto a un utente che «**Daniele** possiede i materiali fisici, estrazione foto in corso»: il testo veniva pari pari da un blocco `v1.0 coverage gap` di `L3/06_technique_movement.md`. Quei blocchi esistono perché il coach conosca i **limiti** del proprio sapere, non perché li reciti — ma ogni file del KB finisce nel system prompt, quindi un nome scritto lì è un nome che il modello può ripetere. **Fix su due livelli:** (1) i dati — rimossi il nome e il processo di ingestione da `06_technique_movement`, e da `10_injuries_fingers` + `11_injuries_shoulder_elbow` (li ha trovati il test, non io: dicevano «physical source not yet acquired»); neutralizzate anche le due istruzioni interne «surface to Daniele» in `L0` e `L1`, ora «invita l'utente a mandarlo dal form di feedback». (2) la regola — nuova voce in `L1 §7 What the coach never does`: mai nominare chi costruisce l'app, mai descrivere possesso delle fonti, ingestione o stato «pending»; quando manca qualcosa la risposta intera è *«non è ancora nel motore»*. **Verificato end-to-end**: rigirata Q-08 con il coach reale, la risposta ora è «quei drill non sono nel motore al momento» e nient'altro (Q-08 passa da 1/2 a 2/2 → **53/56**). Test: `test_b315_coach_fourth_wall.py` (7) — nomi del team e frasi di processo vietati in **ogni** file leggibile dal coach, più la presenza della regola in L1.
+**WELCOME-RECOVER-DEAD-END — «Recover with a code» porta al login, non al recupero (da [[D269]], 2026-08-02)** 🔴 P2, **bug utente reale sulla landing pubblica**. `/onboarding/welcome` mostra *«Lost access? Recover with a code»* (`welcome-content.tsx:96`) e naviga a `/onboarding/recover` — che è uno **stub di 12 righe**: `router.replace("/sign-in")`, nient'altro. Chi ha perso l'accesso e ha in mano un codice `CLIMB-XXXX` atterra su una schermata di login che il codice non lo accetta, e non ha nessun altro percorso. Il backend è ancora **vivo e funzionante** (`POST /api/user/recovery-code` + `/api/user/recover`, `user.py:122/154`), ma il client non li chiama più: `api.ts:718` dice *«Recovery code functions removed — Clerk handles account recovery»*. Cioè metà del flusso è stata smontata lasciando in piedi la promessa. **Non è solo un bottone:** il codice non è più mostrato **da nessuna parte** — zero occorrenze di "recovery" in tutta la UI di Settings, dove la guida diceva di trovarlo. E la guida lo diceva davvero: `user_guide_v1.md` §18 prometteva *«Your account has a recovery code… Find it in Settings… tap "Recover existing account" → enter your code»*, cioè il percorso di backup ufficiale per il caso «il PWA iOS ha cancellato i dati locali». Tre pezzi (welcome, Settings, guida) descrivevano una feature che ne aveva uno solo funzionante — il backend. **Sanato in D269 il pezzo documentale** (la guida ora dice la verità: si rientra con l'email, il codice non esiste più, e il link residuo è segnalato come bug). **Resta da decidere il codice:** (a) ricablare la pagina sugli endpoint che già esistono, oppure (b) togliere il bottone dalla welcome e ritirare i due endpoint. Da non lasciare com'è: è l'unica CTA rotta su una pagina pensata per il traffico freddo, e va chiusa **prima** del post r/climbharder ([[GTM-05]]).
+
+**~~DOC-USERGUIDE-SESSION-BUILDER~~** ✅ **chiuso in [[D269]]** (2026-08-02). Il **Session Builder** (4 pagine, 7 endpoint `/api/custom-session/*`) non aveva una sezione nella guida utente: compariva solo di sfuggita nell'elenco dei tip «Did you know?». Aggiunta la sezione in §11, accanto a Body Part Training e Stretching. *(Il body-part picker invece era già documentato — l'avevo cercato col trattino, la guida lo chiama «Body Part Training».)*
 
 **COACH-PE-4X4-DRIFT — Q-06 perde il rifiuto del 4×4 (da [[D266]], 2026-07-30)** 🟡 minore — il primo run rifiutava esplicitamente il 4×4 in favore degli intervalli a intensità variata (D47); il re-run non lo menziona più, pur avendo `04_power_endurance` in contesto. Non è retrieval, è deriva del modello: se si ripete al prossimo run, vale un rinforzo nel file L3 (spostare D47 in cima alla sezione, o renderlo una riga «cosa NON prescrivere»).
 
@@ -64,6 +66,8 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ## Recently closed (2026-08-01)
 
+- **D269 — Potatura della roadmap e riallineamento documentale** ✅ (audit; scrive solo documentazione, nessuna riga di codice toccata — report: `docs/audit/D269_roadmap_docs_audit.md`). **Metodo:** nessun finding creduto sulla parola — ogni voce aperta verificata contro codice, storia git e stato reale. **Risultato:** quattro sezioni di Audit Remediation (P1.25/1.26/1.27/1.28) erano debito **già pagato**: B176 risultava *Open, effort L, 21 finding* mentre stava in git in 4 commit `fix(B176)` che li nominano uno per uno; i finding D164 su `PHASE_LABELS`, `age_under_16` e i video placeholder hanno 0 occorrenze; i residui D211 non reggono più (**F6** cita un campo `phases[].weeks` che nello schema non esiste — ci sono `duration_weeks` + `start_week`; **F7** dà `goal.deadline` vuoto, oggi è popolato); la tabella di D236 era **vuota**. Chiusi anche R160 (`lib/beep.ts` è già il modulo condiviso, 6 consumatori su 6) e B40 (superato da B196). **Due audit citati per anni non esistono nel repo:** D163 fu cancellato da A198 con la motivazione di archiviarlo (vive solo in `git show be7ec67`) e di D172 non c'è mai stato un report — quindi D172-16/21 non sono azionabili per ID. **Un bug vero, trovato per strada:** [[WELCOME-RECOVER-DEAD-END]] — la landing pubblica promette «Recover with a code», la guida utente spiegava dove trovarlo in Settings, e la UI di Settings non lo mostra da nessuna parte mentre la pagina di recupero è uno stub che rimanda al login; i due endpoint backend sono ancora vivi. Sanato subito il pezzo documentale (la guida ora dice la verità), il codice resta da decidere. **GTM riscritto sui numeri** (`gtm_funnel.py`: 10 trial in scadenza il 5 agosto, 0 paganti): via il log operativo di luglio con i checkbox scaduti, via la timeline di aprile, e GTM-05 — il post r/climbharder mai pubblicato — promosso a prossimo passo attivo. **Allineati** CLAUDE.md (la scomposizione delle 47 pagine ne sommava 36 e ometteva session-builder, body-part-picker, `/demo`, `/offline`, `/dev`; il wizard è di 12 step, non 16), PROJECT_BRIEF (stato funnel al posto dei «4 beta tester» di aprile) e la guida utente (+ sezione Session Builder). Roadmap 1069 → 957 righe; 11 report chiusi spostati in `_archive/docs/audit/`; il testo integrale di ciò che è uscito è in `ROADMAP_v2.md` §D269. Suite invariata e verde.
+
 - **C265 — Contenuto di catalogo in italiano dentro una UI inglese** ✅ (backend-only; **fotografato da Daniele in produzione**: nel guided player *Handstand Kick-up (a Muro)* rendeva titolo, descrizione e cue in italiano mentre tutta l'interfaccia intorno era inglese). **Sweep completo, non solo la card vista:** tre passate indipendenti su *ogni* JSON del repo scoperto con `rglob` — parole funzionali italiane, morfologia (`-zione`/`-ità`/`l'`) e una passata inversa sulle stringhe **prive** di qualsiasi parola funzionale inglese. Le tre non erano ridondanza: la prima mancava `benchmark_note` (chiave fuori dalla lista user-facing) che ha preso la terza, e solo la seconda ha visto le glosse italiane sotto le citazioni latine. **Esposizione reale: 3 file, non un'epoca** — i pacchetti che il brief sospettava (yoga/mobility, conditioning) sono puliti; le 4 entry handstand italiane vengono da [[D262]] (29/07), cinque giorni prima dello screenshot, non da febbraio. Corretti: 7 esercizi (4 handstand + 3 test), 8 note di sessione su 4 file, 4 stringhe nelle quote. **Sul kick-up la diagnosi si è spostata:** il testo «fuso e non eseguibile» descritto nel brief **non esiste nel repo** — l'entry conteneva un kick-up coerente ma in italiano, letto sulla stessa schermata di `heel_pulls_chest_to_wall` (che *è* il drill chest-to-wall). Il difetto vero era più sottile: *«fermandosi al muro»* non diceva **quale lato** guarda il muro, cioè era ambiguo esattamente dove i due drill divergono. La riscrittura lo dichiara (**back-to-wall**, il muro come freno e non come bersaglio) e rimanda per nome al drill chest-to-wall. **Nessuna entry nuova**: il contenuto chest-to-wall ha già la sua (`heel_pulls_chest_to_wall`), duplicarlo avrebbe messo due voci in concorrenza negli stessi pool. **Guardia tenuta** (`test_c265_catalog_language.py`, una passata su tutti i file vivi del catalogo): rileva le **parole funzionali** italiane, non gli accenti — quelli vivono nei nomi propri (Eva López, Saint-Exupéry) e richiederebbero una whitelist che cresce a ogni autore citato, senza guadagno; i token ambigui (`per`, `tempo`, `non` di "non-negotiable") sono esclusi per costruzione, perché una guardia che sbaglia spesso insegna a ignorarla. Ancorata a una stringa **reale** pre-C265, non sintetica ([[B317]]), e verificata iniettando italiano in un file vivo per vederla fallire davvero sul percorso reale. **Non parametrizzata per file** (com'era in prima stesura): la lista dei file viene dal filesystem e `_archive/` è gitignored, quindi il numero di test collezionati cambiava fra clone pulito (64 file) e questa macchina (85) — e quel numero `sync_status.py` lo scrive in PROJECT_BRIEF/README, dove poi il pre-push hook lo confronta. Scoperto perché il sync riportava 3111 su una suite che aveva appena stampato 3090. Id invariati (259, stesso ordine e stessi valori; ogni campo non testuale byte-identico) e sessioni passate intatte — il resolver copia name/cues al momento della risoluzione, quindi ciò che è già persistito non si muove. Suite 3027. Dettaglio: `docs/audit/C265_catalog_language_sweep.md`.
 
 - **B319 — Il carry-over dell'assessment perdeva peso e numeri dei test** ✅ (frontend-only; chiude **ASSESSMENT-CARRYOVER-NUMBERS**, il finding P1 aperto da [[B318]] Fase 2). La pagina pubblica raccoglieva `bodyweight_kg`, `max_hang_added_kg` e `weighted_pullup_added_kg` ([[A263]]) e li allegava **solo** alla chiamata API: `seedDraftFromAssessment()` non li prevedeva nemmeno nella firma, quindi il draft del wizard non li vedeva. Il visitatore che aveva appena digitato peso e max hang se li vedeva richiedere una schermata dopo, subito dopo aver letto *«no need to enter them again»* — e cioè la promessa si rompeva **esattamente** per l'utente più motivato, quello che conosce i propri numeri e che il post r/climbharder dovrebbe intercettare. **Fix:** un solo payload alimenta sia la richiesta sia il draft (prima divergevano, ed è così che il difetto è nato), `profile.weight_kg` viene pre-compilato e i test entrano come **totali** con la stessa conversione `bw + added` del router — se le due convenzioni divergessero, il wizard mostrerebbe un numero diverso da quello appena valutato. Senza peso corporeo i numeri vengono **scartati** invece che combinati con un valore di comodo: è la stessa regola che l'endpoint applica con un 422, perché un totale costruito su un peso inventato riscala in silenzio la misura dell'utente. 5 test nuovi (10 nel file), inclusi i valori assistiti (negativi) e il caso senza peso. Suite frontend 453.
@@ -83,6 +87,8 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 - **A260 — Attrito di installazione della PWA** ✅ (frontend-only; nato dalla domanda di Daniele «l'app in PWA sembra poco seria, la mettiamo sugli store?» → prima di aprire il fronte store, togliere l'attrito che c'è già). **Il difetto principale non era estetico: `beforeinstallprompt` non compariva da nessuna parte nel codice.** Su Chromium quell'evento permette di installare con **un tap su un nostro pulsante**; senza, anche gli utenti Android venivano mandati a cercare il menu a tre puntini. L'evento va catturato con `preventDefault()`, scatta **una volta per caricamento pagina** e di norma *prima* che il componente di rotta monti — e con la navigazione client-side di Next non c'è reload che lo riproponga: per questo il listener è registrato a livello di modulo (`lib/install.ts`) e l'evento è parcheggiato in uno store, con `<InstallCapture />` montato nel root layout **solo** per quel side effect. Altri tre attriti chiusi: (1) la pagina aveva `useState<Platform>("iphone")` **hardcoded**, quindi un utente Android leggeva istruzioni Safari finché non notava il tab; (2) nessun rilevamento di app già installata (da cui il ripiego testuale *«Already installed? Just tap Continue»*); (3) **nessun rilevamento delle webview social** — chi arriva da Instagram/Facebook/LinkedIn è in un browser interno dove installare è **impossibile**, e leggeva istruzioni che non poteva eseguire: ora riceve "copia il link e aprilo in Safari/Chrome". Aggiunto anche il caso Firefox iOS, che non ha affatto *Add to Home Screen*: dirlo è meglio che mandare a cercare una voce di menu inesistente. `getCapability()` è l'unico punto di decisione (installed → native-prompt → in-app-browser → ios-manual → unsupported) e l'ordine conta: una finestra installata può ancora tenere un prompt in sospeso, quindi `installed` vince. Telemetria: `install_prompt_shown` porta la **capability**, perché un tasso di installazione senza sapere quanti sono atterrati in un browser che non può installare non significa nulla; più `install_native_accepted/dismissed`, `install_completed` (`appinstalled`) e `install_copy_link`. **Nota React:** `capability` è `null` durante SSR e idratazione via il server snapshot di `useSyncExternalStore` — ogni ramo legge `navigator`/`matchMedia` e una supposizione mostrerebbe a qualcuno le istruzioni sbagliate. 21 test nuovi (`install-capability.test.ts`) sui rami di rilevamento, inclusi iPadOS che dichiara un UA da Mac desktop e Chrome/Firefox iOS che portano entrambi «Safari» nell'UA. Suite frontend: 425 passed. Lint invariato rispetto a `main` (75 problemi, nessuno nei file nuovi).
 
 ## Recently closed (2026-07-31)
+
+- **B315 — COACH-FOURTH-WALL: il coach nominava chi costruisce l'app** ✅ (backend-only). In Q-08 il coach aveva risposto a un utente che «**Daniele** possiede i materiali fisici, estrazione foto in corso»: il testo veniva pari pari da un blocco `v1.0 coverage gap` di `L3/06_technique_movement.md`. Quei blocchi esistono perché il coach conosca i **limiti** del proprio sapere, non perché li reciti — ma ogni file del KB finisce nel system prompt, quindi un nome scritto lì è un nome che il modello può ripetere. **Fix su due livelli:** (1) i dati — rimossi il nome e il processo di ingestione da `06_technique_movement`, e da `10_injuries_fingers` + `11_injuries_shoulder_elbow` (li ha trovati il test, non io: dicevano «physical source not yet acquired»); neutralizzate anche le due istruzioni interne «surface to Daniele» in `L0` e `L1`, ora «invita l'utente a mandarlo dal form di feedback». (2) la regola — nuova voce in `L1 §7 What the coach never does`: mai nominare chi costruisce l'app, mai descrivere possesso delle fonti, ingestione o stato «pending»; quando manca qualcosa la risposta intera è *«non è ancora nel motore»*. **Verificato end-to-end**: rigirata Q-08 con il coach reale, la risposta ora è «quei drill non sono nel motore al momento» e nient'altro (Q-08 passa da 1/2 a 2/2 → **53/56**). Test: `test_b315_coach_fourth_wall.py` (7) — nomi del team e frasi di processo vietati in **ogni** file leggibile dal coach, più la presenza della regola in L1.
 
 - **D268 — Domanda al KB: vale la pena acquisire *The Climbing Bible* per i drill?** ✅ (read-only, `docs/research_kb/question_mobraten_drill_gap.md`). Follow-up di [[C264]]: chiuso il falso gap su Bechtel, Mobråten resta l'**unico** gap dichiarato su Topic 08. Prima di spendere ~30 € e tre sessioni di estrazione, la domanda misura cosa manca davvero: **47 drill di tecnica in catalogo** (23 Bechtel + 24 Hörst/Anderson/Matros/nostri), distribuzione per dominio contata sul catalogo, e cinque ipotesi di buco da far verificare al KB — coordinazione/dinamico moderno, tensione e compressione, lettura di via e tattica, placca/aderenza, e **progressione del drill** (nessuno dei nostri 47 ha un criterio di uscita: è il punto che vale più dei drill stessi). La domanda include anche l'ordine di priorità fra i quattro libri non acquisiti (Mobråten, MacLeod, Ilgner, Christophersen). **Esito "ridondante" previsto come risposta valida:** in quel caso il gap si chiude come *valutato e scartato* invece di restare "not acquired" per sempre.
 
@@ -147,7 +153,6 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ## Recently closed (2026-07-24)
 
-- **B304 — Tooltip viewport clamping + presentazione target-relative degli assi** ✅ (frontend, branch `brief/B304-tooltip-axis-relabel` → preview Vercel; worktree isolato). Chiude [[D260]] Scope A + la metà **presentazionale** di Scope B. **Part 1 (Scope A):** il popover ⓘ del radar (`AxisTooltip` in `radar-chart.tsx`) era un box a larghezza fissa `w-72` centrato sulla cella con `translateX(-50%)` senza collision detection → gli assi in colonna sinistra sforavano il bordo sinistro sotto ~400px (iPhone). Ora clampa orizzontalmente al viewport (shift + `env(safe-area-inset-*)`, margine ≥12px) e **flippa sopra** la bottom tab bar quando servirebbe; `max-width: min(288px, 100vw-24px)`. La matematica di posizionamento è estratta in `lib/radarTooltip.ts` come funzioni pure con unit test a 320/390/768/1280 (il posizionamento DOM misura poi muta lo stile del nodo direttamente — nessun setState-in-effect). Nessuna libreria di posizionamento aggiunta (unico consumer: `/plan`, verificato). **Part 2 (Scope B, solo presentazione):** sottotitolo del radar **"Readiness for {target}"**, badge **"✓ At target"** al posto del 100 nudo sugli assi saturi (geometria del grafico invariata), e le 5 copy dei tooltip riscritte per rendere **esplicito** il framing target-relative ("Scored against what {target} typically demands — 100 means you're already there") + low-line riformulata come **roadmap** invece di verdetto. **Zero** modifiche a engine/formule/anchor/score/DB; solo frontend; sessioni passate intatte (nessun percorso di rigenerazione toccato). Test: +26 frontend (`radar-tooltip.test.ts`: clamping, flip, interpolazione grade, budget 300 char, copertura 5 assi lead+boulder). Suite frontend 34 file / 386 test verdi; tsc + eslint + `next build` OK.
 
 ### Residui di [[D260]] (lato engine, Open — richiedono decisioni di prodotto di Daniele)
 
@@ -155,191 +160,80 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 - **D260-P1b — Technique = proxy gap RP−OS + self-report**: asse guidato dal gap redpoint−onsight (solo 7 valori possibili) + penalità auto-dichiarata; è la leva dominante dei pesi di dominio. Open. Decisione: il gap è un segnale legittimo di tecnica per un redpointer? (domanda 2). Brief tipo D/A, STOP-gate (`assessment_v1`→`macrocycle_v1`).
 - **D260-P2 — saturazione anchor target-relative + soglie fragili + default "50"**: re-anchoring di Finger/Pulling (assoluto vs target-relative), curve continue al posto dei cliff <35/<50/>75, provenienza `measured|default` per axis. Open, **invalida gli score storici** → decisione di prodotto (domanda 1). Vedi `docs/audit_D260_tooltip_and_assessment_scoring.md` §8 per la sequenza fix proposta.
 
-## Recently closed (2026-07-23)
+## Priority 1.25–1.28 — Audit Remediation (D163/D164, D170/D172, D211, D236)
 
-- **A256 — Wizard di onboarding pubblico: il muro della registrazione si sposta a valle** ✅ (frontend, branch `brief/A256-public-onboarding-wizard` → preview Vercel; worktree isolato). **Problema:** `/onboarding/welcome` era pubblico ma lo **step 1 di 12** (`/onboarding/profile`) no, e il CTA "Start assessment" era un `<SignUpButton>` → il visitatore freddo da flyer/Reddit doveva creare un account **prima di vedere un solo output del prodotto**. **Fix:** i 12 step del wizard + `/onboarding/recover` (linkato dalla welcome pubblica) diventano pubblici, derivati da `ONBOARDING_STEPS` così un nuovo step nasce pubblico; l'account viene chiesto **sul CTA finale in `/review`**, dopo che l'utente ha visto il proprio riepilogo ("salva questo", non "iscriviti per iniziare"). Ritorno post-signup con **auto-submit**: l'intent (`generate`|`test`) viaggia in `?complete=` nel `redirect_url` (sopravvive al full reload di Clerk), guardie su `authLoaded`/`isSignedIn`/`loaded`/`profileProblems` + ref anti-doppio-invio + `replaceState` per non ri-sparare al reload. `start-week` e `install` restano gated (girano a piano esistente). **Zero perdita dati:** B293 aveva già predisposto tutto (bozza `_anon` in localStorage, nessuna `getState()` da anonimo, adozione anon→user in `loadDraft`); `SessionScopeGuard` non tocca le bozze onboarding; UTM già in localStorage → attribution intatta; `/api/onboarding/defaults` (unico endpoint chiamato dal wizard, da `/locations`) è senza `Depends(get_user_id)` → 200 da anonimo, verificato in prod. **Leak chiuso nello stesso brief:** `clearOnboardingDraft()` puliva solo `_user_XXX` e lasciava `_anon` orfano sul device — innocuo finché nessuno poteva produrne una, un leak dal momento in cui il wizard diventa pubblico (device condiviso → il visitatore successivo si ritrovava precompilati i dati del precedente). Test: +3 frontend (`onboarding-draft-scope.test.ts`, verificato che fallisce senza il fix) + `public-routes.test.ts` riscritto (l'asserzione B292 "solo /welcome è pubblico" era diventata falsa per design). Frontend 355 → **360**. Backend invariato (2815).
+> **Verificate contro il codice e chiuse da [[D269]] (2026-08-02).** Le quattro sezioni stavano ancora
+> in roadmap come debito aperto; il testo integrale è archiviato in `ROADMAP_v2.md` §D269.
+> Report originali (verificati esistenti, 2026-08-02): `docs/audit/D164/`,
+> `docs/audit/outdoor_audit_D170.md`, `docs/audit/D-TESTUSER-VERIFY_report.md`, `docs/audit/D236/`.
+> ⚠️ Il report **D163** (67 finding frontend) **non è nel repo**: la roadmap lo dava in
+> `_archive/docs/frontend_audit_D163.md`, ma A198 lo ha cancellato dicendo di archiviarlo. Vive solo
+> nella storia git — `git show be7ec67 --stat` per ritrovarlo. Stesso caso di D172 (vedi sotto): due
+> audit citati per anni da una roadmap che puntava a file inesistenti.
 
-- **B303 — Onboarding disponibilità: niente selettore "Which gym?" con una sola palestra** ✅ (frontend, branch `brief/B303-gym-selector-single` → preview Vercel). In `availability/page.tsx` il dropdown gym compariva con `gyms.length > 0`, quindi anche con **una sola** palestra mostrava un select con un'unica opzione — rumore inutile. Ora condizionato a `gyms.length > 1`. Nessuna perdita di funzione: con una gym il planner usa già quella di default (`gym_id` undefined → `default_gym_id`). Modifica di una riga, zero backend.
+**Cosa è risultato già chiuso** (grep sul codice, 2026-08-02):
 
-- **B302 — Ladder gradi lead priva di 5a+/5b+/5c+: assessment/piano crashavano per i principianti** ✅ (backend-only, tocca `assessment_v1` → feeds `macrocycle_v1`: Fase 1 analisi + OK Daniele). **Bug:** il picker frontend (`LEAD_GRADES`) offre `5a+/5b+/5c+` ma `assessment_v1.GRADE_ORDER` li saltava → `grade_index('5c+')` sollevava *"Unknown grade"* → `compute_assessment_profile` crashava → nessun profilo → nessun piano. **Scoperto su `daniele.somensi@ferrero.com`** (max 5a+, target 5c+, `profile: null`) ma sistemico: qualsiasi principiante lead che seleziona quei gradi non poteva generare il piano. **Fix:** inseriti `5a+/5b+/5c+` in `GRADE_ORDER`. Blast radius verificato: tutti i consumer usano gli indici **relativamente** (`grade_gap`, ranking milestone, distanze) tranne il proxy euristico `(current_idx/target_idx)×axis_max` di assessment — shift atteso di ~1 punto su utenti senza test (8a+/8b: 16/17→19/20; `pulling_strength` 61→62, test aggiornato). **outdoor_log reso behavior-preserving:** `_GRADE_WEIGHT` ancorato allo spacing pre-B302 (i + del grado 5 ereditano il peso base, i 6a+ invariati) → il load outdoor storico non si muove; bonus, un 5c+ outdoor non pesa più 10 (era `_UNKNOWN`, mis-pesato come un 6c). `BOULDER_GRADE_ORDER` allineato al picker (5A+/5B+/5C+). `BOULDER_TO_LEAD` già completo (boulder non crashava). Test: +10 (`test_b302_grade_ladder.py`). Suite 2815 → **2825**. ferrero si sblocca ricalcolando assessment → rigenerando.
+- **D164 Frontend** — `PHASE_LABELS` non è più duplicato (1 solo file: `lib/phase-labels.ts`, con test di regressione).
+- **D164 Catalog** — `age_under_16` non compare in nessun file di catalogo (0 occorrenze); nessun video URL placeholder (0); schema deload normalizzato. Chiuso da B165e ("all sub-items already implemented").
+- **D164 Docs** — i conteggi intent in CLAUDE.md sono corretti (15 indoor + 4 outdoor), `closed_loop_v1.py` esiste con quel nome, `grip_transition` è in `vocabulary_v1.md`.
+- **D172 / B176** — implementato in 4 commit (`fix(B176)`: type safety D172-05/11/12, equipment D172-07/08/22, event-input D172-09/13/14/25, logging D172-10/15/17-20/23/24). Restava marcato *Open, effort L, 21 finding* mentre il lavoro era in git: è il caso esatto che la regola di allineamento vuole evitare. Anche il cappello della sezione era stale (dava B174/B175 come "P1 hotfixes pending": entrambi chiusi, con commit `docs: mark B17x Done`).
+- **D211 residui** — verificati sullo stato reale: **F5** nessun consumatore backend legge `goal.primary_weakness` (solo `assessment.self_eval.*`, che è la sede giusta); **F6** non più applicabile — le fasi non hanno un campo `weeks`, hanno `duration_weeks` + `start_week`; **F7** `goal.deadline` è popolato (`2026-09-01`), il sintomo era di uno snapshot di aprile; **F8** `last_test_date` non riproduce l'anomalia. **F4** (week plan stale nella finestra di deploy) era già marcato *Accept*.
+- **D236** — la tabella dei Group era **vuota** (solo l'header): sezione senza contenuto da mesi.
 
-- **A255 — Onboarding: equipment di default preselezionato per home e nuove palestre** ✅ (frontend, branch `brief/A255-onboarding-equipment-defaults` → preview Vercel). **Root cause di Mario:** in `locations/page.tsx` una nuova gym nasceva con `equipment: []` e l'attivazione "train at home" non preselezionava nulla → l'utente doveva spuntare tutto a mano e chi dimenticava l'hangboard perdeva i test dita + le sessioni forza in silenzio (Radium finita con solo `gym_boulder`). **Fix:** `addGym` ora parte con `["hangboard", "pullup_bar", "weight"]` preselezionati; `toggleHomeEnabled` semina `["hangboard", "pullup_bar"]` alla prima attivazione (solo se `home` è ancora vuoto → non sovrascrive scelte deliberate al re-toggle). La **superficie di arrampicata** (gym_boulder/gym_routes) resta a carico dell'utente perché è disciplina-specifica (il gate `locationBlockers` la richiede comunque). Combinato con [[B301]], un tag `weight` di default sblocca subito la forza. Nessun tocco al backend/planner. Verificato su preview.
+**Cosa resta davvero aperto** (spostato dove è azionabile):
 
-- **B301 — `weight` ≡ `dumbbell`: le sessioni di forza sono raggiungibili con qualsiasi peso libero** ✅ (backend-only, STOP-gate `equipment_utils`/pipeline planning: Fase 1 analisi + OK Daniele → Opzione A). **Bug:** l'espansione equipment in `equipment_utils.expand_equipment` era **monodirezionale** — `dumbbell/kettlebell/barbell → weight`, ma chi spuntava solo "Weight plates" (`weight`) non otteneva mai `dumbbell`, e le **2 sole sessioni** gated su `["dumbbell"]` (`heavy_conditioning_gym`, `lower_body_gym`) restavano irraggiungibili. **Fix (Opzione A):** `WEIGHT_FAMILY = {weight, dumbbell, kettlebell, barbell}`; la presenza di uno qualsiasi implica **sia `weight` sia `dumbbell`** → plates-only / barbell-only / kettlebell-only sbloccano la forza. **Blast radius minimo:** 0 esercizi filtrano su dumbbell/weight (gating solo a livello sessione), quindi nessun rischio di sessione svuotata in resolve. Choke point unico condiviso da planner/resolver/replanner/body_part_picker → fix uniforme. Regressione: un utente con `dumbbell` produce output byte-identico (aggiunge `dumbbell` che già aveva → no-op). Test: +8 (`test_b301_weight_dumbbell_equivalence.py`), B159 invariati. Suite 2807 → **2815**. **Scoperto durante l'analisi utente di Mario** (palestra Radium registrata a mano con solo `gym_boulder`).
+| ID | Titolo | Dove vive ora |
+|----|--------|---------------|
+| D172-16, D172-21 | 2 finding "structural/deferred" **non più leggibili**: il tracker `D172_findings_tracker.md` non è mai stato creato e nessun report D172 esiste nel repo (né in `_archive`). Non sono azionabili per ID: o si riapre un audit mirato o restano chiusi di fatto. | qui, come nota — nessun brief |
+| `apply_day_add` non riceve `gyms` (D170 P1-04) | P3, M — serve refactor di firma. Il path utente principale è già coperto dal fix frontend di B173. | Backlog / exploration |
+| Lint frontend, `session-card` monolite, test E2E full-pipeline | già tracciati singolarmente e con numeri più freschi | `D230`, `B-SESSIONCARD-DECOMP`, `R150` |
 
-- **B300 — La root manda i visitatori sloggati alla welcome landing, non al login wall** ✅ (frontend, branch `brief/B300-root-welcome-landing` → preview Vercel → OK Daniele → merge in `main`; deploy prod forzato via API perché il webhook Vercel non era scattato sulla push). **Problema di funnel:** un visitatore freddo da pubblicità/QR che digitava `climbagent.app` sbatteva su `/sign-in` (form di login nudo, zero pitch) invece che sulla pagina che vende il prodotto. **Fix chirurgico (1 riga in `src/app/page.tsx`):** il ramo "non loggato" della root passa da `/sign-in` a `/onboarding/welcome` (la landing pubblica: hero "Periodized training" + value props + CTA "Start assessment"). Nessuna regressione — utente loggato resta dritto a `/today` (nessun doppio hop), logica offline `readLastDestination` (A245) intatta. **Secondo commit:** aggiunto link **"Already have an account? Sign in"** ben visibile (colore primary, sotto la CTA) con Clerk `SignInButton` che dopo il login torna alla root → smista al piano; il recover declassato a "Lost access? Recover with a code". **Doc aggiornata:** `docs/attribution_utm_convention.md` (la vecchia regola "MAI linkare la root / → /sign-in" era ora superata) + sezione "Entry-point routing" in `CLAUDE.md`. Nessun test nuovo (routing puro, verificato su prod da Daniele: sloggato→welcome, Sign in→/today, loggato→/today).
-
-## Priority 1.25 — Audit Remediation (D163 + D164)
-
-> Full reports: `docs/audit/D164/` (138 findings) and `_archive/docs/frontend_audit_D163.md` (67 findings)
-> Date: 2026-03-28
-> Combined: 205 findings (20 P1, 71 P2, 102 P3, 12 P4)
-
-### P2 highlights (not individually tracked — see full reports)
-
-**Engine (D164 Agents 3-5):** Phase duration sum mismatch for 9-11 week macrocycles (P2), deload weights sum 0.40 not 1.0 (P2), `move_session` doesn't validate spacing (P2), `_reconcile()` enforces finger but not hard-day spacing (P2), streak field saved but unused in multiplier (P2).
-
-**Frontend (D164 Agent 1 + D163):** PHASE_LABELS duplicated 4 files, `window.location.href` instead of router.push, console.warn/error in prod, eslint-disable on hooks deps, hardcoded email, session-card 1081 lines, tap targets <44px (6 instances), missing aria-labels (5 instances) → partially covered by B165c, rest deferred to R141/R144/R145.
-
-**Catalog (D164 Agents 7-8):** 10 campus exercises use non-canonical `age_under_16` contraindication, `easy_climbing_deload` legacy schema, `deload_recovery` missing fields, 8 orphan templates, 11 generic placeholder video URLs → covered by B165e.
-
-**Docs (D164 Agent 6):** Intent counts wrong in CLAUDE.md (13+3 vs actual 15+4), `closed_loop_v1.py` filename stale, session "active" label mismatch in sync_status.py, `grip_transition` missing from vocabulary → vocabulary fix in B165a, rest are P2 doc fixes (standalone).
-
-**API contract (D164 Agent 9):** `POST /api/outdoor/convert-slot` response shape mismatch.
-
-**Test coverage (D164 Agent 10):** 9 API endpoints lack integration tests, no full-pipeline E2E test (R150), `cluster_utils` 5/6 functions untested, test fixtures duplicated inline.
-
-### P3 items (102 total) — see full reports, not individually tracked in roadmap
 
 ---
 
-## Priority 1.26 — Audit Remediation (D170 + D172)
+## Priority 1.75 — Go-to-Market
 
-> Full breakdown: tracked inline in this roadmap (see P1.26 priority list below). The file `D172_findings_tracker.md` was planned but never created.
-> Audits: D170 (gym_id propagation, 24 findings, 2026-03-31), D172 (all other fields: session_id / template_id / equipment / slot / phase / API validation, 25 findings, 2026-03-31)
-> Combined: 49 findings — 13 fixed in B173, 2 P1 hotfixes pending (B174/B175), 21 deferred to B176
+> Riscritta da [[D269]] (2026-08-02) sullo stato reale del funnel. Il log operativo di luglio, la
+> timeline "week 0-6" di aprile e le raccomandazioni del Council sono archiviati in `ROADMAP_v2.md` §D269:
+> erano storia eseguita (prezzi decisi, Stripe live, canali provati), non lavoro aperto.
 
-### Post-launch (P2)
+### Dove siamo davvero (snapshot `scripts/gtm_funnel.py`, 2026-08-02)
 
-| ID | Title | Type | Effort | Notes |
-|----|-------|------|--------|-------|
-| **B176** | D172 consolidated remediation — 21 remaining findings (P2+P3) | B | L | 5 groups: type safety (D172-05,11,12), equipment validation (D172-07,08,22), event/input validation (D172-09,13,14,25), logging (D172-10,15,17-20,23,24), structural/deferred (D172-16,21). Supabase migration already complete — no longer a prerequisite. |
+| | |
+|---|---|
+| Utenti registrati | 14 |
+| Trial attivi | 10 — 4 engaged, 6 **mai loggati**; **tutti scadono il 5 agosto** |
+| Ultimo login degli engaged | 21-22 luglio (fermi da ~11 giorni) |
+| Fermi al checkout | 4 (di cui 1 lead caldo, loggato il 28/07) |
+| **Paganti** | **0** |
+| Canceled storici | 3 |
 
-### Deferred from B173 (need API refactoring)
+**Lettura onesta:** la coorte del re-lancio del 21 luglio è **persa** — le win-back hanno prodotto
+qualche rientro ma nessuna carta, e la finestra si chiude il 5 agosto. Il canale è il problema, non il
+prodotto: r/indoorbouldering ha dato un solo post consentito (thread mensile), r/bouldering ha rifiutato
+ed è **chiuso definitivamente**, e il post su r/climbharder — il canale che il Council indicava come #1 —
+**non è mai stato pubblicato**, pur essendo in bozza dal 22 luglio.
 
-| Title | Priority | Effort | Notes |
-|-------|----------|--------|-------|
-| `apply_day_add` doesn't receive `gyms` parameter (D170 P1-04) | P3 | M | Needs signature refactoring. Frontend fix in B173 covers the main user-facing path. |
+### Prossimo passo — GTM-05
 
----
+| ID | Titolo | Tipo | Effort | Stato | Note |
+|----|--------|------|--------|-------|------|
+| GTM-05 | **Post su r/climbharder** | — | XS | 🎯 **Attivo — è il prossimo passo** | Non è un task di codice. Le due condizioni tecniche che mancavano nel piano di aprile ora esistono: [[A262]]/[[A263]] hanno reso `/assessment` una superficie che **dà prima di chiedere** (nessun account, radar + punto debole, scale YDS/V-scale per il pubblico americano, blocco max hang per chi i propri numeri li conosce), e [[B319]] ha chiuso il buco che rompeva la promessa del carry-over proprio per quell'utente. Il post va sull'assessment, non sull'app. Prerequisito ancora aperto: [[WELCOME-RECOVER-DEAD-END]] è una CTA rotta su una pagina d'ingresso — da chiudere o rimuovere **prima** di mandarci traffico. |
+| GTM-STRIPE-TAX | **Stripe Tax registration** | Config | S | 🟡 Deferred | Riattivare a una di queste: (a) 10+ clienti EU paganti, (b) €5k di ricavo EU cumulato, (c) soglia OSS €10k in avvicinamento. Sotto, valgono le regole IVA domestiche italiane e Stripe Tax è scope creep. All'attivazione: 4 passaggi dashboard + 4 righe in `subscription.py:108-124` (`automatic_tax` + `tax_id_collection` + `billing_address_collection`). **Deciso ora:** $9.99/$4.99 sono **netti** (IVA aggiunta sopra all'attivazione). |
+| GTM-06 | **Feature freeze** — 30 giorni senza feature nuove, solo bug di chi paga o è in trial | — | — | ⏸️ Non attivabile | Doveva partire al primo utente non-beta. Con 0 paganti non ha un trigger: riprendere quando esiste una coorte da proteggere. |
+| GTM-07 | **Metrica di successo** | — | — | 🔄 Da ridefinire | La formulazione originale ("3-5 paganti entro fine aprile 2026") è scaduta e mancata. Serve una metrica nuova legata al post r/climbharder — es. *visitatori unici su `/assessment` → % che completa → % che apre il wizard* — misurabile con l'attribution UTM già in casa (`docs/attribution_utm_convention.md`). |
+| B228 | **Handler 402 globale in `api.ts`** | B | S | Open P2 | Centralizzare 402 → `router.push('/subscribe')` + toast. Branch frontend + preview Vercel. |
+| D230 | **Lint frontend** | D | M | Open P3 | Misurato oggi: **34 errori / 41 warning** (era 30/38 — sta crescendo). Quasi tutto `react-hooks/set-state-in-effect` dal React Compiler in Next 16. La CI non lo blocca. Un pomeriggio, branch + preview. |
 
-## Priority 1.27 — Audit Remediation (D211 / D-TESTUSER-VERIFY residuals)
-
-> Origin: `docs/audit/D-TESTUSER-VERIFY_report.md` §5 (2026-04-19)
-> F1 (HIGH) + F3 (HIGH) closed by D214 (`assessment.tests_source` sidecar). Residuals below parked post-launch.
-
-### Post-launch (P2/P3)
-
-| ID | Title | Severity | Priority | Type | Effort | Notes |
-|----|-------|----------|----------|------|--------|-------|
-| F4 | **Stale cached week plan across deploys** — no regeneration trigger on deploy; users onboarded within ~5 min of a push keep pre-push output. | LOW | P3 | B | XS | Accept (deploy-window artifact). Users can force-regenerate via Settings. Document in user guide. |
-| F5 | **`goal.primary_weakness`/`secondary_weakness` are absent** — actual storage at `assessment.self_eval.*`. Consumers reading `goal.*` see `None`. | LOW | P3 | D+B | XS | Grep consumers; if any read `goal.*` for weaknesses, fix read site (not write). Spec-drift only. |
-| F6 | **`macrocycle.phases[].weeks` is `null`** — consumers iterating `phases[].weeks` see `null`; sum via `start_week` deltas works. | LOW | P3 | D+B | XS | Audit consumers; drop the field from schema if all compute from `start_week` deltas, else populate at generation. |
-| F7 | **`goal.deadline` empty while `total_weeks=12`** — onboarding writes `deadline=""` when deadline is derived from `total_weeks`. | LOW | P3 | B | XS | Cosmetic. Compute ISO date from `total_weeks + start_date`, or drop the field. |
-| F8 | **`assessment.tests.last_test_date = 2026-04-16`** (3 days before macrocycle start) — writer not traced in D211. | COSMETIC | P3 | D | XS | Grep writer site; likely legacy path in `progression_v1.py`. |
-
----
-
-## Priority 1.28 — Audit Remediation (D236)
-
-> Tracking docs: `docs/audit/D236/00_remediation_plan.md` (piano completo, 6 Group), `docs/audit/D236/00_findings.md` (47 finding deduplicati su 78 raw).
-> Audit: D236 read-only cleanup, completato 2026-05-09 (47 findings: 6 P0, 22 P1, 13 P2, 6 P3).
-> Group 0 chiuso da B-SYNC-FIX (2026-05-10). Group 1-6 aperti come C-brief indipendenti.
->
-> **Ordine raccomandato**: Group 3 → Group 1 → Group 6 → Group 4 → Group 2 → Group 5.
-> Razionale: Group 3 fixa code-ref errati in CLAUDE.md (F-15 closed_loop path, F-16 planner_v1→v2) — file letto da ogni istanza Claude Code, alta probabilità di morsicare in brief macrocycle/engine. Group 1 chiude P0 Stripe/pricing lies in PROJECT_BRIEF e ROADMAP. Group 6 sblocca KB anchors per D33/CUE-02. Resto è cleanup.
-
-| Group | Title | Type | Effort | Status | Notes |
-|---|---|---|---|---|---|
 
 ---
 
-## Priority 1.75 — Go-to-Market Sprint
+## Priority 2 — Sessioni boulder & board (residui)
 
-> Origin: Strategic Advisory Council (2× runs, 5 advisors each, 2026-04-01)
-> Key insight: distribution + onboarding friction are the real blockers, not features.
-> Constraint: solo founder, zero marketing budget, feature freeze for 30 days.
-> Stripe status: LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
+> Auth (Clerk), persistenza (Supabase JSONB) e pagamenti (Stripe LIVE dal 2026-04-16, guard B202,
+> hardening B226) sono **completi da mesi**: il dettaglio è archiviato in `ROADMAP_v2.md` §D269 ([[D269]],
+> 2026-08-02). Restano qui i due item di catalogo che non c'entravano con i go-to-market blocker.
 
-### GTM log — re-lancio climbagent.app (2026-07-21, post-A248/A249/A250/A251)
-
-**✅ FATTO (2026-07-21):**
-- **Email win-back INVIATE** (manuali, Gmail): 8 destinatari — Christie (personalizzata,
-  la più ingaggiata), Cesar + Arthur (con nota Forgot-password), David + Edoardo (in
-  italiano), Tabitha, Paolo, Agustin, Rowene (`woween@gmail.com`). Contenuto: trial
-  attivo fino al **5 agosto** senza carta (A251), pitch AI coach, mobility/stretching,
-  nuovo dominio + reinstallazione PWA, leva Founding Climber $4.99.
-- **Welcome email INVIATA** al nuovo utente organico (`xbox.live.marionumber0001@`,
-  iscritto 21/07, trial fino al 5/08).
-- **Reddit modmail pre-approvazione** (policy value-first): r/indoorbouldering +
-  r/bouldering — chiesta approvazione mod prima di postare, link
-  `climbagent.app/onboarding/welcome`, offerto ai mod il trial gratuito per feedback.
-- Esclusi come da piano: arnaud + pippin (gestiti a parte).
-
-**⏳ PENDING:**
-- [ ] Attendere risposta mod r/indoorbouldering + r/bouldering → postare dopo approvazione
-- [ ] Domani (22/07): modmail r/climbharder (variante honest prior-removal, già in bozza);
-      valutare r/griptraining; post diretti r/ClaudeAI + r/SideProject
-- [ ] Email activation-nudge a Donato (`odlan3@`) — NON ancora inviata
-- [ ] Monitorare le conversioni win-back prima della scadenza trial del **5 agosto**
-      (dashboard admin: chi rientra, chi completa sessioni, chi aggiunge la carta)
-
-**✅ FATTO (2026-07-23):**
-- **r/indoorbouldering** — postato intro climb-agent nel thread mensile *Simple
-  Questions* (canale mod-approved, nessun post dedicato consentito). Link:
-  `climbagent.app`. Angle: training planner + coach chat, focus lead dichiarato.
-  Pricing non menzionato nel post.
-- **r/bouldering** — outreach rifiutato. **Canale chiuso, non riprovare.**
-
-**⏳ PENDING (2026-07-23):**
-- [ ] Monitorare le risposte ai commenti su r/indoorbouldering → rispondere entro 24h
-- [ ] Canned reply pronta per la domanda "free or paid?"
-
-### Timeline
-
-- **Week 0 (archived, ~2026-04-01):** Beta testers using the app (4-5 users). Founder dry-run. Stripe LIVE since 2026-04-16, sk_live keys on Railway + Vercel.
-- **Week 1-2:** Collect beta feedback + fix onboarding blockers from dry-run.
-- **Week 2-3:** Pricing decision → activate Stripe live → soft launch on r/climbharder.
-- **Week 3-6:** Feature freeze. Only fix bugs from paying/trialing users. Measure.
-
-### Phase 0 — Onboarding dry-run + beta feedback (week 0-2)
-
-| ID | Title | Type | Effort | Status | Notes |
-|----|-------|------|--------|--------|-------|
-| GTM-02b | **Beta tester feedback collection** — structured check-in with Christie, Cesar, Paolo, Agustin on their experience | — | XS | Open | Ask: what confused you? what's missing? would you pay? Key signal: would they pay $9.99/mo Standard (or $4.99/mo as a Founding Climber). |
-
-### Phase 1 — Pricing + Stripe go-live (week 2-3)
-
-| ID | Title | Type | Effort | Status | Notes |
-|----|-------|------|--------|--------|-------|
-| B205 | **Verify cancel_at_period_end grace period** | B | XS-S | 🔁 Rolled into B226 | Targeted test added inside B226 (`stripe_webhook.py` is opened once for fail-loud + customer.deleted + cancel_at_period_end). Marginal cost. |
-| GTM-STRIPE-TAX | **Stripe Tax registration** | Config | S | 🟡 Deferred | Reactivate when **either** condition met: (a) 10+ paying EU customers, OR (b) €5k cumulative EU revenue, OR (c) approaching €10k OSS threshold. Below these, IT domestic VAT rules apply (regime forfettario or ordinario per Daniele's setup), Stripe Tax is scope creep. When reactivating: 4 dashboard steps + 4-line code change in `subscription.py:108-124` (`automatic_tax: {enabled: true}` + `tax_id_collection` + `billing_address_collection: 'required'`). Decide now: prices $9.99/$4.99 are **net** (exclusive — VAT added on top at activation) — document this so future activation is consistent. |
-| GTM-05 | **r/climbharder soft launch** — post asking for 5 beta testers, zero pitch | — | XS | Open | Not a code task. After B204 + B203. |
-| B228 | **Frontend 402 global handler in `api.ts`** | B | S | Open P2 | Audit F4. Centralize 402 → router.push('/subscribe') + sonner toast. Frontend branch + Vercel preview. After both P1. |
-
-### Phase 2 — Measure + iterate (week 3-6)
-
-| ID | Title | Type | Effort | Status | Notes |
-|----|-------|------|--------|--------|-------|
-| GTM-06 | **Feature freeze** — zero new features for 30 days, only fix bugs reported by paying/trialing users | — | — | Open | Starts when first non-beta user signs up. |
-| GTM-07 | **Success metric** — 3-5 paying users by end of April 2026 | — | — | Open | 0 paying after 30 days → reassess PMF. 3+ paying → validate and continue. |
-| D230 | **Frontend lint hygiene — 30 errors / 38 warnings** | D | M | Open P3 | Audit F5. Mostly `react-hooks/set-state-in-effect` from React Compiler in Next 16. CI does not enforce, but debt accumulating. One afternoon, branch + preview. After GTM stability window. |
-
-### Council recommendations (reference)
-
-**Convergence across both runs (high confidence):**
-- Launch NOW — Supabase migration is not a blocker (JSONB handles ~260KB/year/user)
-- r/climbharder is the #1 acquisition channel
-- Zero new features for 30 days post-launch
-- Onboarding is the critical blind spot — no advisor caught it initially, both chairmen flagged it
-- Don't build Kilter/Capacitor/LLM Coach before validating willingness to pay
-
-**Divergence (Daniele decides after beta feedback):**
-- Price: €14.99/mo (Run 1) vs €9.99/mo Founding Climber lock-in (Run 2)
-- Synthesis: €14.99 standard + €9.99 Founding Climber for first 20-30 users
-
----
-
-## Priority 2 — Auth + Payments + DB (go-to-market blockers)
-
-Clerk auth ✅, Supabase JSONB ✅, and Stripe ✅ are complete. Stripe LIVE since 2026-04-16.
-
-- **Supabase migration** ✅ — JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions)
-- **A159 — Stripe subscriptions** ✅ — **LIVE** (sk_live keys on Railway + Vercel). Two-tier pricing ($9.99 Standard + $4.99 Founding Climber). B202 fail-closed guard active. B226 hardening done: fail-loud (500 → Stripe retries), LRU event dedup, customer.deleted handled. No known gaps.
-  - Backend: `subscription_guard.py`, 4 endpoints (status/checkout/portal/webhook), guards on 10 POST endpoints
-  - Frontend: `useSubscription()` hook, `TrialBanner`, `/subscribe` page, settings portal link, guided session gate
-  - Phase 3: `onboarding/start-week` → redirect to `/subscribe` (both Continue and Skip)
-  - SQL migration: `_archive/docs/migrations/subscriptions_table.sql` — ✅ run in Supabase (confirmed 2026-03-31)
 
 ### A-B6 — Session pool boulder audit & completion
 
@@ -520,7 +414,6 @@ Automatizzare il loop di feedback/supporto clienti oggi gestito manualmente (wel
 
 | Book | Status | Needed for |
 |------|--------|-----------|
-| Bechtel — Climb Strong: Drills Manual (pp. 31-91) | ✅ **Integrato** (C240 + C255 + C256, chiuso 2026-07-13): 23 drill `tech_*` nel catalogo | Topic 08 drills |
 | MacLeod — 9 Out of 10 Climbers | 🛒 Buy (DRM-free PDF or photos) | Topics 04, 05, 07, 08 |
 | Ilgner — The Rock Warrior's Way | 🛒 Buy | Topics 05, 09 |
 | Mobråten — The Climbing Bible | 🛒 Buy | Topics 01, 02, 04, 07, 08 |
@@ -599,9 +492,6 @@ Audit deliverable: `docs/audit/outdoor_audit_D170.md` (2026-04-04) — 13 findin
 
 ## Priority 3 — UI polish
 
-| ID | Title | Effort | Notes |
-|----|-------|--------|-------|
-| B40 | Branch develop/main workflow | S | Staging/production branches |
 
 ### Warmup Circuit add-on
 
@@ -945,7 +835,7 @@ Higher pulley injury rate, shoulder impingement from steep terrain, fall injurie
 | R150 | Integration test full-pipeline (assessment → closed-loop) | audit 2026-03-21, confirmed by D164 Agent 10 |
 | R151 | Type hints (`TypedDict`/`dataclass`), eliminate `any`, date utils | audit 2026-03-21 |
 | R152 | Periodic full codebase audit con Agent Teams | audit 2026-03-21 |
-| R160 | Audio util dedup: beep/countdownTick/transitionBeep duplicated in CircuitTimer and Tabata — extract to single shared module in lib/ | B160 audit 2026-03-26 |
+| D170 P1-04 | `apply_day_add` non riceve `gyms` — serve refactor di firma. Il path utente principale è coperto dal fix frontend di B173. Spostato qui da P1.26 ([[D269]]). | audit D170 2026-03-31 |
 | — | Dynamic background imagery (Midjourney, phase-aware) | roadmap discussion |
 | — | Technique drills from book (scan + catalog) | roadmap discussion |
 

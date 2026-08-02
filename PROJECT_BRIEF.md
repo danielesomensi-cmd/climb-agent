@@ -27,7 +27,9 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Frontend components | 105 |
 <!-- STATUS_TABLE_END -->
 
-**Current phase:** Paid launch prep. Production live at **https://climbagent.app** (canonical domain since A248, 2026-07-21 — legacy `climb-agent.vercel.app` 308-redirects with query preserved). Stripe LIVE (sk_live keys on Railway + Vercel). B202 fail-closed subscription guard deployed. Founding Climber ($4.99/mo) and Standard ($9.99/mo) plans active. 4 beta testers (Christie, Cesar, Paolo, Agustin) — will need to subscribe after B202.
+**Current phase:** Paid launch prep. Production live at **https://climbagent.app** (canonical domain since A248, 2026-07-21 — legacy `climb-agent.vercel.app` 308-redirects with query preserved). Stripe LIVE (sk_live keys on Railway + Vercel). B202 fail-closed subscription guard deployed. Founding Climber ($4.99/mo) and Standard ($9.99/mo) plans active.
+
+**Funnel (snapshot 2026-08-02, `scripts/gtm_funnel.py`):** 14 registered · 10 trials, all expiring 5 August (4 engaged, last login 21-22 July; 6 never logged in) · 4 stuck at checkout · **0 paying** · 3 historical cancellations. The 21 July re-launch cohort converted nobody. Distribution is the open problem: r/bouldering rejected outreach (channel closed), r/indoorbouldering allowed one monthly-thread post, and the r/climbharder post — the channel the Council ranked #1 — has been drafted since 22 July but never published. Next step is GTM-05 in `docs/ROADMAP_CURRENT.md`.
 
 **Persistence:** Supabase JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions). RLS enabled on all 6 tables (no policies, service role key bypasses).
 

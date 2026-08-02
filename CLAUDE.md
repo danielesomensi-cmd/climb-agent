@@ -256,7 +256,7 @@ user_state.assessment + user_state.goal
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (47):** 14 main views + 16 onboarding steps + 1 root + 1 onboarding index + 2 auth (sign-in, sign-up) + 1 tabata + 1 legal.
+**Pages (47):** 19 under `(main)` + 2 under `(guided)` (guided session, session-builder play) + 16 under `/onboarding` (index + 15 route dirs) + 2 auth (sign-in, sign-up) + 1 root dispatcher + `/assessment` + `/demo` + `/legal` + `/offline` + 2 dev-only (`/dev/tokens`, `/dev/today-states`). Recount verified against `find frontend/src/app -name page.tsx` (D269, 2026-08-02) — the previous breakdown summed to 36 and omitted the session-builder, body-part-picker, `/demo`, `/offline` and the dev pages.
 
 **Entry-point routing (B300, `src/app/page.tsx`)** — the root `/` is a smart dispatcher, not a page:
 - **Signed-out** (cold ad/flyer visitor) → `/onboarding/welcome` (public marketing landing: hero + value props + "Start assessment" CTA + a visible "Sign in" link + "Recover with a code"). Before B300 it sent them to the bare `/sign-in` login wall — a bad ad landing.
@@ -285,7 +285,12 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/assessment` — **Public** 5-axis assessment (A262/A263). No account, nothing stored: six questions → radar + weakest axis. Scale selezionabile (French/YDS, Font/V-scale — conversione client-side prima dell'invio, l'engine riceve sempre la sua convenzione); blocco opzionale max hang + weighted pull-up che rende misurati gli assi dita/tirata. The acquisition landing meant to be posted publicly; the CTA seeds the answers into the wizard's anonymous draft (`seedDraftFromAssessment`) so nothing is retyped.
 - `/guide` — User guide
 - `/subscribe` — Subscription plans and checkout
-- `/onboarding/*` — 16-step wizard: welcome, install, profile, discipline, experience, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review, start-week, recover
+- `/session-builder`, `/session-builder/[id]`, `/session-builder/[id]/view`, `/session-builder/[id]/play` — Custom session builder: list, edit, read-only view, guided playback (`/api/custom-session/*`)
+- `/body-part-picker` — Body-part session generator (preview → insert into the week plan)
+- `/demo` — Zero-context acquisition landing (no Clerk needed by the page itself — see `A-CLERK-PROVIDER-SCOPE`)
+- `/offline` — Service-worker offline fallback
+- `/dev/tokens`, `/dev/today-states` — Dev-only harnesses (design tokens, `/today` state matrix)
+- `/onboarding/*` — 15 route dirs. **The wizard proper is 12 steps** (`ONBOARDING_STEPS`: profile, experience, discipline, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review). Outside that list: `welcome` (public landing), `install` and `start-week` (run *after* a plan exists, gated), and `recover`. ⚠️ `recover` is currently a 12-line stub that redirects to `/sign-in` — the welcome page still advertises "Recover with a code" and the backend endpoints are still live, so the flow dead-ends (roadmap: `WELCOME-RECOVER-DEAD-END`)
 
 ## Deployment
 
