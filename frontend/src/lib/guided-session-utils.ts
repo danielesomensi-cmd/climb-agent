@@ -5,7 +5,7 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 /**
  * A245 B-2 — this used to return `guided_session_clerk_` for every signed-in
  * user: the LITERAL string "clerk", never the real id. On a shared device (or
- * after a recovery-code import) user A's in-progress session was readable and
+ * after a state import) user A's in-progress session was readable and
  * writable as user B's. Harmless-looking while it only held guided progress,
  * fatal once `state`/`week` are persisted under the same convention — so the
  * scope is now the real Clerk user id everywhere.

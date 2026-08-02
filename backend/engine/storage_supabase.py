@@ -452,38 +452,10 @@ def append_event(user_id: Optional[str], entry: Dict[str, Any]) -> None:
     _sb().table("event_logs").insert({"user_id": uid, "entry": entry}).execute()
 
 
-# ---------------------------------------------------------------------------
-# Recovery codes (global)
-# ---------------------------------------------------------------------------
-
-def load_recovery_codes() -> Dict[str, Any]:
-    """Read all recovery codes. Returns dict {code: {uuid, created_at}}."""
-    r = _sb().table("recovery_codes").select("code, user_id, created_at").execute()
-    codes: Dict[str, Any] = {}
-    for row in r.data:
-        codes[row["code"]] = {
-            "uuid": row["user_id"],
-            "created_at": row["created_at"][:10] if row.get("created_at") else None,
-        }
-    return codes
-
-
-def save_recovery_codes(codes: Dict[str, Any]) -> None:
-    """Sync recovery codes to Supabase (truncate + bulk insert)."""
-    # Delete all existing codes
-    # PostgREST requires a filter for DELETE — use a true-for-all condition
-    _sb().table("recovery_codes").delete().neq("code", "").execute()
-    # Bulk insert
-    if codes:
-        rows = [
-            {
-                "code": code,
-                "user_id": info.get("uuid", ""),
-                "created_at": info.get("created_at"),
-            }
-            for code, info in codes.items()
-        ]
-        _sb().table("recovery_codes").insert(rows).execute()
+# B320: the recovery-code reader/writer lived here. Both are gone with the
+# endpoints that were their only callers. The `recovery_codes` table is NOT
+# dropped — existing rows stay, and `delete_user_data()` below still clears a
+# user's row, so deleting an account keeps wiping everything it owns.
 
 
 # ---------------------------------------------------------------------------

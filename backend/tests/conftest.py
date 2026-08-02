@@ -67,9 +67,8 @@ def isolate_storage_write_dirs(tmp_path, monkeypatch):
 
     monkeypatch.setattr(storage_file, "DATA_DIR", data_dir, raising=False)
     monkeypatch.setattr(storage_file, "USERS_DIR", data_dir / "users", raising=False)
-    monkeypatch.setattr(
-        storage_file, "_CODES_PATH", data_dir / "recovery_codes.json", raising=False
-    )
+    # `_CODES_PATH` was redirected here too, until B320 retired the
+    # recovery-code feature and with it the only writer of that file.
 
     tmp_state = data_dir / "user_state.json"
     real_state = REPO_ROOT / "backend" / "data" / "user_state.json"

@@ -1,13 +1,17 @@
-"""User router — GET /api/user/export, POST /api/user/import, recovery codes."""
+"""User router — GET /api/user/export, POST /api/user/import.
+
+B320 retired the recovery-code endpoints (`/recovery-code`, `/recover`): they
+were a pre-Clerk relic. Account recovery is email sign-in through Clerk, and
+the export/import pair below is the data backup.
+"""
 
 from __future__ import annotations
 
 import json
-import secrets
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 
 from backend.api.deps import (
@@ -15,31 +19,7 @@ from backend.api.deps import (
     load_state,
     save_state,
 )
-from backend.api.rate_limit import limiter
 from backend.engine import storage
-
-# ── Recovery code helpers ───────────────────────────────────────────────
-
-_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"  # no 0/O/1/I/L
-
-
-def _load_codes() -> Dict[str, Any]:
-    return storage.load_recovery_codes()
-
-
-def _save_codes(codes: Dict[str, Any]) -> None:
-    storage.save_recovery_codes(codes)
-
-
-def _generate_code(codes: Dict[str, Any]) -> str:
-    """Generate a unique CLIMB-XXXX-XXXX code not already in *codes*."""
-    for _ in range(100):
-        part1 = "".join(secrets.choice(_ALPHABET) for _ in range(4))
-        part2 = "".join(secrets.choice(_ALPHABET) for _ in range(4))
-        code = f"CLIMB-{part1}-{part2}"
-        if code not in codes:
-            return code
-    raise RuntimeError("Could not generate unique recovery code")
 
 router = APIRouter(prefix="/api/user", tags=["user"])
 
@@ -117,53 +97,3 @@ def import_state(
     save_state(body, user_id)
     _append_import_event(user_id)
     return {"status": "imported"}
-
-
-@router.post("/recovery-code")
-@limiter.limit("5/minute")
-def get_or_create_recovery_code(
-    request: Request,
-    user_id: Optional[str] = Depends(get_user_id),
-):
-    """Return existing recovery code for this user, or generate a new one.
-
-    Requires X-User-ID header. Idempotent: repeated calls return the same code.
-    """
-    if not user_id:
-        raise HTTPException(status_code=400, detail="X-User-ID header required")
-
-    codes = _load_codes()
-
-    # Check if this UUID already has a code
-    for code, info in codes.items():
-        if info.get("uuid") == user_id:
-            return {"recovery_code": code}
-
-    # Generate new code
-    code = _generate_code(codes)
-    codes[code] = {
-        "uuid": user_id,
-        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
-    }
-    _save_codes(codes)
-    return {"recovery_code": code}
-
-
-@router.post("/recover")
-@limiter.limit("5/minute")
-def recover_account(request: Request, body: Dict[str, Any]):
-    """Given a recovery code, return the associated UUID.
-
-    Public endpoint — no X-User-ID required.
-    Body: { "recovery_code": "CLIMB-XXXX-XXXX" }
-    """
-    code = str(body.get("recovery_code", "")).strip().upper()
-    if not code:
-        raise HTTPException(status_code=400, detail="recovery_code required")
-
-    codes = _load_codes()
-    info = codes.get(code)
-    if not info:
-        raise HTTPException(status_code=404, detail="Recovery code not found")
-
-    return {"uuid": info["uuid"]}

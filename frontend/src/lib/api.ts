@@ -715,7 +715,9 @@ export const importUserState = (state: Record<string, unknown>) =>
     body: JSON.stringify(state),
   });
 
-// Recovery code functions removed — Clerk handles account recovery
+// Account recovery is Clerk email sign-in. The recovery-code client functions
+// went first; B320 removed what was left of the feature — the welcome-page
+// link, the /onboarding/recover page and the two backend endpoints.
 
 // Weekly Override (B42)
 export const getWeeklyOverride = (weekStart: string) =>

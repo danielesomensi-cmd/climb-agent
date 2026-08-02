@@ -589,7 +589,7 @@ If this happens, give honest feedback ("Hard" / "Very Hard") and the closed-loop
 
 Your account is tied to the email address you signed up with, and your training data lives on the server — not on the phone. If you reinstall the app, switch device, or the iOS PWA clears its local data, **sign in with the same email** and everything is there.
 
-> **Note (2026-08-02):** earlier versions of this guide described a `CLIMB-XXXX-XXXX` recovery code stored in Settings. That flow was replaced by email sign-in and the code is no longer shown anywhere in the app. The "Recover with a code" link still visible on the welcome screen is a leftover and currently just sends you to the sign-in page — it is tracked as a bug (`WELCOME-RECOVER-DEAD-END`). If you are locked out, use sign-in with your original email, or the export file below.
+> **Note (2026-08-02):** earlier versions of this guide described a `CLIMB-XXXX-XXXX` recovery code stored in Settings. That flow was replaced by email sign-in; B320 removed the last leftovers of it (the welcome-screen link and the page behind it). If you are locked out, sign in with your original email — or restore from the export file below.
 
 ### Export / Import
 

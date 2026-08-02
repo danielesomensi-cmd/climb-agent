@@ -470,12 +470,11 @@ export const GUIDE_SECTIONS: GuideSection[] = [
     id: "backup-and-recovery",
     title: "Backup & Recovery",
     searchText:
-      "backup recovery code CLIMB export import JSON settings restore data PWA reinstall",
+      "backup recovery lost access sign in email export import JSON settings restore data PWA reinstall",
     body: (
       <>
-        <H3>Recovery Code</H3>
-        <P>Your account has a recovery code (format: <code className="text-xs bg-zinc-800 px-1.5 py-0.5 rounded">CLIMB-XXXX-XXXX</code>). Find it in <B>Settings</B>. <B>Save it somewhere safe</B> &mdash; if you lose access to the app, this code is how you get your data back.</P>
-        <P>To recover: open the app &rarr; on the onboarding screen, tap &ldquo;Recover existing account&rdquo; &rarr; enter your code.</P>
+        <H3>Getting back in</H3>
+        <P>Your account is tied to the email address you signed up with, and your training data lives on the server &mdash; not on your phone. If you reinstall the app, switch device, or the iOS PWA clears its local data, <B>sign in with the same email</B> and everything is there.</P>
         <H3>Export / Import</H3>
         <P>In <B>Settings</B>, you can:</P>
         <Ul>
