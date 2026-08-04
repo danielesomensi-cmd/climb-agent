@@ -14371,6 +14371,206 @@
         "base",
         "power_endurance"
       ]
+    },
+    {
+      "id": "treadmill_incline_walk",
+      "name": "Incline Treadmill Walk (Zone 2)",
+      "category": "conditioning",
+      "time_min": 30,
+      "role": [
+        "conditioning"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "locomotion",
+      "intensity_level": "low",
+      "fatigue_cost": 3,
+      "recency_group": "conditioning_steady_cardio",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym",
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 1800,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Walk, do not run. Incline 10-12% at 5-5.5 km/h. No treadmill: any sustained uphill walk works."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Steady-state Zone 2 aerobic work on an inclined treadmill. The most climber-friendly cardio option: walking uphill delivers the same aerobic stimulus as running with a fraction of the joint impact and almost no calf soreness, so it does not compete with the next climbing session. It also rehearses the exact demand of a long crag approach. Aerobic base supports recovery between redpoint attempts and across consecutive days on a climbing trip — it does not build finger strength, and it is not meant to.",
+      "cues": [
+        "Incline 10-12%, speed 5-5.5 km/h. Walking, not running — impact is the thing being avoided",
+        "Target 60-70% of max heart rate. Estimate max as 208 - (0.7 x age), or use a measured value",
+        "Note: the default Zone 2 on most sport watches sits below the physiological aerobic threshold — aim for the top of that band, not the middle",
+        "Talk test: you must be able to say a full sentence without breaking the breath",
+        "Do not hold the handrails — it offloads the legs and voids the incline",
+        "No treadmill? A hill, a stair machine or a loaded pack on any slope all work"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
+    },
+    {
+      "id": "stationary_bike_zone2",
+      "name": "Stationary Bike (Zone 2 Steady)",
+      "category": "conditioning",
+      "time_min": 30,
+      "role": [
+        "conditioning",
+        "recovery"
+      ],
+      "domain": [
+        "aerobic_capacity",
+        "regeneration"
+      ],
+      "pattern": "locomotion",
+      "intensity_level": "low",
+      "fatigue_cost": 2,
+      "recency_group": "conditioning_steady_cardio",
+      "equipment_required": [],
+      "location_allowed": [
+        "gym",
+        "home"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 1800,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Zero impact. The safest aerobic option the day after a hard session or on a recovery day."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Continuous low-intensity cycling for aerobic base and active recovery. Zero impact and zero upper-body load make this the cardio option that interferes least with climbing: it raises circulation and clears metabolites without adding tendon or finger stress. Preferred over running on the day after a maximal session, and the default when knees or ankles are irritated.",
+      "cues": [
+        "Cadence 80-90 rpm with light resistance — spin, do not grind",
+        "Target 60-70% of max heart rate; breathing stays conversational throughout",
+        "Keep a relaxed grip on the bars: squeezing turns a rest tool into forearm work",
+        "As active recovery, 20 minutes is enough — this is not meant to be a workout"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
+    },
+    {
+      "id": "easy_run_zone2",
+      "name": "Easy Run (Zone 2 Aerobic Base)",
+      "category": "conditioning",
+      "time_min": 35,
+      "role": [
+        "conditioning"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "locomotion",
+      "intensity_level": "low",
+      "fatigue_cost": 4,
+      "recency_group": "conditioning_steady_cardio",
+      "equipment_required": [],
+      "location_allowed": [
+        "outdoor",
+        "gym"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 2100,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Conversational pace only. If a hard climbing session follows within 24h, prefer bike or incline walk."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Continuous easy running at conversational pace for general aerobic capacity. Effective and equipment-free, but the highest-impact option here: calf and Achilles loading can carry over into footwork quality for a day or two, and body mass makes that cost scale. Choose it when the next climbing day is at least 48h out; otherwise the bike or the incline walk buys the same aerobic stimulus for less.",
+      "cues": [
+        "Conversational pace throughout — if you cannot hold a sentence, you are running too fast",
+        "Target 60-70% of max heart rate. Most climbers run their easy runs too hard",
+        "Build volume by minutes, not by pace. There is no reason to run fast for climbing",
+        "Land under the hips with a quick turnover — overstriding is what wrecks the calves"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
+    },
+    {
+      "id": "approach_hike_loaded",
+      "name": "Loaded Approach Hike",
+      "category": "conditioning",
+      "time_min": 50,
+      "role": [
+        "conditioning"
+      ],
+      "domain": [
+        "aerobic_capacity"
+      ],
+      "pattern": "locomotion",
+      "intensity_level": "low",
+      "fatigue_cost": 4,
+      "recency_group": "conditioning_steady_cardio",
+      "equipment_required": [],
+      "location_allowed": [
+        "outdoor"
+      ],
+      "contraindications": [],
+      "prescription_defaults": {
+        "sets": 1,
+        "reps": null,
+        "work_seconds": 3000,
+        "rest_between_reps_seconds": null,
+        "rest_between_sets_seconds": null,
+        "notes": "Uphill walking with the pack you actually carry to the crag. Specific preparation for trips with long approaches."
+      },
+      "stress_tags": {
+        "fingers": "none",
+        "elbow": "none",
+        "cns": "low",
+        "skin": "none"
+      },
+      "description": "Sustained uphill walking carrying a loaded pack — the most specific aerobic work available to a climber preparing for a trip. Trains exactly what a steep approach demands: legs, posterior chain and shoulders under a pack, over a duration no gym session reproduces. Best scheduled in the weeks before a trip with long walk-ins, and kept well clear of performance days.",
+      "cues": [
+        "Carry the pack you will actually use — rope and rack, not a token weight",
+        "Steady uphill effort at 60-70% of max heart rate; slow down before you have to stop",
+        "Shorten the stride on steep ground and keep the feet quiet — it is the same skill as footwork",
+        "Descend under control: downhill is where the eccentric damage happens, and it costs days",
+        "Not a taper-week session — the leg fatigue lingers longer than it feels like it will"
+      ],
+      "video_url": null,
+      "load_model": "bodyweight_only",
+      "phase_affinity": [
+        "base",
+        "deload"
+      ]
     }
   ]
 }

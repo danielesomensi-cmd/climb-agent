@@ -31,7 +31,7 @@ def test_version_is_2_1(exercises):
 
 
 def test_total_count(exercise_list):
-    assert len(exercise_list) == 259  # D262: +4 handstand (frog stand, kick-up, heel pulls, scapular shrugs) on top of C260's 255
+    assert len(exercise_list) == 263  # C266: +4 steady-state cardio (incline walk, bike, easy run, loaded approach) on top of D262's 259
 
 
 def test_all_have_canonical_prescription_fields(exercise_list):
