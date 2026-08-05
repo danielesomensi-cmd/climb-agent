@@ -14,6 +14,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { DayCard } from "@/components/training/day-card";
 import { DailyCueBanner } from "@/components/training/daily-cue-banner";
 import { DailyTipCard } from "@/components/training/daily-tip-card";
+import { FounderNoteCard, type FounderNote } from "@/components/training/founder-note-card";
 import { PhaseCelebration } from "@/components/training/phase-celebration";
 import { MilestoneToast } from "@/components/training/milestone-toast";
 import { WeatherCard } from "@/components/training/weather-card";
@@ -1036,6 +1037,15 @@ function TodayContent() {
       <TopBar title={title} subtitle={subtitle} />
 
       <main className="relative z-10 mx-auto max-w-2xl space-y-4 p-4">
+        {/* A264: hand-written note from the founder to this specific athlete.
+            Renders only when user_state.founder_note exists and is undismissed,
+            and only on the live "today" view — a note about your training is
+            noise when you are looking back at last Tuesday. */}
+        <FounderNoteCard
+          note={stateQuery.data?.founder_note as FounderNote | undefined}
+          isViewingToday={isViewingToday}
+        />
+
         {/* Checkout success banner */}
         {checkoutSuccess && (
           <div className="rounded-lg border border-success/30 bg-success/10 p-3 text-sm text-success">

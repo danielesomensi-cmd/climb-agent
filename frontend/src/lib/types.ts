@@ -998,6 +998,17 @@ export interface UserState {
   // fields prone to drift (see D251 C2/W1).
   body?: { age?: number; weight_kg?: number; height_cm?: number };
   bodyweight_kg?: number;
+  // A264: hand-written note from the founder to one athlete, rendered on
+  // /today until dismissed. Absent for everyone who has not been written to.
+  founder_note?: {
+    id: string;
+    title: string;
+    body: string[];
+    cta_label?: string;
+    cta_href?: string;
+    signature?: string;
+    dismissed_at?: string | null;
+  };
   performance?: {
     current_level?: Record<string, unknown>;
     [key: string]: unknown;
