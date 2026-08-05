@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, Tuple
 
+from backend.engine.grade_mapping import BOULDER_TO_LEAD
+
 # ---------------------------------------------------------------------------
 # Grade helpers
 # ---------------------------------------------------------------------------
@@ -28,6 +30,32 @@ def grade_index(grade: str) -> int:
     if grade not in _GRADE_INDEX:
         raise ValueError(f"Unknown grade: {grade!r}")
     return _GRADE_INDEX[grade]
+
+
+def resolve_grade(grade: Optional[str]) -> Optional[str]:
+    """Normalize any stored grade to the lead scale the benchmarks are built on.
+
+    The benchmark tables below are calibrated to lowercase French lead grades,
+    but the engine stores boulder grades in Fontainebleau (``"7B"``) — see the
+    "Fontainebleau for boulder grades" rule in CLAUDE.md. Every caller that
+    turns a grade into an index therefore has to map first, or a boulder athlete
+    silently falls off the table.
+
+    B321: before this existed, ``_compute_finger_strength`` did
+    ``grade_index(g) if g in _GRADE_INDEX else 0`` — so ``"7B"`` produced index
+    **0**, i.e. "beginner", and the axis scored 0 for a 7B boulderer with real
+    numbers on file. Same silent-zero pattern A262 removed from the public
+    assessment endpoint. Returns ``None`` for a genuinely unknown grade so the
+    caller can fall back to a neutral score instead of fabricating a floor.
+    """
+    if not grade:
+        return None
+    if grade in _GRADE_INDEX:
+        return grade
+    mapped = BOULDER_TO_LEAD.get(grade.upper())
+    if mapped in _GRADE_INDEX:
+        return mapped
+    return None
 
 
 def grade_gap(grade_a: str, grade_b: str) -> int:
@@ -79,6 +107,13 @@ def _clamp(value: float, lo: float = 0.0, hi: float = 100.0) -> int:
 
 def _benchmark_for(table: Dict[str, float], target_grade: str) -> float:
     """Get the benchmark for target_grade, falling back to nearest known grade."""
+    # B321: a Font target ("7C") used to raise ValueError here and take the whole
+    # profile down with it. Onboarding maps target_grade before calling, but
+    # PUT /api/state and the goal editor do not always.
+    # An unresolvable grade falls back to the same "7c+" the profile entry point
+    # uses as its default target — never a ValueError, because a raised
+    # assessment means no profile, which means no plan at all (B302).
+    target_grade = resolve_grade(target_grade) or "7c+"
     if target_grade in table:
         return table[target_grade]
     # Fall back: find the closest grade in the table
@@ -140,6 +175,49 @@ _AXIS_WEAKNESS_PENALTIES: Dict[str, Tuple[Tuple[Tuple[str, ...], float, float], 
 }
 
 
+def _redpoint_onsight_gap(grades: Dict[str, Any]) -> Optional[int]:
+    """Return the redpoint − onsight gap in half-grade steps, or None.
+
+    Both power_endurance and technique are driven by this gap. B321: they read
+    ``lead_max_rp``/``lead_max_os`` only, so a boulder-only athlete — who fills
+    in ``boulder_max_rp``/``boulder_max_os`` and leaves the lead fields empty —
+    always fell through to the neutral 50 on **both** axes, no matter how their
+    onsight compared to their redpoint. Boulder grades are mapped to lead via
+    ``resolve_grade`` so the gap is measured on one scale, the same convention
+    A262 applies in the public assessment endpoint.
+    """
+    for rp_key, os_key in (
+        ("lead_max_rp", "lead_max_os"),
+        ("boulder_max_rp", "boulder_max_os"),
+    ):
+        rp = resolve_grade(grades.get(rp_key))
+        os_ = resolve_grade(grades.get(os_key))
+        if rp and os_:
+            return grade_gap(rp, os_)
+    return None
+
+
+def _grade_ratio_score(current_grade: str, target_grade: str, ceiling: float) -> float:
+    """Estimate an axis from the current/target grade ratio (no measured test).
+
+    B321: both call sites previously inlined
+    ``grade_index(g) if g in _GRADE_INDEX else 0``, which turned any grade the
+    lead table does not contain — every Fontainebleau boulder grade — into a
+    hard 0 and dragged the axis to the floor. Grades are resolved through
+    ``resolve_grade`` first; if either side is still unknown the score is the
+    neutral 50, the same value used when the target index is 0. Unknown must
+    read as "we don't know", never as "you are a beginner".
+    """
+    current = resolve_grade(current_grade)
+    target = resolve_grade(target_grade)
+    if current is None or target is None:
+        return 50.0
+    target_idx = grade_index(target)
+    if target_idx <= 0:
+        return 50.0
+    return (grade_index(current) / target_idx) * ceiling
+
+
 def _weakness_penalty(self_eval: Dict[str, Any], axis: str) -> float:
     """Return the (negative or zero) self-eval penalty for the given axis.
 
@@ -178,12 +256,7 @@ def _compute_finger_strength(
         score = (ratio / benchmark) * 100
     else:
         # Estimate from grades: assume current grade ~ 60-70% of target benchmark
-        current_idx = grade_index(current_grade) if current_grade in _GRADE_INDEX else 0
-        target_idx = grade_index(target_grade)
-        if target_idx > 0:
-            score = (current_idx / target_idx) * 70
-        else:
-            score = 50.0
+        score = _grade_ratio_score(current_grade, target_grade, 70.0)
         # Self-eval modifier
         score += _weakness_penalty(self_eval, "finger_strength")
 
@@ -214,12 +287,7 @@ def _compute_pulling_strength(
         ratio = wp_1rm / bw
         score = (ratio / benchmark) * 100
     else:
-        current_idx = grade_index(current_grade) if current_grade in _GRADE_INDEX else 0
-        target_idx = grade_index(target_grade)
-        if target_idx > 0:
-            score = (current_idx / target_idx) * 65
-        else:
-            score = 50.0
+        score = _grade_ratio_score(current_grade, target_grade, 65.0)
         score += _weakness_penalty(self_eval, "pulling_strength")
 
     return _clamp(score)
@@ -241,21 +309,18 @@ def _compute_power_endurance(
     tests = tests or {}
 
     # --- Gap score ---
-    lead_rp = grades.get("lead_max_rp")
-    lead_os = grades.get("lead_max_os")
+    gap = _redpoint_onsight_gap(grades)
 
-    if lead_rp and lead_os and lead_rp in _GRADE_INDEX and lead_os in _GRADE_INDEX:
-        gap = grade_gap(lead_rp, lead_os)
-        if gap <= 2:
-            gap_score = 75.0
-        elif gap <= 4:
-            gap_score = 55.0
-        elif gap <= 6:
-            gap_score = 40.0
-        else:
-            gap_score = 30.0
-    else:
+    if gap is None:
         gap_score = 50.0
+    elif gap <= 2:
+        gap_score = 75.0
+    elif gap <= 4:
+        gap_score = 55.0
+    elif gap <= 6:
+        gap_score = 40.0
+    else:
+        gap_score = 30.0
 
     # --- Repeater score (objective) ---
     repeater_reps = tests.get("repeater_7_3_max_sets_20mm")
@@ -286,21 +351,18 @@ def _compute_technique(
     grades: Dict[str, Any],
     self_eval: Dict[str, Any],
 ) -> int:
-    lead_rp = grades.get("lead_max_rp")
-    lead_os = grades.get("lead_max_os")
+    gap = _redpoint_onsight_gap(grades)
 
-    if lead_rp and lead_os and lead_rp in _GRADE_INDEX and lead_os in _GRADE_INDEX:
-        gap = grade_gap(lead_rp, lead_os)
-        if gap <= 2:
-            score = 80.0
-        elif gap <= 4:
-            score = 60.0
-        elif gap <= 6:
-            score = 40.0
-        else:
-            score = 30.0
-    else:
+    if gap is None:
         score = 50.0
+    elif gap <= 2:
+        score = 80.0
+    elif gap <= 4:
+        score = 60.0
+    elif gap <= 6:
+        score = 40.0
+    else:
+        score = 30.0
 
     score += _weakness_penalty(self_eval, "technique")
 
