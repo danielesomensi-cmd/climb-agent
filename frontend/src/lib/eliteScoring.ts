@@ -105,6 +105,40 @@ export function hasAnyEliteScore(scores: EliteScores): boolean {
   return Object.values(scores).some((v) => v !== null);
 }
 
+/**
+ * A268 — build the raw inputs from **added** loads rather than totals.
+ *
+ * The public `/assessment` page (A263) asks for the weight *added* to the bar,
+ * which can be negative when the pull-up is assisted; the engine and the elite
+ * anchors both speak in totals. This mirrors exactly what
+ * `routers/public_assessment.py` does before calling the engine
+ * (`tests["max_hang_20mm_7s_total_kg"] = bw + added`), so the same answers score
+ * the same way on both scales.
+ *
+ * Without a bodyweight there is nothing to convert and nothing to normalise —
+ * both axes come back null rather than being scored against a stand-in, the
+ * same refusal the endpoint makes with a 422.
+ */
+export function eliteInputsFromAddedLoads(input: {
+  bodyweight_kg?: number | null;
+  max_hang_added_kg?: number | null;
+  weighted_pullup_added_kg?: number | null;
+}): EliteRawInputs {
+  const bw = toPositiveNumber(input.bodyweight_kg);
+  const total = (added: number | null | undefined): number | null => {
+    if (bw === null || added === null || added === undefined) return null;
+    const n = Number(added);
+    if (!Number.isFinite(n)) return null;
+    return toPositiveNumber(bw + n);
+  };
+  return {
+    bodyweightKg: bw,
+    maxHangTotalKg: total(input.max_hang_added_kg),
+    weightedPullupTotalKg: total(input.weighted_pullup_added_kg),
+    enduranceImpulse: null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Extraction from the existing /api/state payload (no new endpoint)
 // ---------------------------------------------------------------------------

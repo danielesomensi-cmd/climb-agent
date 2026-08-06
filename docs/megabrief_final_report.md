@@ -214,9 +214,12 @@ be false.
    but the *stored* score a lead athlete's plan runs on is still top-censored. D272 §4 shows how
    narrow the margins around the cliffs are — three real users sit 1–4 points above `< 50` on a
    derived number.
-7. **The elite toggle ships on `/plan` only.** The public `/assessment` page collects the same numbers
-   optionally, so most visitors there would see both live axes greyed. The component takes one prop to
-   opt in later; the scope choice was deliberate, not an oversight.
+7. ~~**The elite toggle ships on `/plan` only.**~~ **Resolved by A268 (2026-08-06).** The toggle now
+   also renders on the public `/assessment` page, gated on `hasAnyEliteScore` so a visitor who skips
+   the optional numbers sees the page exactly as before. Same pure function, same anchors, still
+   render-only — the public page converts *added* loads to totals via `eliteInputsFromAddedLoads`,
+   mirroring `public_assessment.py`, and a test asserts both surfaces score the same athlete
+   identically.
 
 ---
 

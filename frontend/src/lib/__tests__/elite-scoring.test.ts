@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   computeEliteScores,
+  eliteInputsFromAddedLoads,
   extractEliteInputs,
   hasAnyEliteScore,
   normalizeAgainstAnchor,
@@ -215,6 +216,100 @@ describe("extractEliteInputs — reads the existing /api/state payload", () => {
     expect(extractEliteInputs(undefined).bodyweightKg).toBeNull();
     expect(extractEliteInputs({}).maxHangTotalKg).toBeNull();
     expect(hasAnyEliteScore(computeEliteScores(extractEliteInputs({})))).toBe(false);
+  });
+});
+
+describe("eliteInputsFromAddedLoads — the public /assessment page (A268)", () => {
+  it("converts added loads to totals the way the public endpoint does", () => {
+    const raw = eliteInputsFromAddedLoads({
+      bodyweight_kg: 76,
+      max_hang_added_kg: 46,
+      weighted_pullup_added_kg: 51.8,
+    });
+    expect(raw.bodyweightKg).toBe(76);
+    expect(raw.maxHangTotalKg).toBe(122);
+    expect(raw.weightedPullupTotalKg).toBeCloseTo(127.8, 5);
+  });
+
+  it("scores identically to the /plan path for the same athlete", () => {
+    // Same numbers, one expressed as added load and one as a stored total.
+    const viaAdded = computeEliteScores(
+      eliteInputsFromAddedLoads({
+        bodyweight_kg: 76,
+        max_hang_added_kg: 46,
+        weighted_pullup_added_kg: 51.8,
+      }),
+    );
+    const viaState = computeEliteScores(
+      extractEliteInputs({
+        assessment: {
+          body: { weight_kg: 76 },
+          tests: {
+            max_hang_20mm_7s_total_kg: 122,
+            weighted_pullup_1rm_total_kg: 127.8,
+          },
+        },
+      }),
+    );
+    expect(viaAdded).toEqual(viaState);
+    expect(viaAdded.finger_strength).toBe(61);
+    expect(viaAdded.pulling_strength).toBe(78);
+  });
+
+  it("handles an assisted pull-up (negative added load)", () => {
+    const raw = eliteInputsFromAddedLoads({
+      bodyweight_kg: 67,
+      weighted_pullup_added_kg: -22, // 22 kg of assistance
+    });
+    expect(raw.weightedPullupTotalKg).toBe(45);
+    expect(computeEliteScores(raw).pulling_strength).toBe(0); // below the 100% BW floor
+  });
+
+  it("refuses to score numbers without a bodyweight — no 70kg stand-in", () => {
+    const raw = eliteInputsFromAddedLoads({
+      bodyweight_kg: null,
+      max_hang_added_kg: 46,
+      weighted_pullup_added_kg: 51.8,
+    });
+    expect(raw.maxHangTotalKg).toBeNull();
+    expect(raw.weightedPullupTotalKg).toBeNull();
+    expect(hasAnyEliteScore(computeEliteScores(raw))).toBe(false);
+  });
+
+  it("greys one axis independently of the other", () => {
+    const raw = eliteInputsFromAddedLoads({
+      bodyweight_kg: 70,
+      max_hang_added_kg: 40,
+    });
+    expect(raw.maxHangTotalKg).toBe(110);
+    expect(raw.weightedPullupTotalKg).toBeNull();
+    expect(hasAnyEliteScore(computeEliteScores(raw))).toBe(true);
+  });
+
+  it("hides the toggle for a visitor who entered no numbers at all", () => {
+    const raw = eliteInputsFromAddedLoads({
+      bodyweight_kg: null,
+      max_hang_added_kg: null,
+      weighted_pullup_added_kg: null,
+    });
+    expect(hasAnyEliteScore(computeEliteScores(raw))).toBe(false);
+  });
+
+  it("drops an assistance larger than bodyweight instead of going negative", () => {
+    const raw = eliteInputsFromAddedLoads({
+      bodyweight_kg: 60,
+      weighted_pullup_added_kg: -75,
+    });
+    expect(raw.weightedPullupTotalKg).toBeNull();
+  });
+
+  it("never carries an endurance impulse — the public page collects none", () => {
+    const raw = eliteInputsFromAddedLoads({
+      bodyweight_kg: 76,
+      max_hang_added_kg: 46,
+    });
+    expect(raw.enduranceImpulse).toBeNull();
+    expect(computeEliteScores(raw).endurance).toBeNull();
   });
 });
 

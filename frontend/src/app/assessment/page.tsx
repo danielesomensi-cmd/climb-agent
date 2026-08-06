@@ -27,6 +27,11 @@ import {
   ydsToFrench,
 } from "@/lib/gradeUtils";
 import { captureUtmOnMount, trackEvent } from "@/lib/analytics";
+import {
+  computeEliteScores,
+  eliteInputsFromAddedLoads,
+  hasAnyEliteScore,
+} from "@/lib/eliteScoring";
 
 /**
  * A262/A263 — the public 5-axis assessment.
@@ -187,13 +192,22 @@ export default function PublicAssessmentPage() {
   if (result) {
     const axisScore = result.profile[result.weakest_axis];
     const measured = result.measured_axes.length;
+    // A268 — the same display-only Elite comparison /plan has. The numbers come
+    // from what the visitor typed on this page (added loads → totals), never
+    // from the response: nothing about the elite scale is computed, stored or
+    // returned server-side. With no bodyweight or no numbers there is nothing to
+    // compare, so the toggle simply does not render.
+    const eliteInputs = eliteInputsFromAddedLoads(seed);
+    const showsEliteToggle = hasAnyEliteScore(computeEliteScores(eliteInputs));
     return (
       <div className="mx-auto max-w-lg space-y-6 px-4 pb-16 pt-8">
         <InAppBrowserBanner />
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Your profile</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Five axes, scored against the benchmarks for {result.target_grade_lead}.
+            {showsEliteToggle
+              ? `Five axes — against the benchmarks for ${result.target_grade_lead}, or against elite level.`
+              : `Five axes, scored against the benchmarks for ${result.target_grade_lead}.`}
           </p>
         </div>
 
@@ -203,6 +217,7 @@ export default function PublicAssessmentPage() {
               profile={result.profile}
               discipline={discipline}
               targetGrade={result.target_grade_lead}
+              eliteInputs={eliteInputs}
             />
           </CardContent>
         </Card>
