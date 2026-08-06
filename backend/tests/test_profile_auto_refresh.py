@@ -155,16 +155,27 @@ class TestSaveStateRecomputes(unittest.TestCase):
         _ensure_profile_fresh(state)
         assert state["assessment"]["profile"]["finger_strength"] == 100
 
-    def test_profile_updates_after_grades_change(self):
-        """Grade change should trigger profile recomputation."""
+    def test_grade_change_still_triggers_a_recompute(self):
+        """A270 inverted the assertion, not the mechanism.
+
+        An onsight grade no longer moves any axis — the gap was demoted (D266) —
+        but it is still part of the fingerprint, so the recompute must still
+        fire. Proven on the fingerprint, and on `current_grade`, which does still
+        drive the grade-estimate fallback for finger strength.
+        """
         state = _base_state(with_tests=False)
         _ensure_profile_fresh(state)
-        old_technique = state["assessment"]["profile"]["technique"]
+        before = dict(state["assessment"]["profile"])
+        fingerprint = state["assessment"]["_profile_fingerprint"]
 
-        # Change OS grade → smaller gap → higher technique
         state["assessment"]["grades"]["lead_max_os"] = "7c"
         _ensure_profile_fresh(state)
-        assert state["assessment"]["profile"]["technique"] > old_technique
+        assert state["assessment"]["_profile_fingerprint"] != fingerprint
+        assert state["assessment"]["profile"] == before, "the gap must not move a score"
+
+        state["goal"]["current_grade"] = "7a"
+        _ensure_profile_fresh(state)
+        assert state["assessment"]["profile"]["finger_strength"] < before["finger_strength"]
 
     def test_profile_updates_after_self_eval_change(self):
         """Self-eval change should trigger profile recomputation."""
@@ -215,16 +226,28 @@ class TestDanieleReproduction(unittest.TestCase):
         assert state["assessment"]["profile"]["pulling_strength"] == 100
 
     def test_daniele_exact_values(self):
-        """Verify Daniele's exact profile with all his data."""
+        """Verify Daniele's exact profile with all his data.
+
+        A270 moved three of the five. Both strength axes are untouched — they
+        were always measured. The other three used to be driven by the RP-OS
+        gap (8a redpoint / 7a+ onsight = 5 half-grades, the widest bucket but
+        one), and now:
+          - PE has no repeater on file → exact neutral 50, `estimated`.
+          - Technique is the self-declared `technique_errors` alone: 50 - 10.
+          - Endurance follows PE mechanically (0.8x) plus tenure and the
+            `pump_too_early` secondary penalty.
+        """
         state = _base_state(with_tests=True)
         _ensure_profile_fresh(state)
         profile = state["assessment"]["profile"]
 
         assert profile["finger_strength"] == 100
         assert profile["pulling_strength"] == 100
-        assert profile["power_endurance"] == 38
-        assert profile["technique"] == 30
-        assert profile["endurance"] == 35
+        assert profile["power_endurance"] == 50
+        assert profile["technique"] == 40
+        assert profile["endurance"] == 45
+        assert state["assessment"]["profile_source"]["power_endurance"] == "estimated"
+        assert state["assessment"]["profile_source"]["technique"] == "self_reported"
 
 
 if __name__ == "__main__":

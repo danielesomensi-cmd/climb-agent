@@ -14,6 +14,7 @@ from backend.engine.assessment_v1 import (
     SOURCE_ESTIMATED,
     SOURCE_MEASURED,
     SOURCE_PARTIAL,
+    SOURCE_SELF_REPORTED,
     compute_assessment_profile,
     compute_assessment_profile_with_source,
     compute_profile_source,
@@ -42,15 +43,20 @@ def corpus():
 # The guarantee
 # ---------------------------------------------------------------------------
 
-def test_scoring_is_unchanged_on_production_corpus(corpus):
-    """Every one of the 18 real profiles scores exactly as before A269.
+def test_scoring_matches_the_pinned_corpus(corpus):
+    """The 18 real profiles score exactly as pinned.
+
+    `expected_profile` froze the pre-A270 (v1) scoring and was A269's safety
+    net; `expected_profile_v2` is the current rules. A270 deliberately moved
+    three axes — which three, and by how much, is asserted in
+    `test_a270_gap_demotion.py`. This one keeps the corpus honest.
 
     B321's lesson: pin the actual production payload, not a synthetic one.
     """
     assert len(corpus) == 18
     for user in corpus:
         got = compute_assessment_profile(user["assessment"], user["goal"])
-        assert got == user["expected_profile"], f"scoring moved for {user['uid']}"
+        assert got == user["expected_profile_v2"], f"scoring moved for {user['uid']}"
 
 
 def test_with_source_returns_the_same_profile(corpus):
@@ -117,7 +123,10 @@ def test_three_loading_pin_profiles_are_already_drifted_from_A266(corpus):
 def test_every_axis_always_has_a_value():
     source = compute_profile_source({})
     assert set(source) == set(AXES)
-    assert all(v == SOURCE_ESTIMATED for v in source.values())
+    assert source["technique"] == SOURCE_SELF_REPORTED  # A270
+    assert all(
+        v == SOURCE_ESTIMATED for k, v in source.items() if k != "technique"
+    )
 
 
 def test_values_present_but_not_measured_read_as_estimated():
@@ -204,8 +213,12 @@ def test_repeater_makes_pe_partial_never_measured():
     assert source["power_endurance"] == SOURCE_PARTIAL
 
 
-def test_technique_is_always_estimated():
-    """No test feeds it — not "none today", none by construction."""
+def test_technique_is_always_self_reported():
+    """A270: one self-declared weakness and nothing else.
+
+    `self_reported` rather than `estimated` because they are different failures:
+    `estimated` means we inferred it, this means the athlete told us.
+    """
     everything_measured = {
         "tests_source": {
             "max_hang_20mm_7s_total_kg": "measured",
@@ -214,7 +227,7 @@ def test_technique_is_always_estimated():
             "max_hang_duration_20mm_seconds": "measured",
         }
     }
-    assert compute_profile_source(everything_measured)["technique"] == SOURCE_ESTIMATED
+    assert compute_profile_source(everything_measured)["technique"] == SOURCE_SELF_REPORTED
 
 
 def test_endurance_is_partial_through_either_measured_input():
@@ -233,8 +246,10 @@ def test_endurance_is_partial_through_either_measured_input():
 
 
 def test_a_malformed_tests_source_does_not_crash():
-    assert compute_profile_source({"tests_source": None})["technique"] == SOURCE_ESTIMATED
-    assert compute_profile_source({"tests_source": []})["technique"] == SOURCE_ESTIMATED
+    for bad in (None, [], "nope", 7):
+        source = compute_profile_source({"tests_source": bad})
+        assert source["finger_strength"] == SOURCE_ESTIMATED
+        assert source["technique"] == SOURCE_SELF_REPORTED
 
 
 def test_production_corpus_provenance_distribution(corpus):
@@ -244,7 +259,7 @@ def test_production_corpus_provenance_distribution(corpus):
         for axis, value in compute_profile_source(user["assessment"]).items():
             counts[axis][value] = counts[axis].get(value, 0) + 1
 
-    assert counts["technique"] == {SOURCE_ESTIMATED: 18}
+    assert counts["technique"] == {SOURCE_SELF_REPORTED: 18}  # A270
     assert counts["finger_strength"][SOURCE_ESTIMATED] == 12
     assert counts["pulling_strength"][SOURCE_ESTIMATED] == 13
     assert counts["power_endurance"][SOURCE_PARTIAL] == 1
@@ -376,7 +391,7 @@ def test_onboarding_complete_persists_provenance():
     # The one test entered is a max hang, so exactly one axis is measured.
     assert source["finger_strength"] == SOURCE_MEASURED
     assert source["pulling_strength"] == SOURCE_ESTIMATED
-    assert source["technique"] == SOURCE_ESTIMATED
+    assert source["technique"] == SOURCE_SELF_REPORTED
 
 
 def test_assessment_compute_persists_provenance():

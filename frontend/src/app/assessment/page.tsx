@@ -371,7 +371,7 @@ export default function PublicAssessmentPage() {
 
           <Field
             label={isBoulder ? "Hardest flash" : "Hardest onsight"}
-            hint="First try, no prior beta. The gap between this and your redpoint is what reveals technique and power endurance."
+            hint="First try, no prior beta. The gap between this and your redpoint says a lot about your style and tactics."
           >
             <select
               className={SELECT_CLASS}

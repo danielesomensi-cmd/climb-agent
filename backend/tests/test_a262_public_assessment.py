@@ -82,10 +82,23 @@ class TestScoring:
         with_ = client.post(URL, json={**VALID, "primary_weakness": "fingers_give_out"}).json()
         assert with_["profile"]["finger_strength"] < without["profile"]["finger_strength"]
 
-    def test_a_smaller_rp_os_gap_scores_better_technique(self):
+    def test_the_rp_os_gap_no_longer_moves_technique(self):
+        """A270/D266 inverted this: the gap used to drive the technique bucket.
+
+        It is a tactics/style composite, not a technique measurement — a
+        redpoint specialist runs a wide gap by choice, and reading that as a
+        deficit was the largest plan distortion D260 found.
+        """
         narrow = client.post(URL, json={**VALID, "max_rp": "7a", "max_os": "6c+"}).json()
         wide = client.post(URL, json={**VALID, "max_rp": "7a", "max_os": "5c"}).json()
-        assert narrow["profile"]["technique"] > wide["profile"]["technique"]
+        assert narrow["profile"]["technique"] == wide["profile"]["technique"]
+        assert narrow["profile"]["power_endurance"] == wide["profile"]["power_endurance"]
+
+    def test_technique_can_no_longer_be_the_weakest_link(self):
+        """It is a single self-declared weakness; it must not be the answer we
+        give a stranger about their own climbing (A270)."""
+        r = client.post(URL, json={**VALID, "primary_weakness": "technique_errors"}).json()
+        assert r["weakest_axis"] != "technique"
 
 
 class TestBoulder:

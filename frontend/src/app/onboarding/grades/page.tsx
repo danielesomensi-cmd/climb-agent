@@ -129,8 +129,8 @@ export default function GradesPage() {
           <CardHeader>
             <CardTitle className="text-xl">Lead grades</CardTitle>
             <CardDescription>
-              The gap between redpoint and onsight tells us about your power
-              endurance and technique
+              The gap between redpoint and onsight tells us about your climbing
+              style and tactics — how you approach a route, not how strong you are
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">

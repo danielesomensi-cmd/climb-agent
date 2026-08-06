@@ -249,13 +249,13 @@ export const AXIS_DESCRIPTIONS: Record<string, { lead: AxisInfo; boulder: AxisIn
   technique: {
     lead: {
       label: "Technique & Tactics",
-      description: "How efficiently you climb and how well you read routes. A big gap between your onsight and redpoint grades suggests there's free performance hiding in better movement and route-reading skills.",
-      low: "A lower score means there's free performance in better movement and route-reading — often the fastest axis to improve on the way to {target}.",
+      description: "How efficiently you climb and how well you read routes. This one is your own read on yourself, not a measurement — no test exists for it, so it informs the coach and never changes your plan.",
+      low: "A lower score means you told us movement and route-reading hold you back — worth raising with the coach, and often the fastest thing to improve on the way to {target}.",
     },
     boulder: {
       label: "Movement & Reading",
-      description: "How efficiently you move on the wall and how quickly you figure out the right beta. Good movement skills mean less energy wasted and faster sends.",
-      low: "A lower score means better movement and beta-reading unlock grades you're already strong enough for — often the fastest gains toward {target}.",
+      description: "How efficiently you move on the wall and how quickly you figure out the right beta. This one is your own read on yourself, not a measurement — no test exists for it, so it informs the coach and never changes your plan.",
+      low: "A lower score means you told us movement and beta-reading hold you back — often the fastest gains toward {target}, and worth raising with the coach.",
     },
   },
   endurance: {

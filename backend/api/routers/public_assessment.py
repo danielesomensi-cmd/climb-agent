@@ -44,12 +44,17 @@ router = APIRouter(prefix="/api/public", tags=["public"])
 # Ordered worst-first so ties resolve to the axis the engine treats as most
 # foundational — telling someone their weakness is "technique" when finger
 # strength scores the same is the less actionable of the two answers.
+#
+# A270: `technique` is no longer eligible at all. It used to be last only in a
+# TIE, so it could still win outright — and after the gap demotion it is a
+# single self-declared weakness. That path would tell a stranger "your weakest
+# link is technique" on the strength of the dropdown they just filled in. It
+# stays on the radar and in `profile`; it stops being able to be the answer.
 _AXIS_PRIORITY = (
     "finger_strength",
     "pulling_strength",
     "power_endurance",
     "endurance",
-    "technique",
 )
 
 _AXIS_LABELS: Dict[str, str] = {

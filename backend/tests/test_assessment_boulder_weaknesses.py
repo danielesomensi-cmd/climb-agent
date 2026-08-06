@@ -53,12 +53,14 @@ class TestBoulderWeaknessAccepted(unittest.TestCase):
 class TestBoulderWeaknessAxisMapping(unittest.TestCase):
     """Verify each boulder weakness affects the correct axis."""
 
-    def _profile(self, primary="", secondary=""):
+    def _profile(self, primary="", secondary="", repeater=None):
         a = _make_assessment(primary_weakness=primary, secondary_weakness=secondary)
+        if repeater is not None:
+            a["tests"]["repeater_7_3_max_sets_20mm"] = repeater
         return compute_assessment_profile(a, GOAL)
 
-    def _baseline(self):
-        return self._profile("cant_hold_hard_moves", "")
+    def _baseline(self, repeater=None):
+        return self._profile("cant_hold_hard_moves", "", repeater=repeater)
 
     def test_poor_body_tension_lowers_technique(self):
         baseline = self._baseline()
@@ -75,10 +77,15 @@ class TestBoulderWeaknessAxisMapping(unittest.TestCase):
         with_weakness = self._profile("weak_on_slopers", "")
         self.assertLess(with_weakness["finger_strength"], baseline["finger_strength"])
 
-    def test_poor_dynamic_movement_lowers_pe(self):
-        baseline = self._baseline()
-        with_weakness = self._profile("poor_dynamic_movement", "")
+    def test_poor_dynamic_movement_lowers_pe_when_pe_is_measured(self):
+        """A270: the weakness mapping is unchanged, but PE without a repeater is
+        a flat neutral 50 that no self-declaration can move."""
+        baseline = self._baseline(repeater=24)
+        with_weakness = self._profile("poor_dynamic_movement", "", repeater=24)
         self.assertLess(with_weakness["power_endurance"], baseline["power_endurance"])
+        # Unmeasured PE stays neutral for both.
+        self.assertEqual(self._baseline()["power_endurance"], 50)
+        self.assertEqual(self._profile("poor_dynamic_movement", "")["power_endurance"], 50)
 
     def test_poor_dynamic_movement_lowers_technique(self):
         baseline = self._baseline()
@@ -95,15 +102,22 @@ class TestBoulderWeaknessAxisMapping(unittest.TestCase):
 class TestExistingWeaknessesUnchanged(unittest.TestCase):
     """Existing lead weaknesses must produce identical results (zero regression)."""
 
-    def _profile(self, primary, secondary=""):
+    def _profile(self, primary, secondary="", repeater=None):
         a = _make_assessment(primary_weakness=primary, secondary_weakness=secondary)
+        if repeater is not None:
+            a["tests"]["repeater_7_3_max_sets_20mm"] = repeater
         return compute_assessment_profile(a, GOAL)
 
     def test_pump_too_early_still_lowers_pe_and_endurance(self):
+        """Endurance carries its own pump penalty, so it bites regardless. PE
+        needs a repeater to have anything to subtract from (A270)."""
         neutral = self._profile("cant_hold_hard_moves")
         pump = self._profile("pump_too_early")
-        self.assertLess(pump["power_endurance"], neutral["power_endurance"])
         self.assertLess(pump["endurance"], neutral["endurance"])
+        self.assertLess(
+            self._profile("pump_too_early", repeater=24)["power_endurance"],
+            self._profile("cant_hold_hard_moves", repeater=24)["power_endurance"],
+        )
 
     def test_fingers_give_out_still_lowers_finger_strength(self):
         neutral = self._profile("cant_hold_hard_moves")

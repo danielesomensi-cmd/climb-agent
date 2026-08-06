@@ -143,6 +143,21 @@ describe("buildAxisTooltipCopy — target-relative framing (D260 Scope B)", () =
     expect(copy!.low).toContain("7C");
   });
 
+  it("no longer sells the technique axis as a gap measurement (A270)", () => {
+    // D266 demoted the redpoint-onsight gap to a tactical hint. The copy used
+    // to say "a big gap between your onsight and redpoint suggests…", which
+    // described a scoring rule that no longer exists.
+    for (const disc of ["lead", "boulder"] as const) {
+      const copy = buildAxisTooltipCopy("technique", disc, "8a")!;
+      const text = `${copy.description} ${copy.low}`.toLowerCase();
+      expect(text).not.toContain("gap");
+      expect(text).not.toContain("redpoint");
+      expect(text).not.toContain("onsight");
+      // …and says plainly what it is instead.
+      expect(copy.description.toLowerCase()).toContain("not a measurement");
+    }
+  });
+
   it("keeps each copy section within the 300-char budget (D260 A.4)", () => {
     for (const axis of AXES) {
       for (const disc of ["lead", "boulder"] as const) {

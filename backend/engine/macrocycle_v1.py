@@ -294,8 +294,14 @@ def _find_weakest_axis(profile: Dict[str, int]) -> Tuple[Optional[str], int]:
     """
     weakest: Optional[str] = None
     score = 101
+    # A270: `technique` is deliberately absent. Removing it from the profile is
+    # NOT enough — `profile.get(axis, 50)` below turns a missing axis into a
+    # phantom 50, and on the real production profiles that phantom *wins* the
+    # weakest-axis title for two users. It scores exactly 50 so it never trips
+    # the `< 50` duration shift, but it would be reported as the weakness to the
+    # coach and to any future consumer. It has to come out of this tuple.
     for axis in ("power_endurance", "endurance", "finger_strength",
-                 "pulling_strength", "technique"):
+                 "pulling_strength"):
         v = profile.get(axis, 50)
         if v < score:
             score = v
@@ -432,11 +438,17 @@ def _adjust_domain_weights(
     """
     # Map profile axes to domain weight keys (5 axes → 5 domains)
     # core_prehab remains as a fixed domain weight per phase, no longer driven by an axis.
+    # A270 / D266: `technique` is gone from this map. It was the single largest
+    # plan-shaping lever in the engine — D260 §5 measured +7.5 pp of technique
+    # weight in EVERY phase for the author — and after the gap demotion it is a
+    # three-valued self-declaration (40/45/50). A subjective input must not
+    # rewrite a macrocycle. The phase's base technique weight (.20 in base, .25
+    # in performance) is untouched: technique is not de-prioritised, it simply
+    # stops being corrected by an opinion.
     axis_to_weight = {
         "finger_strength": "finger_strength",
         "pulling_strength": "pulling_strength",
         "power_endurance": "power_endurance",
-        "technique": "technique",
         "endurance": "volume_climbing",  # endurance maps to climbing volume
     }
 

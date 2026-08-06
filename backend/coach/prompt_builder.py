@@ -24,6 +24,7 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional
 
 from backend.coach.routing import KNOWLEDGE_DIR, route_query
+from backend.engine.assessment_v1 import _redpoint_onsight_gap
 from backend.engine.load_score import effective_session_load
 
 logger = logging.getLogger(__name__)
@@ -131,6 +132,21 @@ def _profile_section(state: Dict[str, Any]) -> str:
         f"boulder RP {_fmt(grades.get('boulder_max_rp'))} (Fontainebleau), "
         f"boulder OS {_fmt(grades.get('boulder_max_os'))} (Fontainebleau)"
     )
+    # A270 / D266: the redpoint-onsight gap is no longer a weight driver, it is a
+    # tactical hint — and it lives here, in the block that already prints the
+    # grades, rather than in a payload of its own. The guardrail sentence is not
+    # decorative: without it the model reads a number labelled "gap" and
+    # diagnoses technique, which is the same failure mode B305 closed when the
+    # coach imitated a format string and fabricated a build.
+    _gap = _redpoint_onsight_gap(grades)
+    if _gap is not None:
+        _style = (state.get("goal") or {}).get("target_style")
+        lines.append(
+            f"- Onsight gap: {_gap} half-grades. Tactics/style signal, NOT a technique "
+            "measurement — the plan does not weight it. A wide gap in a redpoint-focused "
+            "climber is a style choice, not a weakness; only raise it as something to work "
+            f"on if the athlete wants to onsight (their stated target style: {_fmt(_style)})."
+        )
     if body:
         lines.append(
             f"- Body: age {_fmt(body.get('age'))}, "
@@ -151,14 +167,21 @@ def _profile_section(state: Dict[str, Any]) -> str:
             return f"{key} {value}/100" if provenance == "measured" else f"{key} {value}/100 ({provenance})"
 
         axes_str = ", ".join(_axis_str(k, v) for k, v in axes)
-        weakest = ", ".join(k for k, _ in axes[:2])
+        # A270: a `self_reported` axis must not be handed over as "your weakest
+        # axis" — that is telling the athlete their weakness on the strength of
+        # the dropdown they filled in themselves. Same exclusion the public
+        # assessment endpoint applies to `technique`.
+        weakest = ", ".join(
+            [k for k, _ in axes if source.get(k) != "self_reported"][:2]
+        )
         lines.append(f"- Assessment (5-axis): {axes_str}")
         lines.append(
             "  (`estimated` = no test behind it, inferred from declared grades and "
-            "self-report; `partial` = one measured input plus derived terms. Do not "
-            "present an estimated axis as a measurement.)"
+            "self-report; `partial` = one measured input plus derived terms; "
+            "`self_reported` = the athlete's own read on themselves, no test at all. "
+            "Do not present any of these as a measurement.)"
         )
-        lines.append(f"- Weakest axes: {weakest}")
+        lines.append(f"- Weakest axes: {weakest or '—'}")
     if assessment.get("last_assessed"):
         lines.append(f"- Last assessed: {assessment['last_assessed']}")
     limitations = (state.get("limitations") or {}).get("active_flags") or []

@@ -91,6 +91,17 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           against, and &mdash; when the score is low &mdash; what training moves it.
         </P>
         <P>
+          <B>Technique &amp; Tactics is your own read on yourself.</B> No test exists for
+          it, so it comes from the weakness you picked during onboarding and nothing else.
+          It informs the coach and it is shown on the radar, but it <B>never changes your
+          plan</B> &mdash; a training plan should not be reshaped by a dropdown. It used to
+          be derived partly from the gap between your redpoint and your onsight; that gap
+          describes your <i>style</i> rather than your technique (a redpoint specialist
+          runs a wide gap on purpose), so it is now a tactical note for the coach. Power
+          Endurance works the same way until you have done a repeater test: until then it
+          sits at a neutral 50 rather than pretending.
+        </P>
+        <P>
           <B>Goal vs Elite.</B> If you have entered a max hang or a weighted pull-up, a
           <B> Goal / Elite </B> toggle appears above the radar. Goal is the default and is
           the scale the rest of the app uses. Elite re-draws the same axes against fixed

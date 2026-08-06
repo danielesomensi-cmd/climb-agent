@@ -23,6 +23,7 @@ import unittest
 from backend.engine.assessment_v1 import (
     _benchmark_for,
     _FINGER_BENCHMARK,
+    _redpoint_onsight_gap,
     compute_assessment_profile,
     resolve_grade,
 )
@@ -99,13 +100,32 @@ class TestBoulderProfile(unittest.TestCase):
             "fallback could not read a Font grade",
         )
 
-    def test_gap_axes_read_boulder_grades(self):
-        """PE and technique used to sit on the neutral 50 for boulder-only users."""
-        profile = compute_assessment_profile(*_boulderer())
-        # 7A onsight → 7b+, 7B redpoint → 7c+ ⇒ gap of 2 half-grades ⇒ top band,
-        # minus the poor_dynamic_movement penalties. Both land well above neutral.
-        self.assertGreater(profile["technique"], 50)
-        self.assertGreater(profile["power_endurance"], 50)
+    def test_the_gap_helper_reads_boulder_grades(self):
+        """B321's fix, retargeted by A270.
+
+        The helper no longer feeds PE or technique — D266 demoted the gap to a
+        tactical hint for the coach. But it is still read, so a boulder-only
+        athlete (Font grades, empty lead fields) must still produce a gap rather
+        than None, which is what B321 fixed. 7A onsight → 7b+, 7B redpoint →
+        7c+ ⇒ 2 half-grades.
+        """
+        assessment, _ = _boulderer()
+        self.assertEqual(_redpoint_onsight_gap(assessment["grades"]), 2)
+
+    def test_the_gap_no_longer_reaches_pe_or_technique(self):
+        """The other half of A270: reading the grades is not the same as scoring
+        on them."""
+        assessment, goal = _boulderer()
+        wide = dict(assessment)
+        wide["grades"] = dict(assessment["grades"], boulder_max_os="5A")
+        base = compute_assessment_profile(assessment, goal)
+        self.assertEqual(
+            compute_assessment_profile(wide, goal)["technique"], base["technique"]
+        )
+        self.assertEqual(
+            compute_assessment_profile(wide, goal)["power_endurance"],
+            base["power_endurance"],
+        )
 
     def test_font_and_mapped_lead_grades_score_identically(self):
         """Storing 7B or its lead equivalent 7c+ must not change the profile."""

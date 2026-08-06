@@ -135,23 +135,41 @@ class TestAssessmentProfile(unittest.TestCase):
         self.assertGreater(profile["finger_strength"], 80)
         self.assertLess(profile["finger_strength"], 100)
 
-    def test_pe_score_high_gap(self):
-        # Big OS-RP gap → low PE. 8a+ RP, 7b OS → gap = 5 half grades
-        assessment = _make_assessment(lead_max_rp="8a+", lead_max_os="7b")
-        goal = _make_goal("8a+", "8a")
-        profile = compute_assessment_profile(assessment, goal)
-        self.assertLess(profile["power_endurance"], 50)
-
-    def test_pe_score_low_gap(self):
-        # Small gap → high PE. 7b RP, 7a+ OS → gap = 1
-        assessment = _make_assessment(
-            lead_max_rp="7b", lead_max_os="7a+",
-            primary_weakness="cant_hold_hard_moves",
-            secondary_weakness=None,
+    def test_pe_ignores_the_gap_entirely(self):
+        """A270/D266: the gap used to carry 60% of PE (0.4 + 0.2), against 40%
+        for the only objective input. Now it carries none."""
+        wide = compute_assessment_profile(
+            _make_assessment(lead_max_rp="8a+", lead_max_os="7b"), _make_goal("8a+", "8a")
         )
-        goal = _make_goal("7c", "7a")
-        profile = compute_assessment_profile(assessment, goal)
-        self.assertGreater(profile["power_endurance"], 60)
+        narrow = compute_assessment_profile(
+            _make_assessment(lead_max_rp="8a+", lead_max_os="8a"), _make_goal("8a+", "8a")
+        )
+        self.assertEqual(wide["power_endurance"], narrow["power_endurance"])
+
+    def test_pe_without_a_repeater_is_exactly_neutral(self):
+        """No measurement, no signal — and exactly 50, not 50 minus a penalty.
+
+        The domain-weight response has a dead band at 50-75; a self-eval penalty
+        would drop it below the `< 50` cliff and let a self-declaration steer the
+        plan, which is what this brief takes away from technique.
+        """
+        for weakness in (None, "pump_too_early", "poor_dynamic_movement"):
+            assessment = _make_assessment(
+                lead_max_rp="7b", lead_max_os="7a+", primary_weakness=weakness,
+            )
+            profile = compute_assessment_profile(assessment, _make_goal("7c", "7a"))
+            self.assertEqual(profile["power_endurance"], 50, weakness)
+
+    def test_pe_with_a_repeater_is_the_repeater(self):
+        """Undiluted: D260 found a repeater worth 78/100 dragged to 54."""
+        assessment = _make_assessment(
+            lead_max_rp="8a+", lead_max_os="7b",
+            primary_weakness="cant_hold_hard_moves", secondary_weakness=None,
+        )
+        assessment["tests"]["repeater_7_3_max_sets_20mm"] = 30
+        profile = compute_assessment_profile(assessment, _make_goal("8a+", "8a"))
+        # 30 / 32 (8a+ benchmark) * 100, no PE weakness penalty
+        self.assertEqual(profile["power_endurance"], 94)
 
     def test_score_clamped_0_100(self):
         # Very strong climber → scores should not exceed 100
@@ -163,19 +181,25 @@ class TestAssessmentProfile(unittest.TestCase):
             self.assertLessEqual(v, 100, f"{k} above 100")
 
     def test_self_eval_modifier_pump(self):
-        # pump_too_early as primary → PE should be lower
-        base = _make_assessment(
-            lead_max_rp="7b", lead_max_os="6c+",
-            primary_weakness="cant_hold_hard_moves",
+        """A270: the pump penalty still bites — but only on top of a real
+        measurement. Without a repeater PE is a flat neutral 50 and no
+        self-declaration can move it."""
+        def _pe(weakness, *, repeater):
+            a = _make_assessment(
+                lead_max_rp="7b", lead_max_os="6c+", primary_weakness=weakness,
+            )
+            if repeater:
+                a["tests"]["repeater_7_3_max_sets_20mm"] = 20
+            return compute_assessment_profile(a, _make_goal())["power_endurance"]
+
+        self.assertLess(
+            _pe("pump_too_early", repeater=True),
+            _pe("cant_hold_hard_moves", repeater=True),
         )
-        with_pump = _make_assessment(
-            lead_max_rp="7b", lead_max_os="6c+",
-            primary_weakness="pump_too_early",
+        self.assertEqual(
+            _pe("pump_too_early", repeater=False),
+            _pe("cant_hold_hard_moves", repeater=False),
         )
-        goal = _make_goal()
-        p1 = compute_assessment_profile(base, goal)
-        p2 = compute_assessment_profile(with_pump, goal)
-        self.assertLess(p2["power_endurance"], p1["power_endurance"])
 
     def test_deterministic(self):
         assessment = _make_assessment(max_hang_total=90, weighted_pullup_total=100)

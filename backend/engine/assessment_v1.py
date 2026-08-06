@@ -374,79 +374,56 @@ def _compute_pulling_strength(
 
 
 def _compute_power_endurance(
-    grades: Dict[str, Any],
     self_eval: Dict[str, Any],
     tests: Optional[Dict[str, Any]] = None,
     target_grade: str = "7c+",
 ) -> int:
     """Compute power endurance score.
 
-    Weighted components:
-    - Repeater test (objective): 40% when available
-    - RP-OS gap: 40% (or 60% without repeater)
-    - Self-eval: 20% (or 40% without repeater)
+    A270 (research decision D266): the redpoint − onsight gap is gone. It used
+    to appear in **two** of the three terms — ``repeater*0.4 + gap*0.4 +
+    (gap+eval)*0.2`` — so a tactics/style composite carried 60% of the score
+    while the only objective input carried 40%. D260 §3.3 measured the cost on
+    the author: a repeater worth 78/100 was dragged to 54.
+
+    What remains:
+
+    - **With a repeater** — the objective test, undiluted, plus the self-eval
+      modifier. `partial` provenance: one measured input, one subjective term.
+    - **Without one** — a flat, exact ``50``. Not ``50 + eval``: the domain-weight
+      response has a dead band at 50–75, so 50 moves nothing, while a −8 penalty
+      would land at 42 and push a weight *below the ``< 50`` cliff*. That is a
+      self-declaration steering the plan, which is precisely what this brief
+      takes away from technique. No measurement ⇒ no signal.
     """
     tests = tests or {}
 
-    # --- Gap score ---
-    gap = _redpoint_onsight_gap(grades)
-
-    if gap is None:
-        gap_score = 50.0
-    elif gap <= 2:
-        gap_score = 75.0
-    elif gap <= 4:
-        gap_score = 55.0
-    elif gap <= 6:
-        gap_score = 40.0
-    else:
-        gap_score = 30.0
-
-    # --- Repeater score (objective) ---
     repeater_reps = tests.get("repeater_7_3_max_sets_20mm")
     has_repeater = repeater_reps is not None and isinstance(repeater_reps, (int, float))
 
-    if has_repeater:
-        benchmark = _benchmark_for(_PE_REPEATER_BENCHMARK, target_grade)
-        repeater_score = (repeater_reps / benchmark) * 100
-        repeater_score = min(100.0, max(0.0, repeater_score))
-    else:
-        repeater_score = 0.0
+    if not has_repeater:
+        return _clamp(50.0)
 
-    # --- Self-eval modifier (reduced penalties to avoid double counting) ---
-    eval_modifier = _weakness_penalty(self_eval, "power_endurance")
-
-    # --- Weighted combination ---
-    if has_repeater:
-        # 40% repeater + 40% gap + 20% self_eval influence
-        score = repeater_score * 0.4 + gap_score * 0.4 + (gap_score + eval_modifier) * 0.2
-    else:
-        # 60% gap + 40% self_eval influence
-        score = gap_score * 0.6 + (gap_score + eval_modifier) * 0.4
-
-    return _clamp(score)
+    benchmark = _benchmark_for(_PE_REPEATER_BENCHMARK, target_grade)
+    repeater_score = min(100.0, max(0.0, (repeater_reps / benchmark) * 100))
+    return _clamp(repeater_score + _weakness_penalty(self_eval, "power_endurance"))
 
 
-def _compute_technique(
-    grades: Dict[str, Any],
-    self_eval: Dict[str, Any],
-) -> int:
-    gap = _redpoint_onsight_gap(grades)
+def _compute_technique(self_eval: Dict[str, Any]) -> int:
+    """Technique & Tactics — self-report only (A270 / D266).
 
-    if gap is None:
-        score = 50.0
-    elif gap <= 2:
-        score = 80.0
-    elif gap <= 4:
-        score = 60.0
-    elif gap <= 6:
-        score = 40.0
-    else:
-        score = 30.0
+    The redpoint − onsight gap is a tactics/style/mental composite, not a
+    physiological measure. It also double-counted: a climber whose onsight lags
+    their redpoint is very likely to also tick "technique errors", so the two
+    inputs were two readings of the same self-perception. D260 §3.5 found the
+    author at gap 5 → 40, minus 10 for a self-declared weakness → **30**, and
+    that 30 was the single largest plan-shaping lever in the engine.
 
-    score += _weakness_penalty(self_eval, "technique")
-
-    return _clamp(score)
+    Three possible values remain — 40 (primary weakness), 45 (secondary), 50
+    (neither) — which is exactly why the axis no longer drives any weight or
+    phase duration. It is `self_reported`: it informs the coach, not the plan.
+    """
+    return _clamp(50.0 + _weakness_penalty(self_eval, "technique"))
 
 
 def _compute_endurance(
@@ -503,11 +480,12 @@ def _compute_endurance(
 #
 # The values describe what an axis was DERIVED FROM, not how good it is.
 
-PROFILE_SCORING_VERSION = "profile_v1"
+PROFILE_SCORING_VERSION = "profile_v2_gap_demoted"  # A270
 
 SOURCE_MEASURED = "measured"    # every input to the axis is a measured test
 SOURCE_PARTIAL = "partial"      # at least one measured input + derived/subjective terms
 SOURCE_ESTIMATED = "estimated"  # no measured input at all
+SOURCE_SELF_REPORTED = "self_reported"  # A270: one subjective input, no test
 
 # The keys each axis actually READS. Deliberately not the wider set the planner
 # treats as "a fresh test": `week.py` also accepts `weighted_pullup_2rm_total_kg`
@@ -563,9 +541,11 @@ def compute_profile_source(assessment: Dict[str, Any]) -> Dict[str, str]:
         else SOURCE_ESTIMATED
     )
 
-    # No test feeds technique. Not "none today" — none by construction: the axis
-    # is the RP-OS gap bucket plus a self-declared weakness (D260 §3.5).
-    technique = SOURCE_ESTIMATED
+    # A270: technique is now a single self-declared weakness and nothing else.
+    # `self_reported` rather than `estimated` because the two are different
+    # failures: `estimated` means we inferred it from other data, this means the
+    # athlete told us. It informs the coach; it drives no weight and no duration.
+    technique = SOURCE_SELF_REPORTED
 
     # Endurance has no test of its own (D260 §3.4): it is `0.8 x PE` plus tenure
     # plus a hang-duration nudge. It is `partial` when EITHER of its two measured
@@ -624,8 +604,8 @@ def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any])
 
     finger = _compute_finger_strength(tests, body, self_eval, target_grade, current_grade)
     pulling = _compute_pulling_strength(tests, body, self_eval, target_grade, current_grade)
-    pe = _compute_power_endurance(grades, self_eval, tests, target_grade)
-    technique = _compute_technique(grades, self_eval)
+    pe = _compute_power_endurance(self_eval, tests, target_grade)
+    technique = _compute_technique(self_eval)
     endurance = _compute_endurance(pe, experience, self_eval, tests)
 
     return {

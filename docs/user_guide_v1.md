@@ -82,6 +82,14 @@ with identical strength but different goals will see different radars, and that 
 Tap the ⓘ next to any axis to see what it measures, what it is scored against, and — when the score
 is low — what kind of training moves it.
 
+**Technique & Tactics is your own read on yourself.** No test exists for it, so it is built from the
+weakness you selected during onboarding and nothing else. It informs the coach and it is shown on the
+radar, but it **never changes your plan** — a training plan should not be reshaped by a dropdown. It
+used to be derived partly from the gap between your redpoint and your onsight; that gap turned out to
+describe your *style* rather than your technique (a redpoint specialist runs a wide gap on purpose),
+so it is now a tactical note for the coach instead of a score. Power Endurance works the same way
+until you have done a repeater test: until then it sits at a neutral 50 rather than pretending.
+
 **Goal vs Elite.** If you have entered a max hang or a weighted pull-up, a `[ Goal | Elite ]` toggle
 appears above the radar. Goal is the default and is the scale everything else in the app uses. Elite
 re-draws the same axes against fixed benchmarks for climbers operating around 8b–9a, so you can see

@@ -34,6 +34,13 @@
    "pulling_strength": 100,
    "technique": 50
   },
+  "expected_profile_v2": {
+   "endurance": 45,
+   "finger_strength": 100,
+   "power_endurance": 50,
+   "pulling_strength": 100,
+   "technique": 40
+  },
   "goal": {
    "current_grade": "6c+",
    "goal_type": "lead_grade",
@@ -102,6 +109,13 @@
    "pulling_strength": 96,
    "technique": 30
   },
+  "expected_profile_v2": {
+   "endurance": 65,
+   "finger_strength": 100,
+   "power_endurance": 70,
+   "pulling_strength": 96,
+   "technique": 40
+  },
   "goal": {
    "current_grade": "8a+",
    "goal_type": "lead_grade",
@@ -147,6 +161,13 @@
    "pulling_strength": 46,
    "technique": 80
   },
+  "expected_profile_v2": {
+   "endurance": 50,
+   "finger_strength": 53,
+   "power_endurance": 50,
+   "pulling_strength": 46,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "7a+",
    "goal_type": "all_round",
@@ -190,6 +211,13 @@
    "pulling_strength": 56,
    "technique": 50
   },
+  "expected_profile_v2": {
+   "endurance": 45,
+   "finger_strength": 60,
+   "power_endurance": 50,
+   "pulling_strength": 56,
+   "technique": 40
+  },
   "goal": {
    "current_grade": "7a",
    "goal_type": "lead_grade",
@@ -232,6 +260,13 @@
    "power_endurance": 40,
    "pulling_strength": 46,
    "technique": 40
+  },
+  "expected_profile_v2": {
+   "endurance": 50,
+   "finger_strength": 40,
+   "power_endurance": 50,
+   "pulling_strength": 46,
+   "technique": 50
   },
   "goal": {
    "current_grade": "8a",
@@ -277,6 +312,13 @@
    "power_endurance": 53,
    "pulling_strength": 46,
    "technique": 60
+  },
+  "expected_profile_v2": {
+   "endurance": 43,
+   "finger_strength": 35,
+   "power_endurance": 50,
+   "pulling_strength": 46,
+   "technique": 50
   },
   "goal": {
    "current_grade": "6c",
@@ -334,6 +376,13 @@
    "power_endurance": 52,
    "pulling_strength": 55,
    "technique": 60
+  },
+  "expected_profile_v2": {
+   "endurance": 32,
+   "finger_strength": 84,
+   "power_endurance": 50,
+   "pulling_strength": 55,
+   "technique": 50
   },
   "goal": {
    "current_grade": "6c+",
@@ -396,6 +445,13 @@
    "pulling_strength": 43,
    "technique": 75
   },
+  "expected_profile_v2": {
+   "endurance": 46,
+   "finger_strength": 100,
+   "power_endurance": 50,
+   "pulling_strength": 43,
+   "technique": 45
+  },
   "goal": {
    "current_grade": "7B",
    "goal_type": "boulder_grade",
@@ -453,6 +509,13 @@
    "pulling_strength": 90,
    "technique": 55
   },
+  "expected_profile_v2": {
+   "endurance": 48,
+   "finger_strength": 98,
+   "power_endurance": 50,
+   "pulling_strength": 90,
+   "technique": 45
+  },
   "goal": {
    "current_grade": "7C+",
    "goal_type": "boulder_grade",
@@ -495,6 +558,13 @@
    "power_endurance": 55,
    "pulling_strength": 55,
    "technique": 60
+  },
+  "expected_profile_v2": {
+   "endurance": 48,
+   "finger_strength": 64,
+   "power_endurance": 50,
+   "pulling_strength": 55,
+   "technique": 50
   },
   "goal": {
    "current_grade": "6c+",
@@ -546,6 +616,13 @@
    "pulling_strength": 89,
    "technique": 40
   },
+  "expected_profile_v2": {
+   "endurance": 50,
+   "finger_strength": 69,
+   "power_endurance": 50,
+   "pulling_strength": 89,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "7c+",
    "goal_type": "all_round",
@@ -592,6 +669,13 @@
    "power_endurance": 53,
    "pulling_strength": 88,
    "technique": 60
+  },
+  "expected_profile_v2": {
+   "endurance": 49,
+   "finger_strength": 60,
+   "power_endurance": 50,
+   "pulling_strength": 88,
+   "technique": 50
   },
   "goal": {
    "current_grade": "7a",
@@ -649,6 +733,13 @@
    "pulling_strength": 91,
    "technique": 60
   },
+  "expected_profile_v2": {
+   "endurance": 41,
+   "finger_strength": 91,
+   "power_endurance": 50,
+   "pulling_strength": 91,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "7b",
    "goal_type": "lead_grade",
@@ -705,6 +796,13 @@
    "pulling_strength": 74,
    "technique": 60
   },
+  "expected_profile_v2": {
+   "endurance": 48,
+   "finger_strength": 71,
+   "power_endurance": 49,
+   "pulling_strength": 74,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "7b",
    "goal_type": "lead_grade",
@@ -758,6 +856,13 @@
    "pulling_strength": 68,
    "technique": 60
   },
+  "expected_profile_v2": {
+   "endurance": 50,
+   "finger_strength": 64,
+   "power_endurance": 50,
+   "pulling_strength": 68,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "8A",
    "goal_type": "boulder_grade",
@@ -809,6 +914,13 @@
    "pulling_strength": 87,
    "technique": 60
   },
+  "expected_profile_v2": {
+   "endurance": 66,
+   "finger_strength": 97,
+   "power_endurance": 82,
+   "pulling_strength": 87,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "7c",
    "goal_type": "lead_grade",
@@ -851,6 +963,13 @@
    "power_endurance": 75,
    "pulling_strength": 26,
    "technique": 70
+  },
+  "expected_profile_v2": {
+   "endurance": 50,
+   "finger_strength": 28,
+   "power_endurance": 50,
+   "pulling_strength": 26,
+   "technique": 40
   },
   "goal": {
    "current_grade": "5b",
@@ -896,6 +1015,13 @@
    "power_endurance": 53,
    "pulling_strength": 57,
    "technique": 50
+  },
+  "expected_profile_v2": {
+   "endurance": 41,
+   "finger_strength": 61,
+   "power_endurance": 50,
+   "pulling_strength": 57,
+   "technique": 40
   },
   "goal": {
    "current_grade": "7b",
