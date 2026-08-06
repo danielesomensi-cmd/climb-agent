@@ -8,7 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SessionCard } from "@/components/training/session-card";
-import type { DayPlan, OtherActivity, OutdoorRoute, WeekPlan } from "@/lib/types";
+import { PitchLadderCard } from "@/components/outdoor/pitch-ladder-card";
+import type {
+  DayPlan,
+  OtherActivity,
+  OutdoorDayType,
+  OutdoorPitchLadder,
+  OutdoorRoute,
+  WeekPlan,
+} from "@/lib/types";
 import { normalizeOtherActivities, hasOtherActivity } from "@/lib/other-activity";
 import { formatDateShort } from "@/lib/format";
 
@@ -40,6 +48,12 @@ interface DayCardProps {
   onEditOutdoor?: (date: string) => void;
   onUndoOutdoor?: (date: string) => void;
   onRemoveOutdoor?: (date: string) => void;
+  /** A265 — generate the ladder from the athlete's grades. */
+  onGenerateOutdoorPlan?: (date: string, dayType: OutdoorDayType) => void;
+  /** A265 — persist the ladder (null clears it). */
+  onSetOutdoorPlan?: (date: string, plan: OutdoorPitchLadder | null) => void;
+  outdoorPlanGenerating?: boolean;
+  outdoorPlanSaving?: boolean;
   outdoorRoutes?: OutdoorRoute[];
   outdoorDurationMinutes?: number;
   outdoorLoadScore?: number;
@@ -366,6 +380,10 @@ export function DayCard({
   onEditOutdoor,
   onUndoOutdoor,
   onRemoveOutdoor,
+  onGenerateOutdoorPlan,
+  onSetOutdoorPlan,
+  outdoorPlanGenerating,
+  outdoorPlanSaving,
   outdoorRoutes,
   outdoorDurationMinutes,
   outdoorLoadScore,
@@ -592,6 +610,27 @@ export function DayCard({
                       })()}
                     </div>
                   </div>
+                )}
+
+                {/* A265 — grades, burns and rests for the day. Read-only once
+                    the day is done: past sessions are immutable. */}
+                {(onSetOutdoorPlan || day.outdoor_plan) && (
+                  <PitchLadderCard
+                    plan={day.outdoor_plan}
+                    readOnly={day.outdoor_session_status === "done"}
+                    generating={outdoorPlanGenerating}
+                    saving={outdoorPlanSaving}
+                    onGenerate={
+                      onGenerateOutdoorPlan
+                        ? (dayType) => onGenerateOutdoorPlan(day.date, dayType)
+                        : undefined
+                    }
+                    onSave={
+                      onSetOutdoorPlan
+                        ? (plan) => onSetOutdoorPlan(day.date, plan)
+                        : undefined
+                    }
+                  />
                 )}
               </div>
             )}

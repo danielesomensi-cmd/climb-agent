@@ -29,6 +29,7 @@ from backend.engine.outdoor_log import (
     remove_outdoor_session,
     update_outdoor_session,
 )
+from backend.engine.outdoor_pitch_ladder import build_pitch_ladder, grades_from_state
 from backend.engine.outdoor_resolver import OutdoorResolveError, resolve_outdoor_day
 
 import logging
@@ -404,7 +405,59 @@ def get_outdoor_strategy(
 
     # Surface the derived conditions so the UI (brief #3) can pre-fill the log.
     resolved["conditions"] = derived_conditions
+
+    # A265: the catalog talks in relative terms ("ramp grades into the day").
+    # Attach the absolute ladder derived from the athlete's own grades, so the
+    # strategy screen names actual grades instead of an example ramp.
+    grades = grades_from_state(load_state(user_id))
+    resolved["pitch_ladder"] = (
+        build_pitch_ladder(
+            day_type,
+            onsight_grade=grades["onsight"],
+            redpoint_grade=grades["redpoint"],
+            discipline=discipline,
+        )
+        if grades
+        else None
+    )
     return resolved
+
+
+@router.get("/pitch-ladder", dependencies=[Depends(require_active_subscription)])
+def get_pitch_ladder(
+    day_type: str = Query(..., description="project | onsight_flash | volume | scout_easy"),
+    discipline: str = Query("lead"),
+    onsight_grade: Optional[str] = Query(None, description="Override the recorded onsight grade"),
+    redpoint_grade: Optional[str] = Query(None, description="Override the recorded redpoint grade"),
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Generate the deterministic pitch ladder for an outdoor day (A265).
+
+    Grades come from the athlete's ``performance.current_level.sport`` unless
+    overridden. 422 rather than a guess when no usable grade exists: prescribing
+    grades that are not the athlete's is worse than prescribing none.
+    """
+    if not onsight_grade and not redpoint_grade:
+        grades = grades_from_state(load_state(user_id))
+        if not grades:
+            raise HTTPException(
+                status_code=422,
+                detail="No recorded sport grade — set your onsight/redpoint grade first",
+            )
+        onsight_grade, redpoint_grade = grades["onsight"], grades["redpoint"]
+
+    ladder = build_pitch_ladder(
+        day_type,
+        onsight_grade=onsight_grade,
+        redpoint_grade=redpoint_grade,
+        discipline=discipline,
+    )
+    if ladder is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"No ladder for discipline={discipline!r} day_type={day_type!r}",
+        )
+    return ladder
 
 
 # ── Active session lifecycle (A225) ─────────────────────────────────────

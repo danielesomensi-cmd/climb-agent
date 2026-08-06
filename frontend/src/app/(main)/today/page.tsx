@@ -28,7 +28,7 @@ import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
-import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
+import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { ForceHardDialog } from "@/components/training/force-hard-dialog";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
@@ -56,7 +56,7 @@ import {
 } from "@/components/ui/dialog";
 import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressSession } from "@/lib/guided-session-utils";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
-import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession, GuidedExercise } from "@/lib/types";
+import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession, GuidedExercise, OutdoorDayType, OutdoorPitchLadder } from "@/lib/types";
 import { hasOtherActivity } from "@/lib/other-activity";
 import { completeOtherActivityEvent, removeOtherActivityEvent, removeOutdoorEvent, undoOtherActivityEvent, undoOutdoorEvent } from "@/lib/week-events";
 
@@ -237,6 +237,8 @@ function TodayContent() {
   const [changeGymDate, setChangeGymDate] = useState<string | null>(null);
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
   const [outdoorEditDate, setOutdoorEditDate] = useState<string | null>(null);
+  // A265 — date of the outdoor day whose ladder is being generated/saved.
+  const [outdoorPlanBusy, setOutdoorPlanBusy] = useState<string | null>(null);
   const [outdoorEditData, setOutdoorEditData] = useState<OutdoorSession | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
   const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
@@ -955,6 +957,37 @@ function TodayContent() {
     }
   }
 
+  /** A265 — generate the day's pitch ladder and persist it in one go. */
+  async function handleGenerateOutdoorPlan(date: string, dayType: OutdoorDayType) {
+    if (!weekPlan) return;
+    setError(null);
+    setOutdoorPlanBusy(date);
+    try {
+      const ladder = await getPitchLadder({ day_type: dayType });
+      const result = await setOutdoorPlan({ date, plan: ladder, week_plan: weekPlan });
+      updateWeekCache(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate the plan");
+    } finally {
+      setOutdoorPlanBusy(null);
+    }
+  }
+
+  /** A265 — persist a hand-edited ladder (null clears it). */
+  async function handleSetOutdoorPlan(date: string, plan: OutdoorPitchLadder | null) {
+    if (!weekPlan) return;
+    setError(null);
+    setOutdoorPlanBusy(date);
+    try {
+      const result = await setOutdoorPlan({ date, plan, week_plan: weekPlan });
+      updateWeekCache(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save the plan");
+    } finally {
+      setOutdoorPlanBusy(null);
+    }
+  }
+
   /** Edit outdoor session — fetch entry, open form in edit mode */
   async function handleEditOutdoor(date: string) {
     try {
@@ -1298,6 +1331,10 @@ function TodayContent() {
             onEditOtherActivity={handleEditOtherActivity}
             onRemoveOtherActivity={handleRemoveOtherActivity}
             onLogOutdoor={handleLogOutdoor}
+            onGenerateOutdoorPlan={handleGenerateOutdoorPlan}
+            onSetOutdoorPlan={handleSetOutdoorPlan}
+            outdoorPlanGenerating={outdoorPlanBusy === dayPlan.date}
+            outdoorPlanSaving={outdoorPlanBusy === dayPlan.date}
             onEditOutdoor={handleEditOutdoor}
             onUndoOutdoor={handleUndoOutdoor}
             onRemoveOutdoor={handleRemoveOutdoor}

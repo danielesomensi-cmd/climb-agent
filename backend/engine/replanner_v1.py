@@ -706,6 +706,11 @@ def merge_prev_week_sessions(
 _DAY_LEVEL_FIELDS = (
     "outdoor_spot_name", "outdoor_spot_id", "outdoor_discipline",
     "outdoor_session_status",
+    # A265: the day's pitch ladder (grades / attempts / rests). Lives at day
+    # level like the rest of the outdoor block, so it MUST be preserved here —
+    # a field missing from this tuple is dropped on the next week regeneration,
+    # silently (the B276 / D263 failure mode).
+    "outdoor_plan",
     # B276: new canonical list form. Legacy scalars kept for preserved
     # pre-B276 days that were never re-touched (single source: whichever exists).
     "other_activities",
@@ -1231,6 +1236,22 @@ def apply_events(
 
             _recompute_day_status(day)
 
+        elif event_type == "set_outdoor_plan":
+            # A265: attach (or clear) the day's pitch ladder. The payload is
+            # stored verbatim — it is either the deterministic ladder from
+            # outdoor_pitch_ladder or the user's hand-edited version of it, and
+            # the engine has no opinion on which.
+            day = _find_day(updated, event["date"])
+            if not day.get("outdoor_spot_name"):
+                raise ValueError(f"Date {event['date']} has no outdoor day to plan")
+            if day.get("outdoor_session_status") == "done":
+                raise ValueError("Cannot change the plan of a completed outdoor session")
+            plan = event.get("plan")
+            if plan is None:
+                day.pop("outdoor_plan", None)
+            else:
+                day["outdoor_plan"] = plan
+
         elif event_type == "undo_outdoor":
             day = _find_day(updated, event["date"])
             day["outdoor_session_status"] = "planned"
@@ -1240,7 +1261,8 @@ def apply_events(
             day = _find_day(updated, event["date"])
             if day.get("outdoor_session_status") == "done":
                 raise ValueError("Cannot remove a completed outdoor session")
-            for k in ("outdoor_spot_name", "outdoor_discipline", "outdoor_spot_id", "outdoor_session_status"):
+            for k in ("outdoor_spot_name", "outdoor_discipline", "outdoor_spot_id",
+                      "outdoor_session_status", "outdoor_plan"):
                 day.pop(k, None)
 
         elif event_type == "change_gym":

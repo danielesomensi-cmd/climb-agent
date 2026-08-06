@@ -12,6 +12,8 @@ import type {
   OutdoorSession,
   OutdoorStats,
   OutdoorStrategyResponse,
+  OutdoorDayType,
+  OutdoorPitchLadder,
   OutdoorSessionStartResponse,
   OutdoorSessionFinishResponse,
   WeeklyReport,
@@ -464,6 +466,31 @@ export const applyEvents = (data: {
   request<{ week_plan: WeekPlan }>("/api/replanner/events", {
     method: "POST",
     body: JSON.stringify(data),
+  });
+
+// A265 — pitch ladder: generate from the athlete's own grades, then persist
+// (generated or hand-edited) onto the outdoor day.
+export const getPitchLadder = (params: {
+  day_type: OutdoorDayType;
+  discipline?: string;
+  onsight_grade?: string;
+  redpoint_grade?: string;
+}) => {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v != null && v !== "") q.set(k, String(v));
+  });
+  return request<OutdoorPitchLadder>(`/api/outdoor/pitch-ladder?${q.toString()}`);
+};
+
+export const setOutdoorPlan = (data: {
+  date: string;
+  plan: OutdoorPitchLadder | null;
+  week_plan: WeekPlan;
+}) =>
+  applyEvents({
+    events: [{ event_type: "set_outdoor_plan", date: data.date, plan: data.plan }],
+    week_plan: data.week_plan,
   });
 
 export const getSuggestedSessions = (targetDate: string, location: string) =>

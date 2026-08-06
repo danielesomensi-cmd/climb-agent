@@ -20,7 +20,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide-react";
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
-import { applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession } from "@/lib/api";
+import { applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { ForceHardDialog } from "@/components/training/force-hard-dialog";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
@@ -39,7 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute, OutdoorSession, Phase } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder } from "@/lib/types";
 import { normalizeOtherActivities } from "@/lib/other-activity";
 import {
   Drawer,
@@ -684,6 +684,38 @@ export default function WeekPage() {
     }
   }
 
+  // A265 — pitch ladder: generate from the athlete's grades, or persist an edit.
+  const [outdoorPlanBusy, setOutdoorPlanBusy] = useState<string | null>(null);
+
+  async function handleGenerateOutdoorPlan(date: string, dayType: OutdoorDayType) {
+    if (!weekPlan) return;
+    setError(null);
+    setOutdoorPlanBusy(date);
+    try {
+      const ladder = await getPitchLadder({ day_type: dayType });
+      const result = await setOutdoorPlan({ date, plan: ladder, week_plan: weekPlan });
+      updateWeekCache(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to generate the plan");
+    } finally {
+      setOutdoorPlanBusy(null);
+    }
+  }
+
+  async function handleSetOutdoorPlan(date: string, plan: OutdoorPitchLadder | null) {
+    if (!weekPlan) return;
+    setError(null);
+    setOutdoorPlanBusy(date);
+    try {
+      const result = await setOutdoorPlan({ date, plan, week_plan: weekPlan });
+      updateWeekCache(result.week_plan);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to save the plan");
+    } finally {
+      setOutdoorPlanBusy(null);
+    }
+  }
+
   /** Edit outdoor session — fetch entry, open form in edit mode */
   const [weekPickerOpen, setWeekPickerOpen] = useState(false);
   const [outdoorEditData, setOutdoorEditData] = useState<OutdoorSession | null>(null);
@@ -875,6 +907,10 @@ export default function WeekPage() {
                   onEditOtherActivity={handleEditOtherActivity}
                   onRemoveOtherActivity={handleRemoveOtherActivity}
                   onLogOutdoor={handleLogOutdoor}
+                  onGenerateOutdoorPlan={handleGenerateOutdoorPlan}
+                  onSetOutdoorPlan={handleSetOutdoorPlan}
+                  outdoorPlanGenerating={outdoorPlanBusy === day.date}
+                  outdoorPlanSaving={outdoorPlanBusy === day.date}
                   onEditOutdoor={handleEditOutdoor}
                   onUndoOutdoor={handleUndoOutdoor}
                   onRemoveOutdoor={handleRemoveOutdoor}
