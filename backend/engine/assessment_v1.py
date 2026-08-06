@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from backend.engine.grade_mapping import BOULDER_TO_LEAD
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Grade helpers
@@ -88,6 +91,31 @@ _PULLING_BENCHMARK: Dict[str, float] = {
     "8c": 1.95, "8c+": 2.05,
     "9a": 2.15, "9a+": 2.25,
 }
+
+# A266: converting a one-hand loading-pin lift into the two-hand max-hang total
+# the finger benchmark is expressed in.
+#
+# Not a guess, and not derivable from _FINGER_BENCHMARK alone — three
+# independent sources agree on it:
+#
+#   * _FINGER_BENCHMARK says 8a needs a two-hand total of 1.40 x bodyweight.
+#   * Lattice's published one-arm dataset (20mm, 7-10s) puts the same ability —
+#     V8/V9, i.e. lead ~8a — at 0.73-0.79 x bodyweight on ONE arm.
+#     => implied two-hand / one-arm ratio = 1.40 / 0.76 = 1.84
+#   * The climbing bilateral-deficit literature reports a two-arm-total to
+#     one-arm ratio of 1.6-2.0 (it is below 2.0 because a single limb expresses
+#     more force alone than it does as half of a bilateral effort).
+#
+# 1.84 sits inside the literature range and falls out of our own benchmark, so
+# the tables stay mutually consistent: a climber who tests on a pin and one who
+# tests on a hangboard land on the same axis score. Rounded to 1.85.
+LP_ONE_ARM_TO_TWO_HAND = 1.85
+
+# Above this, a "one-hand lift" is a data-entry error, not a climber: the Lattice
+# dataset puts V17 — the hardest boulder ever climbed — at 1.18 x bodyweight on
+# one arm. Anything past 1.5 is someone typing the total load, the plate weight,
+# or pounds into a kg field. We drop it rather than saturate the axis on it.
+LP_MAX_PLAUSIBLE_BW_RATIO = 1.5
 
 # Repeater test (7:3 duty cycle, 20mm, 60% max total load): expected reps for grade
 _PE_REPEATER_BENCHMARK: Dict[str, int] = {
@@ -240,6 +268,53 @@ def _weakness_penalty(self_eval: Dict[str, Any], axis: str) -> float:
 # Individual axis computations
 # ---------------------------------------------------------------------------
 
+def loading_pin_two_hand_equivalent(
+    tests: Dict[str, Any], bodyweight_kg: float
+) -> Optional[float]:
+    """Two-hand max-hang total (kg) implied by a one-hand loading-pin lift.
+
+    A266: users who train fingers on a loading pin — including the beta tester
+    who cannot use a hangboard at all, for a shoulder limitation — record
+    ``lp_max_lift_5s_left/right_kg`` and nothing else. `_compute_finger_strength`
+    only ever read ``max_hang_*``, so their measured numbers were invisible and
+    the axis silently fell back to estimating from grade. The wizard collects
+    these values and the closed loop writes them; only the assessment ignored
+    them.
+
+    Both hands are averaged rather than summed: the benchmark describes one
+    two-hand effort, and a left/right spread is an asymmetry to carry into
+    training, not extra strength. A single hand on file is used on its own.
+
+    Returns None when there is no usable value, so the caller keeps its existing
+    grade-estimate path instead of scoring against a fabricated number.
+    """
+    if bodyweight_kg <= 0:
+        return None
+    lifts = []
+    for key in ("lp_max_lift_5s_left_kg", "lp_max_lift_5s_right_kg"):
+        value = tests.get(key)
+        if value is None:
+            continue
+        try:
+            value = float(value)
+        except (TypeError, ValueError):
+            continue
+        if value <= 0:
+            continue
+        if value / bodyweight_kg > LP_MAX_PLAUSIBLE_BW_RATIO:
+            logger.warning(
+                "loading_pin_two_hand_equivalent: %s=%.1fkg is %.0f%% of a %.1fkg "
+                "bodyweight — beyond the hardest boulder ever climbed; ignoring "
+                "as a data-entry error",
+                key, value, 100 * value / bodyweight_kg, bodyweight_kg,
+            )
+            continue
+        lifts.append(value)
+    if not lifts:
+        return None
+    return (sum(lifts) / len(lifts)) * LP_ONE_ARM_TO_TWO_HAND
+
+
 def _compute_finger_strength(
     tests: Dict[str, Any],
     body: Dict[str, Any],
@@ -250,6 +325,11 @@ def _compute_finger_strength(
     bw = body.get("weight_kg") or 70.0
     benchmark = _benchmark_for(_FINGER_BENCHMARK, target_grade)
     max_hang = tests.get("max_hang_20mm_7s_total_kg") or tests.get("max_hang_20mm_5s_total_kg")
+
+    # A266: a hangboard number wins when both exist — it is measured directly in
+    # the unit the benchmark speaks. The pin is converted only as a fallback.
+    if max_hang is None:
+        max_hang = loading_pin_two_hand_equivalent(tests, bw)
 
     if max_hang is not None:
         ratio = max_hang / bw
