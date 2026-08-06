@@ -153,7 +153,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-92 endpoints total (90 router + 2 app-level: health check + stripe webhook). B320 retired `/api/user/recovery-code` and `/api/user/recover`.
+93 endpoints total (91 router + 2 app-level: health check + stripe webhook). B320 retired `/api/user/recovery-code` and `/api/user/recover`.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -196,6 +196,7 @@ user_state.assessment + user_state.goal
 | GET | `/api/outdoor/sessions` | List outdoor sessions |
 | GET | `/api/outdoor/stats` | Outdoor statistics |
 | GET | `/api/outdoor/strategy` | Resolve deterministic strategy + nutrition for an outdoor day (layered patches) |
+| GET | `/api/outdoor/pitch-ladder` | A265: deterministic pitch ladder for an outdoor day — absolute grade, attempts and rest per pitch, derived from the athlete's own onsight/redpoint (`performance.current_level.sport`, goal `current_grade` as fallback). Lead-only in v1, matching the strategy catalog. 422 rather than a guess when no usable grade exists. `/api/outdoor/strategy` now carries the same ladder under `pitch_ladder`. Persisted onto the day via the `set_outdoor_plan` replanner event (`day.outdoor_plan`, preserved in `_DAY_LEVEL_FIELDS`) and hand-editable from the day card. |
 | POST | `/api/outdoor/session/start` | Start an active outdoor session (server-side timer) |
 | POST | `/api/outdoor/session/{session_id}/finish` | Finish active outdoor session → immutable outdoor.v2 log |
 | GET | `/api/outdoor/session/active` | Restore in-progress active outdoor session (with live routes) |
