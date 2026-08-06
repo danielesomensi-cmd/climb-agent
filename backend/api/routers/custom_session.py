@@ -89,6 +89,12 @@ def _enrich_exercise_display(ex: dict, catalog: dict) -> dict:
     ex["cues"] = cat_ex.get("cues") or []
     ex["load_model"] = cat_ex.get("load_model") or ""
     ex["category"] = cat_ex.get("category") or ""
+    # B324: laterality. Without it the custom player ran a Copenhagen plank or a
+    # Pallof press as if it had one side, and the same gap reached the week plan
+    # (add_custom_session copies these dicts verbatim into the slot).
+    # `unilateral` is deliberately NOT copied: it drives per-hand load logging
+    # for loading-pin exercises, which the custom path has no suggested loads for.
+    ex["alt_sides"] = bool(cat_ex.get("alt_sides"))
     if cat_ex.get("video_url"):
         ex["video_url"] = cat_ex["video_url"]
     if not ex.get("notes") and defaults.get("notes"):
@@ -205,6 +211,9 @@ def list_exercises(
             "prescription_defaults": ex.get("prescription_defaults", {}),
             "fatigue_cost": ex.get("fatigue_cost", 0),
             "load_model": ex.get("load_model"),
+            # B324: laterality, so the builder can label a picked exercise
+            # "per side" before the session is ever saved.
+            "alt_sides": bool(ex.get("alt_sides")),
             # A242: deterministic starting proposal + last-logged memory (C.2/C.3).
             "proposal": propose_exercise_prescription(ex["id"], catalog, state, phase),
         })
@@ -265,6 +274,7 @@ def get_blocks(user_id: Optional[str] = Depends(get_user_id)):
                 "rest_between_sets_seconds": prescription.get("rest_between_sets_seconds", 0),
                 "rest_between_reps_seconds": prescription.get("rest_between_reps_seconds"),
                 "load_kg": 0,
+                "alt_sides": bool(ex_cat.get("alt_sides")),   # B324
                 "notes": "",
             })
 

@@ -14,6 +14,7 @@ import type { WeekPlan, CustomSessionExercise } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CustomExerciseStep } from "@/components/session-play/custom-exercise-step";
 import { CustomRestTimer } from "@/components/session-play/custom-rest-timer";
+import { displaySetNumber, sideForSet, totalSetsWithSides } from "@/lib/alt-sides";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
 
@@ -36,6 +37,7 @@ function ExerciseFeedbackCard({
   prescriptionSummary,
   setsCompleted,
   totalSets,
+  altSides,
   feedbackLabel,
   loadKg,
   showLoadInput,
@@ -46,6 +48,7 @@ function ExerciseFeedbackCard({
   prescriptionSummary: string;
   setsCompleted: number;
   totalSets: number;
+  altSides?: boolean;
   feedbackLabel: string;
   loadKg: string;
   showLoadInput: boolean;
@@ -57,7 +60,7 @@ function ExerciseFeedbackCard({
       <div className="flex items-baseline justify-between gap-2">
         <p className="text-sm font-medium truncate">{name}</p>
         <span className="text-[11px] text-muted-foreground tabular-nums shrink-0">
-          {setsCompleted}/{totalSets} sets
+          {setsCompleted}/{totalSets} sets{altSides ? " (R+L)" : ""}
         </span>
       </div>
       {prescriptionSummary && (
@@ -110,9 +113,11 @@ function formatExerciseName(id: string, catalogMap: Map<string, string>): string
 function exercisePrescriptionSummary(ex: CustomSessionExercise): string {
   const parts: string[] = [];
   const sets = ex.sets ?? 1;
-  if (ex.reps != null && ex.reps > 0) parts.push(`${sets}\u00d7${ex.reps}`);
-  else if (ex.work_seconds != null && ex.work_seconds > 0) parts.push(`${sets}\u00d7${ex.work_seconds}s`);
-  else parts.push(`${sets} sets`);
+  // B324: make the laterality visible in the summary \u2014 "3\u00d720s per side".
+  const perSide = ex.alt_sides ? " per side" : "";
+  if (ex.reps != null && ex.reps > 0) parts.push(`${sets}\u00d7${ex.reps}${perSide}`);
+  else if (ex.work_seconds != null && ex.work_seconds > 0) parts.push(`${sets}\u00d7${ex.work_seconds}s${perSide}`);
+  else parts.push(`${sets} sets${perSide}`);
   if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
   if (ex.rest_between_sets_seconds != null && ex.rest_between_sets_seconds > 0) {
     parts.push(`rest ${ex.rest_between_sets_seconds}s`);
@@ -244,7 +249,8 @@ export default function SessionPlayPage() {
       [currentExerciseIndex]: (prev[currentExerciseIndex] ?? 0) + 1,
     }));
 
-    const totalSets = currentExercise.sets ?? 1;
+    // B324: alt_sides → one internal set per side, so 3 prescribed sets run as 6.
+    const totalSets = totalSetsWithSides(currentExercise.sets, currentExercise.alt_sides === true);
     const restSec = currentExercise.rest_between_sets_seconds ?? 0;
     const hasMoreSetsInExercise = currentSet < totalSets;
     const hasNextExercise = currentExerciseIndex < exercises.length - 1;
@@ -289,7 +295,7 @@ export default function SessionPlayPage() {
   /** Called when rest timer reaches target + user taps Start next, or skips early. */
   const handleRestDone = useCallback(() => {
     if (!currentExercise) return;
-    const totalSets = currentExercise.sets ?? 1;
+    const totalSets = totalSetsWithSides(currentExercise.sets, currentExercise.alt_sides === true);
     if (currentSet < totalSets) {
       setCurrentSet((s) => s + 1);
       setStage("exercise_active");
@@ -449,7 +455,11 @@ export default function SessionPlayPage() {
             {stage === "exercise_active" && (
               <>
                 {" "}
-                · Set {currentSet} of {currentExercise.sets ?? 1}
+                · Set {displaySetNumber(currentSet, currentExercise.alt_sides === true)} of{" "}
+                {currentExercise.sets ?? 1}
+                {sideForSet(currentSet, currentExercise.alt_sides === true) && (
+                  <> · {sideForSet(currentSet, currentExercise.alt_sides === true)}</>
+                )}
               </>
             )}
             {stage === "resting" && <> · Resting</>}
@@ -516,10 +526,15 @@ export default function SessionPlayPage() {
         {stage === "resting" &&
           currentExercise &&
           (() => {
-            const totalSets = currentExercise.sets ?? 1;
+            const altSides = currentExercise.alt_sides === true;
+            const totalSets = totalSetsWithSides(currentExercise.sets, altSides);
             const hasMoreSetsInExercise = currentSet < totalSets;
+            // B324: the next bout may be the other side of the same set.
+            const nextSide = sideForSet(currentSet + 1, altSides);
             const nextLabel = hasMoreSetsInExercise
-              ? `Set ${currentSet + 1} of ${totalSets} · ${formatExerciseName(currentExercise.exercise_id, catalogNameMap)}`
+              ? `Set ${displaySetNumber(currentSet + 1, altSides)} of ${currentExercise.sets ?? 1}${
+                  nextSide ? ` · ${nextSide}` : ""
+                } · ${formatExerciseName(currentExercise.exercise_id, catalogNameMap)}`
               : nextExercise
                 ? formatExerciseName(nextExercise.exercise_id, catalogNameMap)
                 : "Finish";
@@ -572,7 +587,8 @@ export default function SessionPlayPage() {
                   name={formatExerciseName(ex.exercise_id, catalogNameMap)}
                   prescriptionSummary={exercisePrescriptionSummary(ex)}
                   setsCompleted={setsByIndex[i] ?? 0}
-                  totalSets={ex.sets ?? 1}
+                  totalSets={totalSetsWithSides(ex.sets, ex.alt_sides === true)}
+                  altSides={ex.alt_sides === true}
                   feedbackLabel={feedbackByIndex[i] ?? "ok"}
                   loadKg={kgByIndex[i] ?? (ex.load_kg > 0 ? String(ex.load_kg) : "")}
                   showLoadInput

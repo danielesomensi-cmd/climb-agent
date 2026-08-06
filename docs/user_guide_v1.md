@@ -452,6 +452,8 @@ Reached from **Free Sessions**, the Session Builder is for a workout you want to
 - **Save it** — your custom sessions are stored on your account and listed on the builder's home screen. Open one to view it read-only, edit it, or delete it.
 - **Run it** — a saved session plays back in the same guided runner as a planned session, with the timer, the load fields and the per-exercise cues.
 
+Exercises that are performed **one side at a time** — Copenhagen plank, Pallof press, side-lying hip abduction and the like — are labelled **"per side"** wherever they appear, and the runner walks you through both: it counts a RIGHT bout and a LEFT bout for each prescribed set, showing which side you're on. So "3×20s" means three sets on each side, and the session's estimated duration accounts for all six.
+
 Custom sessions sit **outside the macrocycle**: running one logs the work and updates your working loads, but it does not feed the closed loop or alter your planned progression.
 
 ---

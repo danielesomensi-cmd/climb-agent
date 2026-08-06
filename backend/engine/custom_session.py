@@ -16,6 +16,10 @@ def estimate_custom_session_duration(exercises: List[Dict[str, Any]]) -> int:
     total_seconds = 0
     for ex in exercises:
         sets = ex.get("sets", 1)
+        # B324: an alt_sides exercise is run once per side — 3x20s Copenhagen is
+        # six work bouts, not three. The players double the set count the same way.
+        if ex.get("alt_sides"):
+            sets = sets * 2
         # Work time per set
         if ex.get("work_seconds"):
             work_per_set = ex["work_seconds"]

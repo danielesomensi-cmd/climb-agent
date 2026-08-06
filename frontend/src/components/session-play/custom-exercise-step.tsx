@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, longBeep, transitionBeep } from "@/lib/beep";
+import { displaySetNumber, sideForSet } from "@/lib/alt-sides";
 import type { CustomSessionExercise } from "@/lib/types";
 
 export type ExerciseCategory = "time_based" | "reps_based" | "timed_sets";
@@ -45,7 +46,12 @@ export function CustomExerciseStep({
   onSetDone,
 }: CustomExerciseStepProps) {
   const category = detectCategory(exercise);
+  // B324: alt_sides exercises are run once per side — the parent counts doubled
+  // internal sets, we show the prescribed number plus the side badge.
+  const altSides = exercise.alt_sides === true;
   const totalSets = exercise.sets ?? 1;
+  const currentSide = sideForSet(currentSet, altSides);
+  const displaySet = displaySetNumber(currentSet, altSides);
   const workSec = exercise.work_seconds ?? 0;
   const loadKg = exercise.load_kg;
   const reps = exercise.reps ?? 0;
@@ -151,9 +157,24 @@ export function CustomExerciseStep({
           Custom
         </Badge>
         <h2 className="text-2xl font-semibold">{exerciseName}</h2>
+        {currentSide && (
+          <div className="flex justify-center pt-1">
+            <div
+              className={cn(
+                "flex items-center justify-center rounded-lg px-5 py-1.5 text-lg font-bold tracking-widest",
+                currentSide === "RIGHT"
+                  ? "bg-orange-500/15 text-orange-400 border border-orange-500/30"
+                  : "bg-sky-500/15 text-sky-400 border border-sky-500/30",
+              )}
+            >
+              {currentSide}
+            </div>
+          </div>
+        )}
         <div className="text-sm text-muted-foreground">
           <span>
-            Set {currentSet} of {totalSets}
+            Set {displaySet} of {totalSets}
+            {currentSide && " per side"}
           </span>
           {loadKg > 0 && <span> · @ {loadKg} kg</span>}
           {category === "reps_based" && reps > 0 && <span> · {reps} reps</span>}
