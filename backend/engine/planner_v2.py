@@ -279,6 +279,23 @@ def _location_has_equipment(
     return all(eq in avail for eq in required_equipment)
 
 
+def allowed_locations_for(equipment: Optional[Dict[str, Any]]) -> List[str]:
+    """Derive the allowed planning locations from the user's equipment block.
+
+    B322: ``equipment.home_enabled`` was written by the wizard and then read by
+    nobody — the planner only ever looked at ``equipment.home``. A user who
+    explicitly said "I don't train at home" still got home sessions placed on
+    their week. Honour the flag, but only when there is somewhere else to train:
+    dropping "home" for a user with no gym would leave the planner with no
+    location at all, which is strictly worse than ignoring the preference.
+    """
+    equipment = equipment or {}
+    gyms = equipment.get("gyms") or []
+    if equipment.get("home_enabled") is False and gyms:
+        return ["gym"]
+    return ["home", "gym"]
+
+
 def _pick_location(
     session_locations: Tuple[str, ...],
     slot_info: Dict[str, Any],
@@ -307,6 +324,28 @@ def _pick_location(
                         return loc
                 return None  # no viable location has the equipment
             return preferred
+        # B322: the preferred location cannot host this session. Dropping it is
+        # correct when the preference is a real choice — "Tuesday I train at
+        # home" must never silently become a gym session (UI batch 1b).
+        #
+        # But "home" is not a choice when the user has no home setup: the wizard
+        # defaults every slot to home, so someone who ticked "Yes" without
+        # opening the location control had their whole climbing week deleted. In
+        # prod a boulderer with a fully equipped gym, `home_enabled=false` and an
+        # empty home kit got nothing but stretching and prehab.
+        #
+        # So fall back only when home is demonstrably not a place this user can
+        # train: an explicitly EMPTY home kit, or home excluded from the allowed
+        # locations (home_enabled=false, see allowed_locations_for). A home kit
+        # of None means "unknown" — treated as available everywhere else in this
+        # module — and keeps the preference binding.
+        home_is_dead_end = not home_equipment and home_equipment is not None
+        if preferred == "home" and (home_is_dead_end or "home" not in allowed_locations):
+            for loc in viable:
+                if not required_equipment or _location_has_equipment(
+                    loc, required_equipment, slot_info, home_equipment, gyms, default_gym_id
+                ):
+                    return loc
         return None  # session can't satisfy location preference
     # No preference — pick first viable with equipment
     if required_equipment:

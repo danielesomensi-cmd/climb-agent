@@ -23,7 +23,11 @@ from backend.api.deps import (
 from backend.api.models import TestReminderResponse
 from backend.engine.macrocycle_v1 import compute_pretrip_dates
 from backend.engine.cues import get_session_cue
-from backend.engine.planner_v2 import generate_phase_week, should_show_test_reminder
+from backend.engine.planner_v2 import (
+    allowed_locations_for,
+    generate_phase_week,
+    should_show_test_reminder,
+)
 from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
 from backend.engine.weekly_override import merge_override_into_availability
@@ -450,6 +454,7 @@ def get_week(
                 intensity_cap=ctx.get("intensity_cap"),
                 pretrip_dates=pretrip_dates if pretrip_dates else None,
                 is_last_week_of_phase=is_last,
+                allowed_locations=allowed_locations_for(equipment),
                 home_equipment=home_equipment,
                 today=today_str,
                 inject_tests=want_tests,

@@ -460,6 +460,8 @@ In **Settings → Locations**, configure:
 
 When the planner builds your week, it checks each day's location and available equipment, then selects only sessions whose `required_equipment` is a subset of what you have. If your home gym only has a hangboard and pull-up bar, you won't get sessions that require a campus board or weight bench at home.
 
+**The location you set for a day is binding.** If a day is marked "home", the planner keeps it at home rather than sending you to the gym — even if that means a lighter session. The one exception is when home isn't somewhere you can train at all (you've turned off the home setup, or listed no equipment there): in that case a home day falls back to your gym instead of leaving the day empty.
+
 ### Non-Standard Equipment
 
 If you have equipment that's not in the standard list (e.g., a specific training board, a crack machine, custom setup), contact us at **[your email]** and we'll evaluate adding it to the catalog so the engine can prescribe exercises for it.

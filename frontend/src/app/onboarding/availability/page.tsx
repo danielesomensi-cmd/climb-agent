@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { defaultTrainingLocation } from "@/lib/training-location";
 import { Button } from "@/components/ui/button";
 import { StepNav } from "@/components/onboarding/step-nav";
 import { Input } from "@/components/ui/input";
@@ -49,10 +50,13 @@ export default function AvailabilityPage() {
   const planningPrefs = data.planning_prefs;
   const gyms = data.equipment.gyms;
 
+  // B322: default to the place the user can actually train (see lib/training-location).
+  const defaultLocation = defaultTrainingLocation(data.equipment);
+
   // No separate dayMeta state needed — other_sport is stored per-slot
 
   const getSlot = (day: string, slot: string): SlotData => {
-    return availability[day]?.[slot] ?? { available: false, preferred_location: "home" };
+    return availability[day]?.[slot] ?? { available: false, preferred_location: defaultLocation };
   };
 
   const setSlot = (day: string, slot: string, value: SlotData) => {
@@ -64,7 +68,7 @@ export default function AvailabilityPage() {
     const current = getSlot(day, slot);
     setSlot(day, slot, {
       available: !current.available,
-      preferred_location: current.preferred_location || "home",
+      preferred_location: current.preferred_location || defaultLocation,
       gym_id: current.gym_id,
     });
   };

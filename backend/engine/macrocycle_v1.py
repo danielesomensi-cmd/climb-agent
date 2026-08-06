@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 from backend.engine.assessment_v1 import _GRADE_INDEX, grade_gap
+from backend.engine.grade_mapping import BOULDER_TO_LEAD
 from backend.engine.start_date_utils import strict_next_monday
 
 # ---------------------------------------------------------------------------
@@ -585,6 +586,16 @@ def _validate_goal(goal: Dict[str, Any]) -> List[str]:
     warnings = []
     target = goal.get("target_grade")
     current = goal.get("current_grade")
+
+    # B322: for a boulder goal the onboarding router converts target_grade to
+    # its lead equivalent (BOULDER_TO_LEAD) but leaves current_grade in Font.
+    # Comparing "9a" against "8A" fell through to the "Unknown current_grade"
+    # branch, so the "target not harder" / "target too ambitious" checks never
+    # ran for a single boulder user. Map current onto the same scale first.
+    if current and current not in _GRADE_INDEX:
+        mapped = BOULDER_TO_LEAD.get(current)
+        if mapped:
+            current = mapped
 
     if target and current and target in _GRADE_INDEX and current in _GRADE_INDEX:
         gap = grade_gap(target, current)
