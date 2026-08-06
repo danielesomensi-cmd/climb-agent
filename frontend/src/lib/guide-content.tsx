@@ -60,7 +60,7 @@ export const GUIDE_SECTIONS: GuideSection[] = [
         <Flow items={["Assessment", "Goal", "Macrocycle", "Weekly Plan", "Session", "Exercises"]} />
         {/* IMAGE: plan_page — screenshot of Plan page showing radar chart + macrocycle timeline */}
         <Ul>
-          <Li><B>Assessment</B>: During onboarding, you provide your climbing experience, grades, test results, and self-reported weaknesses. This generates a 5-axis profile (finger strength, pulling strength, power endurance, technique, endurance) scored 0&ndash;100.</Li>
+          <Li><B>Assessment</B>: During onboarding, you provide your climbing experience, grades, test results, and self-reported weaknesses. This generates a 5-axis profile (finger strength, pulling strength, power endurance, technique, endurance) scored 0&ndash;100 <B>against your goal grade</B> &mdash; see &ldquo;Reading the radar&rdquo; below.</Li>
           <Li><B>Goal</B>: You set a target grade and a deadline. The engine calculates how many weeks you have and what needs to improve.</Li>
           <Li><B>Macrocycle</B>: A periodized plan (typically 10&ndash;13 weeks, minimum 9) is generated, divided into phases. Each phase has a specific physiological purpose.</Li>
           <Li><B>Weekly Plan</B>: Each week, the planner selects sessions based on your current phase, available days, locations, and equipment. It runs a 3-pass algorithm: primary sessions first, then complementary work, then tests when due.</Li>
@@ -68,6 +68,48 @@ export const GUIDE_SECTIONS: GuideSection[] = [
           <Li><B>Feedback Loop</B>: After each session, your feedback drives the closed-loop adaptation system. Loads adjust up or down. Every ~6 weeks, test sessions re-assess your profile.</Li>
         </Ul>
         <P><B>This is fully deterministic.</B> Same inputs always produce the same outputs. No randomness, no AI guessing &mdash; just rules, catalogs, and your data.</P>
+      </>
+    ),
+  },
+  {
+    id: "reading-the-radar",
+    title: "Reading the Radar",
+    searchText:
+      "radar chart 5-axis profile assessment score 0-100 readiness for goal grade at target benchmark elite comparison toggle greyed axis finger strength pulling strength tooltip info what does 100 mean",
+    body: (
+      <>
+        <P>
+          The five-axis radar at the top of <B>Plan</B> is scored <B>against your goal
+          grade</B>, not against an absolute maximum &mdash; the subtitle says so
+          (&ldquo;Readiness for 8a+&rdquo;). A score of 100 means you already meet the
+          benchmark that grade typically demands, so that axis shows <B>&#10003; At
+          target</B> instead of a number. Two climbers with identical strength but
+          different goals see different radars. That is intended.
+        </P>
+        <P>
+          Tap the <B>&#9432;</B> next to any axis for what it measures, what it is scored
+          against, and &mdash; when the score is low &mdash; what training moves it.
+        </P>
+        <P>
+          <B>Goal vs Elite.</B> If you have entered a max hang or a weighted pull-up, a
+          <B> Goal / Elite </B> toggle appears above the radar. Goal is the default and is
+          the scale the rest of the app uses. Elite re-draws the same axes against fixed
+          benchmarks for climbers operating around 8b&ndash;9a, so you can see how far the
+          top of the sport is instead of how close your own goal is. <B>It changes nothing
+          but the picture</B> &mdash; your plan, your domain weights and your progression
+          are always computed from the Goal scale.
+        </P>
+        <P>
+          Only <B>Finger Strength</B> and <B>Pulling Strength</B> have an elite benchmark
+          today. Endurance, Power Endurance and Technique appear greyed with an em dash,
+          because there is no benchmark for them we would stand behind. A greyed axis means
+          &ldquo;we have no ruler&rdquo;, never &ldquo;you score zero&rdquo;.
+        </P>
+        <P>
+          The same radar and the same toggle appear on the public <B>/assessment</B> page,
+          where anyone can get a profile without an account. Nothing entered there is
+          stored.
+        </P>
       </>
     ),
   },

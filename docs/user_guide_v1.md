@@ -71,6 +71,30 @@ The **Plan** page shows your position in the cycle: completed phases get a green
 
 The Plan page also has a **Milestones** gallery — one-time achievements you unlock as you train: your first guided session, your first outdoor day, a new hardest grade sent, a "Perfect Week" (every planned session done, rest days included). They're all "firsts" — there are no streaks to lose and nothing ever locks back up. Unlocked ones light up; the rest stay dimmed so you can see what's ahead.
 
+### Reading the radar
+
+The five-axis radar at the top of the Plan page is **scored against your goal grade**, not against
+some absolute maximum. The subtitle says so: *Readiness for 8a+*. A score of 100 means "you already
+meet the strength benchmark that grade typically demands" — it is a finish line for *your* goal, not
+a perfect score, so an axis that hits it shows **✓ At target** instead of a bare number. Two climbers
+with identical strength but different goals will see different radars, and that is intended.
+
+Tap the ⓘ next to any axis to see what it measures, what it is scored against, and — when the score
+is low — what kind of training moves it.
+
+**Goal vs Elite.** If you have entered a max hang or a weighted pull-up, a `[ Goal | Elite ]` toggle
+appears above the radar. Goal is the default and is the scale everything else in the app uses. Elite
+re-draws the same axes against fixed benchmarks for climbers operating around 8b–9a, so you can see
+how far the top of the sport is rather than how close your own goal is. **It changes nothing but the
+picture** — your plan, your weights and your progression are always computed from the Goal scale.
+
+Only **Finger Strength** and **Pulling Strength** have an elite benchmark today; Endurance, Power
+Endurance and Technique are shown greyed with an em dash, because there is no benchmark for them we
+would stand behind. A greyed axis means "we have no ruler", never "you score zero".
+
+The same radar and the same toggle appear on the public **/assessment** page, where anyone can get a
+profile without an account — nothing entered there is stored.
+
 ### Base / Endurance (4–6 weeks)
 
 **What you'll do**: ARC (Aerobic Restoration and Capillarity) training, easy sustained climbing, repeaters, technique drills, general conditioning.
