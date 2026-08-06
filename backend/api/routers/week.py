@@ -406,9 +406,18 @@ def get_week(
             _tests_src = ((state.get("assessment") or {}).get("tests_source") or {})
             _recent_test_dates: dict[str, str] = {}
             _hb_baselines = (state.get("baselines") or {}).get("hangboard") or []
-            _finger_measured = (
-                _tests_src.get("max_hang_20mm_7s_total_kg") == "measured"
-                or _tests_src.get("max_hang_20mm_5s_total_kg") == "measured"
+            # A266: a loading-pin user never records max_hang_* — the wizard
+            # swaps in the LP variants for them (see finger_device). Reading only
+            # the hangboard keys meant their finger test never counted as fresh,
+            # so the planner kept scheduling a retest they had just done.
+            _finger_measured = any(
+                _tests_src.get(k) == "measured"
+                for k in (
+                    "max_hang_20mm_7s_total_kg",
+                    "max_hang_20mm_5s_total_kg",
+                    "lp_max_lift_5s_left_kg",
+                    "lp_max_lift_5s_right_kg",
+                )
             )
             if _hb_baselines and _finger_measured:
                 # B210 + D214: only honor updated_at when the underlying scalar was measured

@@ -217,7 +217,7 @@ There's no way to dismiss the card without choosing: each option tells the engin
 - **Bodyweight Pull-Up Gate**: If you've never done the weighted test, the system first checks if you can do 15+ bodyweight pull-ups. If yes, you progress to the weighted test.
 - **Hip Flexibility**: Straddle measurement in cm. Informs mobility prescription.
 
-If you use a **loading pin** instead of a hangboard, the system automatically substitutes the finger tests with loading pin variants (LP Max 5s and LP Repeater).
+If you use a **loading pin** instead of a hangboard, the system automatically substitutes the finger tests with loading pin variants (LP Max 5s and LP Repeater). Your pin numbers feed the finger-strength axis exactly like a hangboard result: enter the **external load only** for each hand (don't add your bodyweight), and the engine converts the one-hand lift into the two-hand equivalent the benchmarks are built on. Both hands are averaged, so a left/right difference shows up as an asymmetry to train rather than as extra strength.
 
 If you only have a couple of training days a week, a test week can run out of room — a test needs to respect the same rest spacing as your hard sessions. When that happens you'll see a **"Couldn't schedule a test this week"** note on **Week**: free up an available day or move a session, then use **Replan** to fit the test in.
 

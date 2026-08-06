@@ -521,3 +521,59 @@ Queste correzioni sono emerse dalla lettura diretta della fonte primaria (traini
 | Trovare YouTube Eva López SubHangs / MaxHangs | Media | 🔲 Da fare | YouTube diretto |
 | Accedere a "Training for Climbing" su archive.org | Alta | 🔲 Da fare | Richiede account gratuito — istruzioni sopra |
 | Accedere a RCTM su archive.org | Alta | 🔲 Da fare | Stessa procedura |
+
+---
+
+## 🔗 Conversione loading pin (una mano) → max hang (due mani) — A266
+
+**Perché serve.** L'asse `finger_strength` dell'assessment è tarato su
+`_FINGER_BENCHMARK`, cioè sul **carico totale di un max hang a due mani** diviso
+il peso corporeo. Chi si allena e si testa su loading pin registra invece
+`lp_max_lift_5s_left/right_kg`: un **carico esterno sollevato con una mano**.
+Fino ad A266 quei numeri erano illeggibili per l'assessment e l'asse ripiegava
+sulla stima da grado — anche per la beta tester che il loading pin lo usa per
+necessità (limitazione alla spalla, vedi `beta_feedback.md` FB-6).
+
+**Costante adottata:** `LP_ONE_ARM_TO_TWO_HAND = 1.85`
+(`backend/engine/assessment_v1.py`), applicata alla **media** delle due mani.
+
+**Non è un coefficiente inventato: tre fonti indipendenti convergono.**
+
+| # | Fonte | Cosa dice | Rapporto due mani / una mano |
+|---|-------|-----------|------------------------------|
+| 1 | `_FINGER_BENCHMARK` (interno, già in uso) | 8a lead → carico totale **1,40 × BW** su due mani | — |
+| 2 | Dataset one-arm Lattice Training, 20 mm, 7–10s | V8–V9 (≈ 8a lead) → **0,73–0,79 × BW** su un braccio | 1,40 / 0,76 = **1,84** |
+| 3 | Letteratura sul *bilateral deficit* nei climber | rapporto due braccia / un braccio riportato in **1,6–2,0** (< 2,0 perché un arto isolato esprime più forza di quanto ne esprima come metà di uno sforzo bilaterale) | **1,6–2,0** |
+
+Il valore che cade dal nostro benchmark (1,84) sta dentro il range della
+letteratura e vicino al centro. Arrotondato a **1,85**. Conseguenza voluta: un
+atleta che si testa su pin e uno che si testa su hangboard atterrano sullo
+stesso punteggio d'asse — le due tabelle restano reciprocamente coerenti.
+
+**Bound di plausibilità:** `LP_MAX_PLAUSIBLE_BW_RATIO = 1.5`. Il dataset Lattice
+mette **V17** — il boulder più duro mai salito — a 1,18 × BW su un braccio. Oltre
+1,5 non è un climber, è un errore di inserimento (peso totale invece del carico,
+libbre al posto dei kg): il valore viene **scartato con un warning**, non usato
+per saturare l'asse. Scartare è deliberato — è la lezione di [B321], dove uno
+zero silenzioso valeva "principiante" invece di "non lo sappiamo".
+
+**Precedenza:** se esiste un `max_hang_*` misurato, vince quello. Il pin viene
+convertito solo come fallback: una misura diretta nell'unità del benchmark è
+sempre preferibile a una convertita.
+
+**Fonti:**
+- Lattice Training — dataset forza dita per grado (one-arm 20 mm):
+  https://latticetraining.com/2-arm-fs-test/ e la ricostruzione pubblica del
+  dataset in https://wmgclimbing.wordpress.com/2024/03/10/approximating-lattices-finger-strength-data-set/
+  (V4 49% → V17 118% del peso corporeo, incrementi 6%/grado sotto V11, 4% sopra V14)
+- Handedness, Bilateral, and Interdigit Strength Asymmetries in Male Climbers —
+  https://pubmed.ncbi.nlm.nih.gov/37678830/ (asimmetria media fra le mani 4,1%,
+  motivo per cui si usa la **media** e non la somma)
+- Reliability of finger strength assessment methods in climbing: a systematic review —
+  https://www.frontiersin.org/journals/sports-and-active-living/articles/10.3389/fspor.2025.1650198/full
+
+**⚠️ Limite noto, da rivedere se arrivano dati migliori.** La tabella one-arm
+Lattice per V11–V14 è **interpolata** dall'autore della ricostruzione, non
+pubblicata da Lattice; e l'intero dataset è su **atleti maschi**. La costante è
+quindi solida nella fascia centrale (V4–V11, dove i dati sono diretti) e più
+debole agli estremi. Se Lattice pubblica i dati grezzi, ricalibrare qui.
