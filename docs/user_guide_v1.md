@@ -491,6 +491,16 @@ A live **weather widget** shows conditions for the day, rated by a **friction sc
 
 Outdoor sessions appear in your weekly timeline. The planner knows about your outdoor days (if you've set them in availability) and plans around them — no indoor sessions are scheduled on outdoor days.
 
+### Plan for the day (grades and rests)
+
+An outdoor day on Today or Week carries a **plan**: the pitches to climb, in order, each with an **absolute grade, how many burns, and how long to rest afterwards**.
+
+Tap the kind of day you're having — **Onsight**, **Project**, **Volume** or **Scout** — and the plan is generated from *your* grades, taken from the onsight and redpoint you recorded (if you've only recorded a redpoint, the onsight is estimated one number grade below it). An onsight day for a 7a+ onsight / 8a+ redpoint climber comes out as 6a → 6b+ → 7a → 7a+ → 7b (two burns) → 7a → 6b.
+
+The rests are the part worth reading. On an onsight day the closing pitch gets a deliberately **short** rest — climbing it already pumped is the point, and it's the number most people get wrong when they're tired.
+
+Everything is editable: the pencil opens the list, where you can change any grade, burn count or rest, add pitches and delete them. Once you've edited it by hand the plan is marked **Edited**, and regenerating asks before overwriting your version. Completed outdoor days show their plan read-only — like every past session, they can't be changed.
+
 ### Stats
 
 The Outdoor page shows: per-spot breakdown, grade histogram, and session history. Tap any session to expand the routes you climbed that day. The **Routes** list can be sorted by hardest grade or most recent, and collapses to the top 10 with a "Show all" toggle. Two charts track your **grade progression** (hardest send per month) and **monthly volume**.

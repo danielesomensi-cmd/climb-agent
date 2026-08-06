@@ -152,6 +152,41 @@ export interface DayPlan {
   other_activity_duration_minutes?: number;
   prev_other_activity_reduce?: boolean;
   outdoor_load_score?: number;
+  // A265: the day's pitch ladder — generated from the athlete's grades, then
+  // freely hand-editable. Absent means "no plan written for this day yet".
+  outdoor_plan?: OutdoorPitchLadder;
+}
+
+// ── Pitch ladder (A265) ──────────────────────────────────────────────────
+export type PitchRole =
+  | "warmup"
+  | "build"
+  | "main"
+  | "power_endurance"
+  | "cooldown";
+
+export interface PitchLadderRow {
+  index: number;
+  role: PitchRole;
+  grade: string;
+  attempts: number;
+  rest_after_min: number;
+  note?: string;
+}
+
+export interface OutdoorPitchLadder {
+  discipline?: string;
+  day_type?: OutdoorDayType;
+  onsight_grade?: string;
+  redpoint_grade?: string;
+  pitches: PitchLadderRow[];
+  summary?: {
+    pitch_count: number;
+    total_attempts: number;
+    estimated_hours: number;
+  };
+  /** false once the user has edited the generated ladder by hand. */
+  generated?: boolean;
 }
 
 export interface SkippedTest {
