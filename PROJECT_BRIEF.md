@@ -18,13 +18,13 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 <!-- STATUS_TABLE_START -->
 | Metric | Count |
 |--------|-------|
-| Tests (passing) | 3030 |
+| Tests (passing) | 3057 |
 | Exercises | 263 |
 | Sessions (active) | 35 |
 | Templates | 19 |
-| API endpoints | 92 |
+| API endpoints | 93 |
 | Frontend pages | 46 |
-| Frontend components | 106 |
+| Frontend components | 107 |
 <!-- STATUS_TABLE_END -->
 
 **Current phase:** Paid launch prep. Production live at **https://climbagent.app** (canonical domain since A248, 2026-07-21 — legacy `climb-agent.vercel.app` 308-redirects with query preserved). Stripe LIVE (sk_live keys on Railway + Vercel). B202 fail-closed subscription guard deployed. Founding Climber ($4.99/mo) and Standard ($9.99/mo) plans active.
