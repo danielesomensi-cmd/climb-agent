@@ -106,6 +106,18 @@ Un solo campo condiviso, non uno per brief: [[D272]] §7 lo chiede esplicitament
 
 ## 5. Il fingerprint — l'unico punto delicato
 
+> ⚠️ **§5 è stato SUPERATO in implementazione (06/08). La modifica proposta qui NON è stata fatta.**
+> Il ricalcolo forzato che comportava non è il no-op che questo paragrafo assumeva: sul corpus di
+> produzione **tre profili loading-pin** sono stati salvati prima di [[A266]] e un ricalcolo li
+> sposterebbe (`e60d7a0c` 51→100, `d7f6083e` 51→69, `79fadc50` 54→71). Il primo è l'utente il cui
+> ricalcolo Daniele ha **esplicitamente sospeso** ([[A266-P1]]): una migrazione non può ribaltare una
+> decisione di prodotto. E non serviva: `m002` gira a ogni lettura subito dopo `m001`, quindi la
+> provenienza è derivata dal sidecar già popolato al primo caricamento. Il buco descritto sotto è
+> chiuso dalla migrazione, non dal fingerprint. Dettaglio in
+> `test_three_loading_pin_profiles_are_already_drifted_from_A266`.
+
+*Ragionamento originale, conservato perché il buco che descrive è reale — ha solo un'altra soluzione:*
+
 `_recompute_profile_if_needed` (`deps.py:258-277`) salta il ricalcolo quando l'hash degli input non è cambiato:
 
 ```python

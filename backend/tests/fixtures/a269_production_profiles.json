@@ -1,0 +1,914 @@
+[
+ {
+  "assessment": {
+   "body": {
+    "age": 36,
+    "height_cm": 173,
+    "weight_kg": 68
+   },
+   "experience": {
+    "climbing_years": 17,
+    "structured_training_years": 3
+   },
+   "grades": {
+    "lead_max_os": "6c+",
+    "lead_max_rp": "7b+"
+   },
+   "self_eval": {
+    "primary_weakness": "technique_errors",
+    "secondary_weakness": "pump_too_early"
+   },
+   "tests": {
+    "hip_flexibility_cm": 167,
+    "last_test_date": "2026-01-15",
+    "max_hang_20mm_5s_total_kg": 87,
+    "max_hang_20mm_7s_total_kg": 87,
+    "weighted_pullup_1rm_total_kg": 93
+   },
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 47,
+   "finger_strength": 100,
+   "power_endurance": 53,
+   "pulling_strength": 100,
+   "technique": 50
+  },
+  "goal": {
+   "current_grade": "6c+",
+   "goal_type": "lead_grade",
+   "target_grade": "7b"
+  },
+  "stored_profile": {
+   "endurance": 47,
+   "finger_strength": 100,
+   "power_endurance": 53,
+   "pulling_strength": 100,
+   "technique": 50
+  },
+  "uid": "f49678eb"
+ },
+ {
+  "assessment": {
+   "body": {
+    "body_fat_pct": null,
+    "height_cm": 182,
+    "weight_kg": 76
+   },
+   "experience": {
+    "climbing_years": 16,
+    "structured_training_years": 10
+   },
+   "grades": {
+    "boulder_max_os": "7A",
+    "boulder_max_rp": "7C",
+    "lead_max_os": "7a+",
+    "lead_max_rp": "8a+"
+   },
+   "self_eval": {
+    "primary_weakness": "technique_errors",
+    "secondary_weakness": "pump_too_early"
+   },
+   "tests": {
+    "hip_flexibility_cm": 168,
+    "l_sit_hold_seconds": 60,
+    "last_test_date": "2026-01-01",
+    "max_hang_20mm_5s_total_kg": 122,
+    "max_hang_20mm_7s_total_kg": 122,
+    "max_hang_duration_20mm_seconds": 60,
+    "pulling_ratio_pct": 158.4,
+    "repeater_7_3_max_sets_20mm": 25,
+    "weighted_pullup_1rm_estimated_kg": 127.8,
+    "weighted_pullup_1rm_total_kg": 127.8,
+    "weighted_pullup_2rm_total_kg": 122.0
+   },
+   "tests_source": {
+    "hip_flexibility_cm": "measured",
+    "l_sit_hold_seconds": "measured",
+    "max_hang_20mm_5s_total_kg": "measured",
+    "max_hang_20mm_7s_total_kg": "measured",
+    "max_hang_duration_20mm_seconds": "measured",
+    "pulling_ratio_pct": "measured",
+    "repeater_7_3_max_sets_20mm": "measured",
+    "weighted_pullup_1rm_estimated_kg": "measured",
+    "weighted_pullup_1rm_total_kg": "measured",
+    "weighted_pullup_2rm_total_kg": "measured"
+   }
+  },
+  "expected_profile": {
+   "endurance": 51,
+   "finger_strength": 100,
+   "power_endurance": 53,
+   "pulling_strength": 96,
+   "technique": 30
+  },
+  "goal": {
+   "current_grade": "8a+",
+   "goal_type": "lead_grade",
+   "target_grade": "8b"
+  },
+  "stored_profile": {
+   "endurance": 51,
+   "finger_strength": 100,
+   "power_endurance": 53,
+   "pulling_strength": 96,
+   "technique": 30
+  },
+  "uid": "7ea9f0ee"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 37,
+    "height_cm": 185,
+    "weight_kg": 78
+   },
+   "experience": {
+    "climbing_years": 14,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "boulder_max_os": "6B+",
+    "boulder_max_rp": "6C",
+    "lead_max_os": "6c+",
+    "lead_max_rp": "7a+"
+   },
+   "self_eval": {
+    "primary_weakness": "cant_hold_hard_moves",
+    "secondary_weakness": "fingers_give_out"
+   },
+   "tests": {},
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 70,
+   "finger_strength": 53,
+   "power_endurance": 75,
+   "pulling_strength": 46,
+   "technique": 80
+  },
+  "goal": {
+   "current_grade": "7a+",
+   "goal_type": "all_round",
+   "target_grade": "7b+"
+  },
+  "stored_profile": {
+   "endurance": 70,
+   "finger_strength": 53,
+   "power_endurance": 75,
+   "pulling_strength": 46,
+   "technique": 80
+  },
+  "uid": "52681ef7"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 34,
+    "height_cm": 182,
+    "weight_kg": 73
+   },
+   "experience": {
+    "climbing_years": 7,
+    "structured_training_years": 1
+   },
+   "grades": {
+    "lead_max_os": "6b",
+    "lead_max_rp": "7a"
+   },
+   "self_eval": {
+    "primary_weakness": "cant_read_routes",
+    "secondary_weakness": "cant_manage_rests"
+   },
+   "tests": {},
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 49,
+   "finger_strength": 60,
+   "power_endurance": 55,
+   "pulling_strength": 56,
+   "technique": 50
+  },
+  "goal": {
+   "current_grade": "7a",
+   "goal_type": "lead_grade",
+   "target_grade": "7b"
+  },
+  "stored_profile": {
+   "endurance": 49,
+   "finger_strength": 60,
+   "power_endurance": 55,
+   "pulling_strength": 56,
+   "technique": 50
+  },
+  "uid": "3fc2a699"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 40,
+    "height_cm": 188,
+    "weight_kg": 77
+   },
+   "experience": {
+    "climbing_years": 13,
+    "structured_training_years": 7
+   },
+   "grades": {
+    "lead_max_os": "7a",
+    "lead_max_rp": "8a"
+   },
+   "self_eval": {
+    "primary_weakness": "fingers_give_out",
+    "secondary_weakness": "cant_hold_hard_moves"
+   },
+   "tests": {},
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 42,
+   "finger_strength": 40,
+   "power_endurance": 40,
+   "pulling_strength": 46,
+   "technique": 40
+  },
+  "goal": {
+   "current_grade": "8a",
+   "goal_type": "lead_grade",
+   "target_grade": "8c+"
+  },
+  "stored_profile": {
+   "endurance": 42,
+   "finger_strength": 40,
+   "power_endurance": 40,
+   "pulling_strength": 46,
+   "technique": 40
+  },
+  "uid": "42c3087c"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 25,
+    "height_cm": 176,
+    "weight_kg": 68
+   },
+   "experience": {
+    "climbing_years": 4,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "boulder_max_os": "7A",
+    "boulder_max_rp": "7B+",
+    "lead_max_os": "6a",
+    "lead_max_rp": "6c"
+   },
+   "self_eval": {
+    "primary_weakness": "fingers_give_out",
+    "secondary_weakness": "pump_too_early"
+   },
+   "tests": {},
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 45,
+   "finger_strength": 35,
+   "power_endurance": 53,
+   "pulling_strength": 46,
+   "technique": 60
+  },
+  "goal": {
+   "current_grade": "6c",
+   "goal_type": "all_round",
+   "target_grade": "7b"
+  },
+  "stored_profile": {
+   "endurance": 45,
+   "finger_strength": 35,
+   "power_endurance": 53,
+   "pulling_strength": 46,
+   "technique": 60
+  },
+  "uid": "ce8914f0"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 28,
+    "height_cm": 178,
+    "weight_kg": 82
+   },
+   "experience": {
+    "climbing_years": 5,
+    "structured_training_years": 1
+   },
+   "grades": {
+    "boulder_max_os": "6A",
+    "boulder_max_rp": "6C+",
+    "lead_max_os": "6a+",
+    "lead_max_rp": "6c+"
+   },
+   "self_eval": {
+    "primary_weakness": "pump_too_early",
+    "secondary_weakness": "fingers_give_out"
+   },
+   "tests": {
+    "hip_flexibility_cm": 130.0,
+    "max_hang_20mm_5s_total_kg": 74.0,
+    "max_hang_20mm_7s_total_kg": 74.0,
+    "max_hang_duration_20mm_seconds": 21.0,
+    "max_pullups_bw": 12
+   },
+   "tests_source": {
+    "hip_flexibility_cm": "measured",
+    "max_hang_20mm_5s_total_kg": "measured",
+    "max_hang_20mm_7s_total_kg": "measured",
+    "max_hang_duration_20mm_seconds": "measured",
+    "max_pullups_bw": "measured"
+   }
+  },
+  "expected_profile": {
+   "endurance": 34,
+   "finger_strength": 84,
+   "power_endurance": 52,
+   "pulling_strength": 55,
+   "technique": 60
+  },
+  "goal": {
+   "current_grade": "6c+",
+   "goal_type": "all_round",
+   "target_grade": "7a+"
+  },
+  "stored_profile": {
+   "endurance": 34,
+   "finger_strength": 84,
+   "power_endurance": 52,
+   "pulling_strength": 55,
+   "technique": 60
+  },
+  "uid": "9e4154d4"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 25,
+    "height_cm": 174,
+    "weight_kg": 67
+   },
+   "experience": {
+    "climbing_years": 3,
+    "structured_training_years": 2
+   },
+   "grades": {
+    "boulder_max_os": "7A",
+    "boulder_max_rp": "7B",
+    "lead_max_os": "",
+    "lead_max_rp": ""
+   },
+   "self_eval": {
+    "primary_weakness": "weak_on_slopers",
+    "secondary_weakness": "poor_dynamic_movement"
+   },
+   "tests": {
+    "l_sit_hold_seconds": 25,
+    "last_test_date": "2026-07-28",
+    "lp_duration_20mm_left_seconds": 90,
+    "lp_duration_20mm_right_seconds": 90,
+    "lp_max_lift_5s_left_kg": 62.5,
+    "lp_max_lift_5s_right_kg": 65,
+    "weighted_pullup_1rm_total_kg": 45
+   },
+   "tests_source": {
+    "l_sit_hold_seconds": "measured",
+    "last_test_date": "measured",
+    "lp_duration_20mm_left_seconds": "measured",
+    "lp_duration_20mm_right_seconds": "measured",
+    "lp_max_lift_5s_left_kg": "measured",
+    "lp_max_lift_5s_right_kg": "measured",
+    "weighted_pullup_1rm_total_kg": "measured"
+   }
+  },
+  "expected_profile": {
+   "endurance": 64,
+   "finger_strength": 100,
+   "power_endurance": 73,
+   "pulling_strength": 43,
+   "technique": 75
+  },
+  "goal": {
+   "current_grade": "7B",
+   "goal_type": "boulder_grade",
+   "target_grade": "8a"
+  },
+  "stored_profile": {
+   "endurance": 64,
+   "finger_strength": 51,
+   "power_endurance": 73,
+   "pulling_strength": 43,
+   "technique": 75
+  },
+  "uid": "e60d7a0c"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 37,
+    "height_cm": 169,
+    "weight_kg": 72
+   },
+   "experience": {
+    "climbing_years": 4,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "boulder_max_os": "7A+",
+    "boulder_max_rp": "7C+",
+    "lead_max_os": "",
+    "lead_max_rp": ""
+   },
+   "self_eval": {
+    "primary_weakness": "fingers_give_out",
+    "secondary_weakness": "poor_dynamic_movement"
+   },
+   "tests": {
+    "hip_flexibility_cm": 165,
+    "l_sit_hold_seconds": 50,
+    "max_hang_20mm_5s_total_kg": 120,
+    "max_hang_20mm_7s_total_kg": 120,
+    "weighted_pullup_1rm_total_kg": 120
+   },
+   "tests_source": {
+    "hip_flexibility_cm": "measured",
+    "l_sit_hold_seconds": "measured",
+    "max_hang_20mm_5s_total_kg": "measured",
+    "max_hang_20mm_7s_total_kg": "measured",
+    "weighted_pullup_1rm_total_kg": "measured"
+   }
+  },
+  "expected_profile": {
+   "endurance": 50,
+   "finger_strength": 98,
+   "power_endurance": 53,
+   "pulling_strength": 90,
+   "technique": 55
+  },
+  "goal": {
+   "current_grade": "7C+",
+   "goal_type": "boulder_grade",
+   "target_grade": "8b+"
+  },
+  "stored_profile": {
+   "endurance": 50,
+   "finger_strength": 98,
+   "power_endurance": 53,
+   "pulling_strength": 90,
+   "technique": 55
+  },
+  "uid": "7208f92f"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 39,
+    "height_cm": 155,
+    "weight_kg": 47
+   },
+   "experience": {
+    "climbing_years": 4,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "lead_max_os": "6a+",
+    "lead_max_rp": "6c+"
+   },
+   "self_eval": {
+    "primary_weakness": "lack_power",
+    "secondary_weakness": "cant_hold_hard_moves"
+   },
+   "tests": {},
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 52,
+   "finger_strength": 64,
+   "power_endurance": 55,
+   "pulling_strength": 55,
+   "technique": 60
+  },
+  "goal": {
+   "current_grade": "6c+",
+   "goal_type": "lead_grade",
+   "target_grade": "7a"
+  },
+  "stored_profile": {
+   "endurance": 52,
+   "finger_strength": 64,
+   "power_endurance": 55,
+   "pulling_strength": 55,
+   "technique": 60
+  },
+  "uid": "611e0369"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 40,
+    "height_cm": 170,
+    "weight_kg": 65
+   },
+   "experience": {
+    "climbing_years": 5,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "boulder_max_os": "6B",
+    "boulder_max_rp": "6C",
+    "lead_max_os": "7a",
+    "lead_max_rp": "7c+"
+   },
+   "self_eval": {
+    "primary_weakness": "fingers_give_out",
+    "secondary_weakness": "cant_hold_hard_moves"
+   },
+   "tests": {
+    "l_sit_hold_seconds": 15,
+    "lp_max_lift_5s_left_kg": 33,
+    "lp_max_lift_5s_right_kg": 35,
+    "weighted_pullup_1rm_total_kg": 90
+   },
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 42,
+   "finger_strength": 69,
+   "power_endurance": 40,
+   "pulling_strength": 89,
+   "technique": 40
+  },
+  "goal": {
+   "current_grade": "7c+",
+   "goal_type": "all_round",
+   "target_grade": "8a"
+  },
+  "stored_profile": {
+   "endurance": 42,
+   "finger_strength": 51,
+   "power_endurance": 40,
+   "pulling_strength": 89,
+   "technique": 40
+  },
+  "uid": "d7f6083e"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 36,
+    "height_cm": 159,
+    "weight_kg": 56
+   },
+   "experience": {
+    "climbing_years": 10,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "lead_max_os": "6b",
+    "lead_max_rp": "7a"
+   },
+   "self_eval": {
+    "primary_weakness": "cant_hold_hard_moves",
+    "secondary_weakness": "pump_too_early"
+   },
+   "tests": {
+    "last_test_date": "2026-03-31",
+    "max_hang_duration_20mm_seconds": 68,
+    "weighted_pullup_1rm_total_kg": 64
+   },
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 51,
+   "finger_strength": 60,
+   "power_endurance": 53,
+   "pulling_strength": 88,
+   "technique": 60
+  },
+  "goal": {
+   "current_grade": "7a",
+   "goal_type": "lead_grade",
+   "target_grade": "7b"
+  },
+  "stored_profile": {
+   "endurance": 51,
+   "finger_strength": 60,
+   "power_endurance": 53,
+   "pulling_strength": 88,
+   "technique": 60
+  },
+  "uid": "6cf99c0d"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 53,
+    "height_cm": 173,
+    "weight_kg": 66
+   },
+   "experience": {
+    "climbing_years": 30,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "lead_max_os": "6c+",
+    "lead_max_rp": "7b"
+   },
+   "self_eval": {
+    "primary_weakness": "cant_hold_hard_moves",
+    "secondary_weakness": "pump_too_early"
+   },
+   "tests": {
+    "last_test_date": "2026-07-09",
+    "max_hang_20mm_5s_total_kg": 90,
+    "max_hang_20mm_7s_total_kg": 90,
+    "max_hang_duration_20mm_seconds": 30,
+    "max_pullups_bw": 20,
+    "weighted_pullup_1rm_total_kg": 99
+   },
+   "tests_source": {
+    "last_test_date": "measured",
+    "max_hang_20mm_5s_total_kg": "measured",
+    "max_hang_20mm_7s_total_kg": "measured",
+    "max_hang_duration_20mm_seconds": "measured",
+    "weighted_pullup_1rm_total_kg": "measured"
+   }
+  },
+  "expected_profile": {
+   "endurance": 43,
+   "finger_strength": 91,
+   "power_endurance": 53,
+   "pulling_strength": 91,
+   "technique": 60
+  },
+  "goal": {
+   "current_grade": "7b",
+   "goal_type": "lead_grade",
+   "target_grade": "8a+"
+  },
+  "stored_profile": {
+   "endurance": 43,
+   "finger_strength": 91,
+   "power_endurance": 53,
+   "pulling_strength": 91,
+   "technique": 60
+  },
+  "uid": "5a98187c"
+ },
+ {
+  "assessment": {
+   "body": {
+    "body_fat_pct": null,
+    "height_cm": 172,
+    "weight_kg": 68
+   },
+   "experience": {
+    "climbing_years": 8,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "lead_max_os": "6c+",
+    "lead_max_rp": "7b"
+   },
+   "self_eval": {
+    "primary_weakness": "injury_prone",
+    "secondary_weakness": "pump_too_early"
+   },
+   "tests": {
+    "hip_flexibility_cm": 180,
+    "l_sit_hold_seconds": 11,
+    "lp_max_lift_5s_left_kg": 34,
+    "lp_max_lift_5s_right_kg": 39,
+    "max_hang_duration_20mm_seconds": 63,
+    "pulling_ratio_pct": 114.7,
+    "repeater_7_3_max_sets_20mm": 16,
+    "weighted_pullup_1rm_estimated_kg": 81.7,
+    "weighted_pullup_1rm_total_kg": 78,
+    "weighted_pullup_2rm_total_kg": 78.0
+   },
+   "tests_source": {
+    "weighted_pullup_2rm_total_kg": "measured"
+   }
+  },
+  "expected_profile": {
+   "endurance": 52,
+   "finger_strength": 71,
+   "power_endurance": 54,
+   "pulling_strength": 74,
+   "technique": 60
+  },
+  "goal": {
+   "current_grade": "7b",
+   "goal_type": "lead_grade",
+   "target_grade": "8a"
+  },
+  "stored_profile": {
+   "endurance": 52,
+   "finger_strength": 54,
+   "power_endurance": 54,
+   "pulling_strength": 74,
+   "technique": 60
+  },
+  "uid": "79fadc50"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 27,
+    "height_cm": 172,
+    "weight_kg": 66
+   },
+   "experience": {
+    "climbing_years": 6,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "boulder_max_os": "7A",
+    "boulder_max_rp": "8A",
+    "lead_max_os": "7a+",
+    "lead_max_rp": "7c"
+   },
+   "self_eval": {
+    "primary_weakness": "cant_hold_hard_moves",
+    "secondary_weakness": "fingers_give_out"
+   },
+   "tests": {
+    "lp_max_lift_5s_left_kg": 45,
+    "lp_max_lift_5s_right_kg": 47,
+    "weighted_pullup_1rm_total_kg": 96
+   },
+   "tests_source": {
+    "lp_max_lift_5s_left_kg": "measured",
+    "lp_max_lift_5s_right_kg": "measured",
+    "weighted_pullup_1rm_total_kg": "measured"
+   }
+  },
+  "expected_profile": {
+   "endurance": 54,
+   "finger_strength": 64,
+   "power_endurance": 55,
+   "pulling_strength": 68,
+   "technique": 60
+  },
+  "goal": {
+   "current_grade": "8A",
+   "goal_type": "boulder_grade",
+   "target_grade": "9a"
+  },
+  "stored_profile": {
+   "endurance": 54,
+   "finger_strength": 64,
+   "power_endurance": 55,
+   "pulling_strength": 68,
+   "technique": 60
+  },
+  "uid": "f8ff8569"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 44,
+    "height_cm": 174,
+    "weight_kg": 68
+   },
+   "experience": {
+    "climbing_years": 19,
+    "structured_training_years": 2
+   },
+   "grades": {
+    "boulder_max_os": "7A",
+    "boulder_max_rp": "7A+",
+    "lead_max_os": "7a",
+    "lead_max_rp": "7c"
+   },
+   "self_eval": {
+    "primary_weakness": "pump_too_early",
+    "secondary_weakness": "injury_prone"
+   },
+   "tests": {
+    "last_test_date": "2026-02-01",
+    "max_hang_20mm_5s_total_kg": 92,
+    "max_hang_20mm_7s_total_kg": 92,
+    "repeater_7_3_max_sets_20mm": 27,
+    "weighted_pullup_1rm_total_kg": 92
+   },
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 54,
+   "finger_strength": 97,
+   "power_endurance": 67,
+   "pulling_strength": 87,
+   "technique": 60
+  },
+  "goal": {
+   "current_grade": "7c",
+   "goal_type": "lead_grade",
+   "target_grade": "8a"
+  },
+  "stored_profile": {
+   "endurance": 54,
+   "finger_strength": 97,
+   "power_endurance": 67,
+   "pulling_strength": 87,
+   "technique": 60
+  },
+  "uid": "22080848"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 55,
+    "height_cm": 220,
+    "weight_kg": 55
+   },
+   "experience": {
+    "climbing_years": 23,
+    "structured_training_years": 12
+   },
+   "grades": {
+    "lead_max_os": "5a+",
+    "lead_max_rp": "5b"
+   },
+   "self_eval": {
+    "primary_weakness": "technique_errors",
+    "secondary_weakness": ""
+   },
+   "tests": {},
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 70,
+   "finger_strength": 28,
+   "power_endurance": 75,
+   "pulling_strength": 26,
+   "technique": 70
+  },
+  "goal": {
+   "current_grade": "5b",
+   "goal_type": "lead_grade",
+   "target_grade": "5c+"
+  },
+  "stored_profile": {
+   "endurance": 70,
+   "finger_strength": 28,
+   "power_endurance": 75,
+   "pulling_strength": 26,
+   "technique": 70
+  },
+  "uid": "98f77487"
+ },
+ {
+  "assessment": {
+   "body": {
+    "age": 26,
+    "height_cm": 177,
+    "weight_kg": 73
+   },
+   "experience": {
+    "climbing_years": 3,
+    "structured_training_years": 0
+   },
+   "grades": {
+    "boulder_max_os": "6B",
+    "boulder_max_rp": "6C",
+    "lead_max_os": "6c+",
+    "lead_max_rp": "7b"
+   },
+   "self_eval": {
+    "primary_weakness": "technique_errors",
+    "secondary_weakness": "pump_too_early"
+   },
+   "tests": {},
+   "tests_source": {}
+  },
+  "expected_profile": {
+   "endurance": 43,
+   "finger_strength": 61,
+   "power_endurance": 53,
+   "pulling_strength": 57,
+   "technique": 50
+  },
+  "goal": {
+   "current_grade": "7b",
+   "goal_type": "all_round",
+   "target_grade": "7c"
+  },
+  "stored_profile": {
+   "endurance": 43,
+   "finger_strength": 61,
+   "power_endurance": 53,
+   "pulling_strength": 57,
+   "technique": 50
+  },
+  "uid": "bcab057d"
+ }
+]

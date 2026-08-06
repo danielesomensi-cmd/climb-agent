@@ -65,6 +65,34 @@ Rules:
 
 ---
 
+### 1.2b Axis provenance (`assessment.profile_source`, A269)
+
+Records, per assessment axis, **what the score was derived from** — not how good it is.
+
+Allowed values:
+
+- `measured` — every input to the axis comes from a test recorded as `measured` in
+  `assessment.tests_source`.
+- `partial` — at least one measured input, plus derived (grade-based) or self-reported terms.
+- `estimated` — no measured input at all; the axis is inferred from declared grades, tenure and
+  self-evaluation.
+
+Rules:
+
+- **A missing key means `estimated`.** Same convention as `assessment.tests_source` (D214): a reader
+  must never be able to interpret silence as a measurement.
+- Provenance is derived from `tests_source`, **never** from the presence of a value in
+  `assessment.tests` — an onboarding estimate is present but not measured.
+- `technique` is always `estimated`: no test feeds it.
+- A loading-pin finger number is `measured` even though it is converted (`LP_ONE_ARM_TO_TWO_HAND`,
+  A266); `tests_source` still records which key was the origin.
+
+`assessment.profile_scoring_version` names the rules that produced the profile — `profile_v1` today.
+It is never applied retroactively: a stored profile keeps its version and its numbers, and a new
+version takes effect from the next assessment or the next explicit regeneration.
+
+---
+
 ### 1.3 Finger training device
 
 Allowed `finger_training_device` values:

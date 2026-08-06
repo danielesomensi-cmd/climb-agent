@@ -21,7 +21,10 @@ from backend.api.deps import (
     save_state,
 )
 from backend.api.models import MacrocycleRequest, StartNewCycleRequest
-from backend.engine.assessment_v1 import compute_assessment_profile
+from backend.engine.assessment_v1 import (
+    PROFILE_SCORING_VERSION,
+    compute_assessment_profile_with_source,
+)
 from backend.engine.grade_mapping import BOULDER_TO_LEAD, map_grade_for_discipline_change
 from backend.engine.macrocycle_archive import archive_current_macrocycle
 from backend.engine.macrocycle_v1 import compute_new_macrocycle_start_date, generate_macrocycle
@@ -259,11 +262,13 @@ def start_new_cycle(
     # ── 5. Recompute assessment profile against the new goal ──────────────
     assessment = new_state.get("assessment") or {}
     try:
-        profile = compute_assessment_profile(assessment, new_goal)
+        profile, profile_source = compute_assessment_profile_with_source(assessment, new_goal)
     except Exception as e:
         # No mutation has reached the on-disk state yet — safe to bail.
         raise HTTPException(status_code=422, detail=f"Assessment recomputation failed: {e}")
     new_state.setdefault("assessment", {})["profile"] = profile
+    new_state["assessment"]["profile_source"] = profile_source  # A269
+    new_state["assessment"]["profile_scoring_version"] = PROFILE_SCORING_VERSION
 
     # ── 6. Resolve start_date for the new cycle ───────────────────────────
     new_start = compute_new_macrocycle_start_date(new_state, today)

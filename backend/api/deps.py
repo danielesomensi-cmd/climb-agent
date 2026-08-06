@@ -215,6 +215,12 @@ def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
         from backend.engine.migrations.m001_backfill_tests_source import migrate as _backfill_tests_source
         if _backfill_tests_source(state):
             dirty = True
+        # A269: profile_source sidecar. MUST run after m001 — it derives axis
+        # provenance from tests_source, which m001 is what populates for
+        # pre-D214 users. Reversed, a measured axis would be marked estimated.
+        from backend.engine.migrations.m002_backfill_profile_source import migrate as _backfill_profile_source
+        if _backfill_profile_source(state):
+            dirty = True
         # A221: lazy-archive past week_plans into the cold store. Env-gated
         # (default OFF) so the rollout is: deploy code (flag off) → backup +
         # controlled migration run → flip flag on for ongoing rollover archiving.
@@ -257,6 +263,20 @@ def _ensure_profile_fresh(state: Dict[str, Any]) -> None:
         "body": assessment.get("body") or {},
         "grades": assessment.get("grades") or {},
         "tests": assessment.get("tests") or {},
+        # A269 deliberately does NOT add `tests_source` here, though the brief
+        # proposed it. Doing so forces a one-time recompute for every user, and
+        # on the production corpus that is not the no-op the brief assumed:
+        # three loading-pin profiles were stored before A266 taught the finger
+        # axis to read `lp_max_lift_*`, so a forced recompute would silently
+        # move them (51→100, 51→69, 54→71). One of them is `e60d7a0c`, whose
+        # recompute Daniele explicitly withheld pending verification (A266-P1).
+        # A migration must not overturn a product decision.
+        #
+        # It is not needed either: `m002` runs on every read, immediately after
+        # the `m001` backfill that populates `tests_source`, so provenance is
+        # derived from the populated sidecar on the very first load. Any later
+        # change to `tests_source` travels with a change to `tests`, which does
+        # move the fingerprint.
         "self_eval": assessment.get("self_eval") or {},
         "experience": assessment.get("experience") or {},
         "target_grade": goal.get("target_grade"),
@@ -269,9 +289,14 @@ def _ensure_profile_fresh(state: Dict[str, Any]) -> None:
         return
 
     try:
-        from backend.engine.assessment_v1 import compute_assessment_profile
-        profile = compute_assessment_profile(assessment, goal)
+        from backend.engine.assessment_v1 import (
+            PROFILE_SCORING_VERSION,
+            compute_assessment_profile_with_source,
+        )
+        profile, source = compute_assessment_profile_with_source(assessment, goal)
         assessment["profile"] = profile
+        assessment["profile_source"] = source
+        assessment["profile_scoring_version"] = PROFILE_SCORING_VERSION
         assessment["_profile_fingerprint"] = fingerprint
         state["assessment"] = assessment
     except Exception:

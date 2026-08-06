@@ -1014,6 +1014,16 @@ export interface UserState {
   user: Record<string, unknown>;
   assessment: {
     profile?: AssessmentProfile | null;
+    /**
+     * A269 — per-axis provenance. A missing key means `"estimated"`: silence is
+     * never a measurement. `"partial"` = at least one measured input plus
+     * derived or self-reported terms.
+     */
+    profile_source?: Partial<
+      Record<keyof AssessmentProfile, "measured" | "partial" | "estimated">
+    >;
+    /** A269 — which scoring rules produced `profile`. `"profile_v1"` today. */
+    profile_scoring_version?: string;
     grades?: Record<string, string>;
     tests?: Record<string, unknown>;
     self_eval?: Record<string, string>;

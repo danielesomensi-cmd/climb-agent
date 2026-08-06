@@ -14,7 +14,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.api.deps import REPO_ROOT, build_current_level, ensure_monday, get_user_id, invalidate_week_cache, load_state, next_monday, this_monday, save_state
 from backend.api.rate_limit import limiter
 from backend.api.models import OnboardingData, OnboardingDraftEnvelope, StartWeekRequest
-from backend.engine.assessment_v1 import GRADE_ORDER, compute_assessment_profile
+from backend.engine.assessment_v1 import (
+    GRADE_ORDER,
+    PROFILE_SCORING_VERSION,
+    compute_assessment_profile_with_source,
+)
 from backend.engine.grade_mapping import BOULDER_TO_LEAD
 from backend.engine.macrocycle_v1 import generate_macrocycle
 from backend.engine.progression_v1 import estimate_missing_baselines
@@ -463,7 +467,7 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
     logger.info("goal before assessment: %s", goal)
 
     try:
-        profile = compute_assessment_profile(assessment, goal)
+        profile, profile_source = compute_assessment_profile_with_source(assessment, goal)
     except Exception as e:
         if prev_draft:
             state["onboarding_draft"] = prev_draft
@@ -471,6 +475,8 @@ def onboarding_complete(request: Request, data: OnboardingData, user_id: Optiona
         raise HTTPException(status_code=422, detail=f"Assessment computation failed: {e}")
 
     state["assessment"]["profile"] = profile
+    state["assessment"]["profile_source"] = profile_source  # A269
+    state["assessment"]["profile_scoring_version"] = PROFILE_SCORING_VERSION
     state["assessment"]["last_assessed"] = next_monday()
 
     # 4. If user requested initial tests, set flag (tests injected into week 1)

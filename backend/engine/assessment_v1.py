@@ -484,6 +484,124 @@ def _compute_endurance(
 # Main entry point
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Axis provenance (A269)
+# ---------------------------------------------------------------------------
+#
+# D260 §3.6 called it "the 50 problem": `50` is emitted as a silent default by
+# missing grades in PE/technique, by the `else` branch of finger/pulling when
+# `target_idx == 0`, and by `profile.get(axis, 50)` in the macrocycle — so
+# downstream a real average and "we have no data" are indistinguishable. On the
+# 18 production profiles, 8 have no finger test at all, 15 have no repeater, and
+# 18/18 have no dedicated endurance test. Nothing recorded any of that.
+#
+# This sidecar is the axis-level twin of `assessment.tests_source` (D214), which
+# records the same thing one level down, for individual test scalars. The same
+# absence convention applies and is load-bearing: **a missing key means
+# `estimated`**, never "measured". A reader must never be able to read silence
+# as a measurement.
+#
+# The values describe what an axis was DERIVED FROM, not how good it is.
+
+PROFILE_SCORING_VERSION = "profile_v1"
+
+SOURCE_MEASURED = "measured"    # every input to the axis is a measured test
+SOURCE_PARTIAL = "partial"      # at least one measured input + derived/subjective terms
+SOURCE_ESTIMATED = "estimated"  # no measured input at all
+
+# The keys each axis actually READS. Deliberately not the wider set the planner
+# treats as "a fresh test": `week.py` also accepts `weighted_pullup_2rm_total_kg`
+# for retest freshness, but `_compute_pulling_strength` never reads it — an axis
+# scored from a grade estimate is `estimated` no matter which other tests exist.
+_FINGER_SOURCE_KEYS: Tuple[str, ...] = (
+    "max_hang_20mm_7s_total_kg",
+    "max_hang_20mm_5s_total_kg",
+    "lp_max_lift_5s_left_kg",
+    "lp_max_lift_5s_right_kg",
+)
+_PULLING_SOURCE_KEYS: Tuple[str, ...] = ("weighted_pullup_1rm_total_kg",)
+_PULLING_SUBMAX_KEYS: Tuple[str, ...] = (
+    "pullup_submaximal_reps",
+    "pullup_submaximal_load_kg",
+)
+
+
+def _is_measured(tests_source: Dict[str, Any], key: str) -> bool:
+    return tests_source.get(key) == SOURCE_MEASURED
+
+
+def compute_profile_source(assessment: Dict[str, Any]) -> Dict[str, str]:
+    """Per-axis provenance, derived from ``assessment.tests_source``.
+
+    Reads `tests_source`, never `tests`: a value estimated during onboarding is
+    *present* but not *measured*, and telling those two apart is the whole point
+    of the D214 sidecar this builds on.
+    """
+    tests_source = assessment.get("tests_source") or {}
+    if not isinstance(tests_source, dict):
+        tests_source = {}
+
+    finger = (
+        SOURCE_MEASURED
+        if any(_is_measured(tests_source, k) for k in _FINGER_SOURCE_KEYS)
+        else SOURCE_ESTIMATED
+    )
+    # A266: a loading-pin number is measured but CONVERTED (LP_ONE_ARM_TO_TWO_HAND).
+    # It stays `measured` — the conversion is derived from three agreeing sources
+    # and `tests_source` still records which key was the origin, so nothing is lost.
+
+    pulling_measured = any(_is_measured(tests_source, k) for k in _PULLING_SOURCE_KEYS) or all(
+        _is_measured(tests_source, k) for k in _PULLING_SUBMAX_KEYS
+    )
+    pulling = SOURCE_MEASURED if pulling_measured else SOURCE_ESTIMATED
+
+    # PE is at most `partial`: the repeater carries 40% of the score, the rest is
+    # the RP-OS gap and self-eval (D260 §3.3).
+    pe = (
+        SOURCE_PARTIAL
+        if _is_measured(tests_source, "repeater_7_3_max_sets_20mm")
+        else SOURCE_ESTIMATED
+    )
+
+    # No test feeds technique. Not "none today" — none by construction: the axis
+    # is the RP-OS gap bucket plus a self-declared weakness (D260 §3.5).
+    technique = SOURCE_ESTIMATED
+
+    # Endurance has no test of its own (D260 §3.4): it is `0.8 x PE` plus tenure
+    # plus a hang-duration nudge. It is `partial` when EITHER of its two measured
+    # inputs exists — the duration modifier directly, or the repeater flowing in
+    # through PE. The brief's table listed only the duration; the definition
+    # ("at least one measured input") covers both, and a repeater does reach this
+    # axis at 32% weight, so the wider rule is the honest one.
+    endurance = (
+        SOURCE_PARTIAL
+        if _is_measured(tests_source, "max_hang_duration_20mm_seconds") or pe == SOURCE_PARTIAL
+        else SOURCE_ESTIMATED
+    )
+
+    return {
+        "finger_strength": finger,
+        "pulling_strength": pulling,
+        "power_endurance": pe,
+        "technique": technique,
+        "endurance": endurance,
+    }
+
+
+def compute_assessment_profile_with_source(
+    assessment: Dict[str, Any], goal: Dict[str, Any]
+) -> Tuple[Dict[str, int], Dict[str, str]]:
+    """The profile plus its per-axis provenance (A269).
+
+    Every call site that PERSISTS a profile should use this one, so the scores
+    and the record of where they came from can never drift apart. The plain
+    ``compute_assessment_profile`` remains for callers that only need the
+    numbers — the ~30 test files and the stateless public endpoint, which
+    already reports provenance its own way (`measured_axes`, A262/A263).
+    """
+    return compute_assessment_profile(assessment, goal), compute_profile_source(assessment)
+
+
 def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any]) -> Dict[str, int]:
     """Compute the 5-axis assessment profile (each axis 0-100).
 

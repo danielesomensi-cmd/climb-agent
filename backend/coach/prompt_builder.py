@@ -138,10 +138,26 @@ def _profile_section(state: Dict[str, Any]) -> str:
             f"weight {_fmt(body.get('weight_kg'))} kg"
         )
     if profile:
+        # A269: say which axes are measured and which are inferred. Without it
+        # the model reads five identical-looking numbers and speaks about an
+        # endurance *measurement* that does not exist for anyone — the same
+        # class of fabrication B305 closed in the ad-hoc composer. Absent key
+        # means estimated, the convention tests_source already uses.
+        source = assessment.get("profile_source") or {}
         axes = sorted(profile.items(), key=lambda kv: kv[1])
-        axes_str = ", ".join(f"{k} {v}/100" for k, v in axes)
+
+        def _axis_str(key: str, value: Any) -> str:
+            provenance = source.get(key, "estimated")
+            return f"{key} {value}/100" if provenance == "measured" else f"{key} {value}/100 ({provenance})"
+
+        axes_str = ", ".join(_axis_str(k, v) for k, v in axes)
         weakest = ", ".join(k for k, _ in axes[:2])
         lines.append(f"- Assessment (5-axis): {axes_str}")
+        lines.append(
+            "  (`estimated` = no test behind it, inferred from declared grades and "
+            "self-report; `partial` = one measured input plus derived terms. Do not "
+            "present an estimated axis as a measurement.)"
+        )
         lines.append(f"- Weakest axes: {weakest}")
     if assessment.get("last_assessed"):
         lines.append(f"- Last assessed: {assessment['last_assessed']}")
