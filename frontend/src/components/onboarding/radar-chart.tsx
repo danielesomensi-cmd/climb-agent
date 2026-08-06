@@ -6,9 +6,15 @@ import type { AssessmentProfile } from "@/lib/types";
 import { getRadarLabels, type Discipline } from "@/lib/gradeUtils";
 import {
   buildAxisTooltipCopy,
+  buildEliteAxisTooltipCopy,
   computeTooltipShift,
   shouldFlipAbove,
 } from "@/lib/radarTooltip";
+import {
+  computeEliteScores,
+  hasAnyEliteScore,
+  type EliteRawInputs,
+} from "@/lib/eliteScoring";
 import {
   LABEL_LINE_HEIGHT,
   radarOuterWidth,
@@ -24,12 +30,22 @@ const AXIS_KEYS: (keyof AssessmentProfile)[] = [
   "endurance",
 ];
 
+/** Which scale the axes are read against. Component state only — never stored. */
+type RadarMode = "goal" | "elite";
+
 interface RadarChartProps {
   profile: AssessmentProfile;
   size?: number;
   discipline?: Discipline;
   /** Active goal grade — drives the target-relative tooltip framing (B304). */
   targetGrade?: string | null;
+  /**
+   * A267 — raw measurements for the display-only Elite comparison mode. Pass
+   * them to show the `[ Goal | Elite ]` toggle; omit and the radar behaves
+   * exactly as before. Nothing computed from these is persisted or sent
+   * anywhere: see the header of `lib/eliteScoring.ts`.
+   */
+  eliteInputs?: EliteRawInputs | null;
 }
 
 /** Read env(safe-area-inset-*) as pixels via a hidden probe element. */
@@ -56,11 +72,13 @@ function AxisTooltip({
   axis,
   discipline,
   targetGrade,
+  mode,
   onClose,
 }: {
   axis: string;
   discipline: Discipline;
   targetGrade?: string | null;
+  mode: RadarMode;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -97,7 +115,7 @@ function AxisTooltip({
     }
     el.style.transform = `translateX(calc(-50% + ${dx}px))`;
     el.style.visibility = "visible";
-  }, [axis, targetGrade]);
+  }, [axis, targetGrade, mode]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -107,7 +125,10 @@ function AxisTooltip({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [onClose]);
 
-  const copy = buildAxisTooltipCopy(axis, discipline, targetGrade);
+  const copy =
+    mode === "elite"
+      ? buildEliteAxisTooltipCopy(axis, discipline)
+      : buildAxisTooltipCopy(axis, discipline, targetGrade);
   if (!copy) return null;
 
   return (
@@ -131,10 +152,29 @@ function AxisTooltip({
   );
 }
 
-export function RadarChart({ profile, size = 280, discipline, targetGrade }: RadarChartProps) {
+export function RadarChart({
+  profile,
+  size = 280,
+  discipline,
+  targetGrade,
+  eliteInputs,
+}: RadarChartProps) {
   const labels = getRadarLabels(discipline);
   const AXES = AXIS_KEYS.map((key) => ({ key, label: labels[key] ?? key }));
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
+  // A267 — mode is component state and nothing else. No DB field, no
+  // localStorage, no query param: a comparison lens is not a user setting.
+  const [mode, setMode] = useState<RadarMode>("goal");
+
+  const eliteScores = eliteInputs ? computeEliteScores(eliteInputs) : null;
+  const showToggle = !!eliteScores && hasAnyEliteScore(eliteScores);
+  const activeMode: RadarMode = showToggle ? mode : "goal";
+
+  /** Value plotted per axis. `null` in Elite mode = greyed, not zero. */
+  function axisValue(key: (typeof AXIS_KEYS)[number]): number | null {
+    if (activeMode === "elite") return eliteScores?.[key] ?? null;
+    return profile[key];
+  }
 
   const cx = size / 2;
   const cy = size / 2;
@@ -153,12 +193,56 @@ export function RadarChart({ profile, size = 280, discipline, targetGrade }: Rad
   // Grid lines (20, 40, 60, 80, 100)
   const gridLevels = [20, 40, 60, 80, 100];
 
-  // Data points
-  const points = AXES.map((axis, i) => point(i, profile[axis.key]));
-  const polygon = points.map(([x, y]) => `${x},${y}`).join(" ");
+  // Data points — only the axes that have a value on the active scale. In Goal
+  // mode that is always all five; in Elite mode the axes without an anchor are
+  // simply absent, because plotting them at 0 would read as "you score zero"
+  // rather than "we have no benchmark".
+  const livePoints = AXES.map((axis, i) => {
+    const v = axisValue(axis.key);
+    return v === null ? null : { i, xy: point(i, v) };
+  }).filter((p): p is { i: number; xy: [number, number] } => p !== null);
+  // A polygon needs three vertices. With fewer, spokes from the centre carry
+  // the same information without pretending to be a shape.
+  const polygon =
+    livePoints.length >= 3
+      ? livePoints.map(({ xy: [x, y] }) => `${x},${y}`).join(" ")
+      : null;
 
   return (
     <div className="flex flex-col items-center gap-4">
+      {showToggle && (
+        <div className="flex flex-col items-center gap-1.5">
+          <div
+            role="group"
+            aria-label="Comparison scale"
+            className="inline-flex rounded-full border border-border p-0.5 text-xs"
+          >
+            {(["goal", "elite"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                aria-pressed={activeMode === m}
+                className={
+                  "min-h-[32px] rounded-full px-4 font-medium transition-colors " +
+                  (activeMode === m
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground")
+                }
+              >
+                {m === "goal" ? "Goal" : "Elite"}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {activeMode === "elite"
+              ? "vs elite level"
+              : targetGrade
+                ? `Readiness for ${targetGrade}`
+                : "Readiness for your goal grade"}
+          </p>
+        </div>
+      )}
       {/* B318 — the SVG is now responsive and its box is wider than the
           drawing. Before, `width={size}` with `viewBox="0 0 size size"` clipped
           the right-hand axis label ("Pulling Strenç") because the text extended
@@ -205,10 +289,26 @@ export function RadarChart({ profile, size = 280, discipline, targetGrade }: Rad
         })}
 
         {/* Data polygon */}
-        <polygon points={polygon} fill="var(--primary)" fillOpacity={0.25} stroke="var(--primary)" strokeWidth={2} />
+        {polygon && (
+          <polygon points={polygon} fill="var(--primary)" fillOpacity={0.25} stroke="var(--primary)" strokeWidth={2} />
+        )}
+
+        {/* Spokes — only when there are too few axes to form a polygon (A267) */}
+        {!polygon &&
+          livePoints.map(({ i, xy: [x, y] }) => (
+            <line
+              key={`spoke-${i}`}
+              x1={cx}
+              y1={cy}
+              x2={x}
+              y2={y}
+              stroke="var(--primary)"
+              strokeWidth={2}
+            />
+          ))}
 
         {/* Data points */}
-        {points.map(([x, y], i) => (
+        {livePoints.map(({ i, xy: [x, y] }) => (
           <circle key={i} cx={x} cy={y} r={4} fill="var(--primary)" />
         ))}
 
@@ -247,37 +347,57 @@ export function RadarChart({ profile, size = 280, discipline, targetGrade }: Rad
 
       {/* Legend below with (i) tooltips */}
       <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-        {AXES.map((axis) => (
-          <div key={axis.key} className="relative flex items-center justify-between gap-2">
-            <span className="flex items-center gap-1 text-muted-foreground">
-              {axis.label}
-              <button
-                type="button"
-                onClick={() => setOpenTooltip(openTooltip === axis.key ? null : axis.key)}
-                className="inline-flex text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                aria-label={`Info about ${axis.label}`}
+        {AXES.map((axis) => {
+          const value = axisValue(axis.key);
+          return (
+            <div key={axis.key} className="relative flex items-center justify-between gap-2">
+              <span
+                className={
+                  "flex items-center gap-1 " +
+                  (value === null ? "text-muted-foreground/50" : "text-muted-foreground")
+                }
               >
-                <Info size={14} />
-              </button>
-            </span>
-            {profile[axis.key] >= 100 ? (
-              <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
-                ✓ At target
+                {axis.label}
+                <button
+                  type="button"
+                  onClick={() => setOpenTooltip(openTooltip === axis.key ? null : axis.key)}
+                  className="inline-flex text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                  aria-label={`Info about ${axis.label}`}
+                >
+                  <Info size={14} />
+                </button>
               </span>
-            ) : (
-              <span className="font-mono font-semibold">{profile[axis.key]}</span>
-            )}
-            {openTooltip === axis.key && (
-              <AxisTooltip
-                axis={axis.key}
-                discipline={discipline ?? "lead"}
-                targetGrade={targetGrade}
-                onClose={() => setOpenTooltip(null)}
-              />
-            )}
-          </div>
-        ))}
+              {value === null ? (
+                <span className="font-mono text-muted-foreground/50" aria-label="No elite benchmark">
+                  —
+                </span>
+              ) : activeMode === "goal" && value >= 100 ? (
+                <span className="inline-flex items-center rounded-full bg-primary/15 px-2 py-0.5 text-xs font-medium text-primary">
+                  ✓ At target
+                </span>
+              ) : (
+                <span className="font-mono font-semibold">{value}</span>
+              )}
+              {openTooltip === axis.key && (
+                <AxisTooltip
+                  axis={axis.key}
+                  discipline={discipline ?? "lead"}
+                  targetGrade={targetGrade}
+                  mode={activeMode}
+                  onClose={() => setOpenTooltip(null)}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
+
+      {activeMode === "elite" && livePoints.length < AXES.length && (
+        <p className="max-w-xs text-center text-xs text-muted-foreground/70">
+          Greyed axes have no defensible elite benchmark yet — they are shown for
+          your goal only.
+        </p>
+      )}
     </div>
   );
 }
