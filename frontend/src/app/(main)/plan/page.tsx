@@ -21,6 +21,11 @@ import {
 } from "@/components/training/regenerate-plan-sheet";
 import { PERIODIZATION_RATIONALE, PHASE_RATIONALES } from "@/lib/phase-rationales";
 import { getDiscipline } from "@/lib/gradeUtils";
+import {
+  computeEliteScores,
+  extractEliteInputs,
+  hasAnyEliteScore,
+} from "@/lib/eliteScoring";
 import { getPhaseName } from "@/lib/phase-labels";
 import { computeCurrentWeek } from "@/lib/phase-progress";
 import type { Phase } from "@/lib/types";
@@ -65,6 +70,12 @@ export default function PlanPage() {
     (goalObj.target_boulder_grade as string) ||
     ((macrocycle?.goal_snapshot as Record<string, unknown> | undefined)?.target_grade as string) ||
     null;
+  // A267 — raw strength numbers for the display-only Elite comparison. They are
+  // already in the /api/state payload, so this adds no request and no storage.
+  // When nothing measurable is on file the toggle does not appear and the card
+  // keeps its own "Readiness for …" subtitle.
+  const eliteInputs = extractEliteInputs(state);
+  const showsEliteToggle = hasAnyEliteScore(computeEliteScores(eliteInputs));
 
   const checkStale = useCallback(async () => {
     try {
@@ -156,14 +167,19 @@ export default function PlanPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Assessment profile</CardTitle>
-                  {targetGrade && (
+                  {targetGrade && !showsEliteToggle && (
                     <p className="text-xs text-muted-foreground mt-1">
                       Readiness for {targetGrade}
                     </p>
                   )}
                 </CardHeader>
                 <CardContent className="flex justify-center">
-                  <RadarChart profile={profile} discipline={discipline} targetGrade={targetGrade} />
+                  <RadarChart
+                    profile={profile}
+                    discipline={discipline}
+                    targetGrade={targetGrade}
+                    eliteInputs={eliteInputs}
+                  />
                 </CardContent>
               </Card>
             )}

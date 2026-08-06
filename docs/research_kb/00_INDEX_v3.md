@@ -56,7 +56,8 @@ The **implementation** lives in a separate Claude Code project.
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `decision_consolidation_D01_D91.md` | Master cross-reference: 91 decisions, conflicts, version grouping, D84-D91 appendix | ✅ Synced 2026-04-05 |
+| `decision_consolidation_D01_D91.md` | Master cross-reference: 91 decisions, conflicts, version grouping, D84-D91 appendix, D261-D267 appendix | ✅ Synced 2026-04-05, appendix 2026-08-06 |
+| `../research/assessment_scoring_research_2026-08.md` | **NEW (C267)** — D261-D267: dedicated endurance test, elite radar anchors, RP-OS gap demotion + Berta normative bands | ✅ Current |
 | `decision_roadmap_sync_2026_04_05.md` | **NEW** — Complete decision↔roadmap sync with literature review priorities | ✅ Current |
 | `decision_consolidation_D01_D83.md` | Earlier version (D01-D83 only) — historical | Superseded by D01-D91 |
 | `decision_consolidation_D01_D63.md` | Earlier version (D01-D63 only) — historical | Superseded by D01-D91 |
