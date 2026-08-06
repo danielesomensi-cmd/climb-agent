@@ -72,7 +72,7 @@ def is_week_one_empty(
     # Local import to avoid a top-level cycle: planner_v2 imports from
     # macrocycle_v1, which is fine, but start_date_utils should not appear
     # as a transitive import at module-load time for the engine.
-    from backend.engine.planner_v2 import generate_phase_week
+    from backend.engine.planner_v2 import allowed_locations_for, generate_phase_week
 
     phases = (macrocycle or {}).get("phases") or []
     if not phases:
@@ -91,7 +91,7 @@ def is_week_one_empty(
         session_pool=phase1.get("session_pool") or [],
         start_date=phase1.get("start_date") or macrocycle["start_date"],
         availability=state.get("availability"),
-        allowed_locations=["home", "gym"],
+        allowed_locations=allowed_locations_for(equipment),
         hard_cap_per_week=prefs.get("hard_day_cap_per_week", 3),
         planning_prefs=prefs,
         default_gym_id=default_gym_id,
