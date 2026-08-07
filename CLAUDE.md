@@ -116,10 +116,12 @@ from backend.engine.planner_v2 import generate_phase_week
 ```
 backend/
   engine/            # Core: planner, resolver, replanner, progression, closed-loop
-    adaptation/      # Closed-loop adaptation (multiplier-based adjustments)
+                     # (no adaptation/ submodule: B299 deleted it — the only
+                     #  closed loop is progression_v1.apply_feedback, see
+                     #  docs/ENGINE_ARCHITECTURE.md §8)
   api/               # FastAPI REST API (26 routers)
-    routers/         # state, catalog, onboarding, assessment, macrocycle, plan, week,
-                     # session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips, milestones
+    routers/         # state, catalog, onboarding, assessment, public_assessment, macrocycle,
+                     # plan, week, session, replanner, feedback, outdoor, reports, quotes, user, admin, weekly_override, free_session, subscription, custom_session, body_part_picker, mobility, weather, coach, tips, milestones
   catalog/           # JSON data: exercises, sessions, templates (versioned under v1/)
   data/              # user_state.json + JSON schemas for log validation
   tests/             # pytest test suite with fixtures/
