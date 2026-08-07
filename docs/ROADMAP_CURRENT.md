@@ -71,6 +71,12 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ---
 
+## Recently closed (2026-08-07)
+
+- **B326 — Il funnel GTM contava 12 trial attivi quando erano 2, e chiamava "engaged" chi non aveva mai aperto l'app** ✅ (solo `scripts/gtm_funnel.py`, read-only, nessun codice di prodotto toccato). Trovato rispondendo a «verifichi movimenti iscritti?». **Due bug, entrambi nella direzione che fa sembrare le cose migliori di come sono.** (1) La coorte trial era `status == "trialing"` letto verbatim dal DB, senza guardare `trial_end`: la scadenza del trial locale ([[A250]]) è **lazy** — lo status si ribalta solo quando l'utente ricolpisce la guard — quindi chi non torna più resta `trialing` per sempre. Al 7 agosto: 12 dichiarati, **10 scaduti il 5**. Ora sono due bucket distinti, e quello scaduto si chiama «da riconciliare». (2) «Engaged» significava «ha un `last_active` su Clerk», che è vero per **chiunque si sia mai iscritto** (iscriversi crea una sessione): misurava zero. Al suo posto il segnale che conta, letto dallo stato: `session_completion_log` + `free_sessions` + `outdoor_log`, con la **data dell'ultima sessione** accanto al totale — perché 20 sessioni tutte di aprile sono un utente perso, non un utente attivo. **Trappola per il prossimo che ci mette mano:** `public.session_logs` è **vuota per tutti e 20 gli utenti**, le sessioni completate vivono nel JSONB dello stato; è annotato nel docstring per non far "correggere" il conteggio verso una tabella morta. `giorni_app` è un proxy dichiarato (un id di citazione al giorno, ring buffer a 30 → rende `30+`, mai un totale vero). Le fette di stato arrivano da una select PostgREST mirata (`state->session_completion_log`, …), non dal blob intero. Aggiunta la sezione «nuovi iscritti negli ultimi N giorni», che dà finalmente un uso al flag `--days` (dichiarato e mai letto). **Cosa si vede ora che prima no:** su 20 registrati **4 hanno mai completato una sessione**, e l'unico terzo con uso vero — `ckb.palmer`, 20 sessioni — si è fermato il **7 aprile**. Snapshot GTM riscritto sui numeri corretti. Corretta nel passaggio la riga di GTM-05 che dava [[WELCOME-RECOVER-DEAD-END]] ancora aperto: [[B320]] l'ha chiuso il 2 agosto.
+
+---
+
 ## Recently closed (2026-08-06)
 
 - **B324 — Copenhagen plank e Pallof press giravano su un lato solo** ✅ (backend + frontend, branch `brief/B324-alt-sides-propagation` → preview Vercel). **Segnalato da Daniele guardando la sua sessione**, non da un test. Il catalogo era a posto: `copenhagen_plank`, `copenhagen_adductor_plank` e `pallof_press` hanno tutti `alt_sides: true` (il flag che nel player raddoppia le serie e mostra il badge RIGHT/LEFT, [[B169]]-F3b) — e `resolve_session` lo propagava correttamente. **Il flag si perdeva in quattro costruttori di istanza a valle**, tutti scritti a mano invece che dal resolver: (1) `POST /api/session/add-exercise` copiava `unilateral` ma non `alt_sides`, e perdeva pure `cues`, `video_url`, `equipment_required` e il nome (lo scriveva sotto `exercise_name`, chiave che **nessun client legge** — la card cadeva sul fallback id-senza-underscore); (2) `_enrich_exercise_display` delle sessioni custom, che serve sia il session builder sia — via `add_custom_session` — lo slot nel piano settimanale; (3) `adhoc_builder`, il fallback deterministico del Coach; (4) `coach/session_composer`, che è il percorso **di default** del Coach ([[A259]]). Nel composer il flag è impostato in `validate()` e non solo in `_decorate_engine_fields`, perché il trim sul budget di tempo gira **prima** della decorazione e misura la sessione con `estimate_custom_session_duration` — che ora conta entrambi i lati (una Copenhagen 3×20s sono sei serie, non tre: la stima la sottovalutava della metà). **La lateralità resta una proprietà del catalogo, mai del client**: `CustomSessionExerciseEntry` scarta `alt_sides` in ingresso e il server lo ri-deriva al salvataggio. `unilateral` **non** è stato copiato di proposito — governa il logging del carico per-mano dei loading-pin, che il percorso custom non ha. Lato UI il player custom (`/session-builder/[id]/play`) ha finalmente il badge R/L con la stessa convenzione del guided player (dispari RIGHT, pari LEFT, etichetta sulla serie prescritta), estratta in `lib/alt-sides.ts` invece di duplicata; "per side" compare ora anche nelle schede del builder e nella vista read-only. 8 test backend (`test_b324_alt_sides_propagation.py`, uno per percorso + guardia sul catalogo) e 6 frontend. Suite **3149** / **543**.
@@ -215,28 +221,32 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 > timeline "week 0-6" di aprile e le raccomandazioni del Council sono archiviati in `ROADMAP_v2.md` §D269:
 > erano storia eseguita (prezzi decisi, Stripe live, canali provati), non lavoro aperto.
 
-### Dove siamo davvero (snapshot `scripts/gtm_funnel.py`, 2026-08-02)
+### Dove siamo davvero (snapshot `scripts/gtm_funnel.py`, 2026-08-07 — post-[[B326]])
 
 | | |
 |---|---|
-| Utenti registrati | 14 |
-| Trial attivi | 10 — 4 engaged, 6 **mai loggati**; **tutti scadono il 5 agosto** |
-| Ultimo login degli engaged | 21-22 luglio (fermi da ~11 giorni) |
+| Utenti registrati | 20 |
+| Trial **attivi** | **2** — entrambi iscritti il 5 agosto, scadono il 20 |
+| Trial **scaduti** non riconciliati | 10 — la coorte del 21/07, chiusa il 5 agosto |
 | Fermi al checkout | 4 (di cui 1 lead caldo, loggato il 28/07) |
 | **Paganti** | **0** |
 | Canceled storici | 3 |
+| **Attivazione (≥1 sessione completata)** | **4 utenti su 20**, di cui 1 è l'autore |
 
-**Lettura onesta:** la coorte del re-lancio del 21 luglio è **persa** — le win-back hanno prodotto
-qualche rientro ma nessuna carta, e la finestra si chiude il 5 agosto. Il canale è il problema, non il
-prodotto: r/indoorbouldering ha dato un solo post consentito (thread mensile), r/bouldering ha rifiutato
-ed è **chiuso definitivamente**, e il post su r/climbharder — il canale che il Council indicava come #1 —
-**non è mai stato pubblicato**, pur essendo in bozza dal 22 luglio.
+**Lettura onesta:** la coorte del re-lancio del 21 luglio è **persa** — 0 carte, trial scaduti il 5
+agosto. I due iscritti del 5 agosto (uno arrivato dall'app Reddit, referrer
+`android-app://com.reddit.frontpage/`, l'altro diretto) hanno completato l'onboarding e generato il
+macrociclo, poi **zero sessioni e zero ritorni**. Il canale resta il problema principale — r/climbharder
+non è mai stato pubblicato — ma il numero che [[B326]] ha reso visibile è un secondo problema, distinto:
+**su 20 registrati solo 4 hanno mai completato una sessione**, e l'unico terzo con uso vero
+(`ckb.palmer`, 20 sessioni) si è fermato il **7 aprile**. Portare traffico su un funnel che perde tutti
+tra macrociclo generato e prima sessione moltiplica per zero.
 
 ### Prossimo passo — GTM-05
 
 | ID | Titolo | Tipo | Effort | Stato | Note |
 |----|--------|------|--------|-------|------|
-| GTM-05 | **Post su r/climbharder** | — | XS | 🎯 **Attivo — è il prossimo passo** | Non è un task di codice. Le due condizioni tecniche che mancavano nel piano di aprile ora esistono: [[A262]]/[[A263]] hanno reso `/assessment` una superficie che **dà prima di chiedere** (nessun account, radar + punto debole, scale YDS/V-scale per il pubblico americano, blocco max hang per chi i propri numeri li conosce), e [[B319]] ha chiuso il buco che rompeva la promessa del carry-over proprio per quell'utente. Il post va sull'assessment, non sull'app. Prerequisito ancora aperto: [[WELCOME-RECOVER-DEAD-END]] è una CTA rotta su una pagina d'ingresso — da chiudere o rimuovere **prima** di mandarci traffico. |
+| GTM-05 | **Post su r/climbharder** | — | XS | 🎯 **Attivo — è il prossimo passo** | Non è un task di codice. Le due condizioni tecniche che mancavano nel piano di aprile ora esistono: [[A262]]/[[A263]] hanno reso `/assessment` una superficie che **dà prima di chiedere** (nessun account, radar + punto debole, scale YDS/V-scale per il pubblico americano, blocco max hang per chi i propri numeri li conosce), e [[B319]] ha chiuso il buco che rompeva la promessa del carry-over proprio per quell'utente. Il post va sull'assessment, non sull'app. **Prerequisito caduto:** [[WELCOME-RECOVER-DEAD-END]] è chiuso da [[B320]] (recovery-by-code ritirata, welcome con due sole CTA) — non ci sono più blocchi tecnici. |
 | GTM-STRIPE-TAX | **Stripe Tax registration** | Config | S | 🟡 Deferred | Riattivare a una di queste: (a) 10+ clienti EU paganti, (b) €5k di ricavo EU cumulato, (c) soglia OSS €10k in avvicinamento. Sotto, valgono le regole IVA domestiche italiane e Stripe Tax è scope creep. All'attivazione: 4 passaggi dashboard + 4 righe in `subscription.py:108-124` (`automatic_tax` + `tax_id_collection` + `billing_address_collection`). **Deciso ora:** $9.99/$4.99 sono **netti** (IVA aggiunta sopra all'attivazione). |
 | GTM-06 | **Feature freeze** — 30 giorni senza feature nuove, solo bug di chi paga o è in trial | — | — | ⏸️ Non attivabile | Doveva partire al primo utente non-beta. Con 0 paganti non ha un trigger: riprendere quando esiste una coorte da proteggere. |
 | GTM-07 | **Metrica di successo** | — | — | 🔄 Da ridefinire | La formulazione originale ("3-5 paganti entro fine aprile 2026") è scaduta e mancata. Serve una metrica nuova legata al post r/climbharder — es. *visitatori unici su `/assessment` → % che completa → % che apre il wizard* — misurabile con l'attribution UTM già in casa (`docs/attribution_utm_convention.md`). |
