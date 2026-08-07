@@ -254,6 +254,10 @@ def validate(
     of merely disappointing.
     """
     pool_ids = {str(e.get("id")) for e in pool}
+    # B324: laterality per pool id. Set on the entry here, not only in
+    # _decorate_engine_fields, because the time-budget trim below measures the
+    # session with estimate_custom_session_duration — which counts both sides.
+    alt_sides_by_id = {str(e.get("id")): bool(e.get("alt_sides")) for e in pool}
     exercises: List[Dict[str, Any]] = []
     dropped: List[str] = []
     seen: set = set()
@@ -282,7 +286,11 @@ def validate(
             dropped.append(f"{eid}: neither reps nor work_seconds")
             continue
         rest = _clamp(item.get("rest_between_sets_seconds"), 0, MAX_REST_SECONDS)
-        entry: Dict[str, Any] = {"exercise_id": eid, "sets": sets}
+        entry: Dict[str, Any] = {
+            "exercise_id": eid,
+            "sets": sets,
+            "alt_sides": alt_sides_by_id.get(eid, False),
+        }
         if reps is not None:
             entry["reps"] = reps
         if work is not None:
@@ -333,6 +341,9 @@ def _decorate_engine_fields(
         ex = catalog_by_id.get(entry["exercise_id"]) or {}
         entry["name"] = ex.get("name") or entry["exercise_id"].replace("_", " ").title()
         entry["load_model"] = ex.get("load_model")
+        # B324: laterality comes from the catalog, never from the model — same
+        # rule as the load. Without it a composed Copenhagen plank ran one-sided.
+        entry["alt_sides"] = bool(ex.get("alt_sides"))
         load_val = 0.0
         try:
             p = propose_exercise_prescription(

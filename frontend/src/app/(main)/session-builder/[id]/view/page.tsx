@@ -9,11 +9,12 @@ import { useCustomSession, useBuilderExercises } from "@/lib/hooks/queries";
 import { useState, useMemo } from "react";
 import { Pencil } from "lucide-react";
 
-function formatPrescription(ex: { sets: number; reps: number | null; work_seconds: number | null; load_kg: number; rest_between_sets_seconds: number | null }): string {
+function formatPrescription(ex: { sets: number; reps: number | null; work_seconds: number | null; load_kg: number; rest_between_sets_seconds: number | null; alt_sides?: boolean }): string {
   const parts: string[] = [];
-  if (ex.reps != null) parts.push(`${ex.sets}\u00d7${ex.reps}`);
-  else if (ex.work_seconds != null) parts.push(`${ex.sets}\u00d7${ex.work_seconds}s`);
-  else parts.push(`${ex.sets} sets`);
+  const perSide = ex.alt_sides ? " per side" : "";   // B324
+  if (ex.reps != null) parts.push(`${ex.sets}\u00d7${ex.reps}${perSide}`);
+  else if (ex.work_seconds != null) parts.push(`${ex.sets}\u00d7${ex.work_seconds}s${perSide}`);
+  else parts.push(`${ex.sets} sets${perSide}`);
   if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
   if (ex.rest_between_sets_seconds != null) parts.push(`Rest ${ex.rest_between_sets_seconds}s`);
   return parts.join(" \u00b7 ");

@@ -930,6 +930,7 @@ export interface CustomSessionExercise {
   load_kg: number;
   notes: string;
   cues?: string[];
+  alt_sides?: boolean;   // B324: run once per side (RIGHT/LEFT badge, doubled sets)
 }
 
 export interface CustomSession {
@@ -970,6 +971,7 @@ export interface BuilderExercise {
   };
   fatigue_cost: number;
   load_model: string;
+  alt_sides?: boolean;   // B324: run once per side
   // A242: deterministic starting proposal + last-logged memory (custom-only).
   proposal?: ExerciseProposal;
 }

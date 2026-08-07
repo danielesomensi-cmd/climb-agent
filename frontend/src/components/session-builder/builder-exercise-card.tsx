@@ -7,9 +7,10 @@ import { ChevronUp, ChevronDown, Pencil, Trash2 } from "lucide-react";
 
 function formatPrescription(ex: CustomSessionExercise): string {
   const parts: string[] = [];
-  if (ex.reps != null) parts.push(`${ex.sets}\u00d7${ex.reps}`);
-  else if (ex.work_seconds != null) parts.push(`${ex.sets}\u00d7${ex.work_seconds}s`);
-  else parts.push(`${ex.sets} sets`);
+  const perSide = ex.alt_sides ? " per side" : "";   // B324
+  if (ex.reps != null) parts.push(`${ex.sets}\u00d7${ex.reps}${perSide}`);
+  else if (ex.work_seconds != null) parts.push(`${ex.sets}\u00d7${ex.work_seconds}s${perSide}`);
+  else parts.push(`${ex.sets} sets${perSide}`);
 
   if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
   if (ex.rest_between_sets_seconds != null) parts.push(`Rest ${ex.rest_between_sets_seconds}s`);

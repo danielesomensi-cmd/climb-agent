@@ -133,15 +133,26 @@ def add_exercise(req: AddExerciseRequest, user_id: Optional[str] = Depends(get_u
     default_prescription = exercise.get("prescription_defaults", {})
     prescription = {**default_prescription, **(req.prescription_override or {})}
 
+    # B324: mirror the fields resolve_session puts on an instance. This dict used
+    # to carry a subset, so a hand-added exercise reached the guided player without
+    # `alt_sides` (no RIGHT/LEFT alternation on Copenhagen plank, Pallof press…),
+    # without cues/video, and under `exercise_name` — a key no client reads, so
+    # the card fell back to the de-underscored id.
     new_instance = {
         "exercise_id": req.exercise_id,
+        "name": exercise.get("name", req.exercise_id),
+        # Legacy key kept for instances persisted before B324 (and fixtures).
         "exercise_name": exercise.get("name", req.exercise_id),
         "prescription": prescription,
         "source": "user_added",
         "category": exercise.get("category", ""),
+        "video_url": exercise.get("video_url") or None,
+        "cues": exercise.get("cues") or [],
         "attributes": exercise.get("attributes") or {},
+        "equipment_required": list(exercise.get("equipment_required") or []),
         "load_model": exercise.get("load_model"),
         "unilateral": bool(exercise.get("unilateral")),
+        "alt_sides": bool(exercise.get("alt_sides")),
     }
 
     exercise_instances.append(new_instance)

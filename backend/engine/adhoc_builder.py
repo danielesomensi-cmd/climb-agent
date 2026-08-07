@@ -371,6 +371,11 @@ def _to_custom_exercise(
         # _build_session re-derives this from the catalog on persist; emitting it
         # here keeps the pre-persist preview self-consistent too.)
         "load_model": ex.get("load_model"),
+        # B324: laterality, so the preview card and the runner alternate sides on
+        # Copenhagen plank / Pallof press. Like `name`, this is dropped by
+        # CustomSessionExerciseEntry on persist and re-derived from the catalog by
+        # _enrich_exercise_display — emitting it here keeps the preview honest.
+        "alt_sides": bool(ex.get("alt_sides")),
         "notes": "",
     }
 

@@ -33,6 +33,9 @@ function exerciseToDefaults(ex: BuilderExercise): CustomSessionExercise {
     rest_between_reps_seconds: d.rest_between_reps_seconds ?? null,
     // A242: prefill the user's remembered load (0 when none) — never invented.
     load_kg: ex.proposal?.load_kg ?? 0,
+    // B324: laterality is a catalog property. Carried here only so the builder
+    // can label it "per side" pre-save; the server re-derives it on persist.
+    alt_sides: ex.alt_sides === true,
     notes: "",
   };
 }
