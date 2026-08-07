@@ -282,6 +282,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/guided/[date]/[sessionId]` — Step-by-step guided session with timer
 - `/free-session` — Log free climbing sessions (lead/boulder/outdoor)
 - `/mobility` — Stretching & Mobility guided flow (multi-region setup → auto-advancing timer, Core Circuit UX)
+- `/tabata` — Standalone interval timer (documented in `docs/user_guide_v1.md` §16)
 - `/coach` — LLM Coach chat (plan-aware, KB-grounded, suggest-only; 30 msg/day; weather-aware via on-demand `get_weather` tool with GPS + spot geocoding, personal notes, suggested chips)
 - `/assessment` — **Public** 5-axis assessment (A262/A263). No account, nothing stored: six questions → radar + weakest axis. Scale selezionabile (French/YDS, Font/V-scale — conversione client-side prima dell'invio, l'engine riceve sempre la sua convenzione); blocco opzionale max hang + weighted pull-up che rende misurati gli assi dita/tirata. **A268**: chi compila quei numeri vede anche il toggle `[ Goal | Elite ]` di A267 (solo render, niente di persistito); chi li salta vede la pagina identica a prima. The acquisition landing meant to be posted publicly; the CTA seeds the answers into the wizard's anonymous draft (`seedDraftFromAssessment`) so nothing is retyped.
 - `/guide` — User guide
