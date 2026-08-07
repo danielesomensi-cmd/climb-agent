@@ -60,6 +60,7 @@ except Exception:  # pragma: no cover - zoneinfo always present on 3.9+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SESSIONS_DIR = REPO_ROOT / "backend" / "catalog" / "sessions" / "v1"
+EXERCISES_FILE = REPO_ROOT / "backend" / "catalog" / "exercises" / "v1" / "exercises.json"
 
 LOAD_CAP = 85.0
 
@@ -96,6 +97,24 @@ PESI_KEYWORDS = (
 )
 CARDIO_KEYWORDS = ("cardio", "run", "aerobic_run", "bike")
 
+# intent.primary_goal → tipo, for catalog sessions that carry no distinguishing
+# equipment (a wall or a hangboard already decides those before we get here).
+# flexibility / regeneration are deliberately absent: health-vault's tipo
+# vocabulary has no mobility bucket, and forcing them into 'pesi' would
+# overstate the load. They hit the warning instead, visibly.
+GOAL_TIPO = {
+    "finger_max_strength": "hangboard",
+    "finger_strength_endurance": "hangboard",
+    "aerobic_capacity": "cardio",
+    "strength_general": "pesi",
+    "pulling_strength": "pesi",
+    "core": "pesi",
+    "handstand_skill": "pesi",
+    "prehab_shoulder": "pesi",
+    "prehab_elbow": "pesi",
+    "prehab_wrist": "pesi",
+}
+
 
 # ── catalog ────────────────────────────────────────────────────────────────
 def load_session_catalog() -> Dict[str, Dict[str, Any]]:
@@ -113,8 +132,93 @@ def load_session_catalog() -> Dict[str, Dict[str, Any]]:
             "name": d.get("name") or d.get("display_name") or f.stem,
             "required_equipment": d.get("required_equipment") or [],
             "stem": f.stem,
+            "primary_goal": (d.get("intent") or {}).get("primary_goal") or "",
         }
     return out
+
+
+def load_exercise_catalog() -> Dict[str, Dict[str, Any]]:
+    """{exercise_id: metadata} — needed to classify custom sessions by content."""
+    if not EXERCISES_FILE.exists():
+        return {}
+    try:
+        raw = json.loads(EXERCISES_FILE.read_text())
+    except Exception:
+        return {}
+    return {e["id"]: e for e in (raw.get("exercises") or []) if isinstance(e, dict) and e.get("id")}
+
+
+# Roles that are scaffolding around the session, not the training stimulus.
+SUPPORT_ROLES = {"warmup", "cooldown"}
+# Which tipo a dominant training domain maps to.
+DOMAIN_TIPO = {
+    "aerobic_capacity": "cardio",
+    "finger_strength": "hangboard",
+}
+
+
+def classify_custom_session(
+    session: Dict[str, Any], exercises: Dict[str, Dict[str, Any]]
+) -> Tuple[str, str]:
+    """(tipo, carico_dita) for a user-built session, read off its real exercises.
+
+    A custom session is not in the session catalog, so the keyword/equipment
+    classifier upstream matched nothing and fell through to its
+    "generic indoor climbing" default — labelling a treadmill-and-core evening
+    as boulder_indoor, with a finger load it never had. The name is a hash
+    (``custom_cs_1f679d81``), so nothing in the row gave the error away.
+
+    Method: sum ``time_min`` per training domain, ignoring warmup/cooldown-only
+    entries, and let the dominant domain decide. Time, not exercise count — a
+    30-minute Zone 2 walk next to four short core sets IS a cardio session, and
+    counting entries would call it core. Wall climbing wins outright when
+    present: it is the specific stimulus this log exists to correlate.
+    """
+    minutes: Dict[str, float] = {}
+    finger_working = finger_support = False
+    on_wall = ""
+
+    for entry in session.get("exercises") or []:
+        meta = exercises.get(entry.get("exercise_id") or "", {})
+        roles = set(meta.get("role") or [])
+        domains = list(meta.get("domain") or [])
+        equip = set(meta.get("equipment_required") or [])
+        support_only = bool(roles) and roles.issubset(SUPPORT_ROLES)
+
+        if "gym_boulder" in equip and not on_wall:
+            on_wall = "boulder_indoor"
+        elif "gym_routes" in equip and not on_wall:
+            on_wall = "corda_indoor"
+
+        if "finger_strength" in domains:
+            if support_only:
+                finger_support = True
+            else:
+                finger_working = True
+
+        if support_only:
+            continue
+        for d in domains:
+            minutes[d] = minutes.get(d, 0) + float(meta.get("time_min") or 0)
+
+    if on_wall:
+        tipo = on_wall
+    elif finger_working:
+        tipo = "hangboard"
+    elif minutes:
+        tipo = DOMAIN_TIPO.get(max(minutes, key=lambda d: minutes[d]), "pesi")
+    else:
+        tipo = "pesi"
+
+    if finger_working or tipo == "hangboard":
+        carico = "alto"
+    elif finger_support:
+        carico = "basso"          # warmup hangs only — real, but not a stimulus
+    elif tipo in ("boulder_indoor", "corda_indoor"):
+        carico = carico_dita_for(tipo, "")
+    else:
+        carico = ""               # no finger work: say nothing, don't guess "medio"
+    return tipo, carico
 
 
 # ── time helpers ─────────────────────────────────────────────────────────────
@@ -196,7 +300,18 @@ def classify_planned_tipo(sid: str, meta: Dict[str, Any]) -> str:
         return "cardio"
     if any(k in stem for k in PESI_KEYWORDS):
         return "pesi"
-    return "boulder_indoor"  # generic indoor climbing fallback
+    # Every catalog session declares intent.primary_goal. Reading it beats
+    # guessing from the file name: prehab_maintenance and test_max_weighted_pullup
+    # match no keyword and carry no climbing equipment, so both used to fall
+    # through to the "generic indoor climbing" default and were exported as
+    # bouldering — shoulder CARs and a weighted pull-up test.
+    goal = meta.get("primary_goal") or ""
+    if goal in GOAL_TIPO:
+        return GOAL_TIPO[goal]
+    # Genuinely unrecognised. Never silent: a wrong tipo is invisible in a CSV.
+    print(f"# ATTENZIONE: tipo non riconosciuto per '{sid}' (goal={goal or 'assente'}), "
+          f"ripiego su boulder_indoor", file=sys.stderr)
+    return "boulder_indoor"
 
 
 def carico_dita_for(tipo: str, sid: str) -> str:
@@ -218,6 +333,10 @@ def carico_dita_for(tipo: str, sid: str) -> str:
 def rows_from_completion_log(state: Dict[str, Any], catalog: Dict[str, Dict[str, Any]]) -> List[dict]:
     log = state.get("session_completion_log") or []
     slot_index = _index_week_plan_slots(state)
+    exercises = load_exercise_catalog()
+    # Custom sessions live in the state, not the catalog; their ids appear in the
+    # completion log prefixed ("custom_cs_x" here, "cs_x" in custom_sessions).
+    customs = {c["id"]: c for c in (state.get("custom_sessions") or []) if c.get("id")}
     rows: List[dict] = []
     for e in log:
         date = e.get("date")
@@ -261,7 +380,16 @@ def rows_from_completion_log(state: Dict[str, Any], catalog: Dict[str, Dict[str,
         if slot:
             load, load_fonte = effective_slot_load(slot)
 
-        tipo = classify_planned_tipo(sid, meta)
+        custom = customs.get(sid.replace("custom_", "", 1)) if sid.startswith("custom_") else None
+        if custom:
+            tipo, carico = classify_custom_session(custom, exercises)
+            # The row said "custom_cs_1f679d81". Nobody can spot-check a hash —
+            # the athlete's own title is what makes the row auditable.
+            meta = {**meta, "name": custom.get("name") or sid}
+        else:
+            tipo = classify_planned_tipo(sid, meta)
+            carico = carico_dita_for(tipo, sid)
+
         if status == "skipped":
             load, load_fonte = None, "unavailable"
 
@@ -274,7 +402,7 @@ def rows_from_completion_log(state: Dict[str, Any], catalog: Dict[str, Dict[str,
             "load": "" if load is None else round(load),
             "load_fonte": load_fonte,
             "rpe_stimato": "" if status == "skipped" else estimate_rpe(load, difficulty),
-            "carico_dita": carico_dita_for(tipo, sid),
+            "carico_dita": carico,
             "stato": status,
             "descrizione": _desc_planned(meta, e, difficulty),
             "_sort": finished_at or (date + "T00:00"),
