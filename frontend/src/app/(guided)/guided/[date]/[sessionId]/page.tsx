@@ -397,6 +397,8 @@ export default function GuidedSessionPage() {
         const logEntry: Record<string, unknown> = {
           date: state.date,
           session_id: state.sessionId,
+          // Real wall-clock start the timer already runs on (health-vault export).
+          started_at: state.startedAt,
           session_duration_seconds: durationSeconds,
           actual: {
             exercise_feedback_v1: exerciseFeedback,

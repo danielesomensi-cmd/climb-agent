@@ -370,6 +370,10 @@ export default function SessionPlayPage() {
         log_entry: {
           date,
           session_id: `custom_${id}`,
+          // Real wall-clock start (ms ref → ISO) for the health-vault export.
+          ...(startedAtRef.current > 0
+            ? { started_at: new Date(startedAtRef.current).toISOString() }
+            : {}),
           session_duration_seconds: durationSeconds,
           actual: { exercise_feedback_v1: exerciseFeedback },
         },

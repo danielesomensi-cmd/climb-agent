@@ -389,6 +389,21 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                 if labels:
                     entry["difficulty"] = labels[-1] if len(set(labels)) > 1 else labels[0]
                 entry["exercise_count"] = len(fb_items)
+                # Garmin/health-vault export (2026-08): persist the REAL wall-clock
+                # start the guided player already measures. Until now the client
+                # computed `now - startedAt` and sent only the delta
+                # (session_duration_seconds), throwing the start timestamp away —
+                # so the completion log had a real finish (`completed_at`) but no
+                # real start. Only guided/timed players send `started_at`; a quick
+                # "mark done" has no real start and the field stays absent rather
+                # than being faked. `completed_at` (set at append) is the real
+                # finish, mirrored here as `finished_at` when we have a real start
+                # so the export reads one coherent (start, finish) pair.
+                _started_at = req.log_entry.get("started_at")
+                if _started_at and not entry.get("started_at"):
+                    entry["started_at"] = str(_started_at)
+                    if entry.get("completed_at") and not entry.get("finished_at"):
+                        entry["finished_at"] = entry["completed_at"]
                 duration = req.log_entry.get("session_duration_seconds")
                 if duration is not None:
                     # B197 Bug 1: on resubmit, keep the longest duration seen.
