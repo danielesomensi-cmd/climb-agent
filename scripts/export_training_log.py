@@ -29,6 +29,8 @@ Design contract (mirrors the health-vault mini-brief, 2026-08):
     tipo          boulder_indoor|corda_indoor|falesia_outdoor|hangboard|pesi|cardio
     load          0-85 engine load (comparable indoor/outdoor by design, D151)
     load_fonte    actual | prescribed | free_session | outdoor_grade | unavailable
+    rpe           0-10 DECLARED by the athlete after the session. Blank unless
+                  really stated. This is the measurement; rpe_stimato is not.
     rpe_stimato   0-10, ESTIMATED from load (+difficulty). Not a measured RPE.
     carico_dita   basso|medio|alto — heuristic from session type (optional)
     stato         done | skipped
@@ -39,7 +41,11 @@ than an empty field):
   - ora_inizio is emitted ONLY when a real start exists (guided/free/outdoor
     timer). For a quick "mark done" it stays blank; orari_fonte says why.
   - rpe_stimato is labelled an estimate, never presented as an independent
-    measurement — climb-agent has no 0-10 RPE field today.
+    measurement. The independent one is `rpe`, and it is emitted ONLY when the
+    completion-log entry carries a declared value (`rpe_declared`). Keeping the
+    two columns apart is the whole point of the field: a HIIT can come out at
+    load 24 and RPE 8, and collapsing them would erase exactly the "low load,
+    wrecked me" case the health-vault correlation is looking for.
   - a skipped session carries NO times: its completed_at is when the skip was
     tapped, not the end of a workout (see rows_from_completion_log).
   - outdoor logs double-submitted within seconds are collapsed to one session,
@@ -86,7 +92,7 @@ LOAD_CAP = 85.0
 
 COLUMNS = [
     "data", "ora_inizio", "ora_fine", "orari_fonte", "tipo",
-    "load", "load_fonte", "rpe_stimato", "carico_dita", "stato", "descrizione",
+    "load", "load_fonte", "rpe", "rpe_stimato", "carico_dita", "stato", "descrizione",
 ]
 
 DIFFICULTY_IT = {
@@ -319,6 +325,24 @@ def estimate_rpe(load: Optional[float], difficulty: Optional[str]) -> str:
     return str(int(max(1, min(10, round(load_rpe)))))
 
 
+def declared_rpe(entry: Dict[str, Any]) -> str:
+    """The athlete's own 0-10 RPE, or blank. Never derived, never defaulted.
+
+    Only `rpe_declared` counts. `difficulty` is a five-label bucket the app asks
+    for, not a number the athlete chose, and it sits at "ok" on nearly every
+    entry — promoting it to this column would refill the measured field with the
+    same estimate `rpe_stimato` already carries.
+    """
+    v = entry.get("rpe_declared")
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return ""
+    if not 0 <= v <= 10:
+        print(f"# ATTENZIONE: rpe_declared={v} fuori scala 0-10 su {entry.get('date')} "
+              f"— colonna lasciata vuota", file=sys.stderr)
+        return ""
+    return str(int(round(v)))
+
+
 # ── type / finger-load classification ────────────────────────────────────────
 def classify_planned_tipo(sid: str, meta: Dict[str, Any]) -> str:
     stem = (meta.get("stem") or sid or "").lower()
@@ -418,6 +442,16 @@ def rows_from_completion_log(
             load, load_fonte = effective_slot_load(slot)
 
         custom = customs.get(sid.replace("custom_", "", 1)) if sid.startswith("custom_") else None
+        # A session added by `add_generated_session` (body-part picker, ad-hoc
+        # coach session, a manually registered workout) is in NEITHER the catalog
+        # NOR custom_sessions[] — the payload IS the slot. Without this branch it
+        # fell through to classify_planned_tipo, matched no keyword and no
+        # primary_goal, and took the "generic indoor climbing" default: a HIIT of
+        # cardio and burpees exported as boulder_indoor with carico_dita=medio,
+        # and the descrizione was the raw session id. The slot carries the same
+        # `exercises` list a custom session does, so it classifies the same way.
+        if custom is None and slot and slot.get("is_custom") and slot.get("exercises"):
+            custom = slot
         if custom:
             tipo, carico = classify_custom_session(custom, exercises)
             # The row said "custom_cs_1f679d81". Nobody can spot-check a hash —
@@ -438,6 +472,9 @@ def rows_from_completion_log(
             "tipo": tipo,
             "load": "" if load is None else round(load),
             "load_fonte": load_fonte,
+            # A skipped session was never performed: there is no effort to report,
+            # declared or estimated.
+            "rpe": "" if status == "skipped" else declared_rpe(e),
             "rpe_stimato": "" if status == "skipped" else estimate_rpe(load, difficulty),
             "carico_dita": carico,
             "stato": status,
@@ -465,6 +502,7 @@ def rows_from_free_sessions(state: Dict[str, Any]) -> List[dict]:
             "tipo": tipo,
             "load": "" if load is None else round(float(load)),
             "load_fonte": "free_session",
+            "rpe": declared_rpe(s),
             "rpe_stimato": estimate_rpe(float(load) if load is not None else None, None),
             "carico_dita": carico_dita_for(tipo, surface),
             "stato": "done",
@@ -601,6 +639,7 @@ def rows_from_outdoor(
             "tipo": "falesia_outdoor",
             "load": "" if load is None else round(float(load)),
             "load_fonte": "outdoor_grade",
+            "rpe": declared_rpe(o),
             "rpe_stimato": estimate_rpe(float(load) if load is not None else None, None),
             "carico_dita": "medio",
             "stato": "done",
@@ -748,6 +787,7 @@ def _report_coverage(rows: List[dict]) -> None:
     with_start = sum(1 for r in rows if r["ora_inizio"])
     with_load = sum(1 for r in rows if r["load"] != "")
     with_rpe = sum(1 for r in rows if r["rpe_stimato"] != "")
+    with_rpe_real = sum(1 for r in rows if r["rpe"] != "")
     done = sum(1 for r in rows if r["stato"] == "done")
     load_of_done = sum(1 for r in rows if r["stato"] == "done" and r["load"] != "")
 
@@ -756,7 +796,19 @@ def _report_coverage(rows: List[dict]) -> None:
     print(f"#   con ora di inizio         {pct(with_start)}", file=sys.stderr)
     print(f"#   con load                  {pct(with_load)}"
           f"   [sulle fatte: {load_of_done}/{done}]", file=sys.stderr)
+    print(f"#   con rpe DICHIARATO        {pct(with_rpe_real)}", file=sys.stderr)
     print(f"#   con rpe_stimato           {pct(with_rpe)}", file=sys.stderr)
+    # The two columns disagreeing is the signal, not a defect: it is the
+    # "load says easy, the athlete says wrecked" case. Naming it here stops it
+    # from being read as a bug in the estimate.
+    divergent = [
+        r for r in rows
+        if r["rpe"] != "" and r["rpe_stimato"] != ""
+        and abs(int(r["rpe"]) - int(r["rpe_stimato"])) >= 3
+    ]
+    for r in divergent:
+        print(f"#   ⚠ {r['data']}: rpe dichiarato {r['rpe']} vs stimato {r['rpe_stimato']} "
+              f"(load {r['load']}) — il load sottostima la sessione", file=sys.stderr)
     print(f"#   fedeltà orari: {', '.join(f'{k}={v}' for k, v in sorted(fonti.items(), key=lambda x: -x[1]))}",
           file=sys.stderr)
     print(f"#   tipi: {', '.join(f'{k}={v}' for k, v in sorted(tipi.items(), key=lambda x: -x[1]))}",

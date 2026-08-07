@@ -368,3 +368,106 @@ def test_outdoor_log_rows_without_a_timestamp_yield_no_times():
     row = etl.build_rows(state, outdoor_details=idx)[0]
     assert row["orari_fonte"] == "manuale"
     assert row["ora_inizio"] == "" and row["ora_fine"] == ""
+
+
+# ── A273: RPE dichiarato ─────────────────────────────────────────────────────
+def test_declared_rpe_is_emitted_only_when_really_declared():
+    """The measured column must stay blank rather than borrow from the estimate."""
+    assert etl.declared_rpe({"rpe_declared": 8}) == "8"
+    assert etl.declared_rpe({"rpe_declared": 8.4}) == "8"
+    assert etl.declared_rpe({}) == ""
+    assert etl.declared_rpe({"rpe_declared": None}) == ""
+    # difficulty is a bucket the app asks for, not a number the athlete chose
+    assert etl.declared_rpe({"difficulty": "very_hard"}) == ""
+    # out of scale → refuse, don't clamp into a plausible-looking number
+    assert etl.declared_rpe({"rpe_declared": 14}) == ""
+    assert etl.declared_rpe({"rpe_declared": -1}) == ""
+    # True is an int in Python; it is not an RPE
+    assert etl.declared_rpe({"rpe_declared": True}) == ""
+
+
+def test_declared_rpe_survives_a_load_that_understates_the_session():
+    """load 24 + RPE 8 is the case the two columns exist to keep apart."""
+    state = {
+        "session_completion_log": [{
+            "date": "2026-08-07",
+            "session_id": "generated_hiit_2026-08-07_lunch",
+            "status": "done",
+            "completed_at": "2026-08-07T11:12:15+00:00",
+            "session_duration_seconds": 2235,
+            "difficulty": "hard",
+            "rpe_declared": 8,
+        }],
+        "week_plans": {"2026-08-03": {"weeks": [{"days": [{
+            "date": "2026-08-07",
+            "sessions": [{
+                "session_id": "generated_hiit_2026-08-07_lunch",
+                "session_load_score": 24,
+            }],
+        }]}]}},
+    }
+    row = etl.build_rows(state)[0]
+    assert row["rpe"] == "8"
+    assert row["load"] == 24
+    assert row["rpe_stimato"] != "8"      # the estimate is free to disagree
+    assert row["ora_inizio"] == "12:35" and row["ora_fine"] == "13:12"
+
+
+def test_skipped_session_declares_no_rpe_even_if_one_is_stored():
+    state = {"session_completion_log": [{
+        "date": "2026-08-07", "session_id": "x", "status": "skipped",
+        "completed_at": "2026-08-07T11:00:00+00:00", "rpe_declared": 8,
+    }]}
+    assert etl.build_rows(state)[0]["rpe"] == ""
+
+
+def test_generated_session_is_classified_from_its_own_exercises():
+    """add_generated_session payloads live on the slot, not in custom_sessions[].
+
+    Regression: a lunch HIIT (cardio + burpees + squat + abs) exported as
+    boulder_indoor / carico_dita=medio, because the id matched no catalog entry
+    and the fallback assumes climbing. Same hole hit every body-part-picker
+    session.
+    """
+    state = {
+        "session_completion_log": [{
+            "date": "2026-08-07", "session_id": "generated_hiit_2026-08-07_lunch",
+            "status": "done", "completed_at": "2026-08-07T11:12:15+00:00",
+            "session_duration_seconds": 2235, "exercise_count": 5,
+        }],
+        "week_plans": {"2026-08-03": {"weeks": [{"days": [{
+            "date": "2026-08-07",
+            "sessions": [{
+                "session_id": "generated_hiit_2026-08-07_lunch",
+                "is_custom": True,
+                "name": "Work — HIIT: cardio, burpees, alzate, squat, addominali",
+                "session_load_score": 24,
+                "exercises": [
+                    {"exercise_id": "treadmill_incline_walk"},
+                    {"exercise_id": "jump_rope"},
+                    {"exercise_id": "lateral_raise"},
+                    {"exercise_id": "goblet_squat"},
+                    {"exercise_id": "v_up"},
+                ],
+            }],
+        }]}]}},
+    }
+    row = etl.build_rows(state)[0]
+    assert row["tipo"] == "cardio"
+    assert row["carico_dita"] == ""          # no finger work: say nothing
+    assert row["descrizione"].startswith("Work — HIIT")   # not the raw id
+
+
+def test_catalog_session_is_not_hijacked_by_the_generated_branch():
+    """Only slots that declare is_custom + exercises take the new path."""
+    state = {
+        "session_completion_log": [{
+            "date": "2026-08-05", "session_id": "finger_strength_home",
+            "status": "done", "completed_at": "2026-08-05T17:46:00+00:00",
+        }],
+        "week_plans": {"2026-08-03": {"weeks": [{"days": [{
+            "date": "2026-08-05",
+            "sessions": [{"session_id": "finger_strength_home", "session_load_score": 40}],
+        }]}]}},
+    }
+    assert etl.build_rows(state)[0]["tipo"] == "hangboard"
