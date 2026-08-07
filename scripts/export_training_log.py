@@ -15,6 +15,11 @@ Design contract (mirrors the health-vault mini-brief, 2026-08):
     ora_inizio    HH:MM local (Europe/Luxembourg) — BLANK when not real
     ora_fine      HH:MM local (Europe/Luxembourg)
     orari_fonte   timer_reale | tap_stimato | manuale — the fidelity of the times
+                  timer_reale = real start AND end from a running timer
+                  tap_stimato = real end, start reconstructed from the duration
+                                (or start blank when no duration was recorded)
+                  manuale     = NO reliable times on this row (outdoor logs,
+                                skipped sessions) — both time columns are blank
     tipo          boulder_indoor|corda_indoor|falesia_outdoor|hangboard|pesi|cardio
     load          0-85 engine load (comparable indoor/outdoor by design, D151)
     load_fonte    actual | prescribed | free_session | outdoor_grade | unavailable
@@ -29,6 +34,10 @@ than an empty field):
     timer). For a quick "mark done" it stays blank; orari_fonte says why.
   - rpe_stimato is labelled an estimate, never presented as an independent
     measurement — climb-agent has no 0-10 RPE field today.
+  - a skipped session carries NO times: its completed_at is when the skip was
+    tapped, not the end of a workout (see rows_from_completion_log).
+  - outdoor logs double-submitted within seconds are collapsed to one session,
+    and each dropped copy is reported on stderr (see dedupe_outdoor).
 
 All timestamps in the state are UTC; the athlete's TZ is Europe/Luxembourg
 (same offset as the stored Europe/Brussels), converted here.
@@ -237,6 +246,15 @@ def rows_from_completion_log(state: Dict[str, Any], catalog: Dict[str, Dict[str,
             ora_fine = _hhmm_local(finished_at)
             orari_fonte = "tap_stimato"
 
+        # A skipped session has no training time to report. Its ``completed_at``
+        # is the moment the skip was tapped, which is NOT the end of a workout —
+        # in the real data three separate days were all skipped in one sitting
+        # and came out carrying the same 19:37. Emitting that as ora_fine states
+        # a training time that never happened, so it goes blank and orari_fonte
+        # says the row has no reliable times.
+        if status == "skipped":
+            ora_inizio, ora_fine, orari_fonte = "", "", "manuale"
+
         slot = slot_index.get((date, sid))
         load: Optional[float] = None
         load_fonte = "unavailable"
@@ -291,9 +309,56 @@ def rows_from_free_sessions(state: Dict[str, Any]) -> List[dict]:
     return rows
 
 
+DOUBLE_SUBMIT_WINDOW_S = 120
+
+
+def dedupe_outdoor(entries: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Collapse double-submitted outdoor logs. Returns (kept, dropped).
+
+    The outdoor log has no session id, so an accidental double tap on "save"
+    writes the row twice. In the real data (4 cases over 34 entries) the two
+    copies are identical in EVERY field except ``completed_at``, which differs
+    by 4-10 seconds — nobody logs two separate crag sessions five seconds apart.
+
+    The window is what keeps this conservative: two genuine sessions at the same
+    spot on the same day with the same load would be saved minutes or hours
+    apart, and survive. Only a near-simultaneous exact copy is dropped, and the
+    caller reports how many.
+    """
+    kept: List[Dict[str, Any]] = []
+    dropped: List[Dict[str, Any]] = []
+    for entry in entries:
+        signature = {k: v for k, v in entry.items() if k != "completed_at"}
+        stamp = _parse_iso(entry.get("completed_at"))
+        twin = None
+        for seen in kept:
+            if {k: v for k, v in seen.items() if k != "completed_at"} != signature:
+                continue
+            seen_stamp = _parse_iso(seen.get("completed_at"))
+            if stamp is None or seen_stamp is None:
+                twin = seen  # no timestamps to compare: an exact copy is a copy
+                break
+            if abs((stamp - seen_stamp).total_seconds()) <= DOUBLE_SUBMIT_WINDOW_S:
+                twin = seen
+                break
+        if twin is None:
+            kept.append(entry)
+        else:
+            dropped.append(entry)
+    return kept, dropped
+
+
 def rows_from_outdoor(state: Dict[str, Any]) -> List[dict]:
     rows: List[dict] = []
-    for o in state.get("outdoor_log") or []:
+    entries, dropped = dedupe_outdoor(state.get("outdoor_log") or [])
+    if dropped:
+        for d in dropped:
+            print(
+                f"# dedup: scartata copia outdoor {d.get('date')} {d.get('spot_name')} "
+                f"(salvata a {d.get('completed_at')})",
+                file=sys.stderr,
+            )
+    for o in entries:
         date = o.get("date")
         if not date:
             continue
