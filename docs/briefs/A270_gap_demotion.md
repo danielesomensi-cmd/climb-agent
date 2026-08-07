@@ -175,4 +175,4 @@ Non incluso qui: è una regola in `_PROFILE_CONDITIONAL_SESSIONS` e va decisa co
 
 ---
 
-*Brief pronto. Nessuna riga scritta. Serve OK di Daniele, e [[A269]] prima.*
+*✅ **Consegnato il 2026-08-06** (commit `c2bbd5b`). I due residui del property test sono stati chiusi da [[A271]].*

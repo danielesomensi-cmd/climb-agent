@@ -140,4 +140,4 @@ Ridurre l'influenza degli assi stimati a metà, o mettere un cap. È lo stesso c
 
 ---
 
-*Brief pronto. Nessuna riga scritta. Serve OK di Daniele e la scelta del §3.*
+*✅ **Consegnato il 2026-08-07** (commit `2098cd8`), framing **B**. In più, applicando il §2.1 è emerso che `PUT /api/state` — l'editor dell'assessment nelle impostazioni — non timbrava mai `tests_source`: buco vivo, non solo legacy, chiuso alla sorgente oltre che con `m003`.*

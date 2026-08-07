@@ -198,4 +198,4 @@ Precedente: [[B321]] ha usato il payload di produzione esatto come fixture, ed �
 
 ---
 
-*Brief pronto. Nessuna riga scritta. Serve OK di Daniele.*
+*✅ **Consegnato il 2026-08-06** (commit `5ea8eda`). Il §5 è stato superato in implementazione — vedi il riquadro lì.*
