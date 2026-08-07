@@ -136,7 +136,11 @@ Ridurre l'influenza degli assi stimati a metà, o mettere un cap. È lo stesso c
 
 1. **Framing A o B?** Raccomandato B. A è la posizione giusta più avanti, quando i test saranno diffusi.
 2. **La regola di `m003` — «un valore in `tests` è stato digitato, quindi è misurato» — è accettabile?** È solida contro il codice di oggi, ma è un'inferenza su dati storici di cui non abbiamo il log. L'alternativa conservativa è lasciare quei 4 utenti `estimated` e accettare che il brief li penalizzi.
-3. **Il banner di ricalcolo, di nuovo.** [[A270]] lo ha già fatto comparire a tutti e 18 due giorni fa. A271 lo farebbe comparire a 8 di loro una seconda volta. Vale la pena aspettare e unire questo brief a un altro cambiamento di scoring, invece di far lampeggiare «il tuo profilo è cambiato» due volte in una settimana?
+3. ~~**Il banner di ricalcolo, di nuovo.**~~ **Domanda rientrata — vedi [[B325]].** Era basata su un'assunzione
+   sbagliata: `_recompute_profile_if_needed` fa il fingerprint degli *input*, non della versione di scoring, quindi
+   né [[A270]] né A271 rescorano chi è già a referto. Il banner non compare al deploy per nessuno; le regole nuove
+   valgono da nuovi utenti, da un'edit dell'assessment, o da una rivalutazione esplicita. È la regola «mai
+   retroattivo» che funziona, non un effetto collaterale.
 
 ---
 

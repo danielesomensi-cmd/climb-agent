@@ -298,3 +298,76 @@ def test_the_author_is_untouched(corpus):
     )
     assert profile == author["expected_profile_v3"]
     assert source["finger_strength"] == SOURCE_MEASURED
+
+
+# ---------------------------------------------------------------------------
+# The recompute policy — pinned because it was nearly reported backwards
+# ---------------------------------------------------------------------------
+
+def test_a_scoring_change_is_not_retroactive_for_existing_users(corpus):
+    """A stored profile survives a scoring change until an INPUT changes.
+
+    `_recompute_profile_if_needed` fingerprints the assessment *inputs*, not the
+    scoring version, so shipping A270/A271 does not rescore anyone who was
+    already on file: they keep their v1 numbers and their `profile_v1` stamp
+    until they edit their body, grades, tests, self-eval or goal — or until an
+    explicit `/api/assessment/compute` or `start-new-cycle`.
+
+    This is exactly the "never retroactive" rule the versioning plan states
+    (D271 §7, D272 §7), and it is why `profile_scoring_version` exists: the
+    population is deliberately mixed, and the field says who is on which rules.
+    It is asserted here because nothing else pins it, and because the practical
+    consequence is easy to state backwards — no user sees the "your profile
+    changed" banner on deploy day.
+    """
+    import hashlib
+
+    from backend.api.deps import _ensure_profile_fresh
+
+    user = corpus[0]
+    assessment, goal = user["assessment"], user["goal"]
+    fingerprint = hashlib.md5(
+        json.dumps(
+            {
+                "body": assessment.get("body") or {},
+                "grades": assessment.get("grades") or {},
+                "tests": assessment.get("tests") or {},
+                "self_eval": assessment.get("self_eval") or {},
+                "experience": assessment.get("experience") or {},
+                "target_grade": goal.get("target_grade"),
+                "current_grade": goal.get("current_grade"),
+            },
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+
+    stored = dict(user["stored_profile"])
+    state = {
+        "assessment": {
+            **assessment,
+            "profile": stored,
+            "_profile_fingerprint": fingerprint,
+            "profile_scoring_version": "profile_v1",
+        },
+        "goal": goal,
+    }
+
+    _ensure_profile_fresh(state)
+    assert state["assessment"]["profile"] == stored
+    assert state["assessment"]["profile_scoring_version"] == "profile_v1"
+    # …and the new rules ARE different, so the test is not vacuous.
+    assert compute_assessment_profile(assessment, goal) != stored
+
+
+def test_an_input_change_does_bring_the_new_rules(corpus):
+    """The other half: once anything moves, the athlete lands on v3."""
+    from backend.api.deps import _ensure_profile_fresh
+
+    user = corpus[0]
+    state = {
+        "assessment": {**user["assessment"], "profile": dict(user["stored_profile"])},
+        "goal": dict(user["goal"]),
+    }
+    _ensure_profile_fresh(state)  # no fingerprint stored -> recomputes
+    assert state["assessment"]["profile"] == user["expected_profile_v3"]
+    assert state["assessment"]["profile_scoring_version"] == PROFILE_SCORING_VERSION
