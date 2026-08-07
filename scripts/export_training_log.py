@@ -284,22 +284,35 @@ def effective_slot_load(slot: Dict[str, Any]) -> Tuple[Optional[float], str]:
     return None, "unavailable"
 
 
+NEUTRAL_DIFFICULTY = "ok"
+
+
 def estimate_rpe(load: Optional[float], difficulty: Optional[str]) -> str:
-    """0-10 RPE estimate. Load-driven, nudged 50/50 by the difficulty label
-    when one exists. Returns '' when there is no signal at all."""
-    load_rpe = None
-    if isinstance(load, (int, float)):
-        load_rpe = max(0.0, min(10.0, load / LOAD_CAP * 10.0))
-    diff_rpe = DIFFICULTY_RPE.get(difficulty) if difficulty else None
-    if load_rpe is not None and diff_rpe is not None:
-        val = 0.5 * load_rpe + 0.5 * diff_rpe
-    elif load_rpe is not None:
-        val = load_rpe
-    elif diff_rpe is not None:
-        val = float(diff_rpe)
-    else:
+    """0-10 RPE DERIVED FROM LOAD. Empty when there is no load. Never measured.
+
+    Two things this used to get wrong, both of which manufactured numbers:
+
+    1. With no load it fell back to the difficulty label alone. In the real
+       data ``difficulty`` is ``"ok"`` on 77 completion entries out of 77 — a
+       constant — so that branch emitted a flat 5 for every loadless row and
+       dressed it up as a per-session effort estimate. Blank is the honest
+       answer: no load, no RPE.
+    2. It blended the label 50/50 even when the label was that same neutral
+       "ok", which does not report effort, it reports that the athlete never
+       said anything. Blending it dragged every session toward the middle: a
+       load of 78 came out as 7 instead of 9, damping exactly the variation
+       the HRV correlation is looking for.
+
+    So: load decides. A difficulty label moves the estimate only when the
+    athlete actually said something other than neutral.
+    """
+    if not isinstance(load, (int, float)):
         return ""
-    return str(int(max(1, min(10, round(val)))))
+    load_rpe = max(0.0, min(10.0, load / LOAD_CAP * 10.0))
+    diff_rpe = DIFFICULTY_RPE.get(difficulty) if difficulty else None
+    if diff_rpe is not None and difficulty != NEUTRAL_DIFFICULTY:
+        load_rpe = 0.5 * load_rpe + 0.5 * diff_rpe
+    return str(int(max(1, min(10, round(load_rpe)))))
 
 
 # ── type / finger-load classification ────────────────────────────────────────
@@ -346,9 +359,13 @@ def carico_dita_for(tipo: str, sid: str) -> str:
 
 
 # ── row builders ─────────────────────────────────────────────────────────────
-def rows_from_completion_log(state: Dict[str, Any], catalog: Dict[str, Dict[str, Any]]) -> List[dict]:
+def rows_from_completion_log(
+    state: Dict[str, Any],
+    catalog: Dict[str, Dict[str, Any]],
+    archived: Optional[Dict[str, Any]] = None,
+) -> List[dict]:
     log = state.get("session_completion_log") or []
-    slot_index = _index_week_plan_slots(state)
+    slot_index = _index_week_plan_slots(state, archived)
     exercises = load_exercise_catalog()
     # Custom sessions live in the state, not the catalog; their ids appear in the
     # completion log prefixed ("custom_cs_x" here, "cs_x" in custom_sessions).
@@ -634,7 +651,30 @@ def _desc_outdoor(o: Dict[str, Any]) -> str:
 
 
 # ── week-plan slot index (for planned-session load) ──────────────────────────
-def _index_week_plan_slots(state: Dict[str, Any]) -> Dict[Tuple[str, str], dict]:
+def load_archived_weeks(user_id: str, since: Optional[str]) -> Dict[str, Any]:
+    """Archived week plans from the cold store, keyed by week_start.
+
+    This is where half the history lives. A221 moves past weeks out of
+    ``state["week_plans"]`` into the ``week_archive`` table, so a plain
+    ``GET /api/user/export`` backup only carries the last few weeks — for this
+    athlete the hot state started at 2026-07-27 while 25 weeks sat archived.
+    Every completed session older than that exported as
+    ``load_fonte=unavailable``: the load was never missing, just never read.
+    """
+    from backend.engine import storage
+
+    floor = since or "1970-01-01"
+    try:
+        return storage.read_archived_weeks_in_range(user_id, floor, "9999-12-31") or {}
+    except Exception as exc:
+        print(f"# ATTENZIONE: archivio non leggibile ({exc}) — i load storici resteranno vuoti",
+              file=sys.stderr)
+        return {}
+
+
+def _index_week_plan_slots(
+    state: Dict[str, Any], archived: Optional[Dict[str, Any]] = None
+) -> Dict[Tuple[str, str], dict]:
     index: Dict[Tuple[str, str], dict] = {}
 
     def _ingest(plan: Any) -> None:
@@ -655,6 +695,9 @@ def _index_week_plan_slots(state: Dict[str, Any]) -> Dict[Tuple[str, str], dict]
     for arch in state.get("archived_macrocycles") or []:
         for plan in (arch.get("week_plans") or {}).values() if isinstance(arch, dict) else []:
             _ingest(plan)
+    # A221 cold store, last: the hot state wins on any overlap.
+    for plan in (archived or {}).values():
+        _ingest(plan)
     return index
 
 
@@ -663,10 +706,11 @@ def build_rows(
     state: Dict[str, Any],
     since: Optional[str] = None,
     outdoor_details: Optional[Dict[str, Dict[str, Any]]] = None,
+    archived: Optional[Dict[str, Any]] = None,
 ) -> List[dict]:
     catalog = load_session_catalog()
     rows = (
-        rows_from_completion_log(state, catalog)
+        rows_from_completion_log(state, catalog, archived)
         + rows_from_free_sessions(state)
         + rows_from_outdoor(state, outdoor_details)
     )
@@ -678,9 +722,53 @@ def build_rows(
     return rows
 
 
+def _report_coverage(rows: List[dict]) -> None:
+    """Print what the export actually knows, so gaps are seen and not assumed.
+
+    Every column here has been silently wrong at least once — a treadmill
+    evening typed as bouldering, a constant RPE, half the loads left empty
+    because nobody read the cold store. Printing the coverage is what turns
+    "the CSV looks fine" into a number you can argue with.
+    """
+    total = len(rows)
+    n = total or 1
+
+    def pct(k: int) -> str:
+        return f"{k:3d}/{total} ({k * 100 // n:3d}%)"
+
+    fonti: Dict[str, int] = {}
+    tipi: Dict[str, int] = {}
+    for r in rows:
+        fonti[r["orari_fonte"]] = fonti.get(r["orari_fonte"], 0) + 1
+        tipi[r["tipo"]] = tipi.get(r["tipo"], 0) + 1
+    with_start = sum(1 for r in rows if r["ora_inizio"])
+    with_load = sum(1 for r in rows if r["load"] != "")
+    with_rpe = sum(1 for r in rows if r["rpe_stimato"] != "")
+    done = sum(1 for r in rows if r["stato"] == "done")
+    load_of_done = sum(1 for r in rows if r["stato"] == "done" and r["load"] != "")
+
+    print("#", "─" * 62, file=sys.stderr)
+    print(f"# COPERTURA — {total} sessioni ({done} fatte, {total - done} saltate)", file=sys.stderr)
+    print(f"#   con ora di inizio         {pct(with_start)}", file=sys.stderr)
+    print(f"#   con load                  {pct(with_load)}"
+          f"   [sulle fatte: {load_of_done}/{done}]", file=sys.stderr)
+    print(f"#   con rpe_stimato           {pct(with_rpe)}", file=sys.stderr)
+    print(f"#   fedeltà orari: {', '.join(f'{k}={v}' for k, v in sorted(fonti.items(), key=lambda x: -x[1]))}",
+          file=sys.stderr)
+    print(f"#   tipi: {', '.join(f'{k}={v}' for k, v in sorted(tipi.items(), key=lambda x: -x[1]))}",
+          file=sys.stderr)
+    print("#", "─" * 62, file=sys.stderr)
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(description="climb-agent → health-vault training_log.csv")
-    ap.add_argument("backup", help="Path to user_state export JSON (GET /api/user/export)")
+    ap.add_argument("backup", nargs="?",
+                    help="Path to user_state export JSON (GET /api/user/export). "
+                         "Omit when using --user-id.")
+    ap.add_argument("--user-id",
+                    help="Read state AND the archived weeks straight from storage "
+                         "(needs STORAGE_BACKEND=supabase + keys). Preferred: a backup "
+                         "JSON carries no archived weeks, so historical loads come out empty.")
     ap.add_argument("-o", "--out", help="Output CSV path (default: stdout)")
     ap.add_argument("--days", type=int, help="Only sessions from the last N days")
     ap.add_argument("--since", help="Only sessions on/after YYYY-MM-DD")
@@ -691,7 +779,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     args = ap.parse_args(argv)
 
-    state = json.loads(Path(args.backup).read_text())
+    if not args.backup and not args.user_id:
+        ap.error("serve un backup JSON oppure --user-id")
+
+    if args.user_id:
+        sys.path.insert(0, str(REPO_ROOT))
+        from backend.engine import storage
+        state = storage.read_state(args.user_id)
+        if not state:
+            print(f"✗ nessuno stato per user_id={args.user_id}", file=sys.stderr)
+            return 1
+    else:
+        state = json.loads(Path(args.backup).read_text())
     outdoor_details = None
     if args.outdoor_logs:
         outdoor_details = index_outdoor_details(json.loads(Path(args.outdoor_logs).read_text()))
@@ -705,7 +804,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         base = anchor or datetime.now(LOCAL_TZ).strftime("%Y-%m-%d")
         since = (datetime.strptime(base, "%Y-%m-%d") - timedelta(days=args.days)).strftime("%Y-%m-%d")
 
-    rows = build_rows(state, since=since, outdoor_details=outdoor_details)
+    archived = load_archived_weeks(args.user_id, since) if args.user_id else {}
+    if args.user_id:
+        print(f"# archivio: {len(archived)} settimane lette dal cold store", file=sys.stderr)
+    elif args.backup:
+        print("# nota: export da backup JSON — non contiene le settimane archiviate, "
+              "i load storici resteranno vuoti. Usa --user-id per averli.", file=sys.stderr)
+
+    rows = build_rows(state, since=since, outdoor_details=outdoor_details, archived=archived)
+    _report_coverage(rows)
 
     fh = open(args.out, "w", newline="") if args.out else sys.stdout
     try:

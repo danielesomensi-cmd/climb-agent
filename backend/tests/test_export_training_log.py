@@ -201,3 +201,123 @@ def test_a_real_outdoor_timer_still_wins_over_the_save_estimate():
     r = etl.build_rows(state, outdoor_details=idx)[0]
     assert r["orari_fonte"] == "timer_reale"
     assert r["ora_inizio"] == "11:00" and r["ora_fine"] == "14:00"
+
+
+# ── A272: archivio, RPE onesto, classificazione dal contenuto ───────────────
+
+def test_archived_week_recovers_load_the_hot_state_no_longer_has():
+    """A221 moves past weeks to the cold store; without reading it every
+    session older than the hot window exported as load_fonte=unavailable.
+    On the real 60-day export that was 18 of 41 completed sessions."""
+    state = {
+        "session_completion_log": [
+            {"date": "2026-06-10", "session_id": "route_endurance_gym", "status": "done",
+             "completed_at": "2026-06-10T13:23:00+00:00", "difficulty": "ok",
+             "session_duration_seconds": 3600},
+        ],
+        "week_plans": {},  # hot state has already rolled over
+    }
+    archived = {
+        "2026-06-08": {"start_date": "2026-06-08", "weeks": [{"days": [
+            {"date": "2026-06-10", "sessions": [
+                {"session_id": "route_endurance_gym", "session_load_score": 48}]},
+        ]}]}
+    }
+    without = etl.build_rows(state)[0]
+    assert without["load"] == "" and without["load_fonte"] == "unavailable"
+    assert without["rpe_stimato"] == ""
+
+    with_archive = etl.build_rows(state, archived=archived)[0]
+    assert with_archive["load"] == 48
+    assert with_archive["load_fonte"] == "prescribed"
+    assert with_archive["rpe_stimato"] != ""
+
+
+def test_hot_state_wins_over_the_archive_on_overlap():
+    state = {
+        "session_completion_log": [
+            {"date": "2026-06-10", "session_id": "route_endurance_gym", "status": "done",
+             "completed_at": "2026-06-10T13:23:00+00:00"},
+        ],
+        "week_plans": {"2026-06-08": {"start_date": "2026-06-08", "weeks": [{"days": [
+            {"date": "2026-06-10", "sessions": [
+                {"session_id": "route_endurance_gym", "session_load_score": 70}]}]}]}},
+    }
+    archived = {"2026-06-08": {"start_date": "2026-06-08", "weeks": [{"days": [
+        {"date": "2026-06-10", "sessions": [
+            {"session_id": "route_endurance_gym", "session_load_score": 10}]}]}]}}
+    assert etl.build_rows(state, archived=archived)[0]["load"] == 70
+
+
+def test_no_load_means_no_rpe_even_when_a_difficulty_label_exists():
+    """The label alone used to produce an RPE. Since 'ok' is the default and
+    appeared on 77 real entries out of 77, that emitted a constant 5 that read
+    like a per-session measurement."""
+    assert etl.estimate_rpe(None, "ok") == ""
+    assert etl.estimate_rpe(None, "hard") == ""
+    assert etl.estimate_rpe(None, None) == ""
+
+
+def test_neutral_difficulty_does_not_drag_the_load_estimate():
+    """Blending the neutral label flattened real variation toward 5 — a load of
+    78 came out as 7 instead of 9, damping the very signal being correlated."""
+    assert etl.estimate_rpe(78, "ok") == etl.estimate_rpe(78, None) == "9"
+    assert etl.estimate_rpe(78, "easy") == "7"   # an informative label still moves it
+
+
+def test_custom_session_typed_from_its_exercises_not_from_the_fallback():
+    """A custom session is not in the catalog, so its id is a hash and the
+    classifier fell through to 'generic indoor climbing': a treadmill evening
+    exported as boulder_indoor with a finger load it never had."""
+    exercises = {
+        "treadmill_incline_walk": {"domain": ["aerobic_capacity"], "role": ["conditioning"],
+                                   "time_min": 30, "equipment_required": []},
+        "pallof_press": {"domain": ["core"], "role": ["accessory"], "time_min": 8,
+                         "equipment_required": []},
+        "dynamic_mobility_flow": {"domain": ["mobility"], "role": ["warmup"], "time_min": 5,
+                                  "equipment_required": []},
+    }
+    session = {"id": "cs_x", "name": "Work — cardio montagna + core easy", "exercises": [
+        {"exercise_id": "dynamic_mobility_flow"}, {"exercise_id": "treadmill_incline_walk"},
+        {"exercise_id": "pallof_press"},
+    ]}
+    tipo, carico = etl.classify_custom_session(session, exercises)
+    assert tipo == "cardio"
+    assert carico == ""   # no finger work: say nothing rather than guess "medio"
+
+
+def test_custom_session_wins_for_the_wall_when_climbing_is_present():
+    exercises = {
+        "boulder_4x4": {"domain": ["power_endurance"], "role": ["main"], "time_min": 30,
+                        "equipment_required": ["gym_boulder"]},
+        "bench_press": {"domain": ["strength_general"], "role": ["accessory"], "time_min": 40,
+                        "equipment_required": ["weight"]},
+    }
+    session = {"id": "cs_y", "name": "misto", "exercises": [
+        {"exercise_id": "bench_press"}, {"exercise_id": "boulder_4x4"},
+    ]}
+    tipo, _ = etl.classify_custom_session(session, exercises)
+    assert tipo == "boulder_indoor"   # even though the weights hold more minutes
+
+
+def test_outdoor_double_submit_collapses_but_two_real_sessions_survive():
+    twin = {"date": "2026-07-07", "spot_name": "Berdorf", "discipline": "lead",
+            "load_score": 20, "completed_at": "2026-07-08T16:35:13+00:00"}
+    copy = {**twin, "completed_at": "2026-07-08T16:35:22+00:00"}    # 9s later
+    later = {**twin, "completed_at": "2026-07-08T21:10:00+00:00"}   # hours later
+    kept, dropped = etl.dedupe_outdoor([twin, copy])
+    assert len(kept) == 1 and len(dropped) == 1
+    kept2, dropped2 = etl.dedupe_outdoor([twin, later])
+    assert len(kept2) == 2 and not dropped2
+
+
+def test_skipped_session_carries_no_times():
+    """completed_at on a skip is when the skip was tapped: three separate days
+    skipped in one sitting all exported carrying the same 19:37."""
+    state = {"session_completion_log": [
+        {"date": "2026-07-24", "session_id": "prehab_maintenance", "status": "skipped",
+         "completed_at": "2026-07-26T19:37:00+00:00"},
+    ]}
+    row = etl.build_rows(state)[0]
+    assert row["ora_inizio"] == "" and row["ora_fine"] == ""
+    assert row["orari_fonte"] == "manuale"
