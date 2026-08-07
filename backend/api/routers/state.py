@@ -114,7 +114,27 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
     # benchmarks (e.g. kilter fallback on current_level.boulder.worked.grade)
     # read it, and "performance" is deliberately NOT PUT-able, so without this
     # rebuild it stays frozen at the onboarding-era grades forever.
+    # A271: a test scalar arriving through this endpoint was typed by a human —
+    # it is the settings assessment editor, the only client that patches
+    # `assessment.tests`. It never stamped `tests_source`, so every manual edit
+    # produced a measured number with no provenance, and A269's sidecar decayed
+    # a little each time someone corrected their max hang. `m003` catches it on
+    # the next read, but the honest place to record it is where it is written.
     asmt_patch = patch.get("assessment")
+    if isinstance(asmt_patch, dict) and isinstance(asmt_patch.get("tests"), dict):
+        from backend.engine.migrations.m003_backfill_tests_source_from_values import (
+            _TEST_KEYS,
+        )
+
+        assessment = state.setdefault("assessment", {})
+        source = assessment.get("tests_source")
+        if not isinstance(source, dict):
+            source = {}
+        for key, value in asmt_patch["tests"].items():
+            if key in _TEST_KEYS and value not in (None, ""):
+                source[key] = "measured"
+        assessment["tests_source"] = source
+
     if isinstance(asmt_patch, dict) and isinstance(asmt_patch.get("grades"), dict):
         merged_grades = (state.get("assessment") or {}).get("grades") or {}
         rebuilt = build_current_level(merged_grades)

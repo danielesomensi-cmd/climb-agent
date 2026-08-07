@@ -215,11 +215,21 @@ def load_state(user_id: Optional[str] = None) -> Dict[str, Any]:
         from backend.engine.migrations.m001_backfill_tests_source import migrate as _backfill_tests_source
         if _backfill_tests_source(state):
             dirty = True
-        # A269: profile_source sidecar. MUST run after m001 — it derives axis
-        # provenance from tests_source, which m001 is what populates for
-        # pre-D214 users. Reversed, a measured axis would be marked estimated.
+        # A271: a value in assessment.tests was typed by a human, so it is
+        # measured. Closes the gap m001 cannot reach — four production users had
+        # a real finger number and an empty sidecar because they onboarded
+        # before D214. Runs BEFORE m002, which derives axis provenance from it.
+        from backend.engine.migrations.m003_backfill_tests_source_from_values import migrate as _backfill_source_from_values
+        _tests_source_grew = _backfill_source_from_values(state)
+        if _tests_source_grew:
+            dirty = True
+        # A269: profile_source sidecar. MUST run after m001 and m003 — it derives
+        # axis provenance from tests_source, and reversed a measured axis would
+        # be marked estimated. When m003 just widened the sidecar, the stored
+        # profile_source was derived from a blind one: recompute rather than
+        # keep it.
         from backend.engine.migrations.m002_backfill_profile_source import migrate as _backfill_profile_source
-        if _backfill_profile_source(state):
+        if _backfill_profile_source(state, force=_tests_source_grew):
             dirty = True
         # A221: lazy-archive past week_plans into the cold store. Env-gated
         # (default OFF) so the rollout is: deploy code (flag off) → backup +

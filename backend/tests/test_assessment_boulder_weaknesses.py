@@ -56,7 +56,11 @@ class TestBoulderWeaknessAxisMapping(unittest.TestCase):
     def _profile(self, primary="", secondary="", repeater=None):
         a = _make_assessment(primary_weakness=primary, secondary_weakness=secondary)
         if repeater is not None:
+            # A269: a value is not a measurement until `tests_source` says so.
+            # Every real writer stamps both (onboarding, progression_v1, and the
+            # m003 backfill), so the fixture has to as well.
             a["tests"]["repeater_7_3_max_sets_20mm"] = repeater
+            a["tests_source"] = {"repeater_7_3_max_sets_20mm": "measured"}
         return compute_assessment_profile(a, GOAL)
 
     def _baseline(self, repeater=None):
@@ -72,10 +76,19 @@ class TestBoulderWeaknessAxisMapping(unittest.TestCase):
         with_weakness = self._profile("poor_problem_reading", "")
         self.assertLess(with_weakness["technique"], baseline["technique"])
 
-    def test_weak_on_slopers_lowers_finger_strength(self):
+    def test_weak_on_slopers_no_longer_moves_finger_strength(self):
+        """A271 framing B inverted this.
+
+        The finger penalty lived only in the grade-estimate branch, i.e. exactly
+        when the axis is NOT measured — so it was a self-declaration steering a
+        domain weight on the axis where the engine knows least. The mapping
+        stays in `_AXIS_WEAKNESS_PENALTIES` (it still describes what the
+        weakness means, and a future session-pool rule can use it), but nothing
+        in the scoring consumes it for this axis any more.
+        """
         baseline = self._baseline()
         with_weakness = self._profile("weak_on_slopers", "")
-        self.assertLess(with_weakness["finger_strength"], baseline["finger_strength"])
+        self.assertEqual(with_weakness["finger_strength"], baseline["finger_strength"])
 
     def test_poor_dynamic_movement_lowers_pe_when_pe_is_measured(self):
         """A270: the weakness mapping is unchanged, but PE without a repeater is
@@ -105,34 +118,56 @@ class TestExistingWeaknessesUnchanged(unittest.TestCase):
     def _profile(self, primary, secondary="", repeater=None):
         a = _make_assessment(primary_weakness=primary, secondary_weakness=secondary)
         if repeater is not None:
+            # A269: a value is not a measurement until `tests_source` says so.
+            # Every real writer stamps both (onboarding, progression_v1, and the
+            # m003 backfill), so the fixture has to as well.
             a["tests"]["repeater_7_3_max_sets_20mm"] = repeater
+            a["tests_source"] = {"repeater_7_3_max_sets_20mm": "measured"}
         return compute_assessment_profile(a, GOAL)
 
     def test_pump_too_early_still_lowers_pe_and_endurance(self):
         """Endurance carries its own pump penalty, so it bites regardless. PE
         needs a repeater to have anything to subtract from (A270)."""
-        neutral = self._profile("cant_hold_hard_moves")
-        pump = self._profile("pump_too_early")
-        self.assertLess(pump["endurance"], neutral["endurance"])
+        # A271: both axes now need a measurement under them before a
+        # self-declaration is allowed to move anything.
+        self.assertEqual(
+            self._profile("pump_too_early")["endurance"],
+            self._profile("cant_hold_hard_moves")["endurance"],
+        )
+        self.assertLess(
+            self._profile("pump_too_early", repeater=24)["endurance"],
+            self._profile("cant_hold_hard_moves", repeater=24)["endurance"],
+        )
         self.assertLess(
             self._profile("pump_too_early", repeater=24)["power_endurance"],
             self._profile("cant_hold_hard_moves", repeater=24)["power_endurance"],
         )
 
-    def test_fingers_give_out_still_lowers_finger_strength(self):
+    def test_fingers_give_out_no_longer_moves_finger_strength(self):
+        """A271 framing B — see the sloper test above for the reasoning."""
         neutral = self._profile("cant_hold_hard_moves")
         fingers = self._profile("fingers_give_out")
-        self.assertLess(fingers["finger_strength"], neutral["finger_strength"])
+        self.assertEqual(fingers["finger_strength"], neutral["finger_strength"])
 
     def test_technique_errors_still_lowers_technique(self):
         neutral = self._profile("cant_hold_hard_moves")
         tech = self._profile("technique_errors")
         self.assertLess(tech["technique"], neutral["technique"])
 
-    def test_cant_manage_rests_still_lowers_endurance(self):
-        neutral = self._profile("cant_hold_hard_moves")
-        rests = self._profile("cant_manage_rests")
-        self.assertLess(rests["endurance"], neutral["endurance"])
+    def test_cant_manage_rests_lowers_endurance_only_when_it_is_measured(self):
+        """A271: the endurance penalty needs something measured under it.
+
+        Unmeasured, it was the only thing moving the axis, and through the
+        `< 50` cliff a single dropdown moved `volume_climbing` by 3.5 pp.
+        """
+        self.assertEqual(
+            self._profile("cant_manage_rests")["endurance"],
+            self._profile("cant_hold_hard_moves")["endurance"],
+        )
+        self.assertLess(
+            self._profile("cant_manage_rests", repeater=24)["endurance"],
+            self._profile("cant_hold_hard_moves", repeater=24)["endurance"],
+        )
 
 
 class TestUnknownWeaknessIgnored(unittest.TestCase):

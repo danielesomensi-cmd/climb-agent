@@ -75,12 +75,32 @@ class TestScoring:
         assert profile[body["weakest_axis"]] == min(profile.values())
         assert body["weakest_axis_label"]
 
-    def test_declared_weakness_lowers_its_own_axis(self):
+    def test_declared_weakness_still_reaches_the_engine(self):
         """self_eval has to reach the engine — if the field were dropped the
-        endpoint would still answer 200 with a subtly wrong profile."""
+        endpoint would answer 200 with a subtly wrong profile.
+
+        A271 changed WHICH axis proves it. A self-declaration no longer touches
+        an unmeasured strength axis (framing B: an opinion must not steer a
+        domain weight), so the proof moved to `technique`, which is
+        `self_reported` by construction and where the self-eval is the only
+        input there is.
+        """
         without = client.post(URL, json={**VALID, "primary_weakness": None}).json()
-        with_ = client.post(URL, json={**VALID, "primary_weakness": "fingers_give_out"}).json()
-        assert with_["profile"]["finger_strength"] < without["profile"]["finger_strength"]
+        with_ = client.post(
+            URL, json={**VALID, "primary_weakness": "technique_errors"}
+        ).json()
+        assert with_["profile"]["technique"] < without["profile"]["technique"]
+
+    def test_a_declared_weakness_no_longer_moves_an_unmeasured_strength_axis(self):
+        """A271 framing B, on the acquisition surface."""
+        without = client.post(URL, json={**VALID, "primary_weakness": None}).json()
+        with_ = client.post(
+            URL, json={**VALID, "primary_weakness": "fingers_give_out"}
+        ).json()
+        assert (
+            with_["profile"]["finger_strength"]
+            == without["profile"]["finger_strength"]
+        )
 
     def test_the_rp_os_gap_no_longer_moves_technique(self):
         """A270/D266 inverted this: the gap used to drive the technique bucket.

@@ -199,31 +199,14 @@ _ALL_WEAKNESSES = sorted(
 )
 
 
-# Weaknesses that reach the ENDURANCE axis. They are excluded from the strict
-# bound below and pinned separately in
-# `test_known_residual_a_self_reported_endurance_weakness_still_moves_a_weight`:
-# endurance is `estimated` for 15 of 18 production users, so for them it is a
-# self-report too, and A270 deliberately scopes out the general rule "an
-# estimated axis does not drive weights" (it would also touch finger, pulling
-# and endurance for the 8 users with no tests — see A270 brief §6).
-_ENDURANCE_WEAKNESSES = {
-    w for group in _AXIS_WEAKNESS_PENALTIES["endurance"] for w in group[0]
-}
-
-
-def test_known_residual_a_self_reported_endurance_weakness_still_moves_a_weight():
-    """FINDING, not a passing grade — surfaced by the property test below.
+def test_the_endurance_self_report_leak_is_closed():
+    """Was a 3.5 pp residual at A270; closed by A271 (framing B).
 
     `cant_manage_rests` is a pure self-declaration, and through the endurance
-    axis it still moves `volume_climbing` by ~3.5 pp: endurance drops 10 points
-    and crosses the `< 50` cliff. It is structurally the same defect A270 just
-    removed from technique, on a different axis.
-
-    Out of scope here by decision (A270 brief §6) because the fix — an
-    `estimated` axis does not participate in the weight machinery — also changes
-    finger, pulling and endurance for the 8 users with no tests at all, and
-    deserves its own counterfactual. Pinned so it stays visible and so the
-    follow-up has a number to beat.
+    axis it moved `volume_climbing` by ~3.5 pp — endurance dropped 10 points and
+    crossed the `< 50` cliff. Structurally the same defect A270 removed from
+    technique, on a different axis. A271 gates the endurance penalty on the axis
+    having a real input under it.
     """
     measured = {
         "max_hang_20mm_7s_total_kg": 122,
@@ -241,8 +224,7 @@ def test_known_residual_a_self_reported_endurance_weakness_still_moves_a_weight(
     )
     a = _adjust_domain_weights(_BASE_WEIGHTS["base"], reference)
     b = _adjust_domain_weights(_BASE_WEIGHTS["base"], with_weakness)
-    delta = max(abs(b[k] - a[k]) for k in a)
-    assert 0.03 <= delta <= 0.04, f"residual moved: {delta * 100:.1f}pp"
+    assert max(abs(b[k] - a[k]) for k in a) == 0.0
 
 
 def test_no_self_reported_input_moves_a_weight_by_more_than_two_points():
@@ -252,8 +234,8 @@ def test_no_self_reported_input_moves_a_weight_by_more_than_two_points():
     the measured axes fixed — no domain weight may move by more than 2 pp. The
     +7.5 pp technique distortion would have failed this on the day it shipped.
 
-    Scoped to the weaknesses A270 addresses: the endurance-mapped ones are a
-    known, deliberately deferred residual (see the test above).
+    A271 widened it to every weakness, measured axes or not — see the two tests
+    above, which used to pin the residuals and now pin that they are closed.
     """
     measured_tests = {
         "max_hang_20mm_7s_total_kg": 122,
@@ -263,8 +245,8 @@ def test_no_self_reported_input_moves_a_weight_by_more_than_two_points():
         _assessment(tests=dict(measured_tests), self_eval={}), GOAL
     )
     worst = 0.0
-    candidates = [None] + [w for w in _ALL_WEAKNESSES if w not in _ENDURANCE_WEAKNESSES]
-    for primary, secondary in itertools.product(candidates, repeat=2):
+    # A271 removed the endurance carve-out: the sweep now covers every weakness.
+    for primary, secondary in itertools.product([None] + _ALL_WEAKNESSES, repeat=2):
         if primary == secondary and primary is not None:
             continue
         profile = compute_assessment_profile(
@@ -364,21 +346,15 @@ def test_every_user_becomes_stale_and_that_is_correct(corpus):
     assert stale == 18
 
 
-def test_known_residual_self_report_leaks_through_the_grade_estimate_fallback():
-    """SECOND FINDING from the property sweep, larger than the one A270 removes.
+def test_the_grade_estimate_fallback_leak_is_closed():
+    """Was an 8.3 pp residual at A270 — larger than the one A270 removed.
 
-    When an axis has no test, `_compute_finger_strength` and
-    `_compute_pulling_strength` fall back to a grade estimate **plus the
-    self-eval penalty**, and endurance carries its own. For a user with no tests
-    at all — 8 of the 18 production profiles — a single self-declaration
-    (`cant_manage_rests`) moves a deload weight by **8.3 pp**: more than the
-    +7.5 pp technique distortion D260 called the largest in the engine.
-
-    Deliberately out of A270's scope (brief §6): the fix is the general rule
-    that an `estimated` axis does not participate in the weight machinery, which
-    changes the plan for those 8 users and needs its own counterfactual. A269
-    shipped the field that makes that rule expressible; this test pins the size
-    of the problem it will have to solve.
+    With no test, `_compute_finger_strength` and `_compute_pulling_strength`
+    fell back to a grade estimate **plus the self-eval penalty**, and endurance
+    carried its own. For a user with no tests at all — 8 of the 18 production
+    profiles — one self-declaration (`cant_manage_rests`) moved a deload weight
+    by 8.3 pp, more than the +7.5 pp technique distortion D260 called the
+    largest in the engine. A271 removed the penalty from both fallback branches.
     """
     reference = compute_assessment_profile(_assessment(self_eval={}), GOAL)
     assert reference["power_endurance"] == 50 and reference["technique"] == 50
@@ -387,8 +363,7 @@ def test_known_residual_self_report_leaks_through_the_grade_estimate_fallback():
     )
     a = _adjust_domain_weights(_BASE_WEIGHTS["deload"], reference)
     b = _adjust_domain_weights(_BASE_WEIGHTS["deload"], with_weakness)
-    delta = max(abs(b[k] - a[k]) for k in a)
-    assert 0.08 <= delta <= 0.09, f"residual moved: {delta * 100:.1f}pp"
+    assert max(abs(b[k] - a[k]) for k in a) == 0.0
 
 
 def test_the_coach_gets_the_gap_as_a_hint_with_its_guardrail():
@@ -439,4 +414,5 @@ def test_the_coach_is_never_told_a_self_reported_axis_is_the_weakness():
 
 
 def test_scoring_version_is_bumped():
-    assert PROFILE_SCORING_VERSION == "profile_v2_gap_demoted"
+    # A271 moved it on again; the value is pinned in test_a271_*.
+    assert PROFILE_SCORING_VERSION.startswith("profile_v")

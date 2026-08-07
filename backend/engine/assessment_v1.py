@@ -335,10 +335,13 @@ def _compute_finger_strength(
         ratio = max_hang / bw
         score = (ratio / benchmark) * 100
     else:
-        # Estimate from grades: assume current grade ~ 60-70% of target benchmark
+        # Estimate from grades: assume current grade ~ 60-70% of target benchmark.
+        # A271 (framing B): no self-eval modifier here. This branch runs exactly
+        # when the axis is NOT measured, so the penalty was a self-declaration
+        # steering a domain weight on the axis where the engine knows least —
+        # 8 of 18 production users, up to 8.3 pp on a deload weight. A weak
+        # grade-derived inference may drive the plan; an opinion may not.
         score = _grade_ratio_score(current_grade, target_grade, 70.0)
-        # Self-eval modifier
-        score += _weakness_penalty(self_eval, "finger_strength")
 
     return _clamp(score)
 
@@ -367,8 +370,9 @@ def _compute_pulling_strength(
         ratio = wp_1rm / bw
         score = (ratio / benchmark) * 100
     else:
+        # A271 (framing B): see _compute_finger_strength — no self-eval modifier
+        # on an unmeasured axis.
         score = _grade_ratio_score(current_grade, target_grade, 65.0)
-        score += _weakness_penalty(self_eval, "pulling_strength")
 
     return _clamp(score)
 
@@ -431,12 +435,23 @@ def _compute_endurance(
     experience: Dict[str, Any],
     self_eval: Dict[str, Any],
     tests: Optional[Dict[str, Any]] = None,
+    is_measured: bool = False,
 ) -> int:
+    """A271: ``is_measured`` gates the self-eval penalty.
+
+    Endurance has no test of its own (D260 §3.4) — it is ``0.8 x PE`` plus
+    tenure plus a hang-duration nudge. When nothing measured reaches it, the
+    weakness penalty was the only thing moving it, and through the ``< 50``
+    cliff a single dropdown moved ``volume_climbing`` by 3.5 pp. The penalty now
+    applies only on top of a real input (a repeater through PE, or a measured
+    hang duration).
+    """
     score = pe_score * 0.8
     climbing_years = experience.get("climbing_years") or 0
     score += min(climbing_years * 2, 10)
 
-    score += _weakness_penalty(self_eval, "endurance")
+    if is_measured:
+        score += _weakness_penalty(self_eval, "endurance")
 
     # Max hang duration modifier (Hörst test #3: sustained finger endurance)
     tests = tests or {}
@@ -480,7 +495,7 @@ def _compute_endurance(
 #
 # The values describe what an axis was DERIVED FROM, not how good it is.
 
-PROFILE_SCORING_VERSION = "profile_v2_gap_demoted"  # A270
+PROFILE_SCORING_VERSION = "profile_v3_self_report_unweighted"  # A271
 
 SOURCE_MEASURED = "measured"    # every input to the axis is a measured test
 SOURCE_PARTIAL = "partial"      # at least one measured input + derived/subjective terms
@@ -602,11 +617,18 @@ def compute_assessment_profile(assessment: Dict[str, Any], goal: Dict[str, Any])
     target_grade = goal.get("target_grade", "7c+")
     current_grade = goal.get("current_grade", "7a")
 
+    # A271: provenance is computed first because one axis needs it. It depends
+    # only on `tests_source`, never on the scores, so there is no cycle.
+    source = compute_profile_source(assessment)
+
     finger = _compute_finger_strength(tests, body, self_eval, target_grade, current_grade)
     pulling = _compute_pulling_strength(tests, body, self_eval, target_grade, current_grade)
     pe = _compute_power_endurance(self_eval, tests, target_grade)
     technique = _compute_technique(self_eval)
-    endurance = _compute_endurance(pe, experience, self_eval, tests)
+    endurance = _compute_endurance(
+        pe, experience, self_eval, tests,
+        is_measured=source["endurance"] in (SOURCE_MEASURED, SOURCE_PARTIAL),
+    )
 
     return {
         "finger_strength": finger,

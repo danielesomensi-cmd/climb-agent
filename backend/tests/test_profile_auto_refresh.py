@@ -245,9 +245,13 @@ class TestDanieleReproduction(unittest.TestCase):
         assert profile["pulling_strength"] == 100
         assert profile["power_endurance"] == 50
         assert profile["technique"] == 40
-        assert profile["endurance"] == 45
+        # A271: 50, not 45 — endurance is `estimated` here (no repeater, no
+        # measured hang duration), so the `pump_too_early` penalty no longer
+        # applies. An opinion may not move an axis with nothing measured under it.
+        assert profile["endurance"] == 50
         assert state["assessment"]["profile_source"]["power_endurance"] == "estimated"
         assert state["assessment"]["profile_source"]["technique"] == "self_reported"
+        assert state["assessment"]["profile_source"]["endurance"] == "estimated"
 
 
 if __name__ == "__main__":

@@ -47,7 +47,7 @@ def test_scoring_matches_the_pinned_corpus(corpus):
     """The 18 real profiles score exactly as pinned.
 
     `expected_profile` froze the pre-A270 (v1) scoring and was A269's safety
-    net; `expected_profile_v2` is the current rules. A270 deliberately moved
+    net; `expected_profile_v3` is the current rules. A270 deliberately moved
     three axes — which three, and by how much, is asserted in
     `test_a270_gap_demotion.py`. This one keeps the corpus honest.
 
@@ -56,7 +56,7 @@ def test_scoring_matches_the_pinned_corpus(corpus):
     assert len(corpus) == 18
     for user in corpus:
         got = compute_assessment_profile(user["assessment"], user["goal"])
-        assert got == user["expected_profile_v2"], f"scoring moved for {user['uid']}"
+        assert got == user["expected_profile_v3"], f"scoring moved for {user['uid']}"
 
 
 def test_with_source_returns_the_same_profile(corpus):
@@ -259,10 +259,16 @@ def test_production_corpus_provenance_distribution(corpus):
         for axis, value in compute_profile_source(user["assessment"]).items():
             counts[axis][value] = counts[axis].get(value, 0) + 1
 
+    # A271 (m003) raised coverage sharply: four users had a real finger number
+    # and an empty `tests_source` because they onboarded before D214, so their
+    # measured axes read as estimated. Finger went 12 -> 8 estimated, pulling
+    # 13 -> 8, PE partial 1 -> 3, endurance partial 3 -> 6.
     assert counts["technique"] == {SOURCE_SELF_REPORTED: 18}  # A270
-    assert counts["finger_strength"][SOURCE_ESTIMATED] == 12
-    assert counts["pulling_strength"][SOURCE_ESTIMATED] == 13
-    assert counts["power_endurance"][SOURCE_PARTIAL] == 1
+    assert counts["finger_strength"] == {SOURCE_MEASURED: 10, SOURCE_ESTIMATED: 8}
+    assert counts["pulling_strength"] == {SOURCE_MEASURED: 10, SOURCE_ESTIMATED: 8}
+    assert counts["power_endurance"] == {SOURCE_ESTIMATED: 15, SOURCE_PARTIAL: 3}
+    assert counts["endurance"] == {SOURCE_ESTIMATED: 12, SOURCE_PARTIAL: 6}
+    # PE and endurance can never be `measured`: neither has a test of its own.
     assert SOURCE_MEASURED not in counts["power_endurance"]
     assert SOURCE_MEASURED not in counts["endurance"]
 

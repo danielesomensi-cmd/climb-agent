@@ -31,8 +31,14 @@ from backend.engine.assessment_v1 import (
 )
 
 
-def migrate(state: Dict[str, Any]) -> bool:
-    """Fill profile_source / profile_scoring_version. Returns True if mutated."""
+def migrate(state: Dict[str, Any], force: bool = False) -> bool:
+    """Fill profile_source / profile_scoring_version. Returns True if mutated.
+
+    ``force`` (A271): recompute an existing ``profile_source`` instead of
+    leaving it alone. Passed by ``load_state`` when ``m003`` has just widened
+    ``tests_source`` — the stored provenance was derived from a sidecar that was
+    still blind, so keeping it would preserve exactly the wrong answer.
+    """
     if not isinstance(state, dict):
         return False
 
@@ -47,9 +53,11 @@ def migrate(state: Dict[str, Any]) -> bool:
     mutated = False
 
     existing = assessment.get("profile_source")
-    if not isinstance(existing, dict) or not existing:
-        assessment["profile_source"] = compute_profile_source(assessment)
-        mutated = True
+    if force or not isinstance(existing, dict) or not existing:
+        recomputed = compute_profile_source(assessment)
+        if recomputed != existing:
+            assessment["profile_source"] = recomputed
+            mutated = True
 
     if not assessment.get("profile_scoring_version"):
         # Everything stored before A270 was produced by the v1 rules. Stamping

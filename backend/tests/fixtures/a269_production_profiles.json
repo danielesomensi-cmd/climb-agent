@@ -25,7 +25,12 @@
     "max_hang_20mm_7s_total_kg": 87,
     "weighted_pullup_1rm_total_kg": 93
    },
-   "tests_source": {}
+   "tests_source": {
+    "hip_flexibility_cm": "measured",
+    "max_hang_20mm_5s_total_kg": "measured",
+    "max_hang_20mm_7s_total_kg": "measured",
+    "weighted_pullup_1rm_total_kg": "measured"
+   }
   },
   "expected_profile": {
    "endurance": 47,
@@ -36,6 +41,13 @@
   },
   "expected_profile_v2": {
    "endurance": 45,
+   "finger_strength": 100,
+   "power_endurance": 50,
+   "pulling_strength": 100,
+   "technique": 40
+  },
+  "expected_profile_v3": {
+   "endurance": 50,
    "finger_strength": 100,
    "power_endurance": 50,
    "pulling_strength": 100,
@@ -116,6 +128,13 @@
    "pulling_strength": 96,
    "technique": 40
   },
+  "expected_profile_v3": {
+   "endurance": 65,
+   "finger_strength": 100,
+   "power_endurance": 70,
+   "pulling_strength": 96,
+   "technique": 40
+  },
   "goal": {
    "current_grade": "8a+",
    "goal_type": "lead_grade",
@@ -168,6 +187,13 @@
    "pulling_strength": 46,
    "technique": 50
   },
+  "expected_profile_v3": {
+   "endurance": 50,
+   "finger_strength": 61,
+   "power_endurance": 50,
+   "pulling_strength": 56,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "7a+",
    "goal_type": "all_round",
@@ -213,6 +239,13 @@
   },
   "expected_profile_v2": {
    "endurance": 45,
+   "finger_strength": 60,
+   "power_endurance": 50,
+   "pulling_strength": 56,
+   "technique": 40
+  },
+  "expected_profile_v3": {
+   "endurance": 50,
    "finger_strength": 60,
    "power_endurance": 50,
    "pulling_strength": 56,
@@ -268,6 +301,13 @@
    "pulling_strength": 46,
    "technique": 50
   },
+  "expected_profile_v3": {
+   "endurance": 50,
+   "finger_strength": 55,
+   "power_endurance": 50,
+   "pulling_strength": 51,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "8a",
    "goal_type": "lead_grade",
@@ -316,6 +356,13 @@
   "expected_profile_v2": {
    "endurance": 43,
    "finger_strength": 35,
+   "power_endurance": 50,
+   "pulling_strength": 46,
+   "technique": 50
+  },
+  "expected_profile_v3": {
+   "endurance": 48,
+   "finger_strength": 50,
    "power_endurance": 50,
    "pulling_strength": 46,
    "technique": 50
@@ -378,6 +425,13 @@
    "technique": 60
   },
   "expected_profile_v2": {
+   "endurance": 32,
+   "finger_strength": 84,
+   "power_endurance": 50,
+   "pulling_strength": 55,
+   "technique": 50
+  },
+  "expected_profile_v3": {
    "endurance": 32,
    "finger_strength": 84,
    "power_endurance": 50,
@@ -452,6 +506,13 @@
    "pulling_strength": 43,
    "technique": 45
   },
+  "expected_profile_v3": {
+   "endurance": 46,
+   "finger_strength": 100,
+   "power_endurance": 50,
+   "pulling_strength": 43,
+   "technique": 45
+  },
   "goal": {
    "current_grade": "7B",
    "goal_type": "boulder_grade",
@@ -516,6 +577,13 @@
    "pulling_strength": 90,
    "technique": 45
   },
+  "expected_profile_v3": {
+   "endurance": 48,
+   "finger_strength": 98,
+   "power_endurance": 50,
+   "pulling_strength": 90,
+   "technique": 45
+  },
   "goal": {
    "current_grade": "7C+",
    "goal_type": "boulder_grade",
@@ -566,6 +634,13 @@
    "pulling_strength": 55,
    "technique": 50
   },
+  "expected_profile_v3": {
+   "endurance": 48,
+   "finger_strength": 64,
+   "power_endurance": 50,
+   "pulling_strength": 60,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "6c+",
    "goal_type": "lead_grade",
@@ -607,7 +682,12 @@
     "lp_max_lift_5s_right_kg": 35,
     "weighted_pullup_1rm_total_kg": 90
    },
-   "tests_source": {}
+   "tests_source": {
+    "l_sit_hold_seconds": "measured",
+    "lp_max_lift_5s_left_kg": "measured",
+    "lp_max_lift_5s_right_kg": "measured",
+    "weighted_pullup_1rm_total_kg": "measured"
+   }
   },
   "expected_profile": {
    "endurance": 42,
@@ -617,6 +697,13 @@
    "technique": 40
   },
   "expected_profile_v2": {
+   "endurance": 50,
+   "finger_strength": 69,
+   "power_endurance": 50,
+   "pulling_strength": 89,
+   "technique": 50
+  },
+  "expected_profile_v3": {
    "endurance": 50,
    "finger_strength": 69,
    "power_endurance": 50,
@@ -661,7 +748,10 @@
     "max_hang_duration_20mm_seconds": 68,
     "weighted_pullup_1rm_total_kg": 64
    },
-   "tests_source": {}
+   "tests_source": {
+    "max_hang_duration_20mm_seconds": "measured",
+    "weighted_pullup_1rm_total_kg": "measured"
+   }
   },
   "expected_profile": {
    "endurance": 51,
@@ -671,6 +761,13 @@
    "technique": 60
   },
   "expected_profile_v2": {
+   "endurance": 49,
+   "finger_strength": 60,
+   "power_endurance": 50,
+   "pulling_strength": 88,
+   "technique": 50
+  },
+  "expected_profile_v3": {
    "endurance": 49,
    "finger_strength": 60,
    "power_endurance": 50,
@@ -723,6 +820,7 @@
     "max_hang_20mm_5s_total_kg": "measured",
     "max_hang_20mm_7s_total_kg": "measured",
     "max_hang_duration_20mm_seconds": "measured",
+    "max_pullups_bw": "measured",
     "weighted_pullup_1rm_total_kg": "measured"
    }
   },
@@ -734,6 +832,13 @@
    "technique": 60
   },
   "expected_profile_v2": {
+   "endurance": 41,
+   "finger_strength": 91,
+   "power_endurance": 50,
+   "pulling_strength": 91,
+   "technique": 50
+  },
+  "expected_profile_v3": {
    "endurance": 41,
    "finger_strength": 91,
    "power_endurance": 50,
@@ -786,6 +891,13 @@
     "weighted_pullup_2rm_total_kg": 78.0
    },
    "tests_source": {
+    "hip_flexibility_cm": "measured",
+    "l_sit_hold_seconds": "measured",
+    "lp_max_lift_5s_left_kg": "measured",
+    "lp_max_lift_5s_right_kg": "measured",
+    "max_hang_duration_20mm_seconds": "measured",
+    "repeater_7_3_max_sets_20mm": "measured",
+    "weighted_pullup_1rm_total_kg": "measured",
     "weighted_pullup_2rm_total_kg": "measured"
    }
   },
@@ -797,6 +909,13 @@
    "technique": 60
   },
   "expected_profile_v2": {
+   "endurance": 48,
+   "finger_strength": 71,
+   "power_endurance": 49,
+   "pulling_strength": 74,
+   "technique": 50
+  },
+  "expected_profile_v3": {
    "endurance": 48,
    "finger_strength": 71,
    "power_endurance": 49,
@@ -863,6 +982,13 @@
    "pulling_strength": 68,
    "technique": 50
   },
+  "expected_profile_v3": {
+   "endurance": 50,
+   "finger_strength": 64,
+   "power_endurance": 50,
+   "pulling_strength": 68,
+   "technique": 50
+  },
   "goal": {
    "current_grade": "8A",
    "goal_type": "boulder_grade",
@@ -905,7 +1031,12 @@
     "repeater_7_3_max_sets_20mm": 27,
     "weighted_pullup_1rm_total_kg": 92
    },
-   "tests_source": {}
+   "tests_source": {
+    "max_hang_20mm_5s_total_kg": "measured",
+    "max_hang_20mm_7s_total_kg": "measured",
+    "repeater_7_3_max_sets_20mm": "measured",
+    "weighted_pullup_1rm_total_kg": "measured"
+   }
   },
   "expected_profile": {
    "endurance": 54,
@@ -915,6 +1046,13 @@
    "technique": 60
   },
   "expected_profile_v2": {
+   "endurance": 66,
+   "finger_strength": 97,
+   "power_endurance": 82,
+   "pulling_strength": 87,
+   "technique": 50
+  },
+  "expected_profile_v3": {
    "endurance": 66,
    "finger_strength": 97,
    "power_endurance": 82,
@@ -971,6 +1109,13 @@
    "pulling_strength": 26,
    "technique": 40
   },
+  "expected_profile_v3": {
+   "endurance": 50,
+   "finger_strength": 28,
+   "power_endurance": 50,
+   "pulling_strength": 26,
+   "technique": 40
+  },
   "goal": {
    "current_grade": "5b",
    "goal_type": "lead_grade",
@@ -1018,6 +1163,13 @@
   },
   "expected_profile_v2": {
    "endurance": 41,
+   "finger_strength": 61,
+   "power_endurance": 50,
+   "pulling_strength": 57,
+   "technique": 40
+  },
+  "expected_profile_v3": {
+   "endurance": 46,
    "finger_strength": 61,
    "power_endurance": 50,
    "pulling_strength": 57,
