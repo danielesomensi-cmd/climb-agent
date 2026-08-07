@@ -313,6 +313,26 @@ def read_outdoor_logs(
     return [by_date[d] for d in sorted(by_date)]
 
 
+def read_outdoor_log_rows(
+    user_id: Optional[str],
+    since_date: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Backend parity with the Supabase read_outdoor_log_rows.
+
+    The JSONL log has no separate save-timestamp column, so `created_at` is
+    whatever the entry itself carries — usually nothing. Callers must treat a
+    missing created_at as "no anchor", never as "now".
+    """
+    return [
+        {
+            "session_date": e.get("date", ""),
+            "entry": e,
+            "created_at": e.get("created_at") or e.get("completed_at"),
+        }
+        for e in read_outdoor_logs(user_id, since_date)
+    ]
+
+
 def outdoor_log_date_exists(user_id: Optional[str], date: str) -> bool:
     """Check whether an outdoor log entry exists for a given date."""
     log_path = _outdoor_log_path_for_date(user_id, date)

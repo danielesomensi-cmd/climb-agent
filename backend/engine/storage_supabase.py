@@ -345,6 +345,24 @@ def read_outdoor_logs(
     return [row["entry"] for row in r.data]
 
 
+def read_outdoor_log_rows(
+    user_id: Optional[str],
+    since_date: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Same rows as read_outdoor_logs, but keeping session_date and created_at.
+
+    The training_log export needs the save timestamp: for an outdoor session it
+    is the only anchor that can turn the typed duration into a clock time, and
+    read_outdoor_logs throws it away by projecting to `entry`.
+    """
+    uid = _effective_uid(user_id)
+    q = _sb().table("outdoor_logs").select("session_date,entry,created_at").eq("user_id", uid)
+    if since_date:
+        q = q.gte("session_date", since_date)
+    q = q.order("session_date")
+    return q.execute().data
+
+
 def outdoor_log_date_exists(user_id: Optional[str], date: str) -> bool:
     """Check if an outdoor log entry exists for a given date."""
     uid = _effective_uid(user_id)

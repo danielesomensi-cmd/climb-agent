@@ -321,3 +321,50 @@ def test_skipped_session_carries_no_times():
     row = etl.build_rows(state)[0]
     assert row["ora_inizio"] == "" and row["ora_fine"] == ""
     assert row["orari_fonte"] == "manuale"
+
+
+def test_outdoor_log_rows_keep_the_save_timestamp(tmp_path, monkeypatch):
+    """The file backend must expose the same shape the exporter indexes.
+
+    read_outdoor_logs projects to `entry` and drops the save timestamp — the one
+    field that turns a typed duration into a clock time. This pins the parity so
+    the exporter's --user-id path cannot silently lose outdoor times when it
+    runs against the file backend.
+    """
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    import importlib
+    from backend.engine import storage_file
+    importlib.reload(storage_file)
+
+    log_dir = tmp_path / "users" / "u1" / "logs"
+    log_dir.mkdir(parents=True)
+    (log_dir / "outdoor_sessions_2026-07.jsonl").write_text(
+        '{"date": "2026-07-19", "duration_minutes": 493, '
+        '"completed_at": "2026-07-19T19:54:09+00:00"}\n',
+        encoding="utf-8",
+    )
+
+    rows = storage_file.read_outdoor_log_rows("u1")
+    assert rows and rows[0]["session_date"] == "2026-07-19"
+    assert rows[0]["created_at"] == "2026-07-19T19:54:09+00:00"
+    assert rows[0]["entry"]["duration_minutes"] == 493
+
+    # …and the exporter turns exactly that shape into times.
+    idx = etl.index_outdoor_details(rows)
+    state = {"session_completion_log": [], "outdoor_log": [
+        {"date": "2026-07-19", "spot_name": "Berdorf", "load_score": 35}]}
+    row = etl.build_rows(state, outdoor_details=idx)[0]
+    assert row["orari_fonte"] == "salvataggio_stimato"
+    assert row["ora_inizio"] == "13:41" and row["ora_fine"] == "21:54"
+
+
+def test_outdoor_log_rows_without_a_timestamp_yield_no_times():
+    """No created_at means no anchor — never fall back to 'now'."""
+    rows = [{"session_date": "2026-07-19", "created_at": None,
+             "entry": {"duration_minutes": 493}}]
+    idx = etl.index_outdoor_details(rows)
+    state = {"session_completion_log": [], "outdoor_log": [
+        {"date": "2026-07-19", "spot_name": "Berdorf", "load_score": 35}]}
+    row = etl.build_rows(state, outdoor_details=idx)[0]
+    assert row["orari_fonte"] == "manuale"
+    assert row["ora_inizio"] == "" and row["ora_fine"] == ""

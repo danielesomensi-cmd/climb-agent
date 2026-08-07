@@ -47,13 +47,17 @@ than an empty field):
   - an outdoor session saved the day after is left with NO times: its save
     timestamp says nothing about when the athlete was on the rock.
 
-The outdoor detail (--outdoor-logs) exists because the bookkeeping array inside
-the state export carries only date/spot/load — the duration the athlete typed
-lives in the append-only `outdoor_logs` table and never reaches the backup. It
-is optional: without it every outdoor row stays `manuale`, exactly as before.
+Two things the backup JSON does not contain: the archived weeks (so historical
+loads come out empty) and the duration the athlete typed for an outdoor session
+(so every crag row comes out without times — the bookkeeping array in the state
+carries only date/spot/load). --user-id reads both straight from storage, which
+is why it is the supported way to refresh the CSV:
 
-    python -c "..."  > outdoor_logs.json   # rows: session_date, entry, created_at
-    python scripts/export_training_log.py backup.json --outdoor-logs outdoor_logs.json
+    python scripts/export_training_log.py --user-id <uid> --days 60 \
+        -o ~/Projects/health-vault/training_log.csv
+
+--outdoor-logs stays for the backup-file path: a JSON dump of the table rows
+(session_date / entry / created_at). Without either, outdoor rows stay `manuale`.
 
 All timestamps in the state are UTC; the athlete's TZ is Europe/Luxembourg
 (same offset as the stored Europe/Brussels), converted here.
@@ -775,7 +779,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument(
         "--outdoor-logs",
         help="JSON dump of the outdoor_logs table rows (session_date/entry/created_at). "
-             "Without it every outdoor row stays 'manuale'.",
+             "Only needed with a backup JSON: --user-id reads the table itself.",
     )
     args = ap.parse_args(argv)
 
@@ -794,6 +798,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     outdoor_details = None
     if args.outdoor_logs:
         outdoor_details = index_outdoor_details(json.loads(Path(args.outdoor_logs).read_text()))
+    elif args.user_id:
+        # Same reason as the archive: the duration lives in the outdoor_logs
+        # table, so reading straight from storage is the only way one command
+        # produces a complete CSV.
+        from backend.engine import storage
+        outdoor_details = index_outdoor_details(storage.read_outdoor_log_rows(args.user_id))
 
     since = args.since
     if args.days and not since:
