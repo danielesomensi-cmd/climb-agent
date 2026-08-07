@@ -14,12 +14,18 @@ Design contract (mirrors the health-vault mini-brief, 2026-08):
     data          YYYY-MM-DD (join key)
     ora_inizio    HH:MM local (Europe/Luxembourg) — BLANK when not real
     ora_fine      HH:MM local (Europe/Luxembourg)
-    orari_fonte   timer_reale | tap_stimato | manuale — the fidelity of the times
+    orari_fonte   timer_reale | tap_stimato | salvataggio_stimato | manuale
+                  — the fidelity of the times
                   timer_reale = real start AND end from a running timer
                   tap_stimato = real end, start reconstructed from the duration
                                 (or start blank when no duration was recorded)
-                  manuale     = NO reliable times on this row (outdoor logs,
-                                skipped sessions) — both time columns are blank
+                  salvataggio_stimato = outdoor log saved the same day: the SAVE
+                                timestamp stands in for the end, start = save −
+                                the duration the athlete typed. Same fidelity
+                                class as tap_stimato, one step weaker: nobody
+                                saves at the exact second they stop climbing.
+                  manuale     = NO reliable times on this row (outdoor logs saved
+                                a day late, skipped sessions) — columns blank
     tipo          boulder_indoor|corda_indoor|falesia_outdoor|hangboard|pesi|cardio
     load          0-85 engine load (comparable indoor/outdoor by design, D151)
     load_fonte    actual | prescribed | free_session | outdoor_grade | unavailable
@@ -38,6 +44,16 @@ than an empty field):
     tapped, not the end of a workout (see rows_from_completion_log).
   - outdoor logs double-submitted within seconds are collapsed to one session,
     and each dropped copy is reported on stderr (see dedupe_outdoor).
+  - an outdoor session saved the day after is left with NO times: its save
+    timestamp says nothing about when the athlete was on the rock.
+
+The outdoor detail (--outdoor-logs) exists because the bookkeeping array inside
+the state export carries only date/spot/load — the duration the athlete typed
+lives in the append-only `outdoor_logs` table and never reaches the backup. It
+is optional: without it every outdoor row stays `manuale`, exactly as before.
+
+    python -c "..."  > outdoor_logs.json   # rows: session_date, entry, created_at
+    python scripts/export_training_log.py backup.json --outdoor-logs outdoor_logs.json
 
 All timestamps in the state are UTC; the athlete's TZ is Europe/Luxembourg
 (same offset as the stored Europe/Brussels), converted here.
@@ -476,7 +492,64 @@ def dedupe_outdoor(entries: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]],
     return kept, dropped
 
 
-def rows_from_outdoor(state: Dict[str, Any]) -> List[dict]:
+def index_outdoor_details(detail_rows: Any) -> Dict[str, Dict[str, Any]]:
+    """Index the `outdoor_logs` table rows by session date.
+
+    Accepts the raw table rows (session_date / entry / created_at). The state's
+    bookkeeping array is keyed one-entry-per-date (B277), so this is too; on the
+    rare duplicate the earliest save wins, since a re-save minutes later is a
+    correction typed from memory, not a second visit to the crag.
+    """
+    index: Dict[str, Dict[str, Any]] = {}
+    for row in detail_rows or []:
+        if not isinstance(row, dict):
+            continue
+        entry = row.get("entry") if isinstance(row.get("entry"), dict) else row
+        date = row.get("session_date") or entry.get("date")
+        if not date:
+            continue
+        created = row.get("created_at") or entry.get("created_at")
+        prev = index.get(date)
+        if prev is not None:
+            prev_dt, new_dt = _parse_iso(prev.get("created_at")), _parse_iso(created)
+            if prev_dt and new_dt and prev_dt <= new_dt:
+                continue
+        index[date] = {
+            "created_at": created,
+            "duration_minutes": entry.get("duration_minutes"),
+        }
+    return index
+
+
+def _outdoor_times_from_save(date: str, detail: Optional[Dict[str, Any]]) -> Tuple[str, str, str]:
+    """(ora_inizio, ora_fine, orari_fonte) for one outdoor row.
+
+    The save timestamp is only allowed to stand in for the end when the log was
+    saved on the session's own day. Saved the morning after — six of Daniele's
+    fifteen crag days — it carries no information about when he was climbing,
+    and a reconstructed window would quietly poison the night-validity criteria
+    it feeds in health-vault. Those rows stay blank on purpose.
+    """
+    if not detail:
+        return "", "", "manuale"
+    duration = detail.get("duration_minutes")
+    created = _parse_iso(detail.get("created_at"))
+    if not created or not isinstance(duration, (int, float)) or duration <= 0:
+        return "", "", "manuale"
+    end = created.astimezone(LOCAL_TZ)
+    if end.strftime("%Y-%m-%d") != date:
+        return "", "", "manuale"
+    start = end - timedelta(minutes=float(duration))
+    # A start that falls on the previous day contradicts the row's own date.
+    if start.strftime("%Y-%m-%d") != date:
+        return "", "", "manuale"
+    return start.strftime("%H:%M"), end.strftime("%H:%M"), "salvataggio_stimato"
+
+
+def rows_from_outdoor(
+    state: Dict[str, Any],
+    details: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> List[dict]:
     rows: List[dict] = []
     entries, dropped = dedupe_outdoor(state.get("outdoor_log") or [])
     if dropped:
@@ -496,7 +569,9 @@ def rows_from_outdoor(state: Dict[str, Any]) -> List[dict]:
         if started_at and finished_at:
             ora_inizio, ora_fine, fonte = _hhmm_local(started_at), _hhmm_local(finished_at), "timer_reale"
         else:
-            ora_inizio, ora_fine, fonte = "", "", "manuale"
+            ora_inizio, ora_fine, fonte = _outdoor_times_from_save(
+                date, (details or {}).get(date)
+            )
         rows.append({
             "data": date,
             "ora_inizio": ora_inizio,
@@ -584,12 +659,16 @@ def _index_week_plan_slots(state: Dict[str, Any]) -> Dict[Tuple[str, str], dict]
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
-def build_rows(state: Dict[str, Any], since: Optional[str] = None) -> List[dict]:
+def build_rows(
+    state: Dict[str, Any],
+    since: Optional[str] = None,
+    outdoor_details: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> List[dict]:
     catalog = load_session_catalog()
     rows = (
         rows_from_completion_log(state, catalog)
         + rows_from_free_sessions(state)
-        + rows_from_outdoor(state)
+        + rows_from_outdoor(state, outdoor_details)
     )
     if since:
         rows = [r for r in rows if r["data"] >= since]
@@ -605,9 +684,17 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("-o", "--out", help="Output CSV path (default: stdout)")
     ap.add_argument("--days", type=int, help="Only sessions from the last N days")
     ap.add_argument("--since", help="Only sessions on/after YYYY-MM-DD")
+    ap.add_argument(
+        "--outdoor-logs",
+        help="JSON dump of the outdoor_logs table rows (session_date/entry/created_at). "
+             "Without it every outdoor row stays 'manuale'.",
+    )
     args = ap.parse_args(argv)
 
     state = json.loads(Path(args.backup).read_text())
+    outdoor_details = None
+    if args.outdoor_logs:
+        outdoor_details = index_outdoor_details(json.loads(Path(args.outdoor_logs).read_text()))
 
     since = args.since
     if args.days and not since:
@@ -618,7 +705,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         base = anchor or datetime.now(LOCAL_TZ).strftime("%Y-%m-%d")
         since = (datetime.strptime(base, "%Y-%m-%d") - timedelta(days=args.days)).strftime("%Y-%m-%d")
 
-    rows = build_rows(state, since=since)
+    rows = build_rows(state, since=since, outdoor_details=outdoor_details)
 
     fh = open(args.out, "w", newline="") if args.out else sys.stdout
     try:
@@ -628,6 +715,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     finally:
         if args.out:
             fh.close()
+    if outdoor_details is not None:
+        outdoor_rows = [r for r in rows if r["tipo"] == "falesia_outdoor"]
+        got = sum(1 for r in outdoor_rows if r["orari_fonte"] == "salvataggio_stimato")
+        # Say out loud how many stayed blank: a silent 6-of-15 reads as "covered".
+        print(
+            f"# outdoor: {got}/{len(outdoor_rows)} righe con orari dal salvataggio "
+            f"({len(outdoor_rows) - got} salvate in ritardo → orari vuoti)",
+            file=sys.stderr,
+        )
     print(f"# {len(rows)} sessions exported", file=sys.stderr)
     return 0
 

@@ -106,3 +106,98 @@ def test_since_filter():
     rows = etl.build_rows(BASE_STATE, since="2026-08-02")
     assert all(r["data"] >= "2026-08-02" for r in rows)
     assert rows  # 2026-08-05 rows survive
+
+
+# ── outdoor times reconstructed from the save timestamp ─────────────────────
+# The state's bookkeeping array has no duration; the outdoor_logs table does.
+# These pin when that duration is allowed to become a clock time and when not.
+
+OUTDOOR_STATE = {
+    "session_completion_log": [],
+    "outdoor_log": [
+        {"date": "2026-07-19", "spot_name": "Berdorf", "load_score": 40},   # saved same day
+        {"date": "2026-08-05", "spot_name": "Berdorf", "load_score": 24},   # saved next day
+        {"date": "2026-07-21", "spot_name": "Berdorf", "load_score": 30},   # no detail row
+    ],
+}
+OUTDOOR_DETAIL_ROWS = [
+    {"session_date": "2026-07-19", "created_at": "2026-07-19T19:54:09+00:00",
+     "entry": {"date": "2026-07-19", "duration_minutes": 493}},
+    {"session_date": "2026-08-05", "created_at": "2026-08-06T10:23:14+00:00",
+     "entry": {"date": "2026-08-05", "duration_minutes": 120}},
+]
+
+
+def _outdoor_rows(details=None):
+    idx = etl.index_outdoor_details(details) if details is not None else None
+    return {r["data"]: r for r in etl.build_rows(OUTDOOR_STATE, outdoor_details=idx)}
+
+
+def test_outdoor_saved_same_day_gets_times_from_the_save():
+    r = _outdoor_rows(OUTDOOR_DETAIL_ROWS)["2026-07-19"]
+    assert r["orari_fonte"] == "salvataggio_stimato"
+    assert r["ora_fine"] == "21:54"            # 19:54 UTC → CEST, the save
+    assert r["ora_inizio"] == "13:41"          # save − 493 min
+
+
+def test_outdoor_saved_the_day_after_stays_blank():
+    # The motivating case: 05/08 Berdorf, logged the next morning. A window
+    # reconstructed from a 10:23 save would be fiction, and it feeds the
+    # night-validity criteria in health-vault.
+    r = _outdoor_rows(OUTDOOR_DETAIL_ROWS)["2026-08-05"]
+    assert r["orari_fonte"] == "manuale"
+    assert r["ora_inizio"] == "" and r["ora_fine"] == ""
+
+
+def test_outdoor_without_a_detail_row_stays_blank():
+    r = _outdoor_rows(OUTDOOR_DETAIL_ROWS)["2026-07-21"]
+    assert r["orari_fonte"] == "manuale"
+    assert r["ora_inizio"] == ""
+
+
+def test_outdoor_details_are_optional_and_change_nothing_when_absent():
+    # Backwards compatibility: no --outdoor-logs → the old behaviour, exactly.
+    rows = _outdoor_rows(None)
+    assert {r["orari_fonte"] for r in rows.values()} == {"manuale"}
+    assert all(r["ora_inizio"] == "" and r["ora_fine"] == "" for r in rows.values())
+
+
+def test_start_falling_on_the_previous_day_is_refused():
+    # 09:00 save minus 10h would start at 23:00 the day before, contradicting
+    # the row's own date → refuse rather than emit a cross-midnight window.
+    detail = [{"session_date": "2026-07-19", "created_at": "2026-07-19T07:00:00+00:00",
+               "entry": {"duration_minutes": 600}}]
+    r = _outdoor_rows(detail)["2026-07-19"]
+    assert r["orari_fonte"] == "manuale"
+    assert r["ora_inizio"] == ""
+
+
+def test_zero_or_missing_duration_is_not_a_zero_length_session():
+    for bad in (0, None, "molto"):
+        detail = [{"session_date": "2026-07-19", "created_at": "2026-07-19T19:54:09+00:00",
+                   "entry": {"duration_minutes": bad}}]
+        r = _outdoor_rows(detail)["2026-07-19"]
+        assert r["orari_fonte"] == "manuale", bad
+
+
+def test_duplicate_detail_rows_keep_the_earliest_save():
+    detail = [
+        {"session_date": "2026-07-19", "created_at": "2026-07-19T20:30:00+00:00",
+         "entry": {"duration_minutes": 60}},
+        {"session_date": "2026-07-19", "created_at": "2026-07-19T19:54:09+00:00",
+         "entry": {"duration_minutes": 493}},
+    ]
+    idx = etl.index_outdoor_details(detail)
+    assert idx["2026-07-19"]["duration_minutes"] == 493
+
+
+def test_a_real_outdoor_timer_still_wins_over_the_save_estimate():
+    state = {"session_completion_log": [], "outdoor_log": [
+        {"date": "2026-07-19", "spot_name": "Berdorf", "load_score": 40,
+         "started_at": "2026-07-19T09:00:00+00:00",
+         "finished_at": "2026-07-19T12:00:00+00:00"},
+    ]}
+    idx = etl.index_outdoor_details(OUTDOOR_DETAIL_ROWS)
+    r = etl.build_rows(state, outdoor_details=idx)[0]
+    assert r["orari_fonte"] == "timer_reale"
+    assert r["ora_inizio"] == "11:00" and r["ora_fine"] == "14:00"
