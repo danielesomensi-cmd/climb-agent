@@ -229,22 +229,32 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 | Canceled storici | 3 |
 | **Attivazione (≥1 sessione completata)** | **4 utenti su 20**, di cui 1 è l'autore |
 
-**Lettura onesta:** la coorte del re-lancio del 21 luglio è **persa** — 0 carte, trial scaduti il 5
-agosto. I due iscritti del 5 agosto (uno arrivato dall'app Reddit, referrer
+**Lettura onesta (aggiornata 2026-08-08):** la coorte del re-lancio del 21 luglio è **persa** — 0 carte,
+trial scaduti il 5 agosto. I due iscritti del 5 agosto (uno arrivato dall'app Reddit, referrer
 `android-app://com.reddit.frontpage/`, l'altro diretto) hanno completato l'onboarding e generato il
-macrociclo, poi **zero sessioni e zero ritorni**. Il canale resta il problema principale — r/climbharder
-non è mai stato pubblicato — ma il numero che [[B326]] ha reso visibile è un secondo problema, distinto:
+macrociclo, poi **zero sessioni e zero ritorni**. Nel frattempo il post su **r/climbharder è stato
+pubblicato ed è finito in un ban** (vedi GTM-05): due giorni online, commenti negativi sul testo
+«scritto con l'AI», canale chiuso. Quindi il canale **non è più il problema principale, perché non
+c'è più un canale** — e resta in piedi, intatto, il numero che [[B326]] ha reso visibile:
 **su 20 registrati solo 4 hanno mai completato una sessione**, e l'unico terzo con uso vero
 (`ckb.palmer`, 20 sessioni) si è fermato il **7 aprile**. Portare traffico su un funnel che perde tutti
 tra macrociclo generato e prima sessione moltiplica per zero.
 
-### Prossimo passo — attivazione, poi GTM-05
+### Prossimo passo — attivazione (l'unica cosa rimasta da fare)
 
-> [[D273]] (2026-08-07) ha spostato la priorità. Il canale non è il collo di bottiglia più
-> stretto: su 20 registrati **4 hanno mai completato una sessione** e nessun terzo da 4 mesi.
-> Il salto che perde tutti è **macrociclo generato → prima sessione**, e le cause sono
-> misurate (report: `docs/audit/D273_first_session_activation.md`). Traffico nuovo sopra
-> questo salto si moltiplica per zero.
+> [[D273]] (2026-08-07) aveva spostato la priorità **prima** che il post uscisse: il canale non
+> era il collo di bottiglia più stretto, e mandare traffico sopra il salto macrociclo→prima
+> sessione «lo moltiplica per zero». Il post su r/climbharder è poi uscito ed è finito in un
+> ban (GTM-05) — quindi ora la scelta non c'è nemmeno più: **su 20 registrati 4 hanno mai
+> completato una sessione**, nessun terzo da 4 mesi, e non resta un canale su cui ripiegare.
+> Le cause del salto sono misurate: `docs/audit/D273_first_session_activation.md`.
+>
+> **Il fatto strutturale, in una riga:** delle 6 sessioni con parete a catalogo la più corta è
+> di **70 minuti** ed è di scarico; le altre stanno a 85-100. Alla domanda «sono dentro, ho
+> mezz'ora, voglio provare» il prodotto **non ha una risposta**. Non è che i primi allenamenti
+> non siano attraenti — è che il primo giorno molti utenti non ricevono affatto arrampicata
+> (4 giorni su 7 per il profilo di Jason aprono con la prehab), e chi la riceve se la vede
+> proporre in blocchi da 85 minuti nel momento sbagliato.
 
 | ID | Titolo | Tipo | Effort | Stato | Note |
 |----|--------|------|--------|-------|------|
@@ -252,7 +262,8 @@ tra macrociclo generato e prima sessione moltiplica per zero.
 | ACT-02 | **Non aprire con la prehab** | A | S | Open P1 | Da [[D273]]. Se il giorno 1 di un utente nuovo cade su uno slot casa, il piano apre con cuffia dei rotatori ed eccentrici di gomito (è successo a Jason, iscritto da Reddit). Regola candidata: nella prima settimana la prima sessione proposta è la prima **di arrampicata** disponibile, la prehab si accoda. **STOP-gate** (`planner_v2`). |
 | ACT-03 | **Dire quando si arrampica la prima volta** | A | S | Open P1 | Da [[D273]]. Se la prima sessione vera è fra 3 giorni, `/today` deve dirlo esplicitamente invece di lasciarlo dedurre. `nextSessionInfo` è **già calcolato** in `today/page.tsx` ma mostrato solo negli stati vuoti. Frontend → branch + preview. |
 | ACT-04 | **Un canale di ritorno (push o email)** | A | L | Open P1 | Da [[D273]]. Oggi **non esiste**: l'unico `notify()` manda un Telegram a Daniele, il service worker non ha handler `push`, non c'è email transazionale. Ogni piano che rimanda la prima sessione di più di poche ore è una scommessa sulla memoria dell'utente. È il prerequisito che rende utili ACT-01/02/03 e l'unico che richiede infrastruttura nuova. |
-| GTM-05 | **Post su r/climbharder** | — | XS | ⏸️ **Dopo l'attivazione** ([[D273]]) | Non è un task di codice. Le due condizioni tecniche che mancavano nel piano di aprile ora esistono: [[A262]]/[[A263]] hanno reso `/assessment` una superficie che **dà prima di chiedere** (nessun account, radar + punto debole, scale YDS/V-scale per il pubblico americano, blocco max hang per chi i propri numeri li conosce), e [[B319]] ha chiuso il buco che rompeva la promessa del carry-over proprio per quell'utente. Il post va sull'assessment, non sull'app. **Prerequisito caduto:** [[WELCOME-RECOVER-DEAD-END]] è chiuso da [[B320]] (recovery-by-code ritirata, welcome con due sole CTA) — non ci sono più blocchi tecnici. |
+| ~~GTM-05~~ | **Post su r/climbharder — FATTO, ed è andato male** | — | XS | ❌ **Canale bruciato (2026-08-08)** | Il post è **uscito** (prima settimana di agosto). È rimasto su **due giorni**, ha raccolto **molti commenti negativi sul fatto che fosse scritto con l'AI**, e dopo due giorni Daniele è stato **bannato dal subreddit**. Il canale che il Council indicava come #1 è ora **chiuso, come r/bouldering**. Restano di aperto solo r/indoorbouldering (un post al mese nel thread *Simple Questions*). **Due lezioni, entrambe pagate:** (1) su r/climbharder il registro conta quanto il contenuto — un testo che *suona* generato viene letto come spam a prescindere da cosa offre, e il prodotto non ha mai avuto una vera occasione di essere giudicato; (2) [[D273]] aveva scritto, prima del post, che il canale non era il collo di bottiglia e che mandare traffico sopra il salto macrociclo→prima sessione «lo moltiplica per zero» — ed è esattamente ciò che è successo. **Nessun canale Reddit resta da bruciare: la prossima acquisizione va progettata altrove** (vedi GTM-08). |
+| GTM-08 | **Trovare un canale dopo Reddit** | — | M | 🔴 Open — da scopare | Registrato 2026-08-08 dopo il ban da r/climbharder. Due dei tre subreddit di arrampicata sono chiusi definitivamente. Candidati mai provati: forum/Discord di settore, gruppi Facebook di palestre, la palestra fisica di Daniele (volantino/QR — `docs/attribution_utm_convention.md` ha già la convenzione), passaparola dai 4 utenti attivati, contenuto proprio (il `/assessment` pubblico è linkabile ovunque). **Vincolo appreso:** qualunque testo pubblico deve leggersi come scritto da un arrampicatore, non da un modello. **Non prima dell'attivazione** — il vincolo di D273 vale per ogni canale, non solo per Reddit. |
 | GTM-STRIPE-TAX | **Stripe Tax registration** | Config | S | 🟡 Deferred | Riattivare a una di queste: (a) 10+ clienti EU paganti, (b) €5k di ricavo EU cumulato, (c) soglia OSS €10k in avvicinamento. Sotto, valgono le regole IVA domestiche italiane e Stripe Tax è scope creep. All'attivazione: 4 passaggi dashboard + 4 righe in `subscription.py:108-124` (`automatic_tax` + `tax_id_collection` + `billing_address_collection`). **Deciso ora:** $9.99/$4.99 sono **netti** (IVA aggiunta sopra all'attivazione). |
 | GTM-06 | **Feature freeze** — 30 giorni senza feature nuove, solo bug di chi paga o è in trial | — | — | ⏸️ Non attivabile | Doveva partire al primo utente non-beta. Con 0 paganti non ha un trigger: riprendere quando esiste una coorte da proteggere. |
 | GTM-07 | **Metrica di successo** | — | — | 🔄 Da ridefinire | La formulazione originale ("3-5 paganti entro fine aprile 2026") è scaduta e mancata. Serve una metrica nuova legata al post r/climbharder — es. *visitatori unici su `/assessment` → % che completa → % che apre il wizard* — misurabile con l'attribution UTM già in casa (`docs/attribution_utm_convention.md`). |
