@@ -207,11 +207,14 @@ class TestPromptBuilder:
         storage.append_outdoor_log_line(uid, {
             "date": date.today().isoformat(),
             "spot_name": "Berdorf",
+            "discipline": "lead",
             "routes": [{"grade": "6b"}, {"grade": "6c+"}],
         })
         state = deps.load_state(uid)
         ctx = prompt_builder.build_user_context(state, uid)
-        assert "outdoor at Berdorf" in ctx
+        # B328 enriched this line (discipline, attempt count, outcomes) — see
+        # test_b328_coach_outdoor_context.py for the full rendering contract.
+        assert "outdoor lead at Berdorf" in ctx
         assert "6b, 6c+" in ctx
 
     def test_baselines_and_working_loads_section(self):

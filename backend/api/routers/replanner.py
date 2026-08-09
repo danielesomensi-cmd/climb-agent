@@ -465,6 +465,13 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
                 "load_score": ev.get("outdoor_load_score", 0),
                 "completed_at": datetime.now(timezone.utc).isoformat(),
             }
+            # B329: one bookkeeping entry per date, same invariant B277 gave the
+            # /api/outdoor/log path. Without this, a day completed through both
+            # routes (finish an active session, then a complete_outdoor event —
+            # or a double tap) left two rows for one day, double-counting its
+            # load for anything that sums this list. Also clears historical
+            # duplicates for the date being written.
+            outdoor_log[:] = [e for e in outdoor_log if e.get("date") != ev_date]
             outdoor_log.append(entry)
         elif evt == "undo_outdoor" and ev_date:
             state["outdoor_log"] = [e for e in outdoor_log if e.get("date") != ev_date]

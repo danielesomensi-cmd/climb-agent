@@ -67,6 +67,17 @@ INSTRUCTION_BLOCK = """\
   right now rather than inventing numbers.
 - Keep answers practical and concise (a few short paragraphs or a short
   list). This is a chat on a phone, not an essay.
+- NEVER state a training fact the context does not contain. In particular,
+  about logged sessions: report the outcome as logged (sent / fell, and how
+  many attempts) and never upgrade a fall into a send. If a log line says
+  "(+N more routes not shown)", say the record is partial rather than drawing
+  conclusions from what you can see. If the user asks about something absent
+  from the logs, say it is not in the log and ask — do not reconstruct it.
+- Session duration is SELF-REPORTED and usually excludes rests: athletes log
+  the climbs, not the pauses. Never infer density, pace, or energy system from
+  duration — "8 routes in 2 hours" does NOT establish short rests or a power-
+  endurance stimulus. If the training effect of a session hinges on how long
+  the rests were, ask the user instead of assuming.
 - When asked to build/compose a session (e.g. at a commercial gym, or an
   off-plan alternative), output a clearly structured textual block: warm-up →
   2-4 main blocks → optional core/prehab finisher, with sets/reps and load as
@@ -436,6 +447,89 @@ def _today_section(
     return "\n".join(lines)
 
 
+MAX_OUTDOOR_ROUTES_IN_LOG = 12
+
+
+def _outdoor_log_line(entry: Dict[str, Any]) -> str:
+    """One prompt line for an outdoor session — the full climbing record.
+
+    B328: the previous version emitted bare grades ("climbs: 6c, 7a+, 8a"),
+    which lost every fact a coach reasons from. Three specific failures:
+
+      * **outcome was dropped** — two falls on an 8a project read identically to
+        an 8a redpoint, so the model could congratulate the athlete on a send
+        that never happened;
+      * **repeats collapsed** — a route climbed twice appeared once;
+      * **the list was silently cut at 8 routes**, so a long day read as a
+        short one with no marker that anything was missing.
+
+    Duration is deliberately labelled ``self-reported`` and never presented as
+    a density signal: athletes log the climbs but seldom the rests, so elapsed
+    time says nothing reliable about how tightly the day was packed. See the
+    matching hard rule in the system prompt.
+    """
+    routes = entry.get("routes") or entry.get("climbs") or []
+    date_s = entry.get("date")
+    spot = entry.get("spot_name") or entry.get("spot_id") or "?"
+    discipline = entry.get("discipline") or "climbing"
+
+    head = f"{date_s}: outdoor {discipline} at {spot}"
+    meta: List[str] = []
+    if entry.get("day_type"):
+        meta.append(str(entry["day_type"]))
+
+    rendered: List[str] = []
+    attempt_total = 0
+    for route in routes:
+        if not isinstance(route, dict):
+            continue
+        grade = route.get("grade") or "?"
+        name = route.get("name")
+        attempts = route.get("attempts") or []
+        attempt_total += max(1, len(attempts))
+
+        results = [a.get("result") for a in attempts
+                   if isinstance(a, dict) and a.get("result")]
+        label = f"{name} {grade}" if name and name != grade else str(grade)
+        if route.get("style"):
+            label += f" ({route['style']})"
+
+        if results:
+            sends = results.count("sent")
+            falls = len(results) - sends
+            outcome_bits = []
+            if sends:
+                outcome_bits.append("sent" + (f" x{sends}" if sends > 1 else ""))
+            if falls:
+                outcome_bits.append("fell" + (f" x{falls}" if falls > 1 else ""))
+            label += " " + " + ".join(outcome_bits)
+        rendered.append(label)
+
+    if rendered:
+        meta.append(f"{attempt_total} attempts over {len(rendered)} routes")
+    if entry.get("duration_minutes"):
+        meta.append(f"{entry['duration_minutes']} min self-reported (rests may "
+                    f"be unlogged — not a density signal)")
+
+    if meta:
+        head += " [" + ", ".join(meta) + "]"
+
+    parts = [head]
+    if rendered:
+        shown = rendered[:MAX_OUTDOOR_ROUTES_IN_LOG]
+        climbs = ", ".join(shown)
+        hidden = len(rendered) - len(shown)
+        if hidden:
+            climbs += f", (+{hidden} more routes not shown)"
+        parts.append(climbs)
+
+    notes = entry.get("notes")
+    if notes:
+        parts.append(f'notes: "{str(notes).strip()[:200]}"')
+
+    return "- " + " — ".join(parts)
+
+
 def _logs_section(
     state: Dict[str, Any], user_id: Optional[str], today: date
 ) -> List[str]:
@@ -488,14 +582,7 @@ def _logs_section(
         lines.append("- " + ", ".join(bits))
     try:
         for entry in storage.read_outdoor_logs(user_id, since_date=since):
-            routes = entry.get("routes") or entry.get("climbs") or []
-            sent = [r.get("grade") for r in routes if isinstance(r, dict)
-                    and r.get("grade")]
-            bits = [f"{entry.get('date')}: outdoor at "
-                    f"{entry.get('spot_name') or entry.get('spot_id') or '?'}"]
-            if sent:
-                bits.append(f"climbs: {', '.join(map(str, sent[:8]))}")
-            lines.append("- " + ", ".join(bits))
+            lines.append(_outdoor_log_line(entry))
     except Exception:
         logger.exception("coach: failed to read outdoor logs")
     lines.sort()  # ISO-date prefix → chronological

@@ -247,34 +247,16 @@ class TestOutdoorLoadScore:
 
         assert _score("onsight") > _score("flash") > _score("redpoint") > _score("project") > _score("repeat")
 
-    def test_duration_clamping_low(self):
-        """Duration 30 min → factor clamped to 0.5."""
-        short = _make_entry(
-            duration_minutes=30,
-            routes=[{"name": "R", "grade": "6a", "style": "redpoint",
-                     "attempts": [{"result": "sent"}]}],
-        )
-        very_short = _make_entry(
-            duration_minutes=10,
-            routes=[{"name": "R", "grade": "6a", "style": "redpoint",
-                     "attempts": [{"result": "sent"}]}],
-        )
-        # Both clamped to 0.5 → same score
-        assert compute_outdoor_load_score(short) == compute_outdoor_load_score(very_short)
-
-    def test_duration_clamping_high(self):
-        """Duration 300 min → factor clamped to 1.5."""
-        long = _make_entry(
-            duration_minutes=300,
-            routes=[{"name": "R", "grade": "6a", "style": "redpoint",
-                     "attempts": [{"result": "sent"}]}],
-        )
-        very_long = _make_entry(
-            duration_minutes=500,
-            routes=[{"name": "R", "grade": "6a", "style": "redpoint",
-                     "attempts": [{"result": "sent"}]}],
-        )
-        assert compute_outdoor_load_score(long) == compute_outdoor_load_score(very_long)
+    def test_duration_ignored_short_and_long(self):
+        """B327: duration is no longer a factor — 30 min and 500 min score alike."""
+        def _entry(minutes):
+            return _make_entry(
+                duration_minutes=minutes,
+                routes=[{"name": "R", "grade": "6a", "style": "redpoint",
+                         "attempts": [{"result": "sent"}]}],
+            )
+        scores = {compute_outdoor_load_score(_entry(m)) for m in (10, 30, 120, 300, 500)}
+        assert len(scores) == 1
 
     def test_unknown_grade_fallback(self):
         """Unknown grade uses fallback weight of 10."""
