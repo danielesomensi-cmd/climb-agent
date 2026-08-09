@@ -11,6 +11,7 @@ import type {
   OutdoorConditions,
 } from "@/lib/types";
 import { postOutdoorLog, putOutdoorLog } from "@/lib/api";
+import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { enqueue } from "@/lib/outbox";
 import { deriveTryTimings, routeHasTimestamps } from "@/lib/try-timings";
 import { TryBreakdown } from "@/components/outdoor/try-breakdown";
@@ -81,7 +82,6 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
   const [duration, setDuration] = useState(initialData?.duration_minutes || defaultDuration || 120);
   const [routes, setRoutes] = useState<OutdoorRoute[]>(initialData?.routes || initialRoutes || []);
   const [notes, setNotes] = useState(initialData?.notes || "");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const gradeList = discipline === "lead" || discipline === "both"
@@ -166,12 +166,15 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
     setRoutes(routes.filter((_, i) => i !== idx));
   };
 
-  const handleSubmit = async () => {
+  // B330: the lock is a ref, so a double tap cannot slip a second POST through
+  // the window between `setBusy(true)` and the re-render that disables the
+  // button. Logging the same day twice is otherwise a real path — the plan-sync
+  // side effect runs again and the day's ripple is recomputed.
+  const { run: handleSubmit, busy: submitting } = useSubmitLock(async () => {
     if (!spotName.trim()) {
       setError("Spot name is required");
       return;
     }
-    setSubmitting(true);
     setError(null);
     try {
       const payload: Record<string, unknown> = {
@@ -212,10 +215,8 @@ export default function OutdoorLogForm({ spots, defaultDate, defaultSpotName, de
       onSuccess?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to log session");
-    } finally {
-      setSubmitting(false);
     }
-  };
+  });
 
   // A241 — derived per-try rest/climb (session-wide chronological rule).
   const tryTimings = deriveTryTimings(routes);

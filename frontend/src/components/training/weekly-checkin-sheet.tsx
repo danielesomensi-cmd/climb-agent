@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Home, Mountain, TreePine, Moon, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import {
   Drawer,
   DrawerContent,
@@ -88,7 +89,6 @@ export function WeeklyCheckinSheet({ open, nextWeekStart, onClose, onPlanUpdated
   const [originalDays, setOriginalDays] = useState<DayOverviewEntry[]>([]);
   const [gyms, setGyms] = useState<Array<{ gym_id?: string; name: string }>>([]);
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const hasChanges = days.some((d) => d.modified);
@@ -209,8 +209,10 @@ export function WeeklyCheckinSheet({ open, nextWeekStart, onClose, onPlanUpdated
     );
   }
 
-  async function handleSave() {
-    setSaving(true);
+  // B330: ref-based lock — `disabled={saving}` alone loses a double tap
+  // landing in the same React batch, which here would fire two
+  // putWeeklyOverride writes for the same week.
+  const { run: handleSave, busy: saving } = useSubmitLock(async () => {
     setError(null);
     try {
       const changedDays: Record<string, {
@@ -247,10 +249,8 @@ export function WeeklyCheckinSheet({ open, nextWeekStart, onClose, onPlanUpdated
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save");
-    } finally {
-      setSaving(false);
     }
-  }
+  });
 
   return (
     <Drawer open={open} onOpenChange={(v) => !v && onClose()}>
