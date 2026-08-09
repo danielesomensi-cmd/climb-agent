@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { queryKeys } from "@/lib/query-keys";
 import { sessionResolutionState } from "@/lib/session-resolution";
 import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
@@ -339,7 +340,6 @@ function AddExerciseDialog({
   const [reps, setReps] = useState(10);
   const [workSeconds, setWorkSeconds] = useState<number | null>(null);
   const [loadKg, setLoadKg] = useState<number | undefined>(undefined);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [isTestMeasurement, setIsTestMeasurement] = useState(false);
@@ -418,9 +418,10 @@ function AddExerciseDialog({
     setError(null);
   }, []);
 
-  const handleSubmit = async () => {
+  // B330: ref-based lock — two taps in one React batch would otherwise add
+  // the same exercise to the session twice.
+  const { run: handleSubmit, busy: submitting } = useSubmitLock(async () => {
     if (!selected) return;
-    setSubmitting(true);
     setError(null);
     try {
       const overrides: Record<string, unknown> = { sets };
@@ -449,10 +450,8 @@ function AddExerciseDialog({
       onSuccess(result.week_plan);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add exercise");
-    } finally {
-      setSubmitting(false);
     }
-  };
+  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
