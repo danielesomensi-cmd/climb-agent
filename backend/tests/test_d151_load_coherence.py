@@ -110,7 +110,13 @@ class TestReportLoadFallback:
 # ═══════════════════════════════════════════════════════════════════════════
 
 class TestOutdoorLoadNormalized:
-    """D151 outdoor load: avg × volume_factor × duration_factor, capped at 85."""
+    """Outdoor load, capped at 85.
+
+    D151 shape was avg × volume_factor × duration_factor over routes; B327
+    recomputes both terms over attempts and drops duration entirely. The
+    coherence guarantees D151 established (no volume inflation, hard cap,
+    style ordering, determinism) are unchanged and still asserted here.
+    """
 
     def test_empty_routes_zero(self):
         assert compute_outdoor_load_score(_make_outdoor_entry(routes=[])) == 0
@@ -152,24 +158,25 @@ class TestOutdoorLoadNormalized:
         assert score <= _LOAD_CAP
         assert score >= 20
 
-    def test_volume_factor_single_route(self):
+    def test_volume_factor_single_attempt(self):
         assert _volume_factor(1) == 1.0
 
-    def test_volume_factor_five_routes(self):
-        assert _volume_factor(5) == pytest.approx(2.0)
+    def test_volume_factor_three_attempts(self):
+        assert _volume_factor(3) == pytest.approx(2.0)
 
     def test_volume_factor_capped(self):
-        assert _volume_factor(100) == 2.0
+        assert _volume_factor(100) == 3.0
 
     def test_style_modifiers_ordering_preserved(self):
         def _score(style):
             return compute_outdoor_load_score(_make_outdoor_entry([_route("7a", style)]))
         assert _score("onsight") > _score("flash") > _score("redpoint") > _score("project") > _score("repeat")
 
-    def test_duration_factor_clamped(self):
+    def test_duration_does_not_affect_score(self):
+        """B327: duration is out of the formula — see the regression tests."""
         short = compute_outdoor_load_score(_make_outdoor_entry([_route("6a")], duration_minutes=10))
-        very_short = compute_outdoor_load_score(_make_outdoor_entry([_route("6a")], duration_minutes=30))
-        assert short == very_short  # both clamped to 0.5
+        long = compute_outdoor_load_score(_make_outdoor_entry([_route("6a")], duration_minutes=500))
+        assert short == long
 
     def test_determinism(self):
         entry = _make_outdoor_entry([_route("6a", "onsight"), _route("7a", "redpoint")])

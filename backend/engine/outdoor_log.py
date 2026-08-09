@@ -66,43 +66,72 @@ _STYLE_MODIFIER: Dict[str, float] = {
 
 _LOAD_CAP = 85
 
+# B327: an attempt that ended in a fall is real work — often the most intense
+# burn of the day — but it stops short of the top, so it carries slightly less
+# than a completed ascent. Any other/absent result counts as a full ascent.
+_RESULT_MODIFIER: Dict[str, float] = {
+    "sent": 1.0,
+    "fell": 0.8,
+}
 
-def _duration_factor(duration_minutes: int) -> float:
-    """Baseline 120 min, clamped [0.5, 1.5]."""
-    return max(0.5, min(1.5, duration_minutes / 120))
 
+def _volume_factor(num_attempts: int) -> float:
+    """Log-scaled volume factor over ATTEMPTS: 1=1.0, 3=2.0, 9=3.0, capped at 3.0.
 
-def _volume_factor(num_routes: int) -> float:
-    """Log-scaled volume factor: 1 route=1.0, 5=2.0, capped at 2.0."""
-    if num_routes <= 1:
+    B327 widened this from the D151 version (base-5 log, capped at 2.0, counted
+    over routes). Two reasons:
+
+      * counting *routes* made repeats free — six burns on one project scored
+        the same as touching it once;
+      * the 2.0 cap was reached at five routes, so an eight-pitch volume day and
+        a five-pitch day were indistinguishable.
+    """
+    if num_attempts <= 1:
         return 1.0
-    return min(2.0, 1.0 + math.log(num_routes, 5))
+    return min(3.0, 1.0 + math.log(num_attempts, 3))
 
 
 def compute_outdoor_load_score(entry: Dict[str, Any]) -> int:
     """Compute a deterministic load score for an outdoor session.
 
-    D151 formula: avg(grade_weight × style_modifier) × volume_factor × duration_factor.
-    Returns an int capped at 85, comparable to indoor session_load_score.
-    """
-    routes = entry.get("routes") or []
-    if not routes:
-        return 0
+    B327 formula: ``avg_intensity × volume_factor``, where both terms are
+    computed over **attempts**, not routes:
 
-    route_scores = []
-    for route in routes:
+        attempt_score  = grade_weight × style_modifier × result_modifier
+        avg_intensity  = mean(attempt_score)      → how hard the day was
+        volume_factor  = 1 + log₃(n_attempts)     → how much of it there was
+
+    Returns an int capped at 85, comparable to indoor ``session_load_score``.
+
+    **Why duration is no longer a factor (B327).** The D151 formula multiplied
+    by ``duration_minutes / 120``, which made a day with longer rests score
+    *higher* than the same climbing done back-to-back — backwards, since rest is
+    what removes stress. It also leaned on the least reliable field in the log:
+    users log the climbs but rarely the rests, so the recorded duration is a
+    lower bound of unknown tightness. Volume is already carried by the attempt
+    count; duration added nothing but noise pointing the wrong way.
+    """
+    attempt_scores: List[float] = []
+    for route in entry.get("routes") or []:
         grade = route.get("grade", "")
         weight = _GRADE_WEIGHT.get(grade, _UNKNOWN_GRADE_WEIGHT)
         style = route.get("style")
         modifier = _STYLE_MODIFIER.get(style, 1.0) if style else 1.0
-        route_scores.append(weight * modifier)
 
-    avg_score = sum(route_scores) / len(route_scores)
-    vol = _volume_factor(len(route_scores))
-    duration = entry.get("duration_minutes", 120)
-    dur = _duration_factor(duration)
+        # A route with no attempts array still counts as one ascent: older
+        # outdoor.v1 logs and hand-written entries omit it.
+        attempts = route.get("attempts") or [{}]
+        for attempt in attempts:
+            result = attempt.get("result") if isinstance(attempt, dict) else None
+            attempt_scores.append(
+                weight * modifier * _RESULT_MODIFIER.get(result, 1.0)
+            )
 
-    return round(min(_LOAD_CAP, avg_score * vol * dur))
+    if not attempt_scores:
+        return 0
+
+    avg_intensity = sum(attempt_scores) / len(attempt_scores)
+    return round(min(_LOAD_CAP, avg_intensity * _volume_factor(len(attempt_scores))))
 VALID_DISCIPLINES = {"lead", "boulder", "both"}
 
 
