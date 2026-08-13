@@ -32,10 +32,18 @@ oggetti Stripe). Idempotente e conservativo:
 
 - whitelist **hardcoded per UUID**: nessun altro utente è raggiungibile;
 - riga con `stripe_subscription_id` → **abort** (mai toccare righe Stripe-managed);
-- già `trialing` locale → **non tocca** (non allunga il trial ri-lanciando);
-- `trial_end` già valorizzato (trial storicamente consumato) → **abort**, perché
-  concederne un secondo violerebbe la regola anti-abuso A232. Sul soggetto di
-  questo script è NULL, ed è precisamente la prova che il trial non fu mai usato.
+- trial locale **ancora in corso** (`trialing` + `trial_end` nel futuro) → **skip**:
+  ri-lanciare lo script non allunga un trial già concesso;
+- `trial_end` valorizzato in ogni altro caso (compreso un `trialing` la cui
+  scadenza è passata — la scadenza è *lazy*, lo status non si aggiorna da solo,
+  vedi B326) → **abort**: quel trial è stato consumato e concederne un secondo
+  violerebbe la regola anti-abuso A232.
+
+L'ordine di queste due conta. Lo `upsert` scrive `status` e `trial_end`
+**insieme**, quindi controllando prima `trial_end` il ramo di skip non sarebbe
+mai raggiungibile e un re-run direbbe «trial già consumato» di un trial appena
+concesso da noi. Sul soggetto di questo script `trial_end` era NULL, ed è
+precisamente la prova che il trial non fu mai usato.
 
 Uso:
   python scripts/oneoff_unlock_odlan3_trial.py            # dry-run
@@ -57,6 +65,22 @@ WHITELIST = {
 }
 
 TRIAL_DAYS = 15
+
+
+def _is_future(value) -> bool:
+    """True se `value` è un timestamp ancora nel futuro (None/illeggibile → False)."""
+    if value is None:
+        return False
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        try:
+            parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except ValueError:
+            return False
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed > datetime.now(timezone.utc)
 
 
 def main() -> int:
@@ -93,13 +117,18 @@ def main() -> int:
         if row and row.get("stripe_subscription_id"):
             print(f"ABORT {email}: ha oggetti Stripe ({row['stripe_subscription_id']}) — mai toccare")
             return 1
+        # Prima lo skip idempotente, poi l'abort anti-abuso: l'upsert scrive
+        # `status` e `trial_end` insieme, quindi con l'ordine inverso questo ramo
+        # sarebbe irraggiungibile e un re-run chiamerebbe «già consumato» un
+        # trial appena concesso da noi.
+        if row and row.get("status") == "trialing" and _is_future(row.get("trial_end")):
+            print(f"SKIP {email}: trial locale già attivo (fino al {str(row['trial_end'])[:10]}) — nulla da fare")
+            continue
         if row and row.get("trial_end"):
-            # A232: un trial_end (passato o futuro) significa trial già consumato.
+            # A232: un trial_end già scaduto significa trial consumato — anche se
+            # lo status è rimasto `trialing`, perché la scadenza è lazy (B326).
             print(f"ABORT {email}: trial_end già valorizzato ({str(row['trial_end'])[:10]}) — trial già consumato")
             return 1
-        if row and row.get("status") == "trialing":
-            print(f"SKIP {email}: trial locale già attivo — nulla da fare")
-            continue
         plan.append((email, uid, row.get("status") if row else None))
 
     print(f"Da sbloccare: {len(plan)} | trial_end = {trial_end[:19]}Z")
