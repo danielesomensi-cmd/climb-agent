@@ -1,6 +1,6 @@
 # climb-agent — Active Roadmap
 
-> Last updated: 2026-08-02 ([[D269]] — potatura e riallineamento: quattro sezioni di Audit Remediation verificate contro il codice e chiuse, GTM riscritto sullo stato reale del funnel, tre finding nuovi in Open. Archiviato in `ROADMAP_v2.md` §D269.)
+> Last updated: 2026-08-10 ([[D275]] — allineamento alla decisione di [[D274]]: climb-agent è uno **strumento personale** che resta pubblicamente disponibile, marketing in pausa. Niente si spegne — Stripe LIVE, guardia attiva, piani acquistabili — ma il lavoro di crescita esce dalla roadmap. §1.75 riscritta, ACT-01/03 riclassificati per uso proprio, ACT-02 declassato, ACT-04 rinviato, GTM-06 chiuso won't-do.)
 > Unscheduled exploratory items live in `docs/ROADMAP_BACKLOG.md` (B320) — questo file
 > contiene solo ciò che è aperto **e** schedulato.
 > Archived history: `docs/ROADMAP_v2.md`
@@ -71,9 +71,11 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ## Recently closed (2026-08-10)
 
+- **D275 — Allineamento documentale alla decisione «progetto personale»** ✅ (solo documentazione: `CLAUDE.md`, `PROJECT_BRIEF.md`, `docs/ROADMAP_CURRENT.md`; **nessuna riga di codice, nessuna configurazione toccata**). **Decisione di Daniele dopo [[D274]]: «lo tengo come personal project».** Il punto del brief è che i documenti smettano di descrivere un lancio commerciale che non è più in corso — la stessa regola per cui un item chiuso non resta aperto in roadmap. **Cosa NON è cambiato, per scelta esplicita di Daniele: niente.** Stripe resta **LIVE**, la guardia fail-closed [[B202]] resta attiva, entrambi i piani restano acquistabili, `/assessment` e `/demo` restano pubblici. Chi arriva e vuole pagare può — semplicemente non andiamo più a cercarlo. **Cosa è cambiato:** `CLAUDE.md` guadagna una *project posture* che dice al modello di non proporre lavoro di crescita/acquisizione/conversione se non richiesto e di non trattare «più utenti» come obiettivo implicito, **senza abbassare la barra ingegneristica** (persone vere ci si allenano: un difetto in produzione resta tale); `PROJECT_BRIEF` sostituisce «Paid launch prep» e uno snapshot funnel di 8 giorni prima già sbagliato nei numeri (diceva 14 registrati, sono 20) con la fotografia di [[D274]] e la condizione di riapertura; §1.75 della roadmap non è più «Go-to-Market» ma la memoria di ciò che è stato misurato. **Gli item ACT riclassificati sul criterio nuovo** — *utile all'atleta che lo usa oggi si fa, utile a un utente ipotetico si rinvia*: **ACT-01** resta attivo ma per uso proprio («sono in palestra e ho mezz'ora» è una domanda di Daniele quanto di un iscritto), **ACT-03** P2 (serve a chiunque apra `/today` in un giorno di riposo, non solo al primo accesso), **ACT-02** declassato a P3 (difetto della prima settimana di un utente nuovo, e di utenti nuovi ne arriva ~1 ogni due settimane), **ACT-04** rinviato (era il prerequisito *per una coorte*, e la coorte non c'è). **GTM-06 chiuso won't-do:** un feature freeze serve a proteggere una coorte pagante durante un lancio, e quella coorte non è mai esistita — tenerlo «non attivabile» significava solo rileggerlo ogni volta. Suite invariata e verde (3242).
+
 - **D274 — Audit della coorte GTM: il verdetto sui numeri** ✅ (audit read-only; nessuna scrittura su Supabase, Stripe o Clerk, nessun endpoint di planner/replanner chiamato — report: `docs/audit/D274_gtm_cohort_audit.md`). Domanda posta da Daniele: **spingere l'acquisizione, fermarsi e tenerlo come strumento personale, o ibrido?** Risposta sui dati: **fermarsi**. **I numeri che decidono:** 20 account totali, di cui **11 utenti esterni veri** (il resto è l'autore, 3 suoi account di test, 4 beta tester e una riga orfana); **1 esterno su 11 ha mai completato una sessione**, **0 hanno raggiunto le tre**, e l'ultima sessione completata da un non-autore è del **2026-04-21 — 111 giorni fa**. **Il ricavo netto lifetime è −€0,47:** una sola persona ha mai pagato ($4,99 il 14/06) e ha chiesto il rimborso **quattro ore dopo** avendo completato **zero** sessioni; Stripe ha trattenuto la commissione. Verificato su `Charge`/`Refund`/`BalanceTransaction`, non sullo stato della subscription — vedi [[FUNNEL-REVENUE-LINE]], perché `gtm_funnel.py` questo non l'ha mai mostrato. **Il collo di bottiglia, misurato:** il crollo non è l'acquisizione e non è l'assessment. **11 su 11 completano tutti i 12 step del wizard e generano il macrociclo** — l'intento è intatto — poi 10 su 11 non si allenano mai. Drop **−91%** su `macrociclo generato → prima sessione`, esattamente la diagnosi che [[D273]] aveva fatto *prima* del post Reddit; il post ha poi prodotto **2 iscritti e 0 sessioni**, confermandola sul campo. **Un limite di misura dichiarato, non aggirato:** da [[A256]] il wizard è pubblico e l'account si chiede solo al CTA finale, quindi chi abbandona prima **non lascia traccia server-side** — la domanda «completano l'assessment o mollano prima?» *non è rispondibile* dai dati di produzione. Gli eventi esistono (`public_assessment_view/_completed`, Vercel Analytics) ma il token CLI locale è scaduto: vedi [[VERCEL-ANALYTICS-UNREADABLE]]. Riportato come dato **assente**, mai analizzato come zero. **Raccomandazione accolta nel testo:** percorso 2 — marketing in pausa, strumento personale; le superfici pubbliche restano in piedi perché non costano nulla, ma le ore non vanno in acquisizione. ACT-01/ACT-03 restano sensate **come miglioramenti d'uso personale** (il problema «sono in palestra e ho mezz'ora» è anche di Daniele), ACT-04 si rinvia finché non esiste una coorte da notificare. **Segnale minimo per riaprire la decisione:** un utente non-autore che completa **3 sessioni in 14 giorni** — non è mai successo, ed è il fatto la cui assenza rende inutile ogni altro numero.
 
-- **TRIAL-LOCKOUT — Donato è murato fuori, e per colpa nostra** 🔲 **Open P1.** Aperto da [[D274]]. `odlan3` (`5a98187c`): riga `pending_checkout`, `trial_start`/`trial_end` **NULL**, nessun oggetto Stripe. Iscritto il **09/07**, *prima* di [[A250]] (21/07) che auto-avvia il trial — quindi passare dal paywall era l'unico modo di entrare. Ha aperto due checkout (09/07 23:04 e 19/07 20:16), li ha abbandonati entrambi, e `POST /api/subscription/checkout` gli ha scritto `status: pending_checkout` sulla riga; `deps.py:660` mette `pending_checkout` fra gli `_NEVER_STARTED_STATUSES`, quindi la guardia risponde **402 «Subscribe to start training»**. È **l'utente esterno più coinvolto degli ultimi tre mesi** — 6 giorni distinti di apertura, 3 settimane pianificate, 2 archiviate, **tornato il 28/07** — e la whitelist del win-back [[A251]] (9 utenti) **non lo comprendeva**: è tornato e ha sbattuto contro il muro. Rimedio: un trial locale una-tantum in stile A251. **Non applicato: D274 è read-only.** Stesso meccanismo su `pippin_91donkeys` (`7208f92f`), ma freddo — 0 giorni di apertura, mai tornato: da sistemare solo se si scrive comunque lo script.
+- **TRIAL-LOCKOUT — Donato è murato fuori, e per colpa nostra** 🔲 **Open P1.** Aperto da [[D274]]. `odlan3` (`5a98187c`): riga `pending_checkout`, `trial_start`/`trial_end` **NULL**, nessun oggetto Stripe. Iscritto il **09/07**, *prima* di [[A250]] (21/07) che auto-avvia il trial — quindi passare dal paywall era l'unico modo di entrare. Ha aperto due checkout (09/07 23:04 e 19/07 20:16), li ha abbandonati entrambi, e `POST /api/subscription/checkout` gli ha scritto `status: pending_checkout` sulla riga; `deps.py:660` mette `pending_checkout` fra gli `_NEVER_STARTED_STATUSES`, quindi la guardia risponde **402 «Subscribe to start training»**. È **l'utente esterno più coinvolto degli ultimi tre mesi** — 6 giorni distinti di apertura, 3 settimane pianificate, 2 archiviate, **tornato il 28/07** — e la whitelist del win-back [[A251]] (9 utenti) **non lo comprendeva**: è tornato e ha sbattuto contro il muro. Rimedio: un trial locale una-tantum in stile A251. **Non applicato in D274, che è read-only. Decisione di Daniele (2026-08-10): sbloccare Donato, lasciare `pippin_91donkeys` (`7208f92f`) com'è** — stesso meccanismo, ma freddo: 0 giorni di apertura, mai tornato. Esecuzione in [[B331]].
 
 - **FUNNEL-REVENUE-LINE — `gtm_funnel.py` non ha mai mostrato che del denaro si è mosso** 🔲 **Open P2.** Aperto da [[D274]]. Lo script stampa `Paganti attivi: 0` / `Canceled: 3` e si ferma lì: l'unico addebito vero **e il suo rimborso in giornata** sono invisibili, e il netto lifetime (**−€0,47**) è emerso solo interrogando `Charge`/`Refund`/`BalanceTransaction` a mano. Manca una riga di ricavo lifetime — leggere lo stato delle subscription non basta, perché una subscription `canceled` non dice se è stata incassata o restituita.
 
@@ -237,79 +239,87 @@ _D240 next step **chiuso da C239** (2026-05-26): le 25 proposte KB (cue_036→cu
 
 ---
 
-## Priority 1.75 — Go-to-Market
+## Priority 1.75 — ~~Go-to-Market~~ → **chiusa: progetto personale**
 
-> Riscritta da [[D269]] (2026-08-02) sullo stato reale del funnel. Il log operativo di luglio, la
-> timeline "week 0-6" di aprile e le raccomandazioni del Council sono archiviati in `ROADMAP_v2.md` §D269:
-> erano storia eseguita (prezzi decisi, Stripe live, canali provati), non lavoro aperto.
+> **Decisione di Daniele, 2026-08-10 ([[D274]] + [[D275]]): climb-agent è uno strumento personale
+> che resta pubblicamente disponibile. Il marketing è in pausa a tempo indefinito.**
+>
+> **Cosa NON cambia:** l'app resta live su climbagent.app, Stripe resta **LIVE**, la guardia
+> fail-closed [[B202]] resta attiva, entrambi i piani restano acquistabili. Non si spegne niente —
+> se qualcuno arriva e vuole pagare, può. Persone vere ci si allenano (Daniele incluso), quindi un
+> difetto in produzione resta un difetto in produzione e la barra ingegneristica non si abbassa.
+>
+> **Cosa cambia:** *quale lavoro vale la pena fare*. Si costruisce per l'atleta che lo usa, non per
+> un funnel. Niente brief di crescita, acquisizione o conversione se non li chiede Daniele, e
+> «più utenti» non è un obiettivo implicito di nessun brief.
+>
+> Questa sezione resta in roadmap **solo** come memoria di ciò che è stato misurato e della
+> condizione che riaprirebbe la decisione. Il log operativo di luglio, la timeline di aprile e le
+> raccomandazioni del Council erano già stati archiviati in `ROADMAP_v2.md` §D269 da [[D269]].
 
-### Dove siamo davvero (snapshot `scripts/gtm_funnel.py`, 2026-08-07 — post-[[B326]])
+### I numeri su cui è stata presa la decisione ([[D274]], 2026-08-10)
+
+Report completo: `docs/audit/D274_gtm_cohort_audit.md`. Read-only: nessuna scrittura su Supabase,
+Stripe o Clerk.
 
 | | |
 |---|---|
-| Utenti registrati | 20 |
-| Trial **attivi** | **2** — entrambi iscritti il 5 agosto, scadono il 20 |
-| Trial **scaduti** non riconciliati | 10 — la coorte del 21/07, chiusa il 5 agosto |
-| Fermi al checkout | 4 (di cui 1 lead caldo, loggato il 28/07) |
-| **Paganti** | **0** |
-| Canceled storici | 3 |
-| **Attivazione (≥1 sessione completata)** | **4 utenti su 20**, di cui 1 è l'autore |
+| Account totali | 20 |
+| di cui **utenti esterni veri** | **11** (fuori: l'autore, 3 suoi account di test, 4 beta, 1 riga orfana) |
+| Esterni che hanno completato il wizard e generato il macrociclo | **11 su 11** |
+| Esterni con **≥1 sessione completata** | **1** |
+| Esterni con ≥3 sessioni | **0** |
+| **Paganti oggi** | **0** |
+| **Ricavo netto lifetime** | **−€0,47** |
+| Ultima sessione completata da un non-autore | **2026-04-21** |
 
-**Lettura onesta (aggiornata 2026-08-08):** la coorte del re-lancio del 21 luglio è **persa** — 0 carte,
-trial scaduti il 5 agosto. I due iscritti del 5 agosto (uno arrivato dall'app Reddit, referrer
-`android-app://com.reddit.frontpage/`, l'altro diretto) hanno completato l'onboarding e generato il
-macrociclo, poi **zero sessioni e zero ritorni**. Nel frattempo il post su **r/climbharder è stato
-pubblicato ed è finito in un ban** (vedi GTM-05): due giorni online, commenti negativi sul testo
-«scritto con l'AI», canale chiuso. Quindi il canale **non è più il problema principale, perché non
-c'è più un canale** — e resta in piedi, intatto, il numero che [[B326]] ha reso visibile:
-**su 20 registrati solo 4 hanno mai completato una sessione**, e l'unico terzo con uso vero
-(`ckb.palmer`, 20 sessioni) si è fermato il **7 aprile**. Portare traffico su un funnel che perde tutti
-tra macrociclo generato e prima sessione moltiplica per zero.
+**Il collo di bottiglia, misurato:** **−91%** su `macrociclo generato → prima sessione`. Non è
+l'acquisizione e non è l'assessment — l'intento è intatto, 11 su 11 completano dodici step di
+onboarding. È l'uso che non parte mai. Cause: `docs/audit/D273_first_session_activation.md`.
 
-### Verdetto [[D274]] (2026-08-10) — **marketing in pausa, strumento personale**
+**Il ricavo, per esteso:** l'unico pagamento mai incassato ($4,99 il 14/06) è stato **rimborsato
+quattro ore dopo**, da un utente con **zero sessioni completate**; Stripe ha trattenuto la
+commissione. Va letto su `Charge`/`Refund`/`BalanceTransaction`, non sullo stato delle
+subscription — vedi [[FUNNEL-REVENUE-LINE]].
 
-Il conteggio «4 su 20» qui sopra è corretto ma indulgente: **due dei quattro sono l'autore e una
-beta tester**. Isolando gli **11 utenti esterni veri** (fuori: autore, 3 suoi account di test, 4 beta,
-1 riga orfana), il funnel è **11 iscritti → 11 macrocicli → 1 sessione → 0 con tre sessioni → 0 paganti**.
-**Drop −91%** su `macrociclo → prima sessione`; l'ultima sessione di un non-autore è del **21/04**.
-**Ricavo netto lifetime: −€0,47** — l'unico pagamento mai incassato ($4,99, 14/06) è stato **rimborsato
-quattro ore dopo**, da un utente con **zero sessioni completate**, e Stripe ha tenuto la commissione.
-Target dello sprint mancati: **9 trial esterni contro ≥30** (di cui 5 regalati a posteriori da [[A251]]
-a utenti già dormienti), **0 paganti contro ≥2**.
+**Canali:** Reddit è esaurito — r/bouldering rifiutato, **ban da r/climbharder l'08/08**, resta
+solo r/indoorbouldering (un post al mese nel thread *Simple Questions*). Il post r/climbharder ha
+prodotto **2 iscritti e 0 sessioni**.
 
-**Decisione:** le ore non vanno in acquisizione. Le superfici pubbliche restano online perché non
-costano nulla — non è una strategia, è un non-problema. ACT-01/ACT-03 si fanno **se e quando**
-servono a Daniele come utente, non come prerequisito GTM; ACT-04 si rinvia (non c'è coorte da
-notificare). **Si riapre la decisione a un segnale, non a una data:** un utente non-autore che
-completa **3 sessioni in 14 giorni** — non è mai successo. Controllo mensile con `gtm_funnel.py`.
-Report completo: `docs/audit/D274_gtm_cohort_audit.md`.
+### La sola condizione che riapre la decisione
 
-### Prossimo passo — attivazione (l'unica cosa rimasta da fare)
+**Un utente non-autore che completa 3 sessioni in 14 giorni** (`GTM-07`). Non è mai successo, e la
+sua assenza è ciò che rende inutile ogni altro numero. Verifica: `python scripts/gtm_funnel.py`,
+una volta al mese. Nessun altro lavoro GTM è schedulato.
 
-> [[D273]] (2026-08-07) aveva spostato la priorità **prima** che il post uscisse: il canale non
-> era il collo di bottiglia più stretto, e mandare traffico sopra il salto macrociclo→prima
-> sessione «lo moltiplica per zero». Il post su r/climbharder è poi uscito ed è finito in un
-> ban (GTM-05) — quindi ora la scelta non c'è nemmeno più: **su 20 registrati 4 hanno mai
-> completato una sessione**, nessun terzo da 4 mesi, e non resta un canale su cui ripiegare.
-> Le cause del salto sono misurate: `docs/audit/D273_first_session_activation.md`.
+### Attivazione — ricollocata, non abbandonata
+
+> **Riclassificati da [[D275]] (2026-08-10).** [[D273]] li aveva scritti come *prerequisiti GTM* —
+> sistemare l'attivazione prima di mandare traffico. Con il marketing in pausa quella cornice non
+> vale più, ma **il difetto che descrivono è reale e colpisce anche Daniele**, quindi gli item
+> restano: cambia la ragione per cui si fanno, non se si fanno.
 >
 > **Il fatto strutturale, in una riga:** delle 6 sessioni con parete a catalogo la più corta è
-> di **70 minuti** ed è di scarico; le altre stanno a 85-100. Alla domanda «sono dentro, ho
-> mezz'ora, voglio provare» il prodotto **non ha una risposta**. Non è che i primi allenamenti
-> non siano attraenti — è che il primo giorno molti utenti non ricevono affatto arrampicata
-> (4 giorni su 7 per il profilo di Jason aprono con la prehab), e chi la riceve se la vede
-> proporre in blocchi da 85 minuti nel momento sbagliato.
+> di **70 minuti** ed è di scarico; le altre stanno a 85-100. Alla domanda «sono in palestra, ho
+> mezz'ora, voglio arrampicare» il prodotto **non ha una risposta** — ed è una domanda che si fa
+> Daniele almeno quanto un iscritto nuovo. Non è che i primi allenamenti non siano attraenti: è
+> che il primo giorno molti utenti non ricevono affatto arrampicata (4 giorni su 7 per il profilo
+> di Jason aprono con la prehab), e chi la riceve se la vede proporre in blocchi da 85 minuti nel
+> momento sbagliato.
+>
+> **Nuovo criterio di priorità:** utile all'atleta che lo usa oggi → si fa. Utile solo a un utente
+> ipotetico che non esiste → si rinvia. È la riga che separa ACT-01/ACT-03 da ACT-02/ACT-04.
 
 | ID | Titolo | Tipo | Effort | Stato | Note |
 |----|--------|------|--------|-------|------|
-| ACT-01 | **Una prima sessione che si può fare subito** | A/C | M | 🎯 **Attivo — il prossimo passo** | Da [[D273]]. Al primo `/today` dopo l'onboarding servire una sessione **corta e di arrampicata**, svincolata da giorno e fase. Oggi è impossibile: delle 6 sessioni con parete a catalogo la più corta è **70 min** (ed è di scarico), le altre 85-100. Serve una voce di catalogo + un ramo nel planner per la settimana 1. **STOP-gate** (`planner_v2`). |
-| ACT-02 | **Non aprire con la prehab** | A | S | Open P1 | Da [[D273]]. Se il giorno 1 di un utente nuovo cade su uno slot casa, il piano apre con cuffia dei rotatori ed eccentrici di gomito (è successo a Jason, iscritto da Reddit). Regola candidata: nella prima settimana la prima sessione proposta è la prima **di arrampicata** disponibile, la prehab si accoda. **STOP-gate** (`planner_v2`). |
-| ACT-03 | **Dire quando si arrampica la prima volta** | A | S | Open P1 | Da [[D273]]. Se la prima sessione vera è fra 3 giorni, `/today` deve dirlo esplicitamente invece di lasciarlo dedurre. `nextSessionInfo` è **già calcolato** in `today/page.tsx` ma mostrato solo negli stati vuoti. Frontend → branch + preview. |
-| ACT-04 | **Un canale di ritorno (push o email)** | A | L | Open P1 | Da [[D273]]. Oggi **non esiste**: l'unico `notify()` manda un Telegram a Daniele, il service worker non ha handler `push`, non c'è email transazionale. Ogni piano che rimanda la prima sessione di più di poche ore è una scommessa sulla memoria dell'utente. È il prerequisito che rende utili ACT-01/02/03 e l'unico che richiede infrastruttura nuova. |
+| ACT-01 | **Una sessione corta che si può fare subito** | A/C | M | 🎯 **Attivo** — ora per uso proprio | Da [[D273]], **riclassificato da [[D275]]**: non più "il prossimo passo GTM" ma la lacuna di catalogo più fastidiosa per chi lo usa davvero. Delle 6 sessioni con parete la più corta è **70 min** (ed è di scarico), le altre 85-100: «sono in palestra e ho mezz'ora» non ha risposta, né per un iscritto nuovo né per Daniele. Serve una voce di catalogo + un ramo nel planner. **STOP-gate** (`planner_v2`). |
+| ACT-02 | **Non aprire con la prehab** | A | S | 🟡 Open P3 — **declassato** | Da [[D273]]. Se il giorno 1 di un utente nuovo cade su uno slot casa, il piano apre con cuffia dei rotatori ed eccentrici di gomito (successo a Jason). **[[D275]]:** è un difetto della *prima settimana di un utente nuovo* — con il marketing in pausa gli utenti nuovi sono ~1 ogni due settimane e Daniele non ci ripassa mai. Resta aperto perché è vero, non perché è urgente. **STOP-gate** (`planner_v2`). |
+| ACT-03 | **Dire quando si arrampica la prima volta** | A | S | 🟢 Open P2 | Da [[D273]]. Se la prima sessione vera è fra 3 giorni, `/today` deve dirlo invece di lasciarlo dedurre. `nextSessionInfo` è **già calcolato** in `today/page.tsx` ma mostrato solo negli stati vuoti. **[[D275]]:** utile a chiunque apra `/today` in un giorno di riposo, non solo al primo accesso — quindi vale anche a marketing fermo. Frontend → branch + preview. |
+| ACT-04 | **Un canale di ritorno (push o email)** | A | L | ⏸️ **Rinviato da [[D275]]** | Da [[D273]]. Oggi **non esiste**: l'unico `notify()` manda un Telegram a Daniele, il service worker non ha handler `push`, non c'è email transazionale. Era il prerequisito che rendeva utili ACT-01/02/03 **per una coorte** — e la coorte non c'è: 0 paganti, 0 esterni attivi. È l'unico item che richiede infrastruttura nuova, ed è esattamente il tipo di lavoro che [[D274]] dice di non fare adesso. Si riapre con `GTM-07`. |
 | ~~GTM-05~~ | **Post su r/climbharder — FATTO, ed è andato male** | — | XS | ❌ **Canale bruciato (2026-08-08)** | Il post è **uscito** (prima settimana di agosto). È rimasto su **due giorni**, ha raccolto **molti commenti negativi sul fatto che fosse scritto con l'AI**, e dopo due giorni Daniele è stato **bannato dal subreddit**. Il canale che il Council indicava come #1 è ora **chiuso, come r/bouldering**. Restano di aperto solo r/indoorbouldering (un post al mese nel thread *Simple Questions*). **Due lezioni, entrambe pagate:** (1) su r/climbharder il registro conta quanto il contenuto — un testo che *suona* generato viene letto come spam a prescindere da cosa offre, e il prodotto non ha mai avuto una vera occasione di essere giudicato; (2) [[D273]] aveva scritto, prima del post, che il canale non era il collo di bottiglia e che mandare traffico sopra il salto macrociclo→prima sessione «lo moltiplica per zero» — ed è esattamente ciò che è successo. **Nessun canale Reddit resta da bruciare: la prossima acquisizione va progettata altrove** (vedi GTM-08). |
 | GTM-08 | **Trovare un canale dopo Reddit** | — | M | 🔴 Open — da scopare | Registrato 2026-08-08 dopo il ban da r/climbharder. Due dei tre subreddit di arrampicata sono chiusi definitivamente. Candidati mai provati: forum/Discord di settore, gruppi Facebook di palestre, la palestra fisica di Daniele (volantino/QR — `docs/attribution_utm_convention.md` ha già la convenzione), passaparola dai ~~4 utenti attivati~~ (**[[D274]]: quei 4 sono l'autore, 2 beta tester e un solo esterno con una singola sessione — non c'è una base da cui parta un passaparola**), contenuto proprio (il `/assessment` pubblico è linkabile ovunque). **Vincolo appreso:** qualunque testo pubblico deve leggersi come scritto da un arrampicatore, non da un modello. **Non prima dell'attivazione** — il vincolo di D273 vale per ogni canale, non solo per Reddit. **[[D274]] (2026-08-10): congelato** — la ricerca di un canale non riparte finché non si verifica la metrica di GTM-07. |
 | GTM-STRIPE-TAX | **Stripe Tax registration** | Config | S | 🟡 Deferred | Riattivare a una di queste: (a) 10+ clienti EU paganti, (b) €5k di ricavo EU cumulato, (c) soglia OSS €10k in avvicinamento. Sotto, valgono le regole IVA domestiche italiane e Stripe Tax è scope creep. All'attivazione: 4 passaggi dashboard + 4 righe in `subscription.py:108-124` (`automatic_tax` + `tax_id_collection` + `billing_address_collection`). **Deciso ora:** $9.99/$4.99 sono **netti** (IVA aggiunta sopra all'attivazione). |
-| GTM-06 | **Feature freeze** — 30 giorni senza feature nuove, solo bug di chi paga o è in trial | — | — | ⏸️ Non attivabile | Doveva partire al primo utente non-beta. Con 0 paganti non ha un trigger: riprendere quando esiste una coorte da proteggere. |
+| ~~GTM-06~~ | **Feature freeze** — 30 giorni senza feature nuove, solo bug di chi paga o è in trial | — | — | ❌ **Chiuso da [[D275]] — won't do** | Era un vincolo di disciplina commerciale: smettere di costruire per proteggere una coorte pagante durante un lancio. **Quella coorte non è mai esistita e ora non è più un obiettivo**, quindi il freeze non ha né trigger né scopo — tenerlo «non attivabile» in roadmap significava solo rileggerlo ogni volta. Se `GTM-07` scatta e si torna a vendere, si riapre da zero con i numeri di allora. |
 | GTM-07 | **Metrica di successo** | — | — | ✅ **Ridefinita da [[D274]]** | La formulazione originale ("3-5 paganti entro fine aprile 2026") è scaduta e mancata; quella successiva (funnel `/assessment`) **non è calcolabile** finché vale [[VERCEL-ANALYTICS-UNREADABLE]], e comunque misura il pezzo del funnel che già funziona (11 su 11 completano il wizard). **Metrica nuova, una sola:** *un utente non-autore che completa **3 sessioni in 14 giorni** dall'iscrizione.* Non è mai successo — è il fatto la cui assenza rende inutile ogni altro numero, e si misura con `gtm_funnel.py` senza lavoro nuovo. Secondarie, se servisse conferma: ≥5 iscritti organici in un mese solare senza alcuna spinta (oggi ~1 ogni due settimane), o un contatto inbound spontaneo (zero a oggi). |
 | B228 | **Handler 402 globale in `api.ts`** | B | S | Open P2 | Centralizzare 402 → `router.push('/subscribe')` + toast. Branch frontend + preview Vercel. |
 | D230 | **Lint frontend** | D | M | Open P3 | Misurato oggi: **34 errori / 41 warning** (era 30/38 — sta crescendo). Quasi tutto `react-hooks/set-state-in-effect` dal React Compiler in Next 16. La CI non lo blocca. Un pomeriggio, branch + preview. |

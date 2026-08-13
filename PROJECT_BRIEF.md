@@ -27,13 +27,30 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Frontend components | 109 |
 <!-- STATUS_TABLE_END -->
 
-**Current phase:** Paid launch prep. Production live at **https://climbagent.app** (canonical domain since A248, 2026-07-21 — legacy `climb-agent.vercel.app` 308-redirects with query preserved). Stripe LIVE (sk_live keys on Railway + Vercel). B202 fail-closed subscription guard deployed. Founding Climber ($4.99/mo) and Standard ($9.99/mo) plans active.
+**Current phase: personal tool, marketing paused** (decided 2026-08-10, D274). The app stays
+live and fully operational at **https://climbagent.app** (canonical domain since A248, 2026-07-21 —
+legacy `climb-agent.vercel.app` 308-redirects with query preserved). **Nothing is being switched
+off:** Stripe stays LIVE (sk_live keys on Railway + Vercel), the B202 fail-closed subscription
+guard stays deployed, and both plans stay purchasable. What stopped is the *acquisition effort*,
+not the product. Build for the athlete using it; growth work is out of scope unless Daniele
+reopens it.
 
-**Funnel (snapshot 2026-08-02, `scripts/gtm_funnel.py`):** 14 registered · 10 trials, all expiring 5 August (4 engaged, last login 21-22 July; 6 never logged in) · 4 stuck at checkout · **0 paying** · 3 historical cancellations. The 21 July re-launch cohort converted nobody. Distribution is the open problem: r/bouldering rejected outreach (channel closed), r/indoorbouldering allowed one monthly-thread post, and the r/climbharder post — the channel the Council ranked #1 — has been drafted since 22 July but never published. Next step is GTM-05 in `docs/ROADMAP_CURRENT.md`.
+**Funnel (audit `docs/audit/D274_gtm_cohort_audit.md`, 2026-08-10):** 20 accounts ever, of which
+**11 are real external users** (the rest: the author, 3 of his test accounts, 4 beta testers, 1
+orphan row). Of those 11 — **11 completed the 12-step wizard and generated a macrocycle, 1 ever
+completed a session, 0 reached three, 0 are paying.** The drop is **−91% at "macrocycle generated
+→ first session"**; the last session completed by a non-author was **2026-04-21**. **Lifetime net
+revenue: −€0.47** — the only payment ever taken ($4.99, 2026-06-14) was refunded four hours later
+by a user with zero completed sessions, and Stripe kept the fee. Reddit is exhausted (banned from
+r/climbharder, 2026-08-08). Cause analysis of the activation gap: `docs/audit/D273_first_session_activation.md`.
+
+**Reopening condition (`GTM-07`):** one non-author user completing **3 sessions within 14 days**.
+It has never happened. Check monthly with `python scripts/gtm_funnel.py` — no other GTM work is
+scheduled.
 
 **Persistence:** Supabase JSONB live in production (6 tables: users, session_logs, outdoor_logs, event_logs, recovery_codes, subscriptions). RLS enabled on all 6 tables (no policies, service role key bypasses).
 
-**Pricing at launch:** USD $9.99/month Standard (15-day free trial) + USD $4.99/month Founding Climber (locked forever, first 20 users). Stripe LIVE.
+**Pricing (live, not promoted):** USD $9.99/month Standard (15-day free trial) + USD $4.99/month Founding Climber (locked forever, first 20 users). Stripe LIVE.
 
 - Pricing tax_behavior: **exclusive** (net prices, VAT added at Stripe Tax activation). Decision date: 2026-04-28. Locked-in for consistency at future Stripe Tax activation.
 
