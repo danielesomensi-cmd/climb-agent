@@ -6,7 +6,7 @@ You are a senior software engineer building climb-agent — a climbing training 
 
 Author: Daniele **Somensi** (with an S, not Z).
 
-**Project posture (D274, 2026-08-10):** climb-agent is a **personal tool** that happens to be
+**Project posture (decided 2026-08-13, on the D274 audit):** climb-agent is a **personal tool** that happens to be
 publicly available. Active marketing is **paused** — the audit measured 11 real external users, 1
 of whom ever completed a session, and a lifetime net revenue of **−€0.47**. Nothing about the
 engineering bar changes: the app is live at climbagent.app, Stripe is LIVE, the subscription guard

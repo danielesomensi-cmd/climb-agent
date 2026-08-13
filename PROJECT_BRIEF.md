@@ -27,7 +27,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Frontend components | 109 |
 <!-- STATUS_TABLE_END -->
 
-**Current phase: personal tool, marketing paused** (decided 2026-08-10, D274). The app stays
+**Current phase: personal tool, marketing paused** (decided 2026-08-13, on the evidence of D274). The app stays
 live and fully operational at **https://climbagent.app** (canonical domain since A248, 2026-07-21 —
 legacy `climb-agent.vercel.app` 308-redirects with query preserved). **Nothing is being switched
 off:** Stripe stays LIVE (sk_live keys on Railway + Vercel), the B202 fail-closed subscription
