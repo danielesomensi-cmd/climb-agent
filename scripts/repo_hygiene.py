@@ -121,6 +121,13 @@ def check_tracked_ds_store():
 def check_large_untracked():
     """Find files >500K at root or in docs/ not in .gitignore."""
     SIZE_LIMIT = 500 * 1024
+    # D276: the roadmap archive is *meant* to grow — every trim_roadmap.py run
+    # appends to it, so it crossed 500K the first time the roadmap was pruned
+    # hard. Warning about it would fire on every run from now on and teach the
+    # reader to skim past hygiene output, which is the opposite of the point.
+    # This check exists to catch a binary committed by accident, not the file
+    # the workflow is designed to fill.
+    EXEMPT = {"ROADMAP_v2.md"}
     found = False
     # Check repo root (non-recursive) and docs/
     search_dirs = [REPO_ROOT]
@@ -132,6 +139,8 @@ def check_large_untracked():
             if f.is_dir():
                 continue
             if f.name.startswith("."):
+                continue
+            if f.name in EXEMPT:
                 continue
             try:
                 if f.stat().st_size > SIZE_LIMIT:
