@@ -33,6 +33,15 @@ const GET_READY_SECONDS = 5;
 const RADIUS = 52;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
+/**
+ * B332 — how far past a deadline a tick may land and still count as "observed
+ * live". The tick runs every 200 ms, so in the foreground a phase expires with
+ * `remainingMs` between 0 and -200. Anything past this margin means the
+ * interval was suspended (screen off / PWA backgrounded) and the deadline
+ * elapsed with nobody watching.
+ */
+const RESUME_GAP_MS = 2000;
+
 // ---------------------------------------------------------------------------
 // Audio — uses shared AudioContext from audio-unlock.ts.
 // unlockAudio() is called once on the guided-session page (touchstart +
@@ -114,10 +123,21 @@ function ExerciseTimerImpl({
   const [paused, setPaused] = useState(false);
   const [transitionId, setTransitionId] = useState(0);
   const [flash, setFlash] = useState(false);
+  // B332: the phase timer ran out and we are waiting for the athlete to tap,
+  // instead of advancing the counter on their behalf. `overdueSeconds` counts
+  // up from the deadline, like the session-builder rest timer.
+  const [overdue, setOverdue] = useState(false);
+  const [overdueSeconds, setOverdueSeconds] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseEndTimeRef = useRef<number>(0);
   const secondsLeftRef = useRef(0);
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
+  // B332: the deadline value already consumed by a phase transition — one
+  // deadline must fire exactly once. Without it, a tick landing before React has
+  // committed the transition re-enters the same branch with the stale closure
+  // (`phase` is still "set_rest") and `setCurrentSet(s => s + 1)` runs twice.
+  // -1 rather than 0 so the very first transition is not mistaken for consumed.
+  const consumedDeadlineRef = useRef<number>(-1);
   // Dedup for countdown beep — last second value beeped this phase, so multiple
   // ticks landing in the same 1-s window only fire once. -1 = no beep yet.
   // Reset in startCountdown (every phase transition) and handleReset (B247).
@@ -193,7 +213,24 @@ function ExerciseTimerImpl({
   const startCountdown = useCallback((seconds: number) => {
     phaseEndTimeRef.current = Date.now() + seconds * 1000;
     lastBeepedSecRef.current = -1;
+    // B332: a fresh deadline is unconsumed, and clears any pending hold. Needed
+    // here as well as on the phase effect below because handlePhaseBack can
+    // restart the *same* phase, which the phase-keyed effect would not see.
+    consumedDeadlineRef.current = -1;
+    setOverdue(false);
+    setOverdueSeconds(0);
     setSecondsLeft(seconds);
+  }, []);
+
+  /**
+   * B332 — leave the held state. While held the tick transitions nothing, so
+   * the only ways out are the three user actions (forward / back / reset);
+   * startCountdown covers the rest. No effect needed, and none wanted: clearing
+   * this from an effect body would be a cascading-render lint error.
+   */
+  const clearHold = useCallback(() => {
+    setOverdue(false);
+    setOverdueSeconds(0);
   }, []);
 
   // Main tick — wall-clock based so iOS background suspension doesn't freeze countdown.
@@ -214,6 +251,39 @@ function ExerciseTimerImpl({
       if (remainingMs <= 0) {
         // --- Phase transition ---
 
+        // B332 — two expiries never advance the counter on their own, they
+        // hold and count up until the athlete taps (same contract as the
+        // session-builder rest timer):
+        //
+        //   * ANY rest. The clock knows the rest is over; only the athlete
+        //     knows whether they are back on the wall. Auto-advancing here is
+        //     what moved the counter while the app was backgrounded, so a set
+        //     nobody climbed reached `completedSets` on the next "Done set".
+        //   * A timed WORK phase that expired while the timer was suspended,
+        //     i.e. nobody watched it end — completing that set would write work
+        //     that never happened straight through onSetChange. A work phase
+        //     that expires under our eyes still auto-advances, so hands-free
+        //     timed circuits keep flowing.
+        const workExpiredUnwatched =
+          phase === "work" && remainingMs < -RESUME_GAP_MS;
+
+        if (phase === "rep_rest" || phase === "set_rest" || workExpiredUnwatched) {
+          const elapsed = Math.floor(-remainingMs / 1000);
+          setOverdue(true);
+          setSecondsLeft(0);
+          setOverdueSeconds((prev) => (prev === elapsed ? prev : elapsed));
+          if (consumedDeadlineRef.current !== phaseEndTimeRef.current) {
+            consumedDeadlineRef.current = phaseEndTimeRef.current;
+            pendingVoiceCueRef.current = null; // beep + flash only, no voice cue
+            setTransitionId((id) => id + 1);
+          }
+          return;
+        }
+
+        // B332: one deadline → one transition. See consumedDeadlineRef.
+        if (consumedDeadlineRef.current === phaseEndTimeRef.current) return;
+        consumedDeadlineRef.current = phaseEndTimeRef.current;
+
         if (phase === "get_ready") {
           setPhase("work");
           pendingVoiceCueRef.current = "work";
@@ -233,7 +303,7 @@ function ExerciseTimerImpl({
               return;
             }
             // No rep rest — next rep immediately
-            setCurrentRep((r) => r + 1);
+            setCurrentRep((r) => Math.min(r + 1, reps)); // B332: never past the prescription
             pendingVoiceCueRef.current = "work";
             setTransitionId((id) => id + 1);
             startCountdown(workSeconds);
@@ -257,7 +327,7 @@ function ExerciseTimerImpl({
             return;
           }
           // No set rest — next set directly (no get_ready between sets)
-          setCurrentSet((s) => s + 1);
+          setCurrentSet((s) => Math.min(s + 1, totalSets)); // B332: never past the prescription
           setCurrentRep(1);
           setPhase("work");
           pendingVoiceCueRef.current = "work";
@@ -266,25 +336,8 @@ function ExerciseTimerImpl({
           return;
         }
 
-        if (phase === "rep_rest") {
-          setCurrentRep((r) => r + 1);
-          setPhase("work");
-          pendingVoiceCueRef.current = "work";
-          setTransitionId((id) => id + 1);
-          if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
-          return;
-        }
-
-        if (phase === "set_rest") {
-          setCurrentSet((s) => s + 1);
-          setCurrentRep(1);
-          setPhase("work");
-          pendingVoiceCueRef.current = "work";
-          setTransitionId((id) => id + 1);
-          if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
-          return;
-        }
-
+        // B332: rep_rest / set_rest no longer reach here — they hold above and
+        // advance only through handleRestDone(), on the athlete's tap.
         setSecondsLeft(0);
         return;
       }
@@ -374,10 +427,23 @@ function ExerciseTimerImpl({
     setTransitionId((id) => id + 1);
   }
 
+  /**
+   * B332 — leave a held phase. The timer ran out (rest over, or a timed work
+   * phase that expired while the app was suspended) and parked itself waiting
+   * for this tap. handlePhaseForward already encodes every legal transition out
+   * of rest and out of work, including the onSetChange write, so reuse it.
+   */
+  async function handleRestDone() {
+    await unlockAudio();
+    handlePhaseForward();
+  }
+
   function handleReset() {
     clearTimer();
     phaseEndTimeRef.current = 0;
     lastBeepedSecRef.current = -1;
+    consumedDeadlineRef.current = -1;
+    clearHold();
     setPhase("idle");
     setCurrentSet(1);
     setCurrentRep(1);
@@ -386,6 +452,12 @@ function ExerciseTimerImpl({
   }
 
   function handleCircleTap() {
+    // B332: while held, the circle IS the continue button — pausing an already
+    // expired phase would be meaningless.
+    if (overdue) {
+      handleRestDone();
+      return;
+    }
     if (phase === "work" && isManual) {
       handleDoneManual();
       return;
@@ -399,6 +471,7 @@ function ExerciseTimerImpl({
   function handlePhaseForward() {
     if (phase === "idle" || phase === "complete") return;
     const wasRunning = !paused;
+    clearHold(); // B332
 
     if (phase === "get_ready") {
       setPhase("work");
@@ -435,7 +508,7 @@ function ExerciseTimerImpl({
         }
       }
     } else if (phase === "rep_rest") {
-      setCurrentRep((r) => r + 1);
+      setCurrentRep((r) => Math.min(r + 1, reps)); // B332: never past the prescription
       setPhase("work");
       pendingVoiceCueRef.current = "work";
       if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
@@ -456,6 +529,7 @@ function ExerciseTimerImpl({
   function handlePhaseBack() {
     if (phase === "idle" || phase === "complete") return;
     const wasRunning = !paused;
+    clearHold(); // B332
     const elapsed = totalForPhase - secondsLeft;
 
     if (elapsed > 2) {
@@ -541,8 +615,17 @@ function ExerciseTimerImpl({
     touchStartY.current = null;
   }
 
+  // B332 — copy for the held state: what the athlete has to tap to leave it.
+  const overdueCta = (() => {
+    if (phase === "rep_rest") return "Next rep";
+    if (phase === "set_rest") return currentSet >= totalSets ? "Finish" : "Next set";
+    return "Done set"; // timed work that expired unwatched
+  })();
+  const overdueLabel = phase === "work" ? "TIME UP" : "REST OVER";
+
   // Phase label + color for enlarged mode
   const phaseLabel = (() => {
+    if (overdue) return overdueLabel;
     switch (phase) {
       case "get_ready": return "GET READY";
       case "work": return isManual ? (hasManualRepLoop ? "DO REP" : "DO SET") : "WORK";
@@ -554,6 +637,7 @@ function ExerciseTimerImpl({
   })();
 
   const phaseColor = (() => {
+    if (overdue) return "text-amber-500";
     switch (phase) {
       case "get_ready": return "text-sky-500";
       case "work": return "text-orange-500";
@@ -615,7 +699,11 @@ function ExerciseTimerImpl({
             )}
 
             {/* Big time display */}
-            {phase === "work" && isManual ? (
+            {overdue ? (
+              <span className="text-[120px] leading-none font-bold tabular-nums text-amber-500">
+                +{formatSeconds(overdueSeconds)}
+              </span>
+            ) : phase === "work" && isManual ? (
               <div className="flex flex-col items-center gap-2">
                 {hasManualRepLoop ? (
                   <span className="text-[120px] leading-none font-bold tabular-nums">
@@ -672,8 +760,20 @@ function ExerciseTimerImpl({
               <ChevronLeft className="size-8" />
             </button>
 
+            {/* B332: held phase — the counter moves only from here */}
+            {overdue && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleRestDone(); }}
+                onPointerDown={tapFeedback}
+                className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 text-base font-medium text-black hover:bg-amber-400 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
+              >
+                <CheckCircle2 className="size-5" />
+                {overdueCta}
+              </button>
+            )}
+
             {/* Manual done button */}
-            {phase === "work" && isManual && (
+            {!overdue && phase === "work" && isManual && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleDoneManual(); }}
                 onPointerDown={tapFeedback}
@@ -760,7 +860,9 @@ function ExerciseTimerImpl({
             if (e.key === " " || e.key === "Enter") handleCircleTap();
           }}
           aria-label={
-            phase === "work" && isManual
+            overdue
+              ? overdueCta
+              : phase === "work" && isManual
               ? (hasManualRepLoop ? "Complete rep" : "Complete set")
               : paused ? "Resume timer" : "Pause timer"
           }
@@ -812,7 +914,22 @@ function ExerciseTimerImpl({
               </>
             )}
 
-            {phase === "work" && !isManual && (
+            {/* B332: timer expired, waiting for the athlete — counter frozen */}
+            {overdue && (
+              <>
+                <span className="text-3xl font-bold tabular-nums text-amber-500">
+                  +{formatSeconds(overdueSeconds)}
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-amber-500">
+                  {overdueLabel}
+                </span>
+                <span className="text-xs text-muted-foreground/70 mt-0.5">
+                  Tap to continue
+                </span>
+              </>
+            )}
+
+            {!overdue && phase === "work" && !isManual && (
               <>
                 <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
                   {formatSeconds(secondsLeft)}
@@ -848,7 +965,7 @@ function ExerciseTimerImpl({
               </>
             )}
 
-            {phase === "rep_rest" && (
+            {!overdue && phase === "rep_rest" && (
               <>
                 <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
                   {formatSeconds(secondsLeft)}
@@ -860,7 +977,7 @@ function ExerciseTimerImpl({
               </>
             )}
 
-            {phase === "set_rest" && (
+            {!overdue && phase === "set_rest" && (
               <>
                 <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
                   {formatSeconds(secondsLeft)}
@@ -921,7 +1038,18 @@ function ExerciseTimerImpl({
           </span>
         )}
         <div className="flex items-center gap-3">
-          {phase === "work" && isManual && (
+          {/* B332: held phase — the counter moves only from here */}
+          {overdue && (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleRestDone(); }}
+              onPointerDown={tapFeedback}
+              className="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
+            >
+              <CheckCircle2 className="size-4" />
+              {overdueCta}
+            </button>
+          )}
+          {!overdue && phase === "work" && isManual && (
             <button
               onClick={(e) => { e.stopPropagation(); handleDoneManual(); }}
               onPointerDown={tapFeedback}

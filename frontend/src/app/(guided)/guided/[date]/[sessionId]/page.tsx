@@ -15,6 +15,7 @@ import { buildGuidedFeedbackItems } from "@/lib/feedback-items";
 import { guidedStorageKey } from "@/lib/guided-session-utils";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
+import { useWakeLock } from "@/lib/hooks/use-wake-lock";
 import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
@@ -87,6 +88,12 @@ export default function GuidedSessionPage() {
   const [error, setError] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [resumed, setResumed] = useState(false);
+
+  // B332: keep the screen awake for the whole session, like the session-builder
+  // player already did (play/page.tsx). Without it the screen sleeps on its own
+  // during a 5-minute boulder rest, which suspends the timer — the condition the
+  // set counter used to get wrong.
+  useWakeLock(state !== null && !showSummary);
 
   // Ref to always have latest state for the beforeunload handler
   const stateRef = useRef(state);
