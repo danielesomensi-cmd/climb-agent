@@ -24,7 +24,7 @@ Climbing training planning engine. Deterministic (same inputs → same outputs),
 | Templates | 19 |
 | API endpoints | 93 |
 | Frontend pages | 46 |
-| Frontend components | 109 |
+| Frontend components | 110 |
 <!-- STATUS_TABLE_END -->
 
 **Current phase: personal tool, marketing paused** (decided 2026-08-13, on the evidence of D274). The app stays

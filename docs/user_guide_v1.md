@@ -182,7 +182,11 @@ The guided session is your in-gym companion. It walks you through every exercise
 - A **process cue** banner reminds you what to focus on today (e.g., "Place every foot so silently that no sound is audible")
 - On the **Plan** page, each phase has an expandable "About this phase" section explaining *why* you're in this phase and what to expect
 
-**iOS Safari note**: The timer uses a wall-clock engine specifically designed to survive Safari background suspension. If you switch apps briefly, the timer stays accurate. Audio cues require one initial tap to activate (iOS requirement).
+**When a rest runs out**: the timer stops and waits for you. It keeps counting *up* (`+2:14`) and shows a **Next set** button — the set counter does not move until you tap it. Only you know whether you're actually back on the wall, so the app never counts a set on your behalf. Timed work phases still advance on their own when they finish while you're looking at them, so circuits stay hands-free.
+
+**iOS Safari note**: The timer uses a wall-clock engine specifically designed to survive Safari background suspension, and the screen is kept awake for the whole session. If you switch apps or the phone locks, the clock stays accurate — and anything that ran out while you were away waits for your tap rather than advancing the counter.
+
+Audio cues require one initial tap to activate (iOS requirement).
 
 **You can always**:
 - Skip an exercise within the guided session
