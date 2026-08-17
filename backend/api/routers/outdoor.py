@@ -53,15 +53,34 @@ def _sync_plan_after_outdoor_log(
 
     Best-effort by design: the outdoor log is the primary record and is
     already persisted when this runs. Returns True iff the plan day was
-    marked done. Skips (False) when: plan paused (A223), date in a past week
-    (B257 immutability), no hot plan for that Monday, or day not in the plan.
+    marked done. Skips (False) when: the subscription cannot interact (B334),
+    plan paused (A223), date in a past week (B257 immutability), no hot plan
+    for that Monday, or day not in the plan.
     """
     from backend.api.deps import ensure_monday, is_past_week, is_plan_paused
     from backend.api.routers.replanner import _auto_resolve, persist_week_plan
     from backend.engine.replanner_v1 import apply_events
+    from backend.engine.subscription_guard import check_subscription
 
     date = entry.get("date") or ""
     if not date:
+        return False
+    # B334 (finding OUTDOOR-PUT-UNGATED, D278): two of the three callers carry
+    # require_active_subscription; PUT /log does not, and deliberately so —
+    # across this codebase the guard protects *training* actions while reading,
+    # editing and deleting your own data stays free (see /user/export,
+    # PUT /state, the free_session DELETEs). What must not ride along on that
+    # freedom is the plan mutation: this function marks the day done, writes
+    # the load and applies the ripple, i.e. exactly the resource the guard
+    # protects. Gating the side effect instead of the endpoint keeps both
+    # properties. Checked here, at the single choke point the three callers
+    # share, rather than on the route: a dependency on PUT would take away
+    # data custody to close a plan hole.
+    if not check_subscription(user_id)["can_interact"]:
+        logger.info(
+            "B334: subscription cannot interact — outdoor log %s saved, plan untouched",
+            date,
+        )
         return False
     if is_plan_paused(state):
         logger.info("B273: plan paused — outdoor log %s saved without plan sync", date)
