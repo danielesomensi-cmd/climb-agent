@@ -32,6 +32,7 @@ class MemoryStorage {
 const postFeedback = vi.fn();
 const postOutdoorLog = vi.fn();
 const logFreeClimb = vi.fn();
+const finishOutdoorSession = vi.fn();
 
 class ApiError extends Error {
   status: number;
@@ -48,6 +49,7 @@ vi.mock("@/lib/api", () => ({
   postFeedback: (...a: unknown[]) => postFeedback(...a),
   postOutdoorLog: (...a: unknown[]) => postOutdoorLog(...a),
   logFreeClimb: (...a: unknown[]) => logFreeClimb(...a),
+  finishOutdoorSession: (...a: unknown[]) => finishOutdoorSession(...a),
 }));
 
 vi.mock("@/lib/guided-session-utils", () => ({
@@ -69,6 +71,7 @@ beforeEach(async () => {
   postFeedback.mockReset();
   postOutdoorLog.mockReset();
   logFreeClimb.mockReset();
+  finishOutdoorSession.mockReset();
   toastError.mockReset();
   outbox = await import("@/lib/outbox");
 });
@@ -133,6 +136,70 @@ describe("outbox", () => {
     expect(res.remaining).toBe(0);
     expect(outbox.pendingCount()).toBe(0);
     // Never drop user data silently — that is the whole point of Phase B.
+    expect(toastError).toHaveBeenCalledOnce();
+  });
+
+  // --- B336: outdoor_finish ---------------------------------------------------
+
+  it("replays an outdoor_finish against its server session id", async () => {
+    outbox.enqueue("outdoor_finish", {
+      session_id: "outdoor_active_20260820_1",
+      spot_name: "Grande Grotta",
+      discipline: "lead",
+      routes: [{ name: "DNA", grade: "7a+", attempts: [{ result: "sent" }] }],
+    });
+    finishOutdoorSession.mockResolvedValue({ status: "done" });
+
+    const res = await outbox.flush();
+
+    expect(finishOutdoorSession).toHaveBeenCalledWith("outdoor_active_20260820_1", {
+      spot_name: "Grande Grotta",
+      discipline: "lead",
+      routes: [{ name: "DNA", grade: "7a+", attempts: [{ result: "sent" }] }],
+    });
+    expect(res).toEqual({ sent: 1, remaining: 0 });
+  });
+
+  it("keeps an outdoor_finish queued while still offline", async () => {
+    outbox.enqueue("outdoor_finish", { session_id: "s1", spot_name: "Odyssey" });
+    finishOutdoorSession.mockRejectedValue(new ApiError(0, "offline"));
+
+    await outbox.flush();
+
+    expect(outbox.pendingCount()).toBe(1);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("treats a 404 on outdoor_finish as already applied, NOT as a rejection", async () => {
+    // The likeliest cause is that the original finish succeeded and only its
+    // response was lost: the log exists, so "rejected by the server" would be
+    // both alarming and false.
+    outbox.enqueue("outdoor_finish", { session_id: "s1", spot_name: "Odyssey" });
+    finishOutdoorSession.mockRejectedValue(new ApiError(404, "not found"));
+
+    const res = await outbox.flush();
+
+    expect(res).toEqual({ sent: 1, remaining: 0 });
+    expect(outbox.pendingCount()).toBe(0);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("still warns when an outdoor_finish is genuinely rejected", async () => {
+    outbox.enqueue("outdoor_finish", { session_id: "s1" });
+    finishOutdoorSession.mockRejectedValue(new ApiError(422, "bad payload"));
+
+    await outbox.flush();
+
+    expect(outbox.pendingCount()).toBe(0);
+    expect(toastError).toHaveBeenCalledOnce();
+  });
+
+  it("does not extend the 404 pass to other kinds", async () => {
+    outbox.enqueue("outdoor_log", { date: "2026-08-20" });
+    postOutdoorLog.mockRejectedValue(new ApiError(404, "not found"));
+
+    await outbox.flush();
+
     expect(toastError).toHaveBeenCalledOnce();
   });
 
