@@ -159,7 +159,7 @@ Automatizzare il loop di feedback/supporto clienti oggi gestito manualmente (wel
 > All research files, Hörst syntheses, topic files, and decision consolidations live in that project's knowledge.
 >
 > **⚠️ RULE: Before implementing any deferred decision from the backlog below, open the KB project and check
-> `_archive/docs/horst_integration_audit.md` for enrichment material. Many deferred decisions have ready-to-use content.**
+> `docs/research_kb/horst_integration_audit.md` for enrichment material. Many deferred decisions have ready-to-use content.**
 
 ### Open KB Research Items
 
@@ -168,8 +168,8 @@ Automatizzare il loop di feedback/supporto clienti oggi gestito manualmente (wel
 | Session 2 patch (4 corrections: D11, D12, D39, D72) | ⏸️ Prepared | KB project memory (not yet a file) |
 | D84 pulling strength test (max load review) | ⏸️ Under review | KB project |
 | Finger strength test architecture (5s→7s Lattice) | ⏸️ Under review | KB project |
-| CUE-02 formalize (forearm stretch → D33 amendment) | 📋 Proposed | `_archive/docs/horst_integration_audit.md` §6 |
-| Coach KB spec: add 8 Hörst coaching cues | 📋 Proposed | `_archive/docs/horst_integration_audit.md` §5 |
+| CUE-02 formalize (forearm stretch → D33 amendment) | 📋 Proposed | `docs/research_kb/horst_integration_audit.md` §6 |
+| Coach KB spec: add 8 Hörst coaching cues | 📋 Proposed | `docs/research_kb/horst_integration_audit.md` §5 |
 | Decision consolidation: append D84-D91 | 📋 Proposed | `kb_gaps_analysis.md` |
 | Topics 05-10 Steps 4-5 (decision specs) | ⏳ Not started | KB project |
 
@@ -348,7 +348,7 @@ Depends on: D69 (ACWR) design, beta tester data.
 
 ### Educational content (methodology explanations)
 
-Two-layer system: reference doc (`docs/training_methodology_explained.md`) + condensed UI cards in Plan page.
+Two-layer system: reference doc (`docs/training_methodology_explained.md` (cancellato — vive solo nella storia git)) + condensed UI cards in Plan page.
 Content: 5 phases, DUP vs linear, feedback loop, deload science, exercise ordering.
 
 ### Outdoor redesign
@@ -452,7 +452,7 @@ Higher pulley injury rate, shoulder impingement from steep terrain, fall injurie
 
 ### Mega Brief v1 — Deferred Decisions (v2+)
 
-> Full specifications in `docs/claude_code_mega_brief_v1.md`. Grouped by theme.
+> Full specifications in `docs/claude_code_mega_brief_v1.md` (cancellato — vive solo nella storia git, `git log --diff-filter=D`). Grouped by theme.
 
 **Effort Level / Intensity System (mega brief Session 5)**
 
@@ -479,7 +479,7 @@ Higher pulley injury rate, shoulder impingement from steep terrain, fall injurie
 
 | ID | Title | Effort | Notes |
 |----|-------|--------|-------|
-| D33 | Dedicated `generate_warmup()` function | M | 5-phase protocol generator. **⚠️ KB: Ch. 6 has warm-up exercises + CUE-02 (no forearm flexor stretch pre-performance). See `_archive/docs/horst_integration_audit.md` §5-§6.** |
+| D33 | Dedicated `generate_warmup()` function | M | 5-phase protocol generator. **⚠️ KB: Ch. 6 has warm-up exercises + CUE-02 (no forearm flexor stretch pre-performance). See `docs/research_kb/horst_integration_audit.md` §5-§6.** |
 | D36 | PAP (Post-Activation Potentiation) | S | Advanced users only (3+ years, pulling ≥60). Niche. |
 | D74 | `silent_feet` auto-inject in warmup template | XS | Drill exists, not auto-injected in warmup. |
 | D53 | Active recovery progression (3-step) | S | References EL system (D34). **KB: Ch. 12 confirms active rest +35% lactate clearance (Watts 2000).** |

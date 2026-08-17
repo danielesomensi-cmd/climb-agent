@@ -1,9 +1,9 @@
 # Assessment Scoring Research — Decision Log (2026-08)
 
 **Brief:** C267 · **Date:** 2026-08-06 · **Type:** C (research / decision record, docs only)
-**Predecessor:** `docs/audit_D260_tooltip_and_assessment_scoring.md` (audit, 2026-07-23)
+**Predecessor:** `docs/audit/D260_tooltip_and_assessment_scoring.md` (audit, 2026-07-23)
 **Status:** Decisions recorded. D261 and D266 have implementation analyses pending approval
-(`docs/analysis_D271_endurance_test.md`, `docs/analysis_D272_gap_demotion.md`).
+(`docs/audit/D271_endurance_test_analysis.md`, `docs/audit/D272_gap_demotion_analysis.md`).
 
 ---
 
@@ -103,12 +103,12 @@ anchor for the Endurance axis. It stays dormant until the test ships.
 
 | Decision | Affects | Ships when |
 |---|---|---|
-| D261 rev B | New assessment test, Endurance axis becomes measured | After approval of `analysis_D271_endurance_test.md` |
+| D261 rev B | New assessment test, Endurance axis becomes measured | After approval of `D271_endurance_test_analysis.md` |
 | D262 | Radar "Elite" comparison mode (display only) | A267 — shipped with 2 live axes, 3 greyed |
 | D263 | `max_hang_duration_20mm_seconds` keeps its composite role, loses any endurance claim | With D261 |
 | D264 | Closes the continuous-endurance option; no work to do | Immediately (no-op) |
 | D265 | Removes Critical Force from the v3 roadmap as a "precision upgrade" | Immediately (roadmap) |
-| D266 | Technique & Tactics scoring, domain weights, coach payload | After approval of `analysis_D272_gap_demotion.md` |
+| D266 | Technique & Tactics scoring, domain weights, coach payload | After approval of `D272_gap_demotion_analysis.md` |
 | D267 | Endurance scoring curve + `scoring_version` field | With D261 |
 
 ---

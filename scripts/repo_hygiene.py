@@ -5,12 +5,15 @@ import os
 import subprocess
 from pathlib import Path
 
-# D269 (2026-08-02) — docs + roadmap audit: `docs/audit/D269_roadmap_docs_audit.md`.
-# Covered: roadmap pruning against the code, doc alignment (CLAUDE.md / PROJECT_BRIEF /
-# user guide), archival of closed audit reports. NOT covered: a full code review —
-# for that the last one is still D254 (2026-07-20).
-# Previous hygiene audit: D237, now at `_archive/docs/audit/D237_repo_hygiene_2026-05-11.md`.
-LAST_AUDIT_DATE = "2026-08-02"
+# D277 (2026-08-17) — docs ↔ code audit: `docs/audit/D277_docs_code_audit.md`.
+# Covered: endpoint table vs real routes (exact), counters, env vars read vs documented,
+# deliverable placement, broken file references, git-log ↔ roadmap reconciliation.
+# NOT covered: a full code review — for that the last one is still D254 (2026-07-20).
+# Known gap this check has, recorded by D277 as F5: check_completed_briefs() only reads
+# the first 10 lines, so a closed brief doc without a completion marker passes silently.
+# Previous: D269 (2026-08-02) `docs/audit/D269_roadmap_docs_audit.md`; D237 hygiene audit
+# at `_archive/docs/audit/D237_repo_hygiene_2026-05-11.md`.
+LAST_AUDIT_DATE = "2026-08-17"
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = REPO_ROOT / "docs"

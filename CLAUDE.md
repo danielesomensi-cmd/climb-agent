@@ -267,7 +267,7 @@ user_state.assessment + user_state.goal
 
 Next.js 16 App Router (Turbopack) + Tailwind CSS + shadcn/ui. Mobile-first dark-mode PWA.
 
-**Pages (46):** 19 under `(main)` + 2 under `(guided)` (guided session, session-builder play) + 15 under `/onboarding` (index + 14 route dirs) + 2 auth (sign-in, sign-up) + 1 root dispatcher + `/assessment` + `/demo` + `/legal` + `/offline` + 2 dev-only (`/dev/tokens`, `/dev/today-states`). Recount verified against `find frontend/src/app -name page.tsx` (D269, 2026-08-02; 47 → 46 in B320, which deleted `/onboarding/recover`) — the pre-D269 breakdown summed to 36 and omitted the session-builder, body-part-picker, `/demo`, `/offline` and the dev pages.
+**Pages (46):** 19 under `(main)` + 2 under `(guided)` (guided session, session-builder play) + 16 under `/onboarding` (index + 15 route dirs) + 2 auth (sign-in, sign-up) + 1 root dispatcher + `/assessment` + `/demo` + `/legal` + `/offline` + 2 dev-only (`/dev/tokens`, `/dev/today-states`). Recount verified against `find frontend/src/app -name page.tsx` (D277, 2026-08-17). **The onboarding sub-count was wrong from D269 until D277** and the breakdown summed to 45 against a headline of 46: B320 deleted `/onboarding/recover` and decremented the sub-count on top of a figure that was already one short, so the total was right for the wrong reason. Check the sum, not just the headline. (The pre-D269 breakdown summed to 36 and omitted the session-builder, body-part-picker, `/demo`, `/offline` and the dev pages.)
 
 **Entry-point routing (B300, `src/app/page.tsx`)** — the root `/` is a smart dispatcher, not a page:
 - **Signed-out** (cold ad/flyer visitor) → `/onboarding/welcome` (public marketing landing: hero + value props + "Start assessment" CTA + a visible "Sign in" link). Before B300 it sent them to the bare `/sign-in` login wall — a bad ad landing.
@@ -302,7 +302,7 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
 - `/demo` — Zero-context acquisition landing (no Clerk needed by the page itself — see `A-CLERK-PROVIDER-SCOPE`)
 - `/offline` — Service-worker offline fallback
 - `/dev/tokens`, `/dev/today-states` — Dev-only harnesses (design tokens, `/today` state matrix)
-- `/onboarding/*` — 14 route dirs. **The wizard proper is 12 steps** (`ONBOARDING_STEPS`: profile, experience, discipline, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review). Outside that list: `welcome` (the public landing) plus `install` and `start-week`, which run *after* a plan exists and stay gated. (B320 removed `recover`: recovery-by-code was a pre-Clerk relic — recovery is signing in with the original email.)
+- `/onboarding/*` — 15 route dirs (12 wizard steps + `welcome` + `install` + `start-week`; corrected in D277). **The wizard proper is 12 steps** (`ONBOARDING_STEPS`: profile, experience, discipline, grades, goals, weaknesses, tests, limitations, locations, availability, trips, review). Outside that list: `welcome` (the public landing) plus `install` and `start-week`, which run *after* a plan exists and stay gated. (B320 removed `recover`: recovery-by-code was a pre-Clerk relic — recovery is signing in with the original email.)
 
 ## Deployment
 
@@ -349,6 +349,10 @@ Answers typed before signing up live in `localStorage` under `climb_onboarding_d
   | OPENWEATHER_API_KEY | OpenWeatherMap free-tier key for `/api/weather` (A224) + coach `get_weather` tool & spot geocoding (A-COACH-V1b, on-demand since A244). Unset → endpoint returns 503, `/today` card hides, coach `get_weather` tool returns "unavailable" (model says so, never invents). Commercial use requires visible OpenWeather attribution. |
   | ANTHROPIC_API_KEY | Anthropic API key for the LLM Coach (A-COACH-V1a). Unset → `/api/coach/chat` fails LOUD with 500 `coach_not_configured` (never silent, never commit). |
   | COACH_MODEL | Coach model id (default `claude-sonnet-5` dal 2026-07-28, B306). Swap here for provider/model changes — no code change needed. |
+  | COACH_MAX_TOKENS | Cap on the coach reply length (default `2048`). **Documented in D277**, and it is the knob the open `COACH-TRUNCATION-RESIDUAL` finding is about: `llm_client.py` logs "raise COACH_MAX_TOKENS or tighten L1" when a reply is cut, so the remedy existed while the variable did not appear anywhere in the docs. |
+  | RATE_LIMIT_ENABLED | `0` turns off *all* API rate limiting. Default is **on** (any value other than `0`), so it fails safe — but it is a security switch and must stay unset in production. Documented in D277. |
+  | TRACE_RESOLVE | `true` enables the verbose resolver trace (B126) for debugging `resolve_session` on Railway. Default `false`. Documented in D277. |
+  | WEEKPLAN_ARCHIVE_LAZY | `true` makes the A221 week-plan archiving lazy instead of eager. Default `false`. Documented in D277. |
   | COACH_LLM_COMPOSER | `0` disables the A259 LLM composer — every ad-hoc session then goes through the deterministic `adhoc_builder`. Unset/any other value = enabled. |
   | ALLOW_LEGACY_HEADER | **Dev only.** `1` re-enables the `X-User-ID` auth fallback and anonymous (`user_id=None`) requests. MUST stay unset in production: with Clerk configured or `STORAGE_BACKEND=supabase`, B285 rejects both with 401 (the header was a full IDOR). |
 
