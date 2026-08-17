@@ -52,6 +52,20 @@ HUMIDITY_ZERO_PCT = 80.0
 WIND_FULL_KMH = (8.0, 25.0)    # plateau; decays 25→40 (harsh) and 8→0 (still)
 WIND_HARSH_ZERO_KMH = 40.0
 
+# --- B335 heat ceiling --------------------------------------------------------
+# The temperature component is pinned at 0 above TEMP_HOT_ZERO_C, so its 30%
+# weight silently drops out of the sum — while heat keeps RAISING dew spread and
+# LOWERING relative humidity, the two components worth 55%. The score therefore
+# climbed with temperature: D279 measured a Kalymnos day at 34°C scoring 70
+# ("good — solid day to try hard") against 26°C scoring 43 ("ok"), and
+# best_window duly recommended 15:00. Above ~28°C the limiter is the athlete,
+# not the friction of the rock, so heat is capped here instead of merely
+# abstaining. Below HEAT_CEILING_FROM_C nothing changes.
+HEAT_CEILING_FROM_C = 26.0     # ceiling starts where the temp component dies
+HEAT_CEILING_ZERO_C = 36.0     # ceiling reaches 0 — no score survives this heat
+BAND_HOT_OK_C = 28.0           # ≥ this: band capped at ok, whatever the score
+BAND_HOT_POOR_C = 32.0         # ≥ this: band capped at poor
+
 # Band cut points on the 0–100 score.
 BAND_PRIME_MIN = 80
 BAND_GOOD_MIN = 60
@@ -110,6 +124,20 @@ def friction_components(
     return {"temp": temp, "dew_spread": spread, "humidity": humidity, "wind": wind}
 
 
+def heat_score_ceiling(temp_c: float) -> int:
+    """Upper bound the friction score may reach at *temp_c* (B335).
+
+    100 (no effect) up to ``HEAT_CEILING_FROM_C``, then a linear decay to 0 at
+    ``HEAT_CEILING_ZERO_C``. Pure, monotonically decreasing in temperature.
+    """
+    if temp_c <= HEAT_CEILING_FROM_C:
+        return 100
+    if temp_c >= HEAT_CEILING_ZERO_C:
+        return 0
+    span = HEAT_CEILING_ZERO_C - HEAT_CEILING_FROM_C
+    return int(round(100 * (HEAT_CEILING_ZERO_C - temp_c) / span))
+
+
 def compute_friction_score(
     temp_c: float,
     humidity_pct: float,
@@ -121,11 +149,18 @@ def compute_friction_score(
 
     ``precip_active`` = rain/snow/fog now, measurable recent rain, or >30%
     precipitation probability in the current 3h forecast step — caps the band at
-    poor. Sub-zero temperature caps the band at ok (ice / numb fingers). The
-    score itself is never modified by the caps, only the band.
+    poor. Sub-zero temperature caps the band at ok (ice / numb fingers). Those
+    two caps move the band only, never the score.
+
+    B335 adds the missing symmetric case at the hot end, and it *does* move the
+    score: ``heat_score_ceiling`` clamps it above ``HEAT_CEILING_FROM_C`` so the
+    result is monotonically decreasing in heat instead of rising with it, and the
+    band is additionally capped at ok from ``BAND_HOT_OK_C`` and at poor from
+    ``BAND_HOT_POOR_C``. Below ``HEAT_CEILING_FROM_C`` behaviour is unchanged.
     """
     comps = friction_components(temp_c, humidity_pct, dew_point_c, wind_kmh)
     score = round(100 * sum(FRICTION_WEIGHTS[k] * v for k, v in comps.items()))
+    score = min(score, heat_score_ceiling(temp_c))
 
     if score >= BAND_PRIME_MIN:
         band: ConditionBand = "prime"
@@ -140,6 +175,10 @@ def compute_friction_score(
     if precip_active:
         rank = min(rank, _BAND_RANK["poor"])
     if temp_c < 0.0:
+        rank = min(rank, _BAND_RANK["ok"])
+    if temp_c >= BAND_HOT_POOR_C:
+        rank = min(rank, _BAND_RANK["poor"])
+    elif temp_c >= BAND_HOT_OK_C:
         rank = min(rank, _BAND_RANK["ok"])
     return score, _RANK_BAND[rank]
 

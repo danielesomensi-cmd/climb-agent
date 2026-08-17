@@ -27,6 +27,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from backend.api.deps import require_active_subscription
 from backend.engine.weather_v1 import (
     FRICTION_WEIGHTS,
+    TEMP_FULL_C,
     band_headline,
     catalog_condition_band,
     compute_dew_point,
@@ -181,6 +182,11 @@ def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
 _BEST_WINDOW_MIN_GAIN = 10   # must beat the current score by ≥10 points
 _BEST_WINDOW_RUN_TOL = 5     # contiguous run: steps within 5 points of the peak
 _DAYLIGHT_HOURS = (7, 21)    # local clock window considered climbable
+# B335: once the air is already above the comfort plateau, a HOTTER window is
+# never the answer — pointing an athlete at 15:00/34°C because the air dried out
+# is the D279 failure. Below the plateau top warming genuinely helps (frosty
+# morning → mild afternoon), so the filter only applies in the heat.
+_BEST_WINDOW_MAX_WARMING_C = 1.0
 
 _REASON_LABELS = {
     "temp": lambda cur, best: (
@@ -225,13 +231,26 @@ def best_window(
     peak beats the current score by ≥ ``_BEST_WINDOW_MIN_GAIN``. ``reason`` is
     the component with the largest weighted improvement vs. now. None when now
     is already (close to) the best the day offers, or on any malformed input.
+
+    B335: when it is already warm (current temp at or above the comfort plateau
+    top), steps materially hotter than now are discarded outright — no gain in
+    dryness makes a hotter window the right recommendation.
     """
     try:
         tz_offset = int((forecast_raw.get("city") or {}).get("timezone", 0))
+        cur_temp = float(current["temp"])
+        # Only bind in the heat: a colder morning legitimately improves by warming.
+        max_temp = (
+            cur_temp + _BEST_WINDOW_MAX_WARMING_C
+            if cur_temp >= TEMP_FULL_C[1]
+            else None
+        )
         scored = []
         for step in forecast_raw.get("list", []):
             s = _score_step(step)
             if s is None or s["dt"] <= now_dt:
+                continue
+            if max_temp is not None and s["temp"] > max_temp:
                 continue
             local = time.gmtime(s["dt"] + tz_offset)
             if time.strftime("%Y-%m-%d", local) != local_date:
