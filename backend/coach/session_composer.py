@@ -86,9 +86,26 @@ MAX_COMPOSER_EXERCISES = 16
 # retry the returns vanish and the cost doubles.
 MIN_FILL_RATIO = 0.8
 
-# Pool size ceiling. The whole point is that the model sees real options, so
-# this is generous; at ~25 tokens per line even the full pool stays ~2-3k.
-MAX_POOL = 120
+# Pool size ceiling — a backstop against an unbounded prompt, NOT a selection
+# policy.
+#
+# B333: it had been one. At 120 the cap bit in every equipment mode — 162
+# admissible at home, 139 at the gym — and because the pool is sorted by id
+# before the cut, the 42 exercises it removed were not a sample but always the
+# same tail of the alphabet: side_plank, v_up, toes_to_bar, weighted_pullup,
+# wall_handstand_hold, treadmill_incline_walk, stationary_bike_zone2… So "core
+# at home" could not return the core, and C266's cardio — added to the catalog
+# precisely because it was missing — was unreachable for the composer.
+#
+# The comment here used to call 120 "generous". Nobody had measured it. The
+# full home pool is ~5.1k tokens against ~3.8k for the truncated one: the whole
+# catalog costs ~1.3k more input tokens, which is nothing against a 2048-token
+# reply, and buys back a third of the exercises.
+#
+# 220 leaves room for ~60 new catalog entries before this matters again, and
+# _log_pool_truncation below makes sure that day is noticed instead of guessed
+# at. The sort stays: identical state must produce an identical pool.
+MAX_POOL = 220
 
 
 _SYSTEM = (
@@ -231,6 +248,18 @@ def build_pool(
         and not ({"test"} & set(_roles_of(ex)))
     ]
     pool.sort(key=lambda e: str(e.get("id")))
+    if len(pool) > MAX_POOL:
+        # B333: never cut in silence. The composer already warns when the pool
+        # is too SMALL; it had no symmetric branch, so a pool impoverished by
+        # the ceiling was indistinguishable in the logs from a healthy one —
+        # and the deterministic fallback never fires, because the pool stays
+        # far above MIN_EXERCISES. Same rule B328 applied to the outdoor log,
+        # which announces its own truncation to the model.
+        logger.warning(
+            "composer: pool truncated to %d of %d admissible (equipment_set=%s) — "
+            "the %d dropped are the tail of the id sort, not a sample; raise MAX_POOL",
+            MAX_POOL, len(pool), equipment_set, len(pool) - MAX_POOL,
+        )
     return pool[:MAX_POOL]
 
 
