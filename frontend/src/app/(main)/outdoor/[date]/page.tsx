@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { TopBar } from "@/components/layout/top-bar";
 import { SessionTimer } from "@/components/guided/session-timer";
 import { ConditionBadge } from "@/components/outdoor/condition-badge";
@@ -25,6 +26,17 @@ import type {
   OutdoorSessionFinishResponse,
 } from "@/lib/types";
 import { useUserState } from "@/lib/hooks/use-state";
+import { enqueue } from "@/lib/outbox";
+import {
+  clearLiveSession,
+  isLocalSessionId,
+  isOfflineError,
+  loadLiveSession,
+  newLocalSessionId,
+  pickRestoredSession,
+  saveLiveSession,
+  type LiveOutdoorSession,
+} from "@/lib/outdoor-live-session";
 
 // ---------------------------------------------------------------------------
 // Static option metadata
@@ -121,26 +133,85 @@ export default function OutdoorDayPage() {
     );
   }, []);
 
+  // B336 — true once the session exists only on this device (started offline).
+  const [isLocal, setIsLocal] = useState(false);
+  // B336 — set when the last server sync failed; drives the "saved on this
+  // device" reassurance instead of a red error the athlete cannot act on.
+  const [pendingSync, setPendingSync] = useState(false);
+
+  /** B336 — mirror the whole live session to the device. */
+  const persist = useCallback(
+    (patch: Partial<LiveOutdoorSession> & { sessionId: string; startedAt: string }) => {
+      saveLiveSession({
+        isLocal,
+        date,
+        spotName,
+        discipline: disciplineParam,
+        dayType,
+        routes: [],
+        ...patch,
+      });
+    },
+    [date, spotName, disciplineParam, dayType, isLocal],
+  );
+
   // Restore an in-progress session after a refresh / app close.
+  //
+  // B336: the device copy is consulted FIRST and wins (see pickRestoredSession).
+  // Before this the restore read only the server, so a phone that died offline
+  // came back to an empty day with every logged route gone.
   useEffect(() => {
+    let cancelled = false;
+    const local = loadLiveSession(date);
+
+    const applyRestore = (s: LiveOutdoorSession | null) => {
+      if (cancelled || !s) return;
+      setSessionId(s.sessionId);
+      setStartedAt(s.startedAt);
+      setIsLocal(s.isLocal);
+      if (s.dayType) setDayType(s.dayType);
+      setLiveRoutes(s.routes as LiveRoute[]);
+      setPhase("active");
+    };
+
     getActiveOutdoorSession(date)
       .then((r) => {
         const s = r.session;
-        setSessionId(String(s.session_id));
-        setStartedAt(String(s.started_at));
-        if (s.day_type) setDayType(s.day_type as OutdoorDayType);
-        setLiveRoutes(mapLiveRoutes(s.routes));
-        setPhase("active");
+        applyRestore(
+          pickRestoredSession(local, {
+            sessionId: String(s.session_id),
+            isLocal: false,
+            date,
+            spotName: String(s.spot_name ?? spotName ?? ""),
+            discipline: disciplineParam,
+            dayType: (s.day_type as OutdoorDayType) ?? null,
+            startedAt: String(s.started_at),
+            routes: mapLiveRoutes(s.routes),
+            updatedAt: 0,
+          }),
+        );
       })
-      .catch(() => {}); // 404 = no active session, normal
+      // 404 = no active session; offline = no answer at all. Either way the
+      // device copy is what we have, and it is the one that matters.
+      .catch(() => applyRestore(local));
+
+    return () => {
+      cancelled = true;
+    };
+    // Restoring is a per-date, mount-time concern: re-running it when the spot
+    // label or day type changes would clobber the live session with itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
 
   // Client owns the route list (multiple attempts, removals); each change is
-  // synced to the active session as a whole so it survives a refresh.
+  // written to the device FIRST (B336) and then synced to the active session as
+  // a whole, so it survives a refresh, a crash and a dead battery.
   const syncRoutes = useCallback(
     async (next: LiveRoute[]) => {
       setLiveRoutes(next); // optimistic
-      if (!sessionId) return;
+      if (!sessionId || !startedAt) return;
+      persist({ sessionId, startedAt, routes: next, isLocal });
+      if (isLocal) return; // no server session to sync to — the device copy is it
       setClimbBusy(true);
       try {
         await replaceOutdoorRoutes(
@@ -156,13 +227,21 @@ export default function OutdoorDayPage() {
             ...(typeof r.climb_seconds === "number" ? { climb_seconds: r.climb_seconds } : {}),
           })),
         );
+        setPendingSync(false);
+        setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to sync routes");
+        // B336: the route is already on the device, so a dead network is not an
+        // error the athlete needs to act on — say so instead of alarming them.
+        if (isOfflineError(e)) {
+          setPendingSync(true);
+        } else {
+          setError(e instanceof Error ? e.message : "Failed to sync routes");
+        }
       } finally {
         setClimbBusy(false);
       }
     },
-    [sessionId],
+    [sessionId, startedAt, isLocal, persist],
   );
 
   const resolve = useCallback(
@@ -222,25 +301,67 @@ export default function OutdoorDayPage() {
       const r = await startOutdoorSession({ date, spot_name: spotName || undefined, discipline: disciplineParam, day_type: dayType });
       setSessionId(r.session_id);
       setStartedAt(r.started_at);
+      setIsLocal(false);
+      setPendingSync(false);
+      persist({ sessionId: r.session_id, startedAt: r.started_at, isLocal: false, routes: [] });
       setPhase("active");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start session");
+      // B336: with no signal the session used to be un-startable, so the whole
+      // day went unlogged. Start it on the device instead — the finish then goes
+      // through the outbox as a plain (append-only, self-contained) outdoor log.
+      if (!isOfflineError(e)) {
+        setError(e instanceof Error ? e.message : "Failed to start session");
+        return;
+      }
+      const localId = newLocalSessionId();
+      const now = new Date().toISOString();
+      setSessionId(localId);
+      setStartedAt(now);
+      setIsLocal(true);
+      setPendingSync(true);
+      const stored = saveLiveSession({
+        sessionId: localId, isLocal: true, date, spotName,
+        discipline: disciplineParam, dayType, startedAt: now, routes: [],
+      });
+      setPhase("active");
+      toast(
+        stored
+          ? "Started offline — this session is saved on this device and will sync when you're back online."
+          : "Started offline, but this device refused to save it. Keep a paper note as a backup.",
+        { duration: 8000 },
+      );
     }
   };
 
   const handleFinish = useCallback(
     async (payload: Record<string, unknown>) => {
-      if (!sessionId) throw new Error("No active session");
-      const res = await finishOutdoorSession(sessionId, payload as never);
-      setFinishMeta(res);
+      if (!sessionId || !startedAt) throw new Error("No active session");
+      try {
+        const res = await finishOutdoorSession(sessionId, payload as never);
+        setFinishMeta(res);
+        clearLiveSession();
+      } catch (e) {
+        // B336: the finish used to bypass the outbox precisely when a session
+        // had been STARTED — i.e. the recommended path was the unsafe one. The
+        // session id came from the server, so replaying the finish later is
+        // valid and also clears the dangling active session.
+        if (!isOfflineError(e)) throw e;
+        const queued = enqueue("outdoor_finish", { session_id: sessionId, ...payload });
+        if (!queued) throw e;
+        clearLiveSession();
+        toast("Session saved on this device — it will sync when you're back online.", {
+          duration: 6000,
+        });
+      }
     },
-    [sessionId],
+    [sessionId, startedAt],
   );
 
   const cancelActive = async () => {
-    if (sessionId) {
+    if (sessionId && !isLocalSessionId(sessionId)) {
       try { await cancelOutdoorSession(sessionId); } catch { /* already gone */ }
     }
+    clearLiveSession();
     router.push("/week");
   };
 
@@ -264,6 +385,15 @@ export default function OutdoorDayPage() {
         <ConditionBadge conditions={strategy?.conditions} coords={coords} />
 
         {error && <p className="rounded-md border border-red-900/40 bg-red-950/20 p-3 text-sm text-red-400">{error}</p>}
+
+        {/* B336 — offline reassurance. Amber, not red: nothing is lost and there
+            is nothing for the athlete to do about it at the crag. */}
+        {pendingSync && (
+          <p className="rounded-md border border-amber-900/40 bg-amber-950/20 p-3 text-sm text-amber-200/90">
+            Offline — this session is saved on this device and will sync when you&apos;re back
+            online. Keep logging.
+          </p>
+        )}
 
         {/* ── SETUP ─────────────────────────────────────────────── */}
         {phase === "setup" && (
@@ -367,9 +497,17 @@ export default function OutdoorDayPage() {
             {/* Actions (shared — boulder or lead) */}
             {dayType && (
               <div className="space-y-2">
+                {/* B336: the strategy is ADVICE, not a precondition. Gating Start
+                    on a network fetch meant no signal → no session → the whole
+                    day unlogged, which is the opposite of the trade we want. */}
+                {!isBoulder && !strategy && !loadingStrat && (
+                  <p className="text-xs text-zinc-500">
+                    Strategy unavailable offline — you can still start and log the session.
+                  </p>
+                )}
                 <button
                   onClick={start}
-                  disabled={!gatePassed || (!isBoulder && !strategy)}
+                  disabled={!gatePassed}
                   className="w-full rounded-md bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-40"
                 >
                   Start session
@@ -452,9 +590,16 @@ export default function OutdoorDayPage() {
             durationCappedNote={
               elapsedMin && elapsedMin > 600 ? { cap: 600, raw: elapsedMin } : null
             }
-            onSubmit={sessionId ? handleFinish : undefined}
+            // B336: a LOCAL session has no server id to finish, so it falls
+            // through to the form's own postOutdoorLog path — which is already
+            // outbox-backed (A245 F5) and is exactly the right shape for it:
+            // append-only and self-contained.
+            onSubmit={sessionId && !isLocal ? handleFinish : undefined}
             submitLabel={sessionId ? "Finish & save" : undefined}
-            onSuccess={() => router.push("/outdoor")}
+            onSuccess={() => {
+              clearLiveSession();
+              router.push("/outdoor");
+            }}
           />
         )}
 

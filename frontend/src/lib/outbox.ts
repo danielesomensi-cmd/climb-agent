@@ -1,7 +1,14 @@
 "use client";
 
 import { toast } from "sonner";
-import { ApiError, NETWORK_ERROR_STATUS, postFeedback, postOutdoorLog, logFreeClimb } from "@/lib/api";
+import {
+  ApiError,
+  NETWORK_ERROR_STATUS,
+  finishOutdoorSession,
+  postFeedback,
+  postOutdoorLog,
+  logFreeClimb,
+} from "@/lib/api";
 import { getKeyPrefix } from "@/lib/guided-session-utils";
 
 /**
@@ -31,7 +38,20 @@ const MAX_AGE_MS = 72 * 60 * 60 * 1000;
 /** Same reasoning as the persisted query cache: never risk QuotaExceededError. */
 const MAX_BYTES = 1_000_000;
 
-export type OutboxKind = "feedback" | "outdoor_log" | "free_climb";
+/**
+ * B336 — `outdoor_finish` closes an outdoor session that was STARTED online
+ * (so the server id in the payload is real and durable) but could not be
+ * finished, because the signal went at the crag before the last route.
+ *
+ * The A245 note below excluded it on the grounds that the finish "needs a live
+ * server id". That is true of a session which never reached the server — and
+ * that case is now handled by starting a LOCAL session instead, which finishes
+ * through `outdoor_log`. Where an id already exists, replaying the finish is
+ * the correct move and the only one that also clears the active session
+ * server-side; queuing a plain `outdoor_log` would write the log and leave the
+ * active session dangling, to be "restored" days later.
+ */
+export type OutboxKind = "feedback" | "outdoor_log" | "free_climb" | "outdoor_finish";
 
 export interface OutboxEntry {
   id: string;
@@ -111,6 +131,13 @@ async function send(entry: OutboxEntry): Promise<void> {
       await logFreeClimb(sessionId, climb as never);
       return;
     }
+    case "outdoor_finish": {
+      const { session_id: sessionId, ...body } = entry.payload as {
+        session_id: string;
+      } & Record<string, unknown>;
+      await finishOutdoorSession(sessionId, body as never);
+      return;
+    }
   }
 }
 
@@ -124,6 +151,22 @@ function isPermanent(err: unknown): boolean {
   if (err.status === NETWORK_ERROR_STATUS) return false;
   if (err.status === 408 || err.status === 429) return false;
   return err.status >= 400 && err.status < 500;
+}
+
+/**
+ * B336 — a permanent failure that means "already done", not "rejected".
+ *
+ * `finishOutdoorSession` 404s once the active session is gone, and the most
+ * likely way for that to happen is that the original call SUCCEEDED and only
+ * its response was lost. The log is already written; telling the user their
+ * entry "was rejected by the server" would be both alarming and false.
+ */
+function isAlreadyApplied(entry: OutboxEntry, err: unknown): boolean {
+  return (
+    entry.kind === "outdoor_finish" &&
+    err instanceof ApiError &&
+    err.status === 404
+  );
 }
 
 let flushing = false;
@@ -164,6 +207,12 @@ export async function flush(): Promise<{ sent: number; remaining: number }> {
         write(entries);
         sent++;
       } catch (err) {
+        if (isAlreadyApplied(entry, err)) {
+          entries = entries.filter((e) => e.id !== entry.id);
+          write(entries);
+          sent++;
+          continue;
+        }
         if (isPermanent(err)) {
           entries = entries.filter((e) => e.id !== entry.id);
           write(entries);
