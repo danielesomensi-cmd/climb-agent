@@ -1,7 +1,7 @@
 # Megabrief — Assessment Overhaul: Final Report
 
 **Date:** 2026-08-06 · **Branch:** `brief/A267-assessment-megabrief` (worktree `../climb-agent-megabrief`)
-**Origin:** `docs/audit_D260_tooltip_and_assessment_scoring.md`
+**Origin:** `docs/audit/D260_tooltip_and_assessment_scoring.md`
 
 > **STOP.** Packages 1–4 are delivered. Packages 5–6 are analyses only — **nothing from them has been
 > implemented and nothing should be, until Daniele decides §3**.
@@ -16,8 +16,8 @@
 | 2 | *(none — B323 not consumed)* | Tooltip clamping + axis relabel | — | ⏭️ **already done by B304**, see §1.1 |
 | 3 | **A267** | Radar Elite comparison mode (display-only) | `585508c` | ✅ delivered — **needs Vercel preview approval before merge** |
 | 4 | *(none — bookkeeping)* | `docs/ROADMAP_CURRENT.md` updates | `d07881f` | ✅ delivered |
-| 5 | **D271** | `docs/analysis_D271_endurance_test.md` | `1d5f5a9` | 📋 analysis only |
-| 6 | **D272** | `docs/analysis_D272_gap_demotion.md` | `15f9c19` | 📋 analysis only |
+| 5 | **D271** | `docs/audit/D271_endurance_test_analysis.md` | `1d5f5a9` | 📋 analysis only |
+| 6 | **D272** | `docs/audit/D272_gap_demotion_analysis.md` | `15f9c19` | 📋 analysis only |
 
 Total diff vs `origin/main`: **12 files, +1845 / −43**. `python scripts/next_brief.py` was run before
 each package; `B323` and `C268` remain free.
@@ -87,7 +87,7 @@ target 8b): Goal mode shows **✓ At target** on Finger and **96** on Pulling; E
 | 3 | **Active macrocycles never re-weighted in place** | Traced in D271 §6.2: `generate_macrocycle` writes `assessment_snapshot` (`macrocycle_v1.py:760`), the planners write `profile_snapshot`, and `replanner_v1` reads `profile_snapshot` in eleven places without ever re-reading `assessment.profile`. `state_checks.is_macrocycle_stale` only *reports*. | ✅ Verified read-only; no code shipped that could change it |
 | 4 | **Equipment-based filtering, never location-based** | No filtering logic touched. D271 §3.2 keeps to it: it proposes `pulley_system` as an *equipment* entry, and gates the test on equipment availability, never on gym vs home. | ✅ |
 | 5 | **Fontainebleau / English / no placeholders** | Boulder grades are untouched; A267's inputs are kg and %BW, grade-free. All code, comments, UI copy and both analyses are English (roadmap exception in §1). Nothing was invented: every gap is an open question in §4. | ✅ |
-| 6 | **Packages 5–6 write zero application code** | `git show --stat 1d5f5a9` → 1 file, `docs/analysis_D271_endurance_test.md`. `git show --stat 15f9c19` → 1 file, `docs/analysis_D272_gap_demotion.md`. | ✅ |
+| 6 | **Packages 5–6 write zero application code** | `git show --stat 1d5f5a9` → 1 file, `docs/audit/D271_endurance_test_analysis.md`. `git show --stat 15f9c19` → 1 file, `docs/audit/D272_gap_demotion_analysis.md`. | ✅ |
 
 ### 2.1 A267's display-only proof
 

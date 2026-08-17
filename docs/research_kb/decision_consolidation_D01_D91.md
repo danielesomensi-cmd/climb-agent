@@ -421,19 +421,19 @@ The 57 v1 decisions grouped into 10 implementation sessions:
 
 > Added 2026-08-06 (C267). Full records + the Berta normative band table:
 > `docs/research/assessment_scoring_research_2026-08.md`.
-> Origin: audit D260 (`docs/audit_D260_tooltip_and_assessment_scoring.md`).
+> Origin: audit D260 (`docs/audit/D260_tooltip_and_assessment_scoring.md`).
 > ⚠️ These IDs were assigned by the originating brief and collide with audit-brief IDs
 > using the same `D` prefix. The decision series itself only ran to D91 — renumbering is an
 > open question, see §4 of the research file.
 
 | # | Decision | Status |
 |---|----------|--------|
-| D261 (rev B) | `test_endurance_intermittent` — 8:2s @ 60% max-hang total, to failure; scored as body-mass-normalized impulse. **Supersedes D07** and the earlier 7:3 @ 50% proposal | 📋 Analysis pending approval (`docs/analysis_D271_endurance_test.md`) |
+| D261 (rev B) | `test_endurance_intermittent` — 8:2s @ 60% max-hang total, to failure; scored as body-mass-normalized impulse. **Supersedes D07** and the earlier 7:3 @ 50% proposal | 📋 Analysis pending approval (`docs/audit/D271_endurance_test_analysis.md`) |
 | D262 | Elite radar anchors are display-only: Finger 200% BW, Pulling 187% BW live; Endurance 58.5 kg·s·kg⁻¹ dormant; PE + Technique permanently greyed | ✅ Implemented (A267) |
 | D263 | Bodyweight finger hang EXCLUDED as an endurance measure (65% M / 80% F of its variance is finger strength) | 📋 Ships with D261 |
 | D264 | Continuous endurance test EXCLUDED (2–4% variance, non-significant) | ✅ Closed (no-op) |
 | D265 | Critical Force test (formerly D89) DOWNGRADED — all-out CF validity contested (Baláš et al. 2024); not a v3 precision upgrade | ✅ Closed (D89 stays deferred, indefinitely) |
-| D266 | Redpoint–onsight gap demoted from weight driver to tactical hint | 📋 Analysis pending approval (`docs/analysis_D272_gap_demotion.md`) |
+| D266 | Redpoint–onsight gap demoted from weight driver to tactical hint | 📋 Analysis pending approval (`docs/audit/D272_gap_demotion_analysis.md`) |
 | D267 | Berta bands are curve shape, not transferable absolutes; store raw impulse + `scoring_version` | 📋 Ships with D261 |
 
 **Correction to §5 / line 223 of this file:** D07 is listed there among "reserved for future
