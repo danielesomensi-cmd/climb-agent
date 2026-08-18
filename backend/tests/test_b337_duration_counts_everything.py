@@ -42,12 +42,14 @@ ARLON_EVENING = [
 ]
 
 
-def test_the_session_that_exposed_this_is_72_minutes_not_45():
+def test_the_session_that_exposed_this_is_no_longer_45_minutes():
     # 240 + 300 + 600
     # + 5 x (3x4s work + 2x180s inter-rep) + 4 x 300s  = 1860 + 1200 = 3060
     # + 4 x 30s + 3 x 0s                                = 120
     # = 4320s = 72 min   (pre-B337 the same input returned 45)
-    assert estimate_custom_session_duration(ARLON_EVENING) == 72
+    # + B338: 5 exercises → 4 transitions x 60s          = 240
+    # = 4560s = 76 min
+    assert estimate_custom_session_duration(ARLON_EVENING) == 76
 
 
 def test_limit_boulder_block_alone():

@@ -67,7 +67,8 @@ class TestEstimateDuration:
             {"sets": 3, "work_seconds": 10, "rest_between_sets_seconds": 180},
         ]
         result = estimate_custom_session_duration(exercises)
-        assert result == round((440 + 390) / 60)
+        # B338: two exercises → one transition between them (60s).
+        assert result == round((440 + 390 + 60) / 60)
 
     def test_minimum_one_minute(self):
         exercises = [{"sets": 1, "reps": 1}]
