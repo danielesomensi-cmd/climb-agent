@@ -11,24 +11,71 @@ def compute_custom_session_load(exercise_ids: List[str], catalog: Dict[str, Any]
     return round(min(85, raw * 1.5))
 
 
+# B337: a rep with no duration of its own. Deliberately crude and deliberately
+# kept: turning it into something better needs a per-exercise rep duration, which
+# only the catalog knows and this function never receives. It is an approximation
+# of WORK, not an ignored field — unlike the two defects fixed below.
+SECONDS_PER_REP = 4
+
+# Used only when the entry says nothing about set rest. An explicit 0 means zero.
+DEFAULT_SET_REST_S = 60
+
+# Fallback for an entry with neither work_seconds nor reps.
+DEFAULT_WORK_S = 30
+
+
 def estimate_custom_session_duration(exercises: List[Dict[str, Any]]) -> int:
-    """Estimate duration in minutes from exercise params."""
+    """Estimate duration in minutes from exercise params.
+
+    Counts, per exercise: work × sets, the rest BETWEEN REPS inside each set, and
+    the rest BETWEEN SETS (never after the last one).
+
+    **B337 — two things this used to leave out, both of them written down in the
+    entry it was reading:**
+
+    1. ``rest_between_reps_seconds`` was ignored **entirely**. On anything whose
+       reps are separated by real rest, that is most of the session: a limit
+       boulder block of 5 problems × 3 attempts with 3 min between attempts lost
+       ``5 × 2 × 180s = 30 minutes``, and the session was announced as 45 min when
+       it was 72.
+    2. ``rest_between_sets_seconds or 60`` turned an **explicit 0 into 60**. A
+       4-set stretch written as back-to-back was billed 3 phantom minutes.
+
+    Both consumers that BUDGET on this function (``session_composer``,
+    ``adhoc_builder``) were therefore over-filling: asked for 30 minutes, they
+    packed a session that took longer. A larger, truer estimate makes them pack
+    less, which is the point.
+
+    Still not counted, on purpose: the walk between one exercise and the next.
+    Real, but unknowable from the data — inventing a per-exercise transition
+    would trade a documented under-count for an undocumented guess.
+    """
     total_seconds = 0
     for ex in exercises:
-        sets = ex.get("sets", 1)
+        sets = ex.get("sets", 1) or 1
         # B324: an alt_sides exercise is run once per side — 3x20s Copenhagen is
         # six work bouts, not three. The players double the set count the same way.
         if ex.get("alt_sides"):
             sets = sets * 2
+
+        reps = ex.get("reps")
         # Work time per set
         if ex.get("work_seconds"):
             work_per_set = ex["work_seconds"]
-        elif ex.get("reps"):
-            work_per_set = ex["reps"] * 4  # ~4s per rep rough estimate
+        elif reps:
+            work_per_set = reps * SECONDS_PER_REP
         else:
-            work_per_set = 30  # fallback
-        # Rest time
-        rest_per_set = ex.get("rest_between_sets_seconds") or 60
-        # Total: sets x work + (sets-1) x rest
-        total_seconds += sets * work_per_set + max(0, sets - 1) * rest_per_set
+            work_per_set = DEFAULT_WORK_S
+
+        # B337 (1): rest between reps, inside every set. n reps → n−1 gaps.
+        inter_rep_rest = 0
+        if reps and reps > 1:
+            inter_rep_rest = (reps - 1) * (ex.get("rest_between_reps_seconds") or 0)
+
+        # B337 (2): honour an explicit 0; default only when the field is absent.
+        rest_per_set = ex.get("rest_between_sets_seconds")
+        if rest_per_set is None:
+            rest_per_set = DEFAULT_SET_REST_S
+
+        total_seconds += sets * (work_per_set + inter_rep_rest) + max(0, sets - 1) * rest_per_set
     return max(1, round(total_seconds / 60))
