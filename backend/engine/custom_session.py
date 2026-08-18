@@ -23,12 +23,21 @@ DEFAULT_SET_REST_S = 60
 # Fallback for an entry with neither work_seconds nor reps.
 DEFAULT_WORK_S = 30
 
+# B338: walking to the next station, re-chalking, changing a load, reading the
+# next exercise. B337 left this out on the grounds that it is not in the data —
+# which is true, and is exactly why it is a flat constant here rather than
+# something pretended to be derived. Charged BETWEEN exercises, so n entries pay
+# n−1 transitions: the same shape as set rest, which is never charged after the
+# last set. Decided by Daniele on 2026-08-18.
+TRANSITION_BETWEEN_EXERCISES_S = 60
+
 
 def estimate_custom_session_duration(exercises: List[Dict[str, Any]]) -> int:
     """Estimate duration in minutes from exercise params.
 
     Counts, per exercise: work × sets, the rest BETWEEN REPS inside each set, and
-    the rest BETWEEN SETS (never after the last one).
+    the rest BETWEEN SETS (never after the last one). Plus, once per gap between
+    consecutive exercises, ``TRANSITION_BETWEEN_EXERCISES_S`` (B338).
 
     **B337 — two things this used to leave out, both of them written down in the
     entry it was reading:**
@@ -46,9 +55,11 @@ def estimate_custom_session_duration(exercises: List[Dict[str, Any]]) -> int:
     packed a session that took longer. A larger, truer estimate makes them pack
     less, which is the point.
 
-    Still not counted, on purpose: the walk between one exercise and the next.
-    Real, but unknowable from the data — inventing a per-exercise transition
-    would trade a documented under-count for an undocumented guess.
+    **B338 supersedes one of B337's exclusions.** B337 left the walk between
+    exercises out because it is not in the data. It is still not in the data —
+    but a flat, named, documented minute is a better answer than a silent zero,
+    because zero is also a guess and it is the one guess we know is wrong. The
+    remaining approximation, ``SECONDS_PER_REP``, is a different thing and stays.
     """
     total_seconds = 0
     for ex in exercises:
@@ -78,4 +89,7 @@ def estimate_custom_session_duration(exercises: List[Dict[str, Any]]) -> int:
             rest_per_set = DEFAULT_SET_REST_S
 
         total_seconds += sets * (work_per_set + inter_rep_rest) + max(0, sets - 1) * rest_per_set
+
+    # B338: one transition per GAP, so n exercises pay n−1.
+    total_seconds += max(0, len(exercises) - 1) * TRANSITION_BETWEEN_EXERCISES_S
     return max(1, round(total_seconds / 60))
