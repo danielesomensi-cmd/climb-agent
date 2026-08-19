@@ -645,6 +645,18 @@ Your account is tied to the email address you signed up with, and your training 
 
 > **Note (2026-08-02):** earlier versions of this guide described a `CLIMB-XXXX-XXXX` recovery code stored in Settings. That flow was replaced by email sign-in; B320 removed the last leftovers of it (the welcome-screen link and the page behind it). If you are locked out, sign in with your original email — or restore from the export file below.
 
+### "I tap Sign in and nothing happens"
+
+Sign-in is handled by an external service on `clerk.climbagent.app`. Some
+networks never reach it: corporate Wi-Fi and VPNs that block unknown
+subdomains, and privacy extensions whose blocklists match on `clerk`. When that
+happens the sign-in page now says so instead of sitting blank (B339).
+
+To confirm it is the network and not the app, open
+`https://clerk.climbagent.app/v1/environment` in the same browser. If it returns
+JSON, the block is elsewhere; if it fails, try mobile data, another browser, or
+pausing the extension.
+
 ### Export / Import
 
 In **Settings**, you can:
