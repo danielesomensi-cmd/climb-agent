@@ -1,0 +1,11 @@
+# Dipendenze del solo Telegram → Claude Code bridge (A276, scripts/telegram_bridge.py).
+#
+# Tenute FUORI da requirements.txt di proposito: il bridge è uno strumento
+# personale locale, non gira su Railway e non deve entrare nelle deps del
+# backend. Installalo in un venv separato:
+#
+#   python3 -m venv .venv-bridge
+#   .venv-bridge/bin/pip install -r scripts/requirements-bridge.txt
+#
+# Il parser .env è interno al bridge, quindi qui non serve python-dotenv.
+python-telegram-bot>=21.6
