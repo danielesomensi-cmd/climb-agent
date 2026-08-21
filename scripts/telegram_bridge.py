@@ -217,7 +217,8 @@ def parse_claude_result(stdout: str) -> tuple[str, str | None]:
 
     Solleva BridgeError su output non-JSON, `is_error`, o risultato vuoto —
     portandosi dietro il session_id quando c'è, così una sessione nata e poi
-    fallita resta comunque riusabile (un boot a freddo costa ~12 centesimi).
+    fallita resta comunque riusabile: una sessione nuova ricarica da zero il
+    contesto del repo (CLAUDE.md è grosso), il resume no.
     """
     stdout = stdout.strip()
     if not stdout:
