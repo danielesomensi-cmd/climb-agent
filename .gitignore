@@ -57,3 +57,4 @@ scripts/clerk_migration_backup.json
 .claude_bridge_session
 .claude_bridge.pid
 .venv-bridge/
+.claude_bridge.log

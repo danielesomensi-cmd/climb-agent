@@ -34,6 +34,11 @@ def bridge():
 
 # ---------------------------------------------------------------- allowlist
 
+def _now_utc():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc)
+
+
 class _Recorder:
     """Registra ogni chiamata in uscita che il bridge tentasse di fare."""
 
@@ -68,6 +73,9 @@ class _FakeChat:
 class _FakeMessage:
     def __init__(self, text: str, recorder: _Recorder) -> None:
         self.text = text
+        # Ogni messaggio Telegram vero porta una data, ed è quella che decide se
+        # è arrivato mentre il bridge era giù: i double devono averla.
+        self.date = _now_utc()
         self._rec = recorder
 
     async def reply_text(self, *a, **k):
@@ -492,3 +500,52 @@ def test_errore_non_di_sessione_non_viene_ritentato(bridge, monkeypatch, tmp_pat
         asyncio.run(bridge.run_claude("ciao"))
     assert tentativi == ["sessione-viva"], "nessun ritentativo"
     assert path.exists(), "la sessione valida non va cancellata"
+
+
+# --------------------------------------------- messaggi arrivati a bridge giù
+
+def test_messaggio_recente_non_e_stantio(bridge):
+    from datetime import datetime, timedelta, timezone
+    adesso = datetime.now(timezone.utc) - timedelta(seconds=30)
+    assert bridge.is_stale(adesso) is False
+
+
+def test_messaggio_vecchio_e_stantio(bridge):
+    from datetime import datetime, timedelta, timezone
+    vecchio = datetime.now(timezone.utc) - timedelta(minutes=40)
+    assert bridge.is_stale(vecchio) is True
+
+
+def test_data_naive_trattata_come_utc(bridge):
+    """Telegram manda date aware, ma una naive non deve far esplodere il confronto."""
+    from datetime import datetime, timedelta
+    naive = datetime.utcnow() - timedelta(seconds=10)
+    assert bridge.is_stale(naive) is False
+
+
+def test_data_assente_non_e_stantia(bridge):
+    assert bridge.is_stale(None) is False
+
+
+def test_messaggio_stantio_non_viene_eseguito_ma_viene_annunciato(bridge, monkeypatch):
+    """La coda NON viene più buttata al riavvio, quindi un messaggio vecchio
+    arriva davvero: va segnalato, non eseguito di nascosto ore dopo."""
+    from datetime import datetime, timedelta, timezone
+
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+
+    eseguiti: list[str] = []
+
+    async def _mai(update, context, prompt):
+        eseguiti.append(prompt)
+
+    monkeypatch.setattr(bridge, "_execute_and_deliver", _mai)
+
+    update = _FakeUpdate(ALLOWED, "cancella tutto", recorder)
+    update.effective_message.date = datetime.now(timezone.utc) - timedelta(hours=3)
+
+    asyncio.run(bridge.on_message(update, _FakeContext(recorder)))
+
+    assert eseguiti == [], "un messaggio di 3 ore fa non va eseguito a sorpresa"
+    assert recorder.calls == ["reply_text"], "ma l'utente deve saperlo"

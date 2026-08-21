@@ -53,6 +53,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 # python-telegram-bot vive in un venv separato (.venv-bridge). L'import è
@@ -85,6 +86,12 @@ CLAUDE_TIMEOUT_S = 15 * 60
 CHUNK_LIMIT = 3800          # cap Telegram 4096, margine per sicurezza
 DOCUMENT_THRESHOLD = 10_000  # oltre questo: allegato .md, non un muro di chunk
 TYPING_INTERVAL_S = 4
+
+# Messaggi arrivati mentre il bridge era giù. NON vengono buttati — uno strumento
+# che serve proprio quando sei lontano dalla macchina non può ingoiare in
+# silenzio ciò che gli scrivi — ma oltre questa soglia non vengono nemmeno
+# eseguiti a sorpresa: vengono elencati, e li rimandi tu se servono ancora.
+STALE_MESSAGE_S = 15 * 60
 MODEL = "sonnet"
 
 TRANSCRIBE_TIMEOUT_S = 120
@@ -356,6 +363,20 @@ async def transcribe_voice(src_path: Path) -> str:
         return text
 
 
+def message_age_s(message_date: "datetime | None") -> float | None:
+    """Età in secondi di un messaggio Telegram, o None se la data manca."""
+    if message_date is None:
+        return None
+    if message_date.tzinfo is None:
+        message_date = message_date.replace(tzinfo=timezone.utc)
+    return (datetime.now(timezone.utc) - message_date).total_seconds()
+
+
+def is_stale(message_date: "datetime | None", limit_s: float = STALE_MESSAGE_S) -> bool:
+    age = message_age_s(message_date)
+    return age is not None and age > limit_s
+
+
 def format_uptime(seconds: float) -> str:
     total = int(seconds)
     hours, rest = divmod(total, 3600)
@@ -601,6 +622,26 @@ async def _execute_and_deliver(update: "Update", context: "ContextTypes.DEFAULT_
     await deliver(update, text)
 
 
+async def _skip_if_stale(message, preview: str) -> bool:
+    """True se il messaggio è troppo vecchio per essere eseguito adesso.
+
+    Il bridge non butta più la coda al riavvio, quindi ciò che hai scritto mentre
+    il Mac era giù arriva comunque — ma eseguirlo a ore di distanza, senza che tu
+    stia guardando, è peggio che non eseguirlo. Qui te lo diciamo e ci fermiamo.
+    """
+    if not is_stale(message.date):
+        return False
+    minutes = int((message_age_s(message.date) or 0) // 60)
+    short = preview if len(preview) <= 120 else preview[:117] + "…"
+    logger.warning("Messaggio stantio ignorato (%s min): %s", minutes, short)
+    await message.reply_text(
+        f"Questo messaggio ha {minutes} minuti — il bridge era giù quando l'hai "
+        f"mandato, quindi non lo eseguo a sorpresa.\n\n«{short}»\n\n"
+        "Rimandalo se serve ancora."
+    )
+    return True
+
+
 async def on_message(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> None:
     if not _authorized(update):
         return
@@ -609,6 +650,9 @@ async def on_message(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> 
     if message is None or not (message.text or "").strip():
         return
     prompt = message.text.strip()
+
+    if await _skip_if_stale(message, prompt):
+        return
 
     if STATE.lock.locked():
         await message.reply_text("Occupato — un comando è già in esecuzione. /stop per annullarlo.")
@@ -627,6 +671,9 @@ async def on_voice(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> No
         return
     voice = message.voice or message.audio
     if voice is None:
+        return
+
+    if await _skip_if_stale(message, "(vocale)"):
         return
 
     if STATE.lock.locked():
@@ -755,9 +802,11 @@ def main() -> None:
 
     logger.info("Bridge avviato — repo=%s chat autorizzata=%s", REPO_ROOT, allowed_chat_id)
     try:
-        # drop_pending_updates: al riavvio non voglio rieseguire una coda di
-        # messaggi vecchi accumulati mentre il bridge era giù.
-        application.run_polling(drop_pending_updates=True)
+        # drop_pending_updates=False di proposito: buttare la coda al riavvio
+        # significa perdere in silenzio i messaggi mandati mentre il Mac era giù,
+        # che è esattamente quando questo strumento serve. Li riceviamo tutti; a
+        # non eseguire quelli vecchi ci pensa _skip_if_stale, che almeno lo dice.
+        application.run_polling(drop_pending_updates=False)
     finally:
         release_single_instance_lock()
         logger.info("Bridge fermato.")
