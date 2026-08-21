@@ -8,10 +8,23 @@ lo esegue nel repo, la risposta torna in chat.
 NON è una feature di prodotto: non è esposta agli utenti, non va su Railway né
 su Vercel, non importa nulla di `backend/`.
 
+Vocali: un messaggio voice/audio viene scaricato, convertito con ffmpeg e
+trascritto in locale con whisper.cpp (nessun audio lascia il Mac). Richiede
+`ffmpeg` (`brew install ffmpeg`) e `whisper-cpp` (`brew install whisper-cpp`)
+più un modello GGML — vedi `whisper_model_path()`. Se manca uno dei due il
+bot risponde con l'errore invece di ignorare il vocale in silenzio.
+
 Config (in `.env` alla root del repo, gitignored):
 
     TELEGRAM_BRIDGE_TOKEN      token di @Climbagent_bot (@BotFather)
     TELEGRAM_ALLOWED_CHAT_ID   unico chat id autorizzato (intero)
+
+Config opzionale per la trascrizione (default sensati se omessa):
+
+    WHISPER_MODEL_PATH   default ~/.claude/models/ggml-large-v3-turbo.bin
+    WHISPER_CLI_BIN       default: whisper-cli nel PATH, poi /opt/homebrew/bin/whisper-cli
+    WHISPER_LANGUAGE      default "it"
+    FFMPEG_BIN             default: ffmpeg nel PATH, poi /opt/homebrew/bin/ffmpeg
 
 Il nome `TELEGRAM_BRIDGE_TOKEN` è volutamente diverso da `TELEGRAM_BOT_TOKEN`,
 che appartiene a un altro bot (founder alerts, `backend/api/notifications.py`):
@@ -73,6 +86,9 @@ CHUNK_LIMIT = 3800          # cap Telegram 4096, margine per sicurezza
 DOCUMENT_THRESHOLD = 10_000  # oltre questo: allegato .md, non un muro di chunk
 TYPING_INTERVAL_S = 4
 MODEL = "sonnet"
+
+TRANSCRIBE_TIMEOUT_S = 120
+VOICE_MAX_BYTES = 20 * 1024 * 1024  # limite di download della Bot API locale
 
 STARTED_AT = time.monotonic()
 
@@ -220,6 +236,124 @@ def parse_claude_result(stdout: str) -> tuple[str, str | None]:
     if not isinstance(text, str) or not text.strip():
         raise BridgeError("Claude Code ha risposto senza testo.", session_id)
     return text, session_id
+
+
+# --------------------------------------------------------------------------
+# Trascrizione vocali (ffmpeg + whisper.cpp, tutto in locale)
+# --------------------------------------------------------------------------
+
+def ffmpeg_binary() -> str:
+    override = os.environ.get("FFMPEG_BIN")
+    if override:
+        return override
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    return "/opt/homebrew/bin/ffmpeg"
+
+
+def whisper_cli_binary() -> str:
+    override = os.environ.get("WHISPER_CLI_BIN")
+    if override:
+        return override
+    found = shutil.which("whisper-cli")
+    if found:
+        return found
+    return "/opt/homebrew/bin/whisper-cli"
+
+
+def whisper_model_path() -> Path:
+    override = os.environ.get("WHISPER_MODEL_PATH")
+    if override:
+        return Path(override)
+    return Path.home() / ".claude" / "models" / "ggml-large-v3-turbo.bin"
+
+
+def build_ffmpeg_argv(src: Path, dst: Path) -> list[str]:
+    """Converte in wav mono 16kHz: il formato che whisper.cpp sa decodificare
+    in modo affidabile (l'ogg/opus dei vocali Telegram, testato, non va)."""
+    return [
+        ffmpeg_binary(), "-y", "-i", str(src),
+        "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
+        str(dst),
+    ]
+
+
+def build_whisper_argv(wav_path: Path, out_base: Path) -> list[str]:
+    return [
+        whisper_cli_binary(),
+        "-m", str(whisper_model_path()),
+        "-l", os.environ.get("WHISPER_LANGUAGE", "it"),
+        "-nt", "-np",
+        "-f", str(wav_path),
+        "-otxt", "-of", str(out_base),
+    ]
+
+
+async def _run_subprocess(argv: list[str], timeout: float) -> tuple[int, str, str]:
+    process = await asyncio.create_subprocess_exec(
+        *argv,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        stdin=asyncio.subprocess.DEVNULL,
+    )
+    try:
+        stdout_b, stderr_b = await asyncio.wait_for(process.communicate(), timeout=timeout)
+    except asyncio.TimeoutError:
+        try:
+            process.kill()
+        except (OSError, ProcessLookupError):
+            pass
+        raise BridgeError(f"Timeout dopo {int(timeout)}s durante la trascrizione.") from None
+    return (
+        process.returncode,
+        stdout_b.decode("utf-8", "replace"),
+        stderr_b.decode("utf-8", "replace"),
+    )
+
+
+async def transcribe_voice(src_path: Path) -> str:
+    """Converte `src_path` (vocale Telegram, ogg/opus) e lo trascrive in locale.
+
+    Solleva BridgeError con un messaggio azionabile — mai un errore muto — se
+    manca un binario, il modello, o conversione/trascrizione falliscono.
+    """
+    model_path = whisper_model_path()
+    if not model_path.exists():
+        raise BridgeError(
+            f"Modello whisper mancante: {model_path}\n"
+            "Scaricane uno da https://huggingface.co/ggerganov/whisper.cpp/tree/main "
+            "(es. ggml-large-v3-turbo.bin) o imposta WHISPER_MODEL_PATH nel .env."
+        )
+    ffmpeg_path = ffmpeg_binary()
+    if not Path(ffmpeg_path).exists():
+        raise BridgeError(f"ffmpeg non trovato ({ffmpeg_path}) — installa con `brew install ffmpeg`.")
+    whisper_path = whisper_cli_binary()
+    if not Path(whisper_path).exists():
+        raise BridgeError(f"whisper-cli non trovato ({whisper_path}) — installa con `brew install whisper-cpp`.")
+
+    with tempfile.TemporaryDirectory(prefix="bridge-voice-") as tmpdir:
+        tmp = Path(tmpdir)
+        wav_path = tmp / "audio.wav"
+        out_base = tmp / "transcript"
+
+        returncode, _, stderr = await _run_subprocess(
+            build_ffmpeg_argv(src_path, wav_path), timeout=TRANSCRIBE_TIMEOUT_S
+        )
+        if returncode != 0 or not wav_path.exists():
+            raise BridgeError("Conversione audio fallita:\n" + (stderr[-500:] or "(nessun stderr)"))
+
+        returncode, _, stderr = await _run_subprocess(
+            build_whisper_argv(wav_path, out_base), timeout=TRANSCRIBE_TIMEOUT_S
+        )
+        out_txt = out_base.with_suffix(".txt")
+        if returncode != 0 or not out_txt.exists():
+            raise BridgeError("Trascrizione fallita:\n" + (stderr[-500:] or "(nessun stderr)"))
+
+        text = out_txt.read_text(encoding="utf-8").strip()
+        if not text:
+            raise BridgeError("Trascrizione vuota — audio silenzioso o non udibile.")
+        return text
 
 
 def format_uptime(seconds: float) -> str:
@@ -439,6 +573,34 @@ async def deliver(update: "Update", text: str) -> None:
 # Handler
 # --------------------------------------------------------------------------
 
+async def _execute_and_deliver(update: "Update", context: "ContextTypes.DEFAULT_TYPE", prompt: str) -> None:
+    """Esegue `prompt` con Claude Code e manda la risposta in chat.
+
+    Va chiamata con STATE.lock già acquisito dal chiamante — è condivisa fra
+    on_message e on_voice, che differiscono solo in come ottengono `prompt`.
+    """
+    assert STATE is not None
+    typing = asyncio.create_task(_typing_loop(context.bot, update.effective_chat.id))
+    try:
+        text, session_id = await run_claude(prompt)
+    except BridgeError as exc:
+        if exc.session_id:
+            save_session_id(exc.session_id)
+        logger.error("Comando fallito: %s", exc)
+        await deliver(update, f"⚠️ {exc}")
+        return
+    except Exception as exc:  # il bridge non deve morire per un comando
+        logger.exception("Errore inatteso")
+        await deliver(update, f"⚠️ Errore inatteso nel bridge: {exc!r}")
+        return
+    finally:
+        typing.cancel()
+
+    if session_id:
+        save_session_id(session_id)
+    await deliver(update, text)
+
+
 async def on_message(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> None:
     if not _authorized(update):
         return
@@ -453,25 +615,49 @@ async def on_message(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> 
         return
 
     async with STATE.lock:
-        typing = asyncio.create_task(_typing_loop(context.bot, update.effective_chat.id))
+        await _execute_and_deliver(update, context, prompt)
+
+
+async def on_voice(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> None:
+    if not _authorized(update):
+        return
+    assert STATE is not None
+    message = update.effective_message
+    if message is None:
+        return
+    voice = message.voice or message.audio
+    if voice is None:
+        return
+
+    if STATE.lock.locked():
+        await message.reply_text("Occupato — un comando è già in esecuzione. /stop per annullarlo.")
+        return
+
+    if voice.file_size and voice.file_size > VOICE_MAX_BYTES:
+        await message.reply_text(
+            f"Audio troppo grande ({voice.file_size // 1024} KB, "
+            f"max {VOICE_MAX_BYTES // (1024 * 1024)} MB)."
+        )
+        return
+
+    async with STATE.lock:
         try:
-            text, session_id = await run_claude(prompt)
+            tg_file = await voice.get_file()
+            with tempfile.TemporaryDirectory(prefix="bridge-voice-src-") as tmpdir:
+                src_path = Path(tmpdir) / "voice.ogg"
+                await tg_file.download_to_drive(custom_path=str(src_path))
+                prompt = await transcribe_voice(src_path)
         except BridgeError as exc:
-            if exc.session_id:
-                save_session_id(exc.session_id)
-            logger.error("Comando fallito: %s", exc)
+            logger.error("Trascrizione fallita: %s", exc)
             await deliver(update, f"⚠️ {exc}")
             return
-        except Exception as exc:  # il bridge non deve morire per un comando
-            logger.exception("Errore inatteso")
-            await deliver(update, f"⚠️ Errore inatteso nel bridge: {exc!r}")
+        except Exception as exc:
+            logger.exception("Errore inatteso nella trascrizione")
+            await deliver(update, f"⚠️ Errore inatteso nella trascrizione: {exc!r}")
             return
-        finally:
-            typing.cancel()
 
-        if session_id:
-            save_session_id(session_id)
-        await deliver(update, text)
+        await message.reply_text(f"🎙️ trascritto: {prompt}")
+        await _execute_and_deliver(update, context, prompt)
 
 
 async def cmd_new(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> None:
@@ -518,8 +704,9 @@ async def cmd_help(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> No
     if not _authorized(update):
         return
     await update.effective_message.reply_text(
-        "Scrivimi un messaggio e lo eseguo con Claude Code in "
+        "Scrivimi un messaggio (testo o vocale) e lo eseguo con Claude Code in "
         f"{REPO_ROOT.name}.\n\n"
+        "I vocali vengono trascritti in locale (whisper.cpp) prima dell'esecuzione.\n\n"
         "/new    — azzera la sessione, il prossimo messaggio ne apre una nuova\n"
         "/status — sessione, uptime, cwd, branch, comando in corso\n"
         "/stop   — uccide il comando in esecuzione\n"
@@ -564,6 +751,7 @@ def main() -> None:
     application.add_handler(CommandHandler("stop", cmd_stop))
     application.add_handler(CommandHandler(["help", "start"], cmd_help))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
+    application.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, on_voice))
 
     logger.info("Bridge avviato — repo=%s chat autorizzata=%s", REPO_ROOT, allowed_chat_id)
     try:

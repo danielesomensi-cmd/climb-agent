@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
@@ -258,6 +259,218 @@ def test_sessione_stantia_viene_buttata_e_il_comando_ritentato(bridge, monkeypat
     assert tentativi == ["sessione-morta", None], "un solo ritentativo, da zero"
     assert (text, session_id) == ("ok", "sessione-nuova")
     assert not path.exists(), "la sessione morta va cancellata"
+
+
+# ------------------------------------------------------- trascrizione vocali
+
+def test_ffmpeg_argv_converte_a_16k_mono_pcm(bridge):
+    argv = bridge.build_ffmpeg_argv(Path("/tmp/in.ogg"), Path("/tmp/out.wav"))
+    assert argv[-1] == "/tmp/out.wav"
+    assert argv[argv.index("-i") + 1] == "/tmp/in.ogg"
+    assert argv[argv.index("-ar") + 1] == "16000"
+    assert argv[argv.index("-ac") + 1] == "1"
+
+
+def test_whisper_argv_include_lingua_modello_e_file(bridge, monkeypatch):
+    monkeypatch.setenv("WHISPER_LANGUAGE", "it")
+    argv = bridge.build_whisper_argv(Path("/tmp/audio.wav"), Path("/tmp/out"))
+    assert argv[argv.index("-l") + 1] == "it"
+    assert argv[argv.index("-f") + 1] == "/tmp/audio.wav"
+    assert argv[argv.index("-of") + 1] == "/tmp/out"
+    assert "-otxt" in argv
+
+
+def test_transcribe_voice_senza_modello_da_errore_azionabile(bridge, monkeypatch, tmp_path):
+    monkeypatch.setattr(bridge, "whisper_model_path", lambda: tmp_path / "non-esiste.bin")
+    with pytest.raises(bridge.BridgeError, match="Modello whisper mancante"):
+        asyncio.run(bridge.transcribe_voice(tmp_path / "voice.ogg"))
+
+
+def test_transcribe_voice_senza_ffmpeg_da_errore_azionabile(bridge, monkeypatch, tmp_path):
+    model = tmp_path / "model.bin"
+    model.write_bytes(b"x")
+    monkeypatch.setattr(bridge, "whisper_model_path", lambda: model)
+    monkeypatch.setattr(bridge, "ffmpeg_binary", lambda: str(tmp_path / "non-esiste-ffmpeg"))
+    with pytest.raises(bridge.BridgeError, match="ffmpeg non trovato"):
+        asyncio.run(bridge.transcribe_voice(tmp_path / "voice.ogg"))
+
+
+def test_transcribe_voice_senza_whisper_cli_da_errore_azionabile(bridge, monkeypatch, tmp_path):
+    model = tmp_path / "model.bin"
+    model.write_bytes(b"x")
+    monkeypatch.setattr(bridge, "whisper_model_path", lambda: model)
+    monkeypatch.setattr(bridge, "ffmpeg_binary", lambda: sys.executable)
+    monkeypatch.setattr(bridge, "whisper_cli_binary", lambda: str(tmp_path / "non-esiste-whisper"))
+    with pytest.raises(bridge.BridgeError, match="whisper-cli non trovato"):
+        asyncio.run(bridge.transcribe_voice(tmp_path / "voice.ogg"))
+
+
+def _stub_binaries(bridge, monkeypatch, tmp_path):
+    model = tmp_path / "model.bin"
+    model.write_bytes(b"x")
+    monkeypatch.setattr(bridge, "whisper_model_path", lambda: model)
+    monkeypatch.setattr(bridge, "ffmpeg_binary", lambda: sys.executable)
+    monkeypatch.setattr(bridge, "whisper_cli_binary", lambda: sys.executable)
+
+
+def test_transcribe_voice_flusso_completo(bridge, monkeypatch, tmp_path):
+    """ffmpeg e whisper-cli sono finti (mai lanciati davvero): verifica solo
+    che transcribe_voice sappia orchestrare argv → subprocess → lettura file."""
+    _stub_binaries(bridge, monkeypatch, tmp_path)
+
+    async def _fake_run_subprocess(argv, timeout):
+        if "-otxt" in argv:
+            out_base = Path(argv[argv.index("-of") + 1])
+            out_base.with_suffix(".txt").write_text("ciao mondo\n", encoding="utf-8")
+        else:
+            Path(argv[-1]).write_bytes(b"RIFF....WAVEfmt ")
+        return (0, "", "")
+
+    monkeypatch.setattr(bridge, "_run_subprocess", _fake_run_subprocess)
+
+    text = asyncio.run(bridge.transcribe_voice(tmp_path / "voice.ogg"))
+    assert text == "ciao mondo"
+
+
+def test_transcribe_voice_vuota_da_errore(bridge, monkeypatch, tmp_path):
+    """Audio silenzioso: whisper esce 0 ma produce un .txt vuoto — non deve
+    diventare un prompt vuoto passato a Claude."""
+    _stub_binaries(bridge, monkeypatch, tmp_path)
+
+    async def _fake_run_subprocess(argv, timeout):
+        if "-otxt" in argv:
+            out_base = Path(argv[argv.index("-of") + 1])
+            out_base.with_suffix(".txt").write_text("   \n", encoding="utf-8")
+        else:
+            Path(argv[-1]).write_bytes(b"RIFF....WAVEfmt ")
+        return (0, "", "")
+
+    monkeypatch.setattr(bridge, "_run_subprocess", _fake_run_subprocess)
+
+    with pytest.raises(bridge.BridgeError, match="Trascrizione vuota"):
+        asyncio.run(bridge.transcribe_voice(tmp_path / "voice.ogg"))
+
+
+def test_transcribe_voice_ffmpeg_fallito_da_errore(bridge, monkeypatch, tmp_path):
+    _stub_binaries(bridge, monkeypatch, tmp_path)
+
+    async def _fake_run_subprocess(argv, timeout):
+        return (1, "", "errore di conversione")
+
+    monkeypatch.setattr(bridge, "_run_subprocess", _fake_run_subprocess)
+
+    with pytest.raises(bridge.BridgeError, match="Conversione audio fallita"):
+        asyncio.run(bridge.transcribe_voice(tmp_path / "voice.ogg"))
+
+
+# --------------------------------------------------------- handler on_voice
+
+class _FakeTGFile:
+    def __init__(self, recorder: _Recorder) -> None:
+        self._rec = recorder
+
+    async def download_to_drive(self, custom_path=None):
+        self._rec.calls.append("download_to_drive")
+
+
+class _FakeVoice:
+    def __init__(self, recorder: _Recorder, file_size: int = 1000) -> None:
+        self._rec = recorder
+        self.file_id = "voice-123"
+        self.file_size = file_size
+
+    async def get_file(self):
+        self._rec.calls.append("get_file")
+        return _FakeTGFile(self._rec)
+
+
+class _FakeVoiceMessage(_FakeMessage):
+    def __init__(self, recorder: _Recorder, file_size: int = 1000) -> None:
+        super().__init__("", recorder)
+        self.voice = _FakeVoice(recorder, file_size)
+        self.audio = None
+
+
+class _FakeVoiceUpdate:
+    def __init__(self, chat_id: int, recorder: _Recorder, file_size: int = 1000) -> None:
+        self.effective_chat = _FakeChat(chat_id, recorder)
+        self.effective_message = _FakeVoiceMessage(recorder, file_size)
+        self.effective_user = _FakeUser()
+
+
+def test_allowlist_blocca_voce_di_chat_estranea(bridge):
+    """Come per il testo: chat non autorizzata → zero chiamate, niente download."""
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+    update = _FakeVoiceUpdate(999_000_111, recorder)
+    asyncio.run(bridge.on_voice(update, _FakeContext(recorder)))
+    assert recorder.calls == []
+
+
+def test_voce_troppo_grande_viene_rifiutata_senza_scaricare(bridge, monkeypatch):
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+
+    async def _non_deve_essere_chiamata(*a, **k):
+        raise AssertionError("un vocale oltre il limite non deve essere trascritto")
+
+    monkeypatch.setattr(bridge, "transcribe_voice", _non_deve_essere_chiamata)
+
+    update = _FakeVoiceUpdate(ALLOWED, recorder, file_size=bridge.VOICE_MAX_BYTES + 1)
+    asyncio.run(bridge.on_voice(update, _FakeContext(recorder)))
+
+    assert recorder.calls == ["reply_text"]
+
+
+def test_voce_trascritta_ed_eseguita_per_chat_autorizzata(bridge, monkeypatch):
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+
+    async def _fake_transcribe(src_path):
+        return "controlla lo stato dei test"
+
+    monkeypatch.setattr(bridge, "transcribe_voice", _fake_transcribe)
+
+    spawned: list[str] = []
+
+    async def _fake_run_claude(prompt):
+        spawned.append(prompt)
+        return "fatto", "sid-voice"
+
+    monkeypatch.setattr(bridge, "run_claude", _fake_run_claude)
+    saved: list[str] = []
+    monkeypatch.setattr(bridge, "save_session_id", lambda sid, *a, **k: saved.append(sid))
+
+    update = _FakeVoiceUpdate(ALLOWED, recorder)
+    asyncio.run(bridge.on_voice(update, _FakeContext(recorder)))
+
+    assert recorder.calls == ["get_file", "download_to_drive", "reply_text", "send_message"]
+    assert spawned == ["controlla lo stato dei test"]
+    assert saved == ["sid-voice"]
+
+
+def test_voce_con_trascrizione_fallita_non_chiama_claude(bridge, monkeypatch):
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+
+    async def _fake_transcribe(src_path):
+        raise bridge.BridgeError("whisper-cli non trovato — installa con `brew install whisper-cpp`.")
+
+    monkeypatch.setattr(bridge, "transcribe_voice", _fake_transcribe)
+
+    spawned: list[str] = []
+
+    async def _non_deve_essere_chiamata(prompt):
+        spawned.append(prompt)
+        return "non dovrebbe succedere", None
+
+    monkeypatch.setattr(bridge, "run_claude", _non_deve_essere_chiamata)
+
+    update = _FakeVoiceUpdate(ALLOWED, recorder)
+    asyncio.run(bridge.on_voice(update, _FakeContext(recorder)))
+
+    assert spawned == []
+    assert "send_message" in recorder.calls  # deliver() dell'errore
 
 
 def test_errore_non_di_sessione_non_viene_ritentato(bridge, monkeypatch, tmp_path):
