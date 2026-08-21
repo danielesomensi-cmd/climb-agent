@@ -39,7 +39,9 @@ non confermare a un estraneo che il bot è vivo.
 Trasporto: long polling (`getUpdates`). Nessun webhook — il Mac è dietro NAT, e
 polling non richiede URL pubblico, tunnel o porte aperte.
 
-Avvio: `scripts/run_bridge.sh` (vedi header di quello script).
+Avvio: `scripts/install_bridge_service.sh` lo installa come LaunchAgent, che
+lo riavvia dopo un crash e al login. `scripts/run_bridge.sh` lo lancia in
+primo piano quando vuoi vedere il log scorrere.
 """
 from __future__ import annotations
 

@@ -15,7 +15,16 @@
 #   2. Impostazioni → Batteria → Alimentatore → "Impedisci lo stop automatico
 #      quando lo schermo è spento" ATTIVO.
 #
-# Fallo sopravvivere alla chiusura del terminale con tmux:
+# MODO CONSIGLIATO: non lanciarlo a mano, installalo come servizio —
+#   ./scripts/install_bridge_service.sh
+# launchd lo riavvia dopo un crash e al login; tmux e caffeinate da soli non lo
+# fanno. Questo script resta utile per una sessione in primo piano, per vedere
+# il log scorrere mentre debuggi.
+#
+# Attenzione: se il servizio launchd è attivo, avviarlo anche qui fallisce (un
+# solo getUpdates per token) — il lock su .claude_bridge.pid te lo dice.
+#
+# In alternativa, per farlo sopravvivere alla chiusura del terminale con tmux:
 #   tmux new -s bridge './scripts/run_bridge.sh'
 #   tmux attach -t bridge      # per riattaccarti
 #   Ctrl-b d                   # per staccarti
