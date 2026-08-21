@@ -66,6 +66,19 @@ def _grade_color(grade: str) -> str:
     return "#d94f4f"  # rosso: 7a e oltre
 
 
+def _label_width_px(route: dict) -> float:
+    """Stima larghezza (px) delle due righe di etichetta di una via, per
+    dimensionare la colonna — senza questo, un nome lungo ("A Route With a
+    View") si sovrapponeva alla via accanto: nessun errore, solo un render
+    illeggibile (vedi lezione A278 in docs/lessons.md)."""
+    name = str(route.get("name", "?"))
+    grade = str(route.get("grade", "?"))
+    length = route.get("length_m")
+    grade_line = grade + (f" · {length}m" if length else "")
+    # Helvetica bold ~14px e regular ~12px: stima grezza, non metrica di font vera.
+    return max(len(name) * 8.6, len(grade_line) * 7.2)
+
+
 def build_svg(sector: str, routes: list[dict], subtitle: str = "") -> str:
     """Genera l'SVG dello schizzo. Pura — nessuna dipendenza esterna, testabile."""
     if not routes:
@@ -76,7 +89,9 @@ def build_svg(sector: str, routes: list[dict], subtitle: str = "") -> str:
         key=lambda pair: (pair[1].get("position", pair[0]), pair[0]),
     )
 
-    width = MARGIN_SIDE * 2 + len(ordered) * (ROUTE_WIDTH + ROUTE_GAP) - ROUTE_GAP
+    route_width = max(ROUTE_WIDTH, max(_label_width_px(r) for _, r in ordered) + 10)
+
+    width = MARGIN_SIDE * 2 + len(ordered) * (route_width + ROUTE_GAP) - ROUTE_GAP
     height = MARGIN_TOP + WALL_HEIGHT + MARGIN_BOTTOM
 
     parts = [
@@ -106,12 +121,12 @@ def build_svg(sector: str, routes: list[dict], subtitle: str = "") -> str:
         stars = int(route.get("stars", 0) or 0)
         color = _grade_color(grade)
 
-        cx = x + ROUTE_WIDTH / 2
+        cx = x + route_width / 2
         y_top = MARGIN_TOP + 10
         y_bot = MARGIN_TOP + WALL_HEIGHT - 10
         mid1 = y_top + (y_bot - y_top) * 0.35
         mid2 = y_top + (y_bot - y_top) * 0.7
-        dx = ROUTE_WIDTH * 0.18
+        dx = route_width * 0.18
         path = f"M {cx} {y_bot} L {cx - dx} {mid2} L {cx + dx} {mid1} L {cx} {y_top}"
         parts.append(
             f'<path d="{path}" fill="none" stroke="{color}" stroke-width="5" '
@@ -130,7 +145,7 @@ def build_svg(sector: str, routes: list[dict], subtitle: str = "") -> str:
             f'<text x="{cx}" y="{y_top - 24}" font-family="Helvetica, Arial, sans-serif" '
             f'font-size="12" text-anchor="middle" fill="{color}">{label_grade} {stars_str}</text>'
         )
-        x += ROUTE_WIDTH + ROUTE_GAP
+        x += route_width + ROUTE_GAP
 
     parts.append("</svg>")
     return "\n".join(parts)

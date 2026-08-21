@@ -64,6 +64,23 @@ def test_build_svg_rispetta_ordine_di_posizione_non_di_lista(topo_sketch):
     assert idx_salbei < idx_friends < idx_salamina
 
 
+def test_build_svg_allarga_le_colonne_per_nomi_lunghi(topo_sketch):
+    """Regressione: 'A Route With a View' finiva sovrapposto al nome della via
+    accanto perché la colonna aveva larghezza fissa indipendente dal testo —
+    nessun errore, solo un PNG illeggibile (vedi lezione A278)."""
+    import re
+
+    def _svg_width(svg: str) -> float:
+        return float(re.search(r'width="(\d+(?:\.\d+)?)"', svg).group(1))
+
+    corte = topo_sketch.build_svg("S", [{"name": "A", "grade": "6a"}, {"name": "B", "grade": "6a"}])
+    con_nome_lungo = topo_sketch.build_svg(
+        "S",
+        [{"name": "A Route With a View", "grade": "6a"}, {"name": "B", "grade": "6a"}],
+    )
+    assert _svg_width(con_nome_lungo) > _svg_width(corte)
+
+
 def test_build_svg_via_senza_posizione_usa_ordine_di_lista(topo_sketch):
     svg = topo_sketch.build_svg(
         "Settore",
