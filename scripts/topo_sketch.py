@@ -21,8 +21,10 @@ Dipende da `rsvg-convert` (`brew install librsvg`) per il passaggio SVG→PNG;
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -35,9 +37,19 @@ MARGIN_TOP = 110  # spazio per titolo + sottotitolo + etichetta via, senza sovra
 MARGIN_BOTTOM = 40
 MARGIN_SIDE = 40
 
-BG_COLOR = "#faf6ee"
-ROCK_COLOR = "#8a7a63"
+BG_TOP = "#eef2f4"      # cielo pallido
+ROCK_LIGHT = "#cabfa8"  # roccia in luce
+ROCK_DARK = "#9c8f76"   # roccia in ombra / talus
 TEXT_COLOR = "#2b2b2b"
+BOLT_COLOR = "#4a4438"
+
+
+def _seed_for(*parts: str) -> int:
+    """Seed deterministico da stringhe — stesso input, stesso schizzo, sempre
+    (niente `random` senza seme: due run dello stesso settore devono
+    combaciare, altrimenti build_svg smette di essere testabile a puntino)."""
+    digest = hashlib.md5("|".join(parts).encode("utf-8")).hexdigest()
+    return int(digest[:8], 16)
 
 
 def _esc(s: str) -> str:
@@ -79,8 +91,102 @@ def _label_width_px(route: dict) -> float:
     return max(len(name) * 8.6, len(grade_line) * 7.2)
 
 
+def _jagged_line(rng: random.Random, x0: float, x1: float, y: float, amplitude: float, step: float) -> list[tuple[float, float]]:
+    """Punti di un profilo roccioso irregolare fra x0 e x1, attorno a y."""
+    points = []
+    x = x0
+    while x < x1:
+        points.append((x, y + rng.uniform(-amplitude, amplitude)))
+        x += step * rng.uniform(0.6, 1.4)
+    points.append((x1, y + rng.uniform(-amplitude, amplitude)))
+    return points
+
+
+def _smooth_path(points: list[tuple[float, float]]) -> str:
+    """Path SVG che passa dai punti dati con curve morbide (quadratiche verso
+    il punto medio fra un punto e il successivo) invece di segmenti dritti."""
+    if len(points) < 2:
+        return ""
+    d = f"M {points[0][0]:.1f} {points[0][1]:.1f} "
+    for i in range(1, len(points)):
+        px, py = points[i - 1]
+        cx, cy = points[i]
+        mx, my = (px + cx) / 2, (py + cy) / 2
+        d += f"Q {px:.1f} {py:.1f} {mx:.1f} {my:.1f} "
+    last = points[-1]
+    d += f"L {last[0]:.1f} {last[1]:.1f}"
+    return d
+
+
+def _route_climb_points(rng: random.Random, cx: float, y_top: float, y_bot: float, half_width: float) -> list[tuple[float, float]]:
+    """Punti (base→cima) di una via: zig-zag naturale, non un tubo dritto."""
+    n = rng.randint(4, 6)
+    points = [(cx, y_bot)]
+    for i in range(1, n):
+        frac = i / n
+        y = y_bot - (y_bot - y_top) * frac
+        spread = half_width * rng.uniform(0.4, 1.0) * rng.choice([-1, 1])
+        points.append((cx + spread, y))
+    points.append((cx, y_top))
+    return points
+
+
+def _rock_backdrop(width: float, height: float, sector: str) -> list[str]:
+    """Sfondo roccia: cielo sfumato, silhouette di cresta irregolare in alto,
+    talus irregolare in basso, e qualche macchia scura per la texture — tutto
+    seminato sul nome del settore, così lo stesso settore produce sempre lo
+    stesso sfondo (niente diff casuali fra due run identiche)."""
+    rng = random.Random(_seed_for("backdrop", sector))
+    wall_top = MARGIN_TOP - 10
+    wall_bottom = MARGIN_TOP + WALL_HEIGHT
+    parts = [
+        "<defs>",
+        f'<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">'
+        f'<stop offset="0%" stop-color="{BG_TOP}"/>'
+        f'<stop offset="100%" stop-color="#dfd6c2"/>'
+        f"</linearGradient>",
+        f'<linearGradient id="rock" x1="0" y1="0" x2="0" y2="1">'
+        f'<stop offset="0%" stop-color="{ROCK_LIGHT}"/>'
+        f'<stop offset="100%" stop-color="#b3a68d"/>'
+        f"</linearGradient>",
+        "</defs>",
+        f'<rect width="{width}" height="{height}" fill="url(#sky)"/>',
+    ]
+
+    # Silhouette della parete: profilo di cresta irregolare fino al bordo alto,
+    # riempita di roccia fino al fondo.
+    crest = _jagged_line(rng, 0, width, wall_top, amplitude=22, step=width / 14)
+    poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in crest)
+    parts.append(
+        f'<polygon points="0,{height:.1f} {poly} {width:.1f},{height:.1f}" fill="url(#rock)"/>'
+    )
+
+    # Macchie scure sparse, decorative — suggeriscono texture di roccia senza
+    # pretendere di essere una foto.
+    for _ in range(max(6, int(width / 220))):
+        bx = rng.uniform(0, width)
+        by = rng.uniform(wall_top + 20, wall_bottom - 20)
+        br = rng.uniform(18, 48)
+        parts.append(
+            f'<ellipse cx="{bx:.1f}" cy="{by:.1f}" rx="{br:.1f}" ry="{br * rng.uniform(0.5, 0.9):.1f}" '
+            f'fill="{ROCK_DARK}" opacity="{rng.uniform(0.08, 0.18):.2f}"/>'
+        )
+
+    # Base/talus irregolare invece di una barra piatta.
+    talus = _jagged_line(rng, 0, width, wall_bottom + 6, amplitude=6, step=width / 18)
+    talus_poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in talus)
+    parts.append(
+        f'<polygon points="0,{height:.1f} {talus_poly} {width:.1f},{height:.1f}" fill="{ROCK_DARK}"/>'
+    )
+    return parts
+
+
 def build_svg(sector: str, routes: list[dict], subtitle: str = "") -> str:
-    """Genera l'SVG dello schizzo. Pura — nessuna dipendenza esterna, testabile."""
+    """Genera l'SVG dello schizzo. Pura — nessuna dipendenza esterna, testabile.
+
+    Stile "topo vettoriale da guidebook" (silhouette di roccia + linee vie +
+    rinvii), non un fotomontaggio: niente qui prova a imitare una foto reale
+    della parete — non ne ho una da annotare."""
     if not routes:
         raise ValueError("build_svg richiede almeno una via")
 
@@ -97,40 +203,70 @@ def build_svg(sector: str, routes: list[dict], subtitle: str = "") -> str:
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}">',
-        f'<rect width="{width}" height="{height}" fill="{BG_COLOR}"/>',
-        f'<text x="{width / 2}" y="34" font-family="Helvetica, Arial, sans-serif" '
-        f'font-size="26" font-weight="bold" text-anchor="middle" fill="{TEXT_COLOR}">'
-        f'{_esc(sector)}</text>',
     ]
+    parts.extend(_rock_backdrop(width, height, sector))
+    parts.append(
+        f'<text x="{width / 2}" y="34" font-family="Helvetica, Arial, sans-serif" '
+        f'font-size="26" font-weight="bold" text-anchor="middle" fill="{TEXT_COLOR}" '
+        f'style="paint-order: stroke; stroke: {BG_TOP}; stroke-width: 5px;">'
+        f'{_esc(sector)}</text>'
+    )
     if subtitle:
         parts.append(
             f'<text x="{width / 2}" y="56" font-family="Helvetica, Arial, sans-serif" '
-            f'font-size="14" text-anchor="middle" fill="#666">{_esc(subtitle)}</text>'
+            f'font-size="14" text-anchor="middle" fill="#4a4438" '
+            f'style="paint-order: stroke; stroke: {BG_TOP}; stroke-width: 4px;">'
+            f'{_esc(subtitle)}</text>'
         )
 
-    parts.append(
-        f'<rect x="0" y="{MARGIN_TOP + WALL_HEIGHT}" width="{width}" height="8" '
-        f'fill="{ROCK_COLOR}"/>'
-    )
-
     x = MARGIN_SIDE
-    for _, route in ordered:
+    for position, route in ordered:
         name = route.get("name", "?")
         grade = route.get("grade", "?")
         length = route.get("length_m")
         stars = int(route.get("stars", 0) or 0)
         color = _grade_color(grade)
+        route_number = route.get("position", position + 1)
 
         cx = x + route_width / 2
         y_top = MARGIN_TOP + 10
         y_bot = MARGIN_TOP + WALL_HEIGHT - 10
-        mid1 = y_top + (y_bot - y_top) * 0.35
-        mid2 = y_top + (y_bot - y_top) * 0.7
-        dx = route_width * 0.18
-        path = f"M {cx} {y_bot} L {cx - dx} {mid2} L {cx + dx} {mid1} L {cx} {y_top}"
+        half_width = route_width * 0.32
+
+        rng = random.Random(_seed_for("route", sector, str(name), str(route_number)))
+        climb_points = _route_climb_points(rng, cx, y_top, y_bot, half_width)
+
+        # Alone chiaro sotto la linea vera: la stacca dallo sfondo scuro senza
+        # bisogno di un contorno nero che la farebbe sembrare un cartone.
         parts.append(
-            f'<path d="{path}" fill="none" stroke="{color}" stroke-width="5" '
-            f'stroke-linecap="round" stroke-linejoin="round"/>'
+            f'<path d="{_smooth_path(climb_points)}" fill="none" stroke="{BG_TOP}" '
+            f'stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>'
+        )
+        parts.append(
+            f'<path d="{_smooth_path(climb_points)}" fill="none" stroke="{color}" '
+            f'stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>'
+        )
+
+        # Rinvii: pallini lungo la via, non a ogni vertice del percorso ma a
+        # intervalli regolari — un topo vero non segna ogni piega della corda.
+        n_bolts = max(3, min(9, round((length or 20) / 4)))
+        for i in range(1, n_bolts):
+            t = i / n_bolts
+            idx = t * (len(climb_points) - 1)
+            lo, hi = int(idx), min(int(idx) + 1, len(climb_points) - 1)
+            frac = idx - lo
+            bx = climb_points[lo][0] + (climb_points[hi][0] - climb_points[lo][0]) * frac
+            by = climb_points[lo][1] + (climb_points[hi][1] - climb_points[lo][1]) * frac
+            parts.append(f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="2.6" fill="{BOLT_COLOR}"/>')
+
+        # Numero via in un cerchietto alla base — convenzione da guidebook.
+        parts.append(
+            f'<circle cx="{cx:.1f}" cy="{y_bot + 14:.1f}" r="11" fill="{TEXT_COLOR}"/>'
+        )
+        parts.append(
+            f'<text x="{cx:.1f}" y="{y_bot + 18:.1f}" font-family="Helvetica, Arial, sans-serif" '
+            f'font-size="11" font-weight="bold" text-anchor="middle" fill="{BG_TOP}">'
+            f'{_esc(route_number)}</text>'
         )
 
         label_top = _esc(name)
