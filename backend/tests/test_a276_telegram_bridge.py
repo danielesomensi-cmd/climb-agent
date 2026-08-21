@@ -612,3 +612,44 @@ def test_deliver_outbox_svuota_anche_se_il_send_fallisce(bridge, tmp_path, monke
 
     asyncio.run(bridge.deliver_outbox(_FakeUpdateFallito()))
     assert not (outbox / "rotto.png").exists()
+
+
+def test_startup_flush_manda_outbox_senza_aspettare_un_messaggio(bridge, tmp_path, monkeypatch):
+    """post_init: un'outbox rimasta piena da un riavvio va consegnata subito,
+    non solo alla prossima volta che arriva un messaggio."""
+    outbox = tmp_path / "outbox"
+    outbox.mkdir()
+    (outbox / "schizzo.png").write_bytes(b"\x89PNG\r\n")
+    monkeypatch.setattr(bridge, "OUTBOX_DIR", outbox)
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+
+    calls = []
+
+    class _FakeBot:
+        async def send_photo(self, chat_id, photo, caption=None):
+            calls.append(("send_photo", chat_id))
+
+        async def send_document(self, chat_id, document, filename=None):
+            calls.append(("send_document", chat_id))
+
+    class _FakeApplication:
+        bot = _FakeBot()
+
+    asyncio.run(bridge._startup_flush_outbox(_FakeApplication()))
+
+    assert calls == [("send_photo", ALLOWED)]
+    assert not (outbox / "schizzo.png").exists()
+
+
+def test_startup_flush_senza_outbox_non_chiama_il_bot(bridge, tmp_path, monkeypatch):
+    monkeypatch.setattr(bridge, "OUTBOX_DIR", tmp_path / "non-esiste")
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+
+    class _FailingBot:
+        async def send_photo(self, *a, **k):
+            raise AssertionError("non deve essere chiamato: outbox vuota")
+
+    class _FakeApplication:
+        bot = _FailingBot()
+
+    asyncio.run(bridge._startup_flush_outbox(_FakeApplication()))

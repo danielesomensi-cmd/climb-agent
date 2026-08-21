@@ -596,31 +596,67 @@ async def deliver(update: "Update", text: str) -> None:
         await chat.send_message(chunk)
 
 
-async def deliver_outbox(update: "Update") -> None:
-    """Manda ed elimina ogni file lasciato in OUTBOX_DIR durante il turno.
+async def _flush_outbox(send_photo, send_document) -> None:
+    """Nucleo condiviso: manda ed elimina ogni file lasciato in OUTBOX_DIR.
 
-    `claude -p --output-format json` restituisce solo testo — non c'è altro
-    canale per un turno che produce un'immagine (es. uno schizzo di topo, A277)
-    di dirlo al bridge. Convenzione: scrivi il file in OUTBOX_DIR, il bridge lo
-    trova qui a fine turno e lo allega. Immagini → foto, tutto il resto →
-    documento. Sempre svuotata, comando riuscito o no, per non far accumulare
-    file di un turno fallito a metà.
+    `send_photo(fh, caption)` / `send_document(fh, filename)` astraggono la
+    differenza fra `Chat.send_photo` (dentro un turno, la chat è già nota) e
+    `Bot.send_photo` (all'avvio, serve `chat_id` esplicito — vedi
+    `_startup_flush_outbox`). Sempre svuotata, invio riuscito o no, per non
+    far accumulare file di un tentativo fallito a metà.
     """
     if not OUTBOX_DIR.is_dir():
         return
-    chat = update.effective_chat
-    assert chat is not None
     for path in sorted(p for p in OUTBOX_DIR.iterdir() if p.is_file()):
         try:
             with path.open("rb") as fh:
                 if path.suffix.lower() in IMAGE_EXTENSIONS:
-                    await chat.send_photo(photo=fh, caption=path.stem)
+                    await send_photo(fh, path.stem)
                 else:
-                    await chat.send_document(document=fh, filename=path.name)
+                    await send_document(fh, path.name)
         except Exception:
             logger.exception("Invio outbox fallito per %s", path)
         finally:
             path.unlink(missing_ok=True)
+
+
+async def deliver_outbox(update: "Update") -> None:
+    """Manda ed elimina ogni file lasciato in OUTBOX_DIR durante il turno.
+
+    `claude -p --output-format json` restituisce solo testo — non c'è altro
+    canale per un turno che produce un'immagine (es. uno schizzo di topo, A278)
+    di dirlo al bridge. Convenzione: scrivi il file in OUTBOX_DIR, il bridge lo
+    trova qui a fine turno e lo allega. Immagini → foto, tutto il resto →
+    documento.
+    """
+    chat = update.effective_chat
+    assert chat is not None
+    await _flush_outbox(
+        send_photo=lambda fh, caption: chat.send_photo(photo=fh, caption=caption),
+        send_document=lambda fh, filename: chat.send_document(document=fh, filename=filename),
+    )
+
+
+async def _startup_flush_outbox(application: "Application") -> None:
+    """`post_init` del bridge: consegna un'outbox rimasta piena da un avvio
+    precedente appena il bot è pronto, senza aspettare un nuovo messaggio.
+
+    Il bridge non si riavvia mai da solo a metà di un turno (`_execute_and_deliver`
+    lo aspetta), ma un riavvio manuale — o uno che arriva mentre il turno
+    successivo non è ancora partito — lascerebbe l'outbox piena fino al primo
+    messaggio in arrivo. Da qui parte subito, con `STATE.allowed_chat_id`
+    invece della chat di un update.
+    """
+    assert STATE is not None
+    if not OUTBOX_DIR.is_dir() or not any(OUTBOX_DIR.iterdir()):
+        return
+    logger.info("Outbox non vuota all'avvio — la consegno prima di aprire il polling.")
+    bot = application.bot
+    chat_id = STATE.allowed_chat_id
+    await _flush_outbox(
+        send_photo=lambda fh, caption: bot.send_photo(chat_id=chat_id, photo=fh, caption=caption),
+        send_document=lambda fh, filename: bot.send_document(chat_id=chat_id, document=fh, filename=filename),
+    )
 
 
 # --------------------------------------------------------------------------
@@ -830,7 +866,7 @@ def main() -> None:
     acquire_single_instance_lock()
     STATE = BridgeState(allowed_chat_id)
 
-    application = Application.builder().token(token).build()
+    application = Application.builder().token(token).post_init(_startup_flush_outbox).build()
     application.add_handler(CommandHandler("new", cmd_new))
     application.add_handler(CommandHandler("status", cmd_status))
     application.add_handler(CommandHandler("stop", cmd_stop))
