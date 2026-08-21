@@ -713,7 +713,9 @@ async def cmd_new(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> Non
     had = clear_session_id()
     await update.effective_message.reply_text(
         "Sessione azzerata — il prossimo messaggio ne apre una nuova.\n"
-        "Nota: un boot a freddo su questo repo costa ~$0.12 (CLAUDE.md è grosso)."
+        "Nota: un boot a freddo rilegge tutto CLAUDE.md senza cache (è grosso), "
+        "quindi è più lento del resume — ma sei su abbonamento Max: nessun costo "
+        "a consumo, incluso nel piano."
         if had else
         "Nessuna sessione salvata: il prossimo messaggio ne apre già una nuova."
     )
