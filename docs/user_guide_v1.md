@@ -590,6 +590,8 @@ The **Coach** (in the More menu, or from the card on Today) is a conversational 
 
 It can also pull **real weather** on demand (OpenWeatherMap): just ask. Say "here" (allow location access on the Coach page) for current conditions where you are, or name any crag/city and a day up to 5 ahead — "what conditions will I find at Berdorf on Sunday?" gets a real answer with a friction score and advice. It only checks the weather when your question needs it, and it never invents conditions: if it can't reach the provider it tells you so.
 
+Since A275 it can also answer questions about a **specific time window** and about **daylight** — "what will it be like between 14:00 and 20:00?", "how much light is left?", "which way is the wind coming from?" — because the weather it receives now includes the day hour by hour (in 3-hour steps, in the crag's own local time), sunrise and sunset, and the wind's compass bearing. Those hours are read from the forecast, not estimated: if an hour isn't covered, the Coach says so rather than filling the gap.
+
 Two ways to make it more personal:
 
 - **Notes for your Coach** (Settings): anything it should always keep in mind — fears, schedule constraints, personal goals. It factors them into every answer.

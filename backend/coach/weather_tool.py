@@ -34,14 +34,20 @@ WEATHER_TOOL: Dict[str, Any] = {
     "name": "get_weather",
     "description": (
         "Get real climbing-conditions weather for a location: temperature, "
-        "humidity, dew-point spread, wind, precipitation and a 0-100 friction "
-        "score (higher = better friction). Call this ONLY when the user's "
-        "message needs weather / conditions / friction for a place or a day — "
-        "never for unrelated questions. Set location='here' to use the user's "
-        "current GPS position, or pass a crag/city name. days_ahead=0 is "
-        "now/today; 1-5 is that many days into the future (forecast horizon is "
-        "5 days). If the result says the data is unavailable, tell the user you "
-        "can't pull conditions right now — never invent numbers."
+        "humidity, dew-point spread, wind speed AND compass direction, cloud "
+        "cover, precipitation and a 0-100 friction score (higher = better "
+        "friction). The result also carries sunrise/sunset and an hour-by-hour "
+        "strip in 3-hour steps, so you CAN answer questions about a specific "
+        "window ('what will it be like between 14:00 and 20:00') and about "
+        "remaining daylight — read those hours from the strip, never "
+        "interpolate or estimate them. All times in the result are LOCAL at "
+        "that location. Call this ONLY when the user's message needs weather / "
+        "conditions / friction for a place or a day — never for unrelated "
+        "questions. Set location='here' to use the user's current GPS "
+        "position, or pass a crag/city name. days_ahead=0 is now/today; 1-5 is "
+        "that many days into the future (forecast horizon is 5 days). If the "
+        "result says the data is unavailable, tell the user you can't pull "
+        "conditions right now — never invent numbers."
     ),
     "input_schema": {
         "type": "object",
@@ -62,12 +68,50 @@ WEATHER_TOOL: Dict[str, Any] = {
 }
 
 
+MAX_HOURLY_STEPS = 8  # a full local day of 3-hour steps
+
+
+def _fmt_wind(w: Dict[str, Any]) -> str:
+    """Speed + compass bearing. A275: direction decides whether a NE-facing
+    crag is in the wind or sheltered, so it must never be dropped."""
+    out = f"wind {w['wind']} km/h"
+    if w.get("wind_dir"):
+        out += f" from {w['wind_dir']}"
+    if w.get("wind_label"):
+        out += f" ({w['wind_label']})"
+    return out
+
+
+def _fmt_hourly(steps: list) -> str:
+    """A275 — compact hour-by-hour strip, in the crag's local time.
+
+    One line per 3-hour step so the model can answer "what about 14:00–20:00"
+    by reading, not by interpolating between a single midday number and its own
+    imagination. Times are local at the crag; the label says so, because a
+    model that assumes UTC would hand back a three-hour lie.
+    """
+    rows = []
+    for s in steps[:MAX_HOURLY_STEPS]:
+        bits = [f"{s.get('time', '?')}", f"{s['temp']}°C"]
+        if s.get("cloud_cover") is not None:
+            bits.append(f"cloud {s['cloud_cover']}%")
+        bits.append(_fmt_wind(s))
+        bits.append(f"RH {s['humidity']}%")
+        if s.get("precip_prob"):
+            bits.append(f"precip {s['precip_prob']}%")
+        bits.append(f"{s.get('band', '?')} {s.get('friction_score', '?')}/100")
+        rows.append(" ".join(bits))
+    return "hour by hour (LOCAL time at the location): " + " | ".join(rows)
+
+
 def _fmt_conditions(w: Dict[str, Any]) -> str:
-    """One-line human summary of a normalized weather dict (A238 shape)."""
+    """One-line human summary of a normalized weather dict (A238/A275 shape)."""
     bits = [f"{w['temp']}°C", f"humidity {w['humidity']}%"]
     if w.get("dew_point") is not None:
         bits.append(f"dew point {w['dew_point']}°C")
-    bits.append(f"wind {w['wind']} km/h ({w.get('wind_label', '?')})")
+    bits.append(_fmt_wind(w))
+    if w.get("cloud_cover") is not None:
+        bits.append(f"cloud cover {w['cloud_cover']}%")  # A275
     if w.get("precip_prob") is not None:
         bits.append(f"precip {w['precip_prob']}%")
     if w.get("condition_text"):
@@ -84,7 +128,18 @@ def _fmt_conditions(w: Dict[str, Any]) -> str:
             f"best window today {bw['from']}–{bw['to']} "
             f"({bw.get('reason', 'better conditions')})"
         )
-    return ", ".join(bits)
+    # A275 — daylight. "Is there time for one more route" is a sunset question.
+    if w.get("sunset"):
+        sun = f"sunset {w['sunset']} local"
+        if w.get("sunrise"):
+            sun = f"sunrise {w['sunrise']} / " + sun
+        if w.get("sun_date") and w.get("date") and w["sun_date"] != w["date"]:
+            sun += f" (these sun times are for {w['sun_date']}, ±a few minutes)"
+        bits.append(sun)
+    line = ", ".join(bits)
+    if w.get("hourly"):
+        line += ". " + _fmt_hourly(w["hourly"])
+    return line
 
 
 def _resolve_location(
@@ -146,5 +201,11 @@ def execute_get_weather(
         logger.exception("coach get_weather: unexpected failure")
         return f"Weather for {label} is unavailable right now."
 
-    when = "now" if days == 0 else f"in {days} day(s) (midday forecast)"
+    # A275: the leading numbers are still one representative step (now, or the
+    # forecast's midday step). Say which, so the model quotes the hourly strip
+    # rather than the headline when the user asked about a specific hour.
+    when = (
+        "now, plus the rest of today hour by hour" if days == 0
+        else f"in {days} day(s) — summary from the midday step, plus that day hour by hour"
+    )
     return f"Weather at {label} ({when}): {_fmt_conditions(w)}"

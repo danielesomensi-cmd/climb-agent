@@ -22,6 +22,23 @@ from backend.engine.outdoor_resolver import (
     resolve_strategy,
 )
 
+@pytest.fixture(autouse=True)
+def _clear_weather_cache():
+    """A275: every weather test in this file uses the SAME coordinates
+    (45.0, 7.0), and the router cache is module-global with a 15-minute bucket.
+
+    Until A275 these tests passed only because ``fetch_outdoor_conditions``
+    bypassed the cache entirely — so each one re-fetched and the leak was
+    invisible. Now that it goes through ``cached_conditions`` (the documented
+    single fetch path), the isolation has to be explicit, exactly as
+    ``test_a238_weather_v2.py`` and ``test_a275_weather_hourly.py`` already do.
+    """
+    from backend.api.routers import weather as _weather
+    _weather._cache.clear()
+    yield
+    _weather._cache.clear()
+
+
 STRATEGY_BASE_FIELDS = [
     "warmup_protocol", "target_burns", "rest_between_attempts_min", "stop_criteria",
     "skin_tips", "time_of_day_advice", "hours_plan", "downgrade_rule",

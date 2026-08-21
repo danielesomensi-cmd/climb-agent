@@ -34,6 +34,7 @@ from backend.engine.weather_v1 import (
     compute_friction_score,
     friction_components,
     metric_qualifiers,
+    wind_direction_label,
     wind_label,
 )
 
@@ -90,58 +91,50 @@ def _friction_fields(
     }
 
 
-def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
-    """Map OWM /weather (units=metric) → normalized weather dict."""
-    main = raw.get("main", {})
-    wind = raw.get("wind", {})
-    clouds = raw.get("clouds", {})
-    weather0 = (raw.get("weather") or [{}])[0]
+def _local_hm(ts: Optional[int], tz_offset: int) -> Optional[str]:
+    """Unix timestamp → ``HH:MM`` at the *location's* local clock (A275).
 
-    temp = float(main["temp"])
-    humidity = float(main["humidity"])
-    dew_point = compute_dew_point(temp, humidity)
-    wind_kmh = round(float(wind.get("speed", 0.0)) * 3.6, 1)  # m/s → km/h
-    code = int(weather0.get("id", 800))
-    rain_mm = _rain_mm(raw)  # A238: rain.1h/3h present during/right after rain
-    precip = _is_precip_or_fog(code) or rain_mm > 0
+    OWM reports every timestamp in UTC plus a ``timezone`` offset in seconds.
+    Everything the athlete reads must be in crag-local time — a sunset printed
+    in UTC is worse than no sunset at all.
+    """
+    if ts is None:
+        return None
+    try:
+        return time.strftime("%H:%M", time.gmtime(int(ts) + tz_offset))
+    except (TypeError, ValueError, OSError):
+        return None
 
+
+def _sun_times(raw: Dict[str, Any], tz_offset: int) -> Dict[str, Any]:
+    """A275 — sunrise/sunset in local time, from either OWM payload shape.
+
+    ``/weather`` carries them under ``sys``; ``/forecast`` under ``city``. Both
+    describe **today** at that location — OWM does not publish per-day sun times
+    on the free 5-day endpoint — so ``sun_date`` names the day they belong to
+    and the caller can see when it differs from the forecast date. Over the
+    5-day horizon the drift is a few minutes; pretending otherwise would be the
+    kind of silent approximation this codebase refuses elsewhere.
+    """
+    src = raw.get("sys") if raw.get("sys") else raw.get("city") or {}
+    sunrise, sunset = src.get("sunrise"), src.get("sunset")
+    if sunrise is None and sunset is None:
+        return {"sunrise": None, "sunset": None, "sun_date": None}
+    ref = sunrise if sunrise is not None else sunset
     return {
-        "temp": round(temp, 1),
-        "feels_like": round(float(main["feels_like"]), 1) if main.get("feels_like") is not None else None,  # A227
-        "humidity": round(humidity),
-        "dew_point": dew_point,
-        "wind": wind_kmh,
-        "wind_label": wind_label(wind_kmh),
-        "wind_deg": int(wind["deg"]) if wind.get("deg") is not None else None,  # A227
-        "cloud_cover": int(clouds["all"]) if clouds.get("all") is not None else None,  # A227
-        "precip_prob": None,  # A227: current endpoint has no pop; forecast does
-        "condition_text": (weather0.get("description") or "").capitalize(),
-        "condition_code": code,
-        **_friction_fields(temp, humidity, dew_point, wind_kmh, precip, rain_mm),
-        "recent_rain_mm": rain_mm,  # A238
-        "best_window": None,  # A238: filled by cached_conditions when forecast is available
-        "is_forecast": False,
-        "date": None,
-        "source": "openweathermap",
+        "sunrise": _local_hm(sunrise, tz_offset),
+        "sunset": _local_hm(sunset, tz_offset),
+        "sun_date": time.strftime("%Y-%m-%d", time.gmtime(int(ref) + tz_offset)),
     }
 
 
-def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
-    """Map OWM /forecast (5d/3h) → normalized dict for the midday step of *date*.
+def _step_metrics(step: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize ONE OWM 3-hour forecast step into the shared metric block.
 
-    Picks the 3-hour step on *date* closest to 12:00 local as representative of
-    the climbing day. Raises if *date* is outside the returned window.
+    Extracted in A275 so the day summary (``_normalize_forecast``) and the
+    hourly strip (``hourly_steps``) can never drift apart: one step, one set of
+    numbers, one friction verdict.
     """
-    steps = raw.get("list", [])
-    on_date = [s for s in steps if str(s.get("dt_txt", "")).startswith(date)]
-    if not on_date:
-        raise WeatherUnavailable(f"No forecast available for {date}")
-
-    def _dist_to_noon(step: Dict[str, Any]) -> int:
-        hh = int(str(step["dt_txt"])[11:13])
-        return abs(hh - 12)
-
-    step = min(on_date, key=_dist_to_noon)
     main = step.get("main", {})
     wind = step.get("wind", {})
     clouds = step.get("clouds", {})
@@ -164,13 +157,142 @@ def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
         "wind": wind_kmh,
         "wind_label": wind_label(wind_kmh),
         "wind_deg": int(wind["deg"]) if wind.get("deg") is not None else None,  # A227
+        "wind_dir": wind_direction_label(wind.get("deg")),  # A275: 348° → "NNW"
         "cloud_cover": int(clouds["all"]) if clouds.get("all") is not None else None,  # A227
         "precip_prob": round(float(pop) * 100) if pop is not None else None,  # A227: 0..1 → %
         "condition_text": (weather0.get("description") or "").capitalize(),
         "condition_code": code,
         **_friction_fields(temp, humidity, dew_point, wind_kmh, precip, rain_mm),
         "recent_rain_mm": rain_mm,  # A238
+    }
+
+
+def hourly_steps(
+    raw_forecast: Dict[str, Any],
+    local_date: str,
+    tz_offset: int,
+    now_dt: Optional[int] = None,
+) -> list:
+    """A275 — every 3-hour step of *local_date*, in crag-local time.
+
+    Why this exists: the day summary collapses a climbing day into ONE step
+    (see ``_normalize_forecast``), which cannot answer "what is it like from
+    14:00 to 20:00" — the only question an athlete standing under the crag
+    actually asks. Each entry carries the same metrics and the same friction
+    verdict as the summary, so a caller can slice a window without recomputing
+    anything.
+
+    Days are bucketed by the **local** clock, not by OWM's UTC ``dt_txt``: at
+    UTC+3 the UTC-labelled day starts at 03:00 local, and past ±UTC-9 the two
+    disagree about which day a step even belongs to.
+
+    ``now_dt`` (unix, UTC) drops steps that have already fully elapsed — a step
+    still in progress is kept, because it describes the hour you are living.
+    """
+    out = []
+    for step in raw_forecast.get("list", []):
+        try:
+            dt = int(step["dt"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if time.strftime("%Y-%m-%d", time.gmtime(dt + tz_offset)) != local_date:
+            continue
+        if now_dt is not None and dt + 3 * 3600 <= now_dt:
+            continue
+        try:
+            metrics = _step_metrics(step)
+        except (KeyError, TypeError, ValueError):
+            continue  # a malformed step must not cost us the whole strip
+        out.append({
+            "time": _local_hm(dt, tz_offset),
+            "end_time": _local_hm(dt + 3 * 3600, tz_offset),
+            "dt": dt,
+            **metrics,
+        })
+    return out
+
+
+def _normalize_current(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Map OWM /weather (units=metric) → normalized weather dict."""
+    main = raw.get("main", {})
+    wind = raw.get("wind", {})
+    clouds = raw.get("clouds", {})
+    weather0 = (raw.get("weather") or [{}])[0]
+
+    temp = float(main["temp"])
+    humidity = float(main["humidity"])
+    dew_point = compute_dew_point(temp, humidity)
+    wind_kmh = round(float(wind.get("speed", 0.0)) * 3.6, 1)  # m/s → km/h
+    code = int(weather0.get("id", 800))
+    rain_mm = _rain_mm(raw)  # A238: rain.1h/3h present during/right after rain
+    precip = _is_precip_or_fog(code) or rain_mm > 0
+    tz_offset = int(raw.get("timezone") or 0)  # A275: seconds east of UTC
+
+    return {
+        "temp": round(temp, 1),
+        "feels_like": round(float(main["feels_like"]), 1) if main.get("feels_like") is not None else None,  # A227
+        "humidity": round(humidity),
+        "dew_point": dew_point,
+        "wind": wind_kmh,
+        "wind_label": wind_label(wind_kmh),
+        "wind_deg": int(wind["deg"]) if wind.get("deg") is not None else None,  # A227
+        "wind_dir": wind_direction_label(wind.get("deg")),  # A275: 348° → "NNW"
+        "cloud_cover": int(clouds["all"]) if clouds.get("all") is not None else None,  # A227
+        "precip_prob": None,  # A227: current endpoint has no pop; forecast does
+        "condition_text": (weather0.get("description") or "").capitalize(),
+        "condition_code": code,
+        **_friction_fields(temp, humidity, dew_point, wind_kmh, precip, rain_mm),
+        "recent_rain_mm": rain_mm,  # A238
+        "best_window": None,  # A238: filled by cached_conditions when forecast is available
+        "hourly": [],  # A275: filled by cached_conditions from the forecast payload
+        "timezone_offset_s": tz_offset,  # A275
+        "local_date": time.strftime(
+            "%Y-%m-%d", time.gmtime(int(raw.get("dt") or time.time()) + tz_offset)
+        ),  # A275
+        **_sun_times(raw, tz_offset),  # A275
+        "is_forecast": False,
+        "date": None,
+        "source": "openweathermap",
+    }
+
+
+def _normalize_forecast(raw: Dict[str, Any], date: str) -> Dict[str, Any]:
+    """Map OWM /forecast (5d/3h) → normalized dict for the midday step of *date*.
+
+    Picks the 3-hour step on *date* closest to 12:00 as representative of the
+    climbing day. Raises if *date* is outside the returned window.
+
+    Two known flaws, both tracked as ``B-FORECAST-MIDDAY-STEP`` and deliberately
+    NOT changed by A275, because moving this step moves ``condition_band`` for
+    the /today card and for the subscription-gated outdoor strategy patches:
+      1. midday is, in summer, the one hour nobody climbs;
+      2. the day filter and the "distance to noon" both read OWM's ``dt_txt``,
+         which is UTC — at UTC+3 the step picked is 15:00 local, at UTC+12 it is
+         the middle of the night.
+    A275's answer is not to re-pick this step but to stop depending on it: the
+    ``hourly`` strip beside it is bucketed in true local time and carries every
+    step of the day, so a caller that needs the truth can read the hour it
+    actually cares about.
+    """
+    steps = raw.get("list", [])
+    on_date = [s for s in steps if str(s.get("dt_txt", "")).startswith(date)]
+    if not on_date:
+        raise WeatherUnavailable(f"No forecast available for {date}")
+
+    def _dist_to_noon(step: Dict[str, Any]) -> int:
+        hh = int(str(step["dt_txt"])[11:13])
+        return abs(hh - 12)
+
+    step = min(on_date, key=_dist_to_noon)
+    tz_offset = int((raw.get("city") or {}).get("timezone", 0))
+
+    return {
+        **_step_metrics(step),
         "best_window": None,  # A238: filled by cached_conditions from the same raw
+        "hourly": [],  # A275: filled by cached_conditions from the same raw
+        "timezone_offset_s": tz_offset,  # A275
+        "local_date": date,  # A275
+        **_sun_times(raw, tz_offset),  # A275
         "is_forecast": True,
         "date": date,
         "source": "openweathermap",
@@ -387,12 +509,24 @@ def fetch_outdoor_conditions(
     the date is outside the forecast window — the caller then falls back to the
     catalog base (no condition_band patch). Network is mocked in tests via
     ``_owm_get``.
+
+    A275: goes through ``cached_conditions`` instead of calling the adapters
+    directly. That was an A225 oversight predating the shared cache — the
+    /today card and this helper ask for the same coordinates minutes apart, so
+    the direct path was spending a second free-tier call to recompute an
+    identical answer. Going through the cache also means an outdoor day now
+    carries ``hourly`` and ``sunset``, which is precisely what it needs.
+
+    One deliberate behaviour change comes with it: when the provider goes down
+    but a reading for these coordinates is still inside the 15-minute cache
+    window, this returns that reading instead of ``None``. A ten-minute-old
+    measurement is not a guess — it is the same number the /today card is
+    already showing the athlete — and degrading to the catalog base while a
+    fresh one sits in memory would be a worse answer, not a safer one. With a
+    cold cache the old contract stands: provider down → ``None`` → base.
     """
     try:
-        if date:
-            payload = _normalize_forecast(_owm_get("forecast", lat, lon), date)
-        else:
-            payload = _normalize_current(_owm_get("weather", lat, lon))
+        payload = cached_conditions(lat, lon, date)
     except WeatherUnavailable:
         return None
 
@@ -415,6 +549,14 @@ def fetch_outdoor_conditions(
         "dew_spread": payload.get("dew_spread"),
         "headline": payload.get("headline"),
         "qualifiers": payload.get("qualifiers"),
+        # A275 — the outdoor day is the one screen that needs the clock:
+        # hour-by-hour conditions and when the light goes.
+        "hourly": payload.get("hourly") or [],
+        "sunrise": payload.get("sunrise"),
+        "sunset": payload.get("sunset"),
+        "sun_date": payload.get("sun_date"),
+        "timezone_offset_s": payload.get("timezone_offset_s"),
+        "best_window": payload.get("best_window"),
     }
 
 
@@ -436,17 +578,25 @@ def cached_conditions(
         raw = _owm_get("forecast", lat, lon)
         payload = _normalize_forecast(raw, date)
         payload["best_window"] = best_window(raw, date, payload)
+        # A275: the hour-by-hour strip for that day, in crag-local time.
+        payload["hourly"] = hourly_steps(raw, date, payload["timezone_offset_s"])
     else:
         raw_cur = _owm_get("weather", lat, lon)
         payload = _normalize_current(raw_cur)
         # A238 best-effort: score the rest of the local day from the forecast.
-        # Any failure (provider, malformed payload) leaves best_window = None.
+        # A275 rides on the SAME fetch — the hourly strip must never cost a
+        # third upstream call. Any failure (provider, malformed payload) leaves
+        # best_window = None and hourly = [].
         try:
             now_dt = int(raw_cur.get("dt") or time.time())
             tz_offset = int(raw_cur.get("timezone") or 0)
             local_date = time.strftime("%Y-%m-%d", time.gmtime(now_dt + tz_offset))
+            raw_fc = _owm_get("forecast", lat, lon)
             payload["best_window"] = best_window(
-                _owm_get("forecast", lat, lon), local_date, payload, now_dt=now_dt
+                raw_fc, local_date, payload, now_dt=now_dt
+            )
+            payload["hourly"] = hourly_steps(
+                raw_fc, local_date, tz_offset, now_dt=now_dt
             )
         except (WeatherUnavailable, ValueError, TypeError):
             pass

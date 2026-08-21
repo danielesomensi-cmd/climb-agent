@@ -28,7 +28,7 @@ it is not auto-fetchable.
 from __future__ import annotations
 
 import math
-from typing import Dict, Literal, Tuple
+from typing import Dict, Literal, Optional, Tuple
 
 ConditionBand = Literal["prime", "good", "ok", "poor"]
 
@@ -203,6 +203,31 @@ def wind_label(wind_kmh: float) -> str:
         if wind_kmh < upper:
             return label
     return _WIND_LABELS[-1][1]
+
+
+# 16-point compass, the resolution a climber can actually use: whether the wind
+# hits the face or the back of the crag is a 22.5° question, not a 90° one.
+_COMPASS = (
+    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+    "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW",
+)
+
+
+def wind_direction_label(wind_deg: Optional[float]) -> Optional[str]:
+    """A275 — meteorological bearing in degrees → 16-point compass point.
+
+    Meteorological convention: the bearing is the direction the wind comes
+    FROM, so 348° is "NNW" and means a wind blowing out of the north-northwest.
+    That is the sense an aspect ("NE-facing crag") has to be compared against.
+    Returns None when the provider omits the bearing (calm steps sometimes do).
+    """
+    if wind_deg is None:
+        return None
+    try:
+        idx = int((float(wind_deg) % 360) / 22.5 + 0.5) % 16
+    except (TypeError, ValueError):
+        return None
+    return _COMPASS[idx]
 
 
 # --- A238 per-metric qualifiers (backend-owned copy) ---------------------------

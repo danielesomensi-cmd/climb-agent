@@ -261,7 +261,7 @@ user_state.assessment + user_state.goal
 | POST | `/api/subscription/checkout` | Create Stripe Checkout Session → returns hosted URL |
 | POST | `/api/subscription/portal` | Create Stripe Customer Portal session (manage/cancel). A250: for a local trial (no Stripe customer) returns a card-collecting Checkout session instead |
 | POST | `/api/stripe/webhook` | Stripe webhook receiver (signature-verified) |
-| GET | `/api/weather` | Live conditions (lat/lon) or forecast-by-date; returns metrics + composite friction_score/band (prime/good/ok/poor), per-metric qualifiers, headline, best_window (A238) |
+| GET | `/api/weather` | Live conditions (lat/lon) or forecast-by-date; returns metrics + composite friction_score/band (prime/good/ok/poor), per-metric qualifiers, headline, best_window (A238). **A275** adds, additively: `hourly[]` (every 3h step of the day — same metrics and same friction verdict as the summary, bucketed in **crag-local** time, elapsed steps dropped on the "now" call), `sunrise`/`sunset`/`sun_date` (local `HH:MM`; OWM publishes today's sun times only, so `sun_date` names the day they belong to), `wind_dir` (16-point compass beside the existing degrees) and `timezone_offset_s`. Costs no extra upstream call — it rides the forecast fetch A238 already makes for `best_window`. The day summary still comes from the midday step and still reads UTC (`B-FORECAST-MIDDAY-STEP`); `hourly[]` is what you read when you need the truth about a given hour. `fetch_outdoor_conditions` now goes through `cached_conditions`, so it shares the 15-min cache and serves the last good reading when the provider dies with a warm cache (cold cache → `None` → catalog base, unchanged) |
 
 ## Frontend
 
