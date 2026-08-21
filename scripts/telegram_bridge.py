@@ -83,6 +83,7 @@ REPO_ROOT = Path(
 )
 SESSION_FILE = REPO_ROOT / ".claude_bridge_session"
 PID_FILE = REPO_ROOT / ".claude_bridge.pid"
+OUTBOX_DIR = REPO_ROOT / ".claude_bridge_outbox"
 
 CLAUDE_TIMEOUT_S = 15 * 60
 CHUNK_LIMIT = 3800          # cap Telegram 4096, margine per sicurezza
@@ -98,6 +99,8 @@ MODEL = "sonnet"
 
 TRANSCRIBE_TIMEOUT_S = 120
 VOICE_MAX_BYTES = 20 * 1024 * 1024  # limite di download della Bot API locale
+
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 STARTED_AT = time.monotonic()
 
@@ -593,6 +596,33 @@ async def deliver(update: "Update", text: str) -> None:
         await chat.send_message(chunk)
 
 
+async def deliver_outbox(update: "Update") -> None:
+    """Manda ed elimina ogni file lasciato in OUTBOX_DIR durante il turno.
+
+    `claude -p --output-format json` restituisce solo testo — non c'è altro
+    canale per un turno che produce un'immagine (es. uno schizzo di topo, A277)
+    di dirlo al bridge. Convenzione: scrivi il file in OUTBOX_DIR, il bridge lo
+    trova qui a fine turno e lo allega. Immagini → foto, tutto il resto →
+    documento. Sempre svuotata, comando riuscito o no, per non far accumulare
+    file di un turno fallito a metà.
+    """
+    if not OUTBOX_DIR.is_dir():
+        return
+    chat = update.effective_chat
+    assert chat is not None
+    for path in sorted(p for p in OUTBOX_DIR.iterdir() if p.is_file()):
+        try:
+            with path.open("rb") as fh:
+                if path.suffix.lower() in IMAGE_EXTENSIONS:
+                    await chat.send_photo(photo=fh, caption=path.stem)
+                else:
+                    await chat.send_document(document=fh, filename=path.name)
+        except Exception:
+            logger.exception("Invio outbox fallito per %s", path)
+        finally:
+            path.unlink(missing_ok=True)
+
+
 # --------------------------------------------------------------------------
 # Handler
 # --------------------------------------------------------------------------
@@ -604,25 +634,28 @@ async def _execute_and_deliver(update: "Update", context: "ContextTypes.DEFAULT_
     on_message e on_voice, che differiscono solo in come ottengono `prompt`.
     """
     assert STATE is not None
-    typing = asyncio.create_task(_typing_loop(context.bot, update.effective_chat.id))
     try:
-        text, session_id = await run_claude(prompt)
-    except BridgeError as exc:
-        if exc.session_id:
-            save_session_id(exc.session_id)
-        logger.error("Comando fallito: %s", exc)
-        await deliver(update, f"⚠️ {exc}")
-        return
-    except Exception as exc:  # il bridge non deve morire per un comando
-        logger.exception("Errore inatteso")
-        await deliver(update, f"⚠️ Errore inatteso nel bridge: {exc!r}")
-        return
-    finally:
-        typing.cancel()
+        typing = asyncio.create_task(_typing_loop(context.bot, update.effective_chat.id))
+        try:
+            text, session_id = await run_claude(prompt)
+        except BridgeError as exc:
+            if exc.session_id:
+                save_session_id(exc.session_id)
+            logger.error("Comando fallito: %s", exc)
+            await deliver(update, f"⚠️ {exc}")
+            return
+        except Exception as exc:  # il bridge non deve morire per un comando
+            logger.exception("Errore inatteso")
+            await deliver(update, f"⚠️ Errore inatteso nel bridge: {exc!r}")
+            return
+        finally:
+            typing.cancel()
 
-    if session_id:
-        save_session_id(session_id)
-    await deliver(update, text)
+        if session_id:
+            save_session_id(session_id)
+        await deliver(update, text)
+    finally:
+        await deliver_outbox(update)
 
 
 async def _skip_if_stale(message, preview: str) -> bool:

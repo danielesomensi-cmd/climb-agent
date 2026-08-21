@@ -54,6 +54,9 @@ class _Recorder:
     async def send_document(self, *args, **kwargs):
         self.calls.append("send_document")
 
+    async def send_photo(self, *args, **kwargs):
+        self.calls.append("send_photo")
+
     async def send_chat_action(self, *args, **kwargs):
         self.calls.append("send_chat_action")
 
@@ -68,6 +71,9 @@ class _FakeChat:
 
     async def send_document(self, *a, **k):
         await self._rec.send_document(*a, **k)
+
+    async def send_photo(self, *a, **k):
+        await self._rec.send_photo(*a, **k)
 
 
 class _FakeMessage:
@@ -549,3 +555,60 @@ def test_messaggio_stantio_non_viene_eseguito_ma_viene_annunciato(bridge, monkey
 
     assert eseguiti == [], "un messaggio di 3 ore fa non va eseguito a sorpresa"
     assert recorder.calls == ["reply_text"], "ma l'utente deve saperlo"
+
+
+# ------------------------------------------------------------ outbox (A277)
+
+def test_deliver_outbox_senza_cartella_e_un_noop(bridge, tmp_path, monkeypatch):
+    recorder = _Recorder()
+    monkeypatch.setattr(bridge, "OUTBOX_DIR", tmp_path / "non-esiste")
+    update = _FakeUpdate(ALLOWED, "x", recorder)
+    asyncio.run(bridge.deliver_outbox(update))
+    assert recorder.calls == []
+
+
+def test_deliver_outbox_manda_immagine_come_foto_e_la_cancella(bridge, tmp_path, monkeypatch):
+    outbox = tmp_path / "outbox"
+    outbox.mkdir()
+    (outbox / "schizzo.png").write_bytes(b"\x89PNG\r\n")
+    monkeypatch.setattr(bridge, "OUTBOX_DIR", outbox)
+
+    recorder = _Recorder()
+    update = _FakeUpdate(ALLOWED, "x", recorder)
+    asyncio.run(bridge.deliver_outbox(update))
+
+    assert recorder.calls == ["send_photo"]
+    assert not (outbox / "schizzo.png").exists()
+
+
+def test_deliver_outbox_manda_non_immagine_come_documento(bridge, tmp_path, monkeypatch):
+    outbox = tmp_path / "outbox"
+    outbox.mkdir()
+    (outbox / "dati.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(bridge, "OUTBOX_DIR", outbox)
+
+    recorder = _Recorder()
+    update = _FakeUpdate(ALLOWED, "x", recorder)
+    asyncio.run(bridge.deliver_outbox(update))
+
+    assert recorder.calls == ["send_document"]
+    assert not (outbox / "dati.json").exists()
+
+
+def test_deliver_outbox_svuota_anche_se_il_send_fallisce(bridge, tmp_path, monkeypatch):
+    """Un file che non riesce a partire non deve restare lì per sempre e
+    ripresentarsi (e magari fallire di nuovo) al turno successivo."""
+    outbox = tmp_path / "outbox"
+    outbox.mkdir()
+    (outbox / "rotto.png").write_bytes(b"\x89PNG\r\n")
+    monkeypatch.setattr(bridge, "OUTBOX_DIR", outbox)
+
+    class _FailingChat:
+        async def send_photo(self, *a, **k):
+            raise RuntimeError("rete giù")
+
+    class _FakeUpdateFallito:
+        effective_chat = _FailingChat()
+
+    asyncio.run(bridge.deliver_outbox(_FakeUpdateFallito()))
+    assert not (outbox / "rotto.png").exists()
