@@ -1,0 +1,19 @@
+[
+  {"position": 1,  "name": "7a l'Envers",          "grade": "8b",  "length_m": 15, "stars": 2},
+  {"position": 2,  "name": "Begraveningsplatz",     "grade": "8b+", "length_m": 15, "stars": 1},
+  {"position": 3,  "name": "Finally it's not 7a",   "grade": "8b+", "length_m": 18, "stars": 2},
+  {"position": 4,  "name": "Agrimi",                "grade": "7a+", "length_m": 35, "stars": 2},
+  {"position": 5,  "name": "A Route With a View",   "grade": "7b",  "length_m": 40, "stars": 2},
+  {"position": 6,  "name": "L'enfer du ménage",     "grade": "7b",  "length_m": 40, "stars": 2},
+  {"position": 7,  "name": "Fred",                  "grade": "6b",  "length_m": 30, "stars": 3},
+  {"position": 8,  "name": "Nikolas",                "grade": "5c",  "length_m": 20, "stars": 2},
+  {"position": 9,  "name": "Nikolas ext",            "grade": "7a+", "length_m": 40, "stars": 2},
+  {"position": 10, "name": "Fotini",                 "grade": "6b",  "length_m": 25, "stars": 3},
+  {"position": 11, "name": "Honey Ball",             "grade": "6c",  "length_m": 25, "stars": 2},
+  {"position": 12, "name": "Toni",                   "grade": "6c",  "length_m": 25, "stars": 3},
+  {"position": 13, "name": "Anne",                   "grade": "6b",  "length_m": 30, "stars": 2},
+  {"position": 14, "name": "Sabina",                 "grade": "6c+", "length_m": 28, "stars": 3},
+  {"position": 15, "name": "Vlasis House",           "grade": "6c+", "length_m": 28, "stars": 2},
+  {"position": 16, "name": "K tsi k",                "grade": "7b+", "length_m": 20, "stars": 3},
+  {"position": 17, "name": "Vertigo",                "grade": "7c",  "length_m": 20, "stars": 2}
+]

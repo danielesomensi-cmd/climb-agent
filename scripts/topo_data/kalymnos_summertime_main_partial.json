@@ -1,0 +1,9 @@
+[
+  {"position": 1,  "name": "Salbei",                "grade": "6a",  "length_m": 20, "stars": 2},
+  {"position": 2,  "name": "Friends",                "grade": "6b+", "length_m": 20, "stars": 1},
+  {"position": 3,  "name": "Dill",                   "grade": "6a",  "length_m": 25, "stars": 2},
+  {"position": 12, "name": "Salamina tis Kypros",    "grade": "6a+", "length_m": 20, "stars": 2},
+  {"position": 13, "name": "Ammohostos Vasilevousa", "grade": "6a",  "length_m": 20, "stars": 3},
+  {"position": 14, "name": "Maccabi",                "grade": "6b+", "length_m": 23, "stars": 3},
+  {"position": 15, "name": "Orea Dana",               "grade": "6a+", "length_m": 25, "stars": 2}
+]

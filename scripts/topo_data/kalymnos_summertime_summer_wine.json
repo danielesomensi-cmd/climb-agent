@@ -1,0 +1,22 @@
+[
+  {"position": 1,  "name": "Shiva + Dimitris",     "grade": "6a",  "length_m": 30, "stars": 2},
+  {"position": 2,  "name": "Ando Drom",             "grade": "6c",  "length_m": 30, "stars": 3},
+  {"position": 3,  "name": "Acon69cagva",           "grade": "6b+", "length_m": 30, "stars": 2},
+  {"position": 4,  "name": "Didi, hermana di alma", "grade": "6a",  "length_m": 25, "stars": 3},
+  {"position": 5,  "name": "Summer Wine",           "grade": "6b+", "length_m": 28, "stars": 3},
+  {"position": 6,  "name": "Silver Spurs",          "grade": "6c",  "length_m": 27, "stars": 3},
+  {"position": 7,  "name": "Get Up",                "grade": "6a+", "length_m": 25, "stars": 2},
+  {"position": 8,  "name": "Beru",                  "grade": "6a+", "length_m": 25, "stars": 2},
+  {"position": 9,  "name": "Mama Nota",              "grade": "7a",  "length_m": 25, "stars": 2},
+  {"position": 10, "name": "Père Vert",              "grade": "7a",  "length_m": 25, "stars": 2},
+  {"position": 11, "name": "Mr Rigolo",              "grade": "6b+", "length_m": 25, "stars": 3},
+  {"position": 12, "name": "Antonis Lampos",         "grade": "6c",  "length_m": 15, "stars": 3},
+  {"position": 13, "name": "6 riens",                "grade": "6b",  "length_m": 15, "stars": 2},
+  {"position": 14, "name": "Roumain des bois",       "grade": "6a+", "length_m": 15, "stars": 2},
+  {"position": 15, "name": "Hongrois rêve",          "grade": "6a+", "length_m": 15, "stars": 2},
+  {"position": 16, "name": "Papou Christo",          "grade": "6b",  "length_m": 18, "stars": 2},
+  {"position": 17, "name": "Angry Bird",             "grade": "7c+", "length_m": 12, "stars": 3},
+  {"position": 18, "name": "Norwegian Friends",      "grade": "7b+", "length_m": 12, "stars": 3},
+  {"position": 19, "name": "Vulture",                "grade": "7a+", "length_m": 16, "stars": 2},
+  {"position": 20, "name": "No Pain No Gain",        "grade": "7a",  "length_m": 16, "stars": 1}
+]
