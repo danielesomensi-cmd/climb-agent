@@ -65,7 +65,10 @@ def test_outdoor_log_upsert_targets_unique_constraint(captured):
     assert len(upserts) == 1
     assert upserts[0]["table"] == "outdoor_logs"
     # The crux: conflict target must be the composite unique key, not the PK.
-    assert upserts[0]["kwargs"].get("on_conflict") == "user_id,session_date"
+    # B341: the key widened to (user_id, session_date, spot_name) — a second
+    # crag finished the same day used to silently overwrite the first one's
+    # log row via this same upsert.
+    assert upserts[0]["kwargs"].get("on_conflict") == "user_id,session_date,spot_name"
 
 
 def test_week_archive_upsert_targets_unique_constraint(captured):

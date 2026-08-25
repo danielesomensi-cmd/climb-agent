@@ -294,16 +294,21 @@ def append_outdoor_log_line(user_id: Optional[str], entry: Dict[str, Any]) -> st
     uid = _require_user_id(user_id)
     session_date = entry.get("date", "")
 
-    # on_conflict MUST target the (user_id, session_date) unique constraint, not
-    # the table's serial PK. Without it postgrest defaults to the PK and the
-    # write degrades to a plain INSERT → a second finish for the same date hits
-    # `outdoor_logs_user_id_session_date_key` (23505) and 500s (B266). With it,
-    # re-finishing a day idempotently UPDATES that day's log.
+    # on_conflict MUST target the unique constraint, not the table's serial PK
+    # — without it postgrest defaults to the PK and the write degrades to a
+    # plain INSERT, which then hits the constraint (23505) and 500s (B266).
+    # B341: the constraint (and this on_conflict target) is on
+    # (user_id, session_date, spot_name) — spot_name is a generated column
+    # (entry->>'spot_name'), never sent in the payload. Before B341 it was
+    # (user_id, session_date) alone, which meant a second crag finished the
+    # same day silently overwrote the first one's log via this same upsert.
+    # Re-finishing the *same* crag on the *same* day still idempotently
+    # UPDATEs that one row.
     result = _sb().table("outdoor_logs").upsert({
         "user_id": uid,
         "session_date": session_date,
         "entry": entry,
-    }, on_conflict="user_id,session_date").execute()
+    }, on_conflict="user_id,session_date,spot_name").execute()
 
     # D134 Fix A: verify upsert returned data
     if not result.data:

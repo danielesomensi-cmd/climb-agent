@@ -1162,13 +1162,28 @@ def apply_events(
             _recompute_day_status(day)
 
         elif event_type == "add_outdoor":
+            # B341: a day can hold more than one crag (rare, but real — e.g. a
+            # multi-sector day at Kalymnos). outdoor_spot_name stays a single
+            # string for every existing consumer (day-card, coach prompt,
+            # reports); a second, distinct spot is appended with " - " rather
+            # than overwriting the first. spot_id keeps the first crag (it
+            # drives weather/pitch-ladder lookups, which are single-spot);
+            # discipline merges to "both" when the crags differ.
             day = _find_day(updated, event["date"])
             spot_name = event.get("spot_name")
             if not spot_name:
                 raise ValueError("add_outdoor requires 'spot_name'")
-            day["outdoor_spot_name"] = spot_name
-            day["outdoor_discipline"] = event.get("discipline", "both")
-            if event.get("spot_id"):
+            existing_name = day.get("outdoor_spot_name")
+            existing_parts = [p.strip() for p in existing_name.split(" - ")] if existing_name else []
+            if spot_name not in existing_parts:
+                existing_parts.append(spot_name)
+            day["outdoor_spot_name"] = " - ".join(existing_parts)
+            new_discipline = event.get("discipline", "both")
+            existing_discipline = day.get("outdoor_discipline")
+            if existing_discipline and existing_discipline != new_discipline:
+                new_discipline = "both"
+            day["outdoor_discipline"] = new_discipline
+            if event.get("spot_id") and not day.get("outdoor_spot_id"):
                 day["outdoor_spot_id"] = event["spot_id"]
             day["outdoor_session_status"] = "planned"
 

@@ -284,10 +284,11 @@ def read_outdoor_logs(
 ) -> List[Dict[str, Any]]:
     """Read outdoor sessions from JSONL logs.
 
-    When multiple entries exist for the same date (e.g. after an update),
-    only the last entry per date is returned.  Sorted by date ascending.
+    Deduplicates by (date, spot_name) — last entry per crag wins (e.g. after
+    an update). A day with more than one crag (B341) keeps one entry per
+    crag. Sorted by date, then insertion order within a date.
     """
-    by_date: Dict[str, Dict[str, Any]] = {}
+    by_key: Dict[Tuple[str, str], Dict[str, Any]] = {}
     log_dir = _log_dir(user_id)
     if not os.path.isdir(log_dir):
         return []
@@ -308,9 +309,10 @@ def read_outdoor_logs(
                 date = entry.get("date", "")
                 if since_date and date < since_date:
                     continue
-                by_date[date] = entry  # last entry wins
+                by_key[(date, entry.get("spot_name", ""))] = entry  # last entry wins
 
-    return [by_date[d] for d in sorted(by_date)]
+    # sorted() is stable, so entries within the same date keep insertion order.
+    return [by_key[k] for k in sorted(by_key, key=lambda k: k[0])]
 
 
 def read_outdoor_log_rows(

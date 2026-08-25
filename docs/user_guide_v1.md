@@ -533,6 +533,8 @@ A live **weather widget** shows conditions for the day, rated by a **friction sc
 
 Outdoor sessions appear in your weekly timeline. The planner knows about your outdoor days (if you've set them in availability) and plans around them — no indoor sessions are scheduled on outdoor days.
 
+**Multiple crags in one day:** if you climb at more than one crag on the same date (a multi-sector day), Today/Week shows both names joined ("Symplegades - Ourania") — each crag's routes are still logged and kept separate underneath, only the day's label is combined.
+
 ### Plan for the day (grades and rests)
 
 An outdoor day on Today or Week carries a **plan**: the pitches to climb, in order, each with an **absolute grade, how many burns, and how long to rest afterwards**.

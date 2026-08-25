@@ -108,13 +108,18 @@ def _sync_plan_after_outdoor_log(
         return False
 
     events: List[Dict[str, Any]] = []
-    if not day.get("outdoor_spot_name"):
-        # Spontaneous outdoor day (not planned): register it first so
-        # complete_outdoor has a target — same as the replan add_outdoor path.
+    # B341: register this session's spot if it isn't already on the day's
+    # pointer — covers both the spontaneous first-outdoor case (pointer empty)
+    # and a second, different crag finished later the same day (pointer holds
+    # an earlier spot). add_outdoor itself dedupes/joins, see replanner_v1.
+    this_spot = entry.get("spot_name") or "Outdoor"
+    current_name = day.get("outdoor_spot_name") or ""
+    current_parts = [p.strip() for p in current_name.split(" - ")] if current_name else []
+    if this_spot not in current_parts:
         add_ev: Dict[str, Any] = {
             "event_type": "add_outdoor",
             "date": date,
-            "spot_name": entry.get("spot_name") or "Outdoor",
+            "spot_name": this_spot,
             "discipline": entry.get("discipline") or "both",
         }
         if entry.get("spot_id"):
