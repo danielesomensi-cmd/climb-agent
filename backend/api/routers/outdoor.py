@@ -125,10 +125,21 @@ def _sync_plan_after_outdoor_log(
         if entry.get("spot_id"):
             add_ev["spot_id"] = entry["spot_id"]
         events.append(add_ev)
+    # B341: the day's outdoor_load_score is the day's TOTAL, not one crag's —
+    # a multi-crag day must sum every entry logged for this date. `load_score`
+    # (the just-finished session's own) is what callers return to the client;
+    # it is a safe fallback only if the log read below comes back empty.
+    day_sessions = [
+        s for s in load_outdoor_sessions(user_id, since_date=date)
+        if s.get("date") == date
+    ]
+    day_load_score = (
+        sum(compute_outdoor_load_score(s) for s in day_sessions) if day_sessions else load_score
+    )
     events.append({
         "event_type": "complete_outdoor",
         "date": date,
-        "outdoor_load_score": load_score,
+        "outdoor_load_score": day_load_score,
     })
 
     updated = apply_events(
@@ -155,7 +166,7 @@ def _sync_plan_after_outdoor_log(
         "spot_name": (u_day or {}).get("outdoor_spot_name", entry.get("spot_name", "")),
         "spot_id": (u_day or {}).get("outdoor_spot_id", entry.get("spot_id", "")),
         "discipline": (u_day or {}).get("outdoor_discipline", entry.get("discipline", "both")),
-        "load_score": load_score,
+        "load_score": day_load_score,
         "completed_at": datetime.now(timezone.utc).isoformat(),
     })
 

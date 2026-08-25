@@ -417,13 +417,17 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     from backend.api.routers.custom_session import enrich_custom_sessions_for_play
     custom_sessions = enrich_custom_sessions_for_play(state.get("custom_sessions") or [])
 
-    # For complete_outdoor events, compute outdoor load score from JSONL log
+    # For complete_outdoor events, compute the day's outdoor load score from
+    # the JSONL/DB log. B341: a day can hold more than one crag — sum every
+    # entry logged for that date, not just the last one (previously
+    # `matching[-1]`, which on a multi-crag day silently dropped every crag
+    # but one, in no guaranteed order).
     for ev in req.events:
         if ev.get("event_type") == "complete_outdoor" and ev.get("date"):
             outdoor_sessions = load_outdoor_sessions(user_id, since_date=ev["date"])
             matching = [s for s in outdoor_sessions if s.get("date") == ev["date"]]
             if matching:
-                ev["outdoor_load_score"] = compute_outdoor_load_score(matching[-1])
+                ev["outdoor_load_score"] = sum(compute_outdoor_load_score(s) for s in matching)
 
     try:
         updated = apply_events(
