@@ -14,6 +14,10 @@ trascritto in locale con whisper.cpp (nessun audio lascia il Mac). Richiede
 più un modello GGML — vedi `whisper_model_path()`. Se manca uno dei due il
 bot risponde con l'errore invece di ignorare il vocale in silenzio.
 
+Foto (A280): scaricata in `.claude_bridge_inbox/` e il percorso passato nel
+prompt — Claude Code la legge con il tool Read (multimodale nativo), nessuna
+conversione. Il file viene cancellato a fine turno.
+
 Config (in `.env` alla root del repo, gitignored):
 
     TELEGRAM_BRIDGE_TOKEN      token di @Climbagent_bot (@BotFather)
@@ -84,6 +88,7 @@ REPO_ROOT = Path(
 SESSION_FILE = REPO_ROOT / ".claude_bridge_session"
 PID_FILE = REPO_ROOT / ".claude_bridge.pid"
 OUTBOX_DIR = REPO_ROOT / ".claude_bridge_outbox"
+INBOX_DIR = REPO_ROOT / ".claude_bridge_inbox"
 
 CLAUDE_TIMEOUT_S = 15 * 60
 CHUNK_LIMIT = 3800          # cap Telegram 4096, margine per sicurezza
@@ -779,6 +784,56 @@ async def on_voice(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> No
         await _execute_and_deliver(update, context, prompt)
 
 
+async def on_photo(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> None:
+    """Una foto viene scaricata in INBOX_DIR e il percorso passato a Claude
+    Code nel prompt: il tool Read legge immagini, quindi non serve altro
+    canale. Il file resta finché dura il turno (Claude deve poterlo Read),
+    poi va cancellato — INBOX_DIR non è un archivio."""
+    if not _authorized(update):
+        return
+    assert STATE is not None
+    message = update.effective_message
+    if message is None or not message.photo:
+        return
+
+    if await _skip_if_stale(message, "(foto)"):
+        return
+
+    if STATE.lock.locked():
+        await message.reply_text("Occupato — un comando è già in esecuzione. /stop per annullarlo.")
+        return
+
+    photo = message.photo[-1]  # ultima = risoluzione più alta
+    if photo.file_size and photo.file_size > VOICE_MAX_BYTES:
+        await message.reply_text(
+            f"Foto troppo grande ({photo.file_size // 1024} KB, "
+            f"max {VOICE_MAX_BYTES // (1024 * 1024)} MB)."
+        )
+        return
+
+    caption = (message.caption or "").strip()
+
+    async with STATE.lock:
+        INBOX_DIR.mkdir(exist_ok=True)
+        dest_path = INBOX_DIR / f"{message.message_id}.jpg"
+        try:
+            tg_file = await photo.get_file()
+            await tg_file.download_to_drive(custom_path=str(dest_path))
+        except Exception as exc:
+            logger.exception("Download foto fallito")
+            await deliver(update, f"⚠️ Errore inatteso nel download della foto: {exc!r}")
+            return
+
+        prompt = f"L'utente ha mandato una foto via Telegram, salvata in {dest_path} — leggila con Read prima di rispondere."
+        if caption:
+            prompt += f"\n\nDidascalia: {caption}"
+
+        try:
+            await _execute_and_deliver(update, context, prompt)
+        finally:
+            dest_path.unlink(missing_ok=True)
+
+
 async def cmd_new(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> None:
     if not _authorized(update):
         return
@@ -825,9 +880,10 @@ async def cmd_help(update: "Update", context: "ContextTypes.DEFAULT_TYPE") -> No
     if not _authorized(update):
         return
     await update.effective_message.reply_text(
-        "Scrivimi un messaggio (testo o vocale) e lo eseguo con Claude Code in "
+        "Scrivimi un messaggio (testo, vocale o foto) e lo eseguo con Claude Code in "
         f"{REPO_ROOT.name}.\n\n"
-        "I vocali vengono trascritti in locale (whisper.cpp) prima dell'esecuzione.\n\n"
+        "I vocali vengono trascritti in locale (whisper.cpp) prima dell'esecuzione.\n"
+        "Le foto vengono lette dal tool Read — aggiungi una didascalia se serve contesto.\n\n"
         "/new    — azzera la sessione, il prossimo messaggio ne apre una nuova\n"
         "/status — sessione, uptime, cwd, branch, comando in corso\n"
         "/stop   — uccide il comando in esecuzione\n"
@@ -873,6 +929,7 @@ def main() -> None:
     application.add_handler(CommandHandler(["help", "start"], cmd_help))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_message))
     application.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, on_voice))
+    application.add_handler(MessageHandler(filters.PHOTO, on_photo))
 
     logger.info("Bridge avviato — repo=%s chat autorizzata=%s", REPO_ROOT, allowed_chat_id)
     try:

@@ -385,6 +385,9 @@ class _FakeTGFile:
 
     async def download_to_drive(self, custom_path=None):
         self._rec.calls.append("download_to_drive")
+        if custom_path:
+            Path(custom_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(custom_path).write_bytes(b"fake")
 
 
 class _FakeVoice:
@@ -485,6 +488,112 @@ def test_voce_con_trascrizione_fallita_non_chiama_claude(bridge, monkeypatch):
 
     assert spawned == []
     assert "send_message" in recorder.calls  # deliver() dell'errore
+
+
+# --------------------------------------------------------- handler on_photo (A280)
+
+class _FakePhoto:
+    def __init__(self, recorder: _Recorder, file_size: int = 1000) -> None:
+        self._rec = recorder
+        self.file_id = "photo-123"
+        self.file_size = file_size
+
+    async def get_file(self):
+        self._rec.calls.append("get_file")
+        return _FakeTGFile(self._rec)
+
+
+class _FakePhotoMessage(_FakeMessage):
+    def __init__(
+        self, recorder: _Recorder, file_size: int = 1000,
+        caption: str | None = None, message_id: int = 555,
+    ) -> None:
+        super().__init__("", recorder)
+        self.photo = [_FakePhoto(recorder, file_size)]  # solo l'ultima (risoluzione più alta) conta
+        self.caption = caption
+        self.message_id = message_id
+
+
+class _FakePhotoUpdate:
+    def __init__(
+        self, chat_id: int, recorder: _Recorder,
+        file_size: int = 1000, caption: str | None = None,
+    ) -> None:
+        self.effective_chat = _FakeChat(chat_id, recorder)
+        self.effective_message = _FakePhotoMessage(recorder, file_size, caption)
+        self.effective_user = _FakeUser()
+
+
+def test_allowlist_blocca_foto_di_chat_estranea(bridge):
+    """Come per testo e voce: chat non autorizzata → zero chiamate, niente download."""
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+    update = _FakePhotoUpdate(999_000_111, recorder)
+    asyncio.run(bridge.on_photo(update, _FakeContext(recorder)))
+    assert recorder.calls == []
+
+
+def test_foto_troppo_grande_viene_rifiutata_senza_scaricare(bridge, monkeypatch, tmp_path):
+    monkeypatch.setattr(bridge, "INBOX_DIR", tmp_path / "inbox")
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+
+    update = _FakePhotoUpdate(ALLOWED, recorder, file_size=bridge.VOICE_MAX_BYTES + 1)
+    asyncio.run(bridge.on_photo(update, _FakeContext(recorder)))
+
+    assert recorder.calls == ["reply_text"]
+    assert not (tmp_path / "inbox").exists()
+
+
+def test_foto_scaricata_resta_leggibile_durante_il_turno_e_poi_cancellata(bridge, monkeypatch, tmp_path):
+    """Il punto di tutta la feature: il file deve esistere ancora mentre
+    Claude Code gira (per poterlo Read), e sparire subito dopo — INBOX_DIR
+    non è un archivio."""
+    inbox = tmp_path / "inbox"
+    monkeypatch.setattr(bridge, "INBOX_DIR", inbox)
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+    expected_path = inbox / "555.jpg"
+
+    spawned: list[str] = []
+
+    async def _fake_run_claude(prompt):
+        spawned.append(prompt)
+        assert expected_path.exists(), "il file deve esistere mentre Claude Code lo legge"
+        return "fatto", "sid-photo"
+
+    monkeypatch.setattr(bridge, "run_claude", _fake_run_claude)
+    saved: list[str] = []
+    monkeypatch.setattr(bridge, "save_session_id", lambda sid, *a, **k: saved.append(sid))
+
+    update = _FakePhotoUpdate(ALLOWED, recorder, caption="Snake Valley oggi")
+    asyncio.run(bridge.on_photo(update, _FakeContext(recorder)))
+
+    assert recorder.calls == ["get_file", "download_to_drive", "send_message"]
+    assert str(expected_path) in spawned[0]
+    assert "Snake Valley oggi" in spawned[0]
+    assert saved == ["sid-photo"]
+    assert not expected_path.exists(), "il file va cancellato a fine turno"
+
+
+def test_foto_senza_didascalia_non_aggiunge_sezione_vuota(bridge, monkeypatch, tmp_path):
+    monkeypatch.setattr(bridge, "INBOX_DIR", tmp_path / "inbox")
+    recorder = _Recorder()
+    bridge.STATE = bridge.BridgeState(allowed_chat_id=ALLOWED)
+
+    spawned: list[str] = []
+
+    async def _fake_run_claude(prompt):
+        spawned.append(prompt)
+        return "fatto", "sid"
+
+    monkeypatch.setattr(bridge, "run_claude", _fake_run_claude)
+    monkeypatch.setattr(bridge, "save_session_id", lambda *a, **k: None)
+
+    update = _FakePhotoUpdate(ALLOWED, recorder, caption=None)
+    asyncio.run(bridge.on_photo(update, _FakeContext(recorder)))
+
+    assert "Didascalia" not in spawned[0]
 
 
 def test_errore_non_di_sessione_non_viene_ritentato(bridge, monkeypatch, tmp_path):
