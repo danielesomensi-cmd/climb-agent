@@ -147,19 +147,31 @@ class TestManualLogClosesLoop(_Base):
 
 
 class TestInvariantGuards(_Base):
-    def test_past_week_plan_untouched(self):
+    def test_past_week_now_syncs_but_never_ripples(self):
+        """B343: retroactively logging a past-week date now syncs the plan
+        day (the log is an explicit user action, the one exception B257
+        carves out) but never ripples onto the next day — that day's real
+        outcome is already history."""
         target = LAST_MONDAY.isoformat()
         plan = _mk_plan(LAST_MONDAY, {
             "mon": {"outdoor_spot_name": "Berdorf", "outdoor_discipline": "lead",
                     "outdoor_session_status": "planned"},
+            "tue": {"sessions": [deepcopy(TestRipple.HARD_TUE_SESSION)]},
         })
-        snapshot = deepcopy(plan)
         self._write_state(week_plans={LAST_MONDAY.isoformat(): plan})
 
-        res = self._post_log(target, LOW_LOAD_ROUTES)
-        assert res["plan_synced"] is False
-        assert self._read_state()["week_plans"][LAST_MONDAY.isoformat()] == snapshot
-        # Log still written (primary record).
+        res = self._post_log(target, HIGH_LOAD_ROUTES)  # over ripple threshold
+        assert res["plan_synced"] is True
+
+        day = self._plan_day(self._read_state(), LAST_MONDAY, target)
+        assert day["outdoor_session_status"] == "done"
+        assert day["outdoor_load_score"] >= 65  # precondition: over ripple threshold
+
+        tue = self._plan_day(
+            self._read_state(), LAST_MONDAY, (LAST_MONDAY + timedelta(days=1)).isoformat(),
+        )
+        assert tue["sessions"][0]["session_id"] == "finger_strength_home"
+
         sessions = self.client.get("/api/outdoor/sessions").json()["sessions"]
         assert [s["date"] for s in sessions] == [target]
 

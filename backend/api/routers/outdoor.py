@@ -54,11 +54,27 @@ def _sync_plan_after_outdoor_log(
     Best-effort by design: the outdoor log is the primary record and is
     already persisted when this runs. Returns True iff the plan day was
     marked done. Skips (False) when: the subscription cannot interact (B334),
-    plan paused (A223), date in a past week (B257 immutability), no hot plan
-    for that Monday, or day not in the plan.
+    plan paused (A223), or no plan (hot or archived) exists for that Monday /
+    day.
+
+    B343: a log for a date in a PAST week is now synced too — the immutable
+    outdoor_logs record already IS the source of truth, and this endpoint is
+    an explicit user action reporting what really happened, exactly the
+    exception B257's "past sessions are immutable" principle carves out
+    ("the only exception is explicit user edit"). Two things stay different
+    from the live path so this never rewrites history that didn't happen:
+    (1) the next-day ripple is disabled (`allow_ripple=False` on the
+    complete_outdoor event) — it exists to protect a plan still being built
+    day by day, not to retroactively alter a week that already closed;
+    (2) if the week has already moved to the A221 cold store, the updated
+    plan is written BACK to the cold store, never materialized into hot
+    `state["week_plans"]` — the hot/cold boundary and every other
+    is_past_week() call site (replanner override/events, `/week` reads) stay
+    exactly as they are today.
     """
-    from backend.api.deps import ensure_monday, is_past_week, is_plan_paused
+    from backend.api.deps import ensure_monday, is_past_week, is_plan_paused, read_archived_week
     from backend.api.routers.replanner import _auto_resolve, persist_week_plan
+    from backend.engine import storage as engine_storage
     from backend.engine.replanner_v1 import apply_events
     from backend.engine.subscription_guard import check_subscription
 
@@ -86,17 +102,21 @@ def _sync_plan_after_outdoor_log(
         logger.info("B273: plan paused — outdoor log %s saved without plan sync", date)
         return False
     monday = ensure_monday(date)
-    if is_past_week(monday):
-        logger.info("B273: %s is in a past week — plan untouched (immutability)", date)
-        return False
+    is_past = is_past_week(monday)
 
     plan = (state.get("week_plans") or {}).get(monday)
+    from_cold = False
     if not plan:
         cwp = state.get("current_week_plan")
         if cwp and cwp.get("start_date") == monday:
             plan = cwp
+    if not plan and is_past:
+        # B343: the week may already be in the A221 cold store — read it
+        # there rather than treating "not in hot state" as "nothing to sync".
+        plan = read_archived_week(user_id, monday)
+        from_cold = plan is not None
     if not plan:
-        logger.info("B273: no hot week plan for %s — nothing to sync", monday)
+        logger.info("B273: no plan (hot or archived) for %s — nothing to sync", monday)
         return False
 
     day = next(
@@ -140,6 +160,9 @@ def _sync_plan_after_outdoor_log(
         "event_type": "complete_outdoor",
         "date": date,
         "outdoor_load_score": day_load_score,
+        # B343: never ripple a downshift onto the next day of an already-closed
+        # week — that day's real outcome (or lack of one) is already history.
+        "allow_ripple": not is_past,
     })
 
     updated = apply_events(
@@ -170,8 +193,16 @@ def _sync_plan_after_outdoor_log(
         "completed_at": datetime.now(timezone.utc).isoformat(),
     })
 
-    persist_week_plan(updated, state, user_id)
-    # Ripple may have swapped next-day sessions with unresolved replacements.
+    if from_cold:
+        # B343: keep the A221 hot/cold boundary intact — write the update
+        # back to the cold store instead of materializing this week into
+        # state["week_plans"].
+        engine_storage.archive_week(user_id, monday, updated)
+        save_state(state, user_id)
+    else:
+        persist_week_plan(updated, state, user_id)
+    # Ripple may have swapped next-day sessions with unresolved replacements
+    # (disabled for past weeks — see allow_ripple above).
     _auto_resolve(updated, state, user_id)
     return True
 

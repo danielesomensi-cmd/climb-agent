@@ -1196,7 +1196,10 @@ def apply_events(
             # Store outdoor load score on the day and apply ripple if high
             outdoor_load = event.get("outdoor_load_score", 0)
             day["outdoor_load_score"] = outdoor_load
-            if outdoor_load >= OUTDOOR_RIPPLE_THRESHOLD:
+            # B343: callers syncing a log onto an already-past week set this
+            # False — the ripple exists to protect a plan still being built
+            # day by day, not to retroactively alter a week that already closed.
+            if outdoor_load >= OUTDOOR_RIPPLE_THRESHOLD and event.get("allow_ripple", True):
                 target_d = _parse_date(event["date"])
                 ripple_key = (target_d + timedelta(days=1)).isoformat()
                 try:
