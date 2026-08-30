@@ -11,6 +11,7 @@ import type { GuidedExercise } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
+import { displayPrescribedGrade } from "@/lib/gradeUtils";
 
 interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
@@ -236,7 +237,9 @@ export function GuidedExerciseStep({
     if (exercise.usedGrade != null) {
       setGradeInput(exercise.usedGrade);
     } else if (exercise.suggested.grade) {
-      setGradeInput(exercise.suggested.grade);
+      // B344: prefill in the same scale the target is shown in. Safe to send
+      // back lowercase — the engine's normalize_font_grade uppercases first.
+      setGradeInput(displayPrescribedGrade(exercise.suggested.grade, exercise.suggested.gradeScale));
     }
     if (exercise.testMeasurement != null) {
       setMeasurementInput(String(exercise.testMeasurement));
@@ -674,8 +677,8 @@ export function GuidedExerciseStep({
                     <p>
                       Target: <span className="font-semibold">
                         {exercise.suggested.gradeLow && exercise.suggested.gradeLow !== exercise.suggested.grade
-                          ? `${exercise.suggested.gradeLow} – ${exercise.suggested.grade}`
-                          : exercise.suggested.grade}
+                          ? `${displayPrescribedGrade(exercise.suggested.gradeLow, exercise.suggested.gradeScale)} – ${displayPrescribedGrade(exercise.suggested.grade, exercise.suggested.gradeScale)}`
+                          : displayPrescribedGrade(exercise.suggested.grade, exercise.suggested.gradeScale)}
                       </span>
                       {exercise.suggested.surface && (
                         <span className="text-muted-foreground"> on {exercise.suggested.surface}</span>

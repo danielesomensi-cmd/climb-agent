@@ -280,3 +280,26 @@ export function getAxisDescription(
   if (!entry) return undefined;
   return discipline === "boulder" ? entry.boulder : entry.lead;
 }
+
+export type PrescribedGradeScale = "french" | "font";
+
+/**
+ * Render a prescribed target grade in the scale its anchor is expressed in.
+ *
+ * B344, display-only. The engine computes target grades on a whole-grade
+ * LETTER ladder shared by Font and French (6a/6b/6c/7a ≡ 6A/6B/6C/7A), so the
+ * arithmetic is right for both (vocabulary §2.10.1) — but it emits the
+ * canonical UPPERCASE value. On a rope drill anchored to `lead_max_os` that
+ * surfaced as "6C", and uppercase 6C reads as a Font BOULDER grade (~7a+
+ * French): the string said something far harder than the 6c French meant.
+ *
+ * Same contract as `displayBoulderGrade`: the engine keeps its convention,
+ * the client picks the casing. `scale` comes from `suggested.grade_scale`;
+ * when it is absent (older cached payloads) nothing changes.
+ */
+export function displayPrescribedGrade(
+  grade: string,
+  scale?: PrescribedGradeScale | string,
+): string {
+  return scale === "french" ? grade.toLowerCase() : grade;
+}

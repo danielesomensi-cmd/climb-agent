@@ -443,6 +443,35 @@ Reference values (from literature):
 
 Semantics for boulder exercises: when `grade_relative` and the exercise uses problems/attempts, `reps` = max attempts per problem. The user may stop earlier if quality drops.
 
+#### `grade_scale` (emitted, render-only — B344)
+
+The whole-grade ladder above is shared by Font and French (`6a/6b/6c/7a` ≡
+`6A/6B/6C/7A`), so `step_grade` is correct for both — but it returns the
+**canonical uppercase** value, and on a rope drill anchored to `lead_max_os`
+that surfaced in the UI as `"6C"`. Uppercase `6C` reads as a Font *boulder*
+grade (≈ 7a+ French): the string said something far harder than the `6c` French
+actually prescribed.
+
+`inject_targets` therefore also emits `suggested.grade_scale`, derived
+deterministically from `grade_ref`:
+
+| grade_ref | grade_scale |
+|-----------|-------------|
+| `lead_max_os`, `lead_max_rp` | `french` |
+| `boulder_max_os`, `boulder_max_rp` | `font` |
+| absent | `font` |
+
+Same contract as `displayBoulderGrade`: the engine keeps its convention on the
+wire, the client picks the casing (`displayPrescribedGrade` in `gradeUtils.ts`).
+Nothing downstream branches on it, and an older cached payload without the field
+renders exactly as before.
+
+⚠️ **Not changed:** the `+` is still stripped from the reference grade before the
+offset is applied, so an athlete with `lead_max_os = 7a+` and offset −1 gets
+`6c`, not `6c+` — a half-grade rounded **down**. That is this spec's stated
+behaviour ("The '+' modifier is not an increment"), reaffirmed in B344, not an
+oversight. Changing it is a methodology decision, not a bug fix.
+
 ---
 
 ### 2.10.2 Working loads schema and feedback fields
@@ -476,9 +505,29 @@ Default values (used when user has no custom policy):
 |-------|-----------|----------|
 | very_easy | [0.10, 0.20] | +15% |
 | easy | [0.05, 0.10] | +7.5% |
-| ok | [0.00, 0.05] | +2.5% |
+| ok | **[0.00, 0.00]** | **0%** |
 | hard | [-0.05, 0.00] | -2.5% |
 | very_hard | [-0.15, -0.05] | -10% |
+
+**B344 — `ok` is neutral.** It used to be `[0.00, 0.05]`, i.e. +2.5% on every
+session. `ok` is not merely the modal answer: it is the value submitted at
+**zero user input** (`feedback-dialog.tsx`: "Unrated exercises default to Ok";
+`buildDialogFeedbackItems` ships `feedback_label ?? "ok"`), so closing a session
+without rating anything signed a load increase on every exercise. With ~2 finger
+sessions/week that compounds to ~+5%/week, against a ~2%/week adaptation rate
+(Devise et al. 2022). "Giusto così" now means "same load next time".
+
+A user who has a **stored** `adjustment_policy` keeps their own values — the
+change is to the default only, and `_rule_midpoint_pct` prefers the stored rule.
+
+**B344 — minimum step.** `next_external_load_kg` is `base × (1 + pct)` rounded to
+0.5 kg, with one guard: when `pct > 0` and the multiplier cannot move the value,
+the load advances by `MIN_EXTERNAL_LOAD_STEP_KG` (0.5 kg) instead. Without it
+`0.0 kg` was an **absorbing state** (0 × anything = 0, `very_easy` included), and
+the whole small-load prehab regime was frozen (1.0 kg + `easy` = 1.075 → 1.0).
+Deliberately **asymmetric**: there is no downward floor, because prehab loads are
+already minimal. `last_external_load_kg` is unaffected — 0 kg remains a
+legitimate recorded answer (B288).
 
 #### `baselines.hangboard[]`
 

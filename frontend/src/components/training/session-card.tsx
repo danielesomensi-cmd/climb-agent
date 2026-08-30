@@ -132,6 +132,9 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
       totalLoadKg: suggested.suggested_total_load_kg as number | undefined,
       grade: (suggested.suggested_grade as string | undefined) ?? (boulderTarget.target_grade as string | undefined),
       gradeLow: boulderTarget.target_grade_low as string | undefined,
+      // B344: absent on the boulder-target path (that one really is Font) and
+      // on older cached payloads — displayPrescribedGrade is a no-op then.
+      gradeScale: suggested.grade_scale as string | undefined,
       repScheme: suggested.suggested_rep_scheme as string | undefined,
       surface: boulderTarget.surface_selected as string | undefined,
       attemptGuidance: boulderTarget.attempt_guidance as string | undefined,

@@ -861,6 +861,7 @@ export interface GuidedExercise {
     totalLoadKg?: number;
     grade?: string;
     gradeLow?: string;         // A-B7: lower bound of target grade range
+    gradeScale?: string;       // B344: "french" | "font" — render-only casing hint
     repScheme?: string;
     surface?: string;
     attemptGuidance?: string;  // A-B7: e.g. "1 serious attempt per problem"
