@@ -404,9 +404,11 @@ class TestLPFeedback:
         assert left["hand"] == "left"
         assert right["last_external_load_kg"] == 42.0
         assert left["last_external_load_kg"] == 38.0
-        # "ok" feedback → slight increase
-        assert right["next_external_load_kg"] > 42.0
-        assert left["next_external_load_kg"] > 38.0
+        # B344 (was: "ok" → slight increase). `ok` is neutral now — on finger
+        # loading-pin work above all, where a silent +2.5% per session
+        # compounded onto tissue that signals overload late.
+        assert right["next_external_load_kg"] == 42.0
+        assert left["next_external_load_kg"] == 38.0
 
     def test_feedback_hard_decreases_load(self):
         state = _lp_state()

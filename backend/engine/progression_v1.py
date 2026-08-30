@@ -164,13 +164,31 @@ LEGACY_DIFFICULTY_MAP = {
     "fail": "very_hard",
 }
 
+# B344: `ok` is NEUTRAL. It used to carry pct_range [0.00, 0.05], i.e. a
+# +2.5% midpoint on every single session — and `ok` is not just the modal
+# answer, it is the DEFAULT AT ZERO INPUT: feedback-dialog.tsx documents
+# "Unrated exercises default to Ok" and buildDialogFeedbackItems ships
+# `feedback_label ?? "ok"`. Closing a session without touching anything
+# therefore signed a +2.5% on every load. With ~2 finger sessions/week that
+# compounds to +5%/week, against a ~2%/week adaptation rate observed in the
+# literature (Devise et al. 2022, 4-week RCT) — and finger tissue signals
+# overload late. "Giusto così" must mean "same load next time".
+#
+# NOTE ON REACH: _rule_midpoint_pct prefers working_loads.rules.adjustment_policy
+# over this default, so users who ever stored a policy keep the old behaviour.
+# This is deliberate — a stored policy is an explicit user choice — but it means
+# changing this constant does NOT retro-fix every account.
 DEFAULT_ADJUSTMENT_POLICY = {
     "very_easy": {"pct_range": [0.10, 0.20]},
     "easy": {"pct_range": [0.05, 0.10]},
-    "ok": {"pct_range": [0.00, 0.05]},
+    "ok": {"pct_range": [0.00, 0.00]},
     "hard": {"pct_range": [-0.05, 0.00]},
     "very_hard": {"pct_range": [-0.15, -0.05]},
 }
+
+# B344: minimum quantization step for external load, in kg. Used as an additive
+# floor so a positive feedback always moves the load — see _next_external_load.
+MIN_EXTERNAL_LOAD_STEP_KG = 0.5
 
 
 # B214: central registry of assessment.tests.* scalar keys written by each
@@ -245,6 +263,31 @@ def _first_not_none(*values: Any) -> Any:
 
 def _round_half_step(value: float) -> float:
     return round(value / 0.5) * 0.5
+
+
+def _next_external_load(base: float, pct: float) -> float:
+    """Next external load from the used load and a feedback percentage.
+
+    B344: a pure multiplier makes 0.0 kg an ABSORBING STATE — `0 * (1 + pct)`
+    is 0 for every label, `very_easy` included. Observed in production on
+    `back_squat` (0.0 kg / very_easy / next 0.0 kg, frozen since 2026-07-30).
+    The same trap bites the whole small-load regime where prehab lives: at
+    1.0 kg even `easy` (+7.5%) rounds straight back to 1.0.
+
+    So when the feedback asks for MORE load and the multiplier cannot deliver
+    it, fall back to one quantization step. Deliberately asymmetric (only
+    `pct > 0`, decision Daniele 2026-08-30): prehab loads are already minimal
+    (elbow_eccentric_curl 1.5 kg, wrist_curl 3.0 kg) and nudging them further
+    down buys nothing.
+
+    B288 is preserved: 0.0 kg stays a legitimate *recorded* load. Only the
+    NEXT load moves — `last_external_load_kg` is written by the caller and is
+    untouched by this function.
+    """
+    scaled = _round_half_step(base * (1.0 + pct))
+    if pct > 0 and scaled <= base:
+        return _round_half_step(base + MIN_EXTERNAL_LOAD_STEP_KG)
+    return scaled
 
 
 def _get_bodyweight(user_state: Dict[str, Any]) -> float:
@@ -330,6 +373,24 @@ def normalize_font_grade(grade: str | None) -> Optional[str]:
         return None
     cleaned = str(grade).strip().upper().replace(" ", "")
     return cleaned if cleaned in FONT_GRADE_TO_INDEX else None
+
+
+def grade_scale_for_ref(grade_ref: str | None) -> str:
+    """Which grade scale a `grade_ref` anchor is expressed in: french | font.
+
+    B344 (display only). `step_grade` works on a whole-grade LETTER scale that
+    happens to be shared by Font and French — 6a/6b/6c/7a is the same ladder as
+    6A/6B/6C/7A — so the arithmetic is correct for both (vocabulary §2.10.1).
+    What was wrong is the CASING it hands to the UI: a rope drill anchored to
+    `lead_max_os` came out as "6C", and uppercase 6C reads as a Font BOULDER
+    grade (~7a+ French), i.e. far harder than the 6c French actually meant.
+
+    The engine keeps emitting its canonical uppercase value in
+    `suggested_grade` — same convention as boulder grades staying Font
+    internally — and ships this hint so the client can render the right scale.
+    Render-only: nothing downstream branches on it.
+    """
+    return "french" if str(grade_ref or "").startswith("lead_") else "font"
 
 
 def step_grade(grade: str, steps: int) -> str:
@@ -1066,6 +1127,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     suggested["suggested_grade"] = suggested_grade
                     suggested["grade_ref"] = grade_ref
                     suggested["grade_offset"] = grade_offset
+                    suggested["grade_scale"] = grade_scale_for_ref(grade_ref)
                 # B289 group B: a remembered endurance target (written by
                 # apply_feedback after 2 concordant feedbacks) overrides the
                 # static assessment anchor. 60-day freshness gate as for every
@@ -1076,6 +1138,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         suggested["suggested_grade"] = mem_entry["next_target_grade"]
                         suggested["grade_ref"] = grade_ref
                         suggested["grade_source"] = "working_loads"
+                        suggested["grade_scale"] = grade_scale_for_ref(grade_ref)
 
             # External load exercises — data-driven from load_model (ARCH-2)
             if load_model == "external_load" and not is_loading_pin:
@@ -1600,7 +1663,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 continue
             base = float(used_load)
             pct = _rule_midpoint_pct(updated, feedback_label)
-            next_load = _round_half_step(base * (1.0 + pct))
+            next_load = _next_external_load(base, pct)
             entry = _find_working_load_entry(updated, exercise_id, {})
             entry.update(
                 {
@@ -1707,7 +1770,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 continue
             base = float(used_load)
             pct = _rule_midpoint_pct(updated, feedback_label)
-            next_load = _round_half_step(base * (1.0 + pct))
+            next_load = _next_external_load(base, pct)
             hand_key = f"{exercise_id}:{hand}"
             entries = _working_entries(updated)
             entry = None

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Film } from "lucide-react";
+import { displayPrescribedGrade } from "@/lib/gradeUtils";
 
 interface ExerciseDetailSheetProps {
   open: boolean;
@@ -118,7 +119,10 @@ function buildSuggested(ex: Record<string, unknown>): string[] {
 
   // Grade
   if (s.suggested_grade || s.grade) {
-    let line = `Grade: ${s.suggested_grade ?? s.grade}`;
+    // B344: a lead-anchored target is French — render it lowercase so "6c"
+    // is not read as the Font boulder 6C (~7a+ French).
+    const raw = (s.suggested_grade ?? s.grade) as string;
+    let line = `Grade: ${displayPrescribedGrade(raw, s.grade_scale as string | undefined)}`;
     if (s.surface) line += ` on ${s.surface}`;
     lines.push(line);
   }

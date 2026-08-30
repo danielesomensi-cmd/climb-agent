@@ -41,8 +41,31 @@ quanto sia adattivo.
 
 ## Parte A — Errori confermati nel codice (verificati direttamente)
 
-### A1. `step_grade` collassa i mezzi gradi e stampa la scala boulder sulle sessioni di corda
-**Severità: alta · sforzo S**
+### A1. ⚠️ ~~`step_grade` collassa i mezzi gradi~~ — **in gran parte errato, corretto da [[B344]] (2026-08-30)**
+
+> **Rettifica.** La tesi centrale di questo finding è **sbagliata**. `vocabulary §2.10.1`
+> documenta esplicitamente la scala a gradi interi **anche per il lead** (`lead_max_os=7c`,
+> offset −2 → **7a**), la scala a lettere è condivisa fra Font e francese
+> (`6a/6b/6c/7a` ≡ `6A/6B/6C/7A`), e un test blinda l'assenza del `+` in output.
+> **L'aritmetica è corretta**: 7a+ → 7a → −1 → 6c è un grado intero sotto l'onsight,
+> cioè l'intento documentato. Non ci sono "4 mezzi gradi" di errore.
+>
+> Avevo verificato l'**output** del codice ma non l'**intento** — esattamente l'errore
+> contro cui questo stesso audit metteva in guardia due paragrafi sopra.
+>
+> **Cosa era vero e B344 ha chiuso:** il *casing*. L'output arriva alla UI in maiuscolo
+> Font (`Grade: 6C` in `exercise-detail-sheet.tsx:121`, senza conversione) su una sessione
+> di corda, e `6C` maiuscolo si legge come Font boulder ≈ 7a+ francese. Ora `inject_targets`
+> emette `suggested.grade_scale` e il client rende con `displayPrescribedGrade`.
+>
+> **Cosa resta, come decisione e non come bug:** lo strip del `+` arrotonda in giù di mezzo
+> grado chi ha un `+` nel grado di riferimento (7a+ → 6c invece di 6c+). Comportamento
+> dichiarato dalla spec. Tracciato come `B-LEAD-HALF-GRADE-ROUNDING`.
+
+Il testo originale del finding è conservato qui sotto perché è la prova di come si sbaglia
+questo tipo di audit — non perché sia da implementare.
+
+**Severità dichiarata all'epoca: alta · sforzo S**
 
 ```
 step_grade('7a+', -1) → '6C'      step_grade('7a+', -2) → '6B'      step_grade('7a+', -5) → '5B'

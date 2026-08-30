@@ -184,20 +184,29 @@ def test_e2e_bench_press_loop():
     print(f"S2 suggested: ext={s2['suggested_external_load_kg']}")
     assert s2["suggested_external_load_kg"] == 32.0
 
-    # Feedback "ok" → pct 0.025 → 32×1.025 = 32.8 → 33.0
+    # B344 (was: "ok" → pct 0.025 → 33.0). `ok` is now NEUTRAL: the load must
+    # stay put. This fixture carries `rules: {}`, so it exercises the DEFAULT
+    # policy — which is exactly the path that made "ok" a hidden +2.5%/session,
+    # and `ok` is the label the feedback dialog ships when the user rates
+    # nothing at all.
     log2 = _feedback_log("2026-02-03", "bench_press", "ok", used_external=32.0)
     us = apply_feedback(log2, us)
     e2 = _get_entry(us, "bench_press")
     print(f"After ok: next_ext={e2['next_external_load_kg']}")
-    assert e2["next_external_load_kg"] == 33.0
+    assert e2["next_external_load_kg"] == 32.0
 
-    # S3: from history
+    # S3: from history — unchanged, because "ok" did not move it
     day3 = _day_with_instance("bench_press", {"sets": 3, "reps": 8})
     day3["date"] = "2026-02-05"
     day3 = inject_targets(day3, us)
     s3 = day3["sessions"][0]["exercise_instances"][0]["suggested"]
     print(f"S3 suggested: ext={s3['suggested_external_load_kg']}")
-    assert s3["suggested_external_load_kg"] == 33.0
+    assert s3["suggested_external_load_kg"] == 32.0
+
+    # ...and "easy" still moves it, so the loop is not frozen: 32 × 1.075 = 34.4 → 34.5
+    log3 = _feedback_log("2026-02-05", "bench_press", "easy", used_external=32.0)
+    us = apply_feedback(log3, us)
+    assert _get_entry(us, "bench_press")["next_external_load_kg"] == 34.5
 
 
 # ─── B4: turkish_getup  (external_load, reads constant) ──────────────────────
