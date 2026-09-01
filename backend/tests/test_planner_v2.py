@@ -113,10 +113,18 @@ class TestPlannerV2Deload(unittest.TestCase):
                 self.assertFalse(s["tags"].get("hard", False),
                                  f"Hard session {s['session_id']} in deload week")
 
-    def test_deload_factor(self):
+    def test_deload_factor_field_is_gone(self):
+        """B346: `deload_factor` was written by three modules and read by none.
+
+        It described an intent (halve the sets in a deload) that was never
+        implemented — and could not bite anyway, since the deload pool holds no
+        set-based work to halve. The deload is enforced by the intensity cap and
+        by `effective_hard_cap = 0`, both covered by the tests around this one.
+        This test now pins its ABSENCE so the field cannot quietly come back.
+        """
         plan = generate_phase_week(**_make_kwargs("deload"))
         week = plan["weeks"][0]
-        self.assertEqual(week["targets"]["deload_factor"], 0.5)
+        self.assertNotIn("deload_factor", week["targets"])
 
     def test_deload_phase_tag(self):
         plan = generate_phase_week(**_make_kwargs("deload"))

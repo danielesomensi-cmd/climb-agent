@@ -412,7 +412,7 @@ def generate_week_plan(
             {
                 "week_index": 1,
                 "phase": "build",
-                "targets": {"hard_days": hard_cap_per_week, "finger_days": 1, "deload_factor": 1.0},
+                "targets": {"hard_days": hard_cap_per_week, "finger_days": 1},
                 "days": plan_days,
             }
         ],

@@ -15,7 +15,14 @@ from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_an
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.planner_v2 import _SESSION_META
-from backend.engine.replanner_v1 import apply_day_add, apply_day_override, apply_events, suggest_sessions
+from backend.engine.replanner_v1 import (
+    _session_matches,
+    apply_day_add,
+    apply_day_override,
+    apply_events,
+    suggest_sessions,
+)
+from backend.engine.closed_loop_v1 import apply_day_result_to_user_state
 from backend.engine.resolve_session import resolve_session
 
 logger = logging.getLogger(__name__)
@@ -479,6 +486,46 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             outdoor_log.append(entry)
         elif evt == "undo_outdoor" and ev_date:
             state["outdoor_log"] = [e for e in outdoor_log if e.get("date") != ev_date]
+
+    # --- B346: feed the closed loop from the path users actually take ---
+    #
+    # `apply_day_result_to_user_state` is the only writer of `stimulus_recency`
+    # and `fatigue_proxy`, and its single call site sat behind
+    # `if req.resolved_day` in POST /api/feedback — a field no client has ever
+    # sent. Both dicts were therefore `{}` in production after 98 completed
+    # sessions, and the "Nd since last" row of the weekly report never rendered.
+    #
+    # mark_done / mark_skipped is the path that does run. We rebuild a
+    # single-session `resolved_day` from the plan we just updated, rather than
+    # passing the whole day: a day can hold two sessions and marking one of
+    # them done says nothing about the other.
+    for ev in req.events:
+        evt = ev.get("event_type")
+        ev_date = ev.get("date")
+        if evt not in ("mark_done", "mark_skipped") or not ev_date:
+            continue
+        day = next(
+            (d for w in updated.get("weeks", []) for d in w.get("days", []) if d.get("date") == ev_date),
+            None,
+        )
+        if not day:
+            continue
+        marked = [
+            s for s in (day.get("sessions") or [])
+            if _session_matches(s, session_ref=ev.get("session_ref"), slot=ev.get("slot"))
+        ]
+        if not marked:
+            continue
+        try:
+            state = apply_day_result_to_user_state(
+                state,
+                resolved_day={"date": ev_date, "sessions": marked},
+                status="done" if evt == "mark_done" else "skipped",
+            )
+        except Exception:
+            # Never fail a completion because a derived counter could not be
+            # updated — the plan status and the completion log matter more.
+            logger.warning("closed-loop update failed for %s on %s", evt, ev_date, exc_info=True)
 
     # --- B117: Persistent session completion log ---
     completion_log = state.setdefault("session_completion_log", [])

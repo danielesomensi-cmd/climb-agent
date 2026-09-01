@@ -348,7 +348,6 @@ def _build_user_state_from_onboarding(data: OnboardingData) -> Dict[str, Any]:
             "current_level": build_current_level(data.grades),
         },
         "baselines": {},
-        "recent_sessions": [],
         "recent_sessions_window_days": 14,
         "stimulus_recency": {},
         "fatigue_proxy": {},

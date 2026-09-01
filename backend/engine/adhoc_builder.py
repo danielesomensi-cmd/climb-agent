@@ -410,17 +410,43 @@ def _current_phase(user_state: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+_HARMONIZATION_LOOKBACK_DAYS = 3
+
+
 def _harmonization_note(user_state: Dict[str, Any], today: str) -> Optional[str]:
-    """Deterministic 'yesterday was hard-fingers, keep it light' style note, or
-    None. Reads recent session labels — never mutates state."""
-    recent = (user_state.get("recent_sessions") or [])[-3:]
-    finger_recent = any(
-        "finger" in str(s.get("session_id") or "").lower()
-        or (s.get("tags") or {}).get("finger")
-        for s in recent
-    )
-    if finger_recent:
-        return "You trained fingers recently — this keeps finger load low."
+    """Deterministic 'yesterday was hard-fingers, keep it light' note, or None.
+
+    B346: this used to read ``user_state["recent_sessions"]``, which has no
+    writer anywhere in the repo — so the note could never fire, and the ad-hoc
+    composer's only internal safeguard was inert while looking, to anyone
+    reading the code, like it worked. Now it scans the sessions actually marked
+    done in ``week_plans`` over the last few days.
+
+    Reads only; never mutates state.
+    """
+    from datetime import datetime, timedelta
+
+    try:
+        today_d = datetime.strptime(str(today), "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
+    window_start = (today_d - timedelta(days=_HARMONIZATION_LOOKBACK_DAYS)).isoformat()
+
+    for plan in (user_state.get("week_plans") or {}).values():
+        for week in (plan or {}).get("weeks") or []:
+            for day in week.get("days") or []:
+                date_str = str(day.get("date") or "")
+                if not (window_start <= date_str <= today_d.isoformat()):
+                    continue
+                for session in day.get("sessions") or []:
+                    if session.get("status") != "done":
+                        continue
+                    # B345 made these tags honest for custom / coach sessions
+                    # too, so a hangboard block the coach composed now counts.
+                    if (session.get("tags") or {}).get("finger") or "finger" in str(
+                        session.get("session_id") or ""
+                    ).lower():
+                        return "You trained fingers recently — this keeps finger load low."
     return None
 
 

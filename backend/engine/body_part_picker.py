@@ -448,14 +448,17 @@ def get_available_body_parts(
 
 
 def _recent_exercise_ids(user_state: Dict[str, Any]) -> List[str]:
-    """Flatten recent_sessions[].exercises[*].exercise_id (last N sessions)."""
-    out: List[str] = []
-    for s in (user_state.get("recent_sessions") or [])[-8:]:
-        for ex in (s.get("exercises") or []):
-            eid = ex.get("exercise_id") or ex.get("id")
-            if eid:
-                out.append(eid)
-    return out
+    """Exercise ids from recently completed sessions.
+
+    B346: used to read ``user_state["recent_sessions"]``, a field that was
+    initialised to ``[]`` in two places and **never written by anything** — so
+    this always returned an empty list and the variety penalty it feeds never
+    applied. The real source is the same one ``resolve_session`` already uses:
+    completed sessions in ``week_plans`` (hot ∪ A221 cold store).
+    """
+    from backend.engine.resolve_session import load_recent_exercise_ids
+
+    return load_recent_exercise_ids(user_state=user_state)
 
 
 def _recent_recency_groups(user_state: Dict[str, Any]) -> Set[str]:
