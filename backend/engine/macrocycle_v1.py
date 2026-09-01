@@ -824,7 +824,11 @@ def apply_deload_week(week_plan: Dict[str, Any]) -> Dict[str, Any]:
             day["sessions"] = filtered
 
         week["phase"] = "deload"
-        week["targets"] = {"hard_days": 0, "finger_days": 0, "deload_factor": 0.5}
+        # B346: `deload_factor` removed — written here, in planner_v2 and in
+        # legacy planner_v1, and read by nothing in engine, api or frontend.
+        # It described an intent (halve the sets in a deload) that was never
+        # implemented; the deload pool contains no set-based work to halve.
+        week["targets"] = {"hard_days": 0, "finger_days": 0}
 
     return deload_plan
 

@@ -473,6 +473,10 @@ def get_week(
                 max_pullups_bw=_max_pullups_bw,
                 recent_test_dates=_recent_test_dates if _recent_test_dates else None,
                 prev_week_plan=_prev_week_plan,
+                # B346: the auto-retest queue written by progression_v1 after
+                # two concordant feedbacks on a max hang. Before this it was
+                # read only by the legacy planner_v1, which nothing imports.
+                test_queue=state.get("test_queue"),
             )
         except Exception as e:
             logger.error("Week generation failed: %s", e, exc_info=True)

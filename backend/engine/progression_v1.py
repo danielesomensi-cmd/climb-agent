@@ -1316,6 +1316,48 @@ def _enqueue_test(user_state: Dict[str, Any], *, test_id: str, date_value: str, 
     queue.sort(key=lambda x: (str(x.get("recommended_by_date") or ""), str(x.get("test_id") or ""), str(x.get("created_at") or "")))
 
 
+def _prune_test_queue(user_state: Dict[str, Any]) -> None:
+    """Drop queued retests that have since been performed.
+
+    B346. Until now nothing ever removed an entry, which was harmless only
+    because nothing ever read the queue either. Now that ``planner_v2`` PASS 3
+    consumes it, an entry left behind would re-place the same test every single
+    week. An entry is satisfied when a test with the same ``test_id`` was
+    recorded on or after the day the entry was created.
+
+    Note this is a second line of defence, not the only one: PASS 3 still
+    applies the 42-day freshness gate, so a just-completed test would not be
+    re-placed even if the entry survived. Both exist because the failure modes
+    differ — freshness protects the plan, pruning stops the queue growing
+    without bound.
+    """
+    queue = user_state.get("test_queue")
+    if not isinstance(queue, list) or not queue:
+        return
+
+    latest_by_test: Dict[str, str] = {}
+    for entries in (user_state.get("tests") or {}).values():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            test_id = str(entry.get("test_id") or "")
+            date_str = str(entry.get("date") or "")
+            if not test_id or not date_str:
+                continue
+            if date_str > latest_by_test.get(test_id, ""):
+                latest_by_test[test_id] = date_str
+
+    def _satisfied(item: Dict[str, Any]) -> bool:
+        test_id = str(item.get("test_id") or "")
+        created = str(item.get("created_at") or "")
+        done_on = latest_by_test.get(test_id)
+        return bool(done_on) and bool(created) and done_on >= created
+
+    user_state["test_queue"] = [item for item in queue if not _satisfied(item)]
+
+
 def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bodyweight: float) -> None:
     """Extract test results from a session log and persist them to user_state.
 
@@ -1826,4 +1868,5 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         )
 
     _update_test_from_log(log_entry, updated, bodyweight)
+    _prune_test_queue(updated)
     return updated

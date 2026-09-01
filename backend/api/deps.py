@@ -39,7 +39,6 @@ EMPTY_TEMPLATE: Dict[str, Any] = {
     "macrocycle": None,
     "performance": {},
     "baselines": {},
-    "recent_sessions": [],
     "stimulus_recency": {},
     "fatigue_proxy": {},
     "working_loads": {"entries": [], "rules": {}},

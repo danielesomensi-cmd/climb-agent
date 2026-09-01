@@ -106,6 +106,18 @@ _PHASE_TEST_MAP: Dict[str, Dict[str, bool]] = {
 }
 MAX_WEEKS_UNTESTED = 12  # Force maintenance retest if axis untested for 12+ weeks
 
+# B346: test_queue entry `test_id` → the session that actually runs that test.
+# `progression_v1._enqueue_test` writes a TEST id after two concordant feedbacks
+# on a max hang ("the load stopped making sense — go remeasure"); PASS 3 places
+# SESSIONS. Before B346 the only consumer of that queue was `planner_v1`, which
+# no module imports: the engine's one self-correction mechanism wrote into a
+# channel with no outlet.
+_TEST_QUEUE_SESSION: Dict[str, str] = {
+    "max_hang_5s_total_load": "test_max_hang_5s",
+    "max_hang_7s_total_load": "test_max_hang_7s",
+    "lp_max_test_5s": "test_lp_max_5s",
+}
+
 
 def _validate_session_meta_equipment() -> None:
     """D172-17: warn if _SESSION_META.required_equipment differs from session JSON files.
@@ -653,6 +665,7 @@ def generate_phase_week(
     max_pullups_bw: Optional[int] = None,
     recent_test_dates: Optional[Dict[str, str]] = None,
     prev_week_plan: Optional[Dict[str, Any]] = None,
+    test_queue: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -1403,6 +1416,19 @@ def generate_phase_week(
                     _placed = True
                     break
             if not _placed:
+                # B346: kept, and made audible. D280 listed `unmet_stimulus`
+                # among the "written and never read" fields and the first plan
+                # was to delete it — but B308 added it *because* "silence is
+                # what let D263 hide for months". Deleting a diagnostic on the
+                # grounds that nobody displays it is backwards; the answer is to
+                # stop it being silent. Surfacing it in the UI is a separate,
+                # frontend brief (UNMET-STIMULUS-VISIBILITY).
+                logger.warning(
+                    "unmet stimulus: pulling could not be placed in week %s (phase %s) "
+                    "without breaching the hard-day cap, the recovery gaps or the slots",
+                    start_date,
+                    phase_id,
+                )
                 unmet_stimulus.append({
                     "stimulus": "pulling",
                     "phase_id": phase_id,
@@ -1415,7 +1441,25 @@ def generate_phase_week(
     # ── PASS 3 (optional): Inject test sessions ──
     # Triggers on: last week of base/strength_power, OR explicitly via inject_tests
     skipped_tests: list = []  # B191: populated by phase-gating logic below
-    _run_pass3 = inject_tests or (is_last_week_of_phase and phase_id in ("base", "strength_power"))
+
+    # B346: a queued retest is a third reason to run PASS 3, next to the
+    # explicit assessment and the end of a base/strength_power phase. Only
+    # entries already due (recommended_by_date within this week) count.
+    _queued_test_sids: List[str] = []
+    _week_end_iso = (_parse_date(start_date) + timedelta(days=6)).isoformat()
+    for _item in test_queue or []:
+        _sid = _TEST_QUEUE_SESSION.get(str(_item.get("test_id") or ""))
+        _rec_by = _item.get("recommended_by_date")
+        if not _sid or not isinstance(_rec_by, str):
+            continue
+        if _rec_by <= _week_end_iso and _sid not in _queued_test_sids:
+            _queued_test_sids.append(_sid)
+
+    _run_pass3 = (
+        inject_tests
+        or (is_last_week_of_phase and phase_id in ("base", "strength_power"))
+        or bool(_queued_test_sids)
+    )
     if _run_pass3:
         # B128/B138: freshness check — skip tests completed within TEST_FRESHNESS_DAYS
         # 42 days = 6 weeks minimum between retests (Hörst, Lattice, Eva López)
@@ -1439,6 +1483,14 @@ def generate_phase_week(
             (_repeater_test_sid, True),
             (_pulling_test_sid, False),
         ]
+        # B346: in practice _enqueue_test only ever queues the same finger test
+        # the device preference already selects, so this is belt-and-braces —
+        # but a queued test that is not on the standard schedule must still be
+        # placeable, otherwise the queue would silently drop it.
+        _scheduled_sids = {sid for sid, _ in _test_schedule}
+        for _sid in _queued_test_sids:
+            if _sid not in _scheduled_sids:
+                _test_schedule.append((_sid, True))
 
         # B191/D92+B128: phase-aware gating then freshness check
         # inject_tests=True means explicit baseline assessment (initial or manual) — bypass phase gate
@@ -1450,7 +1502,16 @@ def generate_phase_week(
 
             # 1. Phase-aware gate (D92): skip axes not stimulated by this phase,
             #    unless inject_tests=True (explicit assessment) or axis untested 12+ weeks.
-            phase_allows = _phase_map.get(test_type, True) if test_type else True
+            # B346: a queued retest bypasses the PHASE gate — it exists precisely
+            # because two concordant feedbacks said the recorded max no longer
+            # matches reality, and the phase the athlete happens to be in does
+            # not change that. It does NOT bypass the 42-day freshness gate
+            # below: that is what stops a queue entry from re-placing the same
+            # test every week once it has been done.
+            phase_allows = (
+                True if test_sid in _queued_test_sids
+                else (_phase_map.get(test_type, True) if test_type else True)
+            )
             if not phase_allows:
                 last_date_str = _recent.get(test_type) if test_type else None
                 weeks_since: float | None = None
@@ -1690,7 +1751,6 @@ def generate_phase_week(
                 "targets": {
                     "hard_days": effective_hard_cap,
                     "finger_days": finger_days_count,
-                    "deload_factor": 0.5 if phase_id == "deload" else 1.0,
                 },
                 "days": plan_days,
             }
@@ -1903,7 +1963,6 @@ def generate_test_week(
                 "targets": {
                     "hard_days": hard_days_count,
                     "finger_days": 2,
-                    "deload_factor": 1.0,
                 },
                 "days": plan_days,
             }
