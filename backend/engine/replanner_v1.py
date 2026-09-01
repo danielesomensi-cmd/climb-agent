@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 from backend.engine.macrocycle_v1 import _build_session_pool
 from backend.engine.planner_v2 import _INTENSITY_TO_LOAD, _SESSION_META, generate_phase_week
+from backend.engine.session_tags import derive_session_tags, merge_declared_tags
 from backend.engine.other_activity_v1 import (
     ensure_other_activities_list,
     normalize_other_activities,
@@ -835,6 +836,41 @@ def _adjustment(day_date: str, session: Dict[str, Any], previous_id: str, reason
     }
 
 
+def _is_rewritable(session: Dict[str, Any]) -> bool:
+    """May a deterministic guard replace this session with a lighter one?
+
+    Single source of truth for both downshifters (finger spacing and hard cap),
+    which had grown the same list of exemptions independently.
+
+    Three reasons a session is off-limits:
+
+    * ``done`` / ``skipped`` — B287/R-8: past sessions are immutable, and the
+      tendons do not care whether the entry is ticked.
+    * ``forced`` — A254: the user explicitly asked for it, at their own risk.
+    * ``is_custom`` — **B345**. This one is new and is what makes deriving real
+      tags safe. The downshifters work by ``session.update({"session_id":
+      "regeneration_easy", …})``, which on a user-authored session does not
+      replace it cleanly: ``is_custom``, ``custom_session_id`` and
+      ``exercises`` stay attached to a session_id that now claims to be
+      recovery. The user's hand-written work vanishes from the card and what is
+      left is an incoherent hybrid. So a custom session **constrains** the days
+      around it — which is the whole point of giving it honest tags — but is
+      never rewritten.
+
+    Note the asymmetry is deliberate: exempt from rewriting is NOT exempt from
+    counting. A custom finger session still anchors the 48h gap and still
+    consumes a slot of the weekly hard cap, so the engine's own sessions move
+    around it instead.
+    """
+    if session.get("status") in ("done", "skipped"):
+        return False
+    if session.get("forced"):
+        return False
+    if session.get("is_custom"):
+        return False
+    return True
+
+
 def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Downshift hard sessions beyond the weekly cap. Returns what it changed."""
     adjustments: List[Dict[str, Any]] = []
@@ -845,16 +881,11 @@ def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
         for day in reversed(hard_days[hard_cap:]):
             for session in day.get("sessions") or []:
                 tags = session.get("tags") or {}
-                # B287/R-8: never rewrite a completed or skipped session. The
-                # day-level selection above already ignores done sessions, but
-                # this inner loop used to downshift every hard session on the
-                # day — including one the user had already trained.
-                if session.get("status") in ("done", "skipped"):
-                    continue
-                # A254: a user-forced hard session stays past the cap, at their
-                # own risk — but it still counts as a hard day above, so the cap
-                # is genuinely honoured for everything else.
-                if session.get("forced"):
+                # B345: the exemptions (done/skipped per B287/R-8, forced per
+                # A254, custom per B345) now live in one place. All of them
+                # still COUNT as hard days in the selection above, so the cap is
+                # genuinely honoured for everything else.
+                if not _is_rewritable(session):
                     continue
                 if tags.get("hard"):
                     recovery_meta = _meta_for("regeneration_easy")
@@ -924,10 +955,9 @@ def _enforce_no_consecutive_finger(
         # completed ones included, silently rewriting immutable history.
         # A254: a user-forced session is likewise exempt from rewriting (kept at
         # the user's own risk) — but it still constrains the following days below.
-        downshiftable = [
-            s for s in finger_sessions
-            if s.get("status") not in ("done", "skipped") and not s.get("forced")
-        ]
+        # B345: same exemption list as the hard cap, via _is_rewritable —
+        # which now also spares user-authored (custom / coach ad-hoc) sessions.
+        downshiftable = [s for s in finger_sessions if _is_rewritable(s)]
 
         violates = bool(constrains) and last_finger_date is not None \
             and (cur - last_finger_date).days <= _recovery_gap(plan)
@@ -948,11 +978,12 @@ def _enforce_no_consecutive_finger(
                 adjustments.append(
                     _adjustment(day.get("date", ""), session, _previous_id, "finger_spacing_downshift")
                 )
-            # The day stops being an anchor only if nothing finger-ish survived:
-            # an immutable done session — or an A254-forced one — on this day
-            # still constrains what follows (the tendons don't care that the hard
-            # session was forced).
-            if not any(s.get("status") == "done" or s.get("forced") for s in constrains):
+            # The day stops being an anchor only if EVERY finger session on it
+            # was actually rewritten. Anything the guard could not touch — an
+            # immutable done session, an A254-forced one, or (B345) a
+            # user-authored custom one — still constrains what follows. The
+            # tendons don't care why the guard kept its hands off.
+            if all(_is_rewritable(s) for s in constrains):
                 continue
 
         if constrains:
@@ -1478,6 +1509,7 @@ def apply_events(
                     f"Slot '{slot}' already occupied by other activity on {target_date}"
                 )
 
+            _cs_tags, _cs_intensity = derive_session_tags(cs.get("exercises"))
             new_session = {
                 "slot": slot,
                 "session_id": f"custom_{cs_id}",
@@ -1488,11 +1520,14 @@ def apply_events(
                 "location": location,
                 "gym_id": gym_id if location == "gym" else None,
                 "status": "planned",
-                "intensity": "medium",
+                # B345: tags derived from the exercises, not hardcoded. The 48h
+                # finger gap and the weekly hard cap read nothing but these —
+                # a coach-composed max hang used to sail past both.
+                "intensity": _cs_intensity,
                 "estimated_load_score": cs.get("estimated_load_score", 0),
                 "target_duration_min": cs.get("estimated_duration_minutes", 0),
                 "exercises": cs.get("exercises", []),
-                "tags": {"hard": False, "finger": False},
+                "tags": _cs_tags,
                 "constraints_applied": ["custom_add"],
                 "explain": ["user-added custom session", f"custom_session_id={cs_id}"],
             }
@@ -1542,8 +1577,20 @@ def apply_events(
                 f"generated_{build_kind}_{target_date}_{slot}"
             )
 
+            # B345: same blindness by a different route — `**session_payload`
+            # means a payload without `tags` produced a slot with NO tags key at
+            # all. Derive from content and merge upward, so a caller that
+            # already knows better (body_part_picker derives its own `finger`)
+            # keeps its answer and an under-declaring one gets corrected.
+            _gen_tags, _gen_intensity = merge_declared_tags(
+                session_payload.get("tags"),
+                session_payload.get("intensity"),
+                *derive_session_tags(session_payload.get("exercises")),
+            )
             new_session = {
                 **session_payload,
+                "tags": _gen_tags,
+                "intensity": _gen_intensity,
                 "session_id": session_id,
                 "slot": slot,
                 "session_mode": session_payload.get("session_mode", "custom_build"),
