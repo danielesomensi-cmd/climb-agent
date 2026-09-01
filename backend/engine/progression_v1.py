@@ -438,6 +438,12 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 "load_model": e.get("load_model"),
                 "unilateral": bool(e.get("unilateral")),
                 "pattern": e.get("pattern"),
+                # B345: additive — session_tags.derive_session_tags needs these
+                # to work out a user-authored session's real intensity and
+                # whether it loads the fingers. Kept on this cache rather than
+                # parsing exercises.json a second time.
+                "intensity_level": e.get("intensity_level"),
+                "domain": e.get("domain") or [],
                 "loading_pin": "loading_pin" in (
                     (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
                 ),
