@@ -148,12 +148,31 @@ class TestMacrocycleEndpointMonday(unittest.TestCase):
         # Seed goal + assessment.profile so the macrocycle endpoint has inputs
         # regardless of test ordering.
         original_state = client.get("/api/state").json()
+        # B347: every date here is derived from today.
+        #
+        # This test used to hardcode `start_date: "2026-03-05"` and inherit the
+        # goal deadline from the shared `backend/data/user_state.json` fixture
+        # (PUT deep-merges, so a goal without `deadline` keeps the stored one).
+        # That fixture carries `deadline: 2026-09-01`, and the endpoint rejects a
+        # goal whose deadline is in the past with a 400 — so the test was always
+        # going to start failing on 2026-09-02, and did. The invariant under
+        # test (a non-Monday start_date is snapped back to Monday) has nothing
+        # to do with the calendar; nothing here should.
+        today = date.today()
+        # Next Thursday strictly in the future — deliberately NOT a Monday.
+        thursday = today + timedelta(days=((3 - today.weekday()) % 7) or 7)
+        expected_monday = thursday - timedelta(days=thursday.weekday())
+        self.assertEqual(thursday.weekday(), 3, "fixture must be a Thursday")
+
         client.put("/api/state", json={
             "goal": {
                 "goal_type": "grade_push",
                 "discipline": "lead",
                 "target_grade": "7a",
                 "current_grade": "6b+",
+                # Explicit and comfortably ahead of the per-discipline minimum,
+                # so the test never depends on what the fixture happens to hold.
+                "deadline": (today + timedelta(weeks=20)).isoformat(),
             },
             "assessment": {
                 "profile": {
@@ -165,12 +184,12 @@ class TestMacrocycleEndpointMonday(unittest.TestCase):
 
         try:
             r = client.post("/api/macrocycle/generate", json={
-                "start_date": "2026-03-05",  # Thursday
+                "start_date": thursday.isoformat(),
                 "total_weeks": 12,
             })
-            self.assertEqual(r.status_code, 200)
+            self.assertEqual(r.status_code, 200, r.text)
             mc = r.json()["macrocycle"]
-            self.assertEqual(mc["start_date"], "2026-03-02",
+            self.assertEqual(mc["start_date"], expected_monday.isoformat(),
                              "Thursday should be corrected to Monday")
         finally:
             # Restore macrocycle (PUT deep-merges so goal/assessment stay as seeded,
