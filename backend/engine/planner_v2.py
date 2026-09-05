@@ -1305,6 +1305,14 @@ def generate_phase_week(
         the last resort and only for non-hard sessions: a maintenance dose is
         worth one extra short day, a hard session is not.
 
+        That extra day is a DELIBERATE overshoot of the athlete's stated
+        `target_training_days_per_week`, accepted by Daniele on 2026-09-05 after
+        seeing it on his own plan (a power_endurance week going from 4 to 5
+        days). The alternative was leaving the quality at zero for a three-week
+        phase and only reporting it. Do not "fix" this back to 4 days without
+        reopening that decision — removing step 3 makes the floor unreachable
+        again in exactly the configuration that motivated A282.
+
         Safety constraints are never traded away: the hard-day cap, the hard-day
         gap and the finger gap all still apply. A floor that had to breach one
         of them is simply not placed, and the caller records that.
