@@ -106,6 +106,14 @@ _PHASE_TEST_MAP: Dict[str, Dict[str, bool]] = {
 }
 MAX_WEEKS_UNTESTED = 12  # Force maintenance retest if axis untested for 12+ weeks
 
+# A282: a phase whose domain weight for a primary quality reaches this gets a
+# FLOOR on that quality — it may not be absent from the week. Deliberately a
+# floor and not a proportion: the planner places ~4 sessions across 6 domains,
+# so the finest distribution it can express is 0.25, and in strength_power five
+# of the six weights sit below that. Checking proportions would fail every week
+# by arithmetic; checking presence is both meaningful and achievable.
+QUALITY_FLOOR_WEIGHT = 0.10
+
 # B346: test_queue entry `test_id` → the session that actually runs that test.
 # `progression_v1._enqueue_test` writes a TEST id after two concordant feedbacks
 # on a max hang ("the load stopped making sense — go remeasure"); PASS 3 places
@@ -837,6 +845,8 @@ def generate_phase_week(
     # Determine which days have available slots
     # Track outdoor-only days — they get no sessions from the planner
     day_is_outdoor: List[bool] = [False] * 7
+    # A282: days the athlete CAN train on but that target_days pruning dropped.
+    day_pruned_but_available: List[bool] = [False] * 7
     day_has_available_slot: List[bool] = []
     for offset in range(7):
         # B95: skip past days — no sessions assigned to days before today
@@ -898,6 +908,14 @@ def generate_phase_week(
         for offset in range(7):
             if offset not in keep_offsets:
                 day_has_available_slot[offset] = False
+                # A282: remember that this day was dropped to honour
+                # target_days, NOT because the athlete is unavailable. The
+                # quality floors below need that distinction: with 7 available
+                # evenings and target_days=4, three perfectly usable days become
+                # False here, and every later pass that checks
+                # `day_has_available_slot` treats them as if the athlete were
+                # busy. That is what made the PE finger guarantee unreachable.
+                day_pruned_but_available[offset] = True
 
     # Count total available slots across all available days (for multi-slot-per-day support)
     day_available_slots: List[List[str]] = [[] for _ in range(7)]
@@ -1270,75 +1288,165 @@ def generate_phase_week(
                     finger_day_offsets.append(offset)
                 break
 
-    # ── PASS 2.5 (NEW-F9): Ensure PE phase has at least 1 finger maintenance session ──
-    if phase_id == "power_endurance":
-        has_finger_maintenance = any(
-            s.get("session_id", "").startswith("finger_maintenance")
+    # A282: shared placement cascade for the quality floors below.
+    _unmet_floor: List[Dict[str, Any]] = []
+
+    def _place_quality_floor(*, candidates, tag: str, pass_label: str) -> bool:
+        """Place one session carrying `tag`, trying the least invasive option first.
+
+        Order matters, and each step is more intrusive than the last:
+
+          1. an empty day among those target_days kept;
+          2. replacing a non-primary session that does not already train `tag`;
+          3. a day that target_days PRUNED but the athlete can actually train on.
+
+        Step 3 is what makes the floor reachable at all — see the comment on
+        `day_pruned_but_available`. It adds a day beyond target_days, so it is
+        the last resort and only for non-hard sessions: a maintenance dose is
+        worth one extra short day, a hard session is not.
+
+        Safety constraints are never traded away: the hard-day cap, the hard-day
+        gap and the finger gap all still apply. A floor that had to breach one
+        of them is simply not placed, and the caller records that.
+        """
+        nonlocal days_with_sessions
+
+        def _try(offset: int, *, allow_hard: bool, replace: bool) -> bool:
+            nonlocal days_with_sessions
+            if day_is_outdoor[offset]:
+                return False
+            day_avail = normalized[day_keys[offset]]
+            for sid, meta in candidates:
+                if meta is None:
+                    continue
+                if meta.get("hard"):
+                    if not allow_hard:
+                        continue
+                    if hard_days >= effective_hard_cap:
+                        continue
+                    if any(abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets):
+                        continue
+                if meta.get("finger") and any(
+                    abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
+                ):
+                    continue
+                result = _find_best_slot(
+                    day_avail, meta, locations, prefer_evening=False,
+                    home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id,
+                )
+                if not result:
+                    continue
+                slot, slot_info = result
+                entry = _make_session_entry(
+                    slot, sid, meta, slot_info, locations, phase_id, day_keys[offset],
+                    default_gym_id, gyms or [], pass_label, home_equipment=home_equipment,
+                )
+                if replace:
+                    for i, existing in enumerate(day_sessions[offset]):
+                        ex_meta = _SESSION_META.get(existing.get("session_id", ""), {})
+                        if not _is_primary_session(ex_meta) and not ex_meta.get(tag):
+                            day_sessions[offset][i] = entry
+                            break
+                    else:
+                        continue
+                else:
+                    day_sessions[offset].append(entry)
+                    days_with_sessions += 1
+                if meta.get("finger"):
+                    finger_day_offsets.append(offset)
+                return True
+            return False
+
+        kept = [o for o in range(7) if day_has_available_slot[o]]
+        # 1. empty kept day
+        for offset in kept:
+            if not day_sessions[offset] and _try(offset, allow_hard=True, replace=False):
+                return True
+        # 2. replace a complementary session on a kept day
+        for offset in kept:
+            if day_sessions[offset] and _try(offset, allow_hard=True, replace=True):
+                return True
+        # 3. last resort: a day target_days pruned, maintenance only
+        for offset in range(7):
+            if not day_pruned_but_available[offset] or day_sessions[offset]:
+                continue
+            if _try(offset, allow_hard=False, replace=False):
+                logger.info(
+                    "A282: %s placed on %s, a day beyond target_days — the only way "
+                    "to keep the quality off zero this week",
+                    pass_label, day_dates[offset].isoformat(),
+                )
+                return True
+        return False
+
+    # ── PASS 2.5 (NEW-F9, generalizzato da A282): pavimento sulla forza dita ──
+    #
+    # Il guard originale valeva SOLO in fase power_endurance e cercava una
+    # sessione il cui id iniziasse con "finger_maintenance". Non è mai scattato:
+    # riprodotto sul profilo reale di Daniele, una settimana PE esce con ZERO
+    # sessioni con tag finger e questo pass non prova nemmeno a piazzare.
+    #
+    # Due cause, entrambe sistemate qui:
+    #
+    #   1. `day_has_available_slot` viene azzerato per i giorni potati da
+    #      target_days (7 sere disponibili, target 4 → 3 giorni usabili
+    #      diventano False). Il pass li saltava tutti.
+    #   2. Sui giorni tenuti può solo SOSTITUIRE una sessione «non primaria»,
+    #      ma `_is_primary_session` è `hard or climbing`: in una settimana PE
+    #      tutte e quattro le sessioni sono climbing, quindi non c'è nulla di
+    #      sostituibile.
+    #
+    # Risultato: nessun giorno libero, niente da sostituire, garanzia morta —
+    # e in silenzio, per una fase che nel macrociclo dura tre settimane, contro
+    # un decadimento della forza massima di ~30±5 giorni (Issurin).
+    #
+    # A282 lo rende un PAVIMENTO guidato dal peso di dominio: la qualità non
+    # può stare a zero quando la fase dichiara di allenarla. Non una
+    # proporzione — con 4 sessioni su 6 domini la granularità è 0,25 e cinque
+    # pesi su sei in strength_power sono sotto quella soglia, quindi una
+    # validazione sulle proporzioni sarebbe aritmeticamente sempre violata.
+    _finger_weight = float((domain_weights or {}).get("finger_strength") or 0.0)
+    if phase_id != "deload" and _finger_weight >= QUALITY_FLOOR_WEIGHT:
+        # Il tag, non il prefisso dell'id: in strength_power le dita le carica
+        # limit_boulder_gym, e un pavimento che non lo vedesse aggiungerebbe una
+        # dose superflua. Stessa semantica di `_has_pulling` in PASS 2.6.
+        _has_finger = any(
+            _SESSION_META.get(s.get("session_id", ""), {}).get("finger")
             for day_list in day_sessions for s in day_list
         )
-        if not has_finger_maintenance:
-            fm_candidates = [
-                ("finger_maintenance_home", _SESSION_META.get("finger_maintenance_home")),
-                ("finger_maintenance_gym", _SESSION_META.get("finger_maintenance_gym")),
+        if not _has_finger:
+            # Le sessioni di mantenimento vengono prima: sono la dose minima,
+            # non uno stimolo che consuma il cap dei giorni hard.
+            _fc = [
+                (sid, _SESSION_META.get(sid))
+                for sid in ("finger_maintenance_home", "finger_maintenance_gym")
+            ] + [
+                (sid, _SESSION_META.get(sid))
+                for sid in filtered_pool
+                if _SESSION_META.get(sid, {}).get("finger")
+                and not _SESSION_META.get(sid, {}).get("test")
+                and not sid.startswith("finger_maintenance")
             ]
-            fm_placed = False
-            for offset in range(7):
-                if fm_placed:
-                    break
-                if not day_has_available_slot[offset]:
-                    continue
-                if day_is_outdoor[offset]:
-                    continue
-                # Respect finger gap (extended by D83 recovery multiplier)
-                if finger_day_offsets and any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
-                    continue
-                # Try to place in an empty complementary slot first
-                if day_sessions[offset]:
-                    # Check if we can replace a non-primary session
-                    for i, entry in enumerate(day_sessions[offset]):
-                        sid_meta = _SESSION_META.get(entry.get("session_id", ""), {})
-                        if not _is_primary_session(sid_meta) and not sid_meta.get("finger"):
-                            # Replace this complementary session
-                            day_avail = normalized[day_keys[offset]]
-                            for fm_sid, fm_meta in fm_candidates:
-                                if fm_meta is None:
-                                    continue
-                                result = _find_best_slot(day_avail, fm_meta, locations, prefer_evening=False,
-                                                         home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
-                                if result:
-                                    slot, slot_info = result
-                                    fm_entry = _make_session_entry(
-                                        slot, fm_sid, fm_meta, slot_info, locations,
-                                        phase_id, day_keys[offset],
-                                        default_gym_id, gyms or [], "pass2.5:pe_finger_maintenance",
-                                        home_equipment=home_equipment,
-                                    )
-                                    day_sessions[offset][i] = fm_entry
-                                    finger_day_offsets.append(offset)
-                                    fm_placed = True
-                                    break
-                            break
-                else:
-                    # Empty day — place directly
-                    day_avail = normalized[day_keys[offset]]
-                    for fm_sid, fm_meta in fm_candidates:
-                        if fm_meta is None:
-                            continue
-                        result = _find_best_slot(day_avail, fm_meta, locations, prefer_evening=False,
-                                                 home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
-                        if result:
-                            slot, slot_info = result
-                            fm_entry = _make_session_entry(
-                                slot, fm_sid, fm_meta, slot_info, locations,
-                                phase_id, day_keys[offset],
-                                default_gym_id, gyms or [], "pass2.5:pe_finger_maintenance",
-                                home_equipment=home_equipment,
-                            )
-                            day_sessions[offset].append(fm_entry)
-                            finger_day_offsets.append(offset)
-                            days_with_sessions += 1
-                            fm_placed = True
-                            break
+            _fm_placed = _place_quality_floor(
+                candidates=_fc,
+                tag="finger",
+                pass_label="pass2.5:finger_floor",
+            )
+            if not _fm_placed:
+                logger.warning(
+                    "unmet stimulus: finger (weight %.3f) could not be placed in week %s "
+                    "(phase %s) without breaching the hard-day cap or the recovery gaps",
+                    _finger_weight, start_date, phase_id,
+                )
+                _unmet_floor.append({
+                    "stimulus": "finger_strength",
+                    "phase_id": phase_id,
+                    "weight": round(_finger_weight, 3),
+                    "reason": (
+                        "no session training the fingers could be placed without breaching "
+                        "the hard-day cap, the recovery gaps or the available slots"
+                    ),
+                })
 
     # ── PASS 2.6 (B308): guarantee a weekly pulling stimulus ──
     #
@@ -1804,7 +1912,7 @@ def generate_phase_week(
         # the normal case. Reported rather than swallowed — an undelivered
         # "guaranteed" stimulus that fails silently is the exact bug class D263
         # took months to surface.
-        "unmet_stimulus": unmet_stimulus,
+        "unmet_stimulus": unmet_stimulus + _unmet_floor,
     }
 
     if phase_id == "deload":
