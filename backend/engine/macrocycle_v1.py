@@ -863,6 +863,85 @@ def check_pretrip_deload(
     return None
 
 
+# ---------------------------------------------------------------------------
+# A281 — trip taper
+# ---------------------------------------------------------------------------
+#
+# Until A281 the only thing that happened before a trip was `compute_pretrip_dates`:
+# a 6-day window in which the planner refused to place hard/max sessions. That
+# is the OPPOSITE of what the evidence says. Bosquet et al. 2007 (meta-analysis,
+# Med Sci Sports Exerc, 27 of 182 studies): an effective taper cuts VOLUME by
+# 41-60% while holding intensity and frequency constant (ES 0.72 ± 0.36 for the
+# 41-60% band). Dropping the intensity is how you arrive rested and detrained.
+#
+# So the taper is now two separate things:
+#
+#   * a VOLUME ramp over the two weeks before departure — the part with the
+#     evidence behind it;
+#   * a much shorter NO-HARD window immediately before the flight — the part
+#     the old code was really about, kept because Bosquet studied endurance
+#     athletes peaking for a race-day, not climbers about to spend two weeks
+#     on rock. Loading the fingers maximally 48h before travelling is a
+#     tendon risk the meta-analysis has nothing to say about.
+#
+# Decision (Daniele, 2026-09-05): keep both, and shorten the no-hard window
+# from 6 days to 3.
+TAPER_TOTAL_DAYS = 14          # two weeks, per Bosquet
+TAPER_WEEK1_VOLUME = 0.6       # days T-14..T-8  → -40% volume
+TAPER_WEEK2_VOLUME = 0.4       # days T-7..T-1   → -60% volume
+TAPER_NO_HARD_DAYS = 3         # T-2..T inclusive: no hard/max sessions
+
+
+def compute_taper_windows(
+    trips: List[Dict[str, Any]],
+    week_start: str,
+    week_end: str,
+) -> Dict[str, Any]:
+    """Taper information for the dates of one week.
+
+    Returns ``{"volume": {date: multiplier}, "no_hard": [dates]}``.
+
+    ``volume`` scales the number of SETS of training work (never warmup,
+    cooldown, prehab or test protocols — see ``week.py::_apply_taper_volume``).
+    Intensity and the number of training days are deliberately untouched: that
+    is the whole point of a taper.
+
+    When two trips overlap the same date the STRONGER taper wins (the lower
+    multiplier), because the athlete is tapering for the nearer one.
+    """
+    w_start = datetime.strptime(week_start, "%Y-%m-%d").date()
+    w_end = datetime.strptime(week_end, "%Y-%m-%d").date()
+
+    volume: Dict[str, float] = {}
+    no_hard: set = set()
+
+    for trip in (trips or []):
+        t_start_str = trip.get("start_date")
+        if not t_start_str:
+            continue
+        try:
+            t_start = datetime.strptime(t_start_str, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            continue
+
+        # Volume ramp: [T-14, T-1]. The trip day itself is not "training".
+        d = max(t_start - timedelta(days=TAPER_TOTAL_DAYS), w_start)
+        while d <= min(t_start - timedelta(days=1), w_end):
+            days_out = (t_start - d).days
+            mult = TAPER_WEEK2_VOLUME if days_out <= 7 else TAPER_WEEK1_VOLUME
+            key = d.isoformat()
+            volume[key] = min(volume.get(key, 1.0), mult)
+            d += timedelta(days=1)
+
+        # No-hard window: the last TAPER_NO_HARD_DAYS dates ending on departure.
+        d = max(t_start - timedelta(days=TAPER_NO_HARD_DAYS - 1), w_start)
+        while d <= min(t_start, w_end):
+            no_hard.add(d.isoformat())
+            d += timedelta(days=1)
+
+    return {"volume": volume, "no_hard": sorted(no_hard)}
+
+
 def compute_pretrip_dates(
     trips: List[Dict[str, Any]],
     week_start: str,
