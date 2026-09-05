@@ -39,6 +39,22 @@ def test_kb_states_the_engine_base_duration():
     assert int(match.group("boulder")) == _PHASE_FLOORS_BOULDER["base"]
 
 
+def test_kb_states_the_lead_base_default_not_just_the_floor():
+    # A284: the floor and the default parted ways (2 vs 4). The canonical line
+    # above carries the floor, which on its own would let the coach tell a lead
+    # athlete their base is 2 weeks — true only if they asked for it. The KB
+    # must state both numbers, or it misinforms in the common case.
+    from backend.engine.macrocycle_v1 import _BASE_DURATIONS_LEAD
+
+    text = PERIODIZATION.read_text(encoding="utf-8")
+    default = _BASE_DURATIONS_LEAD["base"]
+    assert f"default is still {default}" in text, (
+        f"01_periodization.md must state that the lead base default is "
+        f"{default} weeks, not only the floor — otherwise the coach reports "
+        f"the floor as if it were what every athlete gets"
+    )
+
+
 def test_no_kb_file_claims_a_six_week_base_floor():
     # The exact claims that made the coach contradict the user's own plan.
     forbidden = (

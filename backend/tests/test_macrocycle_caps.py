@@ -18,6 +18,7 @@ from backend.engine.macrocycle_v1 import (
     _PHASE_CAPS_BOULDER,
     _PHASE_FLOORS_LEAD,
     _PHASE_FLOORS_BOULDER,
+    _SURPLUS_PRIORITY_LEAD,
     _compute_phase_durations,
 )
 
@@ -57,8 +58,13 @@ class TestConstantsInvariants(unittest.TestCase):
     def test_boulder_min_is_8(self):
         self.assertEqual(_MIN_TOTAL_WEEKS_BOULDER, 8)
 
-    def test_lead_floors_sum_equals_min(self):
-        self.assertEqual(sum(_PHASE_FLOORS_LEAD.values()), _MIN_TOTAL_WEEKS_LEAD)
+    def test_lead_floors_sum_is_at_most_min(self):
+        # A284: the two used to be equal by construction. Since the base floor
+        # dropped from 4 to 2 they answer different questions — per-phase minima
+        # vs. the shortest lead cycle worth running (A218) — so the invariant is
+        # now an inequality. It still has to hold: a total_weeks the router
+        # accepts must always be distributable across the floors.
+        self.assertLessEqual(sum(_PHASE_FLOORS_LEAD.values()), _MIN_TOTAL_WEEKS_LEAD)
 
     def test_boulder_floors_sum_equals_min(self):
         self.assertEqual(sum(_PHASE_FLOORS_BOULDER.values()), _MIN_TOTAL_WEEKS_BOULDER)
@@ -67,9 +73,19 @@ class TestConstantsInvariants(unittest.TestCase):
         # Lead is engineered so caps saturate exactly at total=16.
         self.assertEqual(sum(_PHASE_CAPS_LEAD.values()), _MAX_TOTAL_WEEKS)
 
-    def test_lead_base_locked(self):
-        self.assertEqual(_PHASE_FLOORS_LEAD["base"], _PHASE_CAPS_LEAD["base"])
-        self.assertEqual(_PHASE_FLOORS_LEAD["base"], 4)
+    def test_lead_base_default_is_4_but_floor_is_2(self):
+        # A284 replaces the old `test_lead_base_locked`. Base is no longer
+        # floor==cap: the athlete can ask for a shorter one. What must NOT
+        # change is the default — every lead plan that does not ask for
+        # anything still gets 4 weeks of base.
+        self.assertEqual(_BASE_DURATIONS_LEAD["base"], 4)
+        self.assertEqual(_PHASE_CAPS_LEAD["base"], 4)
+        self.assertEqual(_PHASE_FLOORS_LEAD["base"], 2)
+
+    def test_base_stays_out_of_surplus_priority(self):
+        # Surplus weeks must never land on base, override or not — that is what
+        # keeps a longer cycle from silently inflating the base phase (A218).
+        self.assertNotIn("base", _SURPLUS_PRIORITY_LEAD)
 
     def test_lead_defaults_sum_12(self):
         self.assertEqual(sum(_BASE_DURATIONS_LEAD.values()), 12)
@@ -311,6 +327,114 @@ class TestDisciplineAlias(unittest.TestCase):
         d_lead = _compute_phase_durations(_profile(), 14, discipline="lead")
         d_ar = _compute_phase_durations(_profile(), 14, discipline="all_round")
         self.assertEqual(d_lead, d_ar)
+
+
+# ---------------------------------------------------------------------------
+# A284: explicit per-phase overrides
+# ---------------------------------------------------------------------------
+
+class TestPhaseOverrides(unittest.TestCase):
+    """A284. An override is the athlete overruling a default, within [floor, cap]."""
+
+    def test_no_override_changes_nothing(self):
+        # The whole point: existing plans must not move.
+        for total in range(_MIN_TOTAL_WEEKS_LEAD, _MAX_TOTAL_WEEKS + 1):
+            with self.subTest(total=total):
+                self.assertEqual(
+                    _compute_phase_durations(_profile(), total, discipline="lead"),
+                    _compute_phase_durations(_profile(), total, discipline="lead",
+                                             phase_overrides=None),
+                )
+
+    def test_base_2_gives_the_weeks_to_the_other_phases(self):
+        # Daniele's real case: 13 weeks, base cut to 2 on return from a trip.
+        d = _compute_phase_durations(_profile(), 13, discipline="lead",
+                                     phase_overrides={"base": 2})
+        self.assertEqual(d["base"], 2)
+        self.assertEqual(sum(d.values()), 13)
+        # The two freed weeks go where the surplus priority sends them, and
+        # strength_power must end up at its cap — that is the point of asking.
+        self.assertEqual(d["strength_power"], _PHASE_CAPS_LEAD["strength_power"])
+
+    def test_override_is_locked_against_surplus(self):
+        # Without the lock, surplus distribution would hand the weeks straight
+        # back and the athlete's choice would vanish silently.
+        # Pinning base to 2 caps the cycle at 14 (2 + 4 + 3 + 3 + 2), so only
+        # 11-14 are buildable — see test_pinned_base_lowers_the_max_cycle.
+        for total in range(_MIN_TOTAL_WEEKS_LEAD, 15):
+            with self.subTest(total=total):
+                d = _compute_phase_durations(_profile(), total, discipline="lead",
+                                             phase_overrides={"base": 2})
+                self.assertEqual(d["base"], 2)
+
+    def test_pinned_base_lowers_the_max_cycle_and_says_so(self):
+        # A 2-week base leaves 12 weeks of cap across the other phases, so 16 is
+        # no longer reachable. The error must name the override as the reason,
+        # not just report "scope at cap" from deep inside the distribution.
+        with self.assertRaises(ValueError) as ctx:
+            _compute_phase_durations(_profile(), 16, discipline="lead",
+                                     phase_overrides={"base": 2})
+        self.assertIn("phase_overrides", str(ctx.exception))
+
+    def test_weakness_shift_still_cannot_shrink_base_by_itself(self):
+        # The floor dropped to 2, but only an explicit override may use it.
+        # A finger-weak profile used to be a clean no-op and must stay one,
+        # otherwise every such athlete's plan changes on next regeneration.
+        weak = _profile(finger_strength=20, endurance=90,
+                        power_endurance=90, pulling_strength=90)
+        d = _compute_phase_durations(weak, 12, discipline="lead")
+        self.assertEqual(d["base"], 4)
+
+    def test_override_is_locked_against_weakness_shift(self):
+        # profile with endurance as the weakest axis → would normally extend base
+        weak = _profile(endurance=20, power_endurance=90,
+                        finger_strength=90, pulling_strength=90)
+        without = _compute_phase_durations(weak, 12, discipline="lead")
+        with_ovr = _compute_phase_durations(weak, 12, discipline="lead",
+                                            phase_overrides={"base": 2})
+        self.assertEqual(without["base"], 4)   # weakness shift cannot exceed the cap
+        self.assertEqual(with_ovr["base"], 2)  # override wins and holds
+
+    def test_override_below_floor_raises(self):
+        with self.assertRaises(ValueError):
+            _compute_phase_durations(_profile(), 13, discipline="lead",
+                                     phase_overrides={"base": 1})
+
+    def test_override_above_cap_raises(self):
+        with self.assertRaises(ValueError):
+            _compute_phase_durations(_profile(), 13, discipline="lead",
+                                     phase_overrides={"base": 5})
+
+    def test_override_of_unknown_phase_is_ignored(self):
+        d = _compute_phase_durations(_profile(), 13, discipline="lead",
+                                     phase_overrides={"not_a_phase": 3})
+        self.assertEqual(sum(d.values()), 13)
+
+    def test_bool_is_not_an_int_override(self):
+        # True == 1 in Python; silently accepting it would set base to 1 week.
+        with self.assertRaises(ValueError):
+            _compute_phase_durations(_profile(), 13, discipline="lead",
+                                     phase_overrides={"base": True})
+
+    def test_postcondition_holds_for_every_legal_override(self):
+        # Every (base, total) pair either builds a valid plan or refuses with a
+        # ValueError — never an assertion failure, never a silent wrong total.
+        others_cap = sum(v for p, v in _PHASE_CAPS_LEAD.items() if p != "base")
+        for base_weeks in range(_PHASE_FLOORS_LEAD["base"], _PHASE_CAPS_LEAD["base"] + 1):
+            for total in range(_MIN_TOTAL_WEEKS_LEAD, _MAX_TOTAL_WEEKS + 1):
+                with self.subTest(base=base_weeks, total=total):
+                    if total > base_weeks + others_cap:
+                        with self.assertRaises(ValueError):
+                            _compute_phase_durations(_profile(), total, discipline="lead",
+                                                     phase_overrides={"base": base_weeks})
+                        continue
+                    d = _compute_phase_durations(_profile(), total, discipline="lead",
+                                                 phase_overrides={"base": base_weeks})
+                    self.assertEqual(d["base"], base_weeks)
+                    self.assertEqual(sum(d.values()), total)
+                    for p, v in d.items():
+                        self.assertGreaterEqual(v, _PHASE_FLOORS_LEAD[p])
+                        self.assertLessEqual(v, _PHASE_CAPS_LEAD[p])
 
 
 if __name__ == "__main__":

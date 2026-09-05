@@ -42,7 +42,8 @@ The engine ships a Hörst 4-3-2-1 backbone with concurrent (DUP) elements within
 | **Deload** | 1 wk | Active recovery, easy climbing, mobility | Light prehab | "Adaptation happens here, not during the hard week." |
 
 **Phase floors as the engine actually implements them** (`macrocycle_v1.py`, `_PHASE_FLOORS_LEAD` / `_PHASE_FLOORS_BOULDER`):
-- **Base: 4 weeks (lead), 2 weeks (boulder).** For lead, floor == cap: 4 is fixed, surplus weeks never go to Base.
+- **Base: 2 weeks (lead), 2 weeks (boulder).** The lead **default is still 4**, and surplus weeks never go to Base — but since A284 the floor is 2, so an athlete can ask for a shorter Base explicitly via `planning_prefs.phase_weeks`. Unless they do, nothing changes: 4 weeks is what a lead cycle gets.
+  - **When a shorter Base is the right answer:** coming back from a climbing trip or a block of high outdoor volume. Volume, finger aerobic capacity and technique are then at their yearly peak, and the only decayed quality is maximal strength — so 4 weeks of Base spends the cycle rebuilding what the rock already built. Two weeks are enough for tendon reconditioning after time off the hangboard. The engine cannot detect this on its own (it does not read `outdoor_log`), so the athlete declares it.
 - Strength & Power ≥2 weeks, Power Endurance ≥2 (lead) / ≥1 (boulder), Performance ≥2, Deload 1.
 - Totals: lead 11-16 weeks, boulder 8-16, hard cap 16 (A-MACRO-CAPS).
 
