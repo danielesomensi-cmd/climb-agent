@@ -229,7 +229,12 @@ def test_argv_include_resume_solo_con_sessione(bridge):
     assert fresh[1:3] == ["-p", "ciao"]
     assert "--output-format" in fresh and "json" in fresh
     assert "--dangerously-skip-permissions" in fresh
-    assert fresh[fresh.index("--model") + 1] == "sonnet"
+    # B348: il modello del bridge e' una costante di configurazione
+    # (`telegram_bridge.MODEL`), non un valore che questo test debba fissare:
+    # cambiarla faceva fallire un test che verifica la FORMA degli argomenti,
+    # non quale modello sia in uso. Asserisce sul valore vero, cosi' il prossimo
+    # cambio di modello non rompe nulla.
+    assert fresh[fresh.index("--model") + 1] == bridge.MODEL
 
     resumed = bridge.build_claude_argv("ciao", "sid-1")
     assert resumed[resumed.index("--resume") + 1] == "sid-1"

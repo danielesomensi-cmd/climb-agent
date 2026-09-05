@@ -100,7 +100,7 @@ TYPING_INTERVAL_S = 4
 # silenzio ciò che gli scrivi — ma oltre questa soglia non vengono nemmeno
 # eseguiti a sorpresa: vengono elencati, e li rimandi tu se servono ancora.
 STALE_MESSAGE_S = 15 * 60
-MODEL = "sonnet"
+MODEL = "opus"
 
 TRANSCRIBE_TIMEOUT_S = 120
 VOICE_MAX_BYTES = 20 * 1024 * 1024  # limite di download della Bot API locale
