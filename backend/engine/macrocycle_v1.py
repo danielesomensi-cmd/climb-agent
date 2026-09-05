@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -252,13 +252,39 @@ _PHASE_CAPS_LEAD: Dict[str, int] = {
     "performance": 3, "deload": 2,
 }  # sum 16 (== _MAX_TOTAL_WEEKS)
 _PHASE_FLOORS_LEAD: Dict[str, int] = {
-    "base": 4, "strength_power": 2, "power_endurance": 2,
+    "base": 2, "strength_power": 2, "power_endurance": 2,
     "performance": 2, "deload": 1,
-}  # sum 11
+}  # sum 9 — deliberately BELOW _MIN_TOTAL_WEEKS_LEAD, see below
+
+# A284. Two different questions, two different floors:
+#   _PHASE_FLOORS_*  — the absolute minimum a phase may ever be. Validates
+#                      explicit athlete overrides, and backs the postcondition.
+#   _AUTO_FLOORS_*   — the minimum the engine will go down to ON ITS OWN, i.e.
+#                      through the weakness shift or shortfall reduction.
+# They differ only for lead `base`: an athlete may ask for 2, but the engine
+# must never take base below 4 by itself. Without this split, dropping the floor
+# to 2 would silently un-block the finger/pulling weakness shift — which is a
+# no-op today — and every lead athlete with weak fingers would get a different
+# plan on their next regeneration. That is precisely what this brief must not do.
+_AUTO_FLOORS_LEAD: Dict[str, int] = {**_PHASE_FLOORS_LEAD, "base": 4}
 _SURPLUS_PRIORITY_LEAD: Tuple[str, ...] = (
     "performance", "strength_power", "power_endurance", "deload",
 )
-# base is locked at 4 (floor==cap) and intentionally not in the priority list.
+# A284: `base` is no longer locked at 4 (it used to have floor==cap==4), but it
+# stays OUT of the priority list on purpose — surplus and shortfall must not
+# touch it. The default is still 4: the only way to get a shorter base is to ask
+# for it explicitly via `planning_prefs.phase_weeks`, so no existing plan moves.
+#
+# Why the floor dropped: 4 weeks is right for an athlete opening a cycle from
+# rest, and wrong for one coming back from a climbing trip, where volume, finger
+# aerobic capacity and technique are at their yearly peak and the only decayed
+# quality is maximal strength. The engine cannot tell the two apart — it does not
+# read `outdoor_log` (see A-DECLARED-VS-LOGGED-GRADE) — so the athlete says it.
+#
+# NOTE: the floors no longer sum to _MIN_TOTAL_WEEKS_LEAD, and that is
+# intentional. They answer different questions: the floors are per-phase minima,
+# _MIN_TOTAL_WEEKS_LEAD is a KB judgement about the shortest lead cycle worth
+# running (A218). Before A284 the two coincided by construction; now they don't.
 _MIN_TOTAL_WEEKS_LEAD = 11
 
 # Boulder
@@ -274,6 +300,8 @@ _PHASE_FLOORS_BOULDER: Dict[str, int] = {
     "base": 2, "strength_power": 2, "power_endurance": 1,
     "performance": 2, "deload": 1,
 }  # sum 8
+# Boulder base was never locked, so the two floors coincide (A284).
+_AUTO_FLOORS_BOULDER: Dict[str, int] = dict(_PHASE_FLOORS_BOULDER)
 _SURPLUS_PRIORITY_BOULDER: Tuple[str, ...] = (
     "performance", "strength_power", "power_endurance", "base", "deload",
 )
@@ -315,6 +343,7 @@ def _compute_phase_durations(
     discipline: str = "lead",
     *,
     phases: Optional[List[str]] = None,
+    phase_overrides: Optional[Dict[str, int]] = None,
 ) -> Dict[str, int]:
     """Allocate *total_weeks* across the phases listed in *phases*.
 
@@ -324,23 +353,34 @@ def _compute_phase_durations(
 
     Algorithm:
         1. Initialize at discipline defaults.
-        2. Apply ±1 weakness adjustment (clamped to floors and caps).
-        3. Distribute surplus / reduce shortfall against caps and floors.
+        2. Apply *phase_overrides* and LOCK those phases (A284).
+        3. Apply ±1 weakness adjustment (clamped to floors and caps).
+        4. Distribute surplus / reduce shortfall against caps and floors.
+
+    Args:
+        phase_overrides: A284. ``{phase_id: weeks}`` the athlete asked for
+            explicitly. Each value must sit within that phase's [floor, cap];
+            anything else raises. An overridden phase is **locked**: steps 3
+            and 4 will not move it, so what was asked for is what comes out.
+            Phases not listed behave exactly as before.
 
     Raises:
-        ValueError if *total_weeks* is outside the legal range for the scope.
+        ValueError if *total_weeks* is outside the legal range for the scope,
+        or if an override is out of its phase's [floor, cap] range.
     """
     is_boulder = discipline == "boulder"
     if is_boulder:
         defaults = _BASE_DURATIONS_BOULDER
         caps = _PHASE_CAPS_BOULDER
         floors = _PHASE_FLOORS_BOULDER
+        auto_floors = _AUTO_FLOORS_BOULDER
         priority = _SURPLUS_PRIORITY_BOULDER
         min_full = _MIN_TOTAL_WEEKS_BOULDER
     else:
         defaults = _BASE_DURATIONS_LEAD
         caps = _PHASE_CAPS_LEAD
         floors = _PHASE_FLOORS_LEAD
+        auto_floors = _AUTO_FLOORS_LEAD
         priority = _SURPLUS_PRIORITY_LEAD
         min_full = _MIN_TOTAL_WEEKS_LEAD
 
@@ -350,11 +390,29 @@ def _compute_phase_durations(
     if not phases:
         return {}
 
+    # ── 0. Validate overrides FIRST — they narrow the legal range below ──
+    overrides: Dict[str, int] = {}
+    for p, wanted in (phase_overrides or {}).items():
+        if p not in phases:
+            continue
+        if not isinstance(wanted, int) or isinstance(wanted, bool):
+            raise ValueError(f"phase_overrides[{p!r}] must be an int, got {wanted!r}")
+        if not (floors[p] <= wanted <= caps[p]):
+            raise ValueError(
+                f"phase_overrides[{p!r}] = {wanted} outside "
+                f"[{floors[p]}, {caps[p]}] for discipline={discipline}"
+            )
+        overrides[p] = wanted
+
     # ── 1. Range validation (defense in depth — routers also clamp) ──────
+    # A locked phase contributes its fixed size to both bounds, not its
+    # floor/cap: pinning base to 2 genuinely lowers the longest cycle that can
+    # be built, and the athlete deserves to hear that here rather than through
+    # a "scope at cap" further down.
     is_full_cycle = set(phases) == set(PHASE_ORDER)
-    scope_min = sum(floors[p] for p in phases)
-    scope_max = sum(caps[p] for p in phases)
-    full_min = min_full if is_full_cycle else scope_min
+    scope_min = sum(overrides.get(p, floors[p]) for p in phases)
+    scope_max = sum(overrides.get(p, caps[p]) for p in phases)
+    full_min = max(min_full, scope_min) if is_full_cycle else scope_min
     if total_weeks < full_min:
         raise ValueError(
             f"total_weeks {total_weeks} below minimum {full_min} for "
@@ -365,13 +423,22 @@ def _compute_phase_durations(
             f"total_weeks {total_weeks} exceeds max {_MAX_TOTAL_WEEKS}"
         )
     if total_weeks > scope_max:
+        _why = (f" (phase_overrides={overrides} pin {sum(overrides.values())} "
+                f"of those weeks)") if overrides else ""
         raise ValueError(
             f"total_weeks {total_weeks} exceeds scope cap sum {scope_max} "
-            f"for phases={phases}"
+            f"for phases={phases}{_why}"
         )
 
     # ── 2. Initialize at defaults (only for phases in scope) ─────────────
     durations = {p: defaults[p] for p in phases}
+
+    # ── 2b. Apply the overrides validated in step 0, and LOCK them ───────
+    # Locking matters because otherwise steps 3-4 would quietly hand back the
+    # weeks just removed, and the athlete would see the number they asked for
+    # silently ignored.
+    locked: Set[str] = set(overrides)
+    durations.update(overrides)
 
     # ── 3. Weakness adjustment (clamped — no silent self-cancel) ─────────
     weakest_axis, weakest_score = _find_weakest_axis(profile)
@@ -380,18 +447,19 @@ def _compute_phase_durations(
             and weakest_axis in _WEAKNESS_ADJUSTMENTS):
         ext, shr = _WEAKNESS_ADJUSTMENTS[weakest_axis]
         if (ext in durations and shr in durations
+                and ext not in locked and shr not in locked
                 and durations[ext] + 1 <= caps[ext]
-                and durations[shr] - 1 >= floors[shr]):
+                and durations[shr] - 1 >= auto_floors[shr]):
             durations[ext] += 1
             durations[shr] -= 1
-        # else: clean no-op (shift would violate floor or cap, OR phases
-        # outside scope). No silent absorption through any flex phase.
+        # else: clean no-op (shift would violate floor or cap, touch a locked
+        # phase, OR phases outside scope). No silent absorption anywhere.
 
     # ── 4. Surplus distribution OR shortfall reduction ───────────────────
     diff = total_weeks - sum(durations.values())
     if diff > 0:
         for p in priority:
-            if p not in durations:
+            if p not in durations or p in locked:
                 continue
             give = min(diff, caps[p] - durations[p])
             durations[p] += give
@@ -405,9 +473,9 @@ def _compute_phase_durations(
     elif diff < 0:
         shortfall = -diff
         for p in reversed(priority):
-            if p not in durations:
+            if p not in durations or p in locked:
                 continue
-            take = min(shortfall, durations[p] - floors[p])
+            take = min(shortfall, durations[p] - auto_floors[p])
             durations[p] -= take
             shortfall -= take
             if shortfall == 0:
@@ -662,6 +730,14 @@ def generate_macrocycle(
 
     goal_warnings = _validate_goal(goal)
     trips = user_state.get("trips") or []
+
+    # A284: per-phase week counts the athlete asked for explicitly. Read from
+    # user_state rather than added to the signature, so the four production
+    # call sites keep working untouched. Absent key → previous behaviour.
+    _phase_overrides = (user_state.get("planning_prefs") or {}).get("phase_weeks") or None
+    if _phase_overrides is not None and not isinstance(_phase_overrides, dict):
+        raise ValueError("planning_prefs.phase_weeks must be a dict of {phase_id: weeks}")
+
     start = datetime.strptime(start_date, "%Y-%m-%d").date()
     # Invariant: start_date must be a Monday
     if start.weekday() != 0:
@@ -695,11 +771,15 @@ def generate_macrocycle(
         durations = _compute_phase_durations(
             assessment_profile, remaining_weeks,
             discipline=discipline, phases=phases_to_gen,
+            phase_overrides=_phase_overrides,
         )
         current_week = weeks_used + 1
     else:
         kept_phases = []
-        durations = _compute_phase_durations(assessment_profile, total_weeks, discipline=discipline)
+        durations = _compute_phase_durations(
+            assessment_profile, total_weeks,
+            discipline=discipline, phase_overrides=_phase_overrides,
+        )
         phases_to_gen = list(PHASE_ORDER)
         current_week = 1
 
