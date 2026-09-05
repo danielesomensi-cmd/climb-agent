@@ -202,11 +202,22 @@ class TestPEFingerMaintenance:
         has_finger = any(sid.startswith("finger_maintenance") for sid in all_sids)
         assert has_finger, f"No finger_maintenance in PE week: {all_sids}"
 
-    def test_non_pe_week_unaffected(self):
-        """Non-PE phases should not have the forced finger maintenance injection."""
+    def test_floor_does_not_fire_below_the_weight_threshold(self):
+        """A282 rewrote this test's contract, deliberately.
+
+        It used to assert that the finger injection is POWER-ENDURANCE ONLY
+        (`test_non_pe_week_unaffected`). A282 made the guarantee a floor driven
+        by the phase's own domain weight instead: a quality the phase declares
+        it trains may not be absent from the week, whatever the phase is called.
+        A base phase weighting fingers at 0.2 therefore does get the floor.
+
+        What still must NOT happen is the floor firing when the phase barely
+        weights the quality — that is what this test now pins, with a weight
+        below `QUALITY_FLOOR_WEIGHT`.
+        """
         plan = generate_phase_week(
             phase_id="base",
-            domain_weights={"finger_strength": 0.2, "volume_climbing": 0.25},
+            domain_weights={"finger_strength": 0.05, "volume_climbing": 0.25},
             session_pool=["endurance_aerobic_gym", "technique_focus_gym", "prehab_maintenance", "flexibility_full"],
             start_date="2026-03-16",
             availability={
@@ -221,8 +232,7 @@ class TestPEFingerMaintenance:
         all_sids = [
             s["session_id"] for d in days for s in d["sessions"]
         ]
-        # Base phase may or may not have finger maintenance — the point is pass2.5 doesn't inject it
-        # We just verify no "pass2.5" in explain tags
+        # Below the threshold the floor must stay out of the way entirely.
         all_explains = [
             tag
             for d in days for s in d["sessions"]
