@@ -443,6 +443,33 @@ Reference values (from literature):
 
 Semantics for boulder exercises: when `grade_relative` and the exercise uses problems/attempts, `reps` = max attempts per problem. The user may stop earlier if quality drops.
 
+#### Taper fields (A281)
+
+Emitted when a trip is declared, on the two weeks before `trip.start_date`.
+
+| field | where | meaning |
+|-------|-------|---------|
+| `taper_volume_multiplier` | week-plan **day** | 0.6 (days T-14..T-8) or 0.4 (T-7..T-1). Absent = no taper. |
+| `pretrip_deload` | week-plan **day** | day inside the 3-day no-hard window (T-2..T). Pre-existing field, window narrowed from 6 days by A281. |
+| `taper_scaled_from` | resolved **prescription** | the catalog set count before scaling, so the reduction is auditable. |
+
+Constants live in `macrocycle_v1`: `TAPER_TOTAL_DAYS` 14, `TAPER_WEEK1_VOLUME`
+0.6, `TAPER_WEEK2_VOLUME` 0.4, `TAPER_NO_HARD_DAYS` 3.
+
+**What the taper scales, and what it must not.** Only `sets`, and only for
+exercises whose catalog `role` includes one of `main`, `accessory`,
+`conditioning`, `technique`. Loads, grades and intensity percentages are never
+touched — holding intensity while cutting volume *is* the taper (Bosquet et al.
+2007, Med Sci Sports Exerc: −41/−60% volume, intensity and frequency constant,
+ES 0.72 ± 0.36). Sets never fall below 1: frequency is the other thing a taper
+must hold. A test session is exempt as a whole — its protocol is fixed.
+
+Note the role check is an **allow-list**, deliberately: `max_hang_7s` carries
+`role: ["main", "test"]`, so a deny-list on `"test"` would have exempted max
+hangs from the taper everywhere — the one kind of work that most needs it.
+
+---
+
 #### `grade_scale` (emitted, render-only — B344)
 
 The whole-grade ladder above is shared by Font and French (`6a/6b/6c/7a` ≡

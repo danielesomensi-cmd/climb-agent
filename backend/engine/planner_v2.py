@@ -666,6 +666,7 @@ def generate_phase_week(
     recent_test_dates: Optional[Dict[str, str]] = None,
     prev_week_plan: Optional[Dict[str, Any]] = None,
     test_queue: Optional[List[Dict[str, Any]]] = None,
+    taper_volume: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -689,7 +690,14 @@ def generate_phase_week(
         default_gym_id: Default gym for gym sessions.
         gyms: List of gym dicts with equipment.
         intensity_cap: Phase intensity cap (overrides PHASE_INTENSITY_CAP if provided).
-        pretrip_dates: List of YYYY-MM-DD dates that are in pre-trip deload window.
+        pretrip_dates: YYYY-MM-DD dates on which no hard/max session may be
+            placed. A281 narrowed this from 6 days to 3 (see
+            ``macrocycle_v1.TAPER_NO_HARD_DAYS``) and made it enforced after
+            every pass instead of only PASS 1.
+        taper_volume: YYYY-MM-DD → set multiplier (<1.0) for the two weeks
+            before a trip. Stamped onto the day as ``taper_volume_multiplier``
+            and applied to the resolved prescription, never to the session
+            selection: intensity and training days stay untouched.
             Hard/max sessions are blocked on these dates.
 
     Returns:
@@ -1680,6 +1688,35 @@ def generate_phase_week(
                 "required": _required,
             })
 
+    # ── A281: no-hard sweep (closes B-PRETRIP-PASS1-ONLY) ──
+    #
+    # The pre-trip gate lived in PASS 1 only (`:953`), so every later pass could
+    # put a hard session back. Reproduced on Daniele's real state: PASS 2.6
+    # (`pulling_maintenance`) placed `finger_strength_home` — hard, intensity
+    # high — on 2026-08-18, a day the planner itself had flagged
+    # `pretrip_deload: True`, 48h before the flight to Kalymnos.
+    #
+    # Rather than repeat the check at each of the nine placement sites (there is
+    # no shared placement gate, and a tenth site would silently reopen the hole),
+    # this sweeps once after every pass. Trade-off recorded deliberately: it
+    # REMOVES rather than replaces, so a day can end up emptier than before. On
+    # at most three days immediately before departure that is the intended
+    # direction, and PASS 1 still places a non-hard session there when it can.
+    for offset in range(7):
+        if day_dates[offset] not in pretrip_set:
+            continue
+        kept = []
+        for session in day_sessions[offset]:
+            tags = session.get("tags") or {}
+            if tags.get("hard") or session.get("intensity") == "max":
+                logger.info(
+                    "A281 taper: dropped %s from %s (no-hard window before trip)",
+                    session.get("session_id"), day_dates[offset].isoformat(),
+                )
+                continue
+            kept.append(session)
+        day_sessions[offset] = kept
+
     # Build plan_days
     plan_days: List[Dict[str, Any]] = []
     for offset in range(7):
@@ -1692,6 +1729,13 @@ def generate_phase_week(
             day_entry["outdoor_slot"] = True
         if day_dates[offset] in pretrip_set:
             day_entry["pretrip_deload"] = True
+        # A281: the volume multiplier travels ON THE DAY rather than as a
+        # separate parameter, so `_auto_resolve` reads it straight off the plan
+        # it is already walking — and a week generated before A281 simply has no
+        # field, which means no scaling. No migration needed.
+        _tv = (taper_volume or {}).get(day_dates[offset].isoformat())
+        if _tv is not None and _tv < 1.0:
+            day_entry["taper_volume_multiplier"] = _tv
         if day_other_activities[offset]:
             # B276: emit the full per-slot list (no legacy scalar fields).
             day_entry["other_activities"] = day_other_activities[offset]

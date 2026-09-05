@@ -444,6 +444,9 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 # parsing exercises.json a second time.
                 "intensity_level": e.get("intensity_level"),
                 "domain": e.get("domain") or [],
+                # A281: the taper scales training sets only — `role` is what
+                # separates warmup/cooldown/prehab/test from the work itself.
+                "role": e.get("role") or [],
                 "loading_pin": "loading_pin" in (
                     (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
                 ),

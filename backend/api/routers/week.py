@@ -21,7 +21,7 @@ from backend.api.deps import (
     week_num_to_phase_context,
 )
 from backend.api.models import TestReminderResponse
-from backend.engine.macrocycle_v1 import compute_pretrip_dates
+from backend.engine.macrocycle_v1 import compute_pretrip_dates, compute_taper_windows
 from backend.engine.cues import get_session_cue
 from backend.engine.planner_v2 import (
     allowed_locations_for,
@@ -39,6 +39,64 @@ router = APIRouter(prefix="/api/week", tags=["week"])
 SESSIONS_DIR = "backend/catalog/sessions/v1"
 TEMPLATES_DIR = "backend/catalog/templates/v1"
 EXERCISES_PATH = "backend/catalog/exercises/v1/exercises.json"
+
+
+# A281: roles that ARE training volume, and therefore what a taper scales.
+#
+# Everything else — warmup, cooldown, prehab, activation, recovery — is left
+# alone: cutting the warmup during a high-intensity taper week is the opposite
+# of what it needs, and prehab is what keeps the athlete healthy while the hard
+# work continues.
+#
+# Note this is an allow-list, not a deny-list, and that matters: `max_hang_7s`
+# carries `role: ["main", "test"]`, so denying "test" would have exempted max
+# hangs from the taper entirely — precisely the work that most needs tapering.
+# A genuine TEST SESSION is excluded at the session level instead (its protocol
+# is fixed; scaling its sets would silently invalidate the measurement).
+_TAPER_TRAINING_ROLES = frozenset({"main", "accessory", "conditioning", "technique"})
+
+
+def _apply_taper_volume(resolved: dict, multiplier: float, *, is_test_session: bool = False) -> None:
+    """Scale the SETS of training work in a resolved session, in place.
+
+    Bosquet et al. 2007: the taper that works removes 41-60% of the volume and
+    leaves intensity and frequency alone. Sets are the only volume lever the
+    engine has — loads and grades come from the athlete's own baselines and are
+    deliberately untouched here.
+
+    Never drops below one set: a session that reaches zero sets is not a taper,
+    it is a missing session, and frequency is exactly what a taper must hold.
+
+    Idempotent by construction: `resolve_session` rebuilds every instance from
+    the catalog on each call, so this always scales the catalog value and never
+    compounds on an already-scaled one.
+    """
+    if is_test_session:
+        return
+
+    from backend.engine.progression_v1 import _load_catalog_cache
+
+    catalog = _load_catalog_cache()
+    for inst in (resolved or {}).get("resolved_session", {}).get("exercise_instances", []):
+        if inst.get("source") == "user_added":
+            continue  # the athlete put it there on purpose
+        entry = catalog.get(str(inst.get("exercise_id") or "")) or {}
+        roles = entry.get("role") or []
+        if isinstance(roles, str):
+            roles = [roles]
+        # Unknown exercise (no catalog entry) → treat as training work: a
+        # session is tapered as a whole, and silently skipping an unrecognised
+        # exercise would leave a full-volume block inside a taper week.
+        if roles and not (set(roles) & _TAPER_TRAINING_ROLES):
+            continue
+        prescription = inst.get("prescription")
+        if not isinstance(prescription, dict):
+            continue
+        sets = prescription.get("sets")
+        if not isinstance(sets, int) or sets <= 1:
+            continue
+        prescription["sets"] = max(1, round(sets * multiplier))
+        prescription["taper_scaled_from"] = sets
 
 
 def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, phase: Optional[str] = None) -> None:
@@ -113,6 +171,19 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                     if user_added:
                         rs = resolved.get("resolved_session", {})
                         rs.setdefault("exercise_instances", []).extend(user_added)
+                    # A281: taper the volume of the session we just resolved.
+                    # Safe here because this loop already skips done/skipped and
+                    # user-edited sessions, so a past or hand-edited session is
+                    # never touched — the immutability pillar holds without any
+                    # extra guard.
+                    _taper_mult = day_entry.get("taper_volume_multiplier")
+                    if isinstance(_taper_mult, (int, float)) and 0 < _taper_mult < 1:
+                        _apply_taper_volume(
+                            resolved,
+                            float(_taper_mult),
+                            is_test_session=bool((session_entry.get("tags") or {}).get("test"))
+                            or session_id.startswith("test_"),
+                        )
                     session_entry["resolved"] = resolved
                     # A stale marker would keep an error banner up forever.
                     session_entry.pop("resolve_error", None)
@@ -370,12 +441,18 @@ def get_week(
             week_plan = None
 
     if week_plan is None:
-        # Compute pre-trip deload dates for this week (5 days before + trip start day)
+        # A281: the taper replaces the old 6-day "no hard sessions" window with
+        # two things — a 2-week VOLUME ramp (Bosquet 2007: -41/-60% volume,
+        # intensity and frequency held) and a 3-day no-hard window right before
+        # departure. `compute_pretrip_dates` is left alone: it still serves
+        # `check_pretrip_deload` and the macrocycle phase annotation.
         week_start = ctx["start_date"]
         week_end_date = datetime.strptime(week_start, "%Y-%m-%d").date() + timedelta(days=6)
-        pretrip_dates = compute_pretrip_dates(
+        _taper = compute_taper_windows(
             state.get("trips", []), week_start, week_end_date.isoformat()
         )
+        pretrip_dates = _taper["no_hard"]
+        taper_volume = _taper["volume"]
 
         # B114: resolve preserve_before — default to today for current week
         today_str = datetime.now().strftime("%Y-%m-%d") if is_current_week else None
@@ -477,6 +554,7 @@ def get_week(
                 # two concordant feedbacks on a max hang. Before this it was
                 # read only by the legacy planner_v1, which nothing imports.
                 test_queue=state.get("test_queue"),
+                taper_volume=taper_volume if taper_volume else None,
             )
         except Exception as e:
             logger.error("Week generation failed: %s", e, exc_info=True)
