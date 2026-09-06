@@ -63,7 +63,13 @@ export default function SettingsPage() {
   const invalidateWeek = useCallback(() => {
     qc.invalidateQueries({ queryKey: queryKeys.weekAll });
   }, [qc]);
-  const { status: subStatus, isActive: subActive, isTrialing, trialDaysRemaining } = useSubscription();
+  const {
+    status: subStatus,
+    isActive: subActive,
+    isTrialing,
+    trialDaysRemaining,
+    enforced: subEnforced,
+  } = useSubscription();
   const [portalLoading, setPortalLoading] = useState(false);
 
   const [regeneratingMacro, setRegeneratingMacro] = useState(false);
@@ -794,7 +800,12 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Status</span>
                   <span className="font-medium capitalize">
-                    {subStatus === "trialing"
+                    {/* A285: while billing is paused the server reports
+                        everyone as `active`. Saying "Active" here would claim
+                        a subscription that does not exist. */}
+                    {!subEnforced
+                      ? "Free"
+                      : subStatus === "trialing"
                       ? `Trial${trialDaysRemaining != null ? ` (${trialDaysRemaining}d left)` : ""}`
                       : subStatus === "active"
                         ? "Active"
@@ -809,7 +820,15 @@ export default function SettingsPage() {
                                 : "—"}
                   </span>
                 </div>
-                {!subActive ? (
+                {!subEnforced ? (
+                  /* A285: neither button belongs here during the pause —
+                     "Subscribe" would ask for money nobody owes, and "Manage"
+                     opens a portal that 404s without a Stripe customer. */
+                  <p className="text-xs text-muted-foreground">
+                    Billing is paused — the app is free for everyone right now.
+                    Nothing to pay, nothing to manage.
+                  </p>
+                ) : !subActive ? (
                   <Button
                     variant="default"
                     size="sm"

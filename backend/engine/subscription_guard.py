@@ -1,6 +1,7 @@
 """Subscription guard — check and enforce Stripe subscription status.
 
 Design:
+- If SUBSCRIPTION_ENFORCED=0 → bypass all checks (A285, billing paused).
 - If STRIPE_SECRET_KEY is not set → bypass all checks (dev/test mode).
 - If STORAGE_BACKEND != 'supabase' → bypass (pytest uses file backend).
 - If no subscription row in DB + Stripe configured → deny (fail-closed).
@@ -16,6 +17,13 @@ from typing import Any, Dict, Optional
 
 _STRIPE_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
 _STORAGE_BACKEND = os.environ.get("STORAGE_BACKEND", "file")
+
+# A285: billing pause switch. Same shape as RATE_LIMIT_ENABLED (rate_limit.py):
+# default ON, and ONLY the literal "0" turns it off — a missing, empty or
+# misspelled value leaves the paywall standing. Read at import time like its
+# two siblings above, so flipping it needs a restart (on Railway, changing the
+# variable redeploys anyway).
+_SUBSCRIPTION_ENFORCED = os.environ.get("SUBSCRIPTION_ENFORCED", "1") != "0"
 
 
 def _load_bypass_user_ids() -> set[str]:
@@ -149,6 +157,14 @@ def start_trial_if_new(user_id: str) -> bool:
     user who re-onboards keeps their consumed/canceled trial — A232 one trial
     per user, ever). Returns True only when a fresh trial row was created.
     """
+    # A285: with billing paused, a trial grants nothing — access is already
+    # free. Starting one anyway would burn the user's single lifetime trial
+    # (A232) on 15 days they never spent behind a paywall, and they would find
+    # the wall the day enforcement comes back: exactly the TRIAL-LOCKOUT shape
+    # B331 had to repair by hand. No row means their first checkout after the
+    # pause still gets the full 15 days (subscription.py trial_already_used).
+    if not _SUBSCRIPTION_ENFORCED:
+        return False
     if not _stripe_enabled() or not _supabase_enabled():
         return False  # dev/test: guard bypasses anyway
     if get_subscription_row(user_id) is not None:
@@ -209,13 +225,19 @@ def check_subscription(user_id: Optional[str]) -> Dict[str, Any]:
         trial_days_remaining int|None — days left if trialing
         can_interact         bool — same as is_active
         has_payment_method   bool — card on file (A232; synced by webhooks)
+        enforced             bool — A285: is the paywall switched on at all?
+                             Lets a caller tell "active because they pay" from
+                             "active because billing is paused" — the two are
+                             indistinguishable from the other fields.
 
-    Bypass cases (returns ALLOW_ALL) — only when Stripe is NOT configured:
+    Bypass cases (returns ALLOW_ALL):
+    - SUBSCRIPTION_ENFORCED=0 (A285, billing paused — the only bypass that
+      applies with Stripe fully configured in production)
     - Stripe not configured (dev/test)
     - STORAGE_BACKEND != 'supabase' (pytest)
     - user_id is None *in that same dev/test configuration only*
 
-    Fail-closed (returns DENY_ALL) — when Stripe IS configured:
+    Fail-closed (returns DENY_ALL) — when Stripe IS configured and enforced:
     - No subscription row in DB → user must subscribe
     - user_id is None → anonymous request (B285/SEC-2). Previously this
       fell through to ALLOW_ALL, letting unauthenticated traffic past every
@@ -223,6 +245,20 @@ def check_subscription(user_id: Optional[str]) -> Dict[str, Any]:
       runs before any persistence. deps.get_user_id now 401s first; this is
       defense in depth for any non-HTTP caller.
     """
+    result = _check_entitlement(user_id)
+    result["enforced"] = _SUBSCRIPTION_ENFORCED
+    return result
+
+
+def _check_entitlement(user_id: Optional[str]) -> Dict[str, Any]:
+    """Entitlement decision, without the A285 `enforced` annotation."""
+    # A285: billing paused — everyone is entitled, and no DB read is needed to
+    # know it. Deliberately ahead of the user_id check: the anonymous DENY of
+    # B285/SEC-2 is about authentication, which get_user_id already enforces
+    # with a 401 before this runs.
+    if not _SUBSCRIPTION_ENFORCED:
+        return _ALLOW_ALL.copy()
+
     if not _stripe_enabled() or not _supabase_enabled():
         return _ALLOW_ALL.copy()
 

@@ -12,6 +12,18 @@ export type UseSubscriptionResult = {
   trialDaysRemaining: number | null;
   canInteract: boolean;
   hasPaymentMethod: boolean;
+  /**
+   * A285 — false only while billing is paused server-side.
+   *
+   * Everything else here says "you may train"; this says *why*. Without it a
+   * paused user looks exactly like a paying one, and Settings would offer them
+   * a billing portal that 404s (no Stripe customer behind the row).
+   *
+   * Defaults to true everywhere it is unknown — including _DENY, an older
+   * backend that omits the field, and the pre-answer loading state — so the
+   * paused UI only ever appears on an explicit server `false`.
+   */
+  enforced: boolean;
   loading: boolean;
 };
 
@@ -22,6 +34,7 @@ const _ALLOW: UseSubscriptionResult = {
   trialDaysRemaining: null,
   canInteract: true,
   hasPaymentMethod: true,
+  enforced: true,
   loading: false,
 };
 
@@ -32,6 +45,7 @@ const _DENY: UseSubscriptionResult = {
   trialDaysRemaining: null,
   canInteract: false,
   hasPaymentMethod: false,
+  enforced: true,
   loading: false,
 };
 
@@ -43,6 +57,7 @@ function mapResponse(data: SubscriptionStatus): UseSubscriptionResult {
     trialDaysRemaining: data.trial_days_remaining,
     canInteract: data.can_interact,
     hasPaymentMethod: data.has_payment_method ?? false,
+    enforced: data.enforced ?? true,
     loading: false,
   };
 }

@@ -9,6 +9,7 @@ import { PaywallHero } from "@/components/paywall/PaywallHero";
 import { ValueBullets } from "@/components/paywall/ValueBullets";
 import { TierCard } from "@/components/paywall/TierCard";
 import { PaywallFAQ } from "@/components/paywall/PaywallFAQ";
+import { useSubscription } from "@/lib/hooks/use-subscription";
 import { createCheckoutSession } from "@/lib/api";
 import { captureUtmOnMount, trackEvent } from "@/lib/analytics";
 import { foundingBadgeCopy } from "@/config/founding";
@@ -23,6 +24,11 @@ export function SubscribeContent() {
   const isPreview = searchParams?.get("preview") === "1";
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // A285 — `enforced` defaults to true (and stays true while loading), so the
+  // notice appears only on an explicit server "billing is paused".
+  const { enforced, loading: subLoading } = useSubscription();
+  const billingPaused = !subLoading && !enforced;
 
   const tiersRef = useRef<HTMLDivElement>(null);
   const scrolledEventFired = useRef(false);
@@ -102,6 +108,23 @@ export function SubscribeContent() {
   return (
     <>
       <TopBar title="Subscribe" />
+
+      {/* A285: no CTA leads here while billing is paused, but the URL still
+          works and checkout is still live. Taking someone's money for what
+          everyone else has for free is the one outcome worth spending ten
+          lines to avoid — so say it plainly, above the prices. The tiers stay
+          reachable: whoever still wants to subscribe may. */}
+      {billingPaused && (
+        <div className="mx-auto mt-4 max-w-md px-6">
+          <div className="rounded-lg border border-border bg-primary/5 px-4 py-3 text-sm">
+            <p className="font-medium">The app is free right now.</p>
+            <p className="mt-1 text-muted-foreground">
+              Billing is paused for everyone — you have full access without
+              subscribing. Nothing below is needed.
+            </p>
+          </div>
+        </div>
+      )}
 
       <PaywallHero />
 
