@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# DEPRECATO 2026-09-06: il bridge di @Climbagent_bot ora è ~/Projects/cc-bridge
+# (bots/climb.toml, launchd com.daniele.bridge-climb), che usa gli stessi file di
+# stato di questo script (.claude_bridge_session, _outbox, _inbox) e lo stesso
+# .env. Questo file resta per storico e per i test A276; non viene più eseguito.
+# Gestione: ~/Projects/cc-bridge/bin/bots.sh status|restart climb|logs climb
 """Telegram → Claude Code bridge (A276) — strumento personale, locale.
 
 Pilota una sessione Claude Code persistente sul repo climb-agent da Telegram,
