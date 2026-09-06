@@ -35,6 +35,15 @@ guard stays deployed, and both plans stay purchasable. What stopped is the *acqu
 not the product. Build for the athlete using it; growth work is out of scope unless Daniele
 reopens it.
 
+**Billing can be paused without dismantling any of that (A285, 2026-09-06).** Setting
+`SUBSCRIPTION_ENFORCED=0` on Railway makes the app free for everyone — the guard returns
+ALLOW_ALL before reading the DB, no subscription row is touched, Stripe and its webhooks keep
+working, and the trial stops being handed out so nobody burns their single lifetime trial (A232)
+on a pause. Turning it back on is the same variable. **The code alone changes nothing**: check the
+live Railway variable to know which mode production is actually in. Context for why it exists: on
+2026-09-06 every one of the 18 subscription rows was in a blocking state (13 trials expired by
+28/08, 3 `pending_checkout`, 2 `canceled`), so anyone outside `BYPASS_USER_IDS` was walled out.
+
 **Funnel (audit `docs/audit/D274_gtm_cohort_audit.md`, 2026-08-10):** 20 accounts ever, of which
 **11 are real external users** (the rest: the author, 3 of his test accounts, 4 beta testers, 1
 orphan row). Of those 11 — **11 completed the 12-step wizard and generated a macrocycle, 1 ever

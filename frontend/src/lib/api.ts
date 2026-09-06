@@ -996,6 +996,11 @@ export type SubscriptionStatus = {
   trial_days_remaining: number | null;
   can_interact: boolean;
   has_payment_method?: boolean; // A232: card on file (synced by Stripe webhooks)
+  // A285: is the paywall switched on at all? When billing is paused the server
+  // reports everyone as `active`, which is indistinguishable from a real
+  // subscriber on the fields above — this is how the UI tells them apart.
+  // Optional: an older backend simply omits it, and undefined reads as enforced.
+  enforced?: boolean;
 };
 
 export const getSubscriptionStatus = () =>
