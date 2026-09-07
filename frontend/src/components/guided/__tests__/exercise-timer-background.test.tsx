@@ -200,3 +200,70 @@ describe("B332 — guided timer never advances the counter unattended", () => {
     expect(screen.getAllByText(/TIME UP/i).length).toBeGreaterThan(0);
   });
 });
+
+/**
+ * B350 — reported from production (2026-09-06): a Side Plank 2 x 30 s sat on
+ * "REST OVER / Tap to continue" for 19 s. On a timed exercise the clock IS the
+ * exercise, so a tap per set defeats the timer. The rest now restarts the work
+ * on its own — but only in the two cases B332 left safe.
+ */
+describe("B350 — a rest before timed work restarts on its own", () => {
+  /** Plank shape: 30 s work, 30 s rest, 3 sets. */
+  const PLANK = {
+    workSeconds: 30,
+    restBetweenRepsSeconds: 0,
+    restBetweenSetsSeconds: 30,
+    sets: 3,
+    reps: 1,
+  };
+
+  it("starts the next timed set hands-free when the rest ends under our eyes", async () => {
+    const onSetChange = vi.fn();
+    render(<ExerciseTimer {...PLANK} onSetChange={onSetChange} />);
+
+    await click(/start/i);
+    // get_ready (5 s) + work (30 s) → set 1 done, rest starts.
+    await advance(36_000);
+    expect(onSetChange).toHaveBeenCalledWith(1);
+
+    // The 30 s rest runs out with the app in the foreground.
+    await advance(31_000);
+
+    // No tap: the counter moved on and the work phase is running again.
+    expect(counter()).toContain("Set 2 / 3");
+    expect(screen.queryAllByText(/REST OVER/i)).toHaveLength(0);
+  });
+
+  it("still holds when the rest expired while the app was away", async () => {
+    const onSetChange = vi.fn();
+    render(<ExerciseTimer {...PLANK} onSetChange={onSetChange} />);
+
+    await click(/start/i);
+    await advance(36_000);
+    expect(counter()).toContain("Set 1 / 3");
+
+    // Away during the rest — nobody watched it end.
+    background(10 * 60_000);
+    await tick();
+
+    expect(counter()).toContain("Set 1 / 3");
+    expect(screen.getAllByText(/REST OVER/i).length).toBeGreaterThan(0);
+    // Set 1 only: the unattended rest wrote nothing.
+    expect(onSetChange).toHaveBeenCalledTimes(1);
+  });
+
+  it("still waits for the tap on a rep-based exercise", async () => {
+    // Only the athlete knows when a rep-based set is done, so the rest that
+    // follows one must not start it for them.
+    render(<ExerciseTimer {...BOULDER} restBetweenSetsSeconds={30} />);
+
+    await click(/start/i);
+    await click(/done set/i);
+
+    // The 30 s rest runs out live — and still holds.
+    await advance(31_000);
+
+    expect(counter()).toContain("Set 1 / 4");
+    expect(screen.getAllByText(/REST OVER/i).length).toBeGreaterThan(0);
+  });
+});

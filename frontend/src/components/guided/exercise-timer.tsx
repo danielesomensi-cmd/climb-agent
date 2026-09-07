@@ -251,23 +251,27 @@ function ExerciseTimerImpl({
       if (remainingMs <= 0) {
         // --- Phase transition ---
 
-        // B332 — two expiries never advance the counter on their own, they
-        // hold and count up until the athlete taps (same contract as the
-        // session-builder rest timer):
+        // B332 — expiries that hold and count up until the athlete taps,
+        // instead of advancing the counter on their behalf. Auto-advancing on a
+        // suspended timer is what moved the counter while the app was
+        // backgrounded, so a set nobody climbed reached `completedSets` on the
+        // next "Done set". B350 narrowed the rest case: see below.
+        // B350 — a rest before TIMED work no longer waits for a tap when it
+        // ends under our eyes: for a plank or a hangboard hang the clock IS the
+        // exercise, and tapping to restart every set defeats the timer. Two
+        // holds survive, and they are exactly the ones B332 needed:
         //
-        //   * ANY rest. The clock knows the rest is over; only the athlete
-        //     knows whether they are back on the wall. Auto-advancing here is
-        //     what moved the counter while the app was backgrounded, so a set
-        //     nobody climbed reached `completedSets` on the next "Done set".
-        //   * A timed WORK phase that expired while the timer was suspended,
-        //     i.e. nobody watched it end — completing that set would write work
-        //     that never happened straight through onSetChange. A work phase
-        //     that expires under our eyes still auto-advances, so hands-free
-        //     timed circuits keep flowing.
-        const workExpiredUnwatched =
-          phase === "work" && remainingMs < -RESUME_GAP_MS;
+        //   * rep-based work (`isManual`) — the clock cannot know when the set
+        //     is done, so only the athlete can start the rest's successor;
+        //   * any phase that expired while the timer was suspended — nobody
+        //     watched it end, so auto-advancing would write work that never
+        //     happened straight through onSetChange.
+        const expiredUnwatched = remainingMs < -RESUME_GAP_MS;
+        const isRestPhase = phase === "rep_rest" || phase === "set_rest";
+        const restNeedsTap = isRestPhase && (isManual || expiredUnwatched);
+        const workExpiredUnwatched = phase === "work" && expiredUnwatched;
 
-        if (phase === "rep_rest" || phase === "set_rest" || workExpiredUnwatched) {
+        if (restNeedsTap || workExpiredUnwatched) {
           const elapsed = Math.floor(-remainingMs / 1000);
           setOverdue(true);
           setSecondsLeft(0);
@@ -336,8 +340,27 @@ function ExerciseTimerImpl({
           return;
         }
 
-        // B332: rep_rest / set_rest no longer reach here — they hold above and
-        // advance only through handleRestDone(), on the athlete's tap.
+        // B350: a rest that ends under our eyes before TIMED work advances on
+        // its own. Rep-based work and unwatched expiries held above, so
+        // `isManual` is false here and startCountdown always has a duration.
+        if (phase === "rep_rest") {
+          setCurrentRep((r) => Math.min(r + 1, reps)); // B332: never past the prescription
+          setPhase("work");
+          pendingVoiceCueRef.current = "work";
+          setTransitionId((id) => id + 1);
+          startCountdown(workSeconds);
+          return;
+        }
+
+        if (phase === "set_rest") {
+          setCurrentSet((s) => Math.min(s + 1, totalSets)); // B332: never past the prescription
+          setCurrentRep(1);
+          setPhase("work");
+          pendingVoiceCueRef.current = "work";
+          setTransitionId((id) => id + 1);
+          startCountdown(workSeconds);
+          return;
+        }
         setSecondsLeft(0);
         return;
       }

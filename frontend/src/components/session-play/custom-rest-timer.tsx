@@ -16,6 +16,15 @@ function formatMMSS(s: number): string {
   return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
+/**
+ * B350 — how far past the target a tick may land and still count as "observed
+ * live". The tick runs every 250 ms, so in the foreground the target is crossed
+ * within a second. Anything past this margin means the interval was suspended
+ * (screen off / PWA backgrounded) and the rest ended with nobody watching, so
+ * the athlete taps instead — same contract as the guided timer's RESUME_GAP_MS.
+ */
+const AUTO_ADVANCE_GRACE_S = 2;
+
 export type RestColor = "green" | "yellow" | "red";
 
 export function colorForRatio(ratio: number): RestColor {
@@ -29,6 +38,13 @@ interface CustomRestTimerProps {
   nextLabel: string;
   onComplete: () => void;
   onSkip: () => void;
+  /**
+   * B350: true when the next bout is TIMED work (a plank, a hang). Then the
+   * rest starts it on its own the moment it ends, because the clock is the
+   * exercise and a tap per set defeats the timer. Rep-based work leaves this
+   * false: only the athlete knows when that set is done.
+   */
+  autoAdvance?: boolean;
 }
 
 export function CustomRestTimer({
@@ -36,12 +52,19 @@ export function CustomRestTimer({
   nextLabel,
   onComplete,
   onSkip,
+  autoAdvance = false,
 }: CustomRestTimerProps) {
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef<number>(0);
   const reachedTargetRef = useRef(false);
   const lastBeepSecRef = useRef<number>(-1);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // The tick effect is keyed on targetSeconds alone, so it must read these
+  // through refs rather than closing over the render that started it.
+  const onCompleteRef = useRef(onComplete);
+  const autoAdvanceRef = useRef(autoAdvance);
+  useEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
+  useEffect(() => { autoAdvanceRef.current = autoAdvance; }, [autoAdvance]);
 
   useEffect(() => {
     // Best-effort unlock in case the user hadn't interacted yet since mount.
@@ -71,6 +94,14 @@ export function CustomRestTimer({
           (navigator as Navigator & { vibrate?: (p: number[]) => boolean }).vibrate?.([200, 100, 200]);
         } catch {
           /* noop */
+        }
+        // B350: hands-free only when the rest ended under our eyes.
+        if (
+          autoAdvanceRef.current &&
+          e - targetSeconds <= AUTO_ADVANCE_GRACE_S &&
+          document.visibilityState === "visible"
+        ) {
+          onCompleteRef.current();
         }
       }
     }, 250);
