@@ -30,7 +30,7 @@ function formatRest(seconds: number): string {
   return m > 0 ? (s > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${m}:00`) : `${s}s`;
 }
 
-function formatPrescription(ex: GuidedExercise): string[] {
+export function formatPrescription(ex: GuidedExercise): string[] {
   const lines: string[] = [];
   const p = ex.prescription;
 
@@ -55,6 +55,12 @@ function formatPrescription(ex: GuidedExercise): string[] {
     }
   } else if (p.sets && !p.reps && !p.workSeconds) {
     lines.push(`${p.sets} × max`);
+  }
+
+  // B351: side-alternating exercises run every set on both sides — say so
+  // before the timer starts, not only on the RIGHT/LEFT badge.
+  if (ex.altSides && lines.length > 0) {
+    lines[0] = `${lines[0]} per side`;
   }
 
   // Rest info
