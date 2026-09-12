@@ -7,12 +7,17 @@ week_archive, coach_messages.
 
 from __future__ import annotations
 
+import logging
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TypeVar
 
-from supabase import create_client
+import httpx
+from supabase import ClientOptions, create_client
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Client singleton
@@ -20,7 +25,70 @@ from supabase import create_client
 
 _url = os.environ.get("SUPABASE_URL", "")
 _key = os.environ.get("SUPABASE_SERVICE_KEY", "")
-_client = create_client(_url, _key) if _url and _key else None
+
+# B353: supabase-py builds its httpx client with http2=True. Uploading a large
+# user_state (~750 KB) to PostgREST over that connection died mid-body with
+# `httpcore.RemoteProtocolError: ConnectionTerminated` — an HTTP/2 GOAWAY while
+# waiting for outgoing flow-control window — so every PUT /api/state returned
+# 500 while small requests on the same process kept working. HTTP/1.1 has no
+# stream-level flow control to stall on; `retries` covers connect-level blips.
+_HTTP_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=60.0, pool=10.0)
+
+
+def _build_client(url: str, key: str):
+    return create_client(
+        url,
+        key,
+        options=ClientOptions(
+            httpx_client=httpx.Client(
+                http2=False,
+                timeout=_HTTP_TIMEOUT,
+                transport=httpx.HTTPTransport(retries=2),
+            ),
+        ),
+    )
+
+
+_client = _build_client(_url, _key) if _url and _key else None
+
+# Transport-level failures worth a second attempt: the connection died, not the
+# request. A 4xx/5xx from PostgREST is NOT in here — that is an answer, and
+# retrying it would double-apply nothing but latency.
+_TRANSIENT_ERRORS = (
+    httpx.RemoteProtocolError,
+    httpx.ConnectError,
+    httpx.ReadError,
+    httpx.WriteError,
+    httpx.ReadTimeout,
+    httpx.WriteTimeout,
+    httpx.PoolTimeout,
+)
+
+_T = TypeVar("_T")
+
+
+def _retry(op: Callable[[], _T], *, what: str, attempts: int = 3) -> _T:
+    """Run *op*, retrying transient transport errors on a fresh client.
+
+    The client is rebuilt between attempts: a pooled connection that has
+    received a GOAWAY stays poisoned for every later request on it, which is
+    how a single failure turned into "the app cannot save any more".
+    """
+    global _client
+    for attempt in range(1, attempts + 1):
+        try:
+            return op()
+        except _TRANSIENT_ERRORS as exc:
+            if attempt == attempts:
+                raise
+            logger.warning(
+                "B353: transient %s on %s (attempt %d/%d) — rebuilding client and retrying",
+                type(exc).__name__, what, attempt, attempts,
+            )
+            if _url and _key:
+                _client = _build_client(_url, _key)
+            time.sleep(0.5 * attempt)
+    raise AssertionError("unreachable")
 
 
 def _sb():
@@ -92,7 +160,10 @@ def _require_user_id(user_id: Optional[str]) -> str:
 def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """Read user state from Supabase. Returns None if not found."""
     uid = _effective_uid(user_id)
-    r = _sb().table("users").select("state").eq("user_id", uid).execute()
+    r = _retry(
+        lambda: _sb().table("users").select("state").eq("user_id", uid).execute(),
+        what="read_state",
+    )
     if r.data:
         return r.data[0]["state"]
     return None
@@ -101,7 +172,10 @@ def read_state(user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
 def write_state(state: Dict[str, Any], user_id: Optional[str] = None) -> None:
     """Upsert user state into Supabase."""
     uid = _require_user_id(user_id)
-    _sb().table("users").upsert({"user_id": uid, "state": state}).execute()
+    _retry(
+        lambda: _sb().table("users").upsert({"user_id": uid, "state": state}).execute(),
+        what="write_state",
+    )
 
 
 def user_state_mtime(user_id: str) -> Optional[float]:
@@ -133,11 +207,14 @@ def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) 
     # on_conflict targets the (user_id, week_start) unique constraint (not the
     # serial PK) so re-archiving the same week UPDATEs instead of violating the
     # unique key — same class of bug as outdoor_logs (B266).
-    result = _sb().table("week_archive").upsert({
-        "user_id": uid,
-        "week_start": week_start,
-        "plan": plan,
-    }, on_conflict="user_id,week_start").execute()
+    result = _retry(
+        lambda: _sb().table("week_archive").upsert({
+            "user_id": uid,
+            "week_start": week_start,
+            "plan": plan,
+        }, on_conflict="user_id,week_start").execute(),
+        what="archive_week",
+    )
     if not result.data:
         raise OSError(
             f"Supabase week_archive upsert returned empty data "
@@ -162,14 +239,17 @@ def archive_week(user_id: Optional[str], week_start: str, plan: Dict[str, Any]) 
 def read_archived_week(user_id: Optional[str], week_start: str) -> Optional[Dict[str, Any]]:
     """Read a single archived week plan, or None if absent."""
     uid = _effective_uid(user_id)
-    r = (
-        _sb()
-        .table("week_archive")
-        .select("plan")
-        .eq("user_id", uid)
-        .eq("week_start", week_start)
-        .limit(1)
-        .execute()
+    r = _retry(
+        lambda: (
+            _sb()
+            .table("week_archive")
+            .select("plan")
+            .eq("user_id", uid)
+            .eq("week_start", week_start)
+            .limit(1)
+            .execute()
+        ),
+        what="read_archived_week",
     )
     if r.data:
         return r.data[0]["plan"]
