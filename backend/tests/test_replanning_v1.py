@@ -63,7 +63,7 @@ def _finger_dates(plan):
     return dates
 
 
-def test_move_session_event_updates_target_slot_and_refills_origin():
+def test_move_session_event_updates_target_slot_and_leaves_origin_empty():
     plan = _plan_snapshot()
     moved_session_id = None
     source_day = next(d for d in plan["weeks"][0]["days"] if d["date"] == "2026-01-06")
@@ -92,7 +92,9 @@ def test_move_session_event_updates_target_slot_and_refills_origin():
     assert any(s["slot"] == "lunch" and s["session_id"] == moved_session_id for s in target_day["sessions"])
 
     origin_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == "2026-01-06")
-    assert any(s["slot"] == "morning" for s in origin_day["sessions"])
+    # B354: the vacated slot is rest, not a refill.
+    assert not any(s["slot"] == "morning" for s in origin_day["sessions"])
+    assert not any("deterministic refill" in (s.get("explain") or []) for d in updated["weeks"][0]["days"] for s in d.get("sessions") or [])
 
     assert _count_hard_days(updated) <= 3
     finger_days = _finger_dates(updated)

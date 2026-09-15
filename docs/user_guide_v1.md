@@ -319,6 +319,10 @@ You can modify a resolved session in several ways:
 
 From the **Today** or **Week** page, tap a session card's menu to add exercises. The system shows compatible exercises filtered by your equipment and the session's focus. The added exercise gets a prescription calculated from your current working loads.
 
+### Moving a Session
+
+On **Week** or **Today**, move a planned session to another day or slot. The slot you leave stays empty — it simply becomes rest; nothing is added in its place. The usual safety rules still apply where the session lands: if the move puts two finger-heavy days back to back, or goes over your weekly limit of hard days, the later session is swapped for an easy recovery session. Completed or skipped sessions cannot be moved.
+
 ### Removing an Exercise
 
 Expand a planned session card and tap the trash icon (🗑) next to any exercise to remove it. A confirmation dialog will appear. You cannot remove the last exercise — a session must always have at least one. Completed or skipped sessions cannot be modified.
