@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -371,18 +372,14 @@ export default function TestsPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/weaknesses")}
-        >
-          Back
-        </Button>
-        <div className="flex gap-2">
-          {/* A245 Phase D (F46) — Skip used to call `update("tests", {})`, wiping
-              every measurement already entered. Someone who filled three tests
-              and then tapped Skip on the fourth lost all three, silently.
-              Skipping is about not entering MORE, never about deleting. */}
+      <StepNav
+        backHref="/onboarding/weaknesses"
+        nextHref="/onboarding/limitations"
+        secondary={
+          /* A245 Phase D (F46) — Skip used to call `update("tests", {})`, wiping
+             every measurement already entered. Someone who filled three tests
+             and then tapped Skip on the fourth lost all three, silently.
+             Skipping is about not entering MORE, never about deleting. */
           <Button
             variant="ghost"
             className="min-h-[44px]"
@@ -390,11 +387,8 @@ export default function TestsPage() {
           >
             Skip for now
           </Button>
-          <Button onClick={() => router.push("/onboarding/limitations")}>
-            Next
-          </Button>
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 }

@@ -174,15 +174,21 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
             {exercises.map((ex) => {
               const isAdded = addedIds.has(ex.id);
               return (
-                <div
+                // A286 — il bersaglio era il solo "+" da 36px in un angolo.
+                // Ora l'intera riga è toccabile (≥44px); il "+" resta come
+                // affordance visiva, non è più un secondo bersaglio.
+                <button
                   key={ex.id}
-                  className="flex items-start gap-3 rounded-lg border p-3"
+                  type="button"
+                  aria-label={`Add ${ex.name}`}
+                  onClick={() => onAdd(exerciseToDefaults(ex), ex.name)}
+                  className="flex min-h-[44px] w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:border-primary/40 hover:bg-accent active:scale-[0.99]"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <p className="text-sm font-medium truncate">{ex.name}</p>
                       {isAdded && (
-                        <Badge variant="outline" className="text-xs px-2 py-0.5 shrink-0 bg-green-500/20 text-green-400 border-green-500/30">
+                        <Badge variant="outline" className="text-xs px-2 py-0.5 shrink-0 bg-success/15 text-success border-success/30">
                           Added
                         </Badge>
                       )}
@@ -191,7 +197,7 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
                       {formatDefaults(ex)}
                     </p>
                     {lastTimeLabel(ex) && (
-                      <p className="text-[11px] text-amber-500/90 mt-0.5">{lastTimeLabel(ex)}</p>
+                      <p className="text-[11px] text-warning mt-0.5">{lastTimeLabel(ex)}</p>
                     )}
                     {ex.equipment_required.length > 0 && (
                       <div className="flex gap-1 mt-1">
@@ -203,15 +209,10 @@ export function ExercisePicker({ open, onOpenChange, onAdd, addedIds }: Exercise
                       </div>
                     )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-9 w-9 shrink-0"
-                    onClick={() => onAdd(exerciseToDefaults(ex), ex.name)}
-                  >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground">
                     <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+                  </span>
+                </button>
               );
             })}
           </div>

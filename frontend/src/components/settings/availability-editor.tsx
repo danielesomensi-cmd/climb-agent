@@ -250,7 +250,7 @@ export function AvailabilityEditor({
                               type="button"
                               className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
                                 s.preferred_location === "other_sport"
-                                  ? "border-amber-500 bg-amber-500/10 text-amber-500"
+                                  ? "border-warning/40 bg-warning/15 text-warning"
                                   : "border-muted text-muted-foreground"
                               }`}
                               onClick={() => setLocation(day.key, slot.key, "other_sport")}

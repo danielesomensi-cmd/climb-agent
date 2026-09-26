@@ -9,34 +9,22 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, transitionBeep } from "@/lib/beep";
+import { confirmFeedback } from "@/lib/haptics";
 import { speakPhaseTransition } from "@/lib/voice-cues";
 import type { MobilityFlowStep } from "@/lib/api";
+import { useWakeLock } from "@/lib/hooks/use-wake-lock";
+import {
+  PHASE_BG,
+  PHASE_RING,
+  PHASE_TEXT,
+} from "@/components/session-play/player-phase-colors";
 import { RegionFigure } from "./RegionFigure";
 
 // ── Types ──────────────────────────────────────────────────────────────
 
 type FlowPhase = "prepare" | "work" | "rest" | "done";
 
-const PHASE_BG: Record<FlowPhase, string> = {
-  prepare: "bg-zinc-800/80",
-  work: "bg-violet-950/90",
-  rest: "bg-blue-900/80",
-  done: "bg-card",
-};
-
-const PHASE_TEXT: Record<FlowPhase, string> = {
-  prepare: "text-zinc-300",
-  work: "text-violet-400",
-  rest: "text-blue-400",
-  done: "text-green-500",
-};
-
-const PHASE_RING: Record<FlowPhase, string> = {
-  prepare: "stroke-zinc-400",
-  work: "stroke-violet-400",
-  rest: "stroke-blue-400",
-  done: "stroke-green-500",
-};
+// A286 — B7: colori di fase dalla mappa condivisa (player-phase-colors).
 
 // ── Audio (same tones as Core Circuit) ─────────────────────────────────
 
@@ -107,6 +95,9 @@ export function MobilityFlowTimer({
   const currentIndexRef = useRef(0);
   const phaseDurationRef = useRef(PREPARE_SECONDS);
 
+  // A286 — B3: lo schermo resta acceso finché il flow scorre davvero.
+  useWakeLock(phase !== "done" && !paused);
+
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { pausedRef.current = paused; }, [paused]);
@@ -157,6 +148,8 @@ export function MobilityFlowTimer({
   useEffect(() => {
     if (transitionId > 0) {
       transitionBeep();
+      // A286 — B8: il cambio di fase si sente anche senza guardare lo schermo.
+      confirmFeedback();
       if (pendingVoiceCueRef.current) {
         speakPhaseTransition(pendingVoiceCueRef.current);
         pendingVoiceCueRef.current = null;
@@ -420,7 +413,13 @@ export function MobilityFlowTimer({
 
       {/* Timer ring + controls */}
       <div className="mt-4 flex shrink-0 items-center gap-3 px-4">
-        <div className="relative h-36 w-36 shrink-0 cursor-pointer" onClick={handlePauseToggle}>
+        {/* A286 — B9: <button> vero, non un div cliccabile */}
+        <button
+          type="button"
+          onClick={handlePauseToggle}
+          aria-label={paused ? "Resume flow" : "Pause flow"}
+          className="relative h-36 w-36 shrink-0"
+        >
           <svg viewBox="0 0 220 220" className="h-full w-full -rotate-90">
             <circle
               cx="110" cy="110" r={RING_RADIUS}
@@ -444,7 +443,7 @@ export function MobilityFlowTimer({
               {formatTime(secondsLeft)}
             </span>
           </div>
-        </div>
+        </button>
 
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex gap-4 text-sm tabular-nums">
@@ -479,7 +478,7 @@ export function MobilityFlowTimer({
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleStop(); }}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 transition-colors hover:text-red-300"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-danger/30 bg-danger/15 text-danger transition-colors hover:brightness-110"
               aria-label="Stop flow"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
@@ -493,9 +492,18 @@ export function MobilityFlowTimer({
       </div>
 
       {/* Step card area */}
+      {/* A286 — B9: contiene i bottoni prev/next, quindi non può essere un
+          <button> (interattivi annidati). Prende le stesse semantiche del
+          gemello CircuitTimer: role, focus da tastiera e aria-label. */}
       <div
         className="flex min-h-0 flex-1 cursor-pointer flex-col items-center overflow-y-auto px-4 pt-2"
         onClick={handlePauseToggle}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === " " || e.key === "Enter") handlePauseToggle();
+        }}
+        aria-label={paused ? "Resume flow" : "Pause flow"}
       >
         {phase !== "prepare" && (
           <div className="flex w-full max-w-sm items-center gap-2">
@@ -510,7 +518,7 @@ export function MobilityFlowTimer({
               </svg>
             </button>
 
-            <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
+            <div className="flex-1 rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
               <div className="mx-auto mb-2 h-[110px]">
                 <RegionFigure region={displayStep.body_region} className="mx-auto" />
               </div>
@@ -540,8 +548,8 @@ export function MobilityFlowTimer({
         )}
 
         {phase === "prepare" && steps[0] && (
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
-            <p className="mb-2 text-center text-xs uppercase tracking-wider text-white/50">First up</p>
+          <div className="w-full max-w-sm rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
+            <p className="mb-2 text-center text-xs uppercase tracking-wider text-white/70">First up</p>
             <div className="mx-auto mb-2 h-[110px]">
               <RegionFigure region={steps[0].body_region} className="mx-auto" />
             </div>
@@ -555,8 +563,8 @@ export function MobilityFlowTimer({
 
         {previewStep && phase === "work" && (
           <div className="mt-2 w-full max-w-sm rounded-xl border border-white/5 bg-black/10 px-4 py-2">
-            <span className="text-xs text-white/40">Next: </span>
-            <span className="text-sm font-medium text-white/60">
+            <span className="text-xs text-white/70">Next: </span>
+            <span className="text-sm font-medium text-white/80">
               {previewStep.name}
               {previewStep.side ? ` — ${previewStep.side === "left" ? "left" : "right"}` : ""}
             </span>
@@ -565,7 +573,7 @@ export function MobilityFlowTimer({
 
         {phase === "rest" && (
           <div className="mt-2 animate-pulse">
-            <span className="text-lg font-bold uppercase tracking-wider text-blue-300">Get Ready</span>
+            <span className="text-lg font-bold uppercase tracking-wider text-info">Get Ready</span>
           </div>
         )}
       </div>

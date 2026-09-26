@@ -6,7 +6,11 @@ import { cn } from "@/lib/utils"
 import { tapFeedback } from "@/lib/haptics"
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all duration-100 ease-out outline-none active:scale-[0.97] active:brightness-95 active:duration-0 motion-reduce:active:scale-100 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  // A286 — focus ring: era `ring-ring/50` (2,02:1 su surface-base, sotto i 3:1
+  // di WCAG 1.4.11) più un `border-ring` che è un no-op sulle varianti senza
+  // bordo. Ora opacità piena (4,91:1) e un offset che tiene l'anello leggibile
+  // anche quando il bottone è riempito di magenta.
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-all duration-100 ease-out outline-none active:scale-[0.97] active:brightness-95 active:duration-0 motion-reduce:active:scale-100 focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

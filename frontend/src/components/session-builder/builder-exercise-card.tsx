@@ -49,7 +49,7 @@ export function BuilderExerciseCard({
             <Badge
               variant="outline"
               className={`text-[10px] px-1.5 py-0 shrink-0 ${
-                tag === "warmup" ? "text-orange-500 border-orange-500/30" : "text-blue-500 border-blue-500/30"
+                tag === "warmup" ? "text-warning border-warning/30 bg-warning/10" : "text-info border-info/30 bg-info/10"
               }`}
             >
               {tag === "warmup" ? "Warmup" : "Cooldown"}

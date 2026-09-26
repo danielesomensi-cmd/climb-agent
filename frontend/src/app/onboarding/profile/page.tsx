@@ -1,10 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { profileErrors, fieldBoundError } from "@/lib/profile-validation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,7 +14,6 @@ import {
 } from "@/components/ui/card";
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const profile = data.profile;
 
@@ -25,7 +22,9 @@ export default function ProfilePage() {
   };
 
   // B293: shared sanity bounds (mirrored server-side) — reject, never clamp.
-  const isValid = profileErrors(profile).length === 0;
+  // A286: gli stessi errori diventano i blockers di StepNav, così il bottone
+  // resta premibile e dice cosa manca invece di essere un vicolo cieco grigio.
+  const blockers = profileErrors(profile);
   const ageError = fieldBoundError("age", profile.age);
   const weightError = fieldBoundError("weight_kg", profile.weight_kg);
   const heightError = fieldBoundError("height_cm", profile.height_cm);
@@ -111,20 +110,11 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/welcome")}
-        >
-          Back
-        </Button>
-        <Button
-          disabled={!isValid}
-          onClick={() => router.push("/onboarding/experience")}
-        >
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/welcome"
+        nextHref="/onboarding/experience"
+        blockers={blockers}
+      />
     </div>
   );
 }

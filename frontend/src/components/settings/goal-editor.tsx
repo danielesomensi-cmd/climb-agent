@@ -248,7 +248,7 @@ export function GoalEditor({
 
               {/* Warnings */}
               {isAmbitious && (
-                <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+                <div className="rounded-md border border-warning/30 bg-warning/15 px-3 py-2 text-sm text-warning">
                   Ambitious goal! The plan will be aggressive
                 </div>
               )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -108,10 +108,26 @@ export default function PublicAssessmentPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // A286 (C6) — dopo il submit il risultato compariva ma lo scroll restava dov'era
+  // e il radar finiva fuori schermo: su un telefono sembrava che non fosse
+  // successo niente. Portiamo lo scroll in cima al risultato appena viene reso.
+  const resultRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     captureUtmOnMount();
     trackEvent("public_assessment_view");
   }, []);
+
+  useEffect(() => {
+    if (!result) return;
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    resultRef.current?.scrollIntoView({
+      behavior: reduced ? "auto" : "smooth",
+      block: "start",
+    });
+  }, [result]);
 
   const isBoulder = discipline === "boulder";
 
@@ -200,7 +216,11 @@ export default function PublicAssessmentPage() {
     const eliteInputs = eliteInputsFromAddedLoads(seed);
     const showsEliteToggle = hasAnyEliteScore(computeEliteScores(eliteInputs));
     return (
-      <div className="mx-auto max-w-lg space-y-6 px-4 pb-16 pt-8">
+      <div
+        ref={resultRef}
+        className="mx-auto max-w-lg space-y-6 px-4 pb-16 pt-8"
+        style={{ scrollMarginTop: "1rem" }}
+      >
         <InAppBrowserBanner />
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Your profile</h1>

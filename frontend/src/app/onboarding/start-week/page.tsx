@@ -118,8 +118,9 @@ export default function StartWeekPage() {
             skip ahead and start from a later phase.
           </p>
 
+          {/* A286 — token warning al posto di amber-500 grezzo */}
           {loadFailed && (
-            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-400">
+            <p className="rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
               We couldn&apos;t load your plan phases just now. You can continue
               from Week 1 — you can always change where you start later in
               Settings.
@@ -142,12 +143,13 @@ export default function StartWeekPage() {
       <div className="flex justify-between">
         <Button
           variant="outline"
+          className="min-h-[44px]"
           disabled={loading}
           onClick={routeNext}
         >
           Skip
         </Button>
-        <Button size="lg" disabled={loading} onClick={handleContinue}>
+        <Button size="lg" className="min-h-[44px]" disabled={loading} onClick={handleContinue}>
           {loading ? "Applying..." : "Continue"}
         </Button>
       </div>

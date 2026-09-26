@@ -256,25 +256,25 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
     <div className="space-y-3">
       {/* Rest / climb timer */}
       {routes.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg border border-sky-800/30 bg-sky-950/15 px-3 py-2">
+        <div className="flex items-center justify-between rounded-lg border border-info/30 bg-info/10 px-3 py-2">
           <div className="flex items-center gap-2">
             {climbing ? (
               <>
-                <span className="text-[11px] uppercase tracking-wide text-amber-400">Climbing</span>
-                <span className="font-mono text-lg font-semibold text-amber-200 tabular-nums">{fmt(climbSec)}</span>
+                <span className="text-[11px] uppercase tracking-wide text-warning">Climbing</span>
+                <span className="font-mono text-lg font-semibold text-warning tabular-nums">{fmt(climbSec)}</span>
               </>
             ) : (
               <>
-                <span className="text-[11px] uppercase tracking-wide text-sky-400">Rest</span>
-                <span className="font-mono text-lg font-semibold text-zinc-100 tabular-nums">{fmt(restSec)}</span>
+                <span className="text-[11px] uppercase tracking-wide text-info">Rest</span>
+                <span className="font-mono text-lg font-semibold text-foreground tabular-nums">{fmt(restSec)}</span>
               </>
             )}
           </div>
           {climbing ? (
-            <span className="text-right text-[11px] text-zinc-500">on the wall<br /><span className="text-zinc-400">tap Sent / Fell when done</span></span>
+            <span className="text-right text-[11px] text-muted-foreground">on the wall<br /><span className="text-foreground/80">tap Sent / Fell when done</span></span>
           ) : (
             suggestedRest && (
-              <span className="text-right text-[11px] text-zinc-500">suggested<br /><span className="text-zinc-400">{suggestedRest}</span></span>
+              <span className="text-right text-[11px] text-muted-foreground">suggested<br /><span className="text-foreground/80">{suggestedRest}</span></span>
             )
           )}
         </div>
@@ -282,19 +282,19 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
 
       {/* Quick-add / project mode (B279) — after a fall the panel keeps
           targeting the same route until it's sent or the user switches. */}
-      <div className={`rounded-lg border p-3 ${projectRoute ? "border-indigo-700/40 bg-indigo-950/10" : "border-white/10"}`}>
+      <div className={`rounded-lg border p-3 ${projectRoute ? "border-brand-secondary/30 bg-brand-secondary/10" : "border-border"}`}>
         {projectRoute ? (
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] uppercase tracking-wide text-indigo-400">Projecting</p>
-              <p className="truncate text-sm text-zinc-200">
+              <p className="text-[11px] uppercase tracking-wide text-brand-secondary">Projecting</p>
+              <p className="truncate text-sm text-foreground">
                 <span className="font-mono font-medium">{projectRoute.grade}</span> {projectRoute.name}
-                <span className="text-zinc-500"> · try {projectRoute.attempts.length + 1}</span>
+                <span className="text-muted-foreground"> · try {projectRoute.attempts.length + 1}</span>
               </p>
             </div>
             <button
               onClick={() => setActiveIdx(null)}
-              className="shrink-0 rounded-md border border-white/10 px-2.5 py-1.5 text-xs text-zinc-400"
+              className="shrink-0 min-h-[44px] rounded-md border border-border px-2.5 py-1.5 text-xs text-muted-foreground"
             >
               New {routeLabel}
             </button>
@@ -302,18 +302,18 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
         ) : (
           <div className="flex gap-2">
             <select value={grade} onChange={(e) => setGrade(e.target.value)} aria-label="Grade"
-              className="w-[78px] shrink-0 rounded-md border bg-background px-2 py-2 text-sm">
+              className="w-[78px] shrink-0 rounded-md border bg-background px-2 py-2 text-base">
               {grades.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder={`new ${routeLabel} name (optional)`}
-              className="min-w-0 flex-1 rounded-md border bg-background px-2 py-2 text-sm" />
+              className="min-w-0 flex-1 rounded-md border bg-background px-2 py-2 text-base" />
           </div>
         )}
         {/* A4 — optional climb timer */}
         <button
           onClick={startClimb}
           disabled={busy || climbing}
-          className="mt-2 w-full rounded-md border border-amber-700/40 py-1.5 text-xs text-amber-300/90 disabled:opacity-40"
+          className="mt-2 w-full min-h-[44px] rounded-md border border-warning/30 py-1.5 text-xs text-warning disabled:opacity-40"
         >
           {climbing ? `▶ Climbing… ${fmt(climbSec)}` : "▶ Start climb timer (optional)"}
         </button>
@@ -321,12 +321,12 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
           <button
             onClick={() => (projectIdx == null ? addRoute("sent") : addAttempt(projectIdx, "sent"))}
             disabled={busy}
-            className="flex-1 rounded-md bg-green-600 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="flex-1 min-h-[44px] rounded-md border border-success/40 bg-success/15 py-2 text-sm font-medium text-success disabled:opacity-50"
           >✓ Sent</button>
           <button
             onClick={() => (projectIdx == null ? addRoute("fell") : addAttempt(projectIdx, "fell"))}
             disabled={busy}
-            className="flex-1 rounded-md bg-red-600/90 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="flex-1 min-h-[44px] rounded-md border border-danger/40 bg-danger/15 py-2 text-sm font-medium text-danger disabled:opacity-50"
           >✗ Fell / try</button>
         </div>
       </div>
@@ -349,15 +349,15 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
             const climbSecRow = hasTs ? null : climbForRow(r);
             const multi = r.attempts.length > 1;
             return (
-              <li key={i} className={`rounded-lg border px-3 py-2 ${i === projectIdx ? "border-indigo-600/50 bg-indigo-950/20" : "border-white/5 bg-zinc-900/40"}`}>
+              <li key={i} className={`rounded-lg border px-3 py-2 ${i === projectIdx ? "border-brand-secondary/40 bg-brand-secondary/10" : "border-border bg-card"}`}>
                 <button
                   type="button"
                   onClick={() => hasTs && toggleExpanded(i)}
                   aria-expanded={isOpen}
                   className="flex w-full items-center gap-2 text-left text-sm"
                 >
-                  <span className="w-10 shrink-0 font-mono font-medium text-zinc-200">{r.grade}</span>
-                  <span className="min-w-0 flex-1 truncate text-zinc-400">{r.name}</span>
+                  <span className="w-10 shrink-0 font-mono font-medium text-foreground">{r.grade}</span>
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">{r.name}</span>
                   {/* attempt dots */}
                   <span className="flex shrink-0 items-center gap-1">
                     {r.attempts.map((a, ai) => (
@@ -367,10 +367,10 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                           typeof a.climb_seconds === "number" ? `climb ${fmt(a.climb_seconds)}` : null,
                           typeof a.rest_seconds === "number" ? `rest ${fmt(a.rest_seconds)}` : null,
                         ].filter(Boolean).join(" · ")}
-                        className={`inline-block size-2 rounded-full ${a.result === "sent" || a.result === "topped_out" ? "bg-green-500" : "bg-red-500"}`} />
+                        className={`inline-block size-2 rounded-full ${a.result === "sent" || a.result === "topped_out" ? "bg-success" : "bg-danger"}`} />
                     ))}
                   </span>
-                  <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-zinc-500">
+                  <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground">
                     {/* A241 — ticking time since the last try on THIS route */}
                     {sinceLast != null && (
                       <span className="tabular-nums" title="Time since the last try on this route">
@@ -379,17 +379,17 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                     )}
                     {/* A3 / B264 / B265 / B279 — legacy totals (no timestamps) */}
                     {climbSecRow != null && (
-                      <span title={multi ? `Total time on the wall (${r.attempts.length} tries)` : "Time on the wall"} className="text-amber-300/80">climb {fmt(climbSecRow)}</span>
+                      <span title={multi ? `Total time on the wall (${r.attempts.length} tries)` : "Time on the wall"} className="text-warning">climb {fmt(climbSecRow)}</span>
                     )}
                     {climbSecRow != null && restSecRow != null && (
-                      <span className="text-zinc-600" aria-hidden="true">·</span>
+                      <span className="text-muted-foreground" aria-hidden="true">·</span>
                     )}
                     {restSecRow != null && (
                       <span title={multi ? `Total rest (${r.attempts.length} tries)` : "Rest taken before this burn"}>rest {fmt(restSecRow)}</span>
                     )}
                     {hasTs && (
                       <svg
-                        className={`h-3 w-3 text-zinc-600 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                        className={`h-3 w-3 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
                         fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -404,26 +404,26 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
                   </div>
                 )}
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className={`text-[11px] ${i === projectIdx ? "text-indigo-400" : "text-zinc-600"}`}>{sent ? "Sent" : i === projectIdx ? "Projecting" : "Open"} · {r.attempts.length} {r.attempts.length === 1 ? "try" : "tries"}</span>
+                  <span className={`text-[11px] ${i === projectIdx ? "text-brand-secondary" : "text-muted-foreground"}`}>{sent ? "Sent" : i === projectIdx ? "Projecting" : "Open"} · {r.attempts.length} {r.attempts.length === 1 ? "try" : "tries"}</span>
                   {/* A2 — onsight/flash only on a first-attempt send */}
                   {firstTrySend && (
                     <span className="flex items-center gap-1">
                       <button
                         onClick={() => tagStyle(i, "onsight")}
-                        className={`min-h-[44px] rounded border px-2.5 text-xs ${r.style === "onsight" ? "border-emerald-500 bg-emerald-950/40 text-emerald-300" : "border-white/10 text-zinc-500"}`}
+                        className={`min-h-[44px] rounded border px-2.5 text-xs ${r.style === "onsight" ? "border-success/40 bg-success/15 text-success" : "border-border text-muted-foreground"}`}
                         title="Onsight — sent first try, no beta"
                       >OS</button>
                       <button
                         onClick={() => tagStyle(i, "flash")}
-                        className={`min-h-[44px] rounded border px-2.5 text-xs ${r.style === "flash" ? "border-amber-500 bg-amber-950/40 text-amber-300" : "border-white/10 text-zinc-500"}`}
+                        className={`min-h-[44px] rounded border px-2.5 text-xs ${r.style === "flash" ? "border-warning/40 bg-warning/15 text-warning" : "border-border text-muted-foreground"}`}
                         title="Flash — sent first try, with beta"
                       >FL</button>
                     </span>
                   )}
-                  <button onClick={() => addAttempt(i, "sent")} disabled={busy} className="ml-auto min-h-[44px] rounded border border-green-700/50 px-3 text-sm text-green-400 disabled:opacity-50">+✓</button>
-                  <button onClick={() => addAttempt(i, "fell")} disabled={busy} className="min-h-[44px] rounded border border-red-700/50 px-3 text-sm text-red-400 disabled:opacity-50">+✗</button>
+                  <button onClick={() => addAttempt(i, "sent")} disabled={busy} className="ml-auto min-h-[44px] rounded border border-success/40 bg-success/15 px-3 text-sm text-success disabled:opacity-50">+✓</button>
+                  <button onClick={() => addAttempt(i, "fell")} disabled={busy} className="min-h-[44px] rounded border border-danger/40 bg-danger/15 px-3 text-sm text-danger disabled:opacity-50">+✗</button>
                   {/* F3 — delete staccato dagli action button (ml-3) + undo toast */}
-                  <button onClick={() => remove(i)} aria-label="Remove route" className="ml-3 min-h-[44px] rounded border border-white/10 px-3 text-sm text-zinc-500">✕</button>
+                  <button onClick={() => remove(i)} aria-label="Remove route" className="ml-3 min-h-[44px] rounded border border-border px-3 text-sm text-muted-foreground">✕</button>
                 </div>
               </li>
             );
@@ -431,7 +431,7 @@ export function LiveRouteLogger({ discipline, startedAt, routes, onChange, sugge
         </ul>
       )}
       {routes.length > 0 && (
-        <p className="text-[11px] text-zinc-500">
+        <p className="text-[11px] text-muted-foreground">
           {routes.length} {routes.length === 1 ? routeLabel : `${routeLabel}s`} · {routes.filter((r) => r.attempts.some((a) => a.result === "sent")).length} sent
         </p>
       )}

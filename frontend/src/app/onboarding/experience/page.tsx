@@ -1,8 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
-import { Button } from "@/components/ui/button";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -13,7 +12,6 @@ import {
 } from "@/components/ui/card";
 
 export default function ExperiencePage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const exp = data.experience;
 
@@ -70,17 +68,10 @@ export default function ExperiencePage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/profile")}
-        >
-          Back
-        </Button>
-        <Button onClick={() => router.push("/onboarding/discipline")}>
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/profile"
+        nextHref="/onboarding/discipline"
+      />
     </div>
   );
 }

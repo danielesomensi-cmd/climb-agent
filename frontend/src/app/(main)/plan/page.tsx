@@ -188,8 +188,8 @@ export default function PlanPage() {
 
             {/* Dirty-state banner — mutually exclusive with the standalone button below */}
             {showStaleBanner && (
-              <div className="rounded-lg border border-yellow-500/40 bg-yellow-500/10 p-4 space-y-3">
-                <p className="text-sm text-yellow-200">
+              <div className="rounded-lg border border-warning/30 bg-warning/15 p-4 space-y-3">
+                <p className="text-sm text-warning">
                   Your profile has changed since this plan was generated.
                   Only the remaining phases will be updated &mdash; completed
                   sessions and load progression are safe.
@@ -293,7 +293,7 @@ export default function PlanPage() {
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                   Phase details
                 </h2>
-                <p className="text-xs text-zinc-500 mt-1">Tap a phase and open &quot;About this phase&quot; for the science behind each training block.</p>
+                <p className="text-xs text-muted-foreground mt-1">Tap a phase and open &quot;About this phase&quot; for the science behind each training block.</p>
               </div>
 
               {macrocycle.phases.map((phase: Phase) => {
@@ -375,7 +375,7 @@ export default function PlanPage() {
                           <div>
                             <button
                               type="button"
-                              className="flex items-center gap-2 text-xs text-zinc-400 hover:text-zinc-300 transition-colors"
+                              className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setExpandedRationale((prev) =>
@@ -394,16 +394,18 @@ export default function PlanPage() {
                             {expandedRationale === phase.phase_id && (() => {
                               const r = PHASE_RATIONALES[phase.phase_id];
                               return (
-                                <div className="mt-2 text-xs text-zinc-400 space-y-2 pl-5">
+                                <div className="mt-2 text-xs text-muted-foreground space-y-2 pl-5">
                                   <p className="leading-relaxed">{r.text}</p>
                                   {r.duration_note && (
-                                    <p className="text-amber-400/80">{r.duration_note}</p>
+                                    <p className="text-warning">{r.duration_note}</p>
                                   )}
                                   {r.common_mistake && (
-                                    <p className="text-red-400/70">Common mistake: {r.common_mistake}</p>
+                                    <p className="rounded-sm border border-danger/30 bg-danger/15 px-2 py-1.5 text-danger">
+                                      <span className="font-semibold">Common mistake:</span> {r.common_mistake}
+                                    </p>
                                   )}
                                   {r.what_to_expect && (
-                                    <p className="text-emerald-400/70">{r.what_to_expect}</p>
+                                    <p className="text-success">{r.what_to_expect}</p>
                                   )}
                                 </div>
                               );

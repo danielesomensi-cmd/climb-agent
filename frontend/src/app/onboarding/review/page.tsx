@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { submitOnboarding } from "@/lib/onboarding-submit";
 import { profileErrors } from "@/lib/profile-validation";
 import { getAttribution } from "@/lib/analytics";
@@ -329,7 +330,14 @@ export default function ReviewPage() {
           {/* Weaknesses */}
           <SummaryRow
             label="Weaknesses"
-            value={`${WEAKNESS_LABELS[data.self_eval.primary_weakness] ?? data.self_eval.primary_weakness}, ${WEAKNESS_LABELS[data.self_eval.secondary_weakness] ?? data.self_eval.secondary_weakness}`}
+            // A286 — la secondaria è opzionale (F18): il template letterale
+            // lasciava una virgola pendente ogni volta che mancava.
+            value={
+              [data.self_eval.primary_weakness, data.self_eval.secondary_weakness]
+                .filter(Boolean)
+                .map((w) => WEAKNESS_LABELS[w] ?? w)
+                .join(", ") || "—"
+            }
             editHref="/onboarding/weaknesses"
             router={router}
           />
@@ -452,33 +460,31 @@ export default function ReviewPage() {
         A test week calibrates your week-1 prescriptions with precise baselines. Or start immediately and self-report.
       </div>
 
-      <div className="flex items-center justify-between gap-2">
-        <Button
-          variant="ghost"
-          className="text-sm px-3 py-2"
-          onClick={() => router.push("/onboarding/trips")}
-          disabled={loading}
-        >
-          Back
-        </Button>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="min-h-[44px] text-sm px-3"
-            disabled={loading || !authLoaded || profileProblems.length > 0}
-            onClick={handleGenerate}
-          >
-            {loading ? "Generating..." : "Start training now"}
-          </Button>
-          <Button
-            className="min-h-[44px] text-sm px-3"
-            disabled={loading || !authLoaded || profileProblems.length > 0}
-            onClick={handleTestWeek}
-          >
-            {loading ? "Generating..." : "Run a test week first"}
-          </Button>
-        </div>
-      </div>
+      {/* A286 — stesso footer degli altri 11 step. Qui il CTA primario non
+          naviga, invia: `actions` sostituisce Next tenendo Back dov'è sempre. */}
+      <StepNav
+        backHref="/onboarding/trips"
+        backDisabled={loading}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              className="min-h-[44px] text-sm px-3"
+              disabled={loading || !authLoaded || profileProblems.length > 0}
+              onClick={handleGenerate}
+            >
+              {loading ? "Generating..." : "Start training now"}
+            </Button>
+            <Button
+              className="min-h-[44px] text-sm px-3"
+              disabled={loading || !authLoaded || profileProblems.length > 0}
+              onClick={handleTestWeek}
+            >
+              {loading ? "Generating..." : "Run a test week first"}
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

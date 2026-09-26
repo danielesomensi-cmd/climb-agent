@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,7 +41,6 @@ interface Trip {
 }
 
 export default function TripsPage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const trips = data.trips;
 
@@ -77,7 +76,8 @@ export default function TripsPage() {
     update("trips", next);
   };
 
-  // Valid if no trips, or all trips have required fields and dates are valid
+  // Valid if no trips, or all trips have required fields and dates are valid.
+  // A286: stessa regola, come blockers invece che come bottone spento.
   const isValid =
     trips.length === 0 ||
     trips.every(
@@ -89,6 +89,9 @@ export default function TripsPage() {
         t.discipline !== "" &&
         t.priority !== "",
     );
+  const blockers = isValid
+    ? []
+    : ["Give every trip a name and valid start/end dates — or remove it"];
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -212,28 +215,12 @@ export default function TripsPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/availability")}
-        >
-          Back
-        </Button>
-        <div className="flex gap-2">
-          {trips.length === 0 ? (
-            <Button onClick={() => router.push("/onboarding/review")}>
-              Skip — no trips planned
-            </Button>
-          ) : (
-            <Button
-              disabled={!isValid}
-              onClick={() => router.push("/onboarding/review")}
-            >
-              Next
-            </Button>
-          )}
-        </div>
-      </div>
+      <StepNav
+        backHref="/onboarding/availability"
+        nextHref="/onboarding/review"
+        blockers={blockers}
+        nextLabel={trips.length === 0 ? "Skip — no trips planned" : "Next"}
+      />
     </div>
   );
 }

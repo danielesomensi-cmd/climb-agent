@@ -1,13 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { StepNav } from "@/components/onboarding/step-nav";
 import {
   DeadlineWeeksSelector,
   weeksToDeadlineIso,
 } from "@/components/shared/deadline-weeks-selector";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
@@ -44,7 +43,6 @@ function gradeIndex(grade: string, list: string[]): number {
 }
 
 export default function GoalsPage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const goal = data.goal;
   const grades = data.grades;
@@ -144,13 +142,22 @@ export default function GoalsPage() {
     });
   };
 
-  // Validation
-  const hasLeadTarget = !showLeadTarget || goal.target_grade !== "";
-  const hasBoulderTarget = !showBoulderTarget || !!goal.target_boulder_grade;
-  const isValid =
-    hasLeadTarget &&
-    hasBoulderTarget &&
-    !isTooLow;
+  // Validation — A286: stessa condizione di prima, espressa come blockers
+  // (StepNav non disabilita Next, dice cosa manca).
+  const blockers: string[] = [];
+  if (showLeadTarget && goal.target_grade === "") {
+    blockers.push(
+      discipline === "both" ? "Pick your lead target grade" : "Pick your target grade",
+    );
+  }
+  if (showBoulderTarget && !goal.target_boulder_grade) {
+    blockers.push(
+      discipline === "both" ? "Pick your boulder target grade" : "Pick your target grade",
+    );
+  }
+  if (isTooLow) {
+    blockers.push("Your target must be above your current grade");
+  }
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -272,20 +279,11 @@ export default function GoalsPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/grades")}
-        >
-          Back
-        </Button>
-        <Button
-          disabled={!isValid}
-          onClick={() => router.push("/onboarding/weaknesses")}
-        >
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/grades"
+        nextHref="/onboarding/weaknesses"
+        blockers={blockers}
+      />
     </div>
   );
 }
