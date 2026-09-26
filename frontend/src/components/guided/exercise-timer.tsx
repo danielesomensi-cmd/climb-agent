@@ -219,6 +219,11 @@ function ExerciseTimerImpl({
         speakPhaseTransition(pendingVoiceCueRef.current);
         pendingVoiceCueRef.current = null;
       }
+      // B355 — il flash è la controparte visiva del beep: si accende quando
+      // `transitionId` cambia (evento di transizione di fase) e si spegne da
+      // solo dopo 300ms. Non è derivabile dal render, è un effetto one-shot
+      // legato all'evento, esattamente come transitionBeep() qui sopra.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFlash(true);
       const t = setTimeout(() => setFlash(false), 300);
       return () => clearTimeout(t);

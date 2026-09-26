@@ -3,7 +3,6 @@
 import { useParams, useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCustomSession, useBuilderExercises } from "@/lib/hooks/queries";
 import { useState, useMemo } from "react";

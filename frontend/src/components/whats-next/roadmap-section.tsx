@@ -65,6 +65,10 @@ export function RoadmapSection() {
   const [votes, setVotes] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    // B355 — idratazione post-mount da localStorage. Non è leggibile in render
+    // senza rompere l'SSR (hydration mismatch fra markup server, che non ha i
+    // voti, e client). L'effect è la soluzione corretta, non il problema.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setVotes(loadVotes());
   }, []);
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { getOnboardingDefaults } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ const CLIMBING_SURFACES = new Set([
 ]);
 
 export default function LocationsPage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const equipment = data.equipment;
 

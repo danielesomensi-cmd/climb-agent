@@ -14,17 +14,6 @@ import type { ResolvedSession } from "@/lib/types";
 import { formatSessionName } from "@/lib/format";
 import { queryKeys } from "@/lib/query-keys";
 
-
-/** Format rest seconds into a readable string */
-function formatRest(seconds: number): string {
-  if (seconds >= 60) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return secs > 0 ? `${mins}m ${secs}s` : `${mins} min`;
-  }
-  return `${seconds}s`;
-}
-
 function SessionPageInner() {
   const params = useParams();
   const router = useRouter();

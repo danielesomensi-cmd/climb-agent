@@ -1,9 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
-import { Button } from "@/components/ui/button";
 import { StepNav } from "@/components/onboarding/step-nav";
 import { Label } from "@/components/ui/label";
 import {
@@ -67,7 +64,6 @@ function GradeSelect({
 }
 
 export default function GradesPage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const grades = data.grades;
   const discipline = data.goal.discipline || "lead";
@@ -88,11 +84,6 @@ export default function GradesPage() {
       grade_system_boulder: gradeSystem === "font" ? "v_scale" : "font",
     });
   };
-
-  const formatBoulder = useMemo(
-    () => (g: string) => displayBoulderGrade(g, gradeSystem),
-    [gradeSystem],
-  );
 
   // When using V-scale, show clean V-grade list and convert to Font on save
   const isVScale = gradeSystem === "v_scale";

@@ -90,6 +90,10 @@ export function RestTimer({ initialSeconds, autoStart = false, onComplete }: Res
   useEffect(() => {
     if (autoStart) {
       void unlockAudio();
+      // B355 — sincronizzazione prop→stato: il genitore accende `autoStart` e il
+      // timer deve ripartire da initialSeconds. Non è derivabile in render
+      // (serve un wall-clock deadline e lo sblocco audio, che è un side effect).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSeconds(initialSeconds);
       endTimeRef.current = Date.now() + initialSeconds * 1000;
       lastTickedSecRef.current = -1;

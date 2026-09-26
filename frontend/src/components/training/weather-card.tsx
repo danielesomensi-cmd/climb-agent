@@ -108,7 +108,11 @@ export function WeatherCard() {
     if (readCache()) return;
 
     // No geolocation support → silently skip (card stays hidden).
+    // B355 — set-state-in-effect: è capability detection del browser
+    // (navigator.geolocation, Permissions API). Non è leggibile in render
+    // senza rompere l'SSR, e la decisione va presa una volta dopo il mount.
     if (typeof navigator === "undefined" || !navigator.geolocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMode("hidden");
       return;
     }

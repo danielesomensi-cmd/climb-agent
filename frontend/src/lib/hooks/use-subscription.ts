@@ -27,16 +27,8 @@ export type UseSubscriptionResult = {
   loading: boolean;
 };
 
-const _ALLOW: UseSubscriptionResult = {
-  status: "active",
-  isActive: true,
-  isTrialing: false,
-  trialDaysRemaining: null,
-  canInteract: true,
-  hasPaymentMethod: true,
-  enforced: true,
-  loading: false,
-};
+// B355 — `_ALLOW` (il fallback fail-open pre-B202) è stato rimosso: da B202 il
+// solo fallback è `_DENY`, la costante non era più referenziata da nessuno.
 
 const _DENY: UseSubscriptionResult = {
   status: "none",
@@ -120,6 +112,12 @@ export function useSubscription(): UseSubscriptionResult {
   }, []);
 
   useEffect(() => {
+    // B355 — caricamento al mount: `fetch()` è async e il setState avviene solo
+    // nella sua continuation (dopo l'await), quindi non c'è nessun render a
+    // cascata sincrono. Leggere lo stato abbonamento in render è impossibile
+    // (è una chiamata di rete) e spostarlo altrove romperebbe il fail-closed
+    // B202, che dipende dall'ordine mount → prima risposta.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetch();
     // A245 B-5 (F44) — the 5-minute poll used to fire regardless of
     // connectivity: offline it burned a request (and, since A245 A-3, a 15s

@@ -140,19 +140,25 @@ export function AvailabilityEditor({
   const trainingDaysMax = Math.max(1, availableDays);
   const hardDaysMax = Math.max(1, planningPrefs.target_training_days_per_week);
 
-  // Auto-clamp sliders when caps shrink
+  // Auto-clamp sliders when caps shrink.
+  // B355 — il clamp DEVE finire nello state: `handleSave` invia `planningPrefs`
+  // al backend, quindi un valore solo derivato per il render lascerebbe salvare
+  // il numero fuori scala. Il setState in effect è il prezzo di questo
+  // invariante, non una svista.
   useEffect(() => {
     if (availableDays > 0 && planningPrefs.target_training_days_per_week > availableDays) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPlanningPrefs((p) => ({ ...p, target_training_days_per_week: availableDays }));
     }
-  }, [availableDays]);
+  }, [availableDays, planningPrefs.target_training_days_per_week]);
 
   useEffect(() => {
     const max = planningPrefs.target_training_days_per_week;
     if (max > 0 && planningPrefs.hard_day_cap_per_week > max) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPlanningPrefs((p) => ({ ...p, hard_day_cap_per_week: max }));
     }
-  }, [planningPrefs.target_training_days_per_week]);
+  }, [planningPrefs.target_training_days_per_week, planningPrefs.hard_day_cap_per_week]);
 
   const handleSave = () => {
     // D150: Only include days that have at least one configured slot.

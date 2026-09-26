@@ -25,7 +25,7 @@ import {
   useUpdateCustomSession,
   useDeleteCustomSession,
 } from "@/lib/hooks/mutations";
-import type { CustomSessionExercise, BuilderExercise } from "@/lib/types";
+import type { CustomSessionExercise } from "@/lib/types";
 import { Plus, Save, Trash2, Flame, Snowflake } from "lucide-react";
 
 /** Tracks exercise + its display name (catalog name at add time). */
@@ -100,8 +100,12 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
   }, [catalogData]);
 
   // Initialize from existing session in edit mode (wait for catalog to resolve names)
+  // B355 — idratazione one-shot da dati asincroni (sessione + catalogo): finché
+  // la query non risolve i nomi non c'è nulla da mostrare, e la guardia
+  // `!initialized` la rende irripetibile. Non è uno stato derivabile in render.
   useEffect(() => {
     if (isEditMode && existingSession && catalogNameMap.size > 0 && !initialized) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(existingSession.name);
       setEntries(
         existingSession.exercises.map((ex) => ({
@@ -117,11 +121,17 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
   }, [isEditMode, existingSession, initialized, catalogNameMap]);
 
   // Track dirty state
+  // B355 — flag "appiccicoso": una volta sporco resta sporco finché il salvataggio
+  // non lo azzera, quindi non è derivabile dal render corrente.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initialized && (name || entries.length > 0)) setIsDirty(true);
   }, [name, entries, initialized]);
 
   // Track fatigue costs from picker results
+  // B355 — non ancora cablato a nessun consumer (i costi di fatica non arrivano
+  // dal picker): lasciato in piedi perché `fatigueCosts` alimenta `computeLoadScore`.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const updateFatigueCost = useCallback((exerciseId: string, cost: number) => {
     setFatigueCosts((prev) => {
       const next = new Map(prev);
@@ -234,6 +244,10 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
     }
   };
 
+  // B355 — nessun pulsante lo richiama più: è l'unico punto che apre il dialog
+  // di conferma "scarta modifiche" (`discardConfirmOpen`), che quindi oggi è
+  // irraggiungibile. Non cancellato: è UI da ricollegare, non codice morto.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleBack = () => {
     if (isDirty) {
       setDiscardConfirmOpen(true);

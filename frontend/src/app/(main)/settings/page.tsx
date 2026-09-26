@@ -80,7 +80,6 @@ export default function SettingsPage() {
   const {
     status: subStatus,
     isActive: subActive,
-    isTrialing,
     trialDaysRemaining,
     enforced: subEnforced,
   } = useSubscription();
@@ -94,6 +93,11 @@ export default function SettingsPage() {
   const [pendingRegenAction, setPendingRegenAction] = useState<
     "equipment" | "goal" | "restart" | null
   >(null);
+  // B355 — `pendingGoal` è scritto (handleGoalConfirm) e ripulito (regen) ma mai
+  // letto: la rigenerazione rilegge l'obiettivo già persistito da `state?.goal`.
+  // Non lo cancello perché è il residuo dichiarato del "defer regen to the sheet":
+  // toglierlo è una decisione di prodotto, non di lint.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pendingGoal, setPendingGoal] = useState<Record<string, unknown> | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);

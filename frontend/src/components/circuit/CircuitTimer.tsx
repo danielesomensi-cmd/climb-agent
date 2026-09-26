@@ -90,8 +90,18 @@ export function CircuitTimer({
   const [paused, setPaused] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const [transitionId, setTransitionId] = useState(0);
+  // B355 — parte già a 1: il cue "get_ready" dev'essere suonato al mount, e
+  // farlo con un setState dentro l'effect di init è un render in più inutile.
+  const [transitionId, setTransitionId] = useState(1);
   const completedRef = useRef(0);
+  // B355 — il contatore mostrato a schermo vive in state: un ref letto in render
+  // non è reattivo e il numero può restare indietro. Il ref resta perché
+  // buildResult() lo legge in modo sincrono subito dopo la mutazione.
+  const [completedCount, setCompletedCount] = useState(0);
+  const setCompleted = useCallback((n: number) => {
+    completedRef.current = n;
+    setCompletedCount(n);
+  }, []);
   const performedRef = useRef<string[]>([]);
   const skippedRef = useRef<Set<number>>(new Set()); // indices of skipped exercises
 
@@ -99,7 +109,10 @@ export function CircuitTimer({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseEndTimeRef = useRef(0);
   const secondsLeftRef = useRef(PREPARE_SECONDS);
-  const startTimeRef = useRef(Date.now());
+  // B355 — non si chiama Date.now() in render (impuro): parte a 0 e viene
+  // valorizzato nell'effect di init sotto, dove il countdown parte davvero.
+  // Tutti i consumatori sono già guardati da `startTimeRef.current > 0`.
+  const startTimeRef = useRef(0);
   const elapsedAtPauseRef = useRef(0);
   const phaseRef = useRef<CircuitPhase>("prepare");
   const pausedRef = useRef(false);
@@ -131,9 +144,9 @@ export function CircuitTimer({
   // Init: start prepare countdown
   useEffect(() => {
     unlockAudio();
-    phaseEndTimeRef.current = Date.now() + PREPARE_SECONDS * 1000;
-    pendingVoiceCueRef.current = "get_ready";
-    setTransitionId(1);
+    const now = Date.now();
+    startTimeRef.current = now;
+    phaseEndTimeRef.current = now + PREPARE_SECONDS * 1000;
   }, []);
 
   // ── Build result helper ──────────────────────────────────────────
@@ -210,7 +223,7 @@ export function CircuitTimer({
 
         if (curPhase === "work") {
           // Work done — mark exercise completed (not skipped)
-          completedRef.current++;
+          setCompleted(completedRef.current + 1);
           const curIdx = currentIndexRef.current;
           const nextIdx = curIdx + 1;
 
@@ -255,7 +268,7 @@ export function CircuitTimer({
     }, 200);
 
     return clearTimer;
-  }, [phase, paused, workSeconds, restSeconds, totalExercises, sequence, clearTimer, startCountdown]);
+  }, [phase, paused, workSeconds, restSeconds, totalExercises, sequence, clearTimer, startCountdown, setCompleted]);
 
   // iOS visibility handler
   useEffect(() => {
@@ -302,7 +315,7 @@ export function CircuitTimer({
 
     if (phase === "work") {
       // Skip remaining work → go to REST (same as natural timer expiry)
-      completedRef.current++;
+      setCompleted(completedRef.current + 1);
       const curIdx = currentIndexRef.current;
       const nextIdx = curIdx + 1;
 
@@ -346,7 +359,7 @@ export function CircuitTimer({
       // During REST → go back to current exercise's WORK (redo it)
       setPhase("work");
       startCountdown(workSeconds);
-      completedRef.current = Math.max(0, completedRef.current - 1);
+      setCompleted(Math.max(0, completedRef.current - 1));
       pendingVoiceCueRef.current = "work";
       setTransitionId((id) => id + 1);
       return;
@@ -387,11 +400,14 @@ export function CircuitTimer({
   const [smoothProgress, setSmoothProgress] = useState(0);
   const rafRef = useRef<number>(0);
 
+  // B355 — a rAF fermo (done/pausa) il valore "snappato" si deriva in render
+  // invece di scriverlo in state da un effect: stesso numero, un render in meno.
+  const ringFrozen = phase === "done" || paused;
+  const snappedProgress = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
+
   useEffect(() => {
-    if (phase === "done" || paused) {
+    if (ringFrozen) {
       cancelAnimationFrame(rafRef.current);
-      const p = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
-      setSmoothProgress(p);
       return;
     }
     function tick() {
@@ -403,9 +419,10 @@ export function CircuitTimer({
     }
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [phase, paused, phaseDuration, secondsLeft]);
+  }, [ringFrozen, phaseDuration]);
 
-  const dashOffset = RING_CIRCUMFERENCE - smoothProgress * RING_CIRCUMFERENCE;
+  const ringProgress = ringFrozen ? snappedProgress : smoothProgress;
+  const dashOffset = RING_CIRCUMFERENCE - ringProgress * RING_CIRCUMFERENCE;
 
   // ── Current & next exercise ──────────────────────────────────────
 
@@ -496,7 +513,7 @@ export function CircuitTimer({
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Exercise</span>
               <span className="font-semibold text-foreground">
-                {completedRef.current + (phase === "work" ? 1 : 0)}/{totalExercises}
+                {completedCount + (phase === "work" ? 1 : 0)}/{totalExercises}
               </span>
             </div>
           </div>

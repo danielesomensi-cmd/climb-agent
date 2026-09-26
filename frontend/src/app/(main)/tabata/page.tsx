@@ -405,6 +405,11 @@ export default function TabataPage() {
   // Track completed cycles/sets for summary
   const completedCyclesRef = useRef(0);
   const completedSetsRef = useRef(0);
+  // B355 — il riepilogo della schermata "Done!" legge questo state, non i ref:
+  // un ref letto in render non è reattivo, quindi i numeri mostrati potevano
+  // restare indietro rispetto all'ultimo intervallo concluso. Congelato qui nel
+  // momento esatto in cui la sessione finisce (fine naturale o STOP).
+  const [completedSummary, setCompletedSummary] = useState({ cycles: 0, sets: 0 });
 
   // A286 — B3: lo schermo resta acceso solo mentre un intervallo sta scorrendo.
   useWakeLock(mode === "running" && !paused && phase !== "idle" && phase !== "done");
@@ -597,6 +602,7 @@ export default function TabataPage() {
           // Final set completion
           completedSetsRef.current = sets;
           completedCyclesRef.current = cycles * sets;
+          setCompletedSummary({ cycles: cycles * sets, sets });
           setPhase("done");
           setSecondsLeft(0);
           setMode("done");
@@ -658,6 +664,7 @@ export default function TabataPage() {
     await unlockAudio();
     completedCyclesRef.current = 0;
     completedSetsRef.current = 0;
+    setCompletedSummary({ cycles: 0, sets: 0 });
     setCurrentCycle(1);
     setCurrentSet(1);
     setElapsed(0);
@@ -702,6 +709,10 @@ export default function TabataPage() {
         elapsedAtPauseRef.current + Math.floor((Date.now() - startTimeRef.current) / 1000);
     }
     setElapsed(elapsedAtPauseRef.current);
+    setCompletedSummary({
+      cycles: completedCyclesRef.current,
+      sets: completedSetsRef.current,
+    });
     setPhase("done");
     setMode("done");
     setSecondsLeft(0);
@@ -725,6 +736,7 @@ export default function TabataPage() {
     startTimeRef.current = 0;
     completedCyclesRef.current = 0;
     completedSetsRef.current = 0;
+    setCompletedSummary({ cycles: 0, sets: 0 });
   }
 
   // -------------------------------------------------------------------------
@@ -737,12 +749,15 @@ export default function TabataPage() {
   const [smoothProgress, setSmoothProgress] = useState(0);
   const rafRef = useRef<number>(0);
 
+  // B355 — quando il rAF è fermo (idle/done/pausa) il valore "snappato" si
+  // deriva in render invece di essere scritto in state da un effect: stesso
+  // numero, un render in meno e nessuna catena di render.
+  const ringFrozen = phase === "idle" || phase === "done" || paused;
+  const snappedProgress = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
+
   useEffect(() => {
-    // When idle/done or paused, snap to discrete progress
-    if (phase === "idle" || phase === "done" || paused) {
+    if (ringFrozen) {
       cancelAnimationFrame(rafRef.current);
-      const p = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
-      setSmoothProgress(p);
       return;
     }
 
@@ -755,9 +770,10 @@ export default function TabataPage() {
     }
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [phase, paused, phaseDuration, secondsLeft]);
+  }, [ringFrozen, phaseDuration]);
 
-  const dashOffset = RING_CIRCUMFERENCE - smoothProgress * RING_CIRCUMFERENCE;
+  const ringProgress = ringFrozen ? snappedProgress : smoothProgress;
+  const dashOffset = RING_CIRCUMFERENCE - ringProgress * RING_CIRCUMFERENCE;
 
   // Remaining total
   const totalRemaining = (() => {
@@ -819,11 +835,11 @@ export default function TabataPage() {
                 <div className="text-xs text-muted-foreground mt-1">Total time</div>
               </div>
               <div className="rounded-xl bg-card border border-border p-4 text-center">
-                <div className="text-2xl font-bold tabular-nums">{completedCyclesRef.current}/{cycles * sets}</div>
+                <div className="text-2xl font-bold tabular-nums">{completedSummary.cycles}/{cycles * sets}</div>
                 <div className="text-xs text-muted-foreground mt-1">Cycles</div>
               </div>
               <div className="rounded-xl bg-card border border-border p-4 text-center">
-                <div className="text-2xl font-bold tabular-nums">{completedSetsRef.current}/{sets}</div>
+                <div className="text-2xl font-bold tabular-nums">{completedSummary.sets}/{sets}</div>
                 <div className="text-xs text-muted-foreground mt-1">Sets</div>
               </div>
               <div className="rounded-xl bg-card border border-border p-4 text-center">
@@ -862,8 +878,6 @@ export default function TabataPage() {
 
   // --- RUNNING screen ---
   if (mode === "running") {
-    const isActive = phase !== "idle" && phase !== "done";
-
     return (
       <>
         {/* Expanded overlay */}

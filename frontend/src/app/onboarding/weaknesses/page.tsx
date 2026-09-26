@@ -1,9 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
-import { Button } from "@/components/ui/button";
 import { StepNav } from "@/components/onboarding/step-nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -125,7 +123,6 @@ function WeaknessCard({
 }
 
 export default function WeaknessesPage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const selfEval = data.self_eval;
   const discipline = data.goal.discipline || "lead";

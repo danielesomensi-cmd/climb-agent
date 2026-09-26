@@ -100,6 +100,11 @@ export function PhaseCelebration({ state, onSettled, onClosed }: PhaseCelebratio
     const discipline = getDiscipline(
       (state?.goal as { goal_type?: string } | undefined)?.goal_type,
     );
+    // B355 — set-state-in-effect: decisione one-shot presa dopo il mount su
+    // stato caricato via rete e già persistita lato server (putState sopra).
+    // Non è derivabile in render: dipende da `preferences` asincrono e deve
+    // avvenire una volta sola (guardia `checkedRef`).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setContent({
       prevLabel: getPhaseName(prev.phase_id, discipline),
       prevWeeks: prev.duration_weeks,

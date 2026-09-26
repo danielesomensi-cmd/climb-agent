@@ -12,7 +12,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { getWeeklyOverride, putWeeklyOverride, getState } from "@/lib/api";
-import type { DayOverviewEntry, SlotEntry } from "@/lib/types";
+import type { DayOverviewEntry } from "@/lib/types";
 
 const WEEKDAY_LABELS: Record<string, string> = {
   mon: "Mon",
