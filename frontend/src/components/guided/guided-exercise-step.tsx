@@ -472,7 +472,7 @@ export function GuidedExerciseStep({
             <ul className="space-y-0.5">
               {exercise.cues.map((cue, i) => (
                 <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                  <span className="mt-1.5 block h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
+                  <span className="mt-1.5 block h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
                   {cue}
                 </li>
               ))}
@@ -626,8 +626,8 @@ export function GuidedExerciseStep({
                     onPointerDown={tapFeedback}
                     className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
                       feedback === opt.value
-                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        ? `${opt.color} text-black ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
+                        : "border border-border bg-muted text-foreground hover:bg-accent"
                     }`}
                   >
                     {opt.label}
@@ -926,8 +926,8 @@ export function GuidedExerciseStep({
                     onPointerDown={tapFeedback}
                     className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
                       feedback === opt.value
-                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        ? `${opt.color} text-black ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
+                        : "border border-border bg-muted text-foreground hover:bg-accent"
                     }`}
                   >
                     {opt.label}

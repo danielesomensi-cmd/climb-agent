@@ -7,7 +7,9 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen pb-[calc(3.5rem+env(safe-area-inset-bottom))]">
+    /* A286 — l'altezza della nav ora è un token (--nav-h in globals.css):
+       era ricopiata a mano qui e in altri tre file, con due copie sbagliate. */
+    <div className="min-h-screen pb-[var(--nav-h)]">
       <TrialBanner />
       {children}
       <BottomNav />

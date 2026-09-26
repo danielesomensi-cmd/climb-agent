@@ -34,12 +34,16 @@ export interface ConditionsData {
   best_window?: BestWindow | null;
 }
 
-/** Band → chip styling. PRIME emerald, GOOD green, OK amber, POOR red. */
+/** Band → chip styling. PRIME/GOOD success, OK warning, POOR danger.
+ *
+ * A286 — il chip era testo bianco su un 600 saturo (verde/arancio): 2,3:1 su
+ * fondo scuro. Il colore ora fa da inchiostro su un fondo tenue dello stesso
+ * colore. PRIME e GOOD condividono il verde e si distinguono per intensità. */
 const BAND_META: Record<ConditionBand, { label: string; ring: string; chip: string; text: string }> = {
-  prime: { label: "PRIME", ring: "border-emerald-700/40 from-emerald-900/30 to-emerald-800/10", chip: "bg-emerald-600 text-white", text: "text-emerald-400" },
-  good: { label: "GOOD", ring: "border-green-700/40 from-green-900/30 to-green-800/10", chip: "bg-green-600 text-white", text: "text-green-400" },
-  ok: { label: "OK", ring: "border-amber-700/40 from-amber-900/30 to-amber-800/10", chip: "bg-amber-600 text-white", text: "text-amber-400" },
-  poor: { label: "POOR", ring: "border-red-800/40 from-red-950/30 to-red-900/10", chip: "bg-red-700 text-white", text: "text-red-400" },
+  prime: { label: "PRIME", ring: "border-success/40 from-success/15 to-success/5", chip: "bg-success/20 text-success border border-success/40", text: "text-success" },
+  good: { label: "GOOD", ring: "border-success/30 from-success/10 to-success/5", chip: "bg-success/15 text-success border border-success/30", text: "text-success" },
+  ok: { label: "OK", ring: "border-warning/30 from-warning/10 to-warning/5", chip: "bg-warning/15 text-warning border border-warning/30", text: "text-warning" },
+  poor: { label: "POOR", ring: "border-danger/30 from-danger/10 to-danger/5", chip: "bg-danger/15 text-danger border border-danger/30", text: "text-danger" },
 };
 
 const COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
@@ -63,12 +67,12 @@ function dominantEmoji(d: ConditionsData): string {
 function Metric({ label, value, sub, chip }: { label: string; value: string; sub?: string; chip?: string }) {
   return (
     <div>
-      <dt className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd className="text-sm text-zinc-200">{value}</dd>
-      {sub && <dd className="text-[11px] text-zinc-500">{sub}</dd>}
+      <dt className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="text-sm text-foreground">{value}</dd>
+      {sub && <dd className="text-[11px] text-muted-foreground">{sub}</dd>}
       {chip && (
         <dd className="mt-0.5">
-          <span className="inline-block rounded-full border border-white/10 bg-white/5 px-1.5 py-px text-[10px] text-zinc-400">{chip}</span>
+          <span className="inline-block rounded-full border border-white/10 bg-white/5 px-1.5 py-px text-[10px] text-muted-foreground">{chip}</span>
         </dd>
       )}
     </div>
@@ -97,17 +101,17 @@ export function ConditionsPanel({ data, ariaLabel }: { data: ConditionsData; ari
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className={`rounded-md px-2 py-0.5 text-sm font-bold tracking-wide ${meta.chip}`}>{meta.label}</span>
             {data.temp != null && (
-              <span className="text-lg font-semibold text-zinc-100">{Math.round(data.temp)}°C</span>
+              <span className="text-lg font-semibold text-foreground">{Math.round(data.temp)}°C</span>
             )}
-            {data.condition_text && <span className="text-sm text-zinc-400">{data.condition_text}</span>}
+            {data.condition_text && <span className="text-sm text-muted-foreground">{data.condition_text}</span>}
             {data.score != null && (
-              <span className="text-xs text-zinc-500" title="Friction score">{data.score}/100</span>
+              <span className="text-xs text-muted-foreground" title="Friction score">{data.score}/100</span>
             )}
           </div>
         </div>
         {hasDetail && (
           <svg
-            className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
@@ -120,7 +124,7 @@ export function ConditionsPanel({ data, ariaLabel }: { data: ConditionsData; ari
         <div className="px-4 pb-3 -mt-1.5">
           {data.headline && <p className={`text-sm font-medium ${meta.text}`}>{data.headline}</p>}
           {data.best_window && (
-            <p className="mt-0.5 text-xs text-zinc-400">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               Peak conditions from {data.best_window.from} — {data.best_window.reason}.
             </p>
           )}
@@ -158,7 +162,7 @@ export function ConditionsPanel({ data, ariaLabel }: { data: ConditionsData; ari
               <Metric label="Precip" value={`${Math.round(data.precip_prob)}%`} chip={data.qualifiers?.precip} />
             )}
           </dl>
-          <p className="mt-2 text-right text-[10px] text-zinc-600">Weather data by OpenWeather</p>
+          <p className="mt-2 text-right text-[10px] text-muted-foreground">Weather data by OpenWeather</p>
         </div>
       )}
     </section>

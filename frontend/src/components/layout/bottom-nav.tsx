@@ -89,7 +89,10 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-[env(safe-area-inset-bottom)]">
+      <nav
+        aria-label="Main"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-[env(safe-area-inset-bottom)]"
+      >
         <div className="mx-auto flex max-w-3xl items-center justify-around">
           {tabs.map((tab) => {
             const active = pathname.startsWith(tab.href);
@@ -97,6 +100,9 @@ export function BottomNav() {
               <Link
                 key={tab.href}
                 href={tab.href}
+                /* A286 — senza aria-current uno screen reader legge cinque
+                   link identici e non dice quale schermata è aperta. */
+                aria-current={active ? "page" : undefined}
                 className={`flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 px-3 py-2 text-xs transition-colors ${
                   active
                     ? "text-primary"
@@ -135,6 +141,8 @@ export function BottomNav() {
           {/* More button */}
           <button
             onClick={() => setMoreOpen(true)}
+            aria-label="More"
+            aria-expanded={moreOpen}
             className={`flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 px-3 py-2 text-xs transition-colors ${
               moreActive
                 ? "text-primary"
@@ -160,7 +168,9 @@ export function BottomNav() {
       {/* More drawer */}
       <Drawer open={moreOpen} onOpenChange={setMoreOpen}>
         <DrawerContent>
-          <div className="p-4 pb-6">
+          {/* A286 — l'ultima riga di icone finiva sotto l'home indicator su
+              iPhone: pb-6 fisso non tiene conto della safe area. */}
+          <div className="p-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
             <div className="grid grid-cols-3 gap-3">
               {moreItems.map((item) => {
                 const active = pathname.startsWith(item.href);

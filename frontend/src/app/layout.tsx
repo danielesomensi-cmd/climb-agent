@@ -55,18 +55,50 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+/*
+ * A286 — Clerk non era tematizzato: card bianca con testo nero in un'app
+ * dark-only, ed è la schermata che chiude il wizard di onboarding. Si usa
+ * `variables` invece di @clerk/themes per non aggiungere una dipendenza; i
+ * valori sono gli stessi token A214 di globals.css, scritti per esteso perché
+ * Clerk deriva le sue scale dal colore e non risolve var() in modo affidabile.
+ */
+const clerkAppearance = {
+  variables: {
+    colorPrimary: "hsl(340, 85%, 58%)",
+    colorTextOnPrimaryBackground: "hsl(340, 65%, 10%)",
+    colorBackground: "hsl(222, 24%, 13%)",
+    colorText: "hsl(210, 20%, 98%)",
+    colorTextSecondary: "hsl(215, 14%, 62%)",
+    colorInputBackground: "hsl(222, 20%, 19%)",
+    colorInputText: "hsl(210, 20%, 98%)",
+    colorNeutral: "hsl(210, 20%, 98%)",
+    colorDanger: "hsl(0, 75%, 58%)",
+    colorSuccess: "hsl(145, 65%, 48%)",
+    colorWarning: "hsl(40, 90%, 55%)",
+    borderRadius: "10px",
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider appearance={clerkAppearance}>
       <html lang="en" className="dark" suppressHydrationWarning>
         <body className={`${inter.variable} font-sans antialiased`}>
           <Providers>
             <div className="mx-auto min-h-screen max-w-3xl">{children}</div>
-            <Toaster richColors position="top-center" />
+            {/* A286 — nella PWA installata i toast finivano sotto il notch:
+                l'offset di default di sonner è 32px dal bordo dello schermo,
+                che su iPhone è dentro la status bar. */}
+            <Toaster
+              richColors
+              position="top-center"
+              offset="calc(env(safe-area-inset-top) + 16px)"
+              mobileOffset="calc(env(safe-area-inset-top) + 12px)"
+            />
             <SwUpdateBanner />
             <AttributionCapture />
             <InstallCapture />

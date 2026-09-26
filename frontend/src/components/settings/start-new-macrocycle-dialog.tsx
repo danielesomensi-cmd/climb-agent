@@ -376,7 +376,7 @@ export function StartNewMacrocycleDialog({
               </div>
 
               {midCycleWarning && (
-                <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs">
+                <div className="rounded-md border border-warning/30 bg-warning/15 p-3 text-xs">
                   <p className="font-medium">Heads up</p>
                   <p className="mt-1">{midCycleWarning.text}</p>
                 </div>

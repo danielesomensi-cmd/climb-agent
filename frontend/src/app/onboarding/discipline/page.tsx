@@ -1,8 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
-import { Button } from "@/components/ui/button";
+import { StepNav } from "@/components/onboarding/step-nav";
 import {
   Card,
   CardContent,
@@ -29,7 +28,6 @@ const DISCIPLINES = [
 ] as const;
 
 export default function DisciplinePage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const selected = data.goal.discipline || "lead";
 
@@ -82,17 +80,10 @@ export default function DisciplinePage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/experience")}
-        >
-          Back
-        </Button>
-        <Button onClick={() => router.push("/onboarding/grades")}>
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/experience"
+        nextHref="/onboarding/grades"
+      />
     </div>
   );
 }

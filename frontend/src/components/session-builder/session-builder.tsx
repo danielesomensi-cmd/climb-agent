@@ -283,7 +283,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
         <Button
           variant="outline"
           size="sm"
-          className="w-full border-dashed text-orange-500 border-orange-500/30 hover:bg-orange-500/5"
+          className="w-full border-dashed text-warning border-warning/30 hover:bg-warning/10"
           onClick={() => setWarmupPickerOpen(true)}
         >
           <Flame className="h-4 w-4 mr-2" />
@@ -330,7 +330,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
         <Button
           variant="outline"
           size="sm"
-          className="w-full border-dashed text-blue-500 border-blue-500/30 hover:bg-blue-500/5"
+          className="w-full border-dashed text-info border-info/30 hover:bg-info/10"
           onClick={() => setCooldownPickerOpen(true)}
         >
           <Snowflake className="h-4 w-4 mr-2" />
@@ -349,7 +349,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
 
       {/* Error display */}
       {saveError && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-danger/30 bg-danger/15 px-4 py-3 text-sm text-danger">
           {saveError}
         </div>
       )}

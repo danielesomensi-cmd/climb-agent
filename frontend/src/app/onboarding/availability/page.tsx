@@ -160,7 +160,7 @@ export default function AvailabilityPage() {
             )}
           </div>
           {/* Grid header */}
-          <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1 text-center">
+          <div className="grid grid-cols-[2.25rem_1fr_1fr_1fr] gap-1.5 text-center">
             <div />
             {SLOTS.map((s) => (
               <p key={s.key} className="text-xs font-medium text-muted-foreground">
@@ -169,21 +169,35 @@ export default function AvailabilityPage() {
             ))}
           </div>
 
-          {/* Grid rows */}
-          {WEEKDAYS.map((day) => (
-            <div key={day.key} className="space-y-1">
-              <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-1 items-start">
-                <p className="w-10 text-sm font-medium py-2">{day.label}</p>
-                {SLOTS.map((slot) => {
-                  const s = getSlot(day.key, slot.key);
-                  return (
-                    <div key={slot.key} className="space-y-1">
+          {/* Grid rows.
+              A286 (C3) — i selettori Home/Gym/Other stavano DENTRO la colonna
+              dello slot: 63 bersagli alti ~19px con testo a 10px, sotto il
+              minimo WCAG 2.2 e impossibili da centrare col pollice. Nella
+              griglia resta solo il toggle del giorno (44px); il dettaglio di
+              ogni slot attivo scende sotto, a piena larghezza, dove i tre
+              bottoni hanno ~110px ciascuno anche su un 375px. */}
+          {WEEKDAYS.map((day) => {
+            const activeSlots = SLOTS.filter((slot) => {
+              const s = getSlot(day.key, slot.key);
+              return s.available || s.preferred_location === "other_sport";
+            });
+            return (
+              <div key={day.key} className="space-y-1.5">
+                <div className="grid grid-cols-[2.25rem_1fr_1fr_1fr] gap-1.5 items-center">
+                  <p className="text-sm font-medium">{day.label}</p>
+                  {SLOTS.map((slot) => {
+                    const s = getSlot(day.key, slot.key);
+                    const on = s.available || s.preferred_location === "other_sport";
+                    return (
                       <button
+                        key={slot.key}
                         type="button"
-                        className={`w-full rounded-md border px-2 py-2 text-xs transition-colors ${
-                          s.available || s.preferred_location === "other_sport"
+                        aria-pressed={on}
+                        aria-label={`${day.label} ${slot.label}`}
+                        className={`min-h-[44px] w-full rounded-md border px-2 text-xs transition-colors ${
+                          on
                             ? "border-primary bg-primary/10 text-primary font-medium"
-                            : "border-muted bg-muted/30 text-muted-foreground hover:border-primary/40"
+                            : "border-border bg-muted/30 text-muted-foreground hover:border-primary/40"
                         }`}
                         onClick={() => {
                           if (s.preferred_location === "other_sport") {
@@ -193,108 +207,119 @@ export default function AvailabilityPage() {
                           }
                         }}
                       >
-                        {s.preferred_location === "other_sport" ? "Other" : s.available ? "Yes" : "-"}
+                        {s.preferred_location === "other_sport" ? "Other" : s.available ? "Yes" : "–"}
                       </button>
+                    );
+                  })}
+                </div>
 
-                      {(s.available || s.preferred_location === "other_sport") && (
-                        <div className="space-y-1">
-                          <div className="flex gap-1">
-                            <button
-                              type="button"
-                              className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
-                                s.preferred_location === "home"
-                                  ? "border-primary bg-primary/10 text-primary"
-                                  : "border-muted text-muted-foreground"
-                              }`}
-                              onClick={() => setLocation(day.key, slot.key, "home")}
-                            >
-                              Home
-                            </button>
-                            <button
-                              type="button"
-                              disabled={gyms.length === 0}
-                              className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
-                                gyms.length === 0
-                                  ? "border-muted text-muted-foreground/40 cursor-not-allowed"
-                                  : s.preferred_location === "gym"
-                                    ? "border-primary bg-primary/10 text-primary"
-                                    : "border-muted text-muted-foreground"
-                              }`}
-                              onClick={() => setLocation(day.key, slot.key, "gym")}
-                            >
-                              Gym
-                            </button>
-                            <button
-                              type="button"
-                              className={`flex-1 rounded text-[10px] px-1 py-0.5 border ${
-                                s.preferred_location === "other_sport"
-                                  ? "border-warning bg-warning/10 text-warning"
-                                  : "border-muted text-muted-foreground"
-                              }`}
-                              onClick={() => setLocation(day.key, slot.key, "other_sport")}
-                            >
-                              Other
-                            </button>
+                {activeSlots.map((slot) => {
+                  const s = getSlot(day.key, slot.key);
+                  return (
+                    <div
+                      key={`${day.key}-${slot.key}-detail`}
+                      className="space-y-2 rounded-md border border-border bg-muted/20 p-2.5"
+                    >
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {day.label} · {slot.label}
+                      </p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <button
+                          type="button"
+                          aria-pressed={s.preferred_location === "home"}
+                          className={`min-h-[44px] rounded-md border px-2 text-xs font-medium transition-colors ${
+                            s.preferred_location === "home"
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border text-muted-foreground"
+                          }`}
+                          onClick={() => setLocation(day.key, slot.key, "home")}
+                        >
+                          Home
+                        </button>
+                        <button
+                          type="button"
+                          disabled={gyms.length === 0}
+                          aria-pressed={s.preferred_location === "gym"}
+                          className={`min-h-[44px] rounded-md border px-2 text-xs font-medium transition-colors ${
+                            gyms.length === 0
+                              ? "border-border text-muted-foreground/40 cursor-not-allowed"
+                              : s.preferred_location === "gym"
+                                ? "border-primary bg-primary/10 text-primary"
+                                : "border-border text-muted-foreground"
+                          }`}
+                          onClick={() => setLocation(day.key, slot.key, "gym")}
+                        >
+                          Gym
+                        </button>
+                        <button
+                          type="button"
+                          aria-pressed={s.preferred_location === "other_sport"}
+                          className={`min-h-[44px] rounded-md border px-2 text-xs font-medium transition-colors ${
+                            s.preferred_location === "other_sport"
+                              ? "border-warning bg-warning/10 text-warning"
+                              : "border-border text-muted-foreground"
+                          }`}
+                          onClick={() => setLocation(day.key, slot.key, "other_sport")}
+                        >
+                          Other
+                        </button>
+                      </div>
+
+                      {/* gym selector or nothing — no-gym banner is shown at page level.
+                          B303: only offer a choice when there's more than one gym;
+                          with a single gym the planner already defaults to it, so a
+                          "Which?" dropdown with one option is pure noise. */}
+                      {s.preferred_location === "gym" && gyms.length > 1 && (
+                        <Select
+                          value={s.gym_id ?? ""}
+                          onValueChange={(v) => setGymId(day.key, slot.key, v)}
+                        >
+                          <SelectTrigger className="min-h-[44px] w-full text-sm">
+                            <SelectValue placeholder="Which gym?" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {gyms.map((g, i) => (
+                              <SelectItem
+                                key={g.gym_id || i}
+                                value={g.gym_id || ""}
+                              >
+                                {g.name || `Gym ${i + 1}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      {s.preferred_location === "other_sport" && (
+                        <div className="space-y-2">
+                          <Input
+                            placeholder="e.g. Circus, Running"
+                            className="min-h-[44px]"
+                            value={s.other_activity_name ?? ""}
+                            onChange={(e) =>
+                              updateSlot(day.key, slot.key, { ...s, other_activity_name: e.target.value })
+                            }
+                          />
+                          <div className="flex min-h-[44px] items-center gap-2">
+                            <Switch
+                              id={`reduce-${day.key}-${slot.key}`}
+                              checked={s.reduce_intensity_after ?? false}
+                              onCheckedChange={(v) =>
+                                updateSlot(day.key, slot.key, { ...s, reduce_intensity_after: v })
+                              }
+                            />
+                            <Label htmlFor={`reduce-${day.key}-${slot.key}`} className="text-xs">
+                              Reduce next day
+                            </Label>
                           </div>
-
-                          {/* gym selector or nothing — no-gym banner is shown at page level.
-                              B303: only offer a choice when there's more than one gym;
-                              with a single gym the planner already defaults to it, so a
-                              "Which?" dropdown with one option is pure noise. */}
-                          {s.preferred_location === "gym" && gyms.length > 1 && (
-                            <Select
-                              value={s.gym_id ?? ""}
-                              onValueChange={(v) => setGymId(day.key, slot.key, v)}
-                            >
-                              <SelectTrigger className="h-6 text-[10px] w-full">
-                                <SelectValue placeholder="Which?" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {gyms.map((g, i) => (
-                                  <SelectItem
-                                    key={g.gym_id || i}
-                                    value={g.gym_id || ""}
-                                  >
-                                    {g.name || `Gym ${i + 1}`}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-
-                          {s.preferred_location === "other_sport" && (
-                            <div className="space-y-1">
-                              <Input
-                                placeholder="e.g. Circus, Running"
-                                className="h-6 text-[10px]"
-                                value={s.other_activity_name ?? ""}
-                                onChange={(e) =>
-                                  updateSlot(day.key, slot.key, { ...s, other_activity_name: e.target.value })
-                                }
-                              />
-                              <div className="flex items-center gap-1">
-                                <Switch
-                                  id={`reduce-${day.key}-${slot.key}`}
-                                  className="scale-75"
-                                  checked={s.reduce_intensity_after ?? false}
-                                  onCheckedChange={(v) =>
-                                    updateSlot(day.key, slot.key, { ...s, reduce_intensity_after: v })
-                                  }
-                                />
-                                <Label htmlFor={`reduce-${day.key}-${slot.key}`} className="text-[10px]">
-                                  Reduce next day
-                                </Label>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
                   );
                 })}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           <p className="text-sm font-medium text-center text-muted-foreground">
             {availableDays} {availableDays === 1 ? "day" : "days"} with availability

@@ -117,12 +117,27 @@ function AxisTooltip({
     el.style.visibility = "visible";
   }, [axis, targetGrade, mode]);
 
+  // A286 (C7) — la chiusura era su `mousedown`, che su iOS non arriva quando il
+  // tap cade su un elemento non interattivo: il tooltip restava aperto e
+  // copriva la legenda. `pointerdown` copre mouse e touch; Escape dà la stessa
+  // via d'uscita da tastiera, che prima non c'era affatto.
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
+    function handlePointerDown(e: Event) {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    // `touchstart` è la rete di sicurezza per i WebView che non emettono
+    // pointer events (vecchi iOS in-app browser).
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [onClose]);
 
   const copy =

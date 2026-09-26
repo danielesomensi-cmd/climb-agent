@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -14,21 +14,35 @@ import { Button } from "@/components/ui/button";
  *
  * Next is never disabled here. Tapping it with unmet requirements reveals
  * exactly what is missing, which turns a dead end into an instruction.
+ *
+ * A286 — era usato da 4 step su 12; gli altri 8 avevano footer copiati a mano
+ * (CTA da 36px, bottoni grigi senza spiegazione). Ora lo usano tutti e 12, e
+ * le due varianti che servivano davvero sono props: `secondary` (lo "Skip" di
+ * tests/limitations) e `actions` (la review, che invia invece di navigare).
  */
 export function StepNav({
   backHref,
   nextHref,
-  blockers,
+  blockers = [],
   nextLabel = "Next",
   onNext,
+  secondary,
+  actions,
+  backDisabled,
 }: {
   backHref: string;
-  nextHref: string;
+  /** Not needed when `actions` replaces the primary CTA. */
+  nextHref?: string;
   /** Human-readable list of what is still missing. Empty = free to continue. */
-  blockers: string[];
+  blockers?: string[];
   nextLabel?: string;
   /** Runs before navigating, only when there are no blockers. */
   onNext?: () => void;
+  /** Optional ghost action shown to the left of the primary CTA ("Skip"). */
+  secondary?: ReactNode;
+  /** Replaces the primary CTA entirely — for the step that submits. */
+  actions?: ReactNode;
+  backDisabled?: boolean;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -38,7 +52,7 @@ export function StepNav({
   // A245 Phase D (F47) — when the user came here from the summary to fix one
   // field, Next should take them back there, not deeper into the wizard.
   const fromReview = params.get("from") === "review";
-  const target = fromReview ? "/onboarding/review" : nextHref;
+  const target = fromReview ? "/onboarding/review" : (nextHref ?? "");
   const label = fromReview ? "Done — back to summary" : nextLabel;
 
   return (
@@ -58,29 +72,35 @@ export function StepNav({
         </div>
       )}
 
-      <div className="flex justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Button
           variant="outline"
           className="min-h-[44px]"
+          disabled={backDisabled}
           onClick={() => router.push(backHref)}
         >
           Back
         </Button>
-        <Button
-          className="min-h-[44px]"
-          // Deliberately NOT disabled — see the note above.
-          aria-describedby={attempted && blocked ? "step-blockers" : undefined}
-          onClick={() => {
-            if (blocked) {
-              setAttempted(true);
-              return;
-            }
-            onNext?.();
-            router.push(target);
-          }}
-        >
-          {label}
-        </Button>
+        <div className="flex items-center gap-2">
+          {secondary}
+          {actions ?? (
+            <Button
+              className="min-h-[44px]"
+              // Deliberately NOT disabled — see the note above.
+              aria-describedby={attempted && blocked ? "step-blockers" : undefined}
+              onClick={() => {
+                if (blocked) {
+                  setAttempted(true);
+                  return;
+                }
+                onNext?.();
+                if (target) router.push(target);
+              }}
+            >
+              {label}
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

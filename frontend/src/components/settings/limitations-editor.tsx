@@ -36,9 +36,11 @@ const SIDES = [
 ];
 
 const SEVERITIES = [
-  { value: "monitor", label: "Monitor", desc: "Mild discomfort — keep training but stay aware", color: "text-yellow-500" },
-  { value: "active", label: "Active", desc: "Noticeable pain — reduce stress on this area", color: "text-orange-500" },
-  { value: "severe", label: "Severe", desc: "Significant injury — avoid all exercises", color: "text-red-500" },
+  { value: "monitor", label: "Monitor", desc: "Mild discomfort — keep training but stay aware", color: "text-warning" },
+  // A286 — tre livelli, tre token distinti: warning (giallo) → power-endurance
+  // (arancio) → danger (rosso). L'arancio non ha un token funzionale proprio.
+  { value: "active", label: "Active", desc: "Noticeable pain — reduce stress on this area", color: "text-axis-power-endurance" },
+  { value: "severe", label: "Severe", desc: "Significant injury — avoid all exercises", color: "text-danger" },
 ];
 
 interface LimitationDetail {
@@ -60,9 +62,9 @@ interface LimitationsEditorProps {
 }
 
 function severityBadgeColor(severity: string) {
-  if (severity === "monitor") return "bg-yellow-500/15 text-yellow-500 border-yellow-500/30";
-  if (severity === "active") return "bg-orange-500/15 text-orange-500 border-orange-500/30";
-  if (severity === "severe") return "bg-red-500/15 text-red-500 border-red-500/30";
+  if (severity === "monitor") return "bg-warning/15 text-warning border-warning/30";
+  if (severity === "active") return "bg-axis-power-endurance/15 text-axis-power-endurance border-axis-power-endurance/30";
+  if (severity === "severe") return "bg-danger/15 text-danger border-danger/30";
   return "";
 }
 

@@ -12,23 +12,22 @@ interface MacrocycleTimelineProps {
   showProgress?: boolean;
 }
 
-/** Background color keyed on phase_id */
-const PHASE_COLORS: Record<string, string> = {
-  base: "bg-blue-500",
-  strength_power: "bg-red-500",
-  power_endurance: "bg-orange-500",
-  performance: "bg-green-500",
-  deload: "bg-gray-400",
+/**
+ * A286 — la timeline aveva una palette Tailwind parallela (con grigi da
+ * light-mode) e scriveva bianco su verde saturo: 2,28:1 su font 10-12px,
+ * sotto AA anche per testo large. Ora usa i token --phase-*, che erano
+ * definiti in globals.css e non usati da nessun componente: colore nel testo,
+ * fondo tenue dello stesso colore.
+ */
+const PHASE_STYLE: Record<string, string> = {
+  base: "bg-phase-aerobic/20 text-phase-aerobic",
+  strength_power: "bg-phase-anaerobic-alactic/20 text-phase-anaerobic-alactic",
+  power_endurance: "bg-phase-anaerobic-lactic/20 text-phase-anaerobic-lactic",
+  performance: "bg-phase-specific/20 text-phase-specific",
+  deload: "bg-phase-recovery/20 text-phase-recovery",
 };
 
-/** Text color for bar content */
-const PHASE_TEXT: Record<string, string> = {
-  base: "text-white",
-  strength_power: "text-white",
-  power_endurance: "text-white",
-  performance: "text-white",
-  deload: "text-gray-700",
-};
+const PHASE_STYLE_FALLBACK = "bg-muted text-muted-foreground";
 
 export function MacrocycleTimeline({
   macrocycle,
@@ -57,8 +56,7 @@ export function MacrocycleTimeline({
         <div className="flex h-10 w-full overflow-hidden rounded-lg">
           {phasesWithOffset.map((phase) => {
             const widthPct = (phase.duration_weeks / totalWeeks) * 100;
-            const bgColor = PHASE_COLORS[phase.phase_id] ?? "bg-gray-300";
-            const txtColor = PHASE_TEXT[phase.phase_id] ?? "text-gray-800";
+            const phaseStyle = PHASE_STYLE[phase.phase_id] ?? PHASE_STYLE_FALLBACK;
             const label =
               getPhaseNameShort(phase.phase_id, discipline);
 
@@ -67,8 +65,9 @@ export function MacrocycleTimeline({
                 key={phase.phase_id}
                 className={cn(
                   "flex items-center justify-center text-[10px] sm:text-xs font-medium px-0.5 sm:px-1 leading-tight text-center",
-                  bgColor,
-                  txtColor
+                  // Sottile separatore fra fasi adiacenti, che ora hanno fondi tenui.
+                  "border-r border-surface-base/40 last:border-r-0",
+                  phaseStyle
                 )}
                 style={{ width: `${widthPct}%` }}
                 title={`${phase.phase_name} — ${phase.duration_weeks} wk`}
@@ -112,7 +111,7 @@ export function MacrocycleTimeline({
               <p className="text-[10px] font-medium text-muted-foreground leading-tight break-words">
                 {label}
                 {isComplete && (
-                  <span className="ml-0.5 text-emerald-500" aria-label="Phase complete">
+                  <span className="ml-0.5 text-success" aria-label="Phase complete">
                     ✓
                   </span>
                 )}

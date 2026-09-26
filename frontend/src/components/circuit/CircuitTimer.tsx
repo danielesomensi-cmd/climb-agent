@@ -5,7 +5,13 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, transitionBeep } from "@/lib/beep";
+import { confirmFeedback } from "@/lib/haptics";
 import { speakPhaseTransition } from "@/lib/voice-cues";
+import {
+  PHASE_BG,
+  PHASE_RING,
+  PHASE_TEXT,
+} from "@/components/session-play/player-phase-colors";
 import {
   type CircuitExercise,
   type Difficulty,
@@ -17,32 +23,13 @@ import {
 
 type CircuitPhase = "prepare" | "work" | "rest" | "done";
 
-const PHASE_BG: Record<CircuitPhase, string> = {
-  prepare: "bg-zinc-800/80",
-  work: "bg-teal-900/80",
-  rest: "bg-blue-900/80",
-  done: "bg-card",
-};
-
-const PHASE_TEXT: Record<CircuitPhase, string> = {
-  prepare: "text-zinc-300",
-  work: "text-teal-400",
-  rest: "text-blue-400",
-  done: "text-green-500",
-};
+// A286 — B7: colori di fase dalla mappa condivisa (player-phase-colors).
 
 const PHASE_LABEL: Record<CircuitPhase, string> = {
   prepare: "GET READY",
   work: "WORK",
   rest: "REST",
   done: "DONE",
-};
-
-const PHASE_RING: Record<CircuitPhase, string> = {
-  prepare: "stroke-zinc-400",
-  work: "stroke-teal-400",
-  rest: "stroke-blue-400",
-  done: "stroke-green-500",
 };
 
 // ── Audio ──────────────────────────────────────────────────────────────
@@ -171,6 +158,8 @@ export function CircuitTimer({
   useEffect(() => {
     if (transitionId > 0) {
       transitionBeep();
+      // A286 — B8: il cambio di fase si sente anche senza guardare lo schermo.
+      confirmFeedback();
       if (pendingVoiceCueRef.current) {
         speakPhaseTransition(pendingVoiceCueRef.current);
         pendingVoiceCueRef.current = null;
@@ -427,6 +416,11 @@ export function CircuitTimer({
   const displayExercise = phase === "rest" ? (nextExercise || currentExercise) : currentExercise;
   const previewExercise = phase === "work" ? nextExercise : null;
 
+  // A286 — B14: l'immagine che comparirà dopo questa, precaricata mentre la
+  // corrente è ancora a schermo. Durante il REST si sta già mostrando
+  // sequence[i+1], quindi la prossima nuova è la i+2.
+  const preloadExercise = sequence[phase === "rest" ? currentIndex + 2 : currentIndex + 1] ?? null;
+
   // ── Render ───────────────────────────────────────────────────────
 
   return (
@@ -527,7 +521,7 @@ export function CircuitTimer({
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleStop(); }}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-danger/30 bg-danger/15 text-danger hover:brightness-110 transition-colors"
               aria-label="Stop circuit"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
@@ -568,7 +562,7 @@ export function CircuitTimer({
             </button>
 
             {/* Exercise info */}
-            <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
+            <div className="flex-1 rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
               {displayExercise.image && (
                 <Image
                   src={`/exercises/core/${displayExercise.image}`}
@@ -603,8 +597,8 @@ export function CircuitTimer({
 
         {/* Prepare: show first exercise preview */}
         {phase === "prepare" && (
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
-            <p className="text-xs text-center text-white/50 uppercase tracking-wider mb-2">First up</p>
+          <div className="w-full max-w-sm rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
+            <p className="text-xs text-center text-white/70 uppercase tracking-wider mb-2">First up</p>
             {sequence[0].image && (
               <Image
                 src={`/exercises/core/${sequence[0].image}`}
@@ -628,18 +622,32 @@ export function CircuitTimer({
         {/* Next exercise preview (during work) */}
         {previewExercise && phase === "work" && (
           <div className="w-full max-w-sm mt-2 rounded-xl border border-white/5 bg-black/10 px-4 py-2">
-            <span className="text-xs text-white/40">Next: </span>
-            <span className="text-sm font-medium text-white/60">{previewExercise.name}</span>
+            <span className="text-xs text-white/70">Next: </span>
+            <span className="text-sm font-medium text-white/80">{previewExercise.name}</span>
           </div>
         )}
 
         {/* REST: pulsing GET READY */}
         {phase === "rest" && (
           <div className="mt-2 animate-pulse">
-            <span className="text-lg font-bold text-blue-300 uppercase tracking-wider">Get Ready</span>
+            <span className="text-lg font-bold text-info uppercase tracking-wider">Get Ready</span>
           </div>
         )}
       </div>
+
+      {/* A286 — B14: precarica l'immagine successiva fuori campo (h/w 1px,
+          non display:none, altrimenti il browser non la scarica). */}
+      {preloadExercise?.image && (
+        <div aria-hidden className="pointer-events-none absolute h-px w-px overflow-hidden opacity-0">
+          <Image
+            src={`/exercises/core/${preloadExercise.image}`}
+            alt=""
+            width={560}
+            height={280}
+            priority
+          />
+        </div>
+      )}
 
       {/* Safe area bottom spacer for nav bar */}
       <div className="shrink-0 h-[env(safe-area-inset-bottom)]" />

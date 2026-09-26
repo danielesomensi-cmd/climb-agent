@@ -20,16 +20,16 @@ function fmt(sec: number): string {
 
 export function TryBreakdown({ attempts, timings }: { attempts: OutdoorAttempt[]; timings: TryTiming[] }) {
   return (
-    <ul className="space-y-0.5 font-mono text-[11px] text-zinc-500">
+    <ul className="space-y-0.5 font-mono text-[11px] text-muted-foreground">
       {attempts.map((a, i) => {
         const sent = a.result === "sent" || a.result === "topped_out";
         const t = timings[i];
         return (
           <li key={i} className="flex items-center gap-1.5">
-            <span className={sent ? "text-green-500" : "text-red-500"} aria-hidden="true">
+            <span className={sent ? "text-success" : "text-danger"} aria-hidden="true">
               {sent ? "✓" : "✗"}
             </span>
-            <span className="text-zinc-400">try {i + 1}</span>
+            <span className="text-foreground/80">try {i + 1}</span>
             <span aria-hidden="true">·</span>
             <span title="Rest before this try (since the previous burn on any route)">
               rest {t?.rest_before_seconds != null ? fmt(t.rest_before_seconds) : "—"}
@@ -37,7 +37,7 @@ export function TryBreakdown({ attempts, timings }: { attempts: OutdoorAttempt[]
             {t?.climb_seconds != null && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="text-amber-400/80" title="Time on the wall">climb {fmt(t.climb_seconds)}</span>
+                <span className="text-warning" title="Time on the wall">climb {fmt(t.climb_seconds)}</span>
               </>
             )}
           </li>

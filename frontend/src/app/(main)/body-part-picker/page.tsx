@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import {
   getBodyPartPickerOptions,
   getBodyPartEstimate,
+  getWeek,
   previewBodyPartSession,
   startBodyPartSession,
   type BodyPartOption,
   type BodyPartEquipmentOption,
   type BodyPartSession,
 } from "@/lib/api";
+import { findDay, firstFreeSlot } from "@/lib/day-slots";
 import { invalidateWeekPlans } from "@/lib/invalidation";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -124,14 +126,37 @@ export default function BodyPartPickerPage() {
     setError(null);
     setStarting(true);
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      // A286 — lo slot era hardcodato a "evening": con la sera già occupata
+      // l'inserimento tornava 422. Stessa soluzione di B309 sul coach: si
+      // risolve client-side il primo slot libero del giorno.
+      let slot: string | undefined;
+      try {
+        const week = await getWeek(0);
+        const day = week.week_plan ? findDay(week.week_plan, today) : null;
+        if (day) {
+          const free = firstFreeSlot(day);
+          if (!free) {
+            throw new Error(
+              "Today is fully booked (morning, lunch and evening). Free a slot from This Week, then retry."
+            );
+          }
+          slot = free;
+        }
+      } catch (e) {
+        // Il piano settimanale non è indispensabile per generare la sessione:
+        // se manca lasciamo decidere il server (slot undefined). Rilanciamo
+        // solo il "giornata piena", che è un messaggio azionabile.
+        if (e instanceof Error && e.message.includes("fully booked")) throw e;
+      }
       const result = await startBodyPartSession({
         body_parts: Array.from(selectedParts),
         equipment_mode: equipmentMode,
         gym_id: gymId,
         include_cooldown: includeCooldown,
         target_date: today,
-        slot: "evening",
+        slot,
         location: gymId ? "gym" : equipmentMode === "home" ? "home" : "home",
       });
       invalidateWeekPlans(qc);
@@ -142,7 +167,14 @@ export default function BodyPartPickerPage() {
         router.push("/today");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to start session");
+      const msg = e instanceof Error ? e.message : "Failed to start session";
+      // A286 — il testo grezzo del motore ("Slot 'evening' already occupied")
+      // non è azionabile per chi lo slot non l'ha mai scelto.
+      setError(
+        msg.includes("already occupied")
+          ? "Today is fully booked. Free a slot from This Week, then retry."
+          : msg
+      );
       setStarting(false);
     }
   }, [selectedParts, equipmentMode, gymId, includeCooldown, qc, router]);
@@ -162,7 +194,7 @@ export default function BodyPartPickerPage() {
       />
       <main className="px-4 py-4 max-w-lg mx-auto">
         {error && (
-          <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          <div className="mb-3 rounded-lg border border-danger/30 bg-danger/15 p-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -259,7 +291,7 @@ export default function BodyPartPickerPage() {
             </label>
 
             {/* Footer — live counter + action */}
-            <div className="sticky bottom-4 mt-2 rounded-xl border bg-background/95 backdrop-blur p-3 shadow-lg">
+            <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] mt-2 rounded-xl border bg-background/95 backdrop-blur p-3 shadow-lg">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm">
                   <span className="font-semibold">{selectedParts.size}</span>{" "}
@@ -347,7 +379,7 @@ export default function BodyPartPickerPage() {
               </div>
             )}
 
-            <div className="sticky bottom-4 mt-2 rounded-xl border bg-background/95 backdrop-blur p-3 shadow-lg">
+            <div className="sticky bottom-[calc(4.5rem+env(safe-area-inset-bottom))] mt-2 rounded-xl border bg-background/95 backdrop-blur p-3 shadow-lg">
               <Button
                 onClick={handleStart}
                 disabled={starting}

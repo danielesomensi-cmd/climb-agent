@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CheckCircle2, Play } from "lucide-react";
+import { CheckCircle2, Pause, Play } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, longBeep, transitionBeep } from "@/lib/beep";
+import { completeFeedback, tapFeedback } from "@/lib/haptics";
 import { displaySetNumber, sideForSet } from "@/lib/alt-sides";
 import type { CustomSessionExercise } from "@/lib/types";
+import { PHASE_TEXT } from "./player-phase-colors";
 
 export type ExerciseCategory = "time_based" | "reps_based" | "timed_sets";
 
@@ -24,13 +26,8 @@ export function detectCategory(ex: CustomSessionExercise): ExerciseCategory {
 
 
 
-function vibrate(pattern: number[]) {
-  try {
-    (navigator as Navigator & { vibrate?: (p: number[]) => boolean }).vibrate?.(pattern);
-  } catch {
-    /* noop */
-  }
-}
+// A286 — l'haptic passa da `navigator.vibrate` (che su iOS non fa nulla) agli
+// helper di src/lib/haptics, che hanno il fallback switch-toggle per Safari.
 
 interface CustomExerciseStepProps {
   exercise: CustomSessionExercise;
@@ -57,6 +54,9 @@ export function CustomExerciseStep({
   const reps = exercise.reps ?? 0;
 
   const [timerRunning, setTimerRunning] = useState(false);
+  // A286 — B10: un set cronometrato si può mettere in pausa, come negli altri
+  // player. `timerRunning` resta "il set è in corso", `paused` ne ferma il tick.
+  const [paused, setPaused] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(workSec);
   const endRef = useRef<number>(0);
   const lastTickRef = useRef<number>(-1);
@@ -70,6 +70,7 @@ export function CustomExerciseStep({
   // this naturally, but we also guard here for safety).
   useEffect(() => {
     setTimerRunning(false);
+    setPaused(false);
     setSecondsLeft(workSec);
     lastTickRef.current = -1;
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -77,7 +78,7 @@ export function CustomExerciseStep({
 
   // Wall-clock based countdown (iOS background safe).
   useEffect(() => {
-    if (!timerRunning) return;
+    if (!timerRunning || paused) return;
     endRef.current = Date.now() + secondsLeft * 1000;
 
     intervalRef.current = setInterval(() => {
@@ -91,7 +92,7 @@ export function CustomExerciseStep({
         }
         if (remainingS === 0) {
           longBeep();
-          vibrate([300, 100, 300]);
+          completeFeedback();
           setTimerRunning(false);
           setSecondsLeft(0);
           onSetDoneRef.current();
@@ -106,33 +107,41 @@ export function CustomExerciseStep({
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
     // secondsLeft is intentionally not in deps — the endRef pins wall-clock
-    // target at start; re-running on every tick would reset it.
+    // target at start; re-running on every tick would reset it. A286: `paused`
+    // invece sì, ed è proprio quello che ricalcola endRef alla ripresa.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [timerRunning]);
+  }, [timerRunning, paused]);
 
   // iOS visibility resync — recalc from wall clock when returning to foreground.
   useEffect(() => {
     const onVisible = () => {
-      if (document.visibilityState !== "visible" || !timerRunning) return;
+      if (document.visibilityState !== "visible" || !timerRunning || paused) return;
       const remainingMs = endRef.current - Date.now();
       setSecondsLeft(Math.max(0, Math.ceil(remainingMs / 1000)));
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [timerRunning]);
+  }, [timerRunning, paused]);
 
   const handleStartTimer = useCallback(async () => {
     await unlockAudio();
     lastTickRef.current = -1;
     setSecondsLeft(workSec);
     endRef.current = Date.now() + workSec * 1000;
+    setPaused(false);
     setTimerRunning(true);
     transitionBeep();
   }, [workSec]);
 
+  const handlePauseToggle = useCallback(() => {
+    tapFeedback();
+    setPaused((p) => !p);
+  }, []);
+
   const handleRepsDone = useCallback(async () => {
     await unlockAudio();
     transitionBeep();
+    completeFeedback();
     onSetDoneRef.current();
   }, []);
 
@@ -141,11 +150,12 @@ export function CustomExerciseStep({
   const handleFinishEarly = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setTimerRunning(false);
+    setPaused(false);
     setSecondsLeft(0);
     onSetDoneRef.current();
   }, []);
 
-  const isCountdown = timerRunning && secondsLeft <= 3 && secondsLeft > 0;
+  const isCountdown = timerRunning && !paused && secondsLeft <= 3 && secondsLeft > 0;
 
   return (
     <div className="space-y-6 py-6">
@@ -191,20 +201,25 @@ export function CustomExerciseStep({
         <div className="flex flex-col items-center gap-5">
           <div
             className={cn(
-              "flex items-center justify-center w-60 h-60 rounded-full border-2",
+              "flex flex-col items-center justify-center w-60 h-60 rounded-full border-2",
               timerRunning
-                ? "bg-orange-500/10 border-orange-500/40"
+                ? "bg-warning/10 border-warning/40"
                 : "bg-muted/30 border-muted",
             )}
           >
             <span
               className={cn(
                 "text-7xl font-bold tabular-nums",
-                isCountdown && "animate-pulse text-orange-500",
+                isCountdown && cn("animate-pulse", PHASE_TEXT.work),
               )}
             >
               {secondsLeft}s
             </span>
+            {paused && (
+              <span className="mt-1 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+                Paused
+              </span>
+            )}
           </div>
 
           {!timerRunning && (
@@ -214,13 +229,25 @@ export function CustomExerciseStep({
             </Button>
           )}
           {timerRunning && (
-            <button
-              type="button"
-              onClick={handleFinishEarly}
-              className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
-            >
-              Finish set early
-            </button>
+            <div className="flex flex-col items-center gap-3">
+              {/* A286 — B10: pausa/ripresa, coerente con gli altri player */}
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={handlePauseToggle}
+                className="gap-2 min-w-[200px]"
+              >
+                {paused ? <Play className="size-5" /> : <Pause className="size-5" />}
+                {paused ? "Resume" : "Pause"}
+              </Button>
+              <button
+                type="button"
+                onClick={handleFinishEarly}
+                className="min-h-[44px] text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+              >
+                Finish set early
+              </button>
+            </div>
           )}
         </div>
       )}

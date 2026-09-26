@@ -20,8 +20,13 @@ import { PERSIST_MAX_AGE_MS } from "@/lib/query-persist";
  * structural sharing ensures every cache write produces a fresh top-level reference
  * that useSyncExternalStore always picks up.
  *
- * Adjacent-week prefetch: when this query loads successfully, prefetch the
- * previous and next week silently in the background so navigation is instant.
+ * Next-week prefetch: when this query loads successfully, prefetch the FOLLOWING
+ * week silently in the background so navigation forward is instant.
+ *
+ * A286 E6 — prima si prefetchavano entrambe le adiacenti. La precedente è quasi
+ * sempre sprecata: da /today si guarda avanti (cosa mi tocca), non indietro, e
+ * ogni settimana è una `/api/week/{n}` che risolve tutte le sessioni server-side.
+ * Chi torna davvero indietro paga un caricamento, una volta.
  */
 export function useWeekPlan(weekNum = 0, enabled = true) {
   const qc = useQueryClient();
@@ -35,24 +40,15 @@ export function useWeekPlan(weekNum = 0, enabled = true) {
     gcTime: PERSIST_MAX_AGE_MS,
   });
 
-  // Prefetch adjacent weeks once we have data for the current one.
+  // Prefetch the next week once we have data for the current one.
   // displayWeekNum (returned by the API) is used as the source of truth: when
   // weekNum=0 the real week number is resolved server-side.
   const displayWeekNum = query.data?.week_num;
   useEffect(() => {
     if (!enabled || displayWeekNum == null) return;
-    const prev = displayWeekNum - 1;
-    const next = displayWeekNum + 1;
-    if (prev >= 1) {
-      qc.prefetchQuery({
-        queryKey: queryKeys.week(prev),
-        queryFn: () => getWeek(prev),
-        staleTime: 60_000,
-      });
-    }
     qc.prefetchQuery({
-      queryKey: queryKeys.week(next),
-      queryFn: () => getWeek(next),
+      queryKey: queryKeys.week(displayWeekNum + 1),
+      queryFn: () => getWeek(displayWeekNum + 1),
       staleTime: 60_000,
     });
   }, [qc, enabled, displayWeekNum]);

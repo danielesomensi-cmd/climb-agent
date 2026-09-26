@@ -123,30 +123,61 @@
 }
 
 :root {
+  /*
+   * A286 — l'app è dark-only ma non lo diceva al browser: senza color-scheme
+   * gli scrollbar, i controlli nativi (date/time picker, select) e lo sfondo
+   * di overscroll restano chiari.
+   */
+  color-scheme: dark;
+
+  /*
+   * A286 — altezza della bottom nav, prima ricopiata a mano come magic number
+   * in quattro file (e sbagliata in due: le barre sticky ci finivano sotto).
+   */
+  --nav-h: calc(3.5rem + env(safe-area-inset-bottom));
+
   /* ---- A214 — Raw design tokens (HSL channel-only, dark only) ---- */
 
-  /* Surface scale */
-  --surface-base: 222 28% 8%;
-  --surface-raised: 222 25% 12%;
-  --surface-elevated: 222 22% 16%;
-  --surface-inset: 222 30% 6%;
+  /*
+   * Surface scale — A286: scala di profondità allargata.
+   * Prima base↔raised valeva 1,094:1 e raised↔elevated 1,117:1, cioè le card
+   * non si staccavano dalla pagina su OLED. Ora 1,144 e 1,203.
+   */
+  --surface-base: 222 30% 7%;
+  --surface-raised: 222 24% 13%;
+  --surface-elevated: 222 20% 19%;
+  --surface-inset: 222 32% 4%;
 
-  /* Foreground scale */
+  /*
+   * Foreground scale — A286: fg-muted alzato da 55% a 62%.
+   * È aliasato a --muted-foreground (655 usi): a 55% dava 4,36:1 su
+   * surface-elevated, sotto AA. Ora 4,97:1 su elevated, 6,84:1 su base.
+   * fg-disabled da 35% a 46%: a 35% era sotto 3:1 ovunque, quindi nessuno
+   * lo usava e si improvvisava con text-muted-foreground/40.
+   */
   --fg-primary: 210 20% 98%;
   --fg-secondary: 215 15% 75%;
-  --fg-muted: 215 12% 55%;
-  --fg-disabled: 215 10% 35%;
+  --fg-muted: 215 14% 62%;
+  --fg-disabled: 215 10% 46%;
 
-  /* Borders */
-  --border-subtle: 222 20% 18%;
-  --border-default: 222 18% 25%;
-  --border-strong: 222 15% 40%;
+  /* Borders — A286: alzati, border-default su card passa da 1,53:1 a 2,03:1 */
+  --border-subtle: 222 18% 23%;
+  --border-default: 222 16% 33%;
+  --border-strong: 222 14% 46%;
 
-  /* Primary accent — magenta */
+  /*
+   * Primary accent — magenta.
+   * A286 — contrasto del CTA: bianco su questo magenta dava 3,81:1, sotto AA
+   * (1.4.3) su ogni bottone primario dell'app, e peggio ancora al sole in
+   * falesia. Il magenta NON si tocca: abbassarlo a 48% romperebbe `text-primary`
+   * (5,00:1 → 4,07:1 su surface-base, 3,56:1 su card — è la tab attiva della
+   * bottom nav). Si cambia l'inchiostro: prugna scura sopra il magenta = 4,80:1.
+   * Una riga, zero componenti toccati, i 366 usi decorativi del magenta invariati.
+   */
   --accent-primary: 340 85% 58%;
   --accent-primary-hover: 340 85% 52%;
   --accent-primary-muted: 340 60% 20%;
-  --accent-primary-fg: 0 0% 100%;
+  --accent-primary-fg: 340 65% 10%;
 
   /* Secondary accent — cyan */
   --accent-secondary: 190 90% 55%;
@@ -189,12 +220,29 @@
   --shadow-glow-primary: 0 0 24px -4px hsl(var(--glow-primary));
   --shadow-glow-secondary: 0 0 24px -4px hsl(var(--glow-secondary));
 
-  /* Radius */
+  /*
+   * Radius.
+   * TRAPPOLA NOTA (A286, lasciata volutamente com'è): qui sono ridefiniti solo
+   * sm/md/lg/xl, quindi `rounded-2xl` resta il default Tailwind (16px) ed è più
+   * PICCOLO di `rounded-xl` (24px); `rounded` nudo vale 4px, meno di
+   * `rounded-sm` (6px). Completare la scala renderebbe i nomi monotoni ma
+   * sposterebbe di colpo 23 `rounded-2xl` da 16px a 32px: churn visivo non
+   * verificato su tutta l'app. Se un giorno la si completa, va fatto insieme
+   * alla conversione dei call-site, non prima.
+   */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-pill: 999px;
+
+  /*
+   * A286: --font-geist-mono non era definito da nessuna parte (il layout carica
+   * solo Inter), quindi `font-mono` era inerte in 26 punti e le colonne di gradi
+   * non si allineavano. Stack di sistema: zero download.
+   */
+  --font-geist-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    monospace;
 
   /* ---- Shadcn aliases (bridged to A214 tokens above) ---- */
   --radius: var(--radius-md);
@@ -244,5 +292,28 @@
     font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  /*
+   * A286 — "Riduci movimento" non era rispettato a livello di sistema: la
+   * copertura era puntuale (solo gli `active:scale`), quindi restavano fuori 16
+   * `animate-pulse`, 24 `animate-spin`, gli animate-in/out di dialog e drawer e
+   * tutte le transition. Con Riduci movimento attivo su iOS le skeleton di
+   * /today e /week lampeggiavano comunque a schermo pieno.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+    /* Eccezione: uno spinner fermo non dice più "sto caricando". */
+    .animate-spin {
+      animation-duration: 1.5s !important;
+      animation-iteration-count: infinite !important;
+    }
   }
 }

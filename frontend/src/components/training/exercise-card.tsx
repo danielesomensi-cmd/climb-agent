@@ -6,29 +6,8 @@ import { ChevronRight } from "lucide-react";
 import type { ActualExercise } from "@/lib/types";
 import { ExerciseDetailSheet } from "@/components/training/exercise-detail-sheet";
 
-const FEEDBACK_COLORS: Record<string, string> = {
-  very_easy: "bg-emerald-500",
-  easy: "bg-green-500",
-  ok: "bg-yellow-400",
-  hard: "bg-orange-500",
-  very_hard: "bg-red-500",
-};
-
-const FEEDBACK_TEXT_COLORS: Record<string, string> = {
-  very_easy: "text-emerald-400",
-  easy: "text-green-400",
-  ok: "text-yellow-400",
-  hard: "text-orange-400",
-  very_hard: "text-red-400",
-};
-
-const FEEDBACK_LABELS: Record<string, string> = {
-  very_easy: "Very Easy",
-  easy: "Easy",
-  ok: "OK",
-  hard: "Hard",
-  very_hard: "Very Hard",
-};
+// A286 — mappa colori condivisa (era duplicata e divergente in 3 file).
+import { FEEDBACK_CHIP, FEEDBACK_DOT, FEEDBACK_LABEL } from "@/components/training/feedback-colors";
 
 /** Visual treatment keys */
 type PhaseStyle = { opacity: string; border: string };
@@ -147,16 +126,16 @@ export function ExerciseCard({ exercise, feedbackLevel, actual, rawExercise, mod
             {rawExercise && (
               <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/50" />
             )}
-            {effectiveFeedback && FEEDBACK_COLORS[effectiveFeedback] ? (
+            {effectiveFeedback && FEEDBACK_DOT[effectiveFeedback] ? (
               actual ? (
                 <span
-                  className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium leading-none ${FEEDBACK_COLORS[effectiveFeedback]} text-white`}
+                  className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium leading-none ${FEEDBACK_CHIP[effectiveFeedback]}`}
                 >
-                  {FEEDBACK_LABELS[effectiveFeedback] ?? effectiveFeedback}
+                  {FEEDBACK_LABEL[effectiveFeedback] ?? effectiveFeedback}
                 </span>
               ) : (
                 <span
-                  className={`inline-block size-2 shrink-0 rounded-full ${FEEDBACK_COLORS[effectiveFeedback]}`}
+                  className={`inline-block size-2 shrink-0 rounded-full ${FEEDBACK_DOT[effectiveFeedback]}`}
                   title={effectiveFeedback.replace(/_/g, " ")}
                 />
               )

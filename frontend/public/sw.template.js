@@ -7,6 +7,16 @@
 // (B196), PWA users were stuck with stale JS bundles after every deploy.
 const CACHE_NAME = "climb-agent-__BUILD_ID__";
 
+// A286 E1 — cache separata per le immagini, derivata da CACHE_NAME (quindi
+// versionata dal commit SHA come tutto il resto: non bumpare a mano).
+// Sta a parte per un solo motivo: qui serve un tetto al numero di voci, e
+// contare le chiavi della cache principale (che contiene anche HTML/JS/CSS)
+// significherebbe sfrattare l'app shell.
+const IMAGE_CACHE_NAME = `${CACHE_NAME}-images`;
+// ~120 voci = tutte le immagini degli esercizi che un utente incontra in
+// qualche settimana di piano, senza far crescere la cache all'infinito.
+const IMAGE_CACHE_MAX_ENTRIES = 120;
+
 // A245 B-1 (F1) — the precache used to be just ["/", "/manifest.json"], so a
 // cold start with no network could not reach any real screen.
 //
@@ -65,7 +75,8 @@ self.addEventListener("activate", (event) => {
       // Purge every cache that doesn't match the current build — this handles
       // both stale climb-agent-* caches and any leftover from previous schemes.
       const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)));
+      const keep = new Set([CACHE_NAME, IMAGE_CACHE_NAME]);
+      await Promise.all(keys.filter((k) => !keep.has(k)).map((k) => caches.delete(k)));
       // Take control of all open PWA clients without requiring a reload.
       await self.clients.claim();
     })()
@@ -108,6 +119,65 @@ function isRscRequest(request, url) {
   return request.headers.get("RSC") === "1" || url.searchParams.has("_rsc");
 }
 
+/**
+ * A286 E1 — le immagini degli esercizi non venivano cacciate da nessuno.
+ *
+ * `next/image` serve tutto da `/_next/image?url=...`: un path senza estensione,
+ * che il regex degli statici (`\.(js|css|png|...)$`) non matcha mai. Offline il
+ * circuito core era cieco — e le figure sono metà del motivo per cui uno apre la
+ * scheda di un esercizio.
+ */
+function isImageRequest(url) {
+  return url.pathname === "/_next/image" || url.pathname.startsWith("/icons/");
+}
+
+/** Cache-first con tetto: la voce più vecchia esce quando si sfora. */
+async function imageCacheFirst(request) {
+  const cache = await caches.open(IMAGE_CACHE_NAME);
+  const cached = await cache.match(request);
+  if (cached) return cached;
+
+  const response = await fetch(request);
+  if (response.ok) {
+    await cache.put(request, response.clone());
+    // cache.keys() restituisce le voci in ordine di inserimento: le prime sono
+    // le più vecchie. Sfratto FIFO, non LRU — basta e costa una sola scansione.
+    const keys = await cache.keys();
+    const excess = keys.length - IMAGE_CACHE_MAX_ENTRIES;
+    if (excess > 0) {
+      await Promise.all(keys.slice(0, excess).map((k) => cache.delete(k)));
+    }
+  }
+  return response;
+}
+
+/**
+ * A286 E2 — navigazioni stale-while-revalidate, ma SOLO su queste route.
+ *
+ * Criterio (volutamente stretto): shell statica prerenderizzata, pubblica in
+ * `PUBLIC_ROUTES`, e zero dati utente nell'HTML. `/` è la start_url della PWA,
+ * quindi è la rotta che decide se l'app "si apre subito" o no.
+ *
+ * Le shell sotto auth (`/today`, `/week`, ...) restano network-first di
+ * proposito: passano da `auth.protect()` nel proxy Clerk, e servire dalla cache
+ * una di quelle significa saltare il redirect a sign-in di un utente che si è
+ * appena disconnesso o a cui è scaduta la sessione. Offline continuano a essere
+ * servite dalla cache dal ramo di fallback qui sotto, che è il caso che conta.
+ */
+const SWR_NAVIGATION_ROUTES = new Set([
+  "/",
+  "/offline",
+  "/legal",
+  "/demo",
+  "/assessment",
+  "/onboarding/welcome",
+]);
+
+function isSwrNavigation(url) {
+  const path = url.pathname.replace(/\/+$/, "") || "/";
+  return SWR_NAVIGATION_ROUTES.has(path);
+}
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -115,6 +185,15 @@ self.addEventListener("fetch", (event) => {
   // Skip non-GET and API requests. Offline mutations are the outbox's job
   // (B-4), not the SW's — replaying them here would be invisible to the UI.
   if (request.method !== "GET" || url.pathname.startsWith("/api")) return;
+
+  // A286 E1 — prima degli statici: /icons/*.png matcherebbe anche il regex qui
+  // sotto, e va invece nella cache con il tetto.
+  if (isImageRequest(url)) {
+    event.respondWith(
+      imageCacheFirst(request).catch(() => caches.match(request).then((c) => c || Response.error()))
+    );
+    return;
+  }
 
   // Cache-first for static assets (JS, CSS, images, fonts)
   if (
@@ -140,6 +219,39 @@ self.addEventListener("fetch", (event) => {
   const isNavigation = request.mode === "navigate";
   const isRsc = isRscRequest(request, url);
   if (!isNavigation && !isRsc) return;
+
+  // A286 E2 — stale-while-revalidate sulle sole shell statiche pubbliche:
+  // risposta immediata dalla cache, rete in sottofondo che aggiorna la copia
+  // per la prossima apertura. Niente `fetchWithTimeout` qui: la richiesta di
+  // rete non blocca nessuno, può prendersi il tempo che vuole.
+  if (isNavigation && isSwrNavigation(url)) {
+    event.respondWith(
+      (async () => {
+        const cached = await caches.match(request);
+        const network = fetch(request)
+          .then(async (response) => {
+            // `response.ok` esclude anche gli opaqueredirect (status 0): una
+            // shell che il proxy ha redirezionato non va messa in cache.
+            if (response.ok) {
+              const cache = await caches.open(CACHE_NAME);
+              await cache.put(request, response.clone());
+            }
+            return response;
+          })
+          .catch(() => null);
+
+        if (cached) {
+          event.waitUntil(network);
+          return cached;
+        }
+        const fresh = await network;
+        if (fresh) return fresh;
+        const offline = await caches.match("/offline");
+        return offline || Response.error();
+      })()
+    );
+    return;
+  }
 
   // Network-first with timeout, then cache, then the offline page.
   event.respondWith(

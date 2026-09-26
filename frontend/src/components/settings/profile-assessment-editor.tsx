@@ -395,7 +395,7 @@ export function ProfileAssessmentEditor({
             </div>
 
             {rpOsError && (
-              <p className="text-sm text-red-500 mt-2">{rpOsError}</p>
+              <p className="text-sm text-danger mt-2">{rpOsError}</p>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={onCancel}>
