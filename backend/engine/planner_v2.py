@@ -761,6 +761,27 @@ def generate_phase_week(
     if user_age is not None and user_age < 18:
         target_days = min(target_days, 4)
 
+    # A283 — quante SESSIONI a settimana, che non è la stessa cosa di quanti
+    # GIORNI. Chi si allena spezzato (complementari a pranzo, arrampicata la
+    # sera) ha più slot che giorni, e finché il budget di sessioni era
+    # `target_days` quei pranzi restavano vuoti per definizione.
+    #
+    # Preferenza esplicita e non derivata dagli slot: derivarla cambierebbe in
+    # silenzio il piano di chiunque abbia anche un solo giorno a due fasce,
+    # senza che l'abbia chiesto — contro il principio deterministico.
+    # Chiave assente, None, non-int o fuori range → None → comportamento
+    # odierno identico, byte per byte (verificato in Fase 1 su target_days 3/4/5).
+    _ts = prefs.get("target_sessions_per_week")
+    target_sessions = _ts if isinstance(_ts, int) and 1 <= _ts <= 21 else None
+    if target_sessions is not None:
+        # Mai meno dei giorni: un target sessioni più basso dei giorni target
+        # sarebbe una contraddizione, non una richiesta.
+        target_sessions = max(target_sessions, target_days)
+        if user_age is not None and user_age < 18:
+            # D81 — il cap giovanile è sui giorni: senza questo, lo split lo
+            # aggirerebbe impilando sessioni sugli stessi 4 giorni.
+            target_sessions = target_days
+
     # D83: recovery multiplier increases minimum gap between hard sessions
     recovery_mult = float(prefs.get("recovery_multiplier", 1.0))
     hard_gap_days = math.ceil(1 * recovery_mult)  # base gap = 1 day (48h)
@@ -1201,7 +1222,13 @@ def generate_phase_week(
     # When total sessions placed < target AND a day has unused slots, place
     # additional NON-hard sessions to fill them.
     total_sessions_placed = sum(len(ds) for ds in day_sessions)
-    session_target = min(target_days, total_available_slots)
+    # A283 — qui `target_days` contava GIORNI mentre `session_target` conta
+    # SESSIONI: unità sbagliata, e il risultato era che con 11 slot su 7 giorni
+    # uscivano 7 sessioni e 4 pranzi vuoti. PASS 2.2 esiste da B121 proprio per
+    # riempire gli slot extra, ma la sua guardia qui sotto era già falsa.
+    # `total_available_slots` (riga ~929) è la somma degli slot sui giorni
+    # sopravvissuti al pruning: era ed è il termine giusto del min().
+    session_target = min(target_sessions or target_days, total_available_slots)
 
     if total_sessions_placed < session_target:
         # Build combined pool: primary non-hard + all complementary
@@ -1286,6 +1313,13 @@ def generate_phase_week(
                 total_sessions_placed += 1
                 if meta["finger"]:
                     finger_day_offsets.append(offset)
+                # A283 — questo `break` limita a UNA sessione extra per giorno,
+                # cioè a due sessioni in totale. Lasciato di proposito: copre
+                # integralmente lo split pranzo+sera, mentre trasformarlo in un
+                # ciclo sugli slot residui aprirebbe a tre sessioni al giorno
+                # (morning+lunch+evening) che nessuno ha chiesto, e in Fase 1
+                # produceva solo riempitivi di mobilità perché il pool non regge.
+                # Si riapre se qualcuno usa davvero tre fasce.
                 break
 
     # A282: shared placement cascade for the quality floors below.
@@ -1338,9 +1372,30 @@ def generate_phase_week(
                     abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
                 ):
                     continue
+                # B359 — la vittima si individua PRIMA di cercare lo slot, come in
+                # PASS 3: altrimenti in modalità `replace` si piazza su uno slot già
+                # occupato da una sessione che resta, e in modalità append si
+                # sovrappone a quelle che ci sono già. Su un giorno a una sola
+                # sessione (tutti i piani esistenti) `occupied` è vuoto in replace e
+                # il comportamento è identico a prima.
+                replace_idx = None
+                if replace:
+                    for i, existing in enumerate(day_sessions[offset]):
+                        ex_meta = _SESSION_META.get(existing.get("session_id", ""), {})
+                        if not _is_primary_session(ex_meta) and not ex_meta.get(tag):
+                            replace_idx = i
+                            break
+                    if replace_idx is None:
+                        continue
+                occupied = {
+                    e["slot"]
+                    for i, e in enumerate(day_sessions[offset])
+                    if i != replace_idx and e.get("slot")
+                }
                 result = _find_best_slot(
                     day_avail, meta, locations, prefer_evening=False,
                     home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id,
+                    occupied_slots=occupied,
                 )
                 if not result:
                     continue
@@ -1350,13 +1405,7 @@ def generate_phase_week(
                     default_gym_id, gyms or [], pass_label, home_equipment=home_equipment,
                 )
                 if replace:
-                    for i, existing in enumerate(day_sessions[offset]):
-                        ex_meta = _SESSION_META.get(existing.get("session_id", ""), {})
-                        if not _is_primary_session(ex_meta) and not ex_meta.get(tag):
-                            day_sessions[offset][i] = entry
-                            break
-                    else:
-                        continue
+                    day_sessions[offset][replace_idx] = entry
                 else:
                     day_sessions[offset].append(entry)
                     days_with_sessions += 1
@@ -1507,18 +1556,10 @@ def generate_phase_week(
                         abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets
                     ):
                         continue
-                    result = _find_best_slot(
-                        day_avail, _meta, locations, prefer_evening=False,
-                        home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id,
-                    )
-                    if not result:
-                        continue
-                    slot, slot_info = result
-                    entry = _make_session_entry(
-                        slot, _sid, _meta, slot_info, locations, phase_id, day_keys[offset],
-                        default_gym_id, gyms or [], "pass2.6:pulling_maintenance",
-                        home_equipment=home_equipment,
-                    )
+                    # B359 — vittima prima dello slot, come in PASS 3 e nel quality
+                    # floor: qui la sostituzione avveniva su uno slot scelto senza
+                    # sapere quali restavano occupati.
+                    _victim = None
                     if day_sessions[offset]:
                         # Replace a complementary session, never a primary one.
                         _victim = next(
@@ -1528,6 +1569,25 @@ def generate_phase_week(
                         )
                         if _victim is None:
                             continue
+                    _occupied = {
+                        e["slot"]
+                        for i, e in enumerate(day_sessions[offset])
+                        if i != _victim and e.get("slot")
+                    }
+                    result = _find_best_slot(
+                        day_avail, _meta, locations, prefer_evening=False,
+                        home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id,
+                        occupied_slots=_occupied,
+                    )
+                    if not result:
+                        continue
+                    slot, slot_info = result
+                    entry = _make_session_entry(
+                        slot, _sid, _meta, slot_info, locations, phase_id, day_keys[offset],
+                        default_gym_id, gyms or [], "pass2.6:pulling_maintenance",
+                        home_equipment=home_equipment,
+                    )
+                    if _victim is not None:
                         day_sessions[offset][_victim] = entry
                     else:
                         day_sessions[offset].append(entry)
@@ -1682,35 +1742,25 @@ def generate_phase_week(
                 # Skip days already used by a test session in this pass
                 if offset in test_placed_offsets:
                     continue
-                # Check if this day already has a finger/hard session we'd swap
-                day_has_finger = any(
-                    _SESSION_META.get(e.get("session_id", ""), {}).get("finger")
-                    for e in day_sessions[offset]
-                )
-                day_has_hard = any(
-                    _SESSION_META.get(e.get("session_id", ""), {}).get("hard")
-                    for e in day_sessions[offset]
-                )
-                # Respect finger spacing (extended by D83 recovery multiplier)
-                if test_meta["finger"] and not day_has_finger and finger_day_offsets:
-                    if any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
-                        continue
-                # Respect hard-day spacing (extended by D83 recovery multiplier)
-                if test_meta["hard"] and not day_has_hard and hard_day_offsets:
-                    if any(abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets):
-                        continue
-                # Hard cap check
-                if test_meta["hard"] and hard_days >= effective_hard_cap:
-                    continue
                 if not day_sessions[offset]:
                     continue
-                day_avail = normalized[day_keys[offset]]
-                result = _find_best_slot(day_avail, test_meta, locations, prefer_evening=True,
-                                         home_equipment=home_equipment, gyms=gyms, default_gym_id=default_gym_id)
-                if result is None:
-                    continue
-                slot, slot_info = result
-                # Pick best session to replace: prefer complementary, fall back to any
+
+                # B359 — la vittima si sceglie PRIMA dello slot, non dopo.
+                #
+                # Prima l'ordine era invertito: `_find_best_slot` veniva chiamato
+                # senza `occupied_slots` e solo dopo si decideva quale sessione
+                # sostituire. Su un giorno con evening=primary + lunch=complementare
+                # il codice rimpiazzava l'entry di *lunch* con una piazzata su
+                # *evening*, cioè due sessioni nello stesso slot. Riprodotto sul
+                # codice di produzione in base, strength_power e performance.
+                #
+                # Sapere chi si sostituisce serve anche alle due guardie sotto:
+                # erano scritte su `day_has_finger`/`day_has_hard`, che guardano
+                # l'INTERO giorno, e quindi saltavano il controllo di spaziatura
+                # ogni volta che il giorno conteneva una sessione dita — anche
+                # quando `replace_idx` cadeva su un'altra. È così che in base
+                # uscivano `finger_maintenance_gym` + `test_repeater_7_3` lo stesso
+                # giorno, con il gap 48h aggirato.
                 replace_idx = None
                 for i, entry in enumerate(day_sessions[offset]):
                     sid_meta = _SESSION_META.get(entry.get("session_id", ""), {})
@@ -1720,9 +1770,38 @@ def generate_phase_week(
                 if replace_idx is None:
                     # No complementary — replace the last session on this day
                     replace_idx = len(day_sessions[offset]) - 1
-                # Check if replacing a hard/finger session frees up constraints
                 old_entry = day_sessions[offset][replace_idx]
                 old_meta = _SESSION_META.get(old_entry.get("session_id", ""), {})
+
+                # Respect finger spacing (extended by D83 recovery multiplier).
+                # B359: misurato sulla sessione che si sostituisce davvero — se è
+                # già una sessione dita, lo scambio è neutro per la spaziatura.
+                if test_meta["finger"] and not old_meta.get("finger") and finger_day_offsets:
+                    if any(abs(offset - fo) <= finger_gap_days for fo in finger_day_offsets):
+                        continue
+                # Respect hard-day spacing (extended by D83 recovery multiplier)
+                if test_meta["hard"] and not old_meta.get("hard") and hard_day_offsets:
+                    if any(abs(offset - ho) <= hard_gap_days for ho in hard_day_offsets):
+                        continue
+                # Hard cap check
+                if test_meta["hard"] and hard_days >= effective_hard_cap:
+                    continue
+
+                day_avail = normalized[day_keys[offset]]
+                # B359 — gli slot delle sessioni che RESTANO sul giorno sono
+                # occupati; quello della vittima no, è proprio lo slot che si libera.
+                occupied_by_survivors = {
+                    e["slot"]
+                    for i, e in enumerate(day_sessions[offset])
+                    if i != replace_idx and e.get("slot")
+                }
+                result = _find_best_slot(day_avail, test_meta, locations, prefer_evening=True,
+                                         home_equipment=home_equipment, gyms=gyms,
+                                         default_gym_id=default_gym_id,
+                                         occupied_slots=occupied_by_survivors)
+                if result is None:
+                    continue
+                slot, slot_info = result
                 test_entry = _make_session_entry(
                     slot, test_sid, test_meta, slot_info, locations,
                     phase_id, day_keys[offset],

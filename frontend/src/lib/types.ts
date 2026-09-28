@@ -388,6 +388,12 @@ export interface OnboardingData {
   planning_prefs: {
     target_training_days_per_week: number;
     hard_day_cap_per_week: number;
+    /**
+     * A283 — quante SESSIONI a settimana, che non è quanti giorni: chi si allena
+     * spezzato (complementari a pranzo, arrampicata la sera) ne fa più dei
+     * giorni. Assente = una al giorno, cioè il comportamento di sempre.
+     */
+    target_sessions_per_week?: number;
   };
   preferences: {
     finger_training_device: "hangboard" | "loading_pin";
