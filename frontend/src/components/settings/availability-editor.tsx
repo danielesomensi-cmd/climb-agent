@@ -47,9 +47,9 @@ interface Gym {
 
 interface AvailabilityEditorProps {
   initialAvailability: Record<string, Record<string, unknown>>;
-  initialPlanningPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number };
+  initialPlanningPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number; target_sessions_per_week?: number };
   gyms: Gym[];
-  onSave: (availability: Record<string, Record<string, unknown>>, planningPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number }) => void;
+  onSave: (availability: Record<string, Record<string, unknown>>, planningPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number; target_sessions_per_week?: number }) => void;
   onCancel: () => void;
 }
 
@@ -137,8 +137,26 @@ export function AvailabilityEditor({
     })
   ).length;
 
+  // A283 — gli SLOT spuntati, che non sono i giorni: chi si allena spezzato
+  // (complementari a pranzo, arrampicata la sera) ne ha più dei giorni, ed è il
+  // tetto naturale di quante sessioni si possono davvero piazzare.
+  const availableSlots = WEEKDAYS.reduce(
+    (total, day) =>
+      total +
+      SLOTS.filter((slot) => {
+        const s = getSlot(day.key, slot.key);
+        return s.available && s.preferred_location !== "other_sport";
+      }).length,
+    0,
+  );
+
   const trainingDaysMax = Math.max(1, availableDays);
   const hardDaysMax = Math.max(1, planningPrefs.target_training_days_per_week);
+  const sessionsMax = Math.max(trainingDaysMax, availableSlots);
+  // Default retrocompatibile: chi non tocca il controllo resta a "una al giorno".
+  const targetSessions =
+    planningPrefs.target_sessions_per_week ?? planningPrefs.target_training_days_per_week;
+  const splitAvailable = availableSlots > availableDays;
 
   // Auto-clamp sliders when caps shrink.
   // B355 — il clamp DEVE finire nello state: `handleSave` invia `planningPrefs`
@@ -159,6 +177,23 @@ export function AvailabilityEditor({
       setPlanningPrefs((p) => ({ ...p, hard_day_cap_per_week: max }));
     }
   }, [planningPrefs.target_training_days_per_week, planningPrefs.hard_day_cap_per_week]);
+
+  // A283 — stesso invariante degli altri due clamp: il valore salvato non deve
+  // mai uscire dalla scala. Se togli slot, o alzi i giorni sopra le sessioni, il
+  // numero si riallinea invece di partire fuori scala verso il motore.
+  useEffect(() => {
+    const current = planningPrefs.target_sessions_per_week;
+    if (current == null) return;
+    const clamped = Math.min(Math.max(current, planningPrefs.target_training_days_per_week), sessionsMax);
+    if (clamped !== current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPlanningPrefs((p) => ({ ...p, target_sessions_per_week: clamped }));
+    }
+  }, [
+    planningPrefs.target_sessions_per_week,
+    planningPrefs.target_training_days_per_week,
+    sessionsMax,
+  ]);
 
   const handleSave = () => {
     // D150: Only include days that have at least one configured slot.
@@ -348,6 +383,33 @@ export function AvailabilityEditor({
               }
             />
           </div>
+
+          {/* A283 — compare solo se hai davvero più fasce che giorni: a chi si
+              allena una volta al giorno questo controllo non dice nulla. */}
+          {splitAvailable && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>Sessions per week</Label>
+                <span className="text-sm font-medium tabular-nums">{targetSessions}</span>
+              </div>
+              <Slider
+                min={trainingDaysMax}
+                max={sessionsMax}
+                step={1}
+                value={[Math.min(Math.max(targetSessions, trainingDaysMax), sessionsMax)]}
+                onValueChange={([v]) =>
+                  setPlanningPrefs((p) => ({ ...p, target_sessions_per_week: v }))
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                You have {availableSlots} slots across {availableDays}{" "}
+                {availableDays === 1 ? "day" : "days"}. Raise this above{" "}
+                {planningPrefs.target_training_days_per_week} to train twice in a day —
+                for example a complementary session at lunch and climbing in the
+                evening. The extra sessions are never hard ones.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">

@@ -90,6 +90,16 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "route_endurance_gym": "available",
         "finger_endurance_short": "available",
         "finger_aerobic_base": "available",
+        # B349a — `core_training` mancava dal pool lead pur essendo in
+        # `_SESSION_META` (max_per_week 3) e nel catalogo, ed essendo
+        # `available` in tutte e 4 le fasi del pool boulder. Non esiste una
+        # ragione metodologica per cui il core serva a chi fa boulder e non a
+        # chi fa vie: era una svista. `available` e non `primary` — misurato:
+        # available sposta 13/675 configurazioni sintetiche e non tocca mai
+        # `prehab_maintenance`, primary ne sposta 88/675 e in maggioranza
+        # scalza proprio la prevenzione infortuni. Fuori da `deload`, come nel
+        # pool boulder: PHASE_INTENSITY_CAP["deload"]="low" lo scarterebbe.
+        "core_training": "available",
     },
     "strength_power": {
         "power_contact_gym": "primary",
@@ -104,6 +114,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "finger_maintenance_gym": "available",
         "finger_endurance_short": "available",
         "route_endurance_gym": "available",
+        "core_training": "available",
     },
     "power_endurance": {
         "power_endurance_gym": "primary",
@@ -114,6 +125,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "handstand_practice": "available",
         "endurance_aerobic_gym": "available",
         "route_endurance_gym": "available",
+        "core_training": "available",
     },
     "performance": {
         "technique_focus_gym": "primary",
@@ -127,6 +139,7 @@ _SESSION_POOL: Dict[str, Dict[str, str]] = {
         "finger_strength_home": "available",
         "flexibility_full": "available",
         "handstand_practice": "available",
+        "core_training": "available",
     },
     "deload": {
         "regeneration_easy": "primary",

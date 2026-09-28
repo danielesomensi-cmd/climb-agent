@@ -1107,7 +1107,12 @@ def generate_monthly_report(
     # Suggestions (max 3 rules)
     suggestions: List[str] = []
     overall_adherence = avg_sessions_per_week
-    target = (user_state.get("planning_prefs") or {}).get("target_training_days_per_week", 4)
+    # A283 — `avg_sessions_per_week` conta SESSIONI: confrontarlo con i giorni
+    # target diceva "aderenza sotto il 70%" a chi si allena spezzato e fa più
+    # sessioni che giorni. Se c'è un target sessioni esplicito, è quello il
+    # denominatore giusto; altrimenti resta il comportamento di prima.
+    _pp = user_state.get("planning_prefs") or {}
+    target = _pp.get("target_sessions_per_week") or _pp.get("target_training_days_per_week", 4)
 
     if target > 0 and overall_adherence / target < 0.7:
         suggestions.append(
