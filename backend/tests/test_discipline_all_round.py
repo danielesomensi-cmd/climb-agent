@@ -149,10 +149,26 @@ class TestLeadRegression:
     """Lead macrocycle must produce identical results to before this change."""
 
     def test_lead_pool_unchanged(self):
-        """Lead session pool should not be affected by all_round changes."""
+        """Lead session pool should not be affected by all_round changes.
+
+        B349a — l'asserzione `core_training not in pool` è stata RIMOSSA, non
+        aggirata: bloccava un'asimmetria che era una svista, non una decisione.
+        `core_training` era `available` in tutte e quattro le fasi del pool
+        boulder e assente dal lead, pur essendo dichiarata in `_SESSION_META`
+        (max_per_week 3) e presente nel catalogo. Non c'è una ragione
+        metodologica per cui il core serva a chi fa boulder e non a chi fa vie.
+
+        Ciò che questo test deve ancora proteggere — che il pool lead non venga
+        mosso dalle modifiche *all_round* — resta, e si verifica meglio così:
+        le sessioni esclusive del boulder non devono esserci.
+        """
         pool = _build_session_pool("base", discipline="lead")
         assert "endurance_aerobic_gym" in pool
-        assert "core_training" not in pool  # lead base doesn't have core_training
+        assert "core_training" in pool  # B349a: allineato al pool boulder
+        # Le sessioni che restano esclusive del boulder: se una di queste entra
+        # nel pool lead, l'isolamento fra discipline si è davvero rotto.
+        assert "limit_boulder_gym" not in pool
+        assert "board_session" not in pool
 
     def test_lead_macrocycle_identical(self):
         mc1 = generate_macrocycle(
