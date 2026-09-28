@@ -207,6 +207,18 @@ export interface WeekPlan {
     hard_days_count?: number;
     recovery_days_count?: number;
   };
+  /**
+   * B361 — stimoli che il planner NON è riuscito a piazzare.
+   * [[B308]] l'ha aggiunto proprio contro il silenzio («silence is what let D263
+   * hide for months») e [[B346]] ha aggiunto un `logger.warning` come minimo
+   * sindacale, ma nessun componente lo leggeva: la settimana usciva senza la
+   * garanzia di frequenza sulla tirata e sembrava semplicemente una settimana.
+   */
+  unmet_stimulus?: Array<{
+    stimulus: string;
+    phase_id?: string;
+    reason: string;
+  }>;
 }
 
 export interface Exercise {

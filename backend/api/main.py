@@ -3,6 +3,7 @@
 import logging
 import os
 from contextlib import asynccontextmanager
+from typing import Optional
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -176,16 +177,33 @@ def health():
     users_dir = str(USERS_DIR)
     is_ephemeral = "/app/backend/data" in data_dir or data_dir.endswith("backend/data")
 
-    # Count user directories
-    users_count = 0
+    # B361 — `users_count` contava le DIRECTORY sul volume, non gli utenti.
+    # In produzione lo storage è Supabase: quelle cartelle sono un residuo del
+    # backend `file` e ne esiste una solo per chi ha lasciato tracce su disco,
+    # quindi il campo diceva 14 mentre la tabella `users` ne aveva 20. Un numero
+    # diagnostico che mente è peggio di un numero assente, perché lo si guarda
+    # proprio quando si vuole un riscontro rapido.
+    #
+    # Ora si chiede allo storage attivo, con il conteggio delle directory come
+    # ripiego esplicito: se la lettura fallisce, `users_count` resta None e
+    # `users_count_source` dice perché, invece di restituire uno zero credibile.
+    users_count: Optional[int] = None
+    users_count_source = "unavailable"
     try:
-        if os.path.isdir(users_dir):
-            users_count = len([
-                d for d in os.listdir(users_dir)
-                if os.path.isdir(os.path.join(users_dir, d))
-            ])
-    except OSError:
-        pass
+        from backend.engine import storage
+
+        users_count = len(storage.list_user_ids())
+        users_count_source = "storage"
+    except Exception:
+        try:
+            if os.path.isdir(users_dir):
+                users_count = len([
+                    d for d in os.listdir(users_dir)
+                    if os.path.isdir(os.path.join(users_dir, d))
+                ])
+                users_count_source = "user_dirs_on_volume"
+        except OSError:
+            pass
 
     # Persistence marker: written once, survives redeploy if volume is real
     marker_path = os.path.join(data_dir, ".persistence_marker")
@@ -208,5 +226,8 @@ def health():
         "data_dir_from_env": "DATA_DIR" in os.environ,
         "ephemeral_warning": is_ephemeral,
         "users_count": users_count,
+        # B361 — additivo: dice DA DOVE viene il numero, così "14" non si
+        # confonde più con "14 utenti" quando è "14 cartelle sul volume".
+        "users_count_source": users_count_source,
         "persistence_marker_survived": not marker_fresh,
     }
