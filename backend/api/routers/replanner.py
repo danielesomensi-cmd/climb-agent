@@ -275,6 +275,9 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             gym_id=req.gym_id,
             gyms=gyms,
             session_index=req.session_index,
+            # B360 — la falesia scelta nel dialog, non l'intent
+            spot_id=req.spot_id,
+            spot_name=req.spot_name,
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))

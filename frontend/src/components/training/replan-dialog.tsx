@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,7 +9,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { Mountain } from "lucide-react";
+import { getOutdoorSpots, addOutdoorSpot } from "@/lib/api";
+import type { OutdoorSpot } from "@/lib/types";
 import { formatDateShort } from "@/lib/format";
 
 interface Gym {
@@ -24,7 +28,16 @@ interface ReplanDialogProps {
   gyms: Gym[];
   sessionIndex?: number;
   onClose: () => void;
-  onApply: (data: { intent: string; location: string; gym_id?: string; session_index?: number }) => void;
+  onApply: (data: {
+    intent: string;
+    location: string;
+    gym_id?: string;
+    session_index?: number;
+    // B360 — dove si va. Obbligatori sul ramo outdoor (Apply resta disabled
+    // finché non scegli): senza, il backend scriveva l'intent come falesia.
+    spot_id?: string;
+    spot_name?: string;
+  }) => void;
 }
 
 const INDOOR_INTENT_OPTIONS = [
@@ -57,9 +70,40 @@ export function ReplanDialog({
 }: ReplanDialogProps) {
   const [location, setLocation] = useState<string>("gym");
   const [intent, setIntent] = useState<string>("rest");
+  // B360 — picker falesia (stesso blocco di quick-add-dialog.tsx)
+  const [spots, setSpots] = useState<OutdoorSpot[]>([]);
+  const [selectedSpot, setSelectedSpot] = useState<OutdoorSpot | null>(null);
+  const [addingSpot, setAddingSpot] = useState(false);
+  const [newSpotName, setNewSpotName] = useState("");
+  const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("lead");
 
   const isOutdoor = location === "outdoor";
   const intentOptions = isOutdoor ? OUTDOOR_INTENT_OPTIONS : INDOOR_INTENT_OPTIONS;
+
+  // B360 — carica gli spot quando si passa su outdoor
+  useEffect(() => {
+    if (!open || !isOutdoor) return;
+    getOutdoorSpots()
+      .then((data) => setSpots(data.spots))
+      .catch(() => setSpots([]));
+  }, [open, isOutdoor]);
+
+  const handleAddSpot = async () => {
+    if (!newSpotName.trim()) return;
+    try {
+      const result = await addOutdoorSpot({
+        name: newSpotName.trim(),
+        discipline: newSpotDiscipline,
+      });
+      const spot = result.spot as OutdoorSpot;
+      setSpots((prev) => [...prev, spot]);
+      setSelectedSpot(spot);
+      setAddingSpot(false);
+      setNewSpotName("");
+    } catch {
+      // silently fail — user can retry
+    }
+  };
 
   const handleApply = () => {
     let resolvedIntent = intent;
@@ -68,10 +112,15 @@ export function ReplanDialog({
       resolvedIntent = "finger_max";
     }
     if (isOutdoor) {
+      // B360 — senza falesia non si applica (bottone disabled): il nome della
+      // falesia non può più essere dedotto dall'intent.
+      if (!selectedSpot) return;
       onApply({
         intent: resolvedIntent,
         location: "outdoor",
         session_index: sessionIndex,
+        spot_id: selectedSpot.id,
+        spot_name: selectedSpot.name,
       });
       return;
     }
@@ -159,6 +208,82 @@ export function ReplanDialog({
             </div>
           </div>
 
+          {/* B360 — Spot picker: obbligatorio sul ramo outdoor */}
+          {isOutdoor && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Where?</Label>
+              {spots.length > 0 ? (
+                <div className="space-y-1.5">
+                  {spots.map((spot) => (
+                    <button
+                      key={spot.id}
+                      type="button"
+                      className={`w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                        selectedSpot?.id === spot.id
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-muted text-muted-foreground hover:border-primary/40"
+                      }`}
+                      onClick={() => setSelectedSpot(spot)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Mountain className="size-3.5 text-green-500" />
+                        <span className="font-medium">{spot.name}</span>
+                        <Badge variant="outline" className="text-[10px] ml-auto">{spot.discipline}</Badge>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : !addingSpot ? (
+                <p className="text-xs text-muted-foreground italic">No saved spots</p>
+              ) : null}
+
+              {addingSpot ? (
+                <div className="rounded-lg border border-dashed p-3 space-y-2">
+                  <input
+                    type="text"
+                    placeholder="Spot name (e.g. Berdorf)"
+                    value={newSpotName}
+                    onChange={(e) => setNewSpotName(e.target.value)}
+                    className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                    autoFocus
+                  />
+                  <div className="flex gap-1.5">
+                    {(["lead", "boulder", "both"] as const).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        className={`rounded-md border px-3 py-1 text-xs transition-colors ${
+                          newSpotDiscipline === d
+                            ? "border-primary bg-primary/10 text-primary font-medium"
+                            : "border-muted text-muted-foreground"
+                        }`}
+                        onClick={() => setNewSpotDiscipline(d)}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="text-xs" onClick={() => setAddingSpot(false)}>
+                      Cancel
+                    </Button>
+                    <Button size="sm" className="text-xs" onClick={handleAddSpot} disabled={!newSpotName.trim()}>
+                      Save spot
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="text-xs text-primary underline"
+                  onClick={() => setAddingSpot(true)}
+                >
+                  + Add new spot
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Intent */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">What do you want to do?</Label>
@@ -194,7 +319,8 @@ export function ReplanDialog({
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleApply}>
+          {/* B360 — stesso vincolo di quick-add: outdoor senza falesia non parte */}
+          <Button size="sm" onClick={handleApply} disabled={isOutdoor && !selectedSpot}>
             Apply
           </Button>
         </DialogFooter>

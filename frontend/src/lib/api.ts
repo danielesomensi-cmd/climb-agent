@@ -453,6 +453,9 @@ export const applyOverride = (data: {
   target_date?: string;
   gym_id?: string;
   session_index?: number;
+  // B360 — falesia scelta per un override outdoor
+  spot_id?: string;
+  spot_name?: string;
 }) =>
   request<{ week_plan: WeekPlan }>("/api/replanner/override", {
     method: "POST",
