@@ -788,7 +788,10 @@ export function DayCard({
         {/* Action buttons */}
         {(onReplan || onQuickAdd || onChangeGym) && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-            {onReplan && day.sessions.length <= 1 && (
+            {/* A283 — il gate `day.sessions.length <= 1` faceva sparire "Change
+                plan" proprio sui giorni a due sessioni, che con l'allenamento
+                spezzato sono la norma e non l'eccezione. */}
+            {onReplan && (
               <Button
                 size="sm"
                 variant="outline"

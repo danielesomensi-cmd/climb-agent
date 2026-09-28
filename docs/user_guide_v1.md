@@ -476,6 +476,8 @@ Custom sessions sit **outside the macrocycle**: running one logs the work and up
 
 Your default availability (days, locations, time slots) is set in **Settings**. But real life changes week to week.
 
+**Training twice in a day (split training)**: if you tick more than one time slot on the same day — say lunch at home and evening at the gym — Settings shows a second slider, **Sessions per week**. Leave it alone and nothing changes: you get one session per training day, as before. Raise it and the planner fills those extra slots, typically with a complementary session at lunch and your climbing in the evening. The extra sessions are never hard ones, and your cap on hard days per week still holds — that cap is what protects recovery, and split training does not touch it.
+
 **Weekly Override**: From the **Week** view, you can override availability for any upcoming week. Tap the availability section to:
 
 - Toggle days on/off

@@ -199,7 +199,11 @@ export default function SettingsPage() {
   /** Save updated availability and regenerate plan */
   async function handleSaveAvailability(
     newAvailability: Record<string, unknown>,
-    newPrefs: { target_training_days_per_week: number; hard_day_cap_per_week: number },
+    newPrefs: {
+      target_training_days_per_week: number;
+      hard_day_cap_per_week: number;
+      target_sessions_per_week?: number;
+    },
   ) {
     setActionError(null);
     try {
@@ -661,6 +665,8 @@ export default function SettingsPage() {
                 initialPlanningPrefs={{
                   target_training_days_per_week: (state?.planning_prefs as Record<string, number>)?.target_training_days_per_week ?? 4,
                   hard_day_cap_per_week: (state?.planning_prefs as Record<string, number>)?.hard_day_cap_per_week ?? 3,
+                  // A283 — assente = una sessione al giorno, il comportamento di sempre.
+                  target_sessions_per_week: (state?.planning_prefs as Record<string, number | undefined>)?.target_sessions_per_week,
                 }}
                 gyms={equipment.gyms ?? []}
                 onSave={handleSaveAvailability}
