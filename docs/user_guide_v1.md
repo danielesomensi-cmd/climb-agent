@@ -394,7 +394,7 @@ The **Replan Dialog** lets you make changes to your weekly plan without regenera
 
 - **Change location**: Switch a day from home to gym, gym to outdoor, etc.
 - **Change intent**: Override what kind of session you want (e.g., strength, endurance, technique, projecting, rest, recovery, power endurance, or "hard" for auto-select)
-- **Go outdoor**: Switch to an outdoor intent (easy outdoor, projecting, volume routes, boulder outdoor)
+- **Go outdoor**: Switch to an outdoor intent (easy outdoor, projecting, volume routes, boulder outdoor). The dialog asks **where**: pick one of your saved spots, or add a new one inline. Apply stays disabled until you choose — the crag name is what the Coach geocodes to give you the weather for that day, so it can't be guessed from the intent.
 - **Rest**: Set the intent to "Rest" to turn a training day into a rest day
 
 The replanner handles **ripple effects** — when you change a day's intent, it adjusts surrounding days to maintain proper recovery spacing. It uses 8 indoor intents and 4 outdoor intents to handle all scenarios.

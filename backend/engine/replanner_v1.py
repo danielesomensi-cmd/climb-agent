@@ -114,6 +114,13 @@ OUTDOOR_INTENT_TO_DISCIPLINE = {
     "outdoor_volume": "lead",
     "outdoor_boulder": "boulder",
 }
+
+# B360 — etichetta neutra quando l'utente sceglie "outdoor" senza dire dove.
+# Mai un intent: "projecting" non è una falesia e il geocoder del coach non
+# può risolverlo (niente meteo per quella giornata). "Outdoor" è la stessa
+# etichetta che outdoor.py::_sync_plan_after_outdoor_log usa già come fallback.
+OUTDOOR_SPOT_PLACEHOLDER = "Outdoor"
+
 SLOTS = ("morning", "lunch", "evening")
 
 # Load points for complementary sport feedback
@@ -1211,6 +1218,12 @@ def apply_events(
                 raise ValueError("add_outdoor requires 'spot_name'")
             existing_name = day.get("outdoor_spot_name")
             existing_parts = [p.strip() for p in existing_name.split(" - ")] if existing_name else []
+            # B360 — il placeholder non è una falesia: la prima falesia vera lo
+            # SOSTITUISCE invece di accodarcisi ("Outdoor - Grande Grotta").
+            # Filtra solo il placeholder, mai le vecchie etichette-intent: una
+            # falesia che si chiama davvero "Volume" può esistere.
+            if spot_name != OUTDOOR_SPOT_PLACEHOLDER:
+                existing_parts = [p for p in existing_parts if p != OUTDOOR_SPOT_PLACEHOLDER]
             if spot_name not in existing_parts:
                 existing_parts.append(spot_name)
             day["outdoor_spot_name"] = " - ".join(existing_parts)
@@ -1787,6 +1800,10 @@ def apply_day_override(
     gym_id: Optional[str] = None,
     gyms: Optional[List[Dict[str, Any]]] = None,
     session_index: Optional[int] = None,
+    # B360 — falesia scelta dall'utente per un override outdoor. Default None
+    # ⇒ i call site esistenti non cambiano.
+    spot_id: Optional[str] = None,
+    spot_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     updated = deepcopy(plan)
 
@@ -1816,7 +1833,22 @@ def apply_day_override(
                 f"{len(completed_in_target)} session(s) already completed/skipped"
             )
         target_day["sessions"] = []
-        target_day["outdoor_spot_name"] = intent.replace("outdoor_", "").replace("_", " ")
+        # B360 — la falesia arriva dall'utente, non dall'intent. Prima qui
+        # finiva intent.replace("outdoor_", "") → "projecting"/"volume"/"easy":
+        # nomi che il geocoder del coach non risolve (niente meteo).
+        new_name = (spot_name or "").strip()
+        if new_name:
+            target_day["outdoor_spot_name"] = new_name
+            if spot_id:
+                target_day["outdoor_spot_id"] = spot_id
+            else:
+                # niente puntatore stantio verso un'altra falesia
+                target_day.pop("outdoor_spot_id", None)
+        elif not target_day.get("outdoor_spot_name"):
+            # L'utente ha detto "outdoor" ma non dove: dirlo, non inventarlo.
+            target_day["outdoor_spot_name"] = OUTDOOR_SPOT_PLACEHOLDER
+        # else: il giorno porta già una falesia vera → l'override cambia il tipo
+        #       di giornata, non cancella dove vai. (Prima la cancellava.)
         target_day["outdoor_discipline"] = outdoor_discipline
         target_day["outdoor_session_status"] = "planned"
         target_day.pop("status", None)

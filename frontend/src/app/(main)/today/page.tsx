@@ -650,6 +650,9 @@ function TodayContent() {
     location: string;
     gym_id?: string;
     session_index?: number;
+    // B360 — la falesia scelta nel dialog
+    spot_id?: string;
+    spot_name?: string;
   }) {
     if (!weekPlan || !replanDate) return;
     setError(null);
@@ -663,6 +666,8 @@ function TodayContent() {
         phase_id: phaseId ?? undefined,
         week_plan: weekPlan,
         session_index: rdata.session_index,
+        spot_id: rdata.spot_id,
+        spot_name: rdata.spot_name,
       });
       updateWeekCache(result.week_plan);
     } catch (e) {
