@@ -539,6 +539,14 @@ export interface OutdoorStrategyResponse {
   nutrition: OutdoorNutrition;
   safety: Record<string, string>;
   conditions: OutdoorConditions | null;
+  /**
+   * A287 — la scala di tiri assoluta, derivata dai gradi dell'atleta.
+   * `/api/outdoor/strategy` la allega dal 2026-08 (A265, `outdoor.py:479`) ma il
+   * tipo non la dichiarava, quindi nessun componente la leggeva: la scala viveva
+   * solo su `/today` e `/week`, cioè sullo schermo che hai lasciato a casa.
+   * `null` quando l'atleta non ha gradi utilizzabili.
+   */
+  pitch_ladder?: OutdoorPitchLadder | null;
 }
 
 // ── Active session lifecycle ────────────────────────────────────────────
