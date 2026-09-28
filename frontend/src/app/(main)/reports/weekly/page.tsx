@@ -18,7 +18,6 @@ import {
   Mountain,
   Dumbbell,
   Calendar,
-  Clock,
   Activity,
 } from "lucide-react";
 import { getWeeklyReport } from "@/lib/api";

@@ -29,6 +29,20 @@ const PHASE_STYLE: Record<string, string> = {
 
 const PHASE_STYLE_FALLBACK = "bg-muted text-muted-foreground";
 
+/**
+ * B355 — offset di inizio di ogni fase (prefix-sum delle durate precedenti).
+ * Era un accumulatore mutato dentro `.map()`: riassegnare una variabile di
+ * render viola react-hooks/immutability. Il risultato è identico — la prima
+ * fase parte da 0, ciascuna dalla somma delle durate che la precedono — ma
+ * senza mutazione. Esportata per poterla bloccare con un test: un off-by-one
+ * qui sposterebbe tutte le fasi del macrociclo.
+ */
+export function phaseStartWeeks(durations: number[]): number[] {
+  return durations.map((_, i) =>
+    durations.slice(0, i).reduce((sum, d) => sum + d, 0),
+  );
+}
+
 export function MacrocycleTimeline({
   macrocycle,
   currentWeek,
@@ -38,12 +52,13 @@ export function MacrocycleTimeline({
   const totalWeeks = macrocycle.total_weeks;
 
   // Calculate the cumulative start offset of each phase
-  let cumulativeWeeks = 0;
-  const phasesWithOffset = macrocycle.phases.map((phase) => {
-    const offset = cumulativeWeeks;
-    cumulativeWeeks += phase.duration_weeks;
-    return { ...phase, startWeek: offset };
-  });
+  const startWeeks = phaseStartWeeks(
+    macrocycle.phases.map((p) => p.duration_weeks),
+  );
+  const phasesWithOffset = macrocycle.phases.map((phase, i) => ({
+    ...phase,
+    startWeek: startWeeks[i],
+  }));
 
   // Current-week marker position as a percentage
   const currentWeekPct =

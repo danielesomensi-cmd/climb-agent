@@ -62,7 +62,7 @@ export default function ExperiencePage() {
               onValueChange={([v]) => set("structured_training_years", v)}
             />
             <p className="text-xs text-muted-foreground">
-              If you've never followed a training plan, enter 0
+              If you&apos;ve never followed a training plan, enter 0
             </p>
           </div>
         </CardContent>

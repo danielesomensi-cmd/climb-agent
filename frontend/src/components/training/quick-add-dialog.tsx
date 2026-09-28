@@ -108,8 +108,12 @@ export function QuickAddDialog({
   const [newSpotDiscipline, setNewSpotDiscipline] = useState<"lead" | "boulder" | "both">("lead");
 
   // Reset state when dialog opens/closes or date changes
+  // B355 — set-state-in-effect: sincronizzazione stato↔props all'apertura. Il
+  // dialog resta montato fra un'apertura e l'altra, quindi senza questo reset
+  // riaprirlo su un altro giorno mostrerebbe le scelte del giorno precedente.
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSlot("evening");
       setLocation("gym");
       setSelectedSession(null);
@@ -130,6 +134,9 @@ export function QuickAddDialog({
   // Fetch suggestions when dialog opens or location changes (indoor only)
   useEffect(() => {
     if (!open || !date || mode !== "indoor") return;
+    // B355 — set-state-in-effect: flag di caricamento della fetch dei
+    // suggerimenti, che dipende da open/date/location e può partire solo qui.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     const resolvedLocation = location === "home" ? "home" : "gym";
     getSuggestedSessions(date, resolvedLocation)

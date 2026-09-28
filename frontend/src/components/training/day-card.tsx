@@ -395,7 +395,8 @@ export function DayCard({
   outdoorLoadScore,
   freeSessions,
   onDeleteFreeSession,
-  showActions = false,
+  // B355 — `showActions` non è più letto dal corpo da quando B166 ha tolto il
+  // bottone "View day"; la prop resta nell'interface perché /week la passa.
   weekPlan,
   onSessionUpdated,
 }: DayCardProps) {

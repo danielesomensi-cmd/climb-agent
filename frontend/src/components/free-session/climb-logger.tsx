@@ -104,7 +104,6 @@ export function ClimbLogger({
       startedAt.current = draft.startedAt;
       setResumed(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // Hide resume banner after 4s
@@ -269,7 +268,7 @@ export function ClimbLogger({
     } finally {
       setIsLogging(false);
     }
-  }, [sessionId, grade, status, attempts, style, topped, notes, surface, sessionMode, restSeconds, isLogging, climbs]);
+  }, [sessionId, grade, status, attempts, style, topped, notes, surface, sessionMode, restSeconds, isLogging, climbs, onClimbLogged]);
 
   const handleDeleteClimb = useCallback(async (climbIndex: number) => {
     // Optimistic remove

@@ -103,6 +103,9 @@ export default function GuidedSessionPage() {
   useEffect(() => {
     const saved = loadState(date, sessionId);
     if (saved) {
+      // B355 — idratazione post-mount da localStorage: leggerla in render
+      // romperebbe l'SSR (hydration mismatch). L'effect è la sede corretta.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(saved);
       setSessionStarted(true);
       // Show resume banner if there's actual progress (not a fresh session)

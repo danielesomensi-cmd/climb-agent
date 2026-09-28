@@ -346,6 +346,11 @@ function AddExerciseDialog({
 
   useEffect(() => {
     if (open && catalog.length === 0) {
+      // B355 — set-state-in-effect: è il flag di caricamento di una fetch
+      // avviata all'apertura del dialog (sincronizzazione con un sistema
+      // esterno). Non si può calcolare in render: la fetch parte solo quando
+      // il dialog si apre e il catalogo non è ancora in memoria.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
       getExercises()
         .then((data) => setCatalog(data.exercises))
@@ -355,7 +360,11 @@ function AddExerciseDialog({
   }, [open, catalog.length]);
 
   // Reset showAll when dialog closes
+  // B355 — set-state-in-effect: sincronizzazione stato↔prop `open`. Il dialog
+  // resta montato quando si chiude, quindi il "mostra tutti" va riportato al
+  // default alla chiusura, non al render. Pattern corretto, non un bug.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) setShowAll(false);
   }, [open]);
 

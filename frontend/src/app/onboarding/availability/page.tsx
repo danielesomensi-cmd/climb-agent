@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
 import { defaultTrainingLocation } from "@/lib/training-location";
-import { Button } from "@/components/ui/button";
 import { StepNav } from "@/components/onboarding/step-nav";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +42,6 @@ const SLOTS = [
 type SlotData = { available: boolean; preferred_location: string; gym_id?: string; other_activity_name?: string; reduce_intensity_after?: boolean };
 
 export default function AvailabilityPage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const availability = data.availability;
   const planningPrefs = data.planning_prefs;
@@ -125,17 +122,26 @@ export default function AvailabilityPage() {
   const hardDaysMax = Math.max(1, planningPrefs.target_training_days_per_week);
 
   // Auto-clamp sliders when caps shrink
+  // B355 — dipendenza volutamente sul solo cap: l'effect deve reagire a
+  // "l'utente ha tolto disponibilità", non a ogni tocco dello slider. Aggiungere
+  // il valore corrente (e `setPlanningPref`, ricreata a ogni render perché chiude
+  // su `planningPrefs`) farebbe girare l'effect in continuo su ogni update del
+  // draft di onboarding.
   useEffect(() => {
     if (availableDays > 0 && planningPrefs.target_training_days_per_week > availableDays) {
       setPlanningPref("target_training_days_per_week", availableDays);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availableDays]);
 
+  // B355 — stesso ragionamento: il clamp scatta quando si abbassa il tetto dei
+  // giorni di allenamento, non quando si muove lo slider dei giorni hard.
   useEffect(() => {
     const max = planningPrefs.target_training_days_per_week;
     if (max > 0 && planningPrefs.hard_day_cap_per_week > max) {
       setPlanningPref("hard_day_cap_per_week", max);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planningPrefs.target_training_days_per_week]);
 
   return (

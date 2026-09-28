@@ -67,13 +67,6 @@ export default function GoalsPage() {
   // The "main" current grade (for display and gap computation)
   const currentGrade = discipline === "boulder" ? currentBoulderGrade : currentLeadGrade;
 
-  // Derive goal_type from discipline
-  const goalType = discipline === "lead"
-    ? "lead_grade"
-    : discipline === "boulder"
-      ? "boulder_grade"
-      : "all_round";
-
   // Lead target grades (above current)
   const leadCurrentIdx = gradeIndex(currentLeadGrade, LEAD_GRADES);
   const leadTargetGrades = leadCurrentIdx >= 0

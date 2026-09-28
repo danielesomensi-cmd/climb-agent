@@ -92,11 +92,6 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function daysBetween(a: string, b: string): number {
-  const ms = new Date(b).getTime() - new Date(a).getTime();
-  return Math.floor(ms / (1000 * 60 * 60 * 24));
-}
-
 function formatDateLong(iso: string): string {
   if (!iso) return "—";
   const d = parseISODateLocal(iso);

@@ -224,6 +224,11 @@ export function GuidedExerciseStep({
   useEffect(() => {
     if (prefilledForRef.current === exercise.exerciseId) return;
     prefilledForRef.current = exercise.exerciseId;
+    /* eslint-disable react-hooks/set-state-in-effect --
+       B355 — pre-fill una tantum all'arrivo su un nuovo esercizio: è la
+       sincronizzazione prop→stato descritta sopra (B288), volutamente NON
+       derivata in render perché da lì in poi i campi appartengono all'utente
+       e ricalcolarli li sovrascriverebbe mentre digita. */
     if (exercise.usedLoadKg != null) {
       setLoadInput(String(exercise.usedLoadKg));
     } else if (exercise.suggested.externalLoadKg != null) {
@@ -256,6 +261,7 @@ export function GuidedExerciseStep({
     setNotesInput(exercise.notes ?? "");
     setNotesExpanded(!!(exercise.notes));
     setFeedback(exercise.feedbackLabel || "ok");
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [exercise]);
 
   const prescriptionLines = formatPrescription(exercise);
