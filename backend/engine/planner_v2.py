@@ -761,6 +761,27 @@ def generate_phase_week(
     if user_age is not None and user_age < 18:
         target_days = min(target_days, 4)
 
+    # A283 — quante SESSIONI a settimana, che non è la stessa cosa di quanti
+    # GIORNI. Chi si allena spezzato (complementari a pranzo, arrampicata la
+    # sera) ha più slot che giorni, e finché il budget di sessioni era
+    # `target_days` quei pranzi restavano vuoti per definizione.
+    #
+    # Preferenza esplicita e non derivata dagli slot: derivarla cambierebbe in
+    # silenzio il piano di chiunque abbia anche un solo giorno a due fasce,
+    # senza che l'abbia chiesto — contro il principio deterministico.
+    # Chiave assente, None, non-int o fuori range → None → comportamento
+    # odierno identico, byte per byte (verificato in Fase 1 su target_days 3/4/5).
+    _ts = prefs.get("target_sessions_per_week")
+    target_sessions = _ts if isinstance(_ts, int) and 1 <= _ts <= 21 else None
+    if target_sessions is not None:
+        # Mai meno dei giorni: un target sessioni più basso dei giorni target
+        # sarebbe una contraddizione, non una richiesta.
+        target_sessions = max(target_sessions, target_days)
+        if user_age is not None and user_age < 18:
+            # D81 — il cap giovanile è sui giorni: senza questo, lo split lo
+            # aggirerebbe impilando sessioni sugli stessi 4 giorni.
+            target_sessions = target_days
+
     # D83: recovery multiplier increases minimum gap between hard sessions
     recovery_mult = float(prefs.get("recovery_multiplier", 1.0))
     hard_gap_days = math.ceil(1 * recovery_mult)  # base gap = 1 day (48h)
@@ -1201,7 +1222,13 @@ def generate_phase_week(
     # When total sessions placed < target AND a day has unused slots, place
     # additional NON-hard sessions to fill them.
     total_sessions_placed = sum(len(ds) for ds in day_sessions)
-    session_target = min(target_days, total_available_slots)
+    # A283 — qui `target_days` contava GIORNI mentre `session_target` conta
+    # SESSIONI: unità sbagliata, e il risultato era che con 11 slot su 7 giorni
+    # uscivano 7 sessioni e 4 pranzi vuoti. PASS 2.2 esiste da B121 proprio per
+    # riempire gli slot extra, ma la sua guardia qui sotto era già falsa.
+    # `total_available_slots` (riga ~929) è la somma degli slot sui giorni
+    # sopravvissuti al pruning: era ed è il termine giusto del min().
+    session_target = min(target_sessions or target_days, total_available_slots)
 
     if total_sessions_placed < session_target:
         # Build combined pool: primary non-hard + all complementary
@@ -1286,6 +1313,13 @@ def generate_phase_week(
                 total_sessions_placed += 1
                 if meta["finger"]:
                     finger_day_offsets.append(offset)
+                # A283 — questo `break` limita a UNA sessione extra per giorno,
+                # cioè a due sessioni in totale. Lasciato di proposito: copre
+                # integralmente lo split pranzo+sera, mentre trasformarlo in un
+                # ciclo sugli slot residui aprirebbe a tre sessioni al giorno
+                # (morning+lunch+evening) che nessuno ha chiesto, e in Fase 1
+                # produceva solo riempitivi di mobilità perché il pool non regge.
+                # Si riapre se qualcuno usa davvero tre fasce.
                 break
 
     # A282: shared placement cascade for the quality floors below.
