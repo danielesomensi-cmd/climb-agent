@@ -7,6 +7,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import { SessionTimer } from "@/components/guided/session-timer";
 import { ConditionBadge } from "@/components/outdoor/condition-badge";
 import { StrategyView } from "@/components/outdoor/strategy-view";
+import { PitchLadderCard } from "@/components/outdoor/pitch-ladder-card";
 import { LiveRouteLogger, type LiveRoute } from "@/components/outdoor/live-route-logger";
 import OutdoorLogForm from "@/components/training/OutdoorLogForm";
 import {
@@ -491,6 +492,16 @@ export default function OutdoorDayPage() {
                 {/* Strategy */}
                 {loadingStrat && <p className="text-sm text-muted-foreground">Loading strategy…</p>}
                 {strategy && !loadingStrat && <StrategyView data={strategy} />}
+
+                {/* A287 — la scala di tiri: il backend la allega alla strategy da
+                    A265, ma questa pagina non la leggeva. È lo schermo che apri
+                    in falesia, quindi è qui che serve più che su /today.
+                    Sola lettura: la si genera e si modifica dalla card del giorno. */}
+                {strategy?.pitch_ladder && !loadingStrat && (
+                  <div className="mt-4">
+                    <PitchLadderCard plan={strategy.pitch_ladder} readOnly />
+                  </div>
+                )}
               </>
             )}
 

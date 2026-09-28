@@ -81,7 +81,6 @@
   "fatigue_proxy": {},
   "goal": {
     "current_grade": "7a",
-    "deadline": "2026-09-01",
     "discipline": "lead",
     "goal_type": "lead_grade",
     "target_boulder_grade": "",

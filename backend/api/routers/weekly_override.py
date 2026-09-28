@@ -6,10 +6,20 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from backend.api.deps import assert_plan_not_paused, ensure_monday, get_user_id, load_state, save_state
-from backend.engine.weekly_override import build_merged_view, build_slot_view
+from backend.engine.weekly_override import SLOTS, build_merged_view, build_slot_view
+
+# B358 — i nomi di giorno che il motore sa davvero leggere.
+# `merge_override_into_availability` mappa SOLO i nomi lunghi: una chiave corta
+# (`mon`) cade in `if short is None: continue` e viene scartata in silenzio,
+# mentre l'API aveva già risposto `{"status": "ok"}`. In D270 è costato una
+# generazione sbagliata della settimana in montagna — sette sere piene invece di
+# due, con l'API che confermava un salvataggio senza alcun effetto.
+_VALID_DAYS = frozenset(
+    ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+)
 
 router = APIRouter(prefix="/api/weekly-override", tags=["weekly-override"])
 
@@ -24,9 +34,40 @@ class DayOverridePayload(BaseModel):
     available: bool = True
     slots: Optional[dict[str, SlotOverridePayload]] = None  # per-slot override
 
+    @field_validator("slots")
+    @classmethod
+    def _known_slots(cls, value):
+        if not value:
+            return value
+        unknown = sorted(k for k in value if k.lower() not in SLOTS)
+        if unknown:
+            raise ValueError(
+                f"Unknown slot(s): {', '.join(unknown)}. Expected: {', '.join(SLOTS)}."
+            )
+        return value
+
 
 class WeeklyOverridePayload(BaseModel):
     days: dict[str, DayOverridePayload] = Field(default_factory=dict)
+
+    @field_validator("days")
+    @classmethod
+    def _known_days(cls, value):
+        """B358 — rifiuta le chiavi che il merge scarterebbe in silenzio.
+
+        Il motore legge solo i nomi lunghi. Accettare `mon` e rispondere `ok`
+        significa confermare un salvataggio che non ha alcun effetto: meglio un
+        422 esplicito. Il frontend manda già i nomi lunghi
+        (`weekly-checkin-sheet.tsx`, mappa `longNames`), quindi nessun percorso
+        dell'app cambia comportamento.
+        """
+        unknown = sorted(k for k in value if k.lower() not in _VALID_DAYS)
+        if unknown:
+            raise ValueError(
+                f"Unknown day key(s): {', '.join(unknown)}. "
+                f"Expected full day names: {', '.join(sorted(_VALID_DAYS))}."
+            )
+        return value
 
 
 @router.get("/{week_start}")
@@ -71,8 +112,11 @@ def put_weekly_override(
     for k, v in body.days.items():
         day_dict: dict = {"available": v.available}
         if v.slots:
-            day_dict["slots"] = {sk: sv.model_dump() for sk, sv in v.slots.items()}
-        serialized_days[k] = day_dict
+            day_dict["slots"] = {sk.lower(): sv.model_dump() for sk, sv in v.slots.items()}
+        # B358 — normalizzato: il validator accetta "Monday" come "monday", ma il
+        # merge fa `_LONG_TO_SHORT.get(name.lower())`, quindi salvare la forma già
+        # minuscola evita di dipendere da quel `.lower()` a valle.
+        serialized_days[k.lower()] = day_dict
 
     override_data = {
         "days": serialized_days,
