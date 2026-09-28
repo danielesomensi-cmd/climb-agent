@@ -14540,7 +14540,8 @@
       "recency_group": "conditioning_steady_cardio",
       "equipment_required": [],
       "location_allowed": [
-        "outdoor"
+        "outdoor",
+        "home"
       ],
       "contraindications": [],
       "prescription_defaults": {
