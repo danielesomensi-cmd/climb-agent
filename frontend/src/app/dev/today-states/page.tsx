@@ -49,7 +49,11 @@ export default function DevTodayStatesPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     // Local dev is always allowed; Vercel preview is allowed; prod domain is blocked.
+    // B355 — il gate dipende da `window.location.hostname`, che in render lato
+    // server non esiste: deciderlo prima del mount darebbe hydration mismatch.
+    // Post-mount è l'unico momento onesto per leggerlo.
     if (process.env.NODE_ENV !== "production") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAllowed(true);
       return;
     }

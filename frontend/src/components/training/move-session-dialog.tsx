@@ -44,7 +44,9 @@ const WEEKDAY_LABELS: Record<string, string> = {
 
 export function MoveSessionDialog({
   open,
-  sessionId,
+  // B355 — `sessionId` resta nella props interface (i due chiamanti la passano e
+  // identifica la sessione da spostare) ma il dialog non la usa: sceglie solo la
+  // destinazione e la restituisce a onApply.
   fromDate,
   fromSlot,
   weekPlan,

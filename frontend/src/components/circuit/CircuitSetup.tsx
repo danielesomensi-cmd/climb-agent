@@ -212,7 +212,7 @@ export function CircuitSetup({ onStart, onCancel }: CircuitSetupProps) {
     <div className="flex flex-col gap-5 px-4">
       {/* Header */}
       <div className="flex flex-col items-center gap-2 pt-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-emerald-500/20">
           <Flame className="size-8 text-emerald-400" />
         </div>
         <h2 className="text-xl font-bold">Core Circuit</h2>
@@ -222,7 +222,7 @@ export function CircuitSetup({ onStart, onCancel }: CircuitSetupProps) {
       </div>
 
       {/* Parameters */}
-      <div className="rounded-2xl border border-border bg-card/50 px-3">
+      <div className="rounded-xl border border-border bg-card/50 px-3">
         {PARAMS.map((p, i) => (
           <div key={p.key}>
             {i > 0 && <div className="border-t border-border/50" />}
@@ -236,7 +236,7 @@ export function CircuitSetup({ onStart, onCancel }: CircuitSetupProps) {
       </div>
 
       {/* Difficulty + Bar toggles */}
-      <div className="rounded-2xl border border-border bg-card/50 px-3 py-3 flex flex-col gap-3">
+      <div className="rounded-xl border border-border bg-card/50 px-3 py-3 flex flex-col gap-3">
         {/* Difficulty toggle */}
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-foreground">Difficulty</span>
@@ -292,7 +292,7 @@ export function CircuitSetup({ onStart, onCancel }: CircuitSetupProps) {
       <button
         onClick={() => onStart({ durationMin: duration, workSeconds: work, restSeconds: rest, totalExercises, difficulty, hasBar })}
         disabled={totalExercises < 1}
-        className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 text-lg font-bold text-white shadow-lg shadow-emerald-600/25 transition-all active:scale-[0.98] disabled:opacity-50"
+        className="flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-emerald-600 text-lg font-bold text-white shadow-lg shadow-emerald-600/25 transition-all active:scale-[0.98] disabled:opacity-50"
       >
         <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8 5v14l11-7z" />

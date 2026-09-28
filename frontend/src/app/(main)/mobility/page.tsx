@@ -114,7 +114,7 @@ export default function MobilityPage() {
       {step !== "flow" && <TopBar title="Stretching & Mobility" backHref="/free-session" />}
       <main className="mx-auto max-w-lg pb-8">
         {error && (
-          <div className="mx-4 mb-3 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+          <div className="mx-4 mb-3 rounded-lg border border-danger/30 bg-danger/15 p-3 text-sm text-danger">
             {error}
           </div>
         )}
@@ -156,7 +156,7 @@ export default function MobilityPage() {
             <div className="flex w-full max-w-xs flex-col gap-2 text-left">
               {result.entriesPerformed.map((e) => (
                 <div key={e.id} className="rounded-lg border bg-card p-3 text-sm">
-                  <span className="text-violet-400">✓</span> {e.name}
+                  <span className="text-success">✓</span> {e.name}
                 </div>
               ))}
             </div>

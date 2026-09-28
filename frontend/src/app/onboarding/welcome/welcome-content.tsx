@@ -73,12 +73,19 @@ export function WelcomeContent() {
           </CardContent>
         </Card>
 
-        <div className="flex flex-col items-end gap-3">
+        <div className="flex flex-col items-center gap-3">
           {/* A256 — was a <SignUpButton>: the very first tap on the landing
               page opened a sign-up form, before the visitor had seen anything
               the product does. The wizard is public now; the account is asked
-              for on the review page, where there is something to save. */}
-          <Button onClick={() => router.push("/onboarding/profile")}>
+              for on the review page, where there is something to save.
+
+              A286 — era un bottone da 36px allineato a destra: il CTA
+              principale della landing pubblica deve essere pieno e alto. */}
+          <Button
+            size="lg"
+            className="min-h-[52px] w-full text-base"
+            onClick={() => router.push("/onboarding/profile")}
+          >
             Start assessment
           </Button>
           {/* B300 — a returning, signed-out user (new device, cleared cookies)

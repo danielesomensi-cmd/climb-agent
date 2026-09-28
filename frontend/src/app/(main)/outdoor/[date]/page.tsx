@@ -377,19 +377,19 @@ export default function OutdoorDayPage() {
       <main className="mx-auto max-w-xl px-4 pb-24 pt-4 space-y-5">
         {/* Header */}
         <div>
-          <h1 className="text-lg font-semibold text-zinc-100">{spotName || "Outdoor session"}</h1>
-          <p className="text-xs text-zinc-500">{date}</p>
+          <h1 className="text-lg font-semibold text-foreground">{spotName || "Outdoor session"}</h1>
+          <p className="text-xs text-muted-foreground">{date}</p>
         </div>
 
         {/* Weather widget (A227) — full-width, expandable; hidden when no conditions */}
         <ConditionBadge conditions={strategy?.conditions} coords={coords} />
 
-        {error && <p className="rounded-md border border-red-900/40 bg-red-950/20 p-3 text-sm text-red-400">{error}</p>}
+        {error && <p className="rounded-md border border-danger/30 bg-danger/15 p-3 text-sm text-danger">{error}</p>}
 
         {/* B336 — offline reassurance. Amber, not red: nothing is lost and there
             is nothing for the athlete to do about it at the crag. */}
         {pendingSync && (
-          <p className="rounded-md border border-amber-900/40 bg-amber-950/20 p-3 text-sm text-amber-200/90">
+          <p className="rounded-md border border-warning/30 bg-warning/15 p-3 text-sm text-warning">
             Offline — this session is saved on this device and will sync when you&apos;re back
             online. Keep logging.
           </p>
@@ -399,27 +399,27 @@ export default function OutdoorDayPage() {
         {phase === "setup" && (
           <>
             <div>
-              <h2 className="mb-2 text-sm font-medium text-zinc-300">What kind of day?</h2>
+              <h2 className="mb-2 text-sm font-medium text-foreground">What kind of day?</h2>
               <div className="grid grid-cols-2 gap-2">
                 {DAY_TYPES.map((d) => (
                   <button
                     key={d.id}
                     onClick={() => pickDayType(d.id)}
                     className={`rounded-xl border p-3 text-left transition ${
-                      dayType === d.id ? "border-indigo-500 bg-indigo-950/30" : "border-white/10 hover:border-white/20"
+                      dayType === d.id ? "border-brand-secondary bg-brand-secondary/10" : "border-border hover:border-border-strong"
                     }`}
                   >
                     <div className="text-xl" aria-hidden="true">{d.icon}</div>
-                    <div className="mt-1 text-sm font-medium text-zinc-100">{d.label}</div>
-                    <div className="text-[11px] text-zinc-500">{d.sub}</div>
+                    <div className="mt-1 text-sm font-medium text-foreground">{d.label}</div>
+                    <div className="text-[11px] text-muted-foreground">{d.sub}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {dayType && isBoulder && (
-              <div className="rounded-lg border border-white/10 bg-zinc-900/30 p-4 text-sm text-zinc-400">
-                <p className="font-medium text-zinc-200">Boulder strategy coming soon</p>
+              <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">Boulder strategy coming soon</p>
                 <p className="mt-1">Use the timer and log your sends — full boulder strategy lands in a later update.</p>
               </div>
             )}
@@ -434,8 +434,8 @@ export default function OutdoorDayPage() {
                     aria-expanded={refineOpen}
                     className="flex w-full items-center justify-between p-3 text-left"
                   >
-                    <span className="text-sm font-medium text-zinc-300">Refine (optional)</span>
-                    <svg className={`h-4 w-4 text-zinc-500 transition-transform ${refineOpen ? "rotate-180" : ""}`}
+                    <span className="text-sm font-medium text-foreground">Refine (optional)</span>
+                    <svg className={`h-4 w-4 text-muted-foreground transition-transform ${refineOpen ? "rotate-180" : ""}`}
                       fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
@@ -444,14 +444,14 @@ export default function OutdoorDayPage() {
                     <div className="space-y-3 border-t border-white/5 p-3">
                       {REFINE.map((dim) => (
                         <div key={dim.key}>
-                          <div className="mb-1 text-[11px] uppercase tracking-wide text-zinc-500">{dim.label}</div>
+                          <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">{dim.label}</div>
                           <div className="flex flex-wrap gap-1.5">
                             {dim.options.map((o) => (
                               <button
                                 key={o.v}
                                 onClick={() => setRefine(dim.key, o.v)}
                                 className={`rounded-full border px-3 py-1 text-xs transition ${
-                                  profile[dim.key] === o.v ? "border-indigo-500 bg-indigo-950/40 text-indigo-200" : "border-white/10 text-zinc-400"
+                                  profile[dim.key] === o.v ? "border-brand-secondary bg-brand-secondary/15 text-brand-secondary" : "border-border text-muted-foreground"
                                 }`}
                               >
                                 {o.l}
@@ -467,16 +467,16 @@ export default function OutdoorDayPage() {
                 {/* Readiness gate (project only) */}
                 {isProject && (
                   <div className="rounded-lg border border-white/10 p-3">
-                    <p className="text-sm font-medium text-zinc-200">Fingers OK? Any pain or tweaks?</p>
+                    <p className="text-sm font-medium text-foreground">Fingers OK? Any pain or tweaks?</p>
                     {injuryAreas.length > 0 && (
-                      <p className="mt-1 text-xs text-amber-500">History flagged: {injuryAreas.join(", ")}. Be honest with yourself.</p>
+                      <p className="mt-1 text-xs text-warning">History flagged: {injuryAreas.join(", ")}. Be honest with yourself.</p>
                     )}
                     <div className="mt-2 flex gap-2">
-                      <button onClick={() => setReadyOk(true)} className={`flex-1 rounded-md border px-3 py-2 text-sm ${readyOk === true ? "border-emerald-600 bg-emerald-950/30 text-emerald-300" : "border-white/10"}`}>All good</button>
-                      <button onClick={() => setReadyOk(false)} className={`flex-1 rounded-md border px-3 py-2 text-sm ${readyOk === false ? "border-red-600 bg-red-950/30 text-red-300" : "border-white/10"}`}>Pain / tweak</button>
+                      <button onClick={() => setReadyOk(true)} className={`flex-1 rounded-md border px-3 py-2 text-sm ${readyOk === true ? "border-success/40 bg-success/15 text-success" : "border-border"}`}>All good</button>
+                      <button onClick={() => setReadyOk(false)} className={`flex-1 rounded-md border px-3 py-2 text-sm ${readyOk === false ? "border-danger/40 bg-danger/15 text-danger" : "border-border"}`}>Pain / tweak</button>
                     </div>
                     {readyOk === false && (
-                      <div className="mt-2 rounded-md border border-amber-900/40 bg-amber-950/20 p-2.5 text-xs text-amber-200/90">
+                      <div className="mt-2 rounded-md border border-warning/30 bg-warning/15 p-2.5 text-xs text-warning">
                         <p className="font-medium">Red flag — consider downgrading.</p>
                         <p className="mt-1">{strategy?.strategy.base.downgrade_rule}</p>
                         <div className="mt-2 flex gap-2">
@@ -489,7 +489,7 @@ export default function OutdoorDayPage() {
                 )}
 
                 {/* Strategy */}
-                {loadingStrat && <p className="text-sm text-zinc-500">Loading strategy…</p>}
+                {loadingStrat && <p className="text-sm text-muted-foreground">Loading strategy…</p>}
                 {strategy && !loadingStrat && <StrategyView data={strategy} />}
               </>
             )}
@@ -501,20 +501,20 @@ export default function OutdoorDayPage() {
                     on a network fetch meant no signal → no session → the whole
                     day unlogged, which is the opposite of the trade we want. */}
                 {!isBoulder && !strategy && !loadingStrat && (
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-muted-foreground">
                     Strategy unavailable offline — you can still start and log the session.
                   </p>
                 )}
                 <button
                   onClick={start}
                   disabled={!gatePassed}
-                  className="w-full rounded-md bg-indigo-600 py-2.5 text-sm font-medium text-white disabled:opacity-40"
+                  className="w-full min-h-[44px] rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-40"
                 >
                   Start session
                 </button>
                 <button
                   onClick={() => setPhase("logging")}
-                  className="w-full rounded-md border border-white/10 py-2 text-sm text-zinc-400"
+                  className="w-full min-h-[44px] rounded-md border border-border py-2 text-sm text-muted-foreground"
                 >
                   Log without timer
                 </button>
@@ -526,18 +526,18 @@ export default function OutdoorDayPage() {
         {/* ── ACTIVE ────────────────────────────────────────────── */}
         {phase === "active" && (
           <>
-            <div className="flex items-center justify-between rounded-xl border border-indigo-700/30 bg-indigo-950/20 p-4">
+            <div className="flex items-center justify-between rounded-xl border border-brand-secondary/30 bg-brand-secondary/10 p-4">
               <div>
-                <p className="text-xs uppercase tracking-wide text-indigo-400">Session in progress</p>
-                <p className="text-sm text-zinc-300">{dayType?.replace(/_/g, " ")}</p>
+                <p className="text-xs uppercase tracking-wide text-brand-secondary">Session in progress</p>
+                <p className="text-sm text-foreground">{dayType?.replace(/_/g, " ")}</p>
               </div>
-              {startedAt && <div className="text-xl font-semibold text-zinc-100"><SessionTimer startedAt={startedAt} /></div>}
+              {startedAt && <div className="text-xl font-semibold text-foreground"><SessionTimer startedAt={startedAt} /></div>}
             </div>
 
             {/* Live route logging — capture each climb as you go */}
             {startedAt && (
               <div>
-                <h3 className="mb-2 text-sm font-medium text-zinc-300">Log as you climb</h3>
+                <h3 className="mb-2 text-sm font-medium text-foreground">Log as you climb</h3>
                 <LiveRouteLogger
                   discipline={disciplineParam}
                   startedAt={startedAt}
@@ -551,16 +551,16 @@ export default function OutdoorDayPage() {
 
             {strategy && (
               <details className="rounded-lg border border-white/5">
-                <summary className="cursor-pointer p-3 text-sm font-medium text-zinc-300">Strategy</summary>
+                <summary className="cursor-pointer p-3 text-sm font-medium text-foreground">Strategy</summary>
                 <div className="border-t border-white/5 p-3"><StrategyView data={strategy} /></div>
               </details>
             )}
 
             <div className="space-y-2">
-              <button onClick={() => setPhase("logging")} className="w-full rounded-md bg-indigo-600 py-2.5 text-sm font-medium text-white">
+              <button onClick={() => setPhase("logging")} className="w-full min-h-[44px] rounded-md bg-primary py-2.5 text-sm font-medium text-primary-foreground">
                 Close &amp; log
               </button>
-              <button onClick={cancelActive} className="w-full rounded-md border border-white/10 py-2 text-sm text-zinc-500">
+              <button onClick={cancelActive} className="w-full min-h-[44px] rounded-md border border-border py-2 text-sm text-muted-foreground">
                 Discard session
               </button>
             </div>
@@ -604,7 +604,7 @@ export default function OutdoorDayPage() {
         )}
 
         {finishMeta?.duration_capped && (
-          <p className="text-xs text-amber-500">Saved with capped duration ({finishMeta.duration_minutes} min).</p>
+          <p className="text-xs text-warning">Saved with capped duration ({finishMeta.duration_minutes} min).</p>
         )}
       </main>
     </>

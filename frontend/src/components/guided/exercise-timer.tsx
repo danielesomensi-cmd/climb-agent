@@ -4,9 +4,14 @@ import { memo, useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, CheckCircle2, ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
-import { tapFeedback } from "@/lib/haptics";
+import { confirmFeedback, tapFeedback } from "@/lib/haptics";
 import { countdownTick, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
+import {
+  PHASE_RING,
+  PHASE_TEXT,
+  type PlayerPhase,
+} from "@/components/session-play/player-phase-colors";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -41,6 +46,31 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
  * elapsed with nobody watching.
  */
 const RESUME_GAP_MS = 2000;
+
+/**
+ * A286 — B7: le cinque fasi di questo timer sulle quattro della palette
+ * condivisa. `rep_rest` e `set_rest` sono entrambi riposo: li distingue
+ * l'etichetta (HOLD / REST), non il colore.
+ */
+function playerPhaseOf(phase: Phase): PlayerPhase {
+  switch (phase) {
+    case "get_ready": return "prepare";
+    case "work": return "work";
+    case "rep_rest":
+    case "set_rest": return "rest";
+    case "complete": return "done";
+    default: return "prepare";
+  }
+}
+
+/**
+ * A286 — B11: lo zoom scelto dall'atleta si perdeva a ogni esercizio, perché
+ * il player rimonta questo componente a ogni step. La preferenza vive in un
+ * modulo, non in localStorage: deve durare quanto la sessione aperta, non
+ * oltre. Parte da `false`, quindi SSR e primo render client coincidono —
+ * diventa vera solo dopo un tap.
+ */
+let enlargedPref = false;
 
 // ---------------------------------------------------------------------------
 // Audio — uses shared AudioContext from audio-unlock.ts.
@@ -183,10 +213,17 @@ function ExerciseTimerImpl({
   useEffect(() => {
     if (transitionId > 0) {
       transitionBeep();
+      // A286 — B8: il cambio di fase si sente anche con il telefono in tasca.
+      confirmFeedback();
       if (pendingVoiceCueRef.current) {
         speakPhaseTransition(pendingVoiceCueRef.current);
         pendingVoiceCueRef.current = null;
       }
+      // B355 — il flash è la controparte visiva del beep: si accende quando
+      // `transitionId` cambia (evento di transizione di fase) e si spegne da
+      // solo dopo 300ms. Non è derivabile dal render, è un effetto one-shot
+      // legato all'evento, esattamente come transitionBeep() qui sopra.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFlash(true);
       const t = setTimeout(() => setFlash(false), 300);
       return () => clearTimeout(t);
@@ -604,15 +641,7 @@ function ExerciseTimerImpl({
       : 1 - secondsLeft / totalForPhase;
   const dashOffset = progress * CIRCUMFERENCE;
 
-  const strokeColor = (() => {
-    switch (phase) {
-      case "get_ready": return "stroke-sky-500";
-      case "work": return "stroke-orange-500";
-      case "rep_rest": return "stroke-teal-400";
-      case "set_rest": return "stroke-emerald-500";
-      default: return "stroke-orange-500";
-    }
-  })();
+  const strokeColor = PHASE_RING[playerPhaseOf(phase)];
 
   const isCountdown =
     secondsLeft <= 3 && secondsLeft > 0 &&
@@ -622,7 +651,12 @@ function ExerciseTimerImpl({
   const isActive = phase !== "idle" && phase !== "complete";
 
   // --- Enlarged mode ---
-  const [enlarged, setEnlarged] = useState(false);
+  // A286 — B11: la preferenza sopravvive al remount fra un esercizio e l'altro.
+  const [enlarged, setEnlargedState] = useState(enlargedPref);
+  const setEnlarged = useCallback((v: boolean) => {
+    enlargedPref = v;
+    setEnlargedState(v);
+  }, []);
 
   // Close enlarged mode on swipe down
   const touchStartY = useRef<number | null>(null);
@@ -659,17 +693,9 @@ function ExerciseTimerImpl({
     }
   })();
 
-  const phaseColor = (() => {
-    if (overdue) return "text-amber-500";
-    switch (phase) {
-      case "get_ready": return "text-sky-500";
-      case "work": return "text-orange-500";
-      case "rep_rest": return "text-teal-400";
-      case "set_rest": return "text-emerald-500";
-      case "complete": return "text-green-600";
-      default: return "text-muted-foreground";
-    }
-  })();
+  // Overdue = "il tempo è scaduto, tocca per continuare": stesso ambra del
+  // lavoro, perché è una richiesta di azione, non un errore.
+  const phaseColor = overdue ? PHASE_TEXT.work : PHASE_TEXT[playerPhaseOf(phase)];
 
   // --- Render ---
 
@@ -678,7 +704,8 @@ function ExerciseTimerImpl({
       {/* Enlarged overlay */}
       {enlarged && (
         <div
-          className="fixed inset-0 z-50 bg-[#0a0a0a] flex flex-col items-center justify-center select-none"
+          // A286 — overlay fullscreen: deve stare sopra la nav (z-50), come gli altri player.
+          className="fixed inset-0 z-[60] bg-[#0a0a0a] flex flex-col items-center justify-center select-none pt-[env(safe-area-inset-top)]"
           onTouchStart={handleEnlargedTouchStart}
           onTouchEnd={handleEnlargedTouchEnd}
         >
@@ -686,7 +713,7 @@ function ExerciseTimerImpl({
           <button
             onClick={() => setEnlarged(false)}
             onPointerDown={tapFeedback}
-            className="absolute top-4 right-4 flex items-center justify-center w-12 h-12 rounded-lg border border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100 transition-colors"
+            className="absolute right-4 top-[calc(1rem+env(safe-area-inset-top))] flex items-center justify-center w-12 h-12 rounded-lg border border-muted-foreground/40 text-muted-foreground hover:text-foreground hover:border-foreground/50 active:scale-95 motion-reduce:active:scale-100 transition-colors"
             aria-label="Exit enlarged timer"
           >
             <X className="size-6" />
@@ -723,23 +750,23 @@ function ExerciseTimerImpl({
 
             {/* Big time display */}
             {overdue ? (
-              <span className="text-[120px] leading-none font-bold tabular-nums text-amber-500">
+              <span className={cn("text-[120px] leading-none font-bold tabular-nums", PHASE_TEXT.work)}>
                 +{formatSeconds(overdueSeconds)}
               </span>
             ) : phase === "work" && isManual ? (
               <div className="flex flex-col items-center gap-2">
                 {hasManualRepLoop ? (
                   <span className="text-[120px] leading-none font-bold tabular-nums">
-                    {currentRep}<span className="text-muted-foreground/40">/{reps}</span>
+                    {currentRep}<span className="text-muted-foreground">/{reps}</span>
                   </span>
                 ) : (
                   <span className="text-[120px] leading-none font-bold tabular-nums">
-                    {displaySet}<span className="text-muted-foreground/40">/{sets}</span>
+                    {displaySet}<span className="text-muted-foreground">/{sets}</span>
                   </span>
                 )}
               </div>
             ) : phase === "complete" ? (
-              <CheckCircle2 className="size-32 text-green-600" />
+              <CheckCircle2 className={cn("size-32", PHASE_TEXT.done)} />
             ) : (
               <span className={cn(
                 "text-[120px] leading-none font-bold tabular-nums",
@@ -761,12 +788,12 @@ function ExerciseTimerImpl({
 
             {/* Pause indicator */}
             {paused && isActive && (
-              <Pause className="size-10 text-muted-foreground/60 mt-2" />
+              <Pause className="size-10 text-muted-foreground mt-2" />
             )}
           </div>
 
           {/* Bottom controls */}
-          <div className="flex items-center gap-6 pb-8">
+          <div className="flex items-center gap-6 pb-[calc(2rem+env(safe-area-inset-bottom))]">
             {/* ‹ Back */}
             <button
               onClick={(e) => { e.stopPropagation(); handlePhaseBack(); }}
@@ -788,7 +815,7 @@ function ExerciseTimerImpl({
               <button
                 onClick={(e) => { e.stopPropagation(); handleRestDone(); }}
                 onPointerDown={tapFeedback}
-                className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-6 py-3 text-base font-medium text-black hover:bg-amber-400 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-warning px-6 py-3 text-base font-medium text-black hover:bg-warning/90 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
               >
                 <CheckCircle2 className="size-5" />
                 {overdueCta}
@@ -871,7 +898,7 @@ function ExerciseTimerImpl({
         {/* SVG circle */}
         <div
           className={cn(
-            "relative w-40 h-40 cursor-pointer select-none transition-transform",
+            "relative w-48 h-48 cursor-pointer select-none transition-transform",
             isActive && "active:scale-95 motion-reduce:active:scale-100",
             flash && "ring-2 ring-primary/50 rounded-full"
           )}
@@ -928,10 +955,10 @@ function ExerciseTimerImpl({
 
             {phase === "get_ready" && (
               <>
-                <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                <span className={cn("text-5xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
                   {secondsLeft}
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-sky-500">
+                <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.prepare)}>
                   Get Ready
                 </span>
               </>
@@ -940,13 +967,13 @@ function ExerciseTimerImpl({
             {/* B332: timer expired, waiting for the athlete — counter frozen */}
             {overdue && (
               <>
-                <span className="text-3xl font-bold tabular-nums text-amber-500">
+                <span className={cn("text-5xl font-bold tabular-nums", PHASE_TEXT.work)}>
                   +{formatSeconds(overdueSeconds)}
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-amber-500">
+                <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.work)}>
                   {overdueLabel}
                 </span>
-                <span className="text-xs text-muted-foreground/70 mt-0.5">
+                <span className="text-xs text-muted-foreground mt-0.5">
                   Tap to continue
                 </span>
               </>
@@ -954,10 +981,10 @@ function ExerciseTimerImpl({
 
             {!overdue && phase === "work" && !isManual && (
               <>
-                <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                <span className={cn("text-5xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
                   {formatSeconds(secondsLeft)}
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-orange-500">
+                <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.work)}>
                   Work
                 </span>
                 {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
@@ -968,19 +995,19 @@ function ExerciseTimerImpl({
               <>
                 {hasManualRepLoop ? (
                   <>
-                    <span className="text-2xl font-bold">Rep {currentRep}/{reps}</span>
+                    <span className="text-4xl font-bold">Rep {currentRep}/{reps}</span>
                     <span className="text-xs text-muted-foreground mt-1">Set {displaySet}/{sets}</span>
-                    <span className="text-xs text-muted-foreground/70 mt-0.5">
+                    <span className="text-xs text-muted-foreground mt-0.5">
                       Tap when done
                     </span>
                   </>
                 ) : (
                   <>
-                    <span className="text-2xl font-bold">Set {displaySet}</span>
+                    <span className="text-4xl font-bold">Set {displaySet}</span>
                     <span className="text-xs text-muted-foreground mt-1">
                       {reps > 1 ? `Do ${reps} reps` : "Do your set"}
                     </span>
-                    <span className="text-xs text-muted-foreground/70 mt-0.5">
+                    <span className="text-xs text-muted-foreground mt-0.5">
                       Tap when done
                     </span>
                   </>
@@ -990,10 +1017,10 @@ function ExerciseTimerImpl({
 
             {!overdue && phase === "rep_rest" && (
               <>
-                <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                <span className={cn("text-5xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
                   {formatSeconds(secondsLeft)}
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-teal-400">
+                <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.rest)}>
                   Rest
                 </span>
                 {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
@@ -1002,10 +1029,10 @@ function ExerciseTimerImpl({
 
             {!overdue && phase === "set_rest" && (
               <>
-                <span className={cn("text-3xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
+                <span className={cn("text-5xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
                   {formatSeconds(secondsLeft)}
                 </span>
-                <span className="text-xs font-semibold uppercase tracking-wider mt-0.5 text-emerald-500">
+                <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.rest)}>
                   Rest
                 </span>
                 {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
@@ -1013,7 +1040,7 @@ function ExerciseTimerImpl({
             )}
 
             {phase === "complete" && (
-              <div className="flex flex-col items-center gap-1 text-green-600">
+              <div className={cn("flex flex-col items-center gap-1", PHASE_TEXT.done)}>
                 <span className="text-sm font-semibold">Done!</span>
               </div>
             )}
@@ -1066,7 +1093,7 @@ function ExerciseTimerImpl({
             <button
               onClick={(e) => { e.stopPropagation(); handleRestDone(); }}
               onPointerDown={tapFeedback}
-              className="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-black hover:bg-amber-400 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-md bg-warning px-4 py-2 text-sm font-medium text-black hover:bg-warning/90 active:scale-95 active:brightness-95 motion-reduce:active:scale-100 transition-colors"
             >
               <CheckCircle2 className="size-4" />
               {overdueCta}

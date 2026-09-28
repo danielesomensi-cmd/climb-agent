@@ -52,6 +52,20 @@ import { isVoiceCuesEnabled, setVoiceCuesEnabled } from "@/lib/voice-cues";
 
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
+/** A286 — indice delle sezioni di /settings, nell'ordine in cui compaiono. */
+const SETTINGS_SECTIONS: { id: string; label: string }[] = [
+  { id: "sec-profile", label: "Profile" },
+  { id: "sec-goal", label: "Goal" },
+  { id: "sec-equipment", label: "Equipment" },
+  { id: "sec-availability", label: "Availability" },
+  { id: "sec-outdoor", label: "Outdoor" },
+  { id: "sec-subscription", label: "Subscription" },
+  { id: "sec-preferences", label: "Preferences" },
+  { id: "sec-data", label: "Backup" },
+  { id: "sec-cycle", label: "Next cycle" },
+  { id: "sec-danger", label: "Danger zone" },
+];
+
 export default function SettingsPage() {
   const { isLoaded: authReady } = useAuth();
   // B151: delay fetch until Clerk auth is ready — prevents empty-template flash
@@ -66,7 +80,6 @@ export default function SettingsPage() {
   const {
     status: subStatus,
     isActive: subActive,
-    isTrialing,
     trialDaysRemaining,
     enforced: subEnforced,
   } = useSubscription();
@@ -80,6 +93,11 @@ export default function SettingsPage() {
   const [pendingRegenAction, setPendingRegenAction] = useState<
     "equipment" | "goal" | "restart" | null
   >(null);
+  // B355 — `pendingGoal` è scritto (handleGoalConfirm) e ripulito (regen) ma mai
+  // letto: la rigenerazione rilegge l'obiettivo già persistito da `state?.goal`.
+  // Non lo cancello perché è il residuo dichiarato del "defer regen to the sheet":
+  // toglierlo è una decisione di prodotto, non di lint.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pendingGoal, setPendingGoal] = useState<Record<string, unknown> | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
@@ -391,8 +409,26 @@ export default function SettingsPage() {
 
         {!loading && authReady && !error && state && (
           <>
+            {/* A286 — /settings era una colonna unica di 14 card senza modo di
+                saltare a una sezione. Ancore sticky: niente stato, niente
+                accordion da richiudere, e la Danger Zone resta dov'è. */}
+            <nav
+              aria-label="Settings sections"
+              className="scrollbar-none sticky top-[calc(3.25rem+env(safe-area-inset-top))] z-30 -mx-4 flex gap-2 overflow-x-auto border-b border-border bg-background/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+            >
+              {SETTINGS_SECTIONS.map((sec) => (
+                <a
+                  key={sec.id}
+                  href={`#${sec.id}`}
+                  className="shrink-0 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                >
+                  {sec.label}
+                </a>
+              ))}
+            </nav>
+
             {/* ----- Profile ----- */}
-            <Card>
+            <Card id="sec-profile" className="scroll-mt-32">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Profile &amp; Maxes</CardTitle>
@@ -439,7 +475,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Goal ----- */}
-            <Card>
+            <Card id="sec-goal" className="scroll-mt-32">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Goal</CardTitle>
@@ -492,6 +528,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Equipment ----- */}
+            <div id="sec-equipment" className="scroll-mt-32">
             {editingEquipment ? (
               <EquipmentEditor
                 initialEquipment={equipment}
@@ -566,6 +603,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
+            </div>
 
             {/* ----- Finger Training Device ----- */}
             <Card>
@@ -616,6 +654,7 @@ export default function SettingsPage() {
             )}
 
             {/* ----- Availability ----- */}
+            <div id="sec-availability" className="scroll-mt-32">
             {editingAvailability ? (
               <AvailabilityEditor
                 initialAvailability={availability as Record<string, Record<string, { available: boolean; preferred_location: string; gym_id?: string }>>}
@@ -685,9 +724,10 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
             )}
+            </div>
 
             {/* ----- Outdoor Spots ----- */}
-            <Card>
+            <Card id="sec-outdoor" className="scroll-mt-32">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Outdoor Spots</CardTitle>
@@ -757,7 +797,7 @@ export default function SettingsPage() {
                       placeholder="Spot name"
                       value={newSpotName}
                       onChange={(e) => setNewSpotName(e.target.value)}
-                      className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
+                      className="w-full min-h-[44px] rounded-md border bg-background px-3 py-1.5 text-base"
                     />
                     <div className="flex gap-2">
                       {(["boulder", "lead", "both"] as const).map((d) => (
@@ -792,7 +832,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Subscription ----- */}
-            <Card>
+            <Card id="sec-subscription" className="scroll-mt-32">
               <CardHeader>
                 <CardTitle className="text-base">Subscription</CardTitle>
               </CardHeader>
@@ -873,7 +913,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Session preferences ----- */}
-            <Card>
+            <Card id="sec-preferences" className="scroll-mt-32">
               <CardHeader>
                 <CardTitle className="text-base">Session preferences</CardTitle>
               </CardHeader>
@@ -956,7 +996,7 @@ export default function SettingsPage() {
                   rows={3}
                   maxLength={500}
                   placeholder="Write your notes here…"
-                  className="w-full resize-none rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+                  className="w-full resize-none rounded-xl border border-border bg-muted/50 px-3 py-2 text-base outline-none placeholder:text-muted-foreground focus:border-primary"
                 />
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] text-muted-foreground">
@@ -979,7 +1019,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Backup & Restore ----- */}
-            <Card>
+            <Card id="sec-data" className="scroll-mt-32">
               <CardHeader>
                 <CardTitle className="text-base">Backup &amp; Restore</CardTitle>
               </CardHeader>
@@ -1050,7 +1090,7 @@ export default function SettingsPage() {
                   </AlertDialog>
                 </div>
                 {backupMsg && (
-                  <p className={`text-xs ${backupMsg.type === "ok" ? "text-green-500" : "text-destructive"}`}>
+                  <p className={`text-xs ${backupMsg.type === "ok" ? "text-success" : "text-destructive"}`}>
                     {backupMsg.text}
                   </p>
                 )}
@@ -1058,12 +1098,12 @@ export default function SettingsPage() {
             </Card>
 
             {/* ----- Plan Next Cycle (A-NEW-MACRO) ----- */}
-            <Card>
+            <Card id="sec-cycle" className="scroll-mt-32">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Plan Next Cycle</CardTitle>
                   {cycleStatus.canShow && (
-                    <Badge variant="outline" className="border-green-500/50 text-green-500">
+                    <Badge variant="outline" className="border-success/40 bg-success/15 text-success">
                       Ready
                     </Badge>
                   )}
@@ -1095,7 +1135,7 @@ export default function SettingsPage() {
                       {planPause.isPaused ? "Plan paused" : "Pause plan"}
                     </CardTitle>
                     {planPause.isPaused && (
-                      <Badge variant="outline" className="border-amber-500/50 text-amber-500">
+                      <Badge variant="outline" className="border-warning/40 bg-warning/15 text-warning">
                         Paused
                       </Badge>
                     )}
@@ -1148,7 +1188,7 @@ export default function SettingsPage() {
             <Separator />
 
             {/* ----- Danger zone ----- */}
-            <div className="space-y-3">
+            <div id="sec-danger" className="space-y-3 scroll-mt-32">
               <h2 className="text-sm font-semibold text-destructive uppercase tracking-wider">
                 Danger zone
               </h2>

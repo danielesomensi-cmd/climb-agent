@@ -324,6 +324,10 @@ You can modify a resolved session in several ways:
 
 From the **Today** or **Week** page, tap a session card's menu to add exercises. The system shows compatible exercises filtered by your equipment and the session's focus. The added exercise gets a prescription calculated from your current working loads.
 
+### Moving a Session
+
+On **Week** or **Today**, move a planned session to another day or slot. The slot you leave stays empty — it simply becomes rest; nothing is added in its place. The usual safety rules still apply where the session lands: if the move puts two finger-heavy days back to back, or goes over your weekly limit of hard days, the later session is swapped for an easy recovery session. Completed or skipped sessions cannot be moved.
+
 ### Removing an Exercise
 
 Expand a planned session card and tap the trash icon (🗑) next to any exercise to remove it. A confirmation dialog will appear. You cannot remove the last exercise — a session must always have at least one. Completed or skipped sessions cannot be modified.
@@ -458,7 +462,8 @@ The **Stretching & Mobility** card in Free Sessions works like the Core Circuit:
 Reached from **Free Sessions**, the Session Builder is for a workout you want to keep and repeat — as opposed to Body Part Training, which generates one on the spot and forgets it.
 
 - **Build it** — give the session a name, then pick exercises from the full catalog (searchable and filterable) and set sets, reps and rest for each. Warm-up and cool-down blocks are resolved for you into concrete exercises, so you don't have to design them.
-- **Save it** — your custom sessions are stored on your account and listed on the builder's home screen. Open one to view it read-only, edit it, or delete it.
+- **Save it** — your custom sessions are stored on your account and listed on the builder's home screen. Open one to view it read-only, edit it, or delete it. If you tap back with unsaved changes, the builder asks before discarding them.
+- **Read the load** — the header shows the session's estimated load score and duration as you add exercises, using the same formula the engine uses for a planned session.
 - **Run it** — a saved session plays back in the same guided runner as a planned session, with the timer, the load fields and the per-exercise cues.
 
 Exercises that are performed **one side at a time** — Copenhagen plank, Pallof press, side-lying hip abduction and the like — are labelled **"per side"** wherever they appear, and the runner walks you through both: it counts a RIGHT bout and a LEFT bout for each prescribed set, showing which side you're on. So "3×20s" means three sets on each side, and the session's estimated duration accounts for all six.

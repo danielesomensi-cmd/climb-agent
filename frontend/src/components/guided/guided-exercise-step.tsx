@@ -30,7 +30,7 @@ function formatRest(seconds: number): string {
   return m > 0 ? (s > 0 ? `${m}:${String(s).padStart(2, "0")}` : `${m}:00`) : `${s}s`;
 }
 
-function formatPrescription(ex: GuidedExercise): string[] {
+export function formatPrescription(ex: GuidedExercise): string[] {
   const lines: string[] = [];
   const p = ex.prescription;
 
@@ -55,6 +55,12 @@ function formatPrescription(ex: GuidedExercise): string[] {
     }
   } else if (p.sets && !p.reps && !p.workSeconds) {
     lines.push(`${p.sets} × max`);
+  }
+
+  // B351: side-alternating exercises run every set on both sides — say so
+  // before the timer starts, not only on the RIGHT/LEFT badge.
+  if (ex.altSides && lines.length > 0) {
+    lines[0] = `${lines[0]} per side`;
   }
 
   // Rest info
@@ -218,6 +224,11 @@ export function GuidedExerciseStep({
   useEffect(() => {
     if (prefilledForRef.current === exercise.exerciseId) return;
     prefilledForRef.current = exercise.exerciseId;
+    /* eslint-disable react-hooks/set-state-in-effect --
+       B355 — pre-fill una tantum all'arrivo su un nuovo esercizio: è la
+       sincronizzazione prop→stato descritta sopra (B288), volutamente NON
+       derivata in render perché da lì in poi i campi appartengono all'utente
+       e ricalcolarli li sovrascriverebbe mentre digita. */
     if (exercise.usedLoadKg != null) {
       setLoadInput(String(exercise.usedLoadKg));
     } else if (exercise.suggested.externalLoadKg != null) {
@@ -250,6 +261,7 @@ export function GuidedExerciseStep({
     setNotesInput(exercise.notes ?? "");
     setNotesExpanded(!!(exercise.notes));
     setFeedback(exercise.feedbackLabel || "ok");
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [exercise]);
 
   const prescriptionLines = formatPrescription(exercise);
@@ -466,7 +478,7 @@ export function GuidedExerciseStep({
             <ul className="space-y-0.5">
               {exercise.cues.map((cue, i) => (
                 <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
-                  <span className="mt-1.5 block h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" />
+                  <span className="mt-1.5 block h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
                   {cue}
                 </li>
               ))}
@@ -620,8 +632,8 @@ export function GuidedExerciseStep({
                     onPointerDown={tapFeedback}
                     className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
                       feedback === opt.value
-                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        ? `${opt.color} text-black ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
+                        : "border border-border bg-muted text-foreground hover:bg-accent"
                     }`}
                   >
                     {opt.label}
@@ -920,8 +932,8 @@ export function GuidedExerciseStep({
                     onPointerDown={tapFeedback}
                     className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
                       feedback === opt.value
-                        ? `${opt.color} text-white ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
-                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                        ? `${opt.color} text-black ring-2 ring-offset-1 ring-offset-background ${opt.ring}`
+                        : "border border-border bg-muted text-foreground hover:bg-accent"
                     }`}
                   >
                     {opt.label}

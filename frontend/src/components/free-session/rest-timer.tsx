@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { SkipForward, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { speakPhaseTransition, isVoiceCuesEnabled } from "@/lib/voice-cues";
+import { unlockAudio } from "@/lib/audio-unlock";
+import { countdownTick, transitionBeep } from "@/lib/beep";
+import { completeFeedback } from "@/lib/haptics";
+import { useWakeLock } from "@/lib/hooks/use-wake-lock";
 
 interface RestTimerProps {
   initialSeconds: number;
@@ -16,6 +20,12 @@ export function RestTimer({ initialSeconds, autoStart = false, onComplete }: Res
   const [isRunning, setIsRunning] = useState(autoStart);
   const [isVisible, setIsVisible] = useState(autoStart);
   const endTimeRef = useRef<number | null>(null);
+  // A286 — dedup del tick 3-2-1: l'intervallo gira a 250 ms, senza questo
+  // ogni secondo suonerebbe quattro volte.
+  const lastTickedSecRef = useRef<number>(-1);
+
+  // A286 — lo schermo non si spegne mentre il riposo scorre.
+  useWakeLock(isRunning);
 
   // Wall-clock based timer (iOS PWA safe)
   useEffect(() => {
@@ -28,9 +38,20 @@ export function RestTimer({ initialSeconds, autoStart = false, onComplete }: Res
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((endTimeRef.current! - Date.now()) / 1000));
       setSeconds(remaining);
+
+      // A286 — chi si riposa non guarda lo schermo: stesso countdown sonoro
+      // degli altri quattro timer (beep.ts) più un haptic a fine riposo.
+      if (remaining >= 1 && remaining <= 3 && lastTickedSecRef.current !== remaining) {
+        lastTickedSecRef.current = remaining;
+        countdownTick();
+      }
+
       if (remaining <= 0) {
         setIsRunning(false);
         endTimeRef.current = null;
+        lastTickedSecRef.current = -1;
+        transitionBeep();
+        completeFeedback();
         if (isVoiceCuesEnabled()) speakPhaseTransition("work");
         onComplete?.();
       }
@@ -41,8 +62,12 @@ export function RestTimer({ initialSeconds, autoStart = false, onComplete }: Res
   }, [isRunning, onComplete, seconds]);
 
   const start = useCallback(() => {
+    // Deve stare dentro il gesto utente, altrimenti su iOS l'AudioContext
+    // resta sospeso e il beep di fine riposo non esce.
+    void unlockAudio();
     setSeconds(initialSeconds);
     endTimeRef.current = Date.now() + initialSeconds * 1000;
+    lastTickedSecRef.current = -1;
     setIsRunning(true);
     setIsVisible(true);
   }, [initialSeconds]);
@@ -51,6 +76,7 @@ export function RestTimer({ initialSeconds, autoStart = false, onComplete }: Res
     setIsRunning(false);
     setSeconds(0);
     endTimeRef.current = null;
+    lastTickedSecRef.current = -1;
     setIsVisible(false);
     onComplete?.();
   }, [onComplete]);
@@ -63,8 +89,14 @@ export function RestTimer({ initialSeconds, autoStart = false, onComplete }: Res
   // Reset when a new timer starts via autoStart
   useEffect(() => {
     if (autoStart) {
+      void unlockAudio();
+      // B355 — sincronizzazione prop→stato: il genitore accende `autoStart` e il
+      // timer deve ripartire da initialSeconds. Non è derivabile in render
+      // (serve un wall-clock deadline e lo sblocco audio, che è un side effect).
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSeconds(initialSeconds);
       endTimeRef.current = Date.now() + initialSeconds * 1000;
+      lastTickedSecRef.current = -1;
       setIsRunning(true);
       setIsVisible(true);
     }
@@ -96,7 +128,7 @@ export function RestTimer({ initialSeconds, autoStart = false, onComplete }: Res
       {/* Progress bar */}
       <div className="mb-3 h-2 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-teal-500 transition-all duration-300"
+          className="h-full rounded-full bg-info transition-all duration-300"
           style={{ width: `${progress}%` }}
         />
       </div>

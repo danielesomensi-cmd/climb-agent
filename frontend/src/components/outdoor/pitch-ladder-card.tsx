@@ -34,11 +34,11 @@ const ROLE_LABEL: Record<PitchRole, string> = {
 };
 
 const ROLE_STYLE: Record<PitchRole, string> = {
-  warmup: "text-sky-600 dark:text-sky-400",
-  build: "text-amber-600 dark:text-amber-400",
-  main: "text-red-600 dark:text-red-400",
-  power_endurance: "text-violet-600 dark:text-violet-400",
-  cooldown: "text-emerald-600 dark:text-emerald-400",
+  warmup: "text-info",
+  build: "text-warning",
+  main: "text-danger",
+  power_endurance: "text-axis-finger",
+  cooldown: "text-success",
 };
 
 const DAY_TYPES: Array<{ id: OutdoorDayType; label: string; hint: string }> = [
@@ -141,27 +141,29 @@ export function PitchLadderCard({
           <span />
         </div>
 
+        {/* A286 — text-base su mobile: sotto i 16px iOS zooma al focus
+            e non torna indietro; su desktop resta la griglia compatta. */}
         {rows.map((r, i) => (
           <div key={i} className="grid grid-cols-[1fr_3.5rem_4rem_2rem] gap-1 items-center">
             <Input
               value={r.grade}
               onChange={(e) => patch(i, "grade", e.target.value)}
               placeholder="7a+"
-              className="h-8 text-xs"
+              className="h-10 text-base md:h-8 md:text-xs"
             />
             <Input
               type="number"
               min={1}
               value={r.attempts}
               onChange={(e) => patch(i, "attempts", Number(e.target.value))}
-              className="h-8 text-xs"
+              className="h-10 text-base md:h-8 md:text-xs"
             />
             <Input
               type="number"
               min={0}
               value={r.rest_after_min}
               onChange={(e) => patch(i, "rest_after_min", Number(e.target.value))}
-              className="h-8 text-xs"
+              className="h-10 text-base md:h-8 md:text-xs"
             />
             <Button
               size="sm"

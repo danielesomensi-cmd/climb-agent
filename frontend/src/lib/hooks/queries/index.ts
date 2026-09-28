@@ -7,6 +7,8 @@ export {
   useOutdoorStats,
   useOutdoorLog,
 } from "./use-outdoor";
+export { useOutdoorDoneDays } from "./use-outdoor-sessions";
+export type { OutdoorDaysSummary } from "./use-outdoor-sessions";
 export {
   useFreeSessionSurfaces,
   useFreeSessionPresets,

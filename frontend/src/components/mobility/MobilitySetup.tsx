@@ -209,7 +209,7 @@ export function MobilitySetup({ regions, today, onStart, onCancel }: MobilitySet
     <div className="flex flex-col gap-5 px-4">
       {/* Header */}
       <div className="flex flex-col items-center gap-2 pt-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-500/20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-violet-500/20">
           <StretchHorizontal className="size-8 text-violet-400" />
         </div>
         <h2 className="text-xl font-bold">Stretching & Mobility</h2>
@@ -253,7 +253,7 @@ export function MobilitySetup({ regions, today, onStart, onCancel }: MobilitySet
       </div>
 
       {/* Duration + Rest steppers */}
-      <div className="rounded-2xl border border-border bg-card/50 px-3">
+      <div className="rounded-xl border border-border bg-card/50 px-3">
         {PARAMS.map((p, i) => (
           <div key={p.key}>
             {i > 0 && <div className="border-t border-border/50" />}
@@ -267,7 +267,7 @@ export function MobilitySetup({ regions, today, onStart, onCancel }: MobilitySet
       </div>
 
       {/* Pace toggle */}
-      <div className="flex items-center justify-between rounded-2xl border border-border bg-card/50 px-3 py-3">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card/50 px-3 py-3">
         <span className="text-sm font-medium text-foreground">Pace</span>
         <div className="flex rounded-lg border border-border bg-muted/50 p-0.5">
           {PACES.map((p) => (
@@ -315,7 +315,7 @@ export function MobilitySetup({ regions, today, onStart, onCancel }: MobilitySet
       <button
         onClick={handleStart}
         disabled={selected.size === 0 || starting || !plan || plan.steps.length === 0}
-        className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-violet-600 text-lg font-bold text-white shadow-lg shadow-violet-600/25 transition-all active:scale-[0.98] disabled:opacity-50"
+        className="flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-violet-600 text-lg font-bold text-white shadow-lg shadow-violet-600/25 transition-all active:scale-[0.98] disabled:opacity-50"
       >
         <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
           <path d="M8 5v14l11-7z" />

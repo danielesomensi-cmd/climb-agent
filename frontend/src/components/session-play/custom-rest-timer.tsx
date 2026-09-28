@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, transitionBeep } from "@/lib/beep";
+import { completeFeedback } from "@/lib/haptics";
 
 
 
@@ -90,11 +91,9 @@ export function CustomRestTimer({
       if (!reachedTargetRef.current && e >= targetSeconds) {
         reachedTargetRef.current = true;
         transitionBeep();
-        try {
-          (navigator as Navigator & { vibrate?: (p: number[]) => boolean }).vibrate?.([200, 100, 200]);
-        } catch {
-          /* noop */
-        }
+        // A286 — `navigator.vibrate` su iOS non fa nulla: si passa all'helper
+        // condiviso, che lì usa il fallback switch-toggle.
+        completeFeedback();
         // B350: hands-free only when the rest ended under our eyes.
         if (
           autoAdvanceRef.current &&
@@ -124,18 +123,21 @@ export function CustomRestTimer({
 
   const ratio = targetSeconds > 0 ? elapsed / targetSeconds : 0;
   const color = colorForRatio(ratio);
+  // A286 — token invece dei colori Tailwind grezzi. Qui il colore non è la
+  // fase (è sempre "rest"): segnala quanto si sta sforando il target, quindi
+  // resta la scala info → warning → danger.
   const colorClass =
     color === "green"
-      ? "text-emerald-500"
+      ? "text-info"
       : color === "yellow"
-        ? "text-yellow-400"
-        : "text-red-500";
+        ? "text-warning"
+        : "text-danger";
   const ringClass =
     color === "green"
-      ? "bg-emerald-500/10 border-emerald-500/40"
+      ? "bg-info/10 border-info/40"
       : color === "yellow"
-        ? "bg-yellow-500/10 border-yellow-400/40"
-        : "bg-red-500/10 border-red-500/40";
+        ? "bg-warning/10 border-warning/40"
+        : "bg-danger/10 border-danger/40";
 
   const remaining = Math.max(0, targetSeconds - elapsed);
   const display =

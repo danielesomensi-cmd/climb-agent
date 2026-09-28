@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Calendar, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { WeeklyCheckinSheet } from "./weekly-checkin-sheet";
@@ -34,25 +34,48 @@ interface Props {
 
 export function WeeklyCheckinCard({ weekPlan, onPlanUpdated }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  // A286 — il dismiss veniva scritto in sessionStorage e mai riletto: la card
+  // tornava a ogni navigazione. `null` = non ancora letto (SSR + primo render):
+  // non renderizziamo, così niente accesso allo storage in render e niente
+  // flash di una card già chiusa.
+  const [dismissed, setDismissed] = useState<boolean | null>(null);
 
   const targetMonday = getTargetMonday();
+  const dismissKey = `checkin_dismissed_${targetMonday ?? ""}`;
+
+  useEffect(() => {
+    if (!targetMonday) return;
+    if (typeof window !== "undefined") {
+      let stored = false;
+      try {
+        stored = window.sessionStorage.getItem(dismissKey) === "1";
+      } catch {
+        /* private mode / storage disabilitato: la card resta visibile */
+      }
+      // Leggere lo storage in render romperebbe l'SSR: qui il setState è
+      // l'unico modo, ed è lo stesso pattern di /today per i banner dismissibili.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDismissed(stored);
+    }
+  }, [targetMonday, dismissKey]);
 
   // Tue–Sat: banner hidden entirely.
   if (!targetMonday) return null;
+  if (dismissed === null) return null;
 
   // Monday: block when the current week already has completed activity.
   // Sunday: target is next week (freshly generated, no completed activity by definition).
   const isMonday = new Date().getDay() === 1;
   if (isMonday && hasCompletedActivity(weekPlan)) return null;
 
-  const dismissKey = `checkin_dismissed_${targetMonday}`;
   if (dismissed) return null;
 
   function handleDismiss() {
     setDismissed(true);
-    if (typeof window !== "undefined") {
+    try {
       sessionStorage.setItem(dismissKey, "1");
+    } catch {
+      /* niente storage: resta chiusa solo per questa sessione di pagina */
     }
   }
 

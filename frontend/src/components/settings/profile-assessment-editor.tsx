@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,9 +52,14 @@ export function ProfileAssessmentEditor({
   onCancel,
   saving,
 }: ProfileAssessmentEditorProps) {
-  const body = (currentAssessment.body ?? {}) as Record<string, number>;
-  const grades = (currentAssessment.grades ?? {}) as Record<string, string>;
-  const tests = (currentAssessment.tests ?? {}) as Record<string, number | undefined>;
+  // B355 — memoizzati: `?? {}` creava un oggetto nuovo a ogni render quando la
+  // sezione manca nello state, e quelle tre referenze sono dipendenze
+  // dell'effect di sincronizzazione qui sotto. Risultato: per un utente senza
+  // `body`/`grades`/`tests` l'effect ripartiva a ogni render e riazzerava i
+  // campi mentre li stava compilando.
+  const body = useMemo(() => (currentAssessment.body ?? {}) as Record<string, number>, [currentAssessment]);
+  const grades = useMemo(() => (currentAssessment.grades ?? {}) as Record<string, string>, [currentAssessment]);
+  const tests = useMemo(() => (currentAssessment.tests ?? {}) as Record<string, number | undefined>, [currentAssessment]);
 
   const [step, setStep] = useState<"form" | "confirm">("form");
 
@@ -79,9 +84,13 @@ export function ProfileAssessmentEditor({
   const [lSit, setLSit] = useState<string>("");
   const [hipFlex, setHipFlex] = useState<string>("");
 
-  // Sync form state from props every time the dialog opens
+  // Sync form state from props every time the dialog opens.
+  // B355 — sincronizzazione props→state: corretta così. Il dialog resta montato
+  // nella pagina settings, quindi l'apertura è l'unico momento in cui ricaricare
+  // i valori dal server.
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setWeightKg(body.weight_kg != null ? String(body.weight_kg) : "");
       setHeightCm(body.height_cm != null ? String(body.height_cm) : "");
       setLeadMaxRp(grades.lead_max_rp ?? "");
@@ -395,7 +404,7 @@ export function ProfileAssessmentEditor({
             </div>
 
             {rpOsError && (
-              <p className="text-sm text-red-500 mt-2">{rpOsError}</p>
+              <p className="text-sm text-danger mt-2">{rpOsError}</p>
             )}
             <DialogFooter>
               <Button variant="outline" onClick={onCancel}>

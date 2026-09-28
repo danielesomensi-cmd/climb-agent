@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
@@ -39,6 +39,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ExerciseCard } from "@/components/training/exercise-card";
+import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { getExercises, addExerciseToSession, removeExerciseFromSession, setSessionSurface, apiErrorDetail } from "@/lib/api";
 import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
@@ -70,13 +71,8 @@ interface SessionCardProps {
 }
 
 
-const FEEDBACK_BADGE_STYLE: Record<string, string> = {
-  very_easy: "bg-emerald-400/20 text-emerald-300 border-emerald-400/30",
-  easy: "bg-green-500/20 text-green-400 border-green-500/30",
-  ok: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  hard: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  very_hard: "bg-red-500/20 text-red-400 border-red-500/30",
-};
+// A286 — la mappa vive in feedback-colors.ts: era duplicata (e divergente) qui,
+// in exercise-card e in day-card.
 
 /** Map slot key to display label */
 function formatSlot(slot: string): string {
@@ -350,6 +346,11 @@ function AddExerciseDialog({
 
   useEffect(() => {
     if (open && catalog.length === 0) {
+      // B355 — set-state-in-effect: è il flag di caricamento di una fetch
+      // avviata all'apertura del dialog (sincronizzazione con un sistema
+      // esterno). Non si può calcolare in render: la fetch parte solo quando
+      // il dialog si apre e il catalogo non è ancora in memoria.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(true);
       getExercises()
         .then((data) => setCatalog(data.exercises))
@@ -359,7 +360,11 @@ function AddExerciseDialog({
   }, [open, catalog.length]);
 
   // Reset showAll when dialog closes
+  // B355 — set-state-in-effect: sincronizzazione stato↔prop `open`. Il dialog
+  // resta montato quando si chiude, quindi il "mostra tutti" va riportato al
+  // default alla chiusura, non al render. Pattern corretto, non un bug.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) setShowAll(false);
   }, [open]);
 
@@ -616,13 +621,15 @@ function ExerciseItemWrapper({ children, canEdit, onRemove }: {
   return (
     <div className="relative">
       {children}
+      {/* A286 — era a opacità 30%: di fatto invisibile. Piena visibilità,
+          44px di target; la conferma resta l'AlertDialog di A153. */}
       {canEdit && onRemove && (
         <button
           aria-label="Remove exercise"
-          className="absolute top-0 right-0 flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground/30 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+          className="absolute top-0 right-0 flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
         >
-          <Trash2 className="size-3.5" />
+          <Trash2 className="size-4" />
         </button>
       )}
     </div>
@@ -740,6 +747,21 @@ export function SessionCard({
   const isHard = session.tags?.hard === true;
   const isFinger = session.tags?.finger === true;
   const isDone = session.status === "done";
+  // A286 — micro-feedback sobrio: la card si illumina per un attimo quando la
+  // sessione passa a "fatta". Il check di prefers-reduced-motion è esplicito
+  // perché qui l'effetto è pilotato da JS, non solo da CSS.
+  const [justCompleted, setJustCompleted] = useState(false);
+  const wasDoneRef = useRef(isDone);
+  useEffect(() => {
+    const was = wasDoneRef.current;
+    wasDoneRef.current = isDone;
+    if (was || !isDone) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    setJustCompleted(true);
+    const t = window.setTimeout(() => setJustCompleted(false), 1400);
+    return () => window.clearTimeout(t);
+  }, [isDone]);
   const isSkipped = session.status === "skipped";
   const isFinalized = isDone || isSkipped;
   const locationLabel = getLocationLabel(session, gyms);
@@ -833,7 +855,11 @@ export function SessionCard({
           {boulderOverrideError}
         </div>
       )}
-      <Card className="gap-0 py-0 overflow-hidden">
+      <Card
+        className={`gap-0 py-0 overflow-hidden transition-shadow duration-500 ${
+          justCompleted ? "ring-2 ring-success/60" : ""
+        }`}
+      >
         {/* Header — clickable to expand */}
         <CardHeader
           className="cursor-pointer select-none py-3"
@@ -852,7 +878,7 @@ export function SessionCard({
                 </Badge>
               )}
               {boulderOverrideActive && (
-                <Badge className="bg-amber-600 hover:bg-amber-600 text-white text-[10px] gap-1 px-1.5 py-0">
+                <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-warning/30 bg-warning/15 text-warning">
                   <Mountain className="size-2.5" />
                   Boulder
                 </Badge>
@@ -884,18 +910,20 @@ export function SessionCard({
             <Badge variant="outline" className="text-[10px]">
               {formatSlot(session.slot)}
             </Badge>
+            {/* A286 — bianco su 500 saturo era sotto AA: testo colorato su
+                fondo tenue dello stesso colore. */}
             {isHard && (
-              <Badge className="bg-red-500 text-white text-[10px]">
+              <Badge variant="outline" className="text-[10px] border-danger/30 bg-danger/15 text-danger">
                 Hard
               </Badge>
             )}
             {isFinger && (
-              <Badge className="bg-orange-500 text-white text-[10px]">
+              <Badge variant="outline" className="text-[10px] border-orange-500/30 bg-orange-500/15 text-orange-300">
                 Finger
               </Badge>
             )}
             {hasLoadingPin && (
-              <Badge className="bg-purple-500 text-white text-[10px]">
+              <Badge variant="outline" className="text-[10px] border-purple-500/30 bg-purple-500/15 text-purple-300">
                 Loading Pin
               </Badge>
             )}
@@ -924,23 +952,31 @@ export function SessionCard({
               // slot-table fallback — "Completed" alone is the honest signal.
               const hasReal = session.session_duration_seconds != null && session.session_duration_seconds > 0;
               return (
-                <Badge className="bg-green-600 text-[10px]">
-                  <span className="text-white">Completed</span>
+                // A286 — bianco su verde saturo era ~3:1: colore nel testo,
+                // fondo tenue dello stesso colore.
+                <Badge
+                  variant="outline"
+                  className="text-[10px] border-success/30 bg-success/15 text-success"
+                >
+                  <span>Completed</span>
                   {hasReal && (
-                    <span className="text-white">{` · ${Math.round(session.session_duration_seconds! / 60)} min`}</span>
+                    <span>{` · ${Math.round(session.session_duration_seconds! / 60)} min`}</span>
                   )}
                 </Badge>
               );
             })()}
             {isSkipped && (
-              <Badge className="bg-yellow-500 text-white text-[10px]">
+              <Badge
+                variant="outline"
+                className="text-[10px] border-warning/30 bg-warning/15 text-warning"
+              >
                 Skipped
               </Badge>
             )}
             {isDone && session.feedback_summary && (
               <Badge
                 variant="outline"
-                className={`text-[10px] ${FEEDBACK_BADGE_STYLE[session.feedback_summary] ?? ""}`}
+                className={`text-[10px] ${FEEDBACK_CHIP[session.feedback_summary] ?? ""}`}
               >
                 {session.feedback_summary.replace(/_/g, " ")}
               </Badge>
@@ -975,6 +1011,57 @@ export function SessionCard({
             );
           })()}
         </CardHeader>
+
+        {/* A286 — barra azioni sempre visibile, anche a card chiusa: segnare
+            "fatta" costava 2 tap + lo scroll di tutta la lista esercizi,
+            mentre Start ne costava 1. Stesse funzioni di prima, nessuna
+            logica duplicata. */}
+        {!isFinalized && (hasExercises || onMarkDone || onMarkSkipped) && (
+          <div className="flex flex-wrap items-center gap-1.5 px-6 pb-3">
+            {hasExercises && (
+              <Button
+                className="min-h-[44px] bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStartGuided(session, date, router);
+                }}
+              >
+                <Play className="size-3.5 mr-1" />
+                Start session
+              </Button>
+            )}
+            {/* B293: a session with zero resolved exercises must never be
+                completable — the buttons wait for a successful resolution. */}
+            {onMarkDone && (
+              <Button
+                variant="outline"
+                disabled={marking || !completable}
+                className="min-h-[44px] text-success border-success/30 hover:bg-success/15 hover:text-success"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void runMark(onMarkDone);
+                }}
+              >
+                <Check className="size-4 mr-1" />
+                Done
+              </Button>
+            )}
+            {onMarkSkipped && (
+              <Button
+                variant="outline"
+                disabled={marking || !completable}
+                className="min-h-[44px] text-muted-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void runMark(onMarkSkipped);
+                }}
+              >
+                <X className="size-4 mr-1" />
+                Skip
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Expanded content */}
         {expanded && (
@@ -1142,54 +1229,8 @@ export function SessionCard({
               );
             })()}
 
-            {/* Action buttons — planned sessions: Start / Done / Skip only */}
-            {!isFinalized && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {hasExercises && (
-                  <Button
-                    className="min-h-[44px] bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleStartGuided(session, date, router);
-                    }}
-                  >
-                    <Play className="size-3.5 mr-1" />
-                    Start session
-                  </Button>
-                )}
-                {/* B293: a session with zero resolved exercises must never be
-                    completable — the buttons wait for a successful resolution. */}
-                {onMarkDone && (
-                  <Button
-                    variant="outline"
-                    disabled={marking || !completable}
-                    className="min-h-[44px] text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void runMark(onMarkDone);
-                    }}
-                  >
-                    <Check className="size-4 mr-1" />
-                    Done
-                  </Button>
-                )}
-                {onMarkSkipped && (
-                  <Button
-                    variant="outline"
-                    disabled={marking || !completable}
-                    className="min-h-[44px] text-muted-foreground"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      void runMark(onMarkSkipped);
-                    }}
-                  >
-                    <X className="size-4 mr-1" />
-                    Skip
-                  </Button>
-                )}
-              </div>
-            )}
-
+            {/* A286 — Start/Done/Skip sono risaliti sotto la testata: erano in
+                fondo alla card espansa, dopo tutta la lista esercizi. */}
 
             {/* Hint text for planned sessions with exercises */}
             {!isFinalized && hasExercises && (
@@ -1201,19 +1242,9 @@ export function SessionCard({
         )}
       </Card>
 
-      {/* FAB — Start session (visible without expanding the card) */}
-      {!isFinalized && hasExercises && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleStartGuided(session, date, router);
-          }}
-          className="absolute bottom-[-16px] right-4 z-10 w-11 h-11 rounded-full bg-green-500 flex items-center justify-center shadow-lg active:scale-95 transition-transform"
-          aria-label="Start session"
-        >
-          <Play className="w-5 h-5 text-white ml-0.5" />
-        </button>
-      )}
+      {/* A286 — il FAB "Start session" sporgeva di 16px nel gap e finiva sopra
+          la card successiva. L'azione ora è nella barra in flusso sotto la
+          testata, sempre visibile: niente sovrapposizioni. */}
       </div>
 
       {/* ⋯ Bottom sheet drawer */}

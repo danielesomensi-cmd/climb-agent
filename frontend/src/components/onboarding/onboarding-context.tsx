@@ -264,7 +264,6 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   // the API, so everything waits for Clerk instead of racing it.
   const { isLoaded: authLoaded, userId: clerkUserId } = useAuth();
   const userIdRef = useRef<string | null>(null);
-  userIdRef.current = clerkUserId ?? null;
 
   // A245 Phase D (F16) — track how far the user got, without touching a single
   // step page: the provider wraps them all and the route already says where we
@@ -276,9 +275,22 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   // "this step is complete" moment. Fire-and-forget: a failed push never
   // blocks the wizard, the local draft remains the safety net.
   const dataRef = useRef(data);
-  dataRef.current = data;
   const loadedRef = useRef(false);
-  loadedRef.current = loaded;
+
+  // B355 — i tre "latest value ref" venivano scritti nel corpo del componente.
+  // In rendering concorrente un render può essere scartato e lascerebbe il ref
+  // con il valore di un render abbandonato, quindi la scrittura vive qui.
+  // Questo effect è dichiarato PRIMA di tutti gli altri di proposito: React
+  // esegue gli effect nell'ordine di dichiarazione, così il flush della bozza
+  // sul cambio di step (sotto) legge già i valori del commit corrente.
+  // Nessun consumatore tocca questi ref prima del primo paint: `pushServerDraft`
+  // parte solo da un effect o da un evento utente.
+  useEffect(() => {
+    userIdRef.current = clerkUserId ?? null;
+    dataRef.current = data;
+    loadedRef.current = loaded;
+  }, [clerkUserId, data, loaded]);
+
   const pushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pushServerDraft = useCallback(() => {
     if (!userIdRef.current || !loadedRef.current) return;
@@ -295,10 +307,14 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // B355 — il "sistema esterno" qui è il router: `deepestStep` è il massimo
+  // storico degli step visitati, non una funzione del render corrente, e serve
+  // all'affordance di ripresa. Va registrato quando la rotta cambia.
   useEffect(() => {
     const idx = stepIndexOf(pathname);
     if (idx > deepestRef.current) {
       deepestRef.current = idx;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDeepestStep(idx);
     }
     // B293: flush the pending draft to the server on every step change.
@@ -342,7 +358,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
     if (!uid) {
       // Anonymous: local draft or defaults — and no API call to make.
+      // B355 — idratazione post-mount da localStorage: leggerla in render
+      // romperebbe l'SSR (hydration mismatch). L'effect è la soluzione giusta.
       if (local) applyEnvelope(local);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoaded(true);
       return;
     }

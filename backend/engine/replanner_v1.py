@@ -1043,9 +1043,14 @@ def apply_events(
             moved = _extract_session(from_day, session_ref=ref, slot=from_slot)
             _insert_or_replace(to_day, moved, to_slot)
 
-            if event.get("from_slot") not in _slots_from_day(from_day):
-                fill_kind = "accessory" if any((s.get("tags") or {}).get("hard") for s in from_day.get("sessions") or []) else "recovery"
-                from_day.setdefault("sessions", []).append(_build_fill_session(updated, from_day, event["from_slot"], kind=fill_kind))
+            # B354: the slot the user vacated stays empty. It used to be refilled
+            # with regeneration_easy (or complementary_conditioning next to a hard
+            # session) — a session nobody asked for, which read as the app
+            # rearranging the week behind the user's back. Moving a session is an
+            # explicit edit: what is left behind is rest. Hard-day caps and the
+            # 48h finger gap still run on the result (_reconcile, below).
+            if not from_day.get("sessions"):
+                from_day.pop("status", None)
 
         elif event_type == "remove_session":
             day = _find_day(updated, event["date"])

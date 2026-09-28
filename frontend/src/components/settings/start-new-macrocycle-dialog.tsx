@@ -92,11 +92,6 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function daysBetween(a: string, b: string): number {
-  const ms = new Date(b).getTime() - new Date(a).getTime();
-  return Math.floor(ms / (1000 * 60 * 60 * 24));
-}
-
 function formatDateLong(iso: string): string {
   if (!iso) return "—";
   const d = parseISODateLocal(iso);
@@ -376,7 +371,7 @@ export function StartNewMacrocycleDialog({
               </div>
 
               {midCycleWarning && (
-                <div className="rounded-md border border-yellow-500/40 bg-yellow-500/10 p-3 text-xs">
+                <div className="rounded-md border border-warning/30 bg-warning/15 p-3 text-xs">
                   <p className="font-medium">Heads up</p>
                   <p className="mt-1">{midCycleWarning.text}</p>
                 </div>

@@ -5,7 +5,15 @@ import { TopBar } from "@/components/layout/top-bar";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, halfwayTick, transitionBeep } from "@/lib/beep";
+import { confirmFeedback } from "@/lib/haptics";
 import { speakPhaseTransition } from "@/lib/voice-cues";
+import { useWakeLock } from "@/lib/hooks/use-wake-lock";
+import {
+  PHASE_BG as SHARED_BG,
+  PHASE_RING as SHARED_RING,
+  PHASE_TEXT as SHARED_TEXT,
+  type PlayerPhase,
+} from "@/components/session-play/player-phase-colors";
 
 // ===========================================================================
 // Types & config
@@ -153,36 +161,29 @@ const PHASE_LABEL: Record<TabataPhase, string> = {
   done: "DONE",
 };
 
-// Colors: work = teal/green energico, rest = blue calmo, prepare/cooldown = grey neutro
-const PHASE_BG: Record<TabataPhase, string> = {
-  idle: "bg-card",
-  prepare: "bg-zinc-800/80",
-  work: "bg-teal-900/80",
-  rest: "bg-blue-900/60",
-  rest_between_sets: "bg-blue-900/60",
-  cool_down: "bg-zinc-800/80",
-  done: "bg-card",
+// A286 — B7: una sola palette di fase per tutti i player (player-phase-colors).
+// Le sette fasi del tabata si riducono alle quattro condivise.
+const PLAYER_PHASE: Record<TabataPhase, PlayerPhase> = {
+  idle: "prepare",
+  prepare: "prepare",
+  work: "work",
+  rest: "rest",
+  rest_between_sets: "rest",
+  cool_down: "rest",
+  done: "done",
 };
 
-const PHASE_RING_COLOR: Record<TabataPhase, string> = {
-  idle: "stroke-muted",
-  prepare: "stroke-zinc-400",
-  work: "stroke-teal-400",
-  rest: "stroke-blue-400",
-  rest_between_sets: "stroke-blue-400",
-  cool_down: "stroke-zinc-400",
-  done: "stroke-green-500",
-};
+const PHASE_BG: Record<TabataPhase, string> = Object.fromEntries(
+  (Object.keys(PLAYER_PHASE) as TabataPhase[]).map((k) => [k, SHARED_BG[PLAYER_PHASE[k]]]),
+) as Record<TabataPhase, string>;
 
-const PHASE_TEXT_COLOR: Record<TabataPhase, string> = {
-  idle: "text-muted-foreground",
-  prepare: "text-zinc-300",
-  work: "text-teal-400",
-  rest: "text-blue-400",
-  rest_between_sets: "text-blue-400",
-  cool_down: "text-zinc-300",
-  done: "text-green-500",
-};
+const PHASE_RING_COLOR: Record<TabataPhase, string> = Object.fromEntries(
+  (Object.keys(PLAYER_PHASE) as TabataPhase[]).map((k) => [k, SHARED_RING[PLAYER_PHASE[k]]]),
+) as Record<TabataPhase, string>;
+
+const PHASE_TEXT_COLOR: Record<TabataPhase, string> = Object.fromEntries(
+  (Object.keys(PLAYER_PHASE) as TabataPhase[]).map((k) => [k, SHARED_TEXT[PLAYER_PHASE[k]]]),
+) as Record<TabataPhase, string>;
 
 // ===========================================================================
 // Audio (reuse pattern from exercise-timer.tsx)
@@ -404,6 +405,14 @@ export default function TabataPage() {
   // Track completed cycles/sets for summary
   const completedCyclesRef = useRef(0);
   const completedSetsRef = useRef(0);
+  // B355 — il riepilogo della schermata "Done!" legge questo state, non i ref:
+  // un ref letto in render non è reattivo, quindi i numeri mostrati potevano
+  // restare indietro rispetto all'ultimo intervallo concluso. Congelato qui nel
+  // momento esatto in cui la sessione finisce (fine naturale o STOP).
+  const [completedSummary, setCompletedSummary] = useState({ cycles: 0, sets: 0 });
+
+  // A286 — B3: lo schermo resta acceso solo mentre un intervallo sta scorrendo.
+  useWakeLock(mode === "running" && !paused && phase !== "idle" && phase !== "done");
 
   useEffect(() => { secondsLeftRef.current = secondsLeft; }, [secondsLeft]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
@@ -516,6 +525,8 @@ export default function TabataPage() {
   useEffect(() => {
     if (transitionId > 0) {
       transitionBeep();
+      // A286 — B8: il cambio di fase si sente anche senza guardare lo schermo.
+      confirmFeedback();
       if (pendingVoiceCueRef.current) {
         speakPhaseTransition(pendingVoiceCueRef.current);
         pendingVoiceCueRef.current = null;
@@ -591,6 +602,7 @@ export default function TabataPage() {
           // Final set completion
           completedSetsRef.current = sets;
           completedCyclesRef.current = cycles * sets;
+          setCompletedSummary({ cycles: cycles * sets, sets });
           setPhase("done");
           setSecondsLeft(0);
           setMode("done");
@@ -652,6 +664,7 @@ export default function TabataPage() {
     await unlockAudio();
     completedCyclesRef.current = 0;
     completedSetsRef.current = 0;
+    setCompletedSummary({ cycles: 0, sets: 0 });
     setCurrentCycle(1);
     setCurrentSet(1);
     setElapsed(0);
@@ -696,6 +709,10 @@ export default function TabataPage() {
         elapsedAtPauseRef.current + Math.floor((Date.now() - startTimeRef.current) / 1000);
     }
     setElapsed(elapsedAtPauseRef.current);
+    setCompletedSummary({
+      cycles: completedCyclesRef.current,
+      sets: completedSetsRef.current,
+    });
     setPhase("done");
     setMode("done");
     setSecondsLeft(0);
@@ -719,6 +736,7 @@ export default function TabataPage() {
     startTimeRef.current = 0;
     completedCyclesRef.current = 0;
     completedSetsRef.current = 0;
+    setCompletedSummary({ cycles: 0, sets: 0 });
   }
 
   // -------------------------------------------------------------------------
@@ -731,12 +749,15 @@ export default function TabataPage() {
   const [smoothProgress, setSmoothProgress] = useState(0);
   const rafRef = useRef<number>(0);
 
+  // B355 — quando il rAF è fermo (idle/done/pausa) il valore "snappato" si
+  // deriva in render invece di essere scritto in state da un effect: stesso
+  // numero, un render in meno e nessuna catena di render.
+  const ringFrozen = phase === "idle" || phase === "done" || paused;
+  const snappedProgress = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
+
   useEffect(() => {
-    // When idle/done or paused, snap to discrete progress
-    if (phase === "idle" || phase === "done" || paused) {
+    if (ringFrozen) {
       cancelAnimationFrame(rafRef.current);
-      const p = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
-      setSmoothProgress(p);
       return;
     }
 
@@ -749,9 +770,10 @@ export default function TabataPage() {
     }
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [phase, paused, phaseDuration, secondsLeft]);
+  }, [ringFrozen, phaseDuration]);
 
-  const dashOffset = RING_CIRCUMFERENCE - smoothProgress * RING_CIRCUMFERENCE;
+  const ringProgress = ringFrozen ? snappedProgress : smoothProgress;
+  const dashOffset = RING_CIRCUMFERENCE - ringProgress * RING_CIRCUMFERENCE;
 
   // Remaining total
   const totalRemaining = (() => {
@@ -799,8 +821,8 @@ export default function TabataPage() {
         <main className="mx-auto flex max-w-2xl flex-col items-center justify-center px-4 py-12 pb-24">
           <div className="flex flex-col items-center gap-6 text-center">
             {/* Checkmark circle */}
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-green-500/20">
-              <svg className="h-12 w-12 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-success/15">
+              <svg className="h-12 w-12 text-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5" />
               </svg>
             </div>
@@ -813,11 +835,11 @@ export default function TabataPage() {
                 <div className="text-xs text-muted-foreground mt-1">Total time</div>
               </div>
               <div className="rounded-xl bg-card border border-border p-4 text-center">
-                <div className="text-2xl font-bold tabular-nums">{completedCyclesRef.current}/{cycles * sets}</div>
+                <div className="text-2xl font-bold tabular-nums">{completedSummary.cycles}/{cycles * sets}</div>
                 <div className="text-xs text-muted-foreground mt-1">Cycles</div>
               </div>
               <div className="rounded-xl bg-card border border-border p-4 text-center">
-                <div className="text-2xl font-bold tabular-nums">{completedSetsRef.current}/{sets}</div>
+                <div className="text-2xl font-bold tabular-nums">{completedSummary.sets}/{sets}</div>
                 <div className="text-xs text-muted-foreground mt-1">Sets</div>
               </div>
               <div className="rounded-xl bg-card border border-border p-4 text-center">
@@ -856,14 +878,13 @@ export default function TabataPage() {
 
   // --- RUNNING screen ---
   if (mode === "running") {
-    const isActive = phase !== "idle" && phase !== "done";
-
     return (
       <>
         {/* Expanded overlay */}
         {expanded && (
           <div
-            className="fixed inset-0 z-50 flex flex-col items-center justify-center select-none bg-[#0a0a0a]"
+            // A286 — B1: la nav sta a z-50, PAUSE e STOP ci finivano sotto.
+            className="fixed inset-0 z-[60] flex flex-col items-center justify-center select-none bg-[#0a0a0a]"
             onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY; }}
             onTouchEnd={(e) => {
               if (touchStartY.current !== null) {
@@ -875,7 +896,7 @@ export default function TabataPage() {
             {/* Close */}
             <button
               onClick={() => setExpanded(false)}
-              className="absolute top-4 right-4 flex h-12 w-12 items-center justify-center rounded-lg border border-muted-foreground/40 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-4 top-[calc(1rem+env(safe-area-inset-top))] flex h-12 w-12 items-center justify-center rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Exit expanded timer"
             >
               <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -912,7 +933,7 @@ export default function TabataPage() {
                 <div className="flex flex-col items-center">
                   <div className="leading-none">
                     <span className="text-4xl font-bold">{currentCycle}</span>
-                    <span className="text-2xl font-bold text-muted-foreground/50">/{cycles}</span>
+                    <span className="text-2xl font-bold text-muted-foreground">/{cycles}</span>
                   </div>
                   <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground mt-1">Cycle</span>
                 </div>
@@ -920,7 +941,7 @@ export default function TabataPage() {
                   <div className="flex flex-col items-center">
                     <div className="leading-none">
                       <span className="text-4xl font-bold">{currentSet}</span>
-                      <span className="text-2xl font-bold text-muted-foreground/50">/{sets}</span>
+                      <span className="text-2xl font-bold text-muted-foreground">/{sets}</span>
                     </div>
                     <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground mt-1">Set</span>
                   </div>
@@ -935,11 +956,11 @@ export default function TabataPage() {
             </div>
 
             {/* Bottom controls */}
-            <div className="flex items-center gap-4 pb-8">
+            <div className="flex items-center gap-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
               <button
                 onClick={(e) => { e.stopPropagation(); handlePauseToggle(); }}
                 aria-label={paused ? "Resume timer" : "Pause timer"}
-                className="flex h-14 w-14 items-center justify-center rounded-full border border-muted-foreground/30 text-muted-foreground hover:text-foreground transition-colors"
+                className="flex h-14 w-14 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground transition-colors"
               >
                 {paused ? (
                   <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
@@ -950,7 +971,7 @@ export default function TabataPage() {
               <button
                 onClick={(e) => { e.stopPropagation(); handleStop(); }}
                 aria-label="Stop timer"
-                className="flex h-14 w-14 items-center justify-center rounded-full border border-red-500/50 text-red-400 hover:text-red-300 hover:border-red-400 transition-colors"
+                className="flex h-14 w-14 items-center justify-center rounded-full border border-danger/50 text-danger hover:brightness-110 transition-colors"
               >
                 <svg className="h-7 w-7" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
               </button>
@@ -963,7 +984,9 @@ export default function TabataPage() {
           PHASE_BG[phase]
         )}>
           {/* Top bar — phase label left, compact counter right */}
-          <div className="flex items-center justify-between px-4 pt-4 pb-1">
+          {/* A286 — B2: con viewportFit:cover l'etichetta di fase finiva
+              sotto la Dynamic Island. */}
+          <div className="flex items-center justify-between px-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-1">
             <span className={cn("text-sm font-bold uppercase tracking-[0.2em]", PHASE_TEXT_COLOR[phase])}>
               {PHASE_LABEL[phase]}
             </span>
@@ -1029,7 +1052,7 @@ export default function TabataPage() {
               <div className="flex flex-col items-center">
                 <div className="leading-none">
                   <span className="text-5xl font-bold">{currentCycle}</span>
-                  <span className="text-3xl font-bold text-muted-foreground/50">/{cycles}</span>
+                  <span className="text-3xl font-bold text-muted-foreground">/{cycles}</span>
                 </div>
                 <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground mt-1">Cycle</span>
               </div>
@@ -1037,7 +1060,7 @@ export default function TabataPage() {
                 <div className="flex flex-col items-center">
                   <div className="leading-none">
                     <span className="text-5xl font-bold">{currentSet}</span>
-                    <span className="text-3xl font-bold text-muted-foreground/50">/{sets}</span>
+                    <span className="text-3xl font-bold text-muted-foreground">/{sets}</span>
                   </div>
                   <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground mt-1">Set</span>
                 </div>
@@ -1053,7 +1076,7 @@ export default function TabataPage() {
           </div>
 
           {/* Bottom: elapsed/remaining + next up + controls */}
-          <div className="pb-28 px-4">
+          <div className="px-4 pb-[calc(7rem+env(safe-area-inset-bottom))]">
             {/* Elapsed / Remaining + Next up */}
             <div className="flex flex-col items-center gap-2 mb-5">
               <div className="flex justify-center gap-8 text-sm text-muted-foreground tabular-nums">
@@ -1069,9 +1092,9 @@ export default function TabataPage() {
               {/* Next up preview */}
               {phase !== "done" && (() => {
                 const next = advancePhase(phase, currentCycle, currentSet);
-                if (next.phase === "done") return <span className="text-xs text-muted-foreground/60">Last interval</span>;
+                if (next.phase === "done") return <span className="text-xs text-muted-foreground">Last interval</span>;
                 return (
-                  <span className="text-xs text-muted-foreground/60 tabular-nums">
+                  <span className="text-xs text-muted-foreground tabular-nums">
                     Next: {PHASE_LABEL[next.phase]} {next.duration > 0 && formatTime(next.duration)}
                   </span>
                 );
@@ -1083,7 +1106,7 @@ export default function TabataPage() {
               {/* Pause */}
               <button
                 onClick={handlePauseToggle}
-                className="flex h-14 flex-1 max-w-[160px] items-center justify-center gap-2 rounded-2xl border border-border bg-card/50 text-sm font-bold text-foreground transition-all active:scale-[0.98]"
+                className="flex h-14 flex-1 max-w-[160px] items-center justify-center gap-2 rounded-xl border border-border bg-card/50 text-sm font-bold text-foreground transition-all active:scale-[0.98]"
               >
                 {paused ? (
                   <>
@@ -1101,7 +1124,7 @@ export default function TabataPage() {
               {/* Expand */}
               <button
                 onClick={() => setExpanded(true)}
-                className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
+                className="flex h-14 w-14 items-center justify-center rounded-xl border border-border bg-card/50 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Expand timer"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -1112,7 +1135,7 @@ export default function TabataPage() {
               {/* Stop */}
               <button
                 onClick={handleStop}
-                className="flex h-14 w-14 items-center justify-center rounded-2xl border border-red-500/30 bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
+                className="flex h-14 w-14 items-center justify-center rounded-xl border border-danger/30 bg-danger/15 text-danger hover:brightness-110 transition-colors"
                 aria-label="Stop timer"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
@@ -1142,7 +1165,7 @@ export default function TabataPage() {
         </div>
 
         {/* Parameter list */}
-        <div className="rounded-2xl border border-border bg-card/50 px-3">
+        <div className="rounded-xl border border-border bg-card/50 px-3">
           {PARAMS.map((p, i) => (
             <div key={p.key}>
               {i > 0 && <div className="border-t border-border/50" />}
@@ -1158,7 +1181,7 @@ export default function TabataPage() {
         {/* Start button */}
         <button
           onClick={handleStart}
-          className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-primary text-lg font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
+          className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-primary text-lg font-bold text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.98]"
         >
           <svg className="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
             <path d="M8 5v14l11-7z" />

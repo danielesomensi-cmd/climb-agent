@@ -224,6 +224,9 @@ export function buildGuidedStateFromExercises(
       category: (ex.category as string) ?? "",
       blockUid: (ex.body_part as string) ?? (ex.module_role as string) ?? "",
       loadModel: (ex.load_model as string) ?? "",
+      // B351: the server stamps alt_sides from the catalog on every custom
+      // instance (B324); dropping it here ran Pallof/Copenhagen on one side only.
+      altSides: ex.alt_sides === true,
       prescription: {
         sets: ex.sets as number | undefined,
         reps: ex.reps != null ? (ex.reps as string | number) : undefined,

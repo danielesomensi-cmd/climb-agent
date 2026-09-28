@@ -258,6 +258,14 @@ export default function OutdoorPage() {
   const maxRoutesMonth = Math.max(1, ...months.map(([, m]) => m.routes));
   const minProgRank = progression.length ? Math.min(...progression.map((p) => gradeRank(p.grade))) : 0;
   const maxProgRank = progression.length ? Math.max(...progression.map((p) => gradeRank(p.grade))) : 1;
+  // A286 — scala onesta per "Grade progression". Prima le barre venivano
+  // riscalate sul solo range osservato (25%..100%), così mezzo grado di
+  // differenza riempiva il grafico. Ora l'asse parte da una baseline esplicita
+  // (il mese più debole) ed è largo almeno 3 gradi pieni: un passo nella
+  // scala canonica = mezzo grado, quindi 6 passi.
+  const PROG_MIN_SPAN = 6;
+  const progSpan = Math.max(PROG_MIN_SPAN, maxProgRank - minProgRank);
+  const progBaselineGrade = progression.find((p) => gradeRank(p.grade) === minProgRank)?.grade ?? "";
 
   const monthLabel = (mk: string) =>
     new Date(mk + "-01T00:00:00").toLocaleDateString("en-US", { month: "short", year: "2-digit" });
@@ -431,7 +439,7 @@ export default function OutdoorPage() {
                               <span className="text-sm font-medium">{r.name}</span>
                               <Badge
                                 variant="outline"
-                                className={`text-[10px] ${r.isSent ? "border-green-600 text-green-500" : "text-muted-foreground"}`}
+                                className={`text-[10px] ${r.isSent ? "border-success/40 bg-success/15 text-success" : "text-muted-foreground"}`}
                               >
                                 {STYLE_LABEL[r.bestStyle] || r.bestStyle}
                               </Badge>
@@ -448,7 +456,7 @@ export default function OutdoorPage() {
                               </span>
                             )}
                             {r.isSent ? (
-                              <Check className="h-4 w-4 text-green-500" />
+                              <Check className="h-4 w-4 text-success" />
                             ) : (
                               <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
                             )}
@@ -561,7 +569,7 @@ export default function OutdoorPage() {
                                       <span className="min-w-0 flex-1 truncate">{r.name || "—"}</span>
                                       <Badge
                                         variant="outline"
-                                        className={`text-[10px] ${sent ? "border-green-600/60 text-green-500" : "text-muted-foreground"}`}
+                                        className={`text-[10px] ${sent ? "border-success/40 bg-success/15 text-success" : "text-muted-foreground"}`}
                                       >
                                         {STYLE_LABEL[style] || style}
                                       </Badge>
@@ -654,22 +662,29 @@ export default function OutdoorPage() {
                 <CardContent>
                   <div className="space-y-1.5">
                     {progression.map((p) => {
-                      // Scale bar height by rank within the observed range (min..max).
-                      const span = Math.max(1, maxProgRank - minProgRank);
-                      const pct = 25 + (75 * (gradeRank(p.grade) - minProgRank)) / span;
+                      const pct = (100 * (gradeRank(p.grade) - minProgRank)) / progSpan;
                       const dg = displayBoulderGrade(p.grade, gradeSystem);
                       return (
                         <div key={p.mk} className="flex items-center gap-2 text-sm">
                           <span className="w-14 shrink-0 text-xs text-muted-foreground">{monthLabel(p.mk)}</span>
-                          <div className="h-4 flex-1 overflow-hidden rounded-sm bg-muted">
-                            <div className="h-full rounded-sm bg-primary" style={{ width: `${pct}%` }} />
+                          <div className="h-4 flex-1 overflow-hidden rounded-sm border-l-2 border-border bg-muted">
+                            <div
+                              className="h-full rounded-r-sm bg-primary"
+                              style={{ width: `${pct}%` }}
+                            />
                           </div>
                           <span className="w-10 shrink-0 text-right font-mono text-xs">{dg}</span>
                         </div>
                       );
                     })}
                   </div>
-                  <p className="mt-2 text-[10px] text-muted-foreground">Hardest grade sent each month.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Hardest grade sent each month. Bars start at{" "}
+                    <span className="font-mono text-foreground">
+                      {displayBoulderGrade(progBaselineGrade, gradeSystem)}
+                    </span>{" "}
+                    (baseline) and the full track is {progSpan / 2} grades above it.
+                  </p>
                 </CardContent>
               </Card>
             )}
@@ -710,7 +725,7 @@ export default function OutdoorPage() {
           <DialogHeader>
             <DialogTitle>{editData ? "Edit Today's Session" : "Log Outdoor Session"}</DialogTitle>
             {editData && (
-              <p className="text-xs text-amber-400 mt-1">
+              <p className="text-xs text-warning mt-1">
                 You already have a session logged today — editing it.
               </p>
             )}

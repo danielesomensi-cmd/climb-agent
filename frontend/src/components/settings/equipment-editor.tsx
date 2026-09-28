@@ -257,7 +257,7 @@ export function EquipmentEditor({
           </Button>
 
           {hasEmptyGymName && (
-            <p className="text-xs text-red-500">All gyms must have a name</p>
+            <p className="text-xs text-danger">All gyms must have a name</p>
           )}
         </CardContent>
       </Card>

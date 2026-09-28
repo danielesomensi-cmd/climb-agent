@@ -25,7 +25,7 @@ import {
   useUpdateCustomSession,
   useDeleteCustomSession,
 } from "@/lib/hooks/mutations";
-import type { CustomSessionExercise, BuilderExercise } from "@/lib/types";
+import type { CustomSessionExercise } from "@/lib/types";
 import { Plus, Save, Trash2, Flame, Snowflake } from "lucide-react";
 
 /** Tracks exercise + its display name (catalog name at add time). */
@@ -37,9 +37,23 @@ interface BuilderEntry {
 
 // ── Load / duration computation (mirrors backend) ─────────────────────
 
-function computeLoadScore(entries: BuilderEntry[], catalog: Map<string, number>): number {
+export function computeLoadScore(entries: BuilderEntry[], catalog: Map<string, number>): number {
   const raw = entries.reduce((sum, e) => sum + (catalog.get(e.exercise.exercise_id) ?? 0), 0);
   return Math.min(85, Math.round(raw * 1.5));
+}
+
+/**
+ * B356 — {exercise_id: fatigue_cost} dal catalogo del builder.
+ * Speculare a `build_fatigue_map` in backend/engine/load_score.py. Estratta e
+ * testata perché il bug non era la formula ma la mappa: restava vuota, quindi
+ * `computeLoadScore` sommava zeri e il builder scriveva "Load: 0" per sempre.
+ */
+export function buildFatigueMap(
+  exercises: Array<{ id: string; fatigue_cost?: number }> | undefined,
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const ex of exercises ?? []) map.set(ex.id, ex.fatigue_cost ?? 0);
+  return map;
 }
 
 function computeDuration(entries: BuilderEntry[]): number {
@@ -58,9 +72,15 @@ function computeDuration(entries: BuilderEntry[]): number {
 interface SessionBuilderProps {
   /** Session ID for edit mode. null = create mode. */
   sessionId: string | null;
+  /**
+   * B356 — notifica alla pagina che ci sono modifiche non salvate. Il pulsante
+   * "indietro" sta nella TopBar della pagina, non qui, quindi è la pagina a
+   * dover chiedere conferma prima di uscire.
+   */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-export function SessionBuilder({ sessionId }: SessionBuilderProps) {
+export function SessionBuilder({ sessionId, onDirtyChange }: SessionBuilderProps) {
   const router = useRouter();
   const isEditMode = !!sessionId;
 
@@ -76,7 +96,6 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
   // Builder state
   const [name, setName] = useState("");
   const [entries, setEntries] = useState<BuilderEntry[]>([]);
-  const [fatigueCosts, setFatigueCosts] = useState<Map<string, number>>(new Map());
   const [isDirty, setIsDirty] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
@@ -86,7 +105,6 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
   const [warmupPickerOpen, setWarmupPickerOpen] = useState(false);
   const [cooldownPickerOpen, setCooldownPickerOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
   const [nameError, setNameError] = useState("");
   const [saveError, setSaveError] = useState("");
 
@@ -100,8 +118,12 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
   }, [catalogData]);
 
   // Initialize from existing session in edit mode (wait for catalog to resolve names)
+  // B355 — idratazione one-shot da dati asincroni (sessione + catalogo): finché
+  // la query non risolve i nomi non c'è nulla da mostrare, e la guardia
+  // `!initialized` la rende irripetibile. Non è uno stato derivabile in render.
   useEffect(() => {
     if (isEditMode && existingSession && catalogNameMap.size > 0 && !initialized) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(existingSession.name);
       setEntries(
         existingSession.exercises.map((ex) => ({
@@ -117,18 +139,31 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
   }, [isEditMode, existingSession, initialized, catalogNameMap]);
 
   // Track dirty state
+  // B355 — flag "appiccicoso": una volta sporco resta sporco finché il salvataggio
+  // non lo azzera, quindi non è derivabile dal render corrente.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (initialized && (name || entries.length > 0)) setIsDirty(true);
   }, [name, entries, initialized]);
 
-  // Track fatigue costs from picker results
-  const updateFatigueCost = useCallback((exerciseId: string, cost: number) => {
-    setFatigueCosts((prev) => {
-      const next = new Map(prev);
-      next.set(exerciseId, cost);
-      return next;
-    });
-  }, []);
+  // B356 — lo stato sporco risale alla pagina, che possiede il pulsante indietro.
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  /*
+   * B356 — il builder mostrava "Load: 0" sempre, con qualunque esercizio dentro.
+   * `fatigueCosts` era uno stato alimentato solo da un `updateFatigueCost` che
+   * nessuno chiamava mai, quindi la mappa restava vuota e `computeLoadScore`
+   * sommava zeri: `Math.min(85, Math.round(0 * 1.5))` = 0, per costruzione.
+   * Il costo di fatica è già nel catalogo (`BuilderExercise.fatigue_cost`): la
+   * mappa si costruisce da lì, esattamente come fa `catalogNameMap` sopra e come
+   * fa `build_fatigue_map` in backend/engine/load_score.py.
+   */
+  const fatigueCosts = useMemo(
+    () => buildFatigueMap(catalogData?.exercises),
+    [catalogData],
+  );
 
   // Computed values
   const loadScore = useMemo(() => computeLoadScore(entries, fatigueCosts), [entries, fatigueCosts]);
@@ -234,14 +269,6 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
     }
   };
 
-  const handleBack = () => {
-    if (isDirty) {
-      setDiscardConfirmOpen(true);
-    } else {
-      router.push("/free-session");
-    }
-  };
-
   // ── Editing state ──────────────────────────────────────────────────
 
   const editingEntry = editingIndex !== null ? entries[editingIndex] : null;
@@ -283,7 +310,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
         <Button
           variant="outline"
           size="sm"
-          className="w-full border-dashed text-orange-500 border-orange-500/30 hover:bg-orange-500/5"
+          className="w-full border-dashed text-warning border-warning/30 hover:bg-warning/10"
           onClick={() => setWarmupPickerOpen(true)}
         >
           <Flame className="h-4 w-4 mr-2" />
@@ -330,7 +357,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
         <Button
           variant="outline"
           size="sm"
-          className="w-full border-dashed text-blue-500 border-blue-500/30 hover:bg-blue-500/5"
+          className="w-full border-dashed text-info border-info/30 hover:bg-info/10"
           onClick={() => setCooldownPickerOpen(true)}
         >
           <Snowflake className="h-4 w-4 mr-2" />
@@ -349,7 +376,7 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
 
       {/* Error display */}
       {saveError && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+        <div className="rounded-lg border border-danger/30 bg-danger/15 px-4 py-3 text-sm text-danger">
           {saveError}
         </div>
       )}
@@ -438,23 +465,6 @@ export function SessionBuilder({ sessionId }: SessionBuilderProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Discard confirmation */}
-      <AlertDialog open={discardConfirmOpen} onOpenChange={setDiscardConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes. Are you sure you want to go back?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setIsDirty(false); router.push("/free-session"); }}>
-              Discard
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

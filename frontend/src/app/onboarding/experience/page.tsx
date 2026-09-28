@@ -1,8 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
-import { Button } from "@/components/ui/button";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -13,7 +12,6 @@ import {
 } from "@/components/ui/card";
 
 export default function ExperiencePage() {
-  const router = useRouter();
   const { data, update } = useOnboarding();
   const exp = data.experience;
 
@@ -64,23 +62,16 @@ export default function ExperiencePage() {
               onValueChange={([v]) => set("structured_training_years", v)}
             />
             <p className="text-xs text-muted-foreground">
-              If you've never followed a training plan, enter 0
+              If you&apos;ve never followed a training plan, enter 0
             </p>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/profile")}
-        >
-          Back
-        </Button>
-        <Button onClick={() => router.push("/onboarding/discipline")}>
-          Next
-        </Button>
-      </div>
+      <StepNav
+        backHref="/onboarding/profile"
+        nextHref="/onboarding/discipline"
+      />
     </div>
   );
 }

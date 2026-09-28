@@ -29,15 +29,15 @@ function formatDateCompact(dateStr: string): string {
   return `${parts[2]}/${parts[1]}`;
 }
 
-/** Status indicator color */
+/** Status indicator color (A286 — token, non più grigi da light-mode) */
 function getStatusColor(status: DayPlan["status"]): string {
   switch (status) {
     case "done":
-      return "bg-green-500";
+      return "bg-success";
     case "skipped":
-      return "bg-red-500";
+      return "bg-danger";
     default:
-      return "bg-gray-400";
+      return "bg-muted-foreground/50";
   }
 }
 
@@ -48,8 +48,10 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick }: WeekGridProps) {
   const days: DayPlan[] =
     weekPlan.weeks.length > 0 ? weekPlan.weeks[0].days : [];
 
+  // A286 — 7 colonne vere anche a 375px: prima a max-sm diventava 4+3 e la
+  // settimana smetteva di leggersi come una settimana.
   return (
-    <div className="grid grid-cols-7 gap-1.5 max-sm:grid-cols-4">
+    <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
       {days.map((day) => {
         const isToday = currentDate === day.date;
         const isSelected = selectedDate === day.date;
@@ -62,8 +64,9 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick }: WeekGridProps) {
           <Card
             key={day.date}
             className={cn(
-              "gap-1 py-2 px-2 cursor-pointer transition-colors text-center select-none",
-              isToday && "ring-2 ring-primary",
+              "gap-0.5 py-2 px-0.5 sm:px-2 cursor-pointer transition-colors text-center select-none",
+              // Il giorno corrente si distingue per anello + bordo, non solo colore.
+              isToday && "ring-2 ring-primary border-primary",
               isSelected && "bg-accent",
               !isToday && !isSelected && "hover:bg-muted/50"
             )}
@@ -72,24 +75,26 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick }: WeekGridProps) {
               onDayClick?.(day.date);
             }}
           >
-            {/* Day name */}
+            {/* Day name — iniziale sotto sm, per stare in 7 colonne a 375px */}
             <p
               className={cn(
-                "text-xs font-medium",
+                "text-[11px] sm:text-xs font-medium leading-tight",
                 isToday && "text-primary"
               )}
             >
-              {weekdayLabel}
+              <span className="sm:hidden">{weekdayLabel.slice(0, 2)}</span>
+              <span className="max-sm:hidden">{weekdayLabel}</span>
             </p>
 
             {/* Compact date */}
-            <p className="text-[10px] text-muted-foreground">
-              {formatDateCompact(day.date)}
+            <p className="text-[10px] tabular-nums leading-tight text-muted-foreground">
+              <span className="sm:hidden">{day.date.split("-")[2]}</span>
+              <span className="max-sm:hidden">{formatDateCompact(day.date)}</span>
             </p>
 
             {/* Status indicator (colored dot + session count) */}
             <div
-              className="flex items-center justify-center gap-1 mt-1"
+              className="flex items-center justify-center gap-1 mt-0.5"
               title={`${sessionCount} session${sessionCount !== 1 ? "s" : ""} · ${status}`}
             >
               <span

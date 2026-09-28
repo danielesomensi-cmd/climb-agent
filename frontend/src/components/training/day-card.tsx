@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SessionCard } from "@/components/training/session-card";
+import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { PitchLadderCard } from "@/components/outdoor/pitch-ladder-card";
 import type {
   DayPlan,
@@ -77,10 +78,11 @@ interface DayCardProps {
   onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
 }
 
+// A286 — colori dalla mappa condivisa (feedback-colors.ts), non più una quarta copia.
 const FEEDBACK_OPTIONS = [
-  { value: "easy", label: "Easy", color: "text-green-400 border-green-500/30 bg-green-500/20" },
-  { value: "ok", label: "OK", color: "text-yellow-400 border-yellow-500/30 bg-yellow-500/20" },
-  { value: "hard", label: "Hard", color: "text-orange-400 border-orange-500/30 bg-orange-500/20" },
+  { value: "easy", label: "Easy", color: FEEDBACK_CHIP.easy },
+  { value: "ok", label: "OK", color: FEEDBACK_CHIP.ok },
+  { value: "hard", label: "Hard", color: FEEDBACK_CHIP.hard },
 ];
 
 /** Map English weekday name to short English abbreviation */
@@ -94,13 +96,23 @@ const WEEKDAY_EN: Record<string, string> = {
   sunday: "Sun",
 };
 
-/** Map status to badge label + variant */
+/** Map status to badge label + variant.
+ *  A286 — "Completed" era magenta (variant default = primary) a livello giorno
+ *  e verde a livello sessione, nella stessa card: ora è success in entrambi. */
 const STATUS_CONFIG: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+    className?: string;
+  }
 > = {
   planned: { label: "Planned", variant: "secondary" },
-  done: { label: "Completed", variant: "default" },
+  done: {
+    label: "Completed",
+    variant: "outline",
+    className: "border-success/30 bg-success/15 text-success",
+  },
   skipped: { label: "Skipped", variant: "destructive" },
 };
 
@@ -185,24 +197,18 @@ function OtherActivityBlock({
       </div>
       {activity.status === "completed" ? (
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge className="bg-green-600 text-[10px]">
-            <span className="text-white">Completed</span>
+          <Badge variant="outline" className="text-[10px] border-success/30 bg-success/15 text-success">
+            <span>Completed</span>
             {activity.duration_minutes != null ? (
-              <span className="text-white"> · {activity.duration_minutes} min</span>
+              <span> · {activity.duration_minutes} min</span>
             ) : (
-              <span className="text-zinc-300"> · ~60 min</span>
+              <span className="opacity-70"> · ~60 min</span>
             )}
           </Badge>
           {activity.feedback && (
             <Badge
               variant="outline"
-              className={`text-[10px] ${
-                activity.feedback === "easy"
-                  ? "bg-green-500/20 text-green-400 border-green-500/30"
-                  : activity.feedback === "ok"
-                  ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                  : "bg-orange-500/20 text-orange-400 border-orange-500/30"
-              }`}
+              className={`text-[10px] ${FEEDBACK_CHIP[activity.feedback] ?? FEEDBACK_CHIP.hard}`}
             >
               {activity.feedback}
             </Badge>
@@ -349,7 +355,7 @@ function OtherActivityBlock({
         <Button
           size="sm"
           variant="outline"
-          className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+          className="text-success border-success/30 hover:bg-success/15 hover:text-success"
           onClick={() => setFeedbackPicking(true)}
         >
           <Check className="size-3.5 mr-1" />
@@ -389,7 +395,8 @@ export function DayCard({
   outdoorLoadScore,
   freeSessions,
   onDeleteFreeSession,
-  showActions = false,
+  // B355 — `showActions` non è più letto dal corpo da quando B166 ha tolto il
+  // bottone "View day"; la prop resta nell'interface perché /week la passa.
   weekPlan,
   onSessionUpdated,
 }: DayCardProps) {
@@ -418,7 +425,7 @@ export function DayCard({
               {formatDateShort(day.date)}
             </span>
           </CardTitle>
-          <Badge variant={statusCfg.variant} className="text-[10px]">
+          <Badge variant={statusCfg.variant} className={cn("text-[10px]", statusCfg.className)}>
             {statusCfg.label}
           </Badge>
         </div>
@@ -482,15 +489,15 @@ export function DayCard({
                 <div className="flex flex-wrap items-center gap-1.5">
                   {day.outdoor_session_status === "done" ? (
                     <>
-                      <Badge className="bg-green-600 text-[10px]">
-                        <span className="text-white">Completed</span>
+                      <Badge variant="outline" className="text-[10px] border-success/30 bg-success/15 text-success">
+                        <span>Completed</span>
                         {hasExpandableOutdoor && (
-                          <span className="text-white"> · {outdoorRoutes!.length} {routeLabel}</span>
+                          <span> · {outdoorRoutes!.length} {routeLabel}</span>
                         )}
                         {outdoorDurationMinutes != null && outdoorDurationMinutes > 0 ? (
-                          <span className="text-white"> · {outdoorDurationMinutes} min</span>
+                          <span> · {outdoorDurationMinutes} min</span>
                         ) : (
-                          <span className="text-zinc-300"> · ~120 min</span>
+                          <span className="opacity-70"> · ~120 min</span>
                         )}
                       </Badge>
                       {outdoorLoadScore != null && outdoorLoadScore > 0 && (
@@ -526,7 +533,7 @@ export function DayCard({
                       <Button
                         asChild
                         size="sm"
-                        className="text-xs bg-green-600 hover:bg-green-700 text-white"
+                        className="text-xs bg-success text-surface-base hover:bg-success/90"
                       >
                         <Link href={`/outdoor/${day.date}?spot=${encodeURIComponent(day.outdoor_spot_name ?? "")}&discipline=${day.outdoor_discipline ?? "lead"}`}>
                           <Mountain className="size-3 mr-1" />
@@ -537,7 +544,7 @@ export function DayCard({
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950"
+                          className="text-xs text-success border-success/30 hover:bg-success/15 hover:text-success"
                           onClick={() => onLogOutdoor(day.date)}
                         >
                           <ClipboardList className="size-3 mr-1" />
@@ -708,8 +715,8 @@ export function DayCard({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className="font-medium truncate">Free: {surfaceName} {presetLabel}</span>
-                      <Badge className="bg-green-600 text-[10px] shrink-0">
-                        <span className="text-white">Done</span>
+                      <Badge variant="outline" className="text-[10px] shrink-0 border-success/30 bg-success/15 text-success">
+                        Done
                       </Badge>
                       {onDeleteFreeSession && (
                         <Button

@@ -297,10 +297,15 @@ def enrich_custom_sessions_for_play(sessions: list) -> list:
     out = []
     for s in sessions:
         s = dict(s)
-        s["exercises"] = [
-            _enrich_exercise_display(dict(ex), catalog) if not ex.get("cues") else dict(ex)
-            for ex in (s.get("exercises") or [])
-        ]
+        exercises = []
+        for ex in s.get("exercises") or []:
+            ex = _enrich_exercise_display(dict(ex), catalog) if not ex.get("cues") else dict(ex)
+            # B352: laterality is re-derived even when the display fields are
+            # already stored. Sessions saved between B283 and B324 carry cues but
+            # no alt_sides, so the skip above left them one-sided forever.
+            ex["alt_sides"] = bool((catalog.get(ex.get("exercise_id") or "") or {}).get("alt_sides"))
+            exercises.append(ex)
+        s["exercises"] = exercises
         out.append(s)
     return out
 

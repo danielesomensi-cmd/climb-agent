@@ -76,8 +76,13 @@ export function GoalEditor({
   // Sync form state from props every time the dialog opens.
   // A218: read total_weeks from goal directly; fall back to deriving from
   // the legacy `deadline` ISO so users with old state still see a sensible value.
+  // B355 — sincronizzazione props→state all'apertura del dialog: è il pattern
+  // corretto qui. Il dialog è montato sempre dalla pagina settings (non ha una
+  // `key` che lo rimonti), quindi l'unico momento in cui ricaricare i valori
+  // dallo state del server è la transizione di `open`.
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDiscipline((currentGoal.discipline as string) || "lead");
       setTargetStyle((currentGoal.target_style as string) || "redpoint");
       setTargetGrade((currentGoal.target_grade as string) || "");
@@ -248,7 +253,7 @@ export function GoalEditor({
 
               {/* Warnings */}
               {isAmbitious && (
-                <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200">
+                <div className="rounded-md border border-warning/30 bg-warning/15 px-3 py-2 text-sm text-warning">
                   Ambitious goal! The plan will be aggressive
                 </div>
               )}

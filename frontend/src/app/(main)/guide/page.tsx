@@ -36,19 +36,22 @@ export default function GuidePage() {
     <>
       <TopBar title="Guide" />
 
-      <main className="mx-auto max-w-2xl p-4 space-y-4">
+      {/* A286 — misura di lettura: max-w-2xl mandava il corpo oltre i 100 caratteri
+          per riga su desktop. ~68ch è la riga leggibile. */}
+      <main className="mx-auto max-w-[68ch] p-4 space-y-4">
         {/* Search bar */}
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search guide..."
-          className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-500 focus:border-zinc-500 focus:outline-none focus:ring-1 focus:ring-zinc-500"
+          // A286 — text-base: sotto i 16px iOS zooma al focus e non torna indietro.
+          className="w-full rounded-md border border-border bg-card px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
         />
 
         {/* No results */}
         {query && filtered.length === 0 && (
-          <p className="text-sm text-zinc-500 text-center py-6">
+          <p className="text-sm text-muted-foreground text-center py-6">
             No results found for &ldquo;{search.trim()}&rdquo;
           </p>
         )}
@@ -60,16 +63,16 @@ export default function GuidePage() {
             return (
               <div
                 key={section.id}
-                className="rounded-lg border border-zinc-800 overflow-hidden"
+                className="rounded-md border border-border bg-card overflow-hidden"
               >
                 <button
                   type="button"
                   onClick={() => toggle(section.id)}
-                  className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-zinc-200 hover:bg-zinc-800/50 transition-colors"
+                  className="flex min-h-[44px] w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-foreground hover:bg-accent transition-colors"
                 >
                   <span>{section.title}</span>
                   <svg
-                    className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform ${
+                    className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${
                       isOpen ? "rotate-180" : ""
                     }`}
                     fill="none"
@@ -93,7 +96,7 @@ export default function GuidePage() {
         </div>
 
         {/* Footer */}
-        <p className="text-[11px] text-zinc-600 text-center pb-4">
+        <p className="text-xs text-muted-foreground text-center pb-4">
           Built on peer-reviewed climbing training science: H&ouml;rst, Lattice, Eva L&oacute;pez, Tyler Nelson.
         </p>
       </main>

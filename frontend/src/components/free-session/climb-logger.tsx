@@ -73,6 +73,9 @@ export function ClimbLogger({
   const [climbs, setClimbs] = useState<LoggedClimb[]>([]);
   const [isLogging, setIsLogging] = useState(false);
   const [deletingIndex, setDeletingIndex] = useState<number | null>(null);
+  // A286 — cancellare un climb è distruttivo: il cestino ora è sempre visibile
+  // (era opacity-0/group-hover, invisibile su touch) e chiede conferma inline.
+  const [confirmDeleteIndex, setConfirmDeleteIndex] = useState<number | null>(null);
   const [restKey, setRestKey] = useState(0);
   const [showRest, setShowRest] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -101,7 +104,6 @@ export function ClimbLogger({
       startedAt.current = draft.startedAt;
       setResumed(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 
   // Hide resume banner after 4s
@@ -266,12 +268,13 @@ export function ClimbLogger({
     } finally {
       setIsLogging(false);
     }
-  }, [sessionId, grade, status, attempts, style, topped, notes, surface, sessionMode, restSeconds, isLogging, climbs]);
+  }, [sessionId, grade, status, attempts, style, topped, notes, surface, sessionMode, restSeconds, isLogging, climbs, onClimbLogged]);
 
   const handleDeleteClimb = useCallback(async (climbIndex: number) => {
     // Optimistic remove
     const removed = climbs.find((c) => c.index === climbIndex);
     if (!removed) return;
+    setConfirmDeleteIndex(null);
     setDeletingIndex(climbIndex);
     setClimbs((prev) => prev.filter((c) => c.index !== climbIndex));
     try {
@@ -512,15 +515,35 @@ export function ClimbLogger({
                   <span className="text-xs text-muted-foreground uppercase">{c.style}</span>
                 )}
                 {c.notes && <span className="min-w-0 truncate text-xs text-muted-foreground">{c.notes}</span>}
-                {/* Issue 5: delete button */}
-                <button
-                  onClick={() => handleDeleteClimb(c.index)}
-                  disabled={deletingIndex === c.index}
-                  className="ml-auto shrink-0 text-muted-foreground/40 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100 disabled:opacity-50"
-                  aria-label={`Delete climb #${c.index}`}
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+                {/* Issue 5 / A286: delete — sempre visibile, tap target 44px, con conferma */}
+                {confirmDeleteIndex === c.index ? (
+                  <span className="ml-auto flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => handleDeleteClimb(c.index)}
+                      disabled={deletingIndex === c.index}
+                      className="inline-flex min-h-[44px] items-center rounded-md border border-danger/30 bg-danger/15 px-2.5 text-xs font-semibold text-danger disabled:opacity-50"
+                      aria-label={`Confirm delete climb #${c.index}`}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteIndex(null)}
+                      className="inline-flex size-11 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
+                      aria-label="Cancel delete"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteIndex(c.index)}
+                    disabled={deletingIndex === c.index}
+                    className="ml-auto inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-danger disabled:opacity-50"
+                    aria-label={`Delete climb #${c.index}`}
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

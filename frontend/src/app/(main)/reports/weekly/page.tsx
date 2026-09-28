@@ -18,7 +18,6 @@ import {
   Mountain,
   Dumbbell,
   Calendar,
-  Clock,
   Activity,
 } from "lucide-react";
 import { getWeeklyReport } from "@/lib/api";
@@ -32,12 +31,15 @@ import type {
 import { getPhaseName } from "@/lib/phase-labels";
 import { parseISODateLocal, shiftISODate } from "@/lib/dates";
 
+// A286 — la barra Difficulty usa i token della scala assi/funzionali invece
+// di cinque colori Tailwind grezzi; le classi sono affiancate a una legenda
+// (DifficultyBar), perché su touch il `title` non esiste.
 const DIFFICULTY_COLORS: Record<string, string> = {
-  very_easy: "bg-emerald-400",
-  easy: "bg-green-500",
-  ok: "bg-yellow-500",
-  hard: "bg-orange-500",
-  very_hard: "bg-red-500",
+  very_easy: "bg-success/60",
+  easy: "bg-success",
+  ok: "bg-warning",
+  hard: "bg-axis-power-endurance",
+  very_hard: "bg-danger",
 };
 
 const DIFFICULTY_LABELS: Record<string, string> = {
@@ -48,10 +50,13 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   very_hard: "Very Hard",
 };
 
+// A286 — le pill della timeline erano testo bianco su verde/blu 500
+// (2,28:1 e 3,68:1). Su fondo scuro il colore va usato come INCHIOSTRO su un
+// fondo tenue dello stesso colore, mai come riempimento saturo.
 const STATUS_COLORS: Record<string, string> = {
-  done: "bg-green-500",
-  skipped: "bg-zinc-500",
-  planned: "bg-blue-500",
+  done: "text-success bg-success/15 border-success/30",
+  skipped: "text-muted-foreground bg-muted border-border",
+  planned: "text-info bg-info/15 border-info/30",
 };
 
 const HIGHLIGHT_ICON: Record<string, typeof CheckCircle2> = {
@@ -62,10 +67,10 @@ const HIGHLIGHT_ICON: Record<string, typeof CheckCircle2> = {
 };
 
 const HIGHLIGHT_STYLE: Record<string, string> = {
-  positive: "text-green-400",
-  progress: "text-blue-400",
-  warning: "text-amber-400",
-  info: "text-zinc-400",
+  positive: "text-success",
+  progress: "text-info",
+  warning: "text-warning",
+  info: "text-muted-foreground",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -98,14 +103,17 @@ export default function WeeklyReportPage() {
   );
 }
 
-/** Return the Monday of the current ISO week as YYYY-MM-DD. */
+/** Return the Monday of the current ISO week as YYYY-MM-DD (local time).
+ *
+ * A286 — la chiave restava YYYY-MM-DD ma veniva formattata con `toISOString()`,
+ * cioè in UTC: a Roma, fra mezzanotte e le 02:00, il lunedì locale diventava la
+ * domenica UTC e la pagina apriva la settimana sbagliata. */
 function currentMonday(): string {
   const d = new Date();
   const day = d.getDay(); // 0=Sun … 6=Sat
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const mon = new Date(d);
-  mon.setDate(diff);
-  return mon.toISOString().slice(0, 10);
+  const mon = new Date(d.getFullYear(), d.getMonth(), diff);
+  return `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, "0")}-${String(mon.getDate()).padStart(2, "0")}`;
 }
 
 function WeeklyReportContent() {
@@ -231,7 +239,7 @@ function WeeklyReportContent() {
                         {report.active_days.dots.map((active, i) => (
                           <div
                             key={i}
-                            className={`size-2 rounded-full ${active ? "bg-green-500" : "bg-muted/40"}`}
+                            className={`size-2 rounded-full ${active ? "bg-success" : "bg-muted/40"}`}
                           />
                         ))}
                       </div>
@@ -282,7 +290,7 @@ function WeeklyReportContent() {
                   <ul className="space-y-2">
                     {report.highlights.map((h: WeeklyReportHighlight) => {
                       const Icon = HIGHLIGHT_ICON[h.type] ?? Info;
-                      const style = HIGHLIGHT_STYLE[h.type] ?? "text-zinc-400";
+                      const style = HIGHLIGHT_STYLE[h.type] ?? "text-muted-foreground";
                       return (
                         <li key={h.key} className="flex items-start gap-2 text-sm">
                           <Icon className={`size-4 mt-0.5 shrink-0 ${style}`} />
@@ -321,15 +329,15 @@ function WeeklyReportContent() {
                         {day.sessions.map((s, i) => (
                           <span
                             key={i}
-                            className={`inline-block rounded-full px-2 py-0.5 text-xs text-white ${
-                              STATUS_COLORS[s.status] ?? "bg-zinc-600"
+                            className={`inline-block rounded-full border px-2 py-0.5 text-xs ${
+                              STATUS_COLORS[s.status] ?? "text-muted-foreground bg-muted border-border"
                             }`}
                           >
                             {s.session_id.replace(/_/g, " ")}
                           </span>
                         ))}
                         {day.outdoor && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">
+                          <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success/15 px-2 py-0.5 text-xs text-success">
                             <Mountain className="size-3" />
                             {day.outdoor.spot_name ?? "Outdoor"}
                             {day.outdoor.route_count != null && (
@@ -338,7 +346,7 @@ function WeeklyReportContent() {
                           </span>
                         )}
                         {day.other_activities?.map((oa, i) => (
-                          <span key={oa.slot ?? `oa-${i}`} className="inline-flex items-center gap-1 rounded-full bg-violet-600 px-2 py-0.5 text-xs text-white">
+                          <span key={oa.slot ?? `oa-${i}`} className="inline-flex items-center gap-1 rounded-full border border-axis-finger/30 bg-axis-finger/15 px-2 py-0.5 text-xs text-axis-finger">
                             <Activity className="size-3" />
                             {oa.name ?? "Other"}
                             {oa.feedback && (
@@ -347,7 +355,7 @@ function WeeklyReportContent() {
                           </span>
                         ))}
                         {day.free_sessions?.map((fs: WeeklyReportFreeSession) => (
-                          <span key={fs.id} className="inline-flex items-center gap-1 rounded-full bg-purple-600 px-2 py-0.5 text-xs text-white">
+                          <span key={fs.id} className="inline-flex items-center gap-1 rounded-full border border-brand-secondary/30 bg-brand-secondary/15 px-2 py-0.5 text-xs text-brand-secondary">
                             {fs.context === "add_on" ? "+" : ""}Free: {fs.surface} {fs.preset_name}
                             <span className="opacity-80">
                               ({fs.total_climbs} {fs.climb_type}{fs.max_grade_sent ? `, max ${fs.max_grade_sent}` : ""}{fs.duration_minutes ? `, ${fs.duration_minutes}m` : ""})
@@ -446,7 +454,7 @@ function WeeklyReportContent() {
                         </span>
                       </p>
                       {data.days_since_last != null && (
-                        <p className={`text-xs ${data.days_since_last > 10 ? "text-amber-400" : "text-muted-foreground"}`}>
+                        <p className={`text-xs ${data.days_since_last > 10 ? "text-warning" : "text-muted-foreground"}`}>
                           {data.days_since_last}d since last
                         </p>
                       )}
@@ -476,9 +484,9 @@ function WeeklyReportContent() {
                           <span className="text-muted-foreground">&rarr;</span>
                           <span className={
                             p.direction === "up"
-                              ? "text-green-400 font-medium"
+                              ? "text-success font-medium"
                               : p.direction === "down"
-                              ? "text-red-400"
+                              ? "text-danger"
                               : ""
                           }>
                             {p.current_load}
@@ -567,7 +575,7 @@ function AdherenceRing({ pct }: { pct: number }) {
           strokeWidth={stroke}
           strokeDasharray={`${dash} ${circ}`}
           strokeLinecap="round"
-          className={pct >= 80 ? "text-green-500" : pct >= 50 ? "text-yellow-500" : "text-red-500"}
+          className={pct >= 80 ? "text-success" : pct >= 50 ? "text-warning" : "text-danger"}
         />
       </svg>
       <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
@@ -587,7 +595,7 @@ function LoadBar({ planned, actual }: { planned: number; actual: number }) {
       <div className="flex items-center gap-2 text-xs">
         <span className="w-16 text-muted-foreground">Planned</span>
         <div className="flex-1 h-3 rounded-full bg-muted/30 overflow-hidden">
-          <div className="h-full rounded-full bg-blue-500/60" style={{ width: `${plannedPct}%` }} />
+          <div className="h-full rounded-full bg-info/60" style={{ width: `${plannedPct}%` }} />
         </div>
         <span className="w-10 text-right font-medium">{planned}</span>
       </div>
@@ -597,10 +605,10 @@ function LoadBar({ planned, actual }: { planned: number; actual: number }) {
           <div
             className={`h-full rounded-full ${
               actual > planned * 1.2
-                ? "bg-amber-500"
+                ? "bg-warning"
                 : actual >= planned * 0.8
-                ? "bg-green-500"
-                : "bg-red-400"
+                ? "bg-success"
+                : "bg-danger/70"
             }`}
             style={{ width: `${actualPct}%` }}
           />
@@ -615,22 +623,35 @@ function DifficultyBar({ distribution }: { distribution: Record<string, number> 
   const order = ["very_easy", "easy", "ok", "hard", "very_hard"];
   const total = Object.values(distribution).reduce((a, b) => a + b, 0);
   if (total === 0) return null;
+  const present = order.filter((l) => (distribution[l] ?? 0) > 0);
 
+  // A286 — cinque bande colorate senza legenda: su touch il `title` non esiste,
+  // quindi la barra non era leggibile. La legenda sotto è la vera etichetta.
   return (
-    <div className="flex h-4 rounded-full overflow-hidden">
-      {order.map((label) => {
-        const count = distribution[label] ?? 0;
-        if (count === 0) return null;
-        const pct = (count / total) * 100;
-        return (
-          <div
-            key={label}
-            className={`${DIFFICULTY_COLORS[label]} relative group`}
-            style={{ width: `${pct}%` }}
-            title={`${DIFFICULTY_LABELS[label]}: ${count}`}
-          />
-        );
-      })}
+    <div className="space-y-2">
+      <div className="flex h-4 overflow-hidden rounded-full">
+        {present.map((label) => {
+          const count = distribution[label] ?? 0;
+          const pct = (count / total) * 100;
+          return (
+            <div
+              key={label}
+              className={DIFFICULTY_COLORS[label]}
+              style={{ width: `${pct}%` }}
+              title={`${DIFFICULTY_LABELS[label]}: ${count}`}
+            />
+          );
+        })}
+      </div>
+      <ul className="flex flex-wrap gap-x-3 gap-y-1">
+        {present.map((label) => (
+          <li key={label} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className={`size-2.5 shrink-0 rounded-xs ${DIFFICULTY_COLORS[label]}`} />
+            <span>{DIFFICULTY_LABELS[label]}</span>
+            <span className="font-mono text-foreground">{distribution[label]}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

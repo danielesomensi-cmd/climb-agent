@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useOnboarding } from "@/components/onboarding/onboarding-context";
+import { StepNav } from "@/components/onboarding/step-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -92,11 +93,15 @@ export default function LimitationsPage() {
     }
   };
 
-  // Valid if no limitations, or has at least one fully-filled limitation
+  // Valid if no limitations, or has at least one fully-filled limitation.
+  // A286: la stessa condizione, detta all'utente invece di spegnere il bottone.
   const isValid =
     !hasLimitations ||
     (limitations.length > 0 &&
       limitations.every((l) => l.area !== "" && l.side !== "" && l.severity !== ""));
+  const blockers = isValid
+    ? []
+    : ["Fill in area, side and severity for every limitation — or turn the switch off"];
 
   return (
     <div className="mx-auto max-w-lg space-y-6 pt-8">
@@ -230,17 +235,15 @@ export default function LimitationsPage() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button
-          variant="outline"
-          onClick={() => router.push("/onboarding/tests")}
-        >
-          Back
-        </Button>
-        <div className="flex gap-2">
-          {hasLimitations && (
+      <StepNav
+        backHref="/onboarding/tests"
+        nextHref="/onboarding/locations"
+        blockers={blockers}
+        secondary={
+          hasLimitations ? (
             <Button
               variant="ghost"
+              className="min-h-[44px]"
               onClick={() => {
                 update("limitations", []);
                 setHasLimitations(false);
@@ -249,15 +252,9 @@ export default function LimitationsPage() {
             >
               Skip
             </Button>
-          )}
-          <Button
-            disabled={!isValid}
-            onClick={() => router.push("/onboarding/locations")}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+          ) : null
+        }
+      />
     </div>
   );
 }

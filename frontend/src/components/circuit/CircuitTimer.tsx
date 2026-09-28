@@ -5,7 +5,13 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { countdownTick, transitionBeep } from "@/lib/beep";
+import { confirmFeedback } from "@/lib/haptics";
 import { speakPhaseTransition } from "@/lib/voice-cues";
+import {
+  PHASE_BG,
+  PHASE_RING,
+  PHASE_TEXT,
+} from "@/components/session-play/player-phase-colors";
 import {
   type CircuitExercise,
   type Difficulty,
@@ -17,32 +23,13 @@ import {
 
 type CircuitPhase = "prepare" | "work" | "rest" | "done";
 
-const PHASE_BG: Record<CircuitPhase, string> = {
-  prepare: "bg-zinc-800/80",
-  work: "bg-teal-900/80",
-  rest: "bg-blue-900/80",
-  done: "bg-card",
-};
-
-const PHASE_TEXT: Record<CircuitPhase, string> = {
-  prepare: "text-zinc-300",
-  work: "text-teal-400",
-  rest: "text-blue-400",
-  done: "text-green-500",
-};
+// A286 — B7: colori di fase dalla mappa condivisa (player-phase-colors).
 
 const PHASE_LABEL: Record<CircuitPhase, string> = {
   prepare: "GET READY",
   work: "WORK",
   rest: "REST",
   done: "DONE",
-};
-
-const PHASE_RING: Record<CircuitPhase, string> = {
-  prepare: "stroke-zinc-400",
-  work: "stroke-teal-400",
-  rest: "stroke-blue-400",
-  done: "stroke-green-500",
 };
 
 // ── Audio ──────────────────────────────────────────────────────────────
@@ -103,8 +90,18 @@ export function CircuitTimer({
   const [paused, setPaused] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [elapsed, setElapsed] = useState(0);
-  const [transitionId, setTransitionId] = useState(0);
+  // B355 — parte già a 1: il cue "get_ready" dev'essere suonato al mount, e
+  // farlo con un setState dentro l'effect di init è un render in più inutile.
+  const [transitionId, setTransitionId] = useState(1);
   const completedRef = useRef(0);
+  // B355 — il contatore mostrato a schermo vive in state: un ref letto in render
+  // non è reattivo e il numero può restare indietro. Il ref resta perché
+  // buildResult() lo legge in modo sincrono subito dopo la mutazione.
+  const [completedCount, setCompletedCount] = useState(0);
+  const setCompleted = useCallback((n: number) => {
+    completedRef.current = n;
+    setCompletedCount(n);
+  }, []);
   const performedRef = useRef<string[]>([]);
   const skippedRef = useRef<Set<number>>(new Set()); // indices of skipped exercises
 
@@ -112,7 +109,10 @@ export function CircuitTimer({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseEndTimeRef = useRef(0);
   const secondsLeftRef = useRef(PREPARE_SECONDS);
-  const startTimeRef = useRef(Date.now());
+  // B355 — non si chiama Date.now() in render (impuro): parte a 0 e viene
+  // valorizzato nell'effect di init sotto, dove il countdown parte davvero.
+  // Tutti i consumatori sono già guardati da `startTimeRef.current > 0`.
+  const startTimeRef = useRef(0);
   const elapsedAtPauseRef = useRef(0);
   const phaseRef = useRef<CircuitPhase>("prepare");
   const pausedRef = useRef(false);
@@ -144,9 +144,9 @@ export function CircuitTimer({
   // Init: start prepare countdown
   useEffect(() => {
     unlockAudio();
-    phaseEndTimeRef.current = Date.now() + PREPARE_SECONDS * 1000;
-    pendingVoiceCueRef.current = "get_ready";
-    setTransitionId(1);
+    const now = Date.now();
+    startTimeRef.current = now;
+    phaseEndTimeRef.current = now + PREPARE_SECONDS * 1000;
   }, []);
 
   // ── Build result helper ──────────────────────────────────────────
@@ -171,6 +171,8 @@ export function CircuitTimer({
   useEffect(() => {
     if (transitionId > 0) {
       transitionBeep();
+      // A286 — B8: il cambio di fase si sente anche senza guardare lo schermo.
+      confirmFeedback();
       if (pendingVoiceCueRef.current) {
         speakPhaseTransition(pendingVoiceCueRef.current);
         pendingVoiceCueRef.current = null;
@@ -221,7 +223,7 @@ export function CircuitTimer({
 
         if (curPhase === "work") {
           // Work done — mark exercise completed (not skipped)
-          completedRef.current++;
+          setCompleted(completedRef.current + 1);
           const curIdx = currentIndexRef.current;
           const nextIdx = curIdx + 1;
 
@@ -266,7 +268,7 @@ export function CircuitTimer({
     }, 200);
 
     return clearTimer;
-  }, [phase, paused, workSeconds, restSeconds, totalExercises, sequence, clearTimer, startCountdown]);
+  }, [phase, paused, workSeconds, restSeconds, totalExercises, sequence, clearTimer, startCountdown, setCompleted]);
 
   // iOS visibility handler
   useEffect(() => {
@@ -313,7 +315,7 @@ export function CircuitTimer({
 
     if (phase === "work") {
       // Skip remaining work → go to REST (same as natural timer expiry)
-      completedRef.current++;
+      setCompleted(completedRef.current + 1);
       const curIdx = currentIndexRef.current;
       const nextIdx = curIdx + 1;
 
@@ -357,7 +359,7 @@ export function CircuitTimer({
       // During REST → go back to current exercise's WORK (redo it)
       setPhase("work");
       startCountdown(workSeconds);
-      completedRef.current = Math.max(0, completedRef.current - 1);
+      setCompleted(Math.max(0, completedRef.current - 1));
       pendingVoiceCueRef.current = "work";
       setTransitionId((id) => id + 1);
       return;
@@ -398,11 +400,14 @@ export function CircuitTimer({
   const [smoothProgress, setSmoothProgress] = useState(0);
   const rafRef = useRef<number>(0);
 
+  // B355 — a rAF fermo (done/pausa) il valore "snappato" si deriva in render
+  // invece di scriverlo in state da un effect: stesso numero, un render in meno.
+  const ringFrozen = phase === "done" || paused;
+  const snappedProgress = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
+
   useEffect(() => {
-    if (phase === "done" || paused) {
+    if (ringFrozen) {
       cancelAnimationFrame(rafRef.current);
-      const p = phaseDuration > 0 ? 1 - secondsLeft / phaseDuration : 0;
-      setSmoothProgress(p);
       return;
     }
     function tick() {
@@ -414,9 +419,10 @@ export function CircuitTimer({
     }
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [phase, paused, phaseDuration, secondsLeft]);
+  }, [ringFrozen, phaseDuration]);
 
-  const dashOffset = RING_CIRCUMFERENCE - smoothProgress * RING_CIRCUMFERENCE;
+  const ringProgress = ringFrozen ? snappedProgress : smoothProgress;
+  const dashOffset = RING_CIRCUMFERENCE - ringProgress * RING_CIRCUMFERENCE;
 
   // ── Current & next exercise ──────────────────────────────────────
 
@@ -426,6 +432,11 @@ export function CircuitTimer({
   // During REST, show the NEXT exercise as the main one (brief §5.4)
   const displayExercise = phase === "rest" ? (nextExercise || currentExercise) : currentExercise;
   const previewExercise = phase === "work" ? nextExercise : null;
+
+  // A286 — B14: l'immagine che comparirà dopo questa, precaricata mentre la
+  // corrente è ancora a schermo. Durante il REST si sta già mostrando
+  // sequence[i+1], quindi la prossima nuova è la i+2.
+  const preloadExercise = sequence[phase === "rest" ? currentIndex + 2 : currentIndex + 1] ?? null;
 
   // ── Render ───────────────────────────────────────────────────────
 
@@ -502,7 +513,7 @@ export function CircuitTimer({
             <div className="flex flex-col">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Exercise</span>
               <span className="font-semibold text-foreground">
-                {completedRef.current + (phase === "work" ? 1 : 0)}/{totalExercises}
+                {completedCount + (phase === "work" ? 1 : 0)}/{totalExercises}
               </span>
             </div>
           </div>
@@ -527,7 +538,7 @@ export function CircuitTimer({
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleStop(); }}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 hover:text-red-300 transition-colors"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-danger/30 bg-danger/15 text-danger hover:brightness-110 transition-colors"
               aria-label="Stop circuit"
             >
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
@@ -568,7 +579,7 @@ export function CircuitTimer({
             </button>
 
             {/* Exercise info */}
-            <div className="flex-1 rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
+            <div className="flex-1 rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
               {displayExercise.image && (
                 <Image
                   src={`/exercises/core/${displayExercise.image}`}
@@ -603,8 +614,8 @@ export function CircuitTimer({
 
         {/* Prepare: show first exercise preview */}
         {phase === "prepare" && (
-          <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
-            <p className="text-xs text-center text-white/50 uppercase tracking-wider mb-2">First up</p>
+          <div className="w-full max-w-sm rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
+            <p className="text-xs text-center text-white/70 uppercase tracking-wider mb-2">First up</p>
             {sequence[0].image && (
               <Image
                 src={`/exercises/core/${sequence[0].image}`}
@@ -628,18 +639,32 @@ export function CircuitTimer({
         {/* Next exercise preview (during work) */}
         {previewExercise && phase === "work" && (
           <div className="w-full max-w-sm mt-2 rounded-xl border border-white/5 bg-black/10 px-4 py-2">
-            <span className="text-xs text-white/40">Next: </span>
-            <span className="text-sm font-medium text-white/60">{previewExercise.name}</span>
+            <span className="text-xs text-white/70">Next: </span>
+            <span className="text-sm font-medium text-white/80">{previewExercise.name}</span>
           </div>
         )}
 
         {/* REST: pulsing GET READY */}
         {phase === "rest" && (
           <div className="mt-2 animate-pulse">
-            <span className="text-lg font-bold text-blue-300 uppercase tracking-wider">Get Ready</span>
+            <span className="text-lg font-bold text-info uppercase tracking-wider">Get Ready</span>
           </div>
         )}
       </div>
+
+      {/* A286 — B14: precarica l'immagine successiva fuori campo (h/w 1px,
+          non display:none, altrimenti il browser non la scarica). */}
+      {preloadExercise?.image && (
+        <div aria-hidden className="pointer-events-none absolute h-px w-px overflow-hidden opacity-0">
+          <Image
+            src={`/exercises/core/${preloadExercise.image}`}
+            alt=""
+            width={560}
+            height={280}
+            priority
+          />
+        </div>
+      )}
 
       {/* Safe area bottom spacer for nav bar */}
       <div className="shrink-0 h-[env(safe-area-inset-bottom)]" />

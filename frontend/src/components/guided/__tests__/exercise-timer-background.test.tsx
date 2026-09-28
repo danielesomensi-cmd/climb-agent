@@ -30,7 +30,15 @@ vi.mock("@/lib/audio-unlock", () => ({
   unlockAudio: vi.fn(async () => {}),
   getAudioContext: vi.fn(() => ({ state: "running", resume: vi.fn() })),
 }));
-vi.mock("@/lib/haptics", () => ({ tapFeedback: vi.fn() }));
+// A286 — il mock deve esporre tutto ciò che il timer importa: con solo
+// tapFeedback, la chiamata a confirmFeedback sul cambio di fase diventa
+// undefined() e fa crashare il componente dentro l'effect, facendo fallire i
+// test B332 per un motivo che non c'entra con l'invariante che proteggono.
+vi.mock("@/lib/haptics", () => ({
+  tapFeedback: vi.fn(),
+  confirmFeedback: vi.fn(),
+  completeFeedback: vi.fn(),
+}));
 vi.mock("@/lib/beep", () => ({ countdownTick: vi.fn(), transitionBeep: vi.fn() }));
 vi.mock("@/lib/voice-cues", () => ({ speakPhaseTransition: vi.fn() }));
 

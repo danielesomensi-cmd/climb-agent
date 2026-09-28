@@ -1,22 +1,40 @@
 "use client";
 
-import { Suspense } from "react";
-import { useParams } from "next/navigation";
+import { Suspense, useCallback, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { SessionBuilder } from "@/components/session-builder/session-builder";
+import { DiscardChangesDialog } from "@/components/session-builder/discard-changes-dialog";
+
+const BACK_HREF = "/free-session";
 
 export default function SessionBuilderEditPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
+  // B356 — il chevron della TopBar navigava via senza chiedere nulla: si
+  // perdevano le modifiche in silenzio.
+  const [dirty, setDirty] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handleBack = useCallback(() => {
+    if (dirty) setConfirmOpen(true);
+    else router.push(BACK_HREF);
+  }, [dirty, router]);
 
   return (
     <>
-      <TopBar title="Session Builder" subtitle="Edit" backHref="/free-session" />
+      <TopBar title="Session Builder" subtitle="Edit" onBack={handleBack} />
       <main className="px-4 py-4">
         <Suspense fallback={<p className="text-sm text-muted-foreground text-center py-8">Loading...</p>}>
-          <SessionBuilder sessionId={id} />
+          <SessionBuilder sessionId={id} onDirtyChange={setDirty} />
         </Suspense>
       </main>
+      <DiscardChangesDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        onConfirm={() => router.push(BACK_HREF)}
+      />
     </>
   );
 }

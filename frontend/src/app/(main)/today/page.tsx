@@ -28,10 +28,10 @@ import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
-import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { ForceHardDialog } from "@/components/training/force-hard-dialog";
 import { useSubscription } from "@/lib/hooks/use-subscription";
-import { useUserState, useWeekPlan, useDailyQuote } from "@/lib/hooks/queries";
+import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays } from "@/lib/hooks/queries";
 import { useFreeSessionHistory, useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
@@ -47,7 +47,8 @@ import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
 const OutdoorLogForm = dynamic(() => import("@/components/training/OutdoorLogForm"), { ssr: false });
 import { TodayHeroCTA, type NextSessionInfo } from "@/components/training/today-hero-cta";
-import { formatPauseDate } from "@/lib/hooks/use-plan-pause";
+import { PausedBanner } from "@/components/training/paused-banner";
+import { confirmFeedback } from "@/lib/haptics";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +57,7 @@ import {
 } from "@/components/ui/dialog";
 import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressSession } from "@/lib/guided-session-utils";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
-import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorRoute, OutdoorSession, GuidedExercise, OutdoorDayType, OutdoorPitchLadder } from "@/lib/types";
+import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, GuidedExercise, OutdoorDayType, OutdoorPitchLadder } from "@/lib/types";
 import { hasOtherActivity } from "@/lib/other-activity";
 import { completeOtherActivityEvent, removeOtherActivityEvent, removeOutdoorEvent, undoOtherActivityEvent, undoOutdoorEvent } from "@/lib/week-events";
 
@@ -241,9 +242,10 @@ function TodayContent() {
   const [outdoorPlanBusy, setOutdoorPlanBusy] = useState<string | null>(null);
   const [outdoorEditData, setOutdoorEditData] = useState<OutdoorSession | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
-  const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
-  const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
-  const [weekOutdoorLoad, setWeekOutdoorLoad] = useState(0); // B278: outdoor load for the week
+  // A286 E4 — routes/durate/load outdoor arrivano dalla cache di React Query
+  // (vedi useOutdoorDoneDays più sotto): erano quattro useState riempiti da un
+  // effetto keyato su weekPlan, che con structuralSharing disattivato ripartiva
+  // a ogni azione dell'utente.
   const [resumeSession, setResumeSession] = useState<InProgressSession | null>(null);
   // A-NEW-MACRO: end-of-cycle banner + dialog
   const [newCycleDialogOpen, setNewCycleDialogOpen] = useState(false);
@@ -393,37 +395,22 @@ function TodayContent() {
   }, [weekPlan, targetDate]);
   const { data: quote } = useDailyQuote(quoteContext);
 
-  // Fetch outdoor session routes for days marked "done"
-  useEffect(() => {
-    if (!weekPlan) return;
-    const days = weekPlan.weeks.flatMap(w => w.days);
-    const doneDates = days
-      .filter(d => d.outdoor_session_status === "done")
-      .map(d => d.date);
-    if (doneDates.length === 0) {
-      setOutdoorRoutesMap({});
-      setWeekOutdoorLoad(0);
-      return;
-    }
-    const minDate = doneDates.sort()[0];
-    getOutdoorSessions(minDate)
-      .then(({ sessions }) => {
-        const map: Record<string, OutdoorRoute[]> = {};
-        const durMap: Record<string, number> = {};
-        let outdoorLoadTotal = 0; // B278: keep Today's load coherent with Week header + report
-        for (const s of sessions) {
-          if (doneDates.includes(s.date)) {
-            map[s.date] = [...(map[s.date] || []), ...s.routes];
-            if (s.duration_minutes) durMap[s.date] = (durMap[s.date] ?? 0) + s.duration_minutes;
-            if (s.load_score) outdoorLoadTotal += s.load_score;
-          }
-        }
-        setOutdoorRoutesMap(map);
-        setOutdoorDurationMap(durMap);
-        setWeekOutdoorLoad(outdoorLoadTotal);
-      })
-      .catch((err) => { console.error("Failed to load outdoor sessions:", err); });
-  }, [weekPlan]);
+  // A286 E4 — le giornate outdoor "done" passano dalla cache di React Query.
+  // B278: weekOutdoorLoad resta il totale di settimana usato dalla progress bar.
+  const outdoorDoneDates = useMemo(
+    () =>
+      weekPlan?.weeks
+        .flatMap((w) => w.days)
+        .filter((d) => d.outdoor_session_status === "done")
+        .map((d) => d.date) ?? [],
+    [weekPlan],
+  );
+  const {
+    routesMap: outdoorRoutesMap,
+    durationMap: outdoorDurationMap,
+    loadMap: outdoorLoadMap,
+    totalLoad: weekOutdoorLoad,
+  } = useOutdoorDoneDays(outdoorDoneDates, !!weekPlan);
 
   // A245 F-5 (F15): free sessions now come from the React Query cache instead
   // of two hand-rolled effects keyed on [weekPlan]. With structuralSharing
@@ -530,6 +517,9 @@ function TodayContent() {
       await runWeekEvents([
         { event_type: "mark_done", date: targetDate, session_ref: sessionId },
       ]);
+      // A286 — micro-ricompensa: la conferma si sente. La card fa la sua
+      // transizione a "Completed" (session-card, con prefers-reduced-motion).
+      confirmFeedback();
 
       // A207: custom sessions don't feed closed-loop/progression — skip feedback dialog.
       const markedSession = dayPlan?.sessions.find((s) => s.session_id === sessionId);
@@ -1212,11 +1202,6 @@ function TodayContent() {
           </div>
         )}
 
-        {/* Week progress bar */}
-        {!loading && !error && weekPlan && (
-          <WeekProgressBar weekPlan={weekPlan} freeSessions={weekFreeSessions} freeSessionsLoaded={weekFreeSessionsLoaded} outdoorLoad={weekOutdoorLoad} />
-        )}
-
         {/* A246 (F52) — periodic retest reminder. The backend has emitted this
             every ~6 weeks since it was built; until now nothing rendered it, so
             the recalibration it triggers never happened for anyone. Placed
@@ -1230,52 +1215,6 @@ function TodayContent() {
           <WeeklyCheckinCard weekPlan={weekPlan} onPlanUpdated={refetchAll} />
         )}
 
-        {/* C203: boulder phase tip — discipline-gated, dismissible per-phase */}
-        {!loading && !error && dayPlan && boulderPhaseTip && !phaseTipDismissed && (
-          <div className="relative rounded-lg border border-info/30 bg-info/5 p-3 pr-12 text-sm">
-            <p className="font-medium text-info capitalize">
-              {phaseId?.replace(/_/g, " ")} phase
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {boulderPhaseTip}
-            </p>
-            <button
-              type="button"
-              onClick={dismissPhaseTip}
-              aria-label="Dismiss"
-              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
-        {/* A202: feedback loop education banner */}
-        {!loading && !error && dayPlan && hasDoneSession && !feedbackEduDismissed && (
-          <div className="relative rounded-lg border border-primary/30 bg-primary/5 p-3 pr-12 text-sm">
-            <p className="font-medium text-primary">
-              Your feedback adapts your training
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              After each exercise, your rating (easy/ok/hard) automatically adjusts weight and volume in future sessions. The more feedback you give, the more precise your plan becomes.
-            </p>
-            <button
-              type="button"
-              onClick={dismissFeedbackEdu}
-              aria-label="Dismiss"
-              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-            >
-              ×
-            </button>
-          </div>
-        )}
-
-        {/* A224: live weather card — current location, today view only */}
-        {!loading && !error && isViewingToday && <WeatherCard />}
-
-        {/* A-COACH-V1a: AI coach entry point (bottom nav is full) */}
-        {!loading && !error && isViewingToday && <CoachCard />}
-
         {/* A220: standalone "Focus di oggi" cue section above the day's cards */}
         {!loading && !error && dayPlan && !heroState && dayPlan.sessions.length > 0 && (
           <DailyCueBanner
@@ -1285,22 +1224,10 @@ function TodayContent() {
           />
         )}
 
-        {/* A223: plan paused — replaces today's sessions until resumed */}
+        {/* A223: plan paused — replaces today's sessions until resumed.
+            A286: stesso componente di /week (era una card scritta a mano qui). */}
         {!loading && !error && isPaused && (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 text-center space-y-3">
-            <p className="text-lg font-semibold text-amber-200">Plan paused</p>
-            <p className="text-sm text-muted-foreground">
-              Paused since {formatPauseDate(pausedSince)}. Your training is frozen
-              right where you left off — no sessions are scheduled while paused.
-            </p>
-            <button
-              type="button"
-              onClick={() => router.push("/settings")}
-              className="inline-flex h-11 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-            >
-              Resume plan
-            </button>
-          </div>
+          <PausedBanner since={pausedSince} variant="prominent" />
         )}
 
         {/* Day plan — suppressed when hero is active (A217 rest-day dedup) */}
@@ -1311,6 +1238,7 @@ function TodayContent() {
             homeEquipment={homeEquipment}
             outdoorRoutes={outdoorRoutesMap[dayPlan.date]}
             outdoorDurationMinutes={outdoorDurationMap[dayPlan.date]}
+            outdoorLoadScore={outdoorLoadMap[dayPlan.date]}
             weekPlan={weekPlan}
             onSessionUpdated={(updatedPlan) => {
               // B153d: use response data when available to avoid 422 reload race
@@ -1382,6 +1310,62 @@ function TodayContent() {
               )}
             </div>
           )}
+
+        {/* A286 — tutto quello che segue stava SOPRA la sessione del giorno:
+            per arrivare all'allenamento di oggi bisognava scorrere progress bar,
+            meteo, coach e due banner educativi. La sessione ora è il primo
+            blocco sotto l'header; questi restano, ma dopo. */}
+
+        {/* Week progress bar */}
+        {!loading && !error && weekPlan && (
+          <WeekProgressBar weekPlan={weekPlan} freeSessions={weekFreeSessions} freeSessionsLoaded={weekFreeSessionsLoaded} outdoorLoad={weekOutdoorLoad} />
+        )}
+
+        {/* A224: live weather card — current location, today view only */}
+        {!loading && !error && isViewingToday && <WeatherCard />}
+
+        {/* A-COACH-V1a: AI coach entry point (bottom nav is full) */}
+        {!loading && !error && isViewingToday && <CoachCard />}
+
+        {/* C203: boulder phase tip — discipline-gated, dismissible per-phase */}
+        {!loading && !error && dayPlan && boulderPhaseTip && !phaseTipDismissed && (
+          <div className="relative rounded-lg border border-info/30 bg-info/5 p-3 pr-12 text-sm">
+            <p className="font-medium text-info capitalize">
+              {phaseId?.replace(/_/g, " ")} phase
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {boulderPhaseTip}
+            </p>
+            <button
+              type="button"
+              onClick={dismissPhaseTip}
+              aria-label="Dismiss"
+              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {/* A202: feedback loop education banner */}
+        {!loading && !error && dayPlan && hasDoneSession && !feedbackEduDismissed && (
+          <div className="relative rounded-lg border border-primary/30 bg-primary/5 p-3 pr-12 text-sm">
+            <p className="font-medium text-primary">
+              Your feedback adapts your training
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              After each exercise, your rating (easy/ok/hard) automatically adjusts weight and volume in future sessions. The more feedback you give, the more precise your plan becomes.
+            </p>
+            <button
+              type="button"
+              onClick={dismissFeedbackEdu}
+              aria-label="Dismiss"
+              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* A217: daily motivational quote inside hero card */}
         {quote && !loading && (

@@ -8,6 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { TopBar } from "@/components/layout/top-bar";
 import { WeekGrid } from "@/components/training/week-grid";
 import { PausedBanner } from "@/components/training/paused-banner";
+import { WeekSkeleton } from "@/components/training/week-skeleton";
 import { DayCard } from "@/components/training/day-card";
 import { SkippedTestsCard } from "@/components/training/skipped-tests-card";
 const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
@@ -20,11 +21,12 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide-react";
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
-import { applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, applyEvents, postFeedback, getOutdoorSpots, getOutdoorSessions, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+import { applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, applyEvents, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { ForceHardDialog } from "@/components/training/force-hard-dialog";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
 import { useFreeSessionsForDates } from "@/lib/hooks/queries/use-free-session";
+import { useOutdoorDoneDays } from "@/lib/hooks/queries/use-outdoor-sessions";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
@@ -39,7 +41,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorRoute, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder } from "@/lib/types";
 import { normalizeOtherActivities } from "@/lib/other-activity";
 import {
   Drawer,
@@ -71,7 +73,17 @@ export default function WeekPage() {
   // regenerated) — show an explicit message instead of a generic empty state.
   const pastWeekUnavailable = weekQuery.data?.past_week_unavailable ?? false;
   const phaseId = weekQuery.data?.phase_id ?? null;
-  const displayWeekNum = weekQuery.data?.week_num ?? 1;
+  // A286 — la barra di navigazione si smontava a ogni cambio settimana (il
+  // numero veniva solo dalla risposta, assente mentre carica). Teniamo l'ultimo
+  // numero noto e, se stiamo caricando una settimana richiesta esplicitamente,
+  // mostriamo QUELLA: la barra resta montata e il caricamento si vede solo nel
+  // contenuto.
+  const [lastKnownWeekNum, setLastKnownWeekNum] = useState(1);
+  const serverWeekNum = weekQuery.data?.week_num;
+  useEffect(() => {
+    if (serverWeekNum != null) setLastKnownWeekNum(serverWeekNum);
+  }, [serverWeekNum]);
+  const displayWeekNum = serverWeekNum ?? (weekNum > 0 ? weekNum : lastKnownWeekNum);
   const macrocycle = (stateQuery.data?.macrocycle as Macrocycle | undefined) ?? null;
   const gyms = useMemo<Array<{ gym_id?: string; name: string; equipment: string[] }>>(() => {
     const eq = stateQuery.data?.equipment as Record<string, unknown> | undefined;
@@ -127,9 +139,8 @@ export default function WeekPage() {
   const [outdoorLogDate, setOutdoorLogDate] = useState<string | null>(null);
   const [outdoorEditDate, setOutdoorEditDate] = useState<string | null>(null);
   const [outdoorSpots, setOutdoorSpots] = useState<OutdoorSpot[]>([]);
-  const [outdoorRoutesMap, setOutdoorRoutesMap] = useState<Record<string, OutdoorRoute[]>>({});
-  const [outdoorDurationMap, setOutdoorDurationMap] = useState<Record<string, number>>({});
-  const [outdoorLoadMap, setOutdoorLoadMap] = useState<Record<string, number>>({});
+  // A286 E4 — vedi useOutdoorDoneDays più sotto: erano tre useState riempiti da
+  // un effetto keyato su weekPlan, che rifetchava a ogni azione dell'utente.
   const weekRouter = useRouter();
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -143,36 +154,21 @@ export default function WeekPage() {
   // React Query handles fetching via useUserState + useWeekPlan(weekNum).
   // Changing weekNum swaps the cache key; RQ shows cached data instantly and refetches in background.
 
-  // Fetch outdoor session routes for days marked "done"
-  useEffect(() => {
-    if (!weekPlan) return;
-    const allDays = weekPlan.weeks.flatMap(w => w.days);
-    const doneDates = allDays
-      .filter(d => d.outdoor_session_status === "done")
-      .map(d => d.date);
-    if (doneDates.length === 0) {
-      setOutdoorRoutesMap({});
-      return;
-    }
-    const minDate = doneDates.sort()[0];
-    getOutdoorSessions(minDate)
-      .then(({ sessions }) => {
-        const map: Record<string, OutdoorRoute[]> = {};
-        const durMap: Record<string, number> = {};
-        const loadMap: Record<string, number> = {};
-        for (const s of sessions) {
-          if (doneDates.includes(s.date)) {
-            map[s.date] = [...(map[s.date] || []), ...s.routes];
-            if (s.duration_minutes) durMap[s.date] = (durMap[s.date] ?? 0) + s.duration_minutes;
-            if (s.load_score) loadMap[s.date] = (loadMap[s.date] ?? 0) + s.load_score;
-          }
-        }
-        setOutdoorRoutesMap(map);
-        setOutdoorDurationMap(durMap);
-        setOutdoorLoadMap(loadMap);
-      })
-      .catch((err) => { console.error("Failed to load outdoor sessions:", err); });
-  }, [weekPlan]);
+  // A286 E4 — le giornate outdoor "done" passano dalla cache di React Query,
+  // condivisa con /today: stessa chiave, nessuna richiesta doppia.
+  const outdoorDoneDates = useMemo(
+    () =>
+      weekPlan?.weeks
+        .flatMap((w) => w.days)
+        .filter((d) => d.outdoor_session_status === "done")
+        .map((d) => d.date) ?? [],
+    [weekPlan],
+  );
+  const {
+    routesMap: outdoorRoutesMap,
+    durationMap: outdoorDurationMap,
+    loadMap: outdoorLoadMap,
+  } = useOutdoorDoneDays(outdoorDoneDates, !!weekPlan);
 
   // A245 F-5 (F15): was a hand-rolled Promise.all over 7 days in an effect
   // keyed on [weekPlan]. structuralSharing is off, so every mutation produced a
@@ -760,8 +756,8 @@ export default function WeekPage() {
       <main className="mx-auto max-w-2xl space-y-6 p-4">
         <PausedBanner since={macrocycle?.pause?.active_since} />
 
-        {/* Week navigation */}
-        {!loading && weekPlan && (
+        {/* Week navigation — A286: resta montata anche mentre la settimana carica */}
+        {(weekPlan || macrocycle) && (
           <div className="flex items-center justify-between">
             <Button
               variant="ghost"
@@ -815,12 +811,8 @@ export default function WeekPage() {
           </div>
         )}
 
-        {/* Loading state */}
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          </div>
-        )}
+        {/* Loading state — A286: skeleton al posto dello spinner (vedi WeekSkeleton) */}
+        {loading && <WeekSkeleton />}
 
         {/* Error state */}
         {(error || queryError) && !loading && (

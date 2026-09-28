@@ -28,13 +28,13 @@ export function MySessionsSection({ enabled = true }: MySessionsSectionProps) {
       </div>
 
       {/* Collapsible card */}
-      <div className="rounded-xl border bg-gradient-to-r from-violet-500/20 to-violet-600/5 border-violet-500/30 overflow-hidden">
+      <div className="rounded-xl border bg-gradient-to-r from-brand/20 to-brand/5 border-brand/30 overflow-hidden">
         <button
           onClick={() => setExpanded((v) => !v)}
           className="flex w-full items-center gap-4 p-4 text-left transition-all active:scale-[0.99]"
           aria-expanded={expanded}
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 text-violet-400">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-black/20 text-brand">
             <Dumbbell className="size-6" />
           </div>
           <div className="flex-1">
@@ -49,12 +49,12 @@ export function MySessionsSection({ enabled = true }: MySessionsSectionProps) {
         </button>
 
         {expanded && (
-          <div className="flex flex-col gap-2 border-t border-violet-500/20 bg-black/10 p-3">
+          <div className="flex flex-col gap-2 border-t border-brand/20 bg-black/10 p-3">
             {/* Existing sessions */}
             {sessions.map((session) => (
               <div
                 key={session.id}
-                className="flex items-center gap-3 rounded-lg border border-violet-500/20 bg-background/50 p-3"
+                className="flex items-center gap-3 rounded-lg border border-brand/20 bg-background/50 p-3"
               >
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold truncate">{session.name}</p>
@@ -86,9 +86,9 @@ export function MySessionsSection({ enabled = true }: MySessionsSectionProps) {
             {/* Build a Session button */}
             <button
               onClick={() => router.push("/session-builder")}
-              className="flex items-center gap-3 rounded-lg border border-dashed border-violet-500/30 p-3 text-left transition-all hover:bg-violet-500/5 active:scale-[0.99]"
+              className="flex items-center gap-3 rounded-lg border border-dashed border-brand/30 p-3 text-left transition-all hover:bg-brand/10 active:scale-[0.99]"
             >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-500/10 text-violet-400 shrink-0">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand/15 text-brand shrink-0">
                 <Plus className="size-5" />
               </div>
               <div>

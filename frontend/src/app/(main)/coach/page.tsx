@@ -22,6 +22,7 @@ import {
   type AdhocSessionPreview,
   type CoachMessage,
 } from "@/lib/api";
+import { MarkdownLite } from "@/components/shared/markdown-lite";
 import { buildGuidedStateFromExercises, saveGuidedState } from "@/lib/guided-session-utils";
 import { shouldRouteToAdhoc } from "@/lib/adhoc-gate";
 import { findDay, firstFreeSlot } from "@/lib/day-slots";
@@ -64,7 +65,7 @@ function AdhocSessionCard({
   busy: boolean;
 }) {
   return (
-    <div className="max-w-[92%] space-y-3 rounded-2xl rounded-bl-md border border-primary/30 bg-muted/50 px-4 py-3 text-sm">
+    <div className="max-w-[92%] space-y-3 rounded-xl rounded-bl-md border border-primary/30 bg-card px-4 py-3 text-sm shadow-sm">
       <div>
         <p className="font-semibold">{session.name}</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -128,16 +129,18 @@ function MessageBubble({
       </div>
     );
   }
+  // A286 — il turno dell'utente è testo puro (pre-wrap); quello del coach è
+  // markdown e va renderizzato, altrimenti restano a video ## e ** grezzi.
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+        className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm leading-relaxed ${
           isUser
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md bg-muted text-foreground"
+            ? "whitespace-pre-wrap rounded-br-md bg-primary text-primary-foreground"
+            : "rounded-bl-md border border-border bg-card text-foreground shadow-sm"
         }`}
       >
-        {msg.content}
+        {isUser ? msg.content : <MarkdownLite text={msg.content} />}
       </div>
     </div>
   );
@@ -146,7 +149,7 @@ function MessageBubble({
 function ThinkingIndicator() {
   return (
     <div className="flex justify-start">
-      <div className="flex items-center gap-2 rounded-2xl rounded-bl-md bg-muted px-4 py-3">
+      <div className="flex items-center gap-2 rounded-xl rounded-bl-md border border-border bg-card px-4 py-3">
         <span className="flex gap-1">
           {[0, 150, 300].map((delay) => (
             <span
@@ -351,7 +354,8 @@ export default function CoachPage() {
   );
 
   return (
-    <div className="flex min-h-[calc(100vh-5rem)] flex-col">
+    // A286 — 100dvh: con 100vh su iOS la barra URL mangiava l'ultima riga.
+    <div className="flex min-h-[calc(100dvh-5rem)] flex-col">
       <TopBar title="Coach" subtitle="Your AI climbing coach" />
 
       <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-4">
@@ -398,7 +402,7 @@ export default function CoachPage() {
           {sending && <ThinkingIndicator />}
 
           {error && (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300">
+            <div className="rounded-xl border border-danger/30 bg-danger/15 px-4 py-2.5 text-sm text-danger">
               {error}
             </div>
           )}
@@ -406,8 +410,11 @@ export default function CoachPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Composer + disclaimer — sticky above the bottom nav */}
-        <div className="sticky bottom-20 -mx-4 mt-3 border-t border-border bg-background/95 px-4 pb-2 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        {/* Composer + disclaimer — sticky above the bottom nav.
+            A286: l'offset era `bottom-20` (5rem) a occhio; la bottom nav è alta
+            3.5rem + safe-area, quindi su iPhone col notch il composer finiva
+            sotto la nav. Ora l'offset la misura davvero. */}
+        <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] -mx-4 mt-3 border-t border-border bg-background/95 px-4 pb-2 pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           {/* A-COACH-V1b: suggested-question chips — shown while composing */}
           {suggestions.length > 0 && !input.trim() && !sending && (
             <div className="scrollbar-none -mx-1 mb-2 flex gap-2 overflow-x-auto px-1 pb-0.5">
@@ -437,7 +444,8 @@ export default function CoachPage() {
               rows={1}
               maxLength={4000}
               placeholder="Ask your coach…"
-              className="max-h-32 min-h-[44px] flex-1 resize-none rounded-2xl border border-border bg-muted/50 px-4 py-2.5 text-sm outline-none placeholder:text-muted-foreground focus:border-primary"
+              /* A286 — text-base (16px): sotto i 16px iOS zooma al focus e non torna indietro. */
+              className="max-h-32 min-h-[44px] flex-1 resize-none rounded-xl border border-border bg-muted/50 px-4 py-2.5 text-base outline-none placeholder:text-muted-foreground focus:border-primary"
             />
             <button
               type="button"

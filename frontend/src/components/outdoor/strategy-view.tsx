@@ -15,8 +15,8 @@ import type { OutdoorStrategyResponse, OutdoorModifier } from "@/lib/types";
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</dt>
-      <dd className="mt-0.5 text-sm text-zinc-200">{value}</dd>
+      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-sm text-foreground">{value}</dd>
     </div>
   );
 }
@@ -24,12 +24,12 @@ function Field({ label, value }: { label: string; value: string }) {
 function ListField({ label, items }: { label: string; items: string[] }) {
   return (
     <div>
-      <dt className="text-[11px] uppercase tracking-wide text-zinc-500">{label}</dt>
+      <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className="mt-1">
         <ul className="space-y-1">
           {items.map((it, i) => (
-            <li key={i} className="flex gap-2 text-sm text-zinc-200">
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-zinc-500" aria-hidden="true" />
+            <li key={i} className="flex gap-2 text-sm text-foreground">
+              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground" aria-hidden="true" />
               <span>{it}</span>
             </li>
           ))}
@@ -41,14 +41,14 @@ function ListField({ label, items }: { label: string; items: string[] }) {
 
 function ModifierChip({ m }: { m: OutdoorModifier }) {
   return (
-    <li className="rounded-lg border border-white/5 bg-zinc-900/40 p-2.5">
+    <li className="rounded-lg border border-border bg-card p-2.5">
       <div className="mb-1 flex flex-wrap items-center gap-1.5">
-        <span className="rounded-full bg-indigo-900/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-indigo-300">
+        <span className="rounded-full border border-brand-secondary/30 bg-brand-secondary/15 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-brand-secondary">
           {m.value.replace(/_/g, " ")}
         </span>
-        <span className="text-[10px] uppercase tracking-wide text-zinc-600">{m.key.replace(/_/g, " ")}</span>
+        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{m.key.replace(/_/g, " ")}</span>
       </div>
-      <p className="text-sm text-zinc-300">{m.text}</p>
+      <p className="text-sm text-foreground">{m.text}</p>
     </li>
   );
 }
@@ -75,7 +75,7 @@ export function StrategyView({ data }: { data: OutdoorStrategyResponse }) {
       {/* Modifiers (layered, with provenance) */}
       {strategy.modifiers.length > 0 && (
         <div>
-          <h4 className="mb-2 text-[11px] uppercase tracking-wide text-zinc-500">
+          <h4 className="mb-2 text-[11px] uppercase tracking-wide text-muted-foreground">
             Adjustments for your day
           </h4>
           <ul className="space-y-2">
@@ -94,8 +94,8 @@ export function StrategyView({ data }: { data: OutdoorStrategyResponse }) {
           aria-expanded={nutOpen}
           className="flex w-full items-center justify-between p-3 text-left"
         >
-          <span className="text-sm font-medium text-zinc-200">Fueling &amp; hydration</span>
-          <svg className={`h-4 w-4 text-zinc-500 transition-transform ${nutOpen ? "rotate-180" : ""}`}
+          <span className="text-sm font-medium text-foreground">Fueling &amp; hydration</span>
+          <svg className={`h-4 w-4 text-muted-foreground transition-transform ${nutOpen ? "rotate-180" : ""}`}
             fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
@@ -114,9 +114,9 @@ export function StrategyView({ data }: { data: OutdoorStrategyResponse }) {
 
       {/* Safety standing reminders (D72 / CUE-02 / D64) */}
       {Object.keys(safety).length > 0 && (
-        <ul className="space-y-1 rounded-lg border border-amber-900/30 bg-amber-950/10 p-3">
+        <ul className="space-y-1 rounded-lg border border-warning/30 bg-warning/10 p-3">
           {Object.values(safety).map((s, i) => (
-            <li key={i} className="flex gap-2 text-xs text-amber-200/80">
+            <li key={i} className="flex gap-2 text-xs text-warning">
               <span aria-hidden="true">⚠️</span>
               <span>{s}</span>
             </li>
