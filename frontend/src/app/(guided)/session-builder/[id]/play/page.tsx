@@ -542,12 +542,17 @@ export default function SessionPlayPage() {
               : nextExercise
                 ? formatExerciseName(nextExercise.exercise_id, catalogNameMap)
                 : "Finish";
+            // B350: what comes after this rest — another set of the same
+            // exercise, or the next one. Timed work restarts on its own.
+            const nextBout = hasMoreSetsInExercise ? currentExercise : nextExercise;
+            const nextIsTimed = (nextBout?.work_seconds ?? 0) > 0;
             return (
               <CustomRestTimer
                 targetSeconds={currentExercise.rest_between_sets_seconds ?? 0}
                 nextLabel={nextLabel}
                 onComplete={handleRestDone}
                 onSkip={handleRestDone}
+                autoAdvance={nextIsTimed}
               />
             );
           })()}

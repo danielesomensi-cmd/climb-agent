@@ -182,7 +182,12 @@ The guided session is your in-gym companion. It walks you through every exercise
 - A **process cue** banner reminds you what to focus on today (e.g., "Place every foot so silently that no sound is audible")
 - On the **Plan** page, each phase has an expandable "About this phase" section explaining *why* you're in this phase and what to expect
 
-**When a rest runs out**: the timer stops and waits for you. It keeps counting *up* (`+2:14`) and shows a **Next set** button — the set counter does not move until you tap it. Only you know whether you're actually back on the wall, so the app never counts a set on your behalf. Timed work phases still advance on their own when they finish while you're looking at them, so circuits stay hands-free.
+**When a rest runs out**: what happens depends on what comes next.
+
+- **Timed work** (a plank, a hang, an interval): the next set starts on its own the moment the rest ends. On these the clock *is* the exercise, so tapping to restart every set would defeat the timer.
+- **Rep-based work** (bouldering, a set of pull-ups): the timer stops and waits for you. It keeps counting *up* (`+2:14`) and shows a **Next set** button — the set counter does not move until you tap it. Only you know whether you're actually back on the wall, so the app never counts a set on your behalf.
+
+One exception overrides both: a rest that ran out **while the app was in the background** always waits for your tap, whatever comes next. Nobody watched that clock, so the app will not count work you may not have done.
 
 **iOS Safari note**: The timer uses a wall-clock engine specifically designed to survive Safari background suspension, and the screen is kept awake for the whole session. If you switch apps or the phone locks, the clock stays accurate — and anything that ran out while you were away waits for your tap rather than advancing the counter.
 
