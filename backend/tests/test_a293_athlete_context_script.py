@@ -204,3 +204,17 @@ class TestSimulate:
         snap = json.dumps(st, sort_keys=True)
         cli.simulate(st, DRAFT, "2026-10-06", "evening", replace=False)
         assert json.dumps(st, sort_keys=True) == snap
+
+
+class TestPlayLine:
+    def test_play_line_carries_the_scheme_specific_calculation_note(self):
+        draft = {"name": "Trazioni 3x5", "exercises": [
+            {"exercise_id": "weighted_pullup", "sets": 3, "reps": 5, "load_kg": 28.5}]}
+        sim = cli.simulate(_state(), draft, "2026-10-06", "lunch", replace=True)
+        e = next(x for x in sim["resolved_exercises"] if x["exercise_id"] == "weighted_pullup")
+        from backend.engine.anchored_load import anchored_load
+        anch = anchored_load(_state(), "weighted_pullup", date="2026-10-06", sets=3, reps=5)
+        assert e["suggested_external_load_kg"] == anch["external"]
+        out = cli.render_simulation(sim)
+        assert "carico al play: weighted_pullup 3×5" in out and "→ nota: «" in out
+        assert f"{round(anch['pct_of_official'] * 100)}% di" in out

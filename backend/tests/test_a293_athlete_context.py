@@ -537,3 +537,156 @@ class TestDocs:
         assert cmd.startswith("---\ndescription:")
         assert "scripts/athlete_context.py" in cmd and "docs/training/athlete_plan.md" in cmd
         assert "--simulate" in cmd and "OK esplicito" in cmd
+
+
+# ---------------------------------------------------------------------------
+# Review fixes (A293 review, 2026-10-04)
+# ---------------------------------------------------------------------------
+
+def _set_day(st, week, d, sessions):
+    for day in st["week_plans"][week]["weeks"][0]["days"]:
+        if day["date"] == d:
+            day["sessions"] = sessions
+            return
+    raise AssertionError(d)
+
+
+class TestReviewFixes:
+    def test_finger_guard_sees_replanner_spacing_of_finger_tagged_sessions(self):
+        st = _state()
+        _set_day(st, "2026-10-05", "2026-10-09", [])  # no strength_long
+        sat = _day(ac.build_athlete_context(st, TODAY), "2026-10-10")
+        # finger_maintenance_gym on Sunday is tagged finger (not hard): a max-hang
+        # custom on Saturday would make the replanner downgrade it.
+        assert sat["finger_max_ok"] is False
+        assert any("finger_maintenance_gym" in r and "declasserebbe" in r for r in sat["finger_reasons"])
+
+    def test_finger_spacing_follows_recovery_multiplier(self):
+        st = _state()
+        _set_day(st, "2026-10-05", "2026-10-09", [])
+        st["week_plans"]["2026-10-05"]["profile_snapshot"]["recovery_multiplier"] = 1.5
+        ctx = ac.build_athlete_context(st, TODAY)
+        fri = _day(ctx, "2026-10-09")
+        assert fri["finger_spacing_gap_d"] == 2
+        assert fri["finger_max_ok"] is False  # power_contact Wed and finger_maintenance Sun, both 2 days away
+        assert any("2026-10-11" in r for r in fri["finger_reasons"])
+
+    def test_hard_cap_zero_is_honoured(self):
+        st = _state()
+        st["week_plans"]["2026-10-05"]["profile_snapshot"]["hard_cap_per_week"] = 0
+        ctx = ac.build_athlete_context(st, "2026-10-06")
+        assert ctx["guards"]["hard_cap"]["cap"] == 0 and ctx["guards"]["hard_cap"]["at_cap"] is True
+        tue = _day(ctx, "2026-10-06")  # not a hard day yet
+        assert tue["finger_max_ok"] is False and tue["heavy_pull_ok"] is False
+        assert any("cap giorni hard" in r for r in tue["pull_reasons"])
+
+    def test_deload_blocks_max_rows_and_intensity_cap_rendered(self):
+        ctx = ac.build_athlete_context(_state(), "2026-11-30")
+        assert ctx["position"]["phase_id"] == "deload"
+        row = _day(ctx, "2026-11-30")
+        assert row["finger_max_ok"] is False and row["heavy_pull_ok"] is False
+        assert any("deload" in r for r in row["finger_reasons"])
+        assert "Tetto di intensità della fase: max" in ac.render_text(_ctx())
+
+    def test_heavy_pull_window_looks_forward(self):
+        # 05/10 limit and 09/10 strength_long are planned heavy pulls: a heavy
+        # pull on 03/10 would make 3 in the window 03..09.
+        ctx = ac.build_athlete_context(_state(), "2026-10-02")
+        sat = _day(ctx, "2026-10-03")
+        assert sat["heavy_pull_ok"] is False and sat["front_lever_ok"] is False
+        assert "2026-10-09" in sat["pull_reasons"][0]
+        assert _day(ctx, "2026-10-02")["heavy_pull_ok"] is True  # window 26/09..02/10 has none
+
+    def test_planned_technique_custom_counts(self):
+        st = _state()
+        _set_day(st, "2026-10-05", "2026-10-10", [_sess(
+            "evening", "custom_cs_tech", is_custom=True, name="Tecnica",
+            tags={"hard": False, "finger": False},
+            exercises=[{"exercise_id": "silent_feet_drill", "sets": 1},
+                       {"exercise_id": "no_readjust_drill", "sets": 2},
+                       {"exercise_id": "hover_hands", "sets": 2}])])
+        ctx = ac.build_athlete_context(st, "2026-10-06")
+        tech = _req(ctx, "technique")
+        assert tech["status"] == "planned" and tech["planned"][0]["session_id"] == "custom_cs_tech"
+        assert not any(w.get("key") == "technique" for w in ctx["warnings"])
+        sess = st["week_plans"]["2026-10-05"]["weeks"][0]["days"][5]["sessions"][0]
+        assert "technique" in ac.key_matches(sess, "strength_power")
+
+    def test_warmup_drills_are_not_the_technique_key(self):
+        cat = ac.load_exercise_catalog()
+        warm = {"session_id": "custom_cs_x", "status": "done",
+                "exercises": [{"exercise_id": "silent_feet_drill"}, {"exercise_id": "foothold_stare"},
+                              {"exercise_id": "weighted_pullup"}]}
+        assert ac._technique_hit(warm, cat) is False
+        real = dict(warm, exercises=warm["exercises"] + [{"exercise_id": "no_readjust_drill"},
+                                                         {"exercise_id": "twist_lock_drill"}])
+        assert ac._technique_hit(real, cat) is True
+
+    def test_pe_limit_not_due_inside_gap(self):
+        st = _state()
+        st["week_plans"]["2026-10-12"] = _week("2026-10-12", {
+            "2026-10-17": [_sess("evening", "power_contact_gym", "done", tags={"hard": True, "finger": True})]})
+        ctx = ac.build_athlete_context(st, "2026-10-20")  # PE week 1
+        lp, th = _req(ctx, "limit_power"), _req(ctx, "try_hard")
+        assert lp["last_done"] == "2026-10-17" and lp["due_by"] == "2026-10-29"
+        assert lp["status"] == "not_due" and th["status"] == "not_due"
+        assert not any(w.get("key") in ("limit_power", "try_hard") for w in ctx["warnings"])
+        assert "NOT_DUE" in ac.render_text(ctx)
+
+    def test_pe_limit_due_this_week_is_missing(self):
+        st = _state()
+        st["week_plans"]["2026-10-05"]["weeks"][0]["days"][0]["sessions"][0]["status"] = "done"
+        st["week_plans"]["2026-10-05"]["weeks"][0]["days"][2]["sessions"][1]["status"] = "skipped"
+        ctx = ac.build_athlete_context(st, "2026-10-20")  # last limit 05/10 → due 17/10
+        assert _req(ctx, "limit_power")["status"] == "missing"
+
+    def test_a294_incompatible_signature_is_reported(self, monkeypatch):
+        mod = types.ModuleType("backend.engine.key_sessions_v1")
+
+        def compute_key_status(state, *, plans, outdoor_logs):  # the R5 shape
+            return {"stimuli": []}
+
+        mod.compute_key_status = compute_key_status
+        monkeypatch.setitem(sys.modules, "backend.engine.key_sessions_v1", mod)
+        ctx = _ctx()
+        assert ctx["key_sessions"]["source"] == "fallback"
+        assert "TypeError" in ctx["key_sessions"]["a294_error"]
+        assert any(w["code"] == "KEY_SESSIONS_A294_MISMATCH" for w in ctx["warnings"])
+        assert not any(w["code"] == "KEY_SESSIONS_FALLBACK" for w in ctx["warnings"])
+        assert "A294 presente ma NON integrato" in ac.render_text(ctx)
+
+    def test_a294_unknown_shape_is_reported(self, monkeypatch):
+        mod = types.ModuleType("backend.engine.key_sessions_v1")
+        mod.compute_key_status = lambda state, today, **kw: {"stimuli": []}
+        monkeypatch.setitem(sys.modules, "backend.engine.key_sessions_v1", mod)
+        ks = _ctx()["key_sessions"]
+        assert ks["source"] == "fallback" and "requirements" in ks["a294_error"]
+        assert ks["requirements"]  # the fallback rows, not an empty section
+
+    def test_hiit_work_on_guard_day_warned(self):
+        ctx = _ctx()
+        w = [x for x in ctx["warnings"] if x["code"] == "HIIT_ON_GUARD_DAY"]
+        assert [x["date"] for x in w] == ["2026-10-07"]
+
+    def test_work_recurrences_flagged_at_phase_change(self):
+        st = _state()
+        st["week_plans"]["2026-10-19"] = _week("2026-10-19", {
+            "2026-10-21": [_sess("lunch", "custom_cs_hiit", "planned", is_custom=True,
+                                 name="Work — HIIT 4x4 (VO2max)", tags={"hard": False, "finger": False})]})
+        ctx = ac.build_athlete_context(st, "2026-10-12")  # SP ends 19/10
+        w = [x for x in ctx["warnings"] if x["code"] == "WORK_RECURRENCE_PHASE_CHANGE"]
+        assert len(w) == 1 and "power_endurance" in w[0]["message"] and "2026-10-21" in w[0]["message"]
+        # Far from a phase change: no flag.
+        assert not any(x["code"] == "WORK_RECURRENCE_PHASE_CHANGE"
+                       for x in ac.build_athlete_context(st, "2026-09-28")["warnings"])
+
+    def test_anchor_section_says_it_is_scheme_specific(self):
+        assert "carico al play" in ac.render_text(_ctx())
+
+    def test_plan_pain_rule_complete(self):
+        text = (REPO_ROOT / ac.ATHLETE_PLAN_PATH).read_text(encoding="utf-8")
+        assert "hang ≤ 85%" in text and "0.80" in text
+
+    def test_command_points_to_play_line_for_other_schemes(self):
+        text = (REPO_ROOT / ".claude" / "commands" / "custom-session.md").read_text(encoding="utf-8")
+        assert "carico al play" in text and "NOT_DUE" in text

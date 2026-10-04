@@ -87,7 +87,10 @@ Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
 **Più duro, in quest'ordine:** intensità (RIR 1-2) → densità → frequenza → volume.
 - Mai a cedimento sulle dita.
 - Al massimo 1 blocco a RIR 1.
-- Domanda sul dolore a fine seduta (scala 0-3 per zona: 2 → −10% per 7 giorni, 3 → 14 giorni e proposta di limitazione).
+- Domanda sul dolore a fine seduta (scala 0-3 per zona):
+  - **2** → −10% e **hang ≤ 85%** per 7 giorni;
+  - **3** → 14 giorni con **tetto 0.80** e proposta di limitazione.
+  - Vale per **tutto** il lavoro dita di quella zona, non solo per i 4 esercizi ancorati: hang non ancorati, tasche e intensità del limit compresi. Il dolore si applica prima del pavimento.
 
 **Fatica:** 3 sedute hard in 14 giorni → pavimento più avviso.
 
@@ -105,7 +108,7 @@ Il test conta come esposizione. Durante il rientro, max hang al massimo 5 serie.
 
 **Principi:**
 - La tecnica si allena **vicino al limite**: da flash a RP-2. A 7b a vista gli errori di piede e di posizione escono solo lì.
-- Il riscaldamento non è lo stimolo tecnico.
+- Il riscaldamento non è lo stimolo tecnico: `silent_feet_drill`, `foothold_stare`, `straight_arms` e `hip_rotation_drill` non contano mai per la chiave tecnica (servono ≥ 2 drill tecnici diversi oltre a questi).
 - Mai 6b+/6C come blocco tecnico. Mai più volume come leva.
 - **Una leva per volta:** piedi più piccoli → meno aggiustamenti → più ripido o posizione meno ovvia → fatica → roccia.
 - Sempre **da freschi, a inizio seduta**: precisione e glued_feet mai dopo il limit.

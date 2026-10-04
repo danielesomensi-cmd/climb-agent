@@ -30,10 +30,12 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
   - mai riportare debito dalle settimane passate: uno stimolo saltato la settimana scorsa è perso;
   - mai risolvere un conflitto togliendo la sessione chiave.
 - **Guardie** (sezione «Guardie», giorno per giorno). Ogni riga deve rispettare:
-  - `NO dita max` → niente hang massimali, limit, campus o tasche dure quel giorno. Lavoro dita solo se il giorno è **già** dita-hard e la riga va dentro quella seduta;
-  - `NO tirata ≥85%` → niente trazione zavorrata pesante né front lever (vale anche il giorno prima di limit/strength_long);
+  - `NO dita max` → niente hang massimali, limit, campus o tasche dure quel giorno. Lavoro dita solo se il giorno è **già** dita-hard e la riga va dentro quella seduta. La riga tiene conto anche dello spacing del replanner (sessioni con tag dita entro `ceil(recovery_multiplier)` giorni, finger_maintenance compresa), del cap hard della settimana e del deload;
+  - `NO tirata ≥85%` → niente trazione zavorrata pesante né front lever (finestra mobile di 7 giorni, giorni già pianificati compresi; vale anche il giorno prima di limit/strength_long);
   - `NO HIIT` → niente HIIT lo stesso giorno o il giorno prima di una sessione max;
-  - giorni hard della settimana rispetto al cap.
+  - giorni hard della settimana rispetto al cap (in deload il cap può essere 0).
+  - Avvisi `HIIT_ON_GUARD_DAY` / `WORK_RECURRENCE_PHASE_CHANGE`: le ricorrenze «Work —» di Daniele vanno riviste (spostate o rese Z2) e proposte a lui, non ignorate.
+- Uno stimolo chiave `NOT_DUE` (per esempio il limit in PE dentro il gap di 12 giorni) **non** si aggiunge.
 - **Retest:** decide la retest policy (sezione «Retest»). Non si sposta e non si aggiunge un test a mano. Si riporta la riga «ufficiale / lavoro / prossimo test».
 - **Ogni sessione non di puro recupero** contiene un **blocco tecnica** (piedi o posizione, drill id + livello di scala) **oppure** un **blocco try-hard**, con **UN target misurabile** nelle note. Esempi: «campione ≤1 aggiustamento», «hover 2 s 4/5», «non-send chiusi in FALL», «F2, paura ≤3». La tecnica va fatta da freschi, a inizio seduta, vicino al limite (flash..RP-2): mai dopo il limit, mai 6b+/6C.
 - **La forza continua a progredire:** non togliere né ridurre finger_max, pulling_max e limit per far posto ad altro. Tecnica e try-hard sostituiscono volume.
@@ -41,8 +43,9 @@ python scripts/athlete_context.py --date YYYY-MM-DD                        # se 
 ## 3. Componi
 
 1. **Carichi degli esercizi ancorati** (weighted_pullup, weighted_chinup, max_hang_5s/7s):
-   - **solo** i numeri della sezione «Carichi ancorati oggi»;
-   - nota di calcolo nella riga: «+X kg = Y% di Z kg (1RM/massimale), test gg/mm, rientro n/N»;
+   - la sezione «Carichi ancorati oggi» vale **solo per lo schema che stampa** (serie×ripetizioni del catalogo, per esempio 4×3 trazioni, 5 hang);
+   - con un altro schema (3×5, 3×2, 4 hang...) il carico è diverso: lancia la simulazione (§4) e prendi il numero dalla riga **«carico al play»**, che lo ricalcola sullo schema della bozza;
+   - nota di calcolo nella riga, copiata dalla riga «carico al play» (o dalla sezione, se lo schema è lo stesso): «+X kg = Y% di Z kg (1RM/massimale), test gg/mm, rientro n/N». Mai un numero che il player non prescriverebbe;
    - nel payload: `load_kg` = carico **aggiunto** ≥ 0 (per l'assistito 0 + nota) e `load_mode` lasciato `anchored`, così il player ricalcola il giorno in cui si gioca;
    - mai `working_loads` grezzi, mai il 2RM, mai «oppure».
 2. **Gli anchor entrano in una custom solo se tutte e tre:**

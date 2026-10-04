@@ -307,7 +307,8 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
     result["placed_tags"] = (placed or {}).get("tags")
     result["resolved_exercises"] = [
         {k: e.get(k) for k in ("exercise_id", "sets", "reps", "work_seconds", "load_kg", "load_source",
-                               "suggested_total_load_kg", "stored_load_kg")}
+                               "suggested_external_load_kg", "suggested_total_load_kg", "stored_load_kg",
+                               "anchored")}
         for e in resolve_custom_exercises(state, cs["exercises"], target_date)
     ]
     if any(dg["key"] for dg in result["downgrades"]):
@@ -319,6 +320,25 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
         "(prev_days della settimana precedente) e il lunedì dopo una domenica dita non è visto da /events"
     )
     return result
+
+
+def _play_line(e: Dict[str, Any]) -> str:
+    """The load the player will prescribe for THIS draft's scheme, with the
+    calculation note the command asks to copy into the line's ``notes``."""
+    scheme = f"{e.get('sets')}×{e.get('reps') or (str(e.get('work_seconds')) + 's')}"
+    line = f"  carico al play: {e['exercise_id']} {scheme} load_kg {e.get('load_kg')} ({e['load_source']})"
+    an = e.get("anchored") or {}
+    if e.get("load_source") == "anchored" and an:
+        off = an.get("official") or {}
+        ref = off.get("one_rm") or off.get("total")
+        ref_lbl = "1RM" if off.get("one_rm") else "massimale"
+        pct = an.get("pct_of_official")
+        ext = e.get("suggested_external_load_kg")
+        ramp = an.get("ramp") or {}
+        ramp_s = (f", rientro n={ramp.get('n')}" if (ramp.get("factor") or 1.0) < 1.0 else "")
+        line += (f" → nota: «{'+' if (ext or 0) >= 0 else ''}{ext} kg (totale {e.get('suggested_total_load_kg')}) "
+                 f"= {round(pct * 100) if pct else '—'}% di {ref} kg {ref_lbl}, test {off.get('date')}{ramp_s}»")
+    return line
 
 
 def render_simulation(sim: Dict[str, Any]) -> str:
@@ -338,7 +358,7 @@ def render_simulation(sim: Dict[str, Any]) -> str:
                      + (f" — CHIAVE {','.join(dg['key'])}" if dg["key"] else ""))
         for e in sim.get("resolved_exercises") or []:
             if e.get("load_source"):
-                L.append(f"  carico al play: {e['exercise_id']} load_kg {e.get('load_kg')} ({e['load_source']})")
+                L.append(_play_line(e))
     for w in sim.get("warnings") or []:
         L.append(f"  avviso: {w}")
     return "\n".join(L) + "\n"

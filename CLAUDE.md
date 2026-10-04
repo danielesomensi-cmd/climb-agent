@@ -70,7 +70,7 @@ Whenever Daniele asks for a session ("fammi un allenamento", "sessione custom / 
 - **Loads come only from `anchored_load`.** Every custom session that is not pure recovery carries a technique or try-hard block with one measurable target.
 - **Before any write, simulate it** (`--simulate`). If a key session would be downgraded, change the day or the content.
 - **Show the preview and wait for Daniele's explicit OK, then write.**
-- The key-session section is an A293 fallback until A294 lands (`key_sessions_v1.compute_key_status` is picked up automatically once it exists).
+- The key-session section is an A293 fallback until A294 lands. `key_sessions_v1.compute_key_status` is used only if it returns a `requirements` list; any other signature or shape keeps the fallback and prints `KEY_SESSIONS_A294_MISMATCH`, so A294 must wire itself into `athlete_context._key_sessions`.
 
 ## Execution model
 
