@@ -219,9 +219,16 @@ def test_add_hard_ripple_day1():
                 location="home",
             )
             updated_next = next(d for d in updated["weeks"][0]["days"] if d["date"] == next_day["date"])
-            for s in updated_next["sessions"]:
-                assert not (s.get("tags") or {}).get("hard"), \
-                    f"Day+1 should have no hard sessions after hard quick-add"
+            updated_day = next(d for d in updated["weeks"][0]["days"] if d["date"] == day["date"])
+            added = next(s for s in updated_day["sessions"] if s["slot"] == free_slots[0])
+            if added["session_id"] == "strength_long":
+                for s in updated_next["sessions"]:
+                    assert not (s.get("tags") or {}).get("hard"), \
+                        f"Day+1 should have no hard sessions after hard quick-add"
+            else:
+                # B366: reconcile downshifted the added session itself → the
+                # ripple must not ease day+1 for a load that is not on the plan.
+                assert updated_next["sessions"] == next_day["sessions"]
             return
 
     # If no suitable combination found, test with a synthetic setup

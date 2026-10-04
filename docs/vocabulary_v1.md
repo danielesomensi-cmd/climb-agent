@@ -1164,6 +1164,22 @@ The override is a **temporary layer** — it never modifies `state.availability`
 The planner merges the override into availability before planning (in `week.py`).
 Past-week overrides are kept for history but are never read by the planner.
 
+### 5.7.1 Replanner adjustments (B287/R-5, B366)
+
+```
+Adjustment: { date, slot, action: "downgraded", reason, previous_session_id, session_id }
+  reason ∈ finger_spacing_downshift | hard_cap_downshift        (reconcile, B287)
+         | quick_add_ripple                                     (quick-add day+1, B366)
+         | recovery_ripple_proportional | recovery_ripple       (hard override day+1 / day+2, B366)
+         | outdoor_ripple                                       (completed outdoor ≥ 65 load, day+1, B366)
+  reason always equals the constraints_applied value stamped on the rewritten session.
+```
+
+Where they surface: `POST /api/replanner/quick-add` → `adjustments[]` (reconcile first, ripple last);
+`week_plan.adaptations[]` → `{type: "quick_add", adjustments}`, `{type: "day_override", …, adjustments}`
+(ripple only), `{type: "outdoor_ripple", date, adjustments}` (only when something was rewritten).
+A ripple never rewrites done/skipped, `forced` or `is_custom` sessions (`_is_rewritable`).
+
 ---
 
 ### 5.8 Exercise sort category (A121)

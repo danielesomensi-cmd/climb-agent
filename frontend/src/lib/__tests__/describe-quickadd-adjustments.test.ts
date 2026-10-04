@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { describeQuickAddAdjustments, quickAddHasFingerRisk, type QuickAddAdjustment } from "@/lib/api";
+import { describeQuickAddAdjustments, quickAddCanForce, quickAddHasFingerRisk, type QuickAddAdjustment } from "@/lib/api";
 
 function adj(reason: string): QuickAddAdjustment {
   return { date: "2026-07-22", slot: "evening", action: "downgraded", reason };
@@ -61,5 +61,30 @@ describe("quickAddHasFingerRisk (A254)", () => {
 
   it("is false for a cap-only downshift (toast action is enough)", () => {
     expect(quickAddHasFingerRisk([adj("hard_cap_downshift")])).toBe(false);
+  });
+});
+
+describe("quick_add_ripple (B366)", () => {
+  it("describes a ripple-only result as an eased next day, not an eased session", () => {
+    const note = describeQuickAddAdjustments([adj("quick_add_ripple")]);
+    expect(note).toContain("next day was eased");
+    expect(note).not.toContain("Eased to a lighter session");
+  });
+
+  it("keeps the enforcement sentence and appends the ripple one", () => {
+    const note = describeQuickAddAdjustments([adj("hard_cap_downshift"), adj("quick_add_ripple")]);
+    expect(note).toContain("weekly hard-session limit");
+    expect(note).toContain("next day was eased");
+  });
+
+  it("offers the force action only when the added session itself was eased", () => {
+    expect(quickAddCanForce(undefined)).toBe(false);
+    expect(quickAddCanForce([adj("quick_add_ripple")])).toBe(false);
+    expect(quickAddCanForce([adj("quick_add_ripple"), adj("hard_cap_downshift")])).toBe(true);
+    expect(quickAddCanForce([adj("finger_spacing_downshift")])).toBe(true);
+  });
+
+  it("a ripple is never a finger risk", () => {
+    expect(quickAddHasFingerRisk([adj("quick_add_ripple")])).toBe(false);
   });
 });

@@ -445,6 +445,8 @@ These are full engine sessions — they get resolved with exercises, loads, and 
 
 **Forcing it anyway.** When a session is eased, the note has an **"Add hard anyway"** action — you can keep the hard session you picked, at your own risk. If it was eased only for your weekly hard-day cap, one tap adds it. If it was eased for **finger recovery** (a hard finger session within 48h), you'll get an explicit confirm first — finger overreach (tendons/pulleys) is the most common climbing injury, so only force it if you're sure your fingers are ready. Forcing keeps *that* session hard but still protects the days around it.
 
+**The next day may be eased.** When the session you add is hard, the planned session on the following day is eased (hard → moderate, moderate → easy) so you can recover, and a short note tells you. This only happens if the session you added actually stays hard — if it was itself eased by the recovery rules, the next day is left alone. Sessions you built yourself (custom or coach sessions), sessions you forced, and anything already done or skipped are never touched.
+
 ### Supplementary Training
 
 The Quick-Add dialog also offers supplementary sessions — non-climbing work you can add any time:
@@ -474,7 +476,7 @@ The **Replan Dialog** lets you make changes to your weekly plan without regenera
 - **Go outdoor**: Switch to an outdoor intent (easy outdoor, projecting, volume routes, boulder outdoor). The dialog asks **where**: pick one of your saved spots, or add a new one inline. Apply stays disabled until you choose — the crag name is what the Coach geocodes to give you the weather for that day, so it can't be guessed from the intent.
 - **Rest**: Set the intent to "Rest" to turn a training day into a rest day
 
-The replanner handles **ripple effects** — when you change a day's intent, it adjusts surrounding days to maintain proper recovery spacing. It uses 8 indoor intents and 4 outdoor intents to handle all scenarios.
+The replanner handles **ripple effects** — when you change a day's intent, it adjusts surrounding days to maintain proper recovery spacing. It uses 8 indoor intents and 4 outdoor intents to handle all scenarios. Ripple effects never rewrite your own custom sessions, sessions you forced, or anything already done or skipped; and if the new hard session is itself eased by the recovery rules, the following days are left as they were.
 
 **Skipping a session** is always OK. The system is designed for real life. Skipping doesn't break anything — the plan adapts. Don't add make-up sessions to "compensate" — that leads to overtraining.
 

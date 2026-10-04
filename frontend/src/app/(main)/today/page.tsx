@@ -28,7 +28,8 @@ import { WeeklyCheckinCard } from "@/components/training/weekly-checkin-card";
 import { TestReminderCard } from "@/components/training/test-reminder-card";
 import { WeekProgressBar } from "@/components/training/week-progress-bar";
 import { TodaySkeleton } from "@/components/training/today-skeleton";
-import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+import { applyEvents, postFeedback, applyOverride, quickAddSession, describeQuickAddAdjustments, quickAddHasFingerRisk,
+  quickAddCanForce, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { ForceHardDialog } from "@/components/training/force-hard-dialog";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useUserState, useWeekPlan, useDailyQuote, useOutdoorDoneDays } from "@/lib/hooks/queries";
@@ -720,7 +721,13 @@ function TodayContent() {
         const onForce = quickAddHasFingerRisk(result.adjustments)
           ? () => setForceRetry(() => doForce)
           : doForce;
-        toast("Session adjusted", { description: note, duration: 10000, action: { label: "Add hard anyway", onClick: onForce } });
+        // B366: a ripple-only result needs no force action — the added
+        // session went in as picked; only the next day was eased.
+        if (quickAddCanForce(result.adjustments)) {
+          toast("Session adjusted", { description: note, duration: 10000, action: { label: "Add hard anyway", onClick: onForce } });
+        } else {
+          toast("Next day eased", { description: note, duration: 8000 });
+        }
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to add session";
