@@ -1175,10 +1175,17 @@ Adjustment: { date, slot, action: "downgraded", reason, previous_session_id, ses
   reason always equals the constraints_applied value stamped on the rewritten session.
 ```
 
-Where they surface: `POST /api/replanner/quick-add` → `adjustments[]` (reconcile first, ripple last);
-`week_plan.adaptations[]` → `{type: "quick_add", adjustments}`, `{type: "day_override", …, adjustments}`
-(ripple only), `{type: "outdoor_ripple", date, adjustments}` (only when something was rewritten).
-A ripple never rewrites done/skipped, `forced` or `is_custom` sessions (`_is_rewritable`).
+Where they surface: `POST /api/replanner/quick-add` → `adjustments[]` + `warnings[]` (reconcile first, ripple last);
+`POST /api/replanner/override` → `adjustments[]` + `warnings[]` (additive, B366 review: the override's own
+reconcile downshifts first, then the ripple); `week_plan.adaptations[]` → `{type: "quick_add", adjustments}`,
+`{type: "day_override", …, adjustments, warnings}`, `{type: "outdoor_ripple", date, adjustments, kept_protected?}`
+(only when something was rewritten or kept). `kept_protected: [{date, slot, session_id}]` names the hard/finger
+custom or forced sessions on day+1 the outdoor ripple had to leave in place.
+A ripple never rewrites done/skipped, `forced` or `is_custom` sessions (`_is_rewritable`). Since it spares
+them, `_protected_neighbor_guard` checks the added/overriding session against them instead: a non-skipped
+protected finger session within `_recovery_gap` days AFTER it downshifts the added session
+(`finger_spacing_downshift`, unless it was forced); a protected hard session on day+1 adds the warning
+"Back-to-back hard days: …" (no rewrite — no rule forbids back-to-back hard days).
 
 ---
 

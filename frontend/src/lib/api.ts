@@ -460,7 +460,9 @@ export const applyOverride = (data: {
   spot_id?: string;
   spot_name?: string;
 }) =>
-  request<{ week_plan: WeekPlan }>("/api/replanner/override", {
+  // B366: adjustments/warnings are additive — what the override rewrote
+  // (its own reconcile downshift + the day+1/day+2 recovery ripple).
+  request<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[] }>("/api/replanner/override", {
     method: "POST",
     body: JSON.stringify(data),
   });
@@ -566,6 +568,36 @@ export function describeQuickAddAdjustments(adjustments: QuickAddAdjustment[] | 
 // volume, so a one-tap toast action is enough.
 export function quickAddHasFingerRisk(adjustments: QuickAddAdjustment[] | undefined): boolean {
   return !!adjustments?.some((a) => a.reason === "finger_spacing_downshift");
+}
+
+// B366: the hard day override eases day+1 (proportional) and day+2 (forced
+// recovery) — never a custom or forced session — and reconcile may ease the
+// override itself. Same shape as quick-add; returns null when nothing changed.
+const OVERRIDE_RIPPLES = new Set(["recovery_ripple_proportional", "recovery_ripple"]);
+export function describeOverrideAdjustments(adjustments: QuickAddAdjustment[] | undefined): string | null {
+  if (!adjustments || adjustments.length === 0) return null;
+  const enforced = adjustments.filter((a) => !OVERRIDE_RIPPLES.has(a.reason));
+  const rippled = adjustments.filter((a) => OVERRIDE_RIPPLES.has(a.reason));
+  const sentences: string[] = [];
+  if (enforced.length > 0) {
+    const reasons = new Set(enforced.map((a) => a.reason));
+    const parts: string[] = [];
+    if (reasons.has("finger_spacing_downshift")) {
+      parts.push("to protect finger recovery (a hard finger session was within 48h)");
+    }
+    if (reasons.has("hard_cap_downshift")) {
+      parts.push("to stay within your weekly hard-session limit");
+    }
+    if (parts.length === 0) parts.push("to keep your week balanced");
+    sentences.push(`A session was eased ${parts.join(" and ")}.`);
+  }
+  if (rippled.length > 0) {
+    const days = new Set(rippled.map((a) => a.date)).size;
+    sentences.push(days > 1
+      ? "The next two days were eased so you can recover from this session."
+      : "The following day was eased so you can recover from this session.");
+  }
+  return sentences.join(" ");
 }
 
 // B366: "Add hard anyway" pins the ADDED session. A ripple-only result means

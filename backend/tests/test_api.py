@@ -826,6 +826,30 @@ class TestReplanner:
         assert state.get("current_week_plan") is not None
         assert state["current_week_plan"].get("weeks") is not None
 
+    def test_override_returns_adjustments_and_warnings(self):
+        """B366: the override response carries what it rewrote (never silent)."""
+        week_plan = self._get_week_plan()
+        days = week_plan["weeks"][0]["days"]
+        n_before = len(week_plan.get("adaptations") or [])
+        r = client.post("/api/replanner/override", json={
+            "week_plan": week_plan,
+            "intent": "strength",
+            "location": "home",
+            "reference_date": days[0]["date"],
+            "target_date": days[1]["date"],
+            "slot": "evening",
+        })
+        assert r.status_code == 200
+        body = r.json()
+        assert isinstance(body["adjustments"], list)
+        assert isinstance(body["warnings"], list)
+        entry = next(
+            a for a in body["week_plan"]["adaptations"][n_before:]
+            if a["type"] == "day_override"
+        )
+        assert body["adjustments"] == entry["adjustments"]
+        assert body["warnings"] == entry["warnings"]
+
     # --- B117: session_completion_log ---
 
     def test_mark_done_appends_completion_log(self):

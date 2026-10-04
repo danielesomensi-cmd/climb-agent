@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { describeQuickAddAdjustments, quickAddCanForce, quickAddHasFingerRisk, type QuickAddAdjustment } from "@/lib/api";
+import { describeOverrideAdjustments, describeQuickAddAdjustments, quickAddCanForce, quickAddHasFingerRisk, type QuickAddAdjustment } from "@/lib/api";
 
 function adj(reason: string): QuickAddAdjustment {
   return { date: "2026-07-22", slot: "evening", action: "downgraded", reason };
@@ -86,5 +86,33 @@ describe("quick_add_ripple (B366)", () => {
 
   it("a ripple is never a finger risk", () => {
     expect(quickAddHasFingerRisk([adj("quick_add_ripple")])).toBe(false);
+  });
+});
+
+describe("describeOverrideAdjustments (B366)", () => {
+  const at = (reason: string, date: string): QuickAddAdjustment => ({ date, slot: "evening", action: "downgraded", reason });
+
+  it("returns null when the override changed nothing else", () => {
+    expect(describeOverrideAdjustments(undefined)).toBeNull();
+    expect(describeOverrideAdjustments([])).toBeNull();
+  });
+
+  it("names a one-day ripple", () => {
+    const note = describeOverrideAdjustments([at("recovery_ripple_proportional", "2026-07-23")]);
+    expect(note).toContain("following day was eased");
+  });
+
+  it("names a two-day ripple", () => {
+    const note = describeOverrideAdjustments([
+      at("recovery_ripple_proportional", "2026-07-23"),
+      at("recovery_ripple", "2026-07-24"),
+    ]);
+    expect(note).toContain("next two days were eased");
+  });
+
+  it("explains a finger downshift of the override itself", () => {
+    const note = describeOverrideAdjustments([at("finger_spacing_downshift", "2026-07-22")]);
+    expect(note).toContain("protect finger recovery");
+    expect(note).not.toContain("days were eased");
   });
 });

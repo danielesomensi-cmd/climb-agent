@@ -63,7 +63,7 @@ def _catalog(session_id: str, slot: str, *, hard: bool, finger: bool, intensity:
     }
 
 
-def _custom(slot: str = "evening") -> dict:
+def _custom(slot: str = "evening", *, finger: bool = False) -> dict:
     """A user-built hard session (custom sessions carry derived hard tags, B345)."""
     return {
         "session_id": "custom_cs_4abc6aed",
@@ -73,7 +73,7 @@ def _custom(slot: str = "evening") -> dict:
         "is_custom": True,
         "custom_session_id": "cs_4abc6aed",
         "intensity": "high",
-        "tags": {"hard": True, "finger": False},
+        "tags": {"hard": True, "finger": finger},
         "exercises": [{"exercise_id": "weighted_pullup", "sets": 4, "reps": 3, "load_kg": 28}],
     }
 
@@ -251,7 +251,9 @@ class TestOverrideRipple:
         assert _day(updated, 1)["sessions"][0]["session_id"] == "regeneration_easy"
         assert _day(updated, 2)["sessions"] == [wed]
         entry = next(a for a in updated["adaptations"] if a["type"] == "day_override")
-        assert entry["adjustments"] == []
+        # B366 review: the override's own downshift is reported; no ripple.
+        assert [a["reason"] for a in entry["adjustments"]] == ["finger_spacing_downshift"]
+        assert entry["adjustments"][0]["date"] == _d(1)
 
     def test_done_ripple_days_byte_identical(self):
         plan = _plan()
@@ -313,3 +315,128 @@ class TestOutdoorRipple:
         before = copy.deepcopy(_day(plan, 2)["sessions"])
         updated = self._complete(plan)
         assert _day(updated, 2)["sessions"] == before
+
+
+# ── B366 review: a protected session AFTER the added one ─────────────────────
+
+class TestProtectedSessionAfter:
+    """The forward finger scan cannot downshift backwards: a finger custom on
+    D+1 used to be "protected" by the ripple destroying it. Now the ripple
+    spares it, so the added session on D must yield instead — whichever of the
+    two comes first in the week."""
+
+    def test_finger_quick_add_before_finger_custom_is_downshifted(self):
+        plan = _plan()
+        custom = _custom("evening", finger=True)
+        _put(plan, 2, custom)
+
+        updated, warnings, adjustments = apply_day_add(
+            plan, session_id="finger_strength_home", target_date=_d(1),
+            slot="evening", location="home",
+        )
+        tue = _day(updated, 1)["sessions"][0]
+        assert tue["session_id"] == "regeneration_easy"
+        assert tue["constraints_applied"] == ["finger_spacing_downshift"]
+        assert _day(updated, 2)["sessions"] == [custom]
+        # Same reason as the forward scan → A254 "Add hard anyway" confirm applies.
+        assert adjustments == [{
+            "date": _d(1),
+            "slot": "evening",
+            "action": "downgraded",
+            "reason": "finger_spacing_downshift",
+            "previous_session_id": "finger_strength_home",
+            "session_id": "regeneration_easy",
+        }]
+        assert not [w for w in warnings if "Back-to-back" in w]
+
+    def test_symmetry_with_reverse_order(self):
+        """Custom finger on D, quick-add on D+1: already downshifted by the scan."""
+        plan = _plan()
+        _put(plan, 1, _custom("evening", finger=True))
+        updated, _w, adjustments = apply_day_add(
+            plan, session_id="finger_strength_home", target_date=_d(2),
+            slot="evening", location="home",
+        )
+        assert _day(updated, 2)["sessions"][0]["session_id"] == "regeneration_easy"
+        assert [a["reason"] for a in adjustments] == ["finger_spacing_downshift"]
+
+    def test_forced_quick_add_is_kept_at_users_risk(self):
+        plan = _plan()
+        custom = _custom("evening", finger=True)
+        _put(plan, 2, custom)
+        updated, _w, adjustments = apply_day_add(
+            plan, session_id="finger_strength_home", target_date=_d(1),
+            slot="evening", location="home", force=True,
+        )
+        assert _day(updated, 1)["sessions"][0]["session_id"] == "finger_strength_home"
+        assert _day(updated, 2)["sessions"] == [custom]
+        assert not [a for a in adjustments if a["reason"] == "finger_spacing_downshift"]
+
+    def test_recovery_gap_two_days(self):
+        plan = _plan()
+        plan["profile_snapshot"]["recovery_multiplier"] = 1.5  # gap = 2
+        custom = _custom("evening", finger=True)
+        _put(plan, 3, custom)
+        updated, _w, adjustments = apply_day_add(
+            plan, session_id="finger_strength_home", target_date=_d(1),
+            slot="evening", location="home",
+        )
+        assert _day(updated, 1)["sessions"][0]["session_id"] == "regeneration_easy"
+        assert _day(updated, 3)["sessions"] == [custom]
+        assert [a["reason"] for a in adjustments] == ["finger_spacing_downshift"]
+
+    def test_finger_override_before_finger_custom_is_downshifted(self):
+        plan = _plan()
+        custom = _custom("evening", finger=True)
+        _put(plan, 2, custom)
+        updated = apply_day_override(
+            plan, intent="strength", location="home",
+            reference_date=_d(0), target_date=_d(1), phase_id="strength_power",
+        )
+        tue = _day(updated, 1)["sessions"][0]
+        assert tue["session_id"] == "regeneration_easy"
+        assert tue["constraints_applied"] == ["finger_spacing_downshift"]
+        assert _day(updated, 2)["sessions"] == [custom]
+        entry = next(a for a in updated["adaptations"] if a["type"] == "day_override")
+        assert [a["reason"] for a in entry["adjustments"]] == ["finger_spacing_downshift"]
+
+    def test_hard_quick_add_before_hard_custom_warns(self):
+        """No rule forbids back-to-back hard days: nothing rewritten, but said."""
+        plan = _plan()
+        custom = _custom("evening")
+        _put(plan, 2, custom)
+        updated, warnings, _adj = apply_day_add(
+            plan, session_id="power_endurance_gym", target_date=_d(1),
+            slot="evening", location="gym",
+        )
+        assert _day(updated, 1)["sessions"][0]["session_id"] == "power_endurance_gym"
+        assert _day(updated, 2)["sessions"] == [custom]
+        assert any("Back-to-back hard days" in w and _d(2) in w for w in warnings)
+
+    def test_hard_override_before_hard_custom_warns(self):
+        plan = _plan()
+        _put(plan, 2, _custom("evening"))
+        updated = apply_day_override(
+            plan, intent="power_endurance", location="gym",
+            reference_date=_d(0), target_date=_d(1), phase_id="strength_power",
+        )
+        assert _day(updated, 1)["sessions"][0]["session_id"] == "power_endurance_gym"
+        assert _day(updated, 2)["sessions"] == [_custom("evening")]
+        entry = next(a for a in updated["adaptations"] if a["type"] == "day_override")
+        assert any("Back-to-back hard days" in w and _d(2) in w for w in entry["warnings"])
+
+    def test_outdoor_records_protected_session_kept(self):
+        plan = _plan()
+        custom = _custom("evening", finger=True)
+        _put(plan, 2, custom)
+        _day(plan, 1)["outdoor_spot_name"] = "Berdorf"
+        _day(plan, 1)["outdoor_session_status"] = "planned"
+        updated = apply_events(plan, [{
+            "event_type": "complete_outdoor", "date": _d(1), "outdoor_load_score": 80,
+        }])
+        assert _day(updated, 2)["sessions"] == [custom]
+        entry = next(a for a in updated["adaptations"] if a["type"] == "outdoor_ripple")
+        assert entry["adjustments"] == []
+        assert entry["kept_protected"] == [
+            {"date": _d(2), "slot": "evening", "session_id": "custom_cs_4abc6aed"}
+        ]
