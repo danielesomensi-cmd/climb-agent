@@ -62,6 +62,15 @@ EXTERNAL_LOAD_FALLBACK_FIXED_KG: dict[str, float] = {
     # is dangerously heavy for prehab.
     "elbow_wrist_extensor_eccentric": 1.5,
     "stick_pronation_supination_eccentric": 1.0,
+    # B363: light isolation/prehab work that fell to 0.15×BW (~12 kg) on a
+    # cold start — a rotator-cuff rotation or a wrist roller at 12 kg.
+    "dumbbell_external_rotation": 1.5,
+    "wrist_roller": 2.0,
+    "heavy_reverse_wrist_curl": 4.0,
+    "lateral_raise": 4.0,
+    "dumbbell_fly": 6.0,
+    "overhead_tricep_extension": 6.0,
+    "weighted_hanging_leg_raise": 2.5,
 }
 
 # Similarity groups for cross-exercise load transfer (B90).
@@ -73,10 +82,9 @@ _SIMILARITY_GROUPS: Dict[str, Dict[str, float]] = {
         "bench_press": 1.0,
         "dumbbell_bench_press": 0.85,
     },
-    "squat": {
-        "split_squat": 1.0,
-        "goblet_squat": 0.80,
-    },
+    # B363: "squat" group removed — it prescribed a split squat at goblet/0.80
+    # (61.5 kg → 77 kg on a per-leg movement). split_squat now cold-starts at
+    # EXTERNAL_LOAD_FALLBACK_PCT_BW.
     "pull": {
         "barbell_row": 1.0,
         "face_pull": 0.25,
@@ -152,7 +160,27 @@ HANGBOARD_DEFAULT_INTENSITY_PCT: Dict[str, float] = {
     "one_arm_hang_assisted": 0.85,
     "repeater_15_15": 0.65,
     "repeater_hang_7_3": 0.70,
+    # B363: aerobic finger protocols — midpoint of the catalog MVC range. They
+    # used to fall to the 0.70 default, i.e. a max-strength load on a 35 s hang.
+    "sub_max_capacity_hang": 0.45,        # 40-50% MVC
+    "repeater_sub_max_endurance": 0.50,   # 45-55% MVC
+    "intermittent_dead_hangs": 0.60,      # 55-65% MVC
+    "long_interval_repeaters": 0.50,      # 45-55% MVC
 }
+
+# B363: total_load exercises that are NOT two-arm edge hangs and must never be
+# loaded as a % of the two-arm finger max (they used to be: a weighted chin-up
+# at +3 kg "3x7s", a one-arm hang at 85% of the TWO-arm max). weighted_chinup
+# follows the pull-up 2RM reference; the others get a suggestion only from
+# their own remembered load.
+NOT_FINGER_MAX_TOTAL_LOAD: Tuple[str, ...] = (
+    "weighted_chinup",
+    "weighted_dip",
+    "suitcase_carry",
+    "pinch_block_training",
+    "wide_pinch_extended_wrist_hold",
+    "one_arm_hang_assisted",
+)
 SURFACE_PRIORITY = ("board_kilter", "board_moonboard", "board_other", "spraywall", "gym_boulder")
 VALID_FEEDBACK = {"very_easy", "easy", "ok", "hard", "very_hard"}
 LEGACY_DIFFICULTY_MAP = {
@@ -236,6 +264,152 @@ def estimate_1rm_from_2rm(total_load_kg: float) -> float:
     epley = total_load_kg * (1 + 2 / 30)
     brzycki = total_load_kg * (36 / (37 - 2))
     return round((epley + brzycki) / 2, 1)
+
+
+# ---------------------------------------------------------------------------
+# B363 — test-anchored exercises and the rep-aware weighted pull-up.
+#
+# The pull-up max is MEASURED as a 2RM (D84) and stays a 2RM: it is the
+# athlete's reference number. A 1RM is only ever an intermediate value used to
+# apply PULLING_1RM_PCT, and is always derived from the 2RM — never stored as
+# the reference.
+#
+# Before B363 the 2RM test logged its feedback under the training id
+# 'weighted_pullup', and apply_feedback copied the test load into
+# working_loads as the next TRAINING load: the athlete's 2RM (+45 kg) came
+# back as a 4x3 prescription. max_hang_5s/7s had the same defect (100% test
+# max returned as the ~90% training load).
+# ---------------------------------------------------------------------------
+
+# Exercises whose test protocol logs feedback under the training id. A test log
+# for these must never become the next training load.
+TEST_ANCHORED_EXERCISES: Tuple[str, ...] = ("weighted_pullup", "max_hang_5s", "max_hang_7s")
+
+# Exercises that exist ONLY as tests (catalog category "test"): their load is
+# always a fixed % of the current max, so they never keep a training memory —
+# a remembered "hard → -2.5%" would under-load the next retest.
+def _is_pure_test_exercise(exercise_id: str) -> bool:
+    if exercise_id.startswith("test_"):
+        return True
+    return str(_load_catalog_cache().get(exercise_id, {}).get("category") or "") == "test"
+
+
+# Feedback label → reps in reserve, used to read a training set as an
+# estimate of the max. Coarse by design: the app has no RIR field.
+PULLUP_RIR_BY_LABEL: Dict[str, int] = {
+    "very_hard": 0,
+    "hard": 1,
+    "ok": 2,
+    "easy": 3,
+    "very_easy": 4,
+}
+
+# Default reps for a weighted pull-up set when neither the feedback item nor
+# the planned instance carries them (catalog prescription_defaults.reps).
+PULLUP_DEFAULT_REPS = 3
+
+
+def estimate_1rm_from_reps(total_load_kg: float, reps: float) -> float:
+    """Generalisation of estimate_1rm_from_2rm to N reps (Epley/Brzycki mean).
+
+    ``estimate_1rm_from_reps(x, 2) == estimate_1rm_from_2rm(x)`` by construction.
+    Reps are clamped to [1, 12]: Brzycki diverges near 37 and neither formula
+    is meaningful for long sets.
+    """
+    r = max(1.0, min(12.0, float(reps)))
+    if r <= 1.0:
+        return round(float(total_load_kg), 1)
+    epley = total_load_kg * (1 + r / 30)
+    brzycki = total_load_kg * (36 / (37 - r))
+    return round((epley + brzycki) / 2, 1)
+
+
+def _two_rm_from_1rm(one_rm_total: float) -> float:
+    """Inverse of estimate_1rm_from_2rm (for baselines that only carry a 1RM)."""
+    factor = estimate_1rm_from_2rm(1000.0) / 1000.0
+    return round(float(one_rm_total) / factor, 1)
+
+
+def _pullup_baseline_2rm(user_state: Dict[str, Any]) -> Tuple[Optional[float], str]:
+    """(2RM total kg, updated_at) from baselines.pulling, or (None, '')."""
+    pulling = _get_pulling_baseline(user_state) or {}
+    two_rm = pulling.get("weighted_pullup_2rm_total_kg")
+    if not isinstance(two_rm, (int, float)) or two_rm <= 0:
+        one_rm = pulling.get("weighted_pullup_1rm_total_kg") or pulling.get("weighted_pullup_1rm_estimated_kg")
+        two_rm = _two_rm_from_1rm(float(one_rm)) if isinstance(one_rm, (int, float)) and one_rm > 0 else None
+    return (float(two_rm) if two_rm else None), str(pulling.get("updated_at") or "")
+
+
+def pullup_reference_2rm(user_state: Dict[str, Any]) -> Optional[float]:
+    """The athlete's current pull-up reference, as a 2RM total load (kg).
+
+    The tested 2RM, unless a training log written AFTER that test re-based it
+    (``e2rm_total_kg`` on the working_loads entry, see apply_feedback). A
+    legacy entry without ``e2rm_total_kg`` is ignored — it may be a test load
+    copied in as a training load, which is exactly the B363 defect.
+    """
+    base_2rm, base_date = _pullup_baseline_2rm(user_state)
+    entry_2rm: Optional[float] = None
+    entry_date = ""
+    for e in _working_entries_ro(user_state):
+        if str(e.get("exercise_id") or "") != "weighted_pullup":
+            continue
+        val = e.get("e2rm_total_kg")
+        if isinstance(val, (int, float)) and val > 0 and str(e.get("updated_at") or "") >= entry_date:
+            entry_2rm, entry_date = float(val), str(e.get("updated_at") or "")
+    if entry_2rm is not None and (base_2rm is None or entry_date >= base_date):
+        return entry_2rm
+    # Legacy memory (pre-B363, no e2rm) is trusted only against an UNTESTED
+    # baseline: against a tested one it may be the 2RM test copied in as a
+    # training load. Read as a 3-rep set with ~2 in reserve.
+    pulling = _get_pulling_baseline(user_state) or {}
+    if str(pulling.get("source") or "") not in ("test", "test_session"):
+        legacy = [
+            e for e in _working_entries_ro(user_state)
+            if str(e.get("exercise_id") or "") == "weighted_pullup"
+            and e.get("e2rm_total_kg") is None
+            and isinstance(e.get("next_total_load_kg"), (int, float))
+            and str(e.get("updated_at") or "") >= base_date
+        ]
+        if legacy:
+            legacy.sort(key=lambda e: str(e.get("updated_at") or ""), reverse=True)
+            return _two_rm_from_1rm(estimate_1rm_from_reps(float(legacy[0]["next_total_load_kg"]), PULLUP_DEFAULT_REPS + 2))
+    return base_2rm
+
+
+def weighted_pullup_target(
+    user_state: Dict[str, Any], phase_id: Optional[str], intensity: str
+) -> Optional[Dict[str, float]]:
+    """Deterministic weighted pull-up training load from the 2RM reference.
+
+    2RM → estimated 1RM → × PULLING_1RM_PCT[(phase, intensity)] → minus
+    bodyweight. Returns {total, external, reference_2rm} or None when there is
+    no reference at all.
+    """
+    ref_2rm = pullup_reference_2rm(user_state)
+    if not ref_2rm:
+        return None
+    bodyweight = _get_bodyweight(user_state)
+    pct = PULLING_1RM_PCT.get((phase_id or "", intensity), PULLING_1RM_PCT_DEFAULT)
+    total = _round_half_step(estimate_1rm_from_2rm(ref_2rm) * pct)
+    external = max(0.0, _round_half_step(total - bodyweight))
+    return {"total": _round_half_step(bodyweight + external), "external": external, "reference_2rm": ref_2rm}
+
+
+def _working_entries_ro(user_state: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Read-only view of working_loads.entries (never creates the key)."""
+    entries = ((user_state.get("working_loads") or {}).get("entries")) or []
+    return [e for e in entries if isinstance(e, dict)]
+
+
+def _is_test_log(log_entry: Dict[str, Any]) -> bool:
+    """True when the log comes from a test session (same gate as _update_test_from_log)."""
+    if str(log_entry.get("session_id") or "").startswith("test_"):
+        return True
+    for s in log_entry.get("planned") or []:
+        if str(s.get("session_id") or "").startswith("test_") or bool((s.get("tags") or {}).get("test")):
+            return True
+    return False
 
 
 def canonical_feedback_label(item: Dict[str, Any]) -> str:
@@ -447,6 +621,8 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 # A281: the taper scales training sets only — `role` is what
                 # separates warmup/cooldown/prehab/test from the work itself.
                 "role": e.get("role") or [],
+                # B363: category "test" marks test-only exercises (no memory).
+                "category": e.get("category"),
                 "loading_pin": "loading_pin" in (
                     (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
                 ),
@@ -1049,23 +1225,24 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     write_entry["next_external_load_kg"] = next_external
                     write_entry["updated_at"] = out.get("date")
             elif ex_id == "weighted_pullup":
-                # weighted_pullup: working_loads → baselines.pulling → bodyweight (B121)
-                entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
+                # B363: weighted_pullup is ALWAYS a % of the 2RM reference
+                # (tested 2RM, or a later training re-base), never a raw
+                # remembered load — the remembered load may come from a set
+                # with a different rep count, or from the 2RM test itself.
+                # Falls back to a legacy working load only with no reference.
                 bodyweight = _get_bodyweight(user_state)
                 next_external: float = 0.0
                 load_source: Optional[str] = None
-
-                if entry and entry.get("next_external_load_kg") is not None:
-                    next_external = float(entry["next_external_load_kg"])
+                phase_id = _get_current_phase_id(user_state, out.get("date") or "")
+                target = weighted_pullup_target(user_state, phase_id, intensity)
+                if target is not None:
+                    next_external = target["external"]
+                    load_source = "pullup_2rm_reference"
+                    suggested["reference_2rm_total_kg"] = target["reference_2rm"]
                 else:
-                    pulling = _get_pulling_baseline(user_state)
-                    if pulling and pulling.get("weighted_pullup_1rm_total_kg"):
-                        rm_total = float(pulling["weighted_pullup_1rm_total_kg"])
-                        phase_id = _get_current_phase_id(user_state, out.get("date") or "")
-                        pct = PULLING_1RM_PCT.get((phase_id, intensity), PULLING_1RM_PCT_DEFAULT)
-                        target_total = _round_half_step(rm_total * pct)
-                        next_external = max(0.0, _round_half_step(target_total - bodyweight))
-                        load_source = "baselines.pulling"
+                    entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
+                    if entry and entry.get("next_external_load_kg") is not None:
+                        next_external = float(entry["next_external_load_kg"])
 
                 reps = prescription.get("reps") or (prescription.get("reps_range") or [5])[0]
                 sets = prescription.get("sets") or (prescription.get("sets_range") or [4])[0]
@@ -1205,9 +1382,27 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 })
 
             # Hangboard total_load exercises (repeaters, density hangs, etc.) — data-driven (ARCH-2)
-            if load_model == "total_load" and ex_id not in ("max_hang_5s", "max_hang_7s", "weighted_pullup"):
-                hb_suggested = _hangboard_suggested(user_state, ex_id, prescription, exercise_attrs=inst.get("attributes"))
-                suggested.update(hb_suggested)
+            if load_model == "total_load" and ex_id == "weighted_chinup":
+                # B363: chin-up follows the pull-up 2RM reference.
+                target = weighted_pullup_target(
+                    user_state, _get_current_phase_id(user_state, out.get("date") or ""), intensity,
+                )
+                if target is not None:
+                    reps = prescription.get("reps") or (prescription.get("reps_range") or [5])[0]
+                    sets = prescription.get("sets") or (prescription.get("sets_range") or [4])[0]
+                    suggested.update({
+                        "schema_version": "progression_targets.v1",
+                        "suggested_external_load_kg": target["external"],
+                        "suggested_total_load_kg": target["total"],
+                        "suggested_rep_scheme": f"{sets}x{reps}",
+                        "load_source": "pullup_2rm_reference",
+                    })
+            if load_model == "total_load" and ex_id not in ("max_hang_5s", "max_hang_7s", "weighted_pullup") and not (
+                ex_id == "weighted_chinup" and suggested.get("load_source") == "pullup_2rm_reference"
+            ):
+                if ex_id not in NOT_FINGER_MAX_TOTAL_LOAD:
+                    hb_suggested = _hangboard_suggested(user_state, ex_id, prescription, exercise_attrs=inst.get("attributes"))
+                    suggested.update(hb_suggested)
                 entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
                 if entry and entry.get("next_external_load_kg") is not None:
                     bodyweight = _get_bodyweight(user_state)
@@ -1628,6 +1823,94 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             _mark_measured(f"lp_max_lift_5s_{hand}_kg")
 
 
+def _apply_weighted_pullup_feedback(
+    updated: Dict[str, Any],
+    item: Dict[str, Any],
+    planned_prescription: Dict[str, Any],
+    feedback_label: str,
+    date_value: str,
+    bodyweight: float,
+) -> None:
+    """B363: training feedback re-bases the 2RM reference, rep-aware.
+
+    The set is read as an estimate of the max: load × (reps done + reps in
+    reserve, from the feedback label) → estimated 1RM → 2RM equivalent.
+      * not hard: the reference only goes UP (max(reference, estimate)) — a
+        comfortable 4x3 must never lower the max measured in a test;
+      * hard / very_hard: the reference goes DOWN by the adjustment policy %.
+    The stored ``next_*`` fields are a convenience for legacy readers; the
+    prescription itself is always recomputed by weighted_pullup_target().
+    """
+    used_total = item.get("used_total_load_kg")
+    used_external = item.get("used_external_load_kg")
+    if used_total is None and used_external is not None:
+        used_total = float(used_external) + bodyweight
+    if used_external is None and used_total is not None:
+        used_external = float(used_total) - bodyweight
+    if used_total is None:
+        return
+
+    reps = _first_not_none(
+        item.get("reps"), item.get("prescribed_reps"), planned_prescription.get("reps"),
+    )
+    try:
+        reps_f = float(reps) if reps is not None else float(PULLUP_DEFAULT_REPS)
+    except (TypeError, ValueError):
+        reps_f = float(PULLUP_DEFAULT_REPS)
+    if reps_f <= 0:
+        reps_f = float(PULLUP_DEFAULT_REPS)
+    rir = PULLUP_RIR_BY_LABEL.get(feedback_label, 2)
+
+    existing = next(
+        (e for e in _working_entries_ro(updated) if str(e.get("exercise_id") or "") == "weighted_pullup"
+         and isinstance(e.get("e2rm_total_kg"), (int, float))),
+        None,
+    )
+    if existing is not None:
+        existing_date = str(existing.get("updated_at") or "")
+        # A log older than the stored re-base must not move it, up or down.
+        if date_value < existing_date:
+            return
+        # Idempotent: the same log applied twice re-bases once.
+        if (
+            date_value == existing_date
+            and existing.get("last_total_load_kg") == _round_half_step(float(used_total))
+            and existing.get("last_feedback_label") == feedback_label
+        ):
+            return
+    _, base_date = _pullup_baseline_2rm(updated)
+    if base_date and date_value < base_date:
+        # Older than the current test: the test already supersedes it.
+        return
+
+    set_2rm = _two_rm_from_1rm(estimate_1rm_from_reps(float(used_total), reps_f + rir))
+    reference = pullup_reference_2rm(updated)
+    if feedback_label in {"hard", "very_hard"}:
+        base = reference if reference else set_2rm
+        new_2rm = _round_half_step(base * (1.0 + _rule_midpoint_pct(updated, feedback_label)))
+    else:
+        new_2rm = _round_half_step(max(reference or 0.0, set_2rm))
+
+    entry = _find_working_load_entry(updated, "weighted_pullup", {})
+    entry.update({
+        "exercise_id": "weighted_pullup",
+        "key": "weighted_pullup",
+        "setup": {},
+        "last_completed": bool(item.get("completed", False)),
+        "last_feedback_label": feedback_label,
+        "last_external_load_kg": _round_half_step(float(used_external)),
+        "last_total_load_kg": _round_half_step(float(used_total)),
+        "last_reps": int(reps_f),
+        "e2rm_total_kg": new_2rm,
+        "updated_at": date_value,
+    })
+    phase_id = _get_current_phase_id(updated, date_value)
+    target = weighted_pullup_target(updated, phase_id, "hard")
+    if target is not None:
+        entry["next_total_load_kg"] = target["total"]
+        entry["next_external_load_kg"] = target["external"]
+
+
 def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
     updated = deepcopy(user_state)
     actual = log_entry.get("actual") or {}
@@ -1657,6 +1940,36 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         # C-LOADMODEL-MISTAG: per-hand write keys on loading-pin equipment, not
         # raw unilaterality — mirror of the read-side is_loading_pin gate.
         fb_loading_pin = catalog_info.get("loading_pin", False)
+
+        # B363: a TEST of a test-anchored exercise is a max, not a training
+        # load. It updates the baseline (_update_test_from_log, below) and
+        # retires the old training memory so the next prescription re-anchors
+        # on the fresh max as a percentage.
+        if _is_pure_test_exercise(exercise_id) or (
+            exercise_id in TEST_ANCHORED_EXERCISES and _is_test_log(log_entry)
+        ):
+            # Retire the old memory only when the test produced a result —
+            # the same fields _update_test_from_log writes the baseline from.
+            # A skipped/aborted test item must not wipe a valid re-base.
+            has_result = item.get("used_total_load_kg") is not None or item.get("used_external_load_kg") is not None
+            if has_result:
+                wl = updated.setdefault("working_loads", {})
+                wl["entries"] = [
+                    e for e in (wl.get("entries") or [])
+                    if str(e.get("exercise_id") or "") != exercise_id
+                ]
+                if exercise_id in ("max_hang_5s", "max_hang_7s"):
+                    # A fresh max makes the hard/easy streak meaningless —
+                    # before B363 the test reset it through the total_load branch.
+                    max_hang_hard = 0
+                    max_hang_easy = 0
+            continue
+
+        if exercise_id == "weighted_pullup":
+            _apply_weighted_pullup_feedback(
+                updated, item, planned_prescription, feedback_label, date_value, bodyweight,
+            )
+            continue
 
         if fb_load_model == "total_load":
             used_total = item.get("used_total_load_kg")

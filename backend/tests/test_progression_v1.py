@@ -195,24 +195,32 @@ def test_boulder_grade_progression_changes_next_target():
 
 
 def test_working_load_update_from_feedback():
+    """B363: weighted_pullup feedback re-bases the 2RM reference (rep-aware),
+    instead of carrying the used load forward as the next load."""
     user_state = _base_user_state()
+    user_state["baselines"]["pulling"] = {
+        "weighted_pullup_2rm_total_kg": 117.0, "source": "test_session", "updated_at": "2026-01-01",
+    }
     log_easy = {
         "date": "2026-01-05",
-        "planned": [{"exercise_instances": [{"exercise_id": "weighted_pullup", "prescription": {}}]}],
+        "planned": [{"exercise_instances": [{"exercise_id": "weighted_pullup", "prescription": {"reps": 3}}]}],
         "actual": {"exercise_feedback_v1": [{"exercise_id": "weighted_pullup", "completed": True, "feedback_label": "easy", "used_external_load_kg": 10.0}]},
     }
     updated_easy = apply_feedback(log_easy, user_state)
-    easy_next = next(e for e in updated_easy["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")["next_external_load_kg"]
-    assert easy_next == 16.5
+    easy = next(e for e in updated_easy["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")
+    # A light easy set never lowers the tested 2RM.
+    assert easy["e2rm_total_kg"] == 117.0
+    assert easy["last_reps"] == 3
 
     log_hard = {
         "date": "2026-01-06",
-        "planned": [{"exercise_instances": [{"exercise_id": "weighted_pullup", "prescription": {}}]}],
+        "planned": [{"exercise_instances": [{"exercise_id": "weighted_pullup", "prescription": {"reps": 3}}]}],
         "actual": {"exercise_feedback_v1": [{"exercise_id": "weighted_pullup", "completed": True, "feedback_label": "very_hard", "used_external_load_kg": 10.0}]},
     }
     updated_hard = apply_feedback(log_hard, user_state)
-    hard_next = next(e for e in updated_hard["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")["next_external_load_kg"]
-    assert hard_next == 1.5
+    hard = next(e for e in updated_hard["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")
+    # very_hard: reference down by the policy midpoint (-10%).
+    assert hard["e2rm_total_kg"] == 105.5
 
 
 def test_two_hard_feedbacks_enqueue_retest_and_retest_updates_official_test():

@@ -81,12 +81,13 @@ class TestLoadTransfer:
         assert result is not None
         assert result == _round_half_step(34.0 * (1.0 / 0.85))
 
-    def test_transfer_split_squat_to_goblet(self):
-        """split_squat 15kg → goblet_squat should be ~12kg (0.80×)."""
+    def test_no_squat_transfer(self):
+        """B363: the squat group is gone — goblet/0.80 prescribed a per-leg
+        split squat heavier than the bilateral goblet squat (61.5 → 77 kg)."""
+        state = _state_with_entry("goblet_squat", 61.5)
+        assert _transfer_load(state, "split_squat", "2026-03-05") is None
         state = _state_with_entry("split_squat", 15.0)
-        result = _transfer_load(state, "goblet_squat", "2026-03-05")
-        assert result is not None
-        assert result == _round_half_step(15.0 * 0.80)
+        assert _transfer_load(state, "goblet_squat", "2026-03-05") is None
 
     def test_no_transfer_across_groups(self):
         """bench_press should not transfer to split_squat (different group)."""

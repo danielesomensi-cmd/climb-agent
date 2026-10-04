@@ -254,7 +254,7 @@ def test_resolver_light_working_loads_override(by_id):
     state = {
         "working_loads": {
             "entries": [
-                {"exercise_id": "bench_press", "next_external_load_kg": 60.0},
+                {"exercise_id": "bench_press", "next_external_load_kg": 60.0, "updated_at": "2026-01-01"},
             ],
         }
     }
