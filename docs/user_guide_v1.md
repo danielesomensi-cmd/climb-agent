@@ -681,9 +681,11 @@ routes you sent in one try the first time they appear in your log — and asks, 
 each one, whether it really was **Onsight**, **Flash** or **Worked** (a route you had
 tried on a day you never logged looks exactly like an onsight). It takes at least two
 onsight or flash routes at that grade, on two different days or at two different
-crags. **Confirm** updates your onsight; **Not now** stops the card asking about that
-grade (a harder one will still be proposed). A route you mark *Worked* is never
-counted again. Nothing in your outdoor log is changed — to change a route's style
+crags. **Confirm** updates your onsight; **Not my onsight** declines that grade for
+good — the card stops asking about it (a harder one will still be proposed) and the
+routes you marked *Worked* are remembered. A route you mark *Worked* is never counted
+again. A route you logged as **onsight** or **flash** counts even if another route
+with the same name at that spot came first (generic names like "Tiro 3" repeat). Nothing in your outdoor log is changed — to change a route's style
 there, edit the session.
 
 ### Stats

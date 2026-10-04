@@ -420,6 +420,9 @@ Canonical values:
 - `lead_max_rp` — `assessment.grades.lead_max_rp` (max lead redpoint)
 - `lead_pe_anchor` — **derived, not stored** (A292, R6-PE): `max(lead_max_os, lead_max_rp − 3 half grades)`
   (`progression_v1.lead_pe_anchor`, constant `PE_ANCHOR_RP_HALF_STEPS = −3`, an engineering constant).
+  **Tested athletes only** (`progression_v1.pe_anchor_applies`: tested official max < 90 days on fingers
+  or pulling, the A290 gate); an untested athlete gets `lead_max_os` and the output reports `grade_ref:
+  "lead_max_os"`, exactly as before A292.
   Used by the lead power-endurance drills `route_intervals`, `route_linked_laps`, `route_on_the_minute`,
   `threshold_climbing`; aerobic/ARC work stays on `lead_max_os`. A tie goes to the OS, so a climber whose
   onsight is within 3 half grades of the redpoint gets the same grade as with `lead_max_os`. Either grade
@@ -718,11 +721,12 @@ Written **only** by `POST /api/assessment/confirm-grade` (and, for `manual`, by 
 |-------|-------|
 | `assessment.grades_source.lead_max_os` | `{source: "outdoor_confirmed" \| "manual", date, previous, evidence?: [{key, date, spot_name, name, grade, style: "onsight" \| "flash"}]}`. Absent = the onboarding value. |
 | `assessment.grade_evidence_dismissed.lead_max_os` | the grade the athlete declined (lowercase French). Blocks proposals ≤ it, not harder ones. |
-| `assessment.grade_evidence_worked_routes` | route keys (`"<spot name>\|<route name>"`, casefolded, B362 normalisation) the athlete marked **worked**: never evidence again. Capped at 500. |
+| `assessment.grade_evidence_worked_routes` | route keys (`"<spot name>\|<route name>"`, casefolded, B362 normalisation; a later explicit onsight/flash of an already-seen name gets `"…@<date>"`, `"…@<date>#n"` on the same day) the athlete marked **worked**: never evidence again. Capped at 500. |
 
 Evidence route (`engine/grade_evidence.is_onsight_evidence`): lead (route `discipline`, else the
-session's), first appearance of its key in the date-sorted log, exactly one attempt with `result:
-"sent"`, `style` ∈ {absent, `onsight`, `flash`}, grade on `GRADE_ORDER`. The shared lower-level
+session's), exactly one attempt with `result: "sent"`, `style` ∈ {absent, `onsight`, `flash`}, grade on
+`GRADE_ORDER`, and — only when `style` is absent (inferred) — first appearance of its key in the
+date-sorted log; an explicit `onsight`/`flash` is trusted over a name collision. The shared lower-level
 predicate `is_first_go_send` also drives `compute_outdoor_stats`' onsight auto-detect.
 Proposal: highest G with ≥ `MIN_ROUTES` (2) routes ≥ G on ≥ 2 distinct dates or spot names
 (engineering constants); only if G > current OS, ≤ `lead_max_rp`, > dismissed. `all_in_trip` (every

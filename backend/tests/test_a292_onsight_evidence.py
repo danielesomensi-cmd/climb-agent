@@ -82,6 +82,40 @@ def test_predicate_lead_only_and_grade_on_ladder():
     assert not ge.is_onsight_evidence(_session("2026-01-01", "X", []), _route("C", "?"), seen)
 
 
+def test_explicit_onsight_beats_a_generic_name_collision():
+    """Review fix: 'Tiro 3' on two different multi-pitches at the same 'spot'.
+    The first-appearance rule guards only the inferred case; an explicit
+    onsight/flash is the athlete's declaration and still counts."""
+    log = [
+        _session("2026-08-12", "Montagna — vie lunghe", [_route("Tiro 3", "6b", style="onsight")]),
+        _session("2026-09-12", "Montagna — vie lunghe", [_route("Tiro 3", "7b", style="onsight")]),
+        _session("2026-09-20", "Other", [_route("X", "7b", style="onsight")]),
+    ]
+    evidence = ge.collect_onsight_evidence(log)
+    keys = [r["key"] for r in evidence]
+    assert len(keys) == 3 and len(set(keys)) == 3  # the repeat gets its own key
+    assert keys[1] == "montagna — vie lunghe|tiro 3@2026-09-12"
+    payload = ge.lead_os_evidence(_state(os_="7a", rp="8a"), log)
+    assert payload["proposed"] == "7b"
+    # Marking the repeat 'worked' removes only that one.
+    left = ge.collect_onsight_evidence(log, worked_keys=[keys[1]])
+    assert [r["grade"] for r in left] == ["6b", "7b"]
+
+
+def test_inferred_repeat_of_a_name_still_does_not_count():
+    log = [
+        _session("2026-08-12", "Montagna", [_route("Tiro 3", "6b")]),
+        _session("2026-09-12", "Montagna", [_route("Tiro 3", "7b")]),  # no style
+    ]
+    assert [r["grade"] for r in ge.collect_onsight_evidence(log)] == ["6b"]
+
+
+def test_explicit_onsight_still_needs_one_sent_attempt():
+    log = [_session("2026-08-12", "M", [_route("T", "7b", style="onsight")]),
+           _session("2026-09-12", "M", [_route("T", "7b", style="flash", results=("fell", "sent"))])]
+    assert len(ge.collect_onsight_evidence(log)) == 1
+
+
 def test_first_appearance_is_chronological_not_file_order():
     log = [
         _session("2026-05-02", "Crag", [_route("Route", "7b")]),

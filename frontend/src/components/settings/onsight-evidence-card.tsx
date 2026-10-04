@@ -76,7 +76,7 @@ function EvidenceBody({
       const res = await confirmGrade({ decision, routes });
       onDone(
         decision === "confirm"
-          ? `Onsight updated to ${res.grade}. Your power-endurance targets follow it.`
+          ? `Onsight updated to ${res.grade}.`
           : "Got it — we won't ask about this grade again.",
       );
       await Promise.all([
@@ -148,7 +148,7 @@ function EvidenceBody({
             {busy ? "Saving…" : `Confirm ${supported ?? ""}`.trim()}
           </Button>
           <Button size="sm" variant="outline" disabled={busy} onClick={() => submit("dismiss")}>
-            Not now
+            Not my onsight
           </Button>
         </div>
       </CardContent>

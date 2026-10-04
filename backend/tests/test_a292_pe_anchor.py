@@ -27,13 +27,22 @@ def _catalog():
     return {e["id"]: e for e in json.loads(CATALOG.read_text())["exercises"]}
 
 
-def _state(os_="7a+", rp="8a+"):
+# A tested baseline (DECISIONS, Global): the derived anchor applies only to
+# athletes with a tested official max (< 90 days) on fingers or pulling.
+_TESTS = {"max_strength": [{"test_id": "max_hang_7s_total_load", "date": "2026-09-24",
+                            "total_load_kg": 110.0, "bodyweight_kg": 70.0}]}
+
+
+def _state(os_="7a+", rp="8a+", tested=True):
     grades = {"boulder_max_os": "7A", "boulder_max_rp": "7C"}
     if os_ is not None:
         grades["lead_max_os"] = os_
     if rp is not None:
         grades["lead_max_rp"] = rp
-    return {"assessment": {"grades": grades}, "working_loads": {"entries": []}}
+    state = {"assessment": {"grades": grades}, "working_loads": {"entries": []}}
+    if tested:
+        state["tests"] = deepcopy(_TESTS)
+    return state
 
 
 def _day(ex_id, prescription, date="2026-10-20"):
@@ -100,6 +109,31 @@ def test_narrow_gap_users_get_exactly_the_old_target(ex_id, os_, rp):
     assert new["grade_anchor_from"] == "lead_max_os"
 
 
+@pytest.mark.parametrize("ex_id", PE_IDS)
+@pytest.mark.parametrize("os_,rp", [("6a", "7a"), ("7a+", "8a+"), ("7a", "7b"), (None, "8a"), ("7a", "zz")])
+def test_untested_users_keep_the_pre_a292_output_bit_for_bit(ex_id, os_, rp):
+    """Review fix (DECISIONS, Global): untested athletes — wide gaps included —
+    get exactly the old lead_max_os target, same suggested dict."""
+    state = _state(os_, rp, tested=False)
+    new = _suggested(ex_id, state)
+    old = _suggested(ex_id, state, {"grade_ref": "lead_max_os", "grade_offset": -1})
+    assert new == old
+    assert "grade_anchor_from" not in new
+
+
+def test_stale_test_is_untested():
+    state = _state("6a", "7a")
+    state["tests"]["max_strength"][0]["date"] = "2026-05-01"  # > 90 days before 2026-10-20
+    assert _suggested("route_intervals", state)["suggested_grade"] == "5C"
+
+
+def test_tested_wide_gap_uses_the_rp_side():
+    s = _suggested("route_intervals", _state("6a", "7a"))
+    # RP 7a − 3 half grades = 6b+; − 1 letter = 6a+.
+    assert s["suggested_grade"] == "6A+"
+    assert s["grade_anchor_from"] == "lead_max_rp"
+
+
 def test_no_lead_grades_no_target():
     assert "suggested_grade" not in _suggested("route_intervals", _state(None, None))
 
@@ -130,7 +164,7 @@ def test_edited_future_session_follows_the_new_anchor():
         }]}},
     }
     before_rx = deepcopy(entry["resolved"]["resolved_session"]["exercise_instances"][0]["prescription"])
-    assert refresh_edited_session_targets(entry, "2099-01-05", state, today="2026-10-04")
+    assert refresh_edited_session_targets(entry, "2026-10-12", state, today="2026-10-04")
     inst = entry["resolved"]["resolved_session"]["exercise_instances"][0]
     assert inst["suggested"]["suggested_grade"] == "7B"
     assert inst["suggested"]["grade_anchor_from"] == "lead_max_rp"

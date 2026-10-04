@@ -11,7 +11,12 @@ What counts as one piece of evidence (``is_onsight_evidence``):
 
 - a lead route (the route's own ``discipline``, else the session's);
 - its FIRST appearance in the log (spot name + route name, case- and
-  whitespace-insensitive — the identity B362 already uses for route names);
+  whitespace-insensitive — the identity B362 already uses for route names).
+  The first-appearance rule only guards the INFERRED case (no style): a route
+  the athlete explicitly logged ``onsight``/``flash`` counts even when its name
+  was already seen at that spot, because generic names repeat ("Tiro 3" on two
+  different multi-pitches). Such a repeat gets its own evidence key
+  (``spot|route@date``) so the card can ask about it separately;
 - exactly one attempt, and that attempt is ``sent``;
 - a style that does not exclude a first go: absent, ``onsight`` or ``flash``.
   ``redpoint``, ``repeat``, ``project`` and a ``topped_out`` result are out;
@@ -53,6 +58,8 @@ SUPPORTED_FIELDS = (FIELD_LEAD_OS,)
 # Styles that still allow a first-go send. Anything else (redpoint, repeat,
 # project) says the athlete had been on the route before.
 _FIRST_GO_STYLES = {None, "", "onsight", "flash"}
+# Styles the athlete declared: trusted over a name collision in the log.
+_EXPLICIT_STYLES = {"onsight", "flash"}
 # Answers the card accepts per route.
 CONFIRM_STYLES = {"onsight", "flash", "worked"}
 
@@ -82,15 +89,19 @@ def route_key(entry: Dict[str, Any], route: Dict[str, Any]) -> str:
     return f"{_norm(entry.get('spot_name'))}|{_norm(route.get('name'))}"
 
 
+def _single_sent_attempt(route: Dict[str, Any]) -> bool:
+    attempts = route.get("attempts") or []
+    if len(attempts) != 1 or not isinstance(attempts[0], dict):
+        return False
+    return attempts[0].get("result") == "sent"
+
+
 def is_first_go_send(route: Dict[str, Any], key: str, seen: Set[str]) -> bool:
     """Shared predicate (outdoor stats + evidence): a single sent attempt on a
     route never logged before, with a style that allows a first go."""
     if key in seen:
         return False
-    attempts = route.get("attempts") or []
-    if len(attempts) != 1 or not isinstance(attempts[0], dict):
-        return False
-    if attempts[0].get("result") != "sent":
+    if not _single_sent_attempt(route):
         return False
     return route.get("style") in _FIRST_GO_STYLES
 
@@ -101,11 +112,19 @@ def _is_lead(entry: Dict[str, Any], route: Dict[str, Any]) -> bool:
 
 
 def is_onsight_evidence(entry: Dict[str, Any], route: Dict[str, Any], seen: Set[str]) -> bool:
-    """A first-go send of a lead route on the French ladder."""
+    """A first-go send of a lead route on the French ladder.
+
+    An explicit ``onsight``/``flash`` with one sent attempt counts even when the
+    route name was already seen at the spot (the athlete's declaration beats a
+    generic-name collision, as in ``compute_outdoor_stats``); the
+    first-appearance rule guards only a route logged with no style.
+    """
     if not _is_lead(entry, route):
         return False
     if normalize_lead_grade(route.get("grade")) is None:
         return False
+    if route.get("style") in _EXPLICIT_STYLES:
+        return _single_sent_attempt(route)
     return is_first_go_send(route, route_key(entry, route), seen)
 
 
@@ -140,16 +159,30 @@ def collect_onsight_evidence(
     """
     excluded = set(worked_keys or ())
     seen: Set[str] = set()
+    used_keys: Set[str] = set()
     out: List[Dict[str, Any]] = []
     for entry in chronological(sessions):
         date = str(entry.get("date") or "")
         for route in entry.get("routes") or []:
             if not isinstance(route, dict):
                 continue
-            key = route_key(entry, route)
+            base_key = route_key(entry, route)
             evidence = is_onsight_evidence(entry, route, seen)
-            seen.add(key)
-            if not evidence or key in excluded:
+            seen.add(base_key)
+            if not evidence:
+                continue
+            # A repeated name (explicit onsight/flash only, see
+            # is_onsight_evidence) gets its own key, so the card and the
+            # confirm endpoint can tell the two routes apart.
+            key = base_key
+            if key in used_keys:
+                key = f"{base_key}@{date}"
+                n = 2
+                while key in used_keys:
+                    key = f"{base_key}@{date}#{n}"
+                    n += 1
+            used_keys.add(key)
+            if key in excluded:
                 continue
             style = route.get("style") or None
             out.append({

@@ -667,9 +667,26 @@ def step_grade_scaled(grade: str | None, letter_offset: int, scale: str) -> Opti
 # applied to it exactly as before. A climber whose OS is within 3 half grades
 # of the RP gets the same anchor as before (the OS), bit for bit.
 PE_ANCHOR_GRADE_REF = "lead_pe_anchor"
+# Untested athletes keep the pre-A292 anchor (and report it under this ref).
+PE_ANCHOR_UNTESTED_REF = "lead_max_os"
 # ENGINEERING CONSTANT (no published source; DECISIONS 2026-10-04, R6-PE):
 # 3 half grades below the redpoint is where the anchor stops following the OS.
 PE_ANCHOR_RP_HALF_STEPS = -3
+
+
+def pe_anchor_applies(user_state: Dict[str, Any], on: Any) -> bool:
+    """A292 scope gate for the derived PE anchor (DECISIONS 2026-10-04, Global:
+    anchor rules apply ONLY to athletes with a tested baseline). Same gate as
+    A290's ``phase_anchor.is_tested_any``: a tested official max on the finger
+    OR the pulling protocol on ``on``. No usable date → not tested."""
+    from backend.engine import retest_policy as rp  # lazy: rp imports this module lazily too
+    try:
+        return bool(
+            rp.is_tested(user_state, rp.PROTOCOL_HANG_7S, on)
+            or rp.is_tested(user_state, rp.PROTOCOL_PULLUP_2RM, on)
+        )
+    except (TypeError, ValueError):
+        return False
 
 
 def lead_pe_anchor(grades: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
@@ -1697,9 +1714,15 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             if grade_ref and not _is_limit_grade_exercise(ex_id):
                 grades = ((user_state.get("assessment") or {}).get("grades") or {})
                 anchor_from: Optional[str] = None
-                if grade_ref == PE_ANCHOR_GRADE_REF:
-                    # A292 (R6-PE): derived anchor max(OS, RP − 3 half grades).
+                if grade_ref == PE_ANCHOR_GRADE_REF and pe_anchor_applies(user_state, out.get("date")):
+                    # A292 (R6-PE): derived anchor max(OS, RP − 3 half grades),
+                    # tested athletes only (DECISIONS, Global).
                     ref_grade_raw, anchor_from = lead_pe_anchor(grades)
+                elif grade_ref == PE_ANCHOR_GRADE_REF:
+                    # Untested athlete: exactly the pre-A292 output — the
+                    # onsight anchor, reported as lead_max_os.
+                    grade_ref = PE_ANCHOR_UNTESTED_REF
+                    ref_grade_raw = grades.get(grade_ref)
                 else:
                     ref_grade_raw = grades.get(grade_ref)
                 ref_scale = grade_scale_for_ref(grade_ref)
