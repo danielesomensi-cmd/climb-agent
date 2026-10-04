@@ -343,6 +343,28 @@ def validate(
     return exercises, dropped
 
 
+def _scale_load_for_reps(load: float, ex: Dict[str, Any], reps: Any, bodyweight: float = 0.0) -> float:
+    """B363: the remembered load belongs to the catalog rep scheme. When the
+    model asks for MORE reps, scale it DOWN (Epley, ~2 in reserve); never up —
+    fewer reps keep the remembered load, the safe side. Loads ≤ 0 (assisted or
+    unknown) are left alone."""
+    # Only rep-counted lifts: a hang's "reps" are hangs, not a rep max.
+    if ex.get("load_model") != "external_load" and ex.get("id") not in ("weighted_pullup", "weighted_chinup"):
+        return load
+    ref = (ex.get("prescription_defaults") or {}).get("reps")
+    if not load or load <= 0 or not isinstance(ref, (int, float)) or not isinstance(reps, (int, float)):
+        return load
+    if reps <= ref:
+        return load
+    factor = (1 + (ref + 2) / 30) / (1 + (reps + 2) / 30)
+    if ex.get("load_model") == "total_load":
+        # Rep-max scaling holds on the TOTAL load (bodyweight + added).
+        scaled = max(0.0, (load + bodyweight) * factor - bodyweight)
+    else:
+        scaled = load * factor
+    return round(scaled * 2) / 2
+
+
 def _decorate_engine_fields(
     exercises: List[Dict[str, Any]],
     catalog_by_id: Dict[str, Dict[str, Any]],
@@ -383,6 +405,10 @@ def _decorate_engine_fields(
                 load_val = float(remembered)
             if not load_val:
                 load_val = float(anchor_adhoc_load(ex, user_state, phase) or 0)
+            load_val = _scale_load_for_reps(
+                load_val, ex, entry.get("reps"),
+                float(user_state.get("bodyweight_kg") or ((user_state.get("body") or {}).get("weight_kg") or 0.0)),
+            )
         except Exception:
             logger.exception("composer: load lookup failed for %s", entry["exercise_id"])
         entry["load_kg"] = load_val

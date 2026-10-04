@@ -80,6 +80,56 @@ def _is_current_macrocycle_monday(state: dict, candidate_monday: str) -> bool:
     return candidate_monday == current_start
 
 
+def _attach_prescribed_reps(log_entry: dict, state: dict, target_date, target_sid) -> None:
+    """B363: copy the prescribed reps of each exercise onto its feedback item.
+
+    Looks the session up in the stored week plan (planned, quick-added and
+    custom sessions all live there as ``exercises``), falling back to the
+    custom session definition. Best effort: an exercise not found keeps no
+    ``prescribed_reps`` and progression uses the catalog default.
+    """
+    items = (log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
+    if not items or not target_date or not target_sid:
+        return
+
+    reps_by_id: dict = {}
+
+    def _collect(exercises) -> None:
+        for ex in exercises or []:
+            if not isinstance(ex, dict):
+                continue
+            eid = ex.get("exercise_id")
+            reps = ex.get("reps")
+            if reps is None:
+                reps = (ex.get("prescription") or {}).get("reps")
+            if eid and isinstance(reps, (int, float)) and reps > 0 and eid not in reps_by_id:
+                reps_by_id[eid] = reps
+
+    monday = _monday_for_date(target_date)
+    plans = [(state.get("week_plans") or {}).get(monday) if monday else None, state.get("current_week_plan")]
+    for plan in plans:
+        for week in (plan or {}).get("weeks") or []:
+            for day in week.get("days") or []:
+                if day.get("date") != target_date:
+                    continue
+                for s in day.get("sessions") or []:
+                    if s.get("session_id") == target_sid:
+                        _collect(s.get("exercises"))
+                        _collect(s.get("exercise_instances"))
+                        # Planned (macrocycle) sessions keep them under resolved.
+                        _collect(((s.get("resolved") or {}).get("resolved_session") or {}).get("exercise_instances"))
+    if str(target_sid).startswith("custom_"):
+        cs_id = str(target_sid)[len("custom_"):]
+        for cs in state.get("custom_sessions") or []:
+            if isinstance(cs, dict) and cs.get("id") == cs_id:
+                _collect(cs.get("exercises"))
+
+    for item in items:
+        eid = item.get("exercise_id")
+        if eid in reps_by_id and item.get("reps") is None and item.get("prescribed_reps") is None:
+            item["prescribed_reps"] = reps_by_id[eid]
+
+
 @router.post("", dependencies=[Depends(require_active_subscription)])
 @limiter.limit("30/minute")
 def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str] = Depends(get_user_id)):
@@ -207,6 +257,11 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
             if _s.get("session_id") == target_sid and _s.get("is_custom"):
                 _is_custom_session = True
                 break
+
+    # B363: tell progression how many reps each set was prescribed — the
+    # clients do not send them, and the weighted pull-up max is re-based from
+    # (load, reps). Only fills items that carry no reps of their own.
+    _attach_prescribed_reps(req.log_entry, state, target_date, target_sid)
 
     # 2. Apply progression feedback (updates working loads)
     try:

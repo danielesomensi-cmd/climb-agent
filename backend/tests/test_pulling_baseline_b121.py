@@ -194,7 +194,8 @@ class TestWeightedPullupWithBaseline:
         # external = 107.0 - 77 = 30.0
         assert sug["suggested_total_load_kg"] > 77.0, "Should be more than bodyweight"
         assert sug["suggested_external_load_kg"] > 0, "Should have added weight"
-        assert sug["load_source"] == "baselines.pulling"
+        # B363: the anchor is the 2RM reference derived from the same baseline.
+        assert sug["load_source"] == "pullup_2rm_reference"
 
     def test_phase_aware_load_base_vs_strength_power(self):
         """Load is lower in base phase than in strength_power."""
@@ -225,18 +226,19 @@ class TestWeightedPullupWithBaseline:
         # total = 77.0 (BW only is fine for deload)
         assert total <= 77.0, "Deload should be at or below bodyweight"
 
-    def test_working_loads_override_baseline(self):
-        """When working_loads entry exists, baseline is ignored."""
+    def test_legacy_working_load_does_not_override_baseline(self):
+        """B363 (inverts the B121 rule): a raw remembered load never beats the
+        tested max — it may be the 2RM test itself copied in as a training load."""
         state = _user_state_with_pullup_1rm(bodyweight=77.0, pullup_1rm_total=130.0)
         state["working_loads"]["entries"] = [
-            {"exercise_id": "weighted_pullup", "next_external_load_kg": 15.0, "updated_at": "2026-01-04"}
+            {"exercise_id": "weighted_pullup", "next_external_load_kg": 45.0, "updated_at": "2026-01-04"}
         ]
         day = _resolved_day_with_weighted_pullup(date="2026-01-05", intent="strength")
         result = inject_targets(day, state)
 
         wp = result["sessions"][0]["exercise_instances"][0]
-        assert wp["suggested"]["suggested_external_load_kg"] == 15.0
-        assert "load_source" not in wp["suggested"]
+        assert wp["suggested"]["suggested_external_load_kg"] != 45.0
+        assert wp["suggested"]["load_source"] == "pullup_2rm_reference"
 
     def test_no_baseline_no_1rm_bodyweight_fallback(self):
         """No 1RM provided → graceful fallback to bodyweight only (no regression)."""

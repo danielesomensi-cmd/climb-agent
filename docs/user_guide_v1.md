@@ -254,7 +254,7 @@ There's no way to dismiss the card without choosing: each option tells the engin
 
 - **Max Hang (7s)**: Maximum weight you can hang for 7 seconds on a 20mm edge. Measures finger max strength.
 - **Repeater (7:3 to failure)**: How many reps you can sustain at 60% of your max hang. Measures finger endurance.
-- **Weighted Pull-Up (2RM)**: Maximum added weight for 2 reps. The system estimates your 1RM from this. Measures pulling strength.
+- **Weighted Pull-Up (2RM)**: Maximum added weight for 2 reps. This 2RM stays your pulling reference: training loads are a percentage of it for the current phase (e.g. ~86% of the 2RM total for heavy 4×3 sets in the strength phase), never the 2RM itself. Training sessions can raise the reference when a set shows you are stronger; only a set you rate *hard* or *very hard* lowers it.
 - **Bodyweight Pull-Up Gate**: If you've never done the weighted test, the system first checks if you can do 15+ bodyweight pull-ups. If yes, you progress to the weighted test.
 - **Hip Flexibility**: Straddle measurement in cm. Informs mobility prescription.
 
@@ -264,7 +264,7 @@ If you only have a couple of training days a week, a test week can run out of ro
 
 **Why they matter**: Without fresh test data, the system keeps using your old baselines. Your loads won't progress accurately, and your plan won't adapt to your real improvements. Tests are not optional extras — they're the system recalibrating itself.
 
-**After a test session**: Your profile radar updates, working loads recalculate, and the remaining macrocycle adjusts its emphasis based on your new strengths and weaknesses.
+**After a test session**: Your profile radar updates, working loads recalculate (a test result is a max, so it resets the training load to a percentage of the new max instead of becoming the next training load), and the remaining macrocycle adjusts its emphasis based on your new strengths and weaknesses.
 
 ---
 

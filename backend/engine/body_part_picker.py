@@ -18,9 +18,17 @@ import json
 import logging
 import random
 from copy import deepcopy
+from datetime import date as _date
 from typing import Any, Dict, List, Optional, Sequence, Set
 
 from backend.engine.equipment_utils import KNOWN_EQUIPMENT_KEYS, expand_equipment
+from backend.engine.progression_v1 import (
+    EXTERNAL_LOAD_FRESHNESS_DAYS,
+    _best_entry,
+    _get_current_phase_id,
+    _is_fresh,
+    weighted_pullup_target,
+)
 from backend.engine.resolve_session import (
     _apply_load_override,
     score_exercise,
@@ -545,6 +553,7 @@ def select_exercises_for_part(
 def apply_resolver_light(
     exercise: Dict[str, Any],
     user_state: Dict[str, Any],
+    today: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build an exercise instance with prescription + suggested loads.
 
@@ -593,12 +602,38 @@ def apply_resolver_light(
     instance["load_kg"] = p.get("load_kg") or 0
     instance["notes"] = p.get("notes") or ""
 
-    # Step 3 — working_loads lookup
-    wl_entries = (user_state.get("working_loads") or {}).get("entries") or []
-    wl_match = next(
-        (e for e in wl_entries if e.get("exercise_id") == ex_id),
-        None,
+    today = today or _date.today().isoformat()
+
+    # Step 3a — B363: the weighted pull-up is a % of the 2RM reference, never
+    # the raw memory (which may be the 2RM test itself).
+    if ex_id == "weighted_pullup":
+        target = weighted_pullup_target(
+            user_state, _get_current_phase_id(user_state, today), "hard",
+        )
+        if target is not None:
+            instance["suggested_external_load_kg"] = target["external"]
+            instance["suggested_total_load_kg"] = target["total"]
+            instance["load_source"] = "pullup_2rm_reference"
+            return instance
+
+    # Step 3 — working_loads lookup. B363: through the same freshness gate as
+    # planned resolution (60 days for maxes/hangs, wide for external_load) —
+    # it used to serve any entry of any age (a March max_hang_5s at +46 kg).
+    freshness = (
+        EXTERNAL_LOAD_FRESHNESS_DAYS
+        if exercise.get("load_model") == "external_load"
+        else 60
     )
+    wl_match = _best_entry(user_state, ex_id or "", {}, today, freshness_days=freshness)
+    if wl_match is None:
+        # Several keyed memories (per-hand loading pin, max hang per edge):
+        # the freshest one, ties broken by key — deterministic.
+        fresh = [
+            e for e in (user_state.get("working_loads") or {}).get("entries") or []
+            if e.get("exercise_id") == ex_id and _is_fresh(e.get("updated_at"), today, freshness)
+        ]
+        fresh.sort(key=lambda e: (str(e.get("updated_at") or ""), str(e.get("key") or "")), reverse=True)
+        wl_match = fresh[0] if fresh else None
     if wl_match:
         next_ext = wl_match.get("next_external_load_kg")
         next_tot = wl_match.get("next_total_load_kg")
@@ -683,6 +718,7 @@ def generate_body_part_session(
     exercises_catalog: Sequence[Dict[str, Any]],
     include_cooldown: bool = True,
     seed: Optional[int] = None,
+    today: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Main entry point — generate a full session dict ready for week insertion.
 
@@ -714,14 +750,14 @@ def generate_body_part_session(
         wex = by_id.get(wid)
         if wex is None:
             continue
-        winst = apply_resolver_light(wex, user_state)
+        winst = apply_resolver_light(wex, user_state, today)
         winst["module_role"] = "warmup"
         winst["body_part"] = "warmup"
         exercise_instances.append(winst)
 
     for block in blocks:
         for ex in block["exercises"]:
-            inst = apply_resolver_light(ex, user_state)
+            inst = apply_resolver_light(ex, user_state, today)
             inst["module_role"] = "main"
             inst["body_part"] = block["body_part"]
             exercise_instances.append(inst)

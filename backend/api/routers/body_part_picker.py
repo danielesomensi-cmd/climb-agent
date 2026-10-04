@@ -61,6 +61,9 @@ class PreviewRequest(BaseModel):
     gym_id: Optional[str] = None
     include_cooldown: bool = True
     seed: Optional[int] = None
+    # B363: the day the session is for (freshness gate + phase %). Optional on
+    # preview — the client does not send it yet; /start always does.
+    target_date: Optional[str] = None
 
 
 class StartRequest(PreviewRequest):
@@ -117,6 +120,8 @@ def options(
 def preview(req: PreviewRequest, user_id: Optional[str] = Depends(get_user_id)):
     """Generate a session preview without persisting."""
     _validate_body_parts(req.body_parts)
+    if req.target_date:
+        _validate_target_date(req.target_date)
     state = load_state(user_id)
     catalog = _load_catalog()
     session = generate_body_part_session(
@@ -127,6 +132,7 @@ def preview(req: PreviewRequest, user_id: Optional[str] = Depends(get_user_id)):
         exercises_catalog=catalog,
         include_cooldown=req.include_cooldown,
         seed=req.seed,
+        today=req.target_date,
     )
     if not session.get("exercises"):
         raise HTTPException(
@@ -153,6 +159,7 @@ def start(req: StartRequest, user_id: Optional[str] = Depends(get_user_id)):
         exercises_catalog=catalog,
         include_cooldown=req.include_cooldown,
         seed=req.seed,
+        today=req.target_date,
     )
     if not session_payload.get("exercises"):
         raise HTTPException(

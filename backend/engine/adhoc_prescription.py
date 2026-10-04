@@ -24,14 +24,14 @@ from datetime import date as _date
 from typing import Any, Dict, Optional
 
 from backend.engine.progression_v1 import (
-    PULLING_1RM_PCT,
-    PULLING_1RM_PCT_DEFAULT,
     PULLING_EXTERNAL_SCALING,
     _best_entry,
     _get_bodyweight,
     _get_pulling_baseline,
     _hangboard_suggested,
     _round_half_step,
+    NOT_FINGER_MAX_TOTAL_LOAD,
+    weighted_pullup_target,
 )
 
 # A253 — genuine (max-derived) load anchor for the adhoc path, SCOPED to
@@ -39,7 +39,8 @@ from backend.engine.progression_v1 import (
 _TEST_BASELINE_SOURCES = ("test", "test_session")
 # total_load ids that are NOT hangboard hangs (they'd wrongly read the finger
 # baseline) — excluded from the hangboard anchor branch.
-_NON_HANGBOARD_TOTAL_LOAD = ("weighted_pullup", "weighted_chinup", "weighted_dip")
+# B363: plus every total_load exercise that is not a two-arm edge hang.
+_NON_HANGBOARD_TOTAL_LOAD = ("weighted_pullup",) + NOT_FINGER_MAX_TOTAL_LOAD
 
 # Coarse macrocycle-phase → effort-band cue. Display-only, custom-only, never
 # persisted. Keys are the canonical phase ids (macrocycle_v1.PHASE_ORDER).
@@ -95,6 +96,18 @@ def propose_exercise_prescription(
         if isinstance(kg, (int, float)) and kg > 0:
             load_kg = float(kg)
 
+    # B363: the weighted pull-up is prefilled from the 2RM reference as a % for
+    # the phase, never from the raw memory — the last logged load may come from
+    # a set with a different rep count, or be the 2RM test itself (+45 kg
+    # proposed for a 4x3). ``last_logged`` still shows the true last value.
+    # Without memory it fires only on a TESTED baseline (A253 boundary: a
+    # grade-estimate is never surfaced as a number).
+    if exercise_id == "weighted_pullup":
+        tested = str((_get_pulling_baseline(user_state) or {}).get("source") or "") in _TEST_BASELINE_SOURCES
+        target = weighted_pullup_target(user_state, phase, "hard") if (load_kg > 0 or tested) else None
+        if target is not None:
+            load_kg = target["external"]
+
     return {
         "sets": defaults.get("sets", 1),
         "reps": defaults.get("reps"),
@@ -141,12 +154,11 @@ def anchor_adhoc_load(
         pulling = _get_pulling_baseline(user_state)
         if not pulling or str(pulling.get("source") or "") not in _TEST_BASELINE_SOURCES:
             return None
-        rm_total = pulling.get("weighted_pullup_1rm_total_kg")
-        if not isinstance(rm_total, (int, float)) or rm_total <= 0:
+        # B363: same 2RM-reference rule as the planned path.
+        target = weighted_pullup_target(user_state, phase, "medium")
+        if target is None:
             return None
-        pct = PULLING_1RM_PCT.get((phase or "", "medium"), PULLING_1RM_PCT_DEFAULT)
-        external = _round_half_step(float(rm_total) * pct - _get_bodyweight(user_state))
-        return external if external > 0 else None
+        return target["external"] if target["external"] > 0 else None
 
     if eid in PULLING_EXTERNAL_SCALING:  # barbell_row, face_pull
         pulling = _get_pulling_baseline(user_state)

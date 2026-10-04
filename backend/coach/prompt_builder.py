@@ -239,10 +239,27 @@ def _baselines_section(state: Dict[str, Any]) -> str:
         setup_bits = ", ".join(f"{k}={v}" for k, v in setup.items()
                                if v not in (None, "", []))
         load_bits = []
-        for key, label in (("next_external_load_kg", "next external load"),
-                           ("next_total_load_kg", "next total load")):
-            if entry.get(key) is not None:
-                load_bits.append(f"{label} {entry[key]} kg")
+        if entry.get("exercise_id") == "weighted_pullup":
+            # B363: never print a raw remembered pull-up load — it may be the
+            # 2RM test itself. Print the 2RM-derived training load instead.
+            from backend.engine.progression_v1 import (
+                _get_current_phase_id, pullup_reference_2rm, weighted_pullup_target,
+            )
+            target = weighted_pullup_target(
+                state, _get_current_phase_id(state, date.today().isoformat()), "hard",
+            )
+            if target is not None:
+                load_bits.append(
+                    f"training load {target['external']} kg added "
+                    f"({target['total']} kg total) for heavy low-rep sets, "
+                    f"from a 2RM reference of {pullup_reference_2rm(state)} kg total — "
+                    "the 2RM is a max, never a training load"
+                )
+        else:
+            for key, label in (("next_external_load_kg", "next external load"),
+                               ("next_total_load_kg", "next total load")):
+                if entry.get(key) is not None:
+                    load_bits.append(f"{label} {entry[key]} kg")
         if entry.get("next_target_grade"):
             load_bits.append(f"next target grade {entry['next_target_grade']}")
         if not load_bits:

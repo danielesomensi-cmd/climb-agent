@@ -613,7 +613,11 @@ def test_arch2_all_total_load_exercises_get_suggestion():
     with open("backend/catalog/exercises/v1/exercises.json") as f:
         data = json.load(f)
     us = _base_user_state()
-    total_ids = [e["id"] for e in data["exercises"] if e.get("load_model") == "total_load"]
+    from backend.engine.progression_v1 import NOT_FINGER_MAX_TOTAL_LOAD
+    # B363: non-edge-hang total_load exercises get NO finger-max suggestion —
+    # no number beats a wrong one (a weighted chin-up at +3 kg "3x7s").
+    total_ids = [e["id"] for e in data["exercises"]
+                 if e.get("load_model") == "total_load" and e["id"] not in NOT_FINGER_MAX_TOTAL_LOAD]
     for ex_id in total_ids:
         day = _day_with_exercises([{
             "exercise_id": ex_id,
