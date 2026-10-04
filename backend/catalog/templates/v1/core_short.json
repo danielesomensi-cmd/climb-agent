@@ -6,6 +6,8 @@
   "blocks": [
     {
       "block_id": "main",
+      "rotation": "ab",
+      "rotation_exclude": ["plank", "dead_bug", "plank_shoulder_tap"],
       "type": "main_set",
       "role": ["accessory"],
       "domain": ["core"],

@@ -26,6 +26,7 @@
     },
     {
       "block_id": "shoulder_prehab",
+      "rotation": "ab",
       "type": "prehab",
       "role": ["prehab"],
       "domain": ["prehab_shoulder"],

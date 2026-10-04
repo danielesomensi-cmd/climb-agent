@@ -30,6 +30,8 @@
     },
     {
       "block_id": "limit_bouldering",
+      "rotation": "phase_anchor",
+      "anchor_priority": ["system_board_limit", "board_limit_boulders", "spray_wall_limit", "limit_bouldering"],
       "required": true,
       "priority": 90,
       "module_role": "primary",
@@ -46,6 +48,8 @@
     },
     {
       "block_id": "campus_power",
+      "rotation": "phase_anchor",
+      "anchor_priority": ["campus_max_ladders", "campus_laddering_feet_off", "campus_bumps", "campus_touches", "campus_laddering_feet_on"],
       "required": false,
       "priority": 80,
       "module_role": "secondary",

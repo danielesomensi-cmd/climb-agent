@@ -82,6 +82,11 @@
     },
     {
       "block_id": "main",
+      "rotation": "phase_anchor",
+      "anchor_axis": "finger",
+      "anchor_priority": {"tested": ["max_hang_7s", "lp_max_lift_7s", "max_hang_5s", "max_hang_ladder", "horst_7_53"], "untested": ["horst_7_53", "min_edge_hang", "max_hang_ladder", "pangullich_ladders_easy"]},
+      "anchor_exclude": {"tested": ["min_edge_hang"]},
+      "anchor_priority_by_phase": {"power_endurance": {"tested": ["max_hang_7s", "lp_max_lift_7s", "horst_7_53"], "tested_prescription_overrides": {"sets": 3, "sets_range": [3, 3]}}},
       "type": "main_set",
       "selection": {
         "primary": {

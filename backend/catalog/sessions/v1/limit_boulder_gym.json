@@ -30,6 +30,8 @@
     },
     {
       "block_id": "limit_projecting",
+      "rotation": "phase_anchor",
+      "anchor_priority": ["limit_bouldering", "spray_wall_limit", "board_limit_boulders"],
       "required": true,
       "priority": 90,
       "module_role": "primary",
@@ -46,6 +48,9 @@
     },
     {
       "block_id": "supplementary_pulling",
+      "rotation": "ab",
+      "unloaded_only": true,
+      "ab_pool": ["power_pullups_explosive", "archer_pullup", "one_arm_pullup_assisted"],
       "required": false,
       "priority": 70,
       "module_role": "secondary",

@@ -167,6 +167,17 @@ Your daily workflow:
 
 **Done** and **Skip** are always reversible — tap **Undo completion** (to reverse Done) or **Undo skip** (to reverse Skip) — don't worry about misclicks.
 
+### Same main exercise for the whole phase (once you have tested)
+
+Once you have a recent strength test (max hang or weighted pull-up, within the last 90 days), the main exercises stay **fixed for the whole phase**, so you can see your progress week on week:
+
+- **Finger strength** — max hangs on the 20 mm edge (half crimp) if your tested level is high enough, otherwise a submaximal variant. In Power Endurance the finger session becomes a short maintenance dose (3 sets).
+- **Weighted pull-ups** — in the first **two** pulling-strength sessions of the week during Strength & Power (one in the other phases). The other sessions, and the pulling block after a limit or power day, use pull-up variations without added weight.
+- **Limit bouldering** on the wall and on the board, and the campus exercise, also stay the same for the phase.
+- **Core and shoulder accessories** alternate between two exercises (A one week, B the next), so they change but stay recognisable.
+
+To protect you from stacking fatigue, the heavy version steps down for that day if you did weighted pull-ups in the last 48 hours, did max hangs (or a finger test) in the last 72 hours, or have a limit/strength day tomorrow. Without a recent test nothing changes: exercises keep rotating as before.
+
 ---
 
 ## 4. The Guided Session

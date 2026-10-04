@@ -425,6 +425,61 @@ if grip matches    → +5
 
 Every selection produces a `trace` dict with counts at each stage, enabling production debugging when `TRACE_RESOLVE=true` is set.
 
+### 6.1 Phase-anchor rotation (`phase_anchor.py`, A290)
+
+**Scope:** only athletes with a TESTED baseline on the finger or the pulling
+axis (`retest_policy.is_tested`: a `tests.*` entry, source test/test_session,
+< 90 days). Otherwise `build_rotation_context()` returns `None` and every new
+P0 kwarg keeps its default: the resolver is bit-for-bit the pre-A290 one
+(golden `backend/tests/fixtures/a290_untested_golden.json`).
+
+The catalog declares a **rotation class** per block, as top-level keys of a
+template block or of an inline session module (never inside `selection`):
+
+| Class | Pick | History |
+|---|---|---|
+| `phase_anchor` | first candidate in the priority list (`anchor_priority`, overridden by `anchor_priority_by_phase[phase]`; `tested` / `untested` list by `anchor_axis`); ids outside the list follow by md5(id \| phase \| effective phase start) | none — fixed for the phase |
+| `ab` | pool ordered by md5(id \| phase \| phase start \| session \| block); A = pool[0], B = pool[1]; choice = `(week_idx + occurrence_idx) % 2` | none — `occurrence_idx` counts the same session earlier in the ISO week, **status agnostic** (marking Monday done never changes Thursday) |
+| *(none)* | free: the chain above + recency score + weekly md5 tie-break | yes |
+
+- **Phase window** from `macro_position` (pause-aware): `phase_id` = the
+  resolver's `phase` kwarg (else the phase on `target_date`), start =
+  `start_date + pause.offset_days + 7 × earlier phases`. `phases[].start_date`
+  is never read. `week_idx = (target_date − phase_start) // 7`.
+- **Tested list** per axis: fingers total/BW ≥ 1.35 (20 mm, 7 s; a 5 s test is
+  converted), pulling 2RM total/BW ≥ 1.45 — from `official_max` (tests.*, the
+  test's own bodyweight), never from the estimated baselines. ENGINEERING
+  CONSTANTS.
+- **Heavy slot** (`heavy_slot: true` on `strength_long.pulling_compound`,
+  `finger_strength_home.pulling_maintenance`,
+  `pulling_strength_compound.weighted_pullup_main`): heavy (phase_anchor on
+  the weighted list) only for the first 2 heavy-slot sessions of the ISO week
+  in strength_power, 1 elsewhere. A heavy occurrence is downgraded to `ab`
+  without external load (`load_model` not total/external) when: a weighted
+  pull was done < 48 h before (`heavy_pull_48h`), 2 heavy-pull days in the
+  last 7 (`heavy_pull_7d_cap`), or a limit_boulder / power_contact /
+  strength_long is planned tomorrow (`pre_limit_24h`; the core also drops
+  front levers that day).
+- **Max-hang spacing:** a finger_max exposure (tests included) < 72 h before
+  drops the finger anchor to the `untested` list (`max_hang_72h`).
+  Fatigue = done sessions only (F0 `stimulus.exposure_dates`, custom sessions
+  with logged sets included); a skipped session never counts.
+- **P0 fixes for tested athletes:** Stage 0 drops `active: false`; Stage 2e
+  exempts a test exercise only in a block that asks for role `test` (D35:
+  max_hang_7s is role main+test); Stage 3b (history dedup) runs after Stage 6
+  for free blocks, so a saturated history cannot push a pick out of the
+  target domain/pattern. The variety recency excludes the main instances of
+  test sessions, includes done custom sessions and has no 100-id cap.
+- **Dose by phase:** `anchor_priority_by_phase.power_endurance.tested_prescription_overrides`
+  — PE finger session = max_hang_7s maintenance at 3 sets (B364's
+  `anchored_load` gives the 85-90 % load).
+- Trace: `blocks[].p0_trace.rotation` `{rotation, anchor_list, anchor_axis,
+  anchor_rank, phase_seed, week_idx, ab_slot, occurrence_idx, ab_pair,
+  heavy_slot, heavy_rank, spacing_downgrade, selected}` (additive).
+- `resolve_session(..., week_plan=...)`: the plan being resolved (week and
+  replanner `_auto_resolve` pass it) is the structural truth for occurrences;
+  without it the state's hot week plans are read.
+
 ---
 
 ## 7. Progression Engine (`progression_v1.py`)

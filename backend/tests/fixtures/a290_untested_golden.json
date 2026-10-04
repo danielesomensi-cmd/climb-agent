@@ -1,0 +1,390 @@
+{
+ "no_tests_onboarding_baselines|2026-10-05|limit_boulder_gym": {
+  "digest": "0acc260352609b2d5aeaf7e3687dde64b1bf689711ca095ec8d98a2d14a3eb3d",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "system_board_limit",
+   "weighted_chinup",
+   "side_plank",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-06|pulling_strength_gym": {
+  "digest": "25a34c0348cb31e15a8b57efd765fb1143a54c9f2175d354b8492c7d12ee7d03",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "eccentric_pullup",
+   "l_sit_pullup",
+   "weighted_chinup",
+   "side_plank",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-07|power_contact_gym": {
+  "digest": "70fb0c3a8756ae8524cb9ad2ce0365b7ab86dc1ff3c0c04e95dca56c43b9efdb",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "campus_switches",
+   "system_board_limit",
+   "side_plank",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-09|strength_long": {
+  "digest": "4e888b046edb2cf0351ed93383676f7970fe4f91e3315aa8af66a290cd79c32e",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "max_hang_10s",
+   "weighted_chinup",
+   "side_plank",
+   "pronator_terres_isometric_hold",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-11|finger_maintenance_home": {
+  "digest": "d349306683e90825e683be378f5fc377ee606c721357323f202b1b48442fe535",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "hang_rampup_progressive",
+   "weighted_chinup",
+   "density_hangs",
+   "side_plank",
+   "pronator_terres_isometric_hold",
+   "reverse_wrist_curl",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-13|finger_strength_home": {
+  "digest": "d61057d896e28b375d69c0d64ebabd2f659333a313a046da7d116b4b7f0bee87",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "finger_warmup_generic",
+   "horst_7_53",
+   "typewriter_pullup",
+   "core_l_sit",
+   "elbow_eccentric_curl",
+   "finger_extensor_training",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_pigeon"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-15|limit_boulder_gym": {
+  "digest": "032d656a03ec3d1d51745bf6f077b15e540337530c6553287e2d10dfd8634a8f",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "spray_wall_limit",
+   "typewriter_pullup",
+   "core_l_sit",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_pigeon"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-17|boulder_circuit_gym": {
+  "digest": "717b6daaddbf79e03030a8af197c88f9c592bec4f92d776e362ebaa67dd7ae40",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "typewriter_pullup",
+   "otm_bouldering",
+   "core_l_sit",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_pigeon"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-20|finger_strength_home": {
+  "digest": "f127dacb9c23652f55e5c6d0e955953c022787cfb04d61fdc7da121bcf663c8d",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "warmup_repeaters_large",
+   "max_hang_10s",
+   "one_arm_pullup_assisted",
+   "plank",
+   "reverse_wrist_curl",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-22|power_endurance_gym": {
+  "digest": "309fafa4510b82f99b9a290d05a3245b8e65498df8543c9c04f48f4e08362878",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "linked_boulders",
+   "route_intervals",
+   "repeater_15_15",
+   "pullup",
+   "plank",
+   "pushup",
+   "shoulder_car",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "no_tests_onboarding_baselines|2026-10-24|strength_long": {
+  "digest": "fe96818f6b9fdb9a01fb0e11a257f0220bec14850c43c713e8dba8a7eca8e9bc",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "max_hang_10s",
+   "one_arm_pullup_assisted",
+   "plank",
+   "pushup",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "stale_tests|2026-10-05|limit_boulder_gym": {
+  "digest": "6c7e87cae5094cc2705acac03140bfe7402bba355007ff77c677eb89ebcd3b9e",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "system_board_limit",
+   "weighted_chinup",
+   "side_plank",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "stale_tests|2026-10-06|pulling_strength_gym": {
+  "digest": "3caed710cc0ef087bec287be807d5124120e96933d2dc93721cfae9bf2e8a003",
+  "exercise_ids": [
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "eccentric_pullup",
+   "l_sit_pullup",
+   "weighted_chinup",
+   "side_plank",
+   "pushup",
+   "scapular_pullup",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "stale_tests|2026-10-07|power_contact_gym": {
+  "digest": "70fb0c3a8756ae8524cb9ad2ce0365b7ab86dc1ff3c0c04e95dca56c43b9efdb",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "campus_switches",
+   "system_board_limit",
+   "side_plank",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "stale_tests|2026-10-09|strength_long": {
+  "digest": "0f3b8f6e19cde01378f7382875bbde1052429b78c556aec118f3ccc27b5c550a",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "hang_rampup_progressive",
+   "max_hang_10s",
+   "weighted_chinup",
+   "side_plank",
+   "pronator_terres_isometric_hold",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "stale_tests|2026-10-11|finger_maintenance_home": {
+  "digest": "d74db824a4faf2c7fecad4e396b5c6eaff107ecea92592ef3fadba56a81a3cd4",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "hang_rampup_progressive",
+   "weighted_chinup",
+   "density_hangs",
+   "side_plank",
+   "pronator_terres_isometric_hold",
+   "reverse_wrist_curl",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "forearm_stretches"
+  ]
+ },
+ "stale_tests|2026-10-13|finger_strength_home": {
+  "digest": "f09c59899a9a04ef700a6b51abbc5e22466eb436d6ba192c6c7b2e66fed9dcb9",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "finger_warmup_generic",
+   "horst_7_53",
+   "typewriter_pullup",
+   "core_l_sit",
+   "elbow_eccentric_curl",
+   "finger_extensor_training",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_pigeon"
+  ]
+ },
+ "stale_tests|2026-10-15|limit_boulder_gym": {
+  "digest": "032d656a03ec3d1d51745bf6f077b15e540337530c6553287e2d10dfd8634a8f",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "spray_wall_limit",
+   "typewriter_pullup",
+   "core_l_sit",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_pigeon"
+  ]
+ },
+ "stale_tests|2026-10-17|boulder_circuit_gym": {
+  "digest": "717b6daaddbf79e03030a8af197c88f9c592bec4f92d776e362ebaa67dd7ae40",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "typewriter_pullup",
+   "otm_bouldering",
+   "core_l_sit",
+   "pushup",
+   "scapular_pullup",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hamstring_fold",
+   "cooldown_hip_pigeon"
+  ]
+ },
+ "stale_tests|2026-10-20|finger_strength_home": {
+  "digest": "cb2b12b0db6bf4729294d7b0d79dfc6f341604fbbc6354b9eb92eb28234a9ba4",
+  "exercise_ids": [
+   "finger_recruitment_pulls",
+   "warmup_repeaters_large",
+   "max_hang_10s",
+   "one_arm_pullup_assisted",
+   "plank",
+   "reverse_wrist_curl",
+   "stick_pronation_supination_eccentric",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "stale_tests|2026-10-22|power_endurance_gym": {
+  "digest": "7339cbc7c48b351167aa0a4c88ea142b5d71c604fc346412e6becc822c81929f",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "dynamic_mobility_flow",
+   "general_pulse_raise",
+   "warmup_easy_boulders",
+   "linked_boulders",
+   "route_intervals",
+   "repeater_15_15",
+   "pullup",
+   "plank",
+   "pushup",
+   "shoulder_car",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ },
+ "stale_tests|2026-10-24|strength_long": {
+  "digest": "32dab4a9143e314da6d1ad05b022f1c42023f68adecee1cb93453bfcda64860a",
+  "exercise_ids": [
+   "active_hip_mobility",
+   "bear_crawl",
+   "dynamic_mobility_flow",
+   "finger_recruitment_pulls",
+   "general_pulse_raise",
+   "max_hang_10s",
+   "one_arm_pullup_assisted",
+   "plank",
+   "pushup",
+   "shoulder_car",
+   "stick_pronation_supination_eccentric",
+   "wall_slide",
+   "cooldown_forearm_wrist_stretch",
+   "cooldown_hip_pigeon",
+   "cooldown_shoulder_chest"
+  ]
+ }
+}

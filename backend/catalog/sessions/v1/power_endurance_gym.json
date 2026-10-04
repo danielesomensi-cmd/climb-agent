@@ -36,6 +36,7 @@
     },
     {
       "block_id": "pe_routes",
+      "rotation": "phase_anchor",
       "required": false,
       "priority": 85,
       "module_role": "primary",
@@ -62,6 +63,7 @@
     },
     {
       "block_id": "pe_boulder",
+      "rotation": "phase_anchor",
       "required": true,
       "priority": 90,
       "module_role": "primary",
@@ -85,6 +87,7 @@
     },
     {
       "block_id": "finger_endurance",
+      "rotation": "phase_anchor",
       "required": false,
       "priority": 80,
       "module_role": "secondary",
@@ -108,6 +111,9 @@
     },
     {
       "block_id": "pulling_maintenance",
+      "rotation": "ab",
+      "unloaded_only": true,
+      "ab_pool": ["power_pullups_explosive", "archer_pullup", "one_arm_pullup_assisted"],
       "required": false,
       "priority": 70,
       "module_role": "secondary",
