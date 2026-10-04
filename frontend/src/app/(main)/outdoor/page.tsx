@@ -76,29 +76,34 @@ function sessionRouteStyle(route: { style?: string; attempts?: { result: string 
  */
 function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
   // Group occurrences by route key, preserving chronological order.
-  const groups = new Map<string, { spot: string; grade: string; discipline?: "lead" | "boulder"; occ: { date: string; route: OutdoorSession["routes"][number] }[] }>();
+  const groups = new Map<string, { name: string; spot: string; grade: string; discipline?: "lead" | "boulder"; occ: { date: string; route: OutdoorSession["routes"][number] }[] }>();
   const ordered = sessions.slice().sort((a, b) => a.date.localeCompare(b.date));
   for (const s of ordered) {
     for (const r of s.routes || []) {
       if (!r.name?.trim()) continue;
       if (!(r.attempts?.length)) continue;
-      const key = `${r.name.trim()}||${s.spot_name || ""}`;
+      // B362: one route, one row — "Cima nikita" and "Cima Nikita " are the
+      // same line. Group case/whitespace-insensitively, show the latest spelling.
+      const name = r.name.trim().replace(/\s+/g, " ");
+      const key = `${name.toLowerCase()}||${(s.spot_name || "").trim().toLowerCase()}`;
       const g = groups.get(key);
       if (g) {
         g.occ.push({ date: s.date, route: r });
+        g.name = name;
         if (!g.grade && r.grade) g.grade = r.grade;
       } else {
-        groups.set(key, { spot: s.spot_name || "", grade: r.grade || "", discipline: r.discipline, occ: [{ date: s.date, route: r }] });
+        groups.set(key, { name, spot: s.spot_name || "", grade: r.grade || "", discipline: r.discipline, occ: [{ date: s.date, route: r }] });
       }
     }
   }
 
   const out: RouteAggregate[] = [];
-  for (const [key, g] of groups) {
-    const name = key.split("||")[0];
+  for (const g of groups.values()) {
+    const name = g.name;
     let totalAttempts = 0;
     let attemptsToSend: number | null = null;
     let firstSendOnsight = false;
+    let firstSendRepeat = false;
     let lastDate = g.occ[0].date;
     let running = 0;
     for (const { date, route } of g.occ) {
@@ -109,6 +114,8 @@ function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
         if (attemptsToSend === null && isSendResult(atts[i].result)) {
           attemptsToSend = running;
           firstSendOnsight = running === 1 && route.style === "onsight";
+          // B362: sent before the app existed — a repeat, never a flash.
+          firstSendRepeat = route.style === "repeat";
         }
       }
       if (date > lastDate) lastDate = date;
@@ -116,6 +123,7 @@ function aggregateRoutes(sessions: OutdoorSession[]): RouteAggregate[] {
 
     let bestStyle: string;
     if (attemptsToSend === null) bestStyle = "project";
+    else if (firstSendRepeat) bestStyle = "repeat";
     else if (attemptsToSend === 1) bestStyle = firstSendOnsight ? "onsight" : "flash";
     else bestStyle = "redpoint";
 
