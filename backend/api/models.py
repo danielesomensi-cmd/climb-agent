@@ -145,12 +145,27 @@ class OverrideRequest(BaseModel):
     # vecchio che non li invia ottiene il placeholder, non un 422.
     spot_id: Optional[str] = None
     spot_name: Optional[str] = None
+    # A294 review: client-local date (YYYY-MM-DD) for the key-session status
+    # returned with the override; the server's UTC clock otherwise.
+    today: Optional[str] = None
 
 
 class EventsRequest(BaseModel):
     """Body for POST /api/replanner/events."""
     events: List[Dict[str, Any]]
     week_plan: Optional[Dict[str, Any]] = None
+    # A294: apply the events on a copy and return {week_plan, adjustments,
+    # key_status, key_conflicts} without writing anything (plan, outdoor log,
+    # closed loop, completion log). Used to warn before a custom session
+    # removes a key session.
+    dry_run: bool = False
+    # A294 + dry_run: a custom session that does not exist yet (the builder /
+    # coach preview), injected into the copy of custom_sessions so the check
+    # runs BEFORE POST /api/custom-session (no orphan customs).
+    custom_session_payload: Optional[Dict[str, Any]] = None
+    # A294: client-local date (YYYY-MM-DD) for the key-session status; the
+    # server's UTC clock otherwise.
+    today: Optional[str] = None
 
 
 class QuickAddRequest(BaseModel):
@@ -165,6 +180,8 @@ class QuickAddRequest(BaseModel):
     # A254: user explicitly keeps the hard session they picked, at their own risk
     # (skips the 48h finger gap / weekly hard-cap downshift for THIS session only).
     force: bool = False
+    # A294 review: client-local date (YYYY-MM-DD) for the key-session status.
+    today: Optional[str] = None
 
 
 # --------------------------------------------------------------------------- #

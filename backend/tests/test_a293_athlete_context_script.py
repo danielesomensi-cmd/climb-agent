@@ -78,7 +78,7 @@ class TestReadOnlyMain:
         rc = cli.main(["--state-file", str(files["state"]), "--date", TODAY, "--json"])
         payload = json.loads(capsys.readouterr().out)
         assert rc == 0 and payload["context"]["as_of"] == TODAY
-        assert payload["context"]["key_sessions"]["source"] == "fallback"
+        assert payload["context"]["key_sessions"]["source"] == "a294"
 
     def test_no_state_exit_3(self, tmp_path, no_writes):
         empty = tmp_path / "empty.json"
@@ -195,7 +195,8 @@ class TestSimulate:
         st = _state(availability={"mon": {"evening": {"available": True}}},
                     equipment={"gyms": [{"gym_id": "g1", "equipment": ["gym_boulder"]}]})
         cli.simulate(st, DRAFT, "2026-10-06", "evening")
-        assert set(seen) == {"availability", "planning_prefs", "gyms", "custom_sessions"}
+        # A294 (+ review: `today` freezes the past, as POST /events does)
+        assert set(seen) == {"availability", "planning_prefs", "gyms", "custom_sessions", "prev_days", "today"}
         assert seen["gyms"] == [{"gym_id": "g1", "equipment": ["gym_boulder"]}]
         assert any(c["id"] == cli.SIM_SESSION_ID for c in seen["custom_sessions"])
 

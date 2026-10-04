@@ -1228,3 +1228,121 @@ export interface RetestStatus {
   axes: Partial<Record<RetestAxis, RetestAxisStatus>>;
   covered_axes: RetestAxis[];
 }
+
+/**
+ * A294 — key-session status of a week, attached to `GET /api/week/{n}` and to
+ * the replanner responses as `key_status` — a SIBLING of `week_plan`, never
+ * inside it (derived at read, never persisted).
+ *
+ * Shape mirrors `compute_key_status()` in `backend/engine/key_sessions_v1.py`.
+ */
+export type KeyStimulus =
+  | "finger_max"
+  | "finger_maintenance"
+  | "limit_power"
+  | "pulling_max"
+  | "power_endurance"
+  | "project"
+  | "technique"
+  | "try_hard"
+  | string;
+
+export type KeyRequirementStatus = "done" | "planned" | "partial" | "missing" | "not_due" | "unplaceable";
+export type KeyResolution = "proposal" | "deferred_next" | "deferred_fatigue" | "let_go" | "missed" | null;
+export type KeySeverity = "none" | "info" | "warning" | "critical";
+
+export interface KeySessionRef {
+  date: string;
+  slot: string | null;
+  session_id: string | null;
+  name?: string | null;
+  status?: string;
+  dose?: "full" | "partial";
+  dose_reason?: string | null;
+  unmarked?: boolean;
+  evidence?: string;
+}
+
+export interface KeyRequirement {
+  key: KeyStimulus;
+  label: string;
+  why?: string;
+  priority?: number;
+  target: number;
+  status: KeyRequirementStatus;
+  resolution: KeyResolution;
+  severity: KeySeverity;
+  debt: number;
+  done: KeySessionRef[];
+  partial: KeySessionRef[];
+  planned: KeySessionRef[];
+  skipped: KeySessionRef[];
+  next_key?: KeySessionRef | null;
+  due_by?: string | null;
+  last_full_date?: string | null;
+  hint?: string;
+  exposures_21d?: number;
+}
+
+export interface KeyProposalSideEffect {
+  date: string;
+  slot: string;
+  from: string | null;
+  to: string | null;
+  reason?: string | null;
+}
+
+export interface KeyProposal {
+  keys: KeyStimulus[];
+  date: string;
+  slot: string;
+  session_id: string;
+  session_name: string;
+  location: string;
+  gym_id: string | null;
+  reduced_reentry_dose: boolean;
+  side_effects: KeyProposalSideEffect[];
+  apply: { endpoint: string; event: Record<string, unknown> };
+}
+
+export interface KeyConflict {
+  code: "key_downgraded" | "pre_test_fatigue" | "finger_gap" | "pulling_overlap"
+    | "key_removed" | "key_replaced" | "test_downgraded" | string;
+  severity: "high" | "medium" | string;
+  message: string;
+  date?: string;
+  slot?: string;
+  key?: KeyStimulus;
+  label?: string;
+  replace_key?: boolean;
+  partial_replacement?: boolean;
+}
+
+export type KeyRole = "key" | "supporting" | "optional" | "skipped" | "downgraded";
+
+export interface KeySessionRole {
+  date: string;
+  slot: string | null;
+  session_id: string | null;
+  status: string;
+  role: KeyRole;
+  keys: KeyStimulus[];
+  supporting: KeyStimulus[];
+  downgraded_from?: string;
+}
+
+export interface KeyStatus {
+  version: string;
+  source: "a294";
+  as_of: string;
+  week_start: string;
+  week_end: string;
+  phase_id: string | null;
+  is_current_week: boolean;
+  is_past_week: boolean;
+  requirements: KeyRequirement[];
+  sessions: KeySessionRole[];
+  proposals: KeyProposal[];
+  conflicts: KeyConflict[];
+  summary: { required: number; covered: number; done: number; missing: string[]; debt: number; max_severity: KeySeverity };
+}

@@ -1,0 +1,112 @@
+{
+  "version": "key_stimuli.v1",
+  "_doc": "A294 (R5) — the key stimuli of each phase. Data only: backend/engine/key_sessions_v1.py derives the weekly key status from it at read time (never persisted). A stimulus is satisfied by a session that delivers it (families from backend/engine/stimulus.py, session_ids, technique drills, try-hard exercises, outdoor-hard days) — by DOSE, not by presence, for the anchored families. Decisions 2026-10-04 + GOAL REFRAME (technique in every phase, try-hard attached to the limit key — to the project key in performance, absent in base where there is no limit key). A294 review: outdoor days no longer count as technique (not verifiable), a limit session alone no longer counts as try-hard (a fall-practice block, outdoor near RP or a free limit session do), deload technique is info only.",
+  "stimuli": {
+    "finger_max": {
+      "label": "Finger max",
+      "why": "Max finger strength is the strength-power phase's main adaptation: one heavy hang session a week keeps it progressing.",
+      "families": ["finger_max"],
+      "session_ids": ["strength_long", "finger_strength_home"],
+      "propose": ["finger_strength_home", "strength_long"],
+      "dose": "anchored",
+      "finger_hard": true,
+      "tests_count": true
+    },
+    "finger_maintenance": {
+      "label": "Finger maintenance",
+      "why": "Power-endurance weeks keep one short max-hang session so the strength built in the previous phase is not lost.",
+      "families": ["finger_max"],
+      "session_ids": ["finger_maintenance_gym", "finger_maintenance_home", "finger_strength_home", "strength_long"],
+      "propose": ["finger_strength_home", "finger_maintenance_gym", "finger_maintenance_home"],
+      "dose": "presence",
+      "finger_hard": true,
+      "tests_count": true
+    },
+    "limit_power": {
+      "label": "Limit / power",
+      "why": "Hard moves at your limit (limit boulders, board, campus) train recruitment and power — the stimulus that turns finger strength into climbing.",
+      "families": ["limit_power"],
+      "session_ids": ["limit_boulder_gym", "power_contact_gym"],
+      "propose": ["limit_boulder_gym", "power_contact_gym"],
+      "reentry_excluded": ["power_contact_gym"],
+      "dose": "presence",
+      "finger_hard": true,
+      "free_limit_counts": true
+    },
+    "pulling_max": {
+      "label": "Max pulling",
+      "why": "Heavy weighted pull-ups keep pulling strength progressing; one session a week is enough when fingers are the priority.",
+      "families": ["pulling_max"],
+      "session_ids": ["strength_long", "pulling_strength_gym"],
+      "propose": ["strength_long", "pulling_strength_gym"],
+      "dose": "anchored",
+      "finger_hard": false,
+      "tests_count": true
+    },
+    "power_endurance": {
+      "label": "Power-endurance intervals",
+      "why": "Intervals near your redpoint pace (4x4, linked boulders, route intervals) are the power-endurance phase's main adaptation.",
+      "families": ["power_endurance"],
+      "session_ids": ["power_endurance_gym", "boulder_circuit_gym"],
+      "propose": ["power_endurance_gym"],
+      "dose": "presence",
+      "finger_hard": false
+    },
+    "project": {
+      "label": "Project",
+      "why": "The performance phase exists to redpoint: one real projecting session a week (gym projecting, or outdoor attempts near your redpoint).",
+      "session_ids": ["route_projecting_gym"],
+      "propose": ["route_projecting_gym"],
+      "outdoor_hard_counts": true,
+      "dose": "presence",
+      "finger_hard": true
+    },
+    "technique": {
+      "label": "Technique",
+      "why": "Feet and body positioning are your declared limiters: one weekly session of precise footwork and positioning near your limit, not easy mileage.",
+      "session_ids": ["technique_focus_gym"],
+      "propose": ["technique_focus_gym"],
+      "technique_drills": true,
+      "dose": "presence",
+      "finger_hard": false
+    },
+    "try_hard": {
+      "label": "Try-hard",
+      "why": "Falls practice and full commitment on attempts: you often stop before 100%. It rides on the limit session — it counts when that session (or another one) holds a fall-practice block, or when you climb outdoors near your redpoint.",
+      "exercise_ids": ["fall_practice"],
+      "outdoor_hard_counts": true,
+      "free_limit_counts": true,
+      "attached_to": "limit_power",
+      "propose": [],
+      "dose": "presence",
+      "finger_hard": false
+    }
+  },
+  "phases": {
+    "base": [
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"}
+    ],
+    "strength_power": [
+      {"stimulus": "finger_max", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
+      {"stimulus": "limit_power", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
+      {"stimulus": "pulling_max", "target_per_week": 1, "priority": 3, "max_severity": "warning"},
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"},
+      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning"}
+    ],
+    "power_endurance": [
+      {"stimulus": "power_endurance", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
+      {"stimulus": "finger_maintenance", "target_per_week": 1, "priority": 2, "max_severity": "warning"},
+      {"stimulus": "limit_power", "target_per_week": 1, "priority": 3, "max_severity": "warning", "max_gap_days": 12},
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"},
+      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning"}
+    ],
+    "performance": [
+      {"stimulus": "project", "target_per_week": 1, "priority": 1, "max_severity": "critical"},
+      {"stimulus": "technique", "target_per_week": 1, "priority": 2, "max_severity": "critical"},
+      {"stimulus": "try_hard", "target_per_week": 1, "priority": 3, "max_severity": "warning", "attached_to": "project"}
+    ],
+    "deload": [
+      {"stimulus": "technique", "target_per_week": 1, "priority": 3, "max_severity": "info"}
+    ]
+  }
+}

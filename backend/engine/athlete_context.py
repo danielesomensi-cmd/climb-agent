@@ -28,13 +28,10 @@ Contract:
   that integration point belongs to A297 (R7b), behind ``COACH_ATHLETE_CONTEXT``.
 
 Key sessions: A294 owns their definition (derived at read, never persisted).
-Until A294 lands, ``key_sessions`` is a labelled fallback computed from the
-current week plan with the requirements fixed in the 2026-10-04 decisions
-(``KEY_REQUIREMENTS``). When ``backend.engine.key_sessions_v1.compute_key_status``
-exists it is tried, and used only if its result carries the ``requirements`` rows
-the renderer reads; any other outcome (TypeError on a different signature, a
-different shape) keeps the fallback AND is reported as
-``KEY_SESSIONS_A294_MISMATCH`` — never silently. A294 owns wiring itself in.
+``key_sessions`` / ``key_sessions_next_week`` are
+``key_sessions_v1.compute_key_status`` for the current and the next week (the
+A293 fallback is gone). A failure is reported as ``source: "error"`` and the
+warning ``KEY_SESSIONS_ERROR`` — never an empty section.
 
 Read-only by construction: nothing here writes tests, baselines, working loads
 or week plans. Past sessions are only read.
@@ -59,12 +56,8 @@ from backend.engine.anchored_load import (
 )
 from backend.engine.macro_position import position_on
 from backend.engine.stimulus import (
-    FAMILY_FINGER_MAX,
     FAMILY_LIMIT_POWER,
-    FAMILY_POWER_ENDURANCE,
-    FAMILY_PULLING_MAX,
     counted_entries,
-    exposure_dates,
     finger_hard_days,
     is_finger_hard_session,
     is_test_session,
@@ -117,55 +110,19 @@ _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__f
 _EXERCISES_PATH = os.path.join(_REPO_ROOT, "backend", "catalog", "exercises", "v1", "exercises.json")
 
 # ---------------------------------------------------------------------------
-# Key-session requirements (fallback until A294). Decisions 2026-10-04 +
-# GOAL REFRAME: a weekly technique key in every phase and a try-hard component.
+# Key sessions — owned by A294 (``key_sessions_v1``). The names below are kept
+# as thin aliases for the CLI and the custom-session command.
 # ---------------------------------------------------------------------------
 
-#: Session ids that satisfy a requirement by themselves (when the session
-#: carries no exercise list the stimulus view cannot see them).
-TECHNIQUE_SESSION_IDS = ("technique_focus_gym",)
-FINGER_MAINTENANCE_SESSION_IDS = ("finger_maintenance_gym", "finger_maintenance_home")
-PROJECT_SESSION_IDS = ("route_projecting_gym",)
+from backend.engine import key_sessions_v1 as ks1  # noqa: E402
+
+TECHNIQUE_MIN_DRILLS = ks1.TECHNIQUE_MIN_DRILLS
+WARMUP_TECHNIQUE_DRILLS = ks1.WARMUP_TECHNIQUE_DRILLS
 #: Exercises that make a session a try-hard practice.
 TRYHARD_EXERCISE_IDS = ("fall_practice",)
-#: Minimum technique-category exercises (catalog ``category == technique``) in a
-#: done session to count it as the technique key. ENGINEERING CONSTANT.
-TECHNIQUE_MIN_DRILLS = 2
-#: The plan's zero-cost warm-up drills (athlete_plan.md §3, «Riscaldamento a
-#: costo zero»): the warm-up is not the technique stimulus, so these never count
-#: towards the technique key (``flag_practice`` is also a positioning drill and
-#: still counts).
-WARMUP_TECHNIQUE_DRILLS = ("silent_feet_drill", "foothold_stare", "straight_arms", "hip_rotation_drill")
 #: Custom sessions whose name starts with this are Daniele's recurring "Work"
 #: lunch sessions: re-checked against the day guards and at each phase change.
 _WORK_RE = re.compile(r"^\s*Work\b", re.IGNORECASE)
-
-KEY_REQUIREMENTS: Dict[str, List[Dict[str, Any]]] = {
-    "base": [],
-    "strength_power": [
-        {"key": "finger_max", "label": "dita max (finger_strength_home o strength_long)",
-         "families": [FAMILY_FINGER_MAX]},
-        {"key": "limit_power", "label": "limit / potenza", "families": [FAMILY_LIMIT_POWER]},
-        {"key": "pulling_max", "label": "trazione massimale", "families": [FAMILY_PULLING_MAX]},
-    ],
-    "power_endurance": [
-        {"key": "power_endurance", "label": "intervalli PE", "families": [FAMILY_POWER_ENDURANCE]},
-        {"key": "finger_maintenance", "label": "mantenimento dita",
-         "families": [FAMILY_FINGER_MAX], "session_ids": list(FINGER_MAINTENANCE_SESSION_IDS)},
-        {"key": "limit_power", "label": f"limit (gap max {PE_LIMIT_MAX_GAP_D} gg)",
-         "families": [FAMILY_LIMIT_POWER], "max_gap_days": PE_LIMIT_MAX_GAP_D},
-    ],
-    "performance": [
-        {"key": "project", "label": "progetto", "session_ids": list(PROJECT_SESSION_IDS),
-         "outdoor_hard": True},
-    ],
-    "deload": [],
-}
-#: Every phase: one technique key (feet + positioning, near the limit). In
-#: deload it is low severity (slow climbing / hover), still one per week.
-TECHNIQUE_REQUIREMENT = {"key": "technique", "label": "tecnica (piedi + posizione, vicino al limite)"}
-#: Every phase except deload: the try-hard component attached to the limit key.
-TRYHARD_REQUIREMENT = {"key": "try_hard", "label": "try-hard (cadute / impegno / budget tentativi)"}
 
 _HIIT_RE = re.compile(r"\b(HIIT|VO2)", re.IGNORECASE)
 _TRYHARD_TOKEN_RE = re.compile(r"\b(SEND|FALL|TAKE|LET_GO)\b")
@@ -359,42 +316,13 @@ def _retest(state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeeks
 
 
 def _technique_hit(session: Mapping[str, Any], catalog: Mapping[str, Mapping[str, Any]]) -> bool:
-    """A session that delivers the technique key, planned or done: the
-    technique catalog session, or ≥ ``TECHNIQUE_MIN_DRILLS`` technique drills
-    that are neither the try-hard drill nor the plan's warm-up drills. Planned
-    entries are read as written, done ones with the "was it done" rule."""
-    if str(session.get("session_id") or "") in TECHNIQUE_SESSION_IDS:
-        return True
-    entries, _origin = counted_entries(session)
-    drills = {str(e.get("exercise_id") or "") for e in entries
-              if (catalog.get(str(e.get("exercise_id") or "")) or {}).get("category") == "technique"}
-    drills -= set(TRYHARD_EXERCISE_IDS) | set(WARMUP_TECHNIQUE_DRILLS)
-    return len(drills) >= TECHNIQUE_MIN_DRILLS
-
-
-def _tryhard_in(session: Mapping[str, Any]) -> bool:
-    entries, _origin = counted_entries(session)
-    if any(str(e.get("exercise_id") or "") in TRYHARD_EXERCISE_IDS for e in entries):
-        return True
-    return FAMILY_LIMIT_POWER in session_stimuli(session)
-
-
-def _matches(req: Mapping[str, Any], session: Mapping[str, Any]) -> bool:
-    sid = str(session.get("session_id") or "")
-    if sid in (req.get("session_ids") or []):
-        return True
-    fams = req.get("families") or []
-    return bool(fams) and any(f in session_stimuli(session) for f in fams)
+    """The technique key (A294 definition)."""
+    return ks1.technique_hit(session, catalog)
 
 
 def key_requirements_for(phase_id: Optional[str]) -> List[Dict[str, Any]]:
-    """The key requirements of a phase (fallback until A294), technique and
-    try-hard included."""
-    reqs = [dict(r) for r in KEY_REQUIREMENTS.get(phase_id or "", [])]
-    reqs.append(dict(TECHNIQUE_REQUIREMENT))
-    if phase_id != "deload":
-        reqs.append(dict(TRYHARD_REQUIREMENT))
-    return reqs
+    """The key requirements of a phase (A294 catalog ``key_stimuli/v1``)."""
+    return ks1.phase_requirements(phase_id)
 
 
 def key_matches(session: Mapping[str, Any], phase_id: Optional[str],
@@ -402,186 +330,27 @@ def key_matches(session: Mapping[str, Any], phase_id: Optional[str],
     """Keys of the phase a (planned) session delivers — used by the CLI to flag
     a key session that a simulated insertion would downgrade or replace."""
     cat = catalog if catalog is not None else load_exercise_catalog()
-    out: List[str] = []
-    for req in key_requirements_for(phase_id):
-        if req["key"] == "technique":
-            hit = _technique_hit(session, cat)
-        elif req["key"] == "try_hard":
-            continue  # attached to the limit key, never a session of its own
-        else:
-            hit = _matches(req, session)
-        if hit:
-            out.append(req["key"])
-    return out
-
-
-def _skipped_from_log(state: Mapping[str, Any], week_start: date, week_end: date) -> List[Dict[str, Any]]:
-    """Skipped sessions recovered from ``session_completion_log`` (mark_skipped
-    replaces the session with regeneration_easy; the original id survives only
-    in the log, matched by DATE — the log has no slot)."""
-    out: List[Dict[str, Any]] = []
-    for row in state.get("session_completion_log") or []:
-        if not isinstance(row, Mapping) or row.get("status") != "skipped":
-            continue
-        d = _parse(row.get("date"))
-        if d is None or not (week_start <= d <= week_end):
-            continue
-        out.append({"date": d.isoformat(), "session_id": row.get("session_id") or None})
-    return out
-
-
-def _key_sessions_fallback(
-    state: Mapping[str, Any], today: date, phase_id: Optional[str],
-    archived_weeks: ArchivedWeeks, outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
-    catalog: Mapping[str, Mapping[str, Any]],
-    *,
-    week_of: Optional[date] = None,
-) -> Dict[str, Any]:
-    """Planned / done key stimuli of ONE week (no carried debt): the current
-    week, or the week of ``week_of``. "Unmarked" and the PE limit gap are
-    always read against ``today``."""
-    ws = _monday(week_of or today)
-    we = ws + timedelta(days=6)
-    days = _plan_days(state, archived_weeks)
-    week_sessions: List[Tuple[str, Dict[str, Any]]] = []
-    for d in sorted(days):
-        dd = _as_date(d)
-        if ws <= dd <= we:
-            for s in days[d]:
-                week_sessions.append((d, s))
-    outdoor = [e for e in _outdoor_entries(state, outdoor_rows)
-               if ws <= _as_date(e["date"]) <= we]
-    hard_outdoor = {o["date"] for o in outdoor_hard_days(state, since=ws, until=we, outdoor_rows=outdoor_rows)}
-    log_skips = _skipped_from_log(state, ws, we)
-
-    reqs = key_requirements_for(phase_id)
-
-    out_rows: List[Dict[str, Any]] = []
-    for req in reqs:
-        planned: List[Dict[str, Any]] = []
-        done: List[Dict[str, Any]] = []
-        for d, s in week_sessions:
-            status = s.get("status")
-            if req["key"] == "technique":
-                hit = _technique_hit(s, catalog)
-            elif req["key"] == "try_hard":
-                hit = _tryhard_in(s)
-            else:
-                hit = _matches(req, s)
-            if not hit or is_test_session(s):
-                continue
-            if status == "done":
-                done.append(_session_ref(d, s))
-            elif status != "skipped":
-                ref = _session_ref(d, s)
-                if d < today.isoformat():
-                    ref["unmarked"] = True  # in the past, never marked done/skipped
-                planned.append(ref)
-        if req["key"] == "technique":
-            for e in outdoor:
-                done.append({"date": str(e["date"])[:10], "slot": None, "session_id": None,
-                             "name": f"outdoor {e.get('spot_name') or ''}".strip(), "status": "done",
-                             "evidence": "outdoor (regole tecniche non verificabili)"})
-        if req["key"] in ("try_hard", "project"):
-            for d in sorted(hard_outdoor):
-                done.append({"date": d, "slot": None, "session_id": None, "name": "outdoor hard",
-                             "status": "done", "evidence": "outdoor ≥ soglia hard"})
-        if req["key"] in ("limit_power", "try_hard"):
-            # A free boulder session with ≥ 2 problems at limit grade counts as
-            # limit (decision 2026-10-04), and the limit carries the try-hard.
-            for d_iso in _free_limit_dates(state, ws, we):
-                if not any(x["date"] == d_iso for x in done):
-                    done.append({"date": d_iso, "slot": None, "session_id": None, "name": "free boulder",
-                                 "status": "done", "evidence": "free session ≥ soglia"})
-        skipped = [k for k in log_skips if k["session_id"] and _matches(req, {"session_id": k["session_id"]})]
-        row: Dict[str, Any] = {
-            "key": req["key"],
-            "label": req["label"],
-            "planned": planned,
-            "done": sorted(done, key=lambda x: (x["date"], str(x.get("slot") or ""))),
-            "skipped": skipped,
-        }
-        row["status"] = "done" if done else ("planned" if planned else "missing")
-        if req.get("max_gap_days"):
-            last = exposure_dates(state, FAMILY_LIMIT_POWER, until=today, archived_weeks=archived_weeks)
-            last_d = _as_date(last[-1]) if last else None
-            due = (last_d + timedelta(days=int(req["max_gap_days"]))) if last_d else None
-            row["last_done"] = last_d.isoformat() if last_d else None
-            row["due_by"] = due.isoformat() if due else None
-            # A gap requirement (PE limit, decision 2026-10-04: "max gap 12
-            # days") is not due in a week that ends before the deadline: it is
-            # not missing, and it must not push an extra finger-hard session.
-            if row["status"] == "missing" and due is not None and due > we:
-                row["status"] = "not_due"
-        out_rows.append(row)
-
-    # The try-hard component is attached to the limit key (GOAL REFRAME): a
-    # week in which the limit is not due does not owe a try-hard either.
-    by_key = {r["key"]: r for r in out_rows}
-    if (by_key.get("limit_power") or {}).get("status") == "not_due" \
-            and (by_key.get("try_hard") or {}).get("status") == "missing":
-        by_key["try_hard"]["status"] = "not_due"
-
-    unknown_skips = [k for k in log_skips if not k["session_id"]]
-    removed_unknown = 0
-    for w in (state.get("week_plans") or {}).values():
-        if not isinstance(w, Mapping) or str(w.get("start_date") or "") != ws.isoformat():
-            continue
-        for a in w.get("adaptations") or []:
-            if isinstance(a, Mapping) and a.get("event_type") == "remove_session" and not a.get("session_id"):
-                removed_unknown += 1
-    planned_n = sum(1 for r in out_rows if r["planned"] or r["done"] or r["status"] == "not_due")
-    done_n = sum(1 for r in out_rows if r["done"])
-    return {
-        "source": "fallback",
-        "week_start": ws.isoformat(),
-        "week_end": we.isoformat(),
-        "phase_id": phase_id,
-        "requirements": out_rows,
-        "summary": {"required": len(out_rows), "covered": planned_n, "done": done_n,
-                    "missing": [r["key"] for r in out_rows if r["status"] == "missing"]},
-        "unknown_skips": unknown_skips,
-        "removed_unknown": removed_unknown,
-    }
-
-
-def _free_limit_dates(state: Mapping[str, Any], since: date, until: date) -> List[str]:
-    from backend.engine.stimulus import exposures
-
-    return sorted({r["date"] for r in exposures(state, since=since, until=until, families=[FAMILY_LIMIT_POWER])
-                   if r["source"] == "free"})
+    return ks1.session_keys(session, phase_id, cat)
 
 
 def _key_sessions(
-    state: Mapping[str, Any], today: date, phase_id: Optional[str],
-    archived_weeks: ArchivedWeeks, outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
-    catalog: Mapping[str, Mapping[str, Any]],
+    state: Mapping[str, Any], today: date, archived_weeks: ArchivedWeeks,
+    outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
+    catalog: Mapping[str, Mapping[str, Any]], *, week_of: Optional[date] = None,
+    with_proposals: bool = True,
 ) -> Dict[str, Any]:
-    """A294's ``compute_key_status`` when present AND in the shape this module
-    renders, else the labelled fallback. A present-but-incompatible A294 is
-    reported (``a294_error``), never swallowed: the signature here is a guess
-    and A294 owns the integration."""
+    """A294's ``compute_key_status`` for the week of ``week_of`` (default: the
+    current week). A failure is reported (``source: "error"``), never hidden
+    behind an empty section."""
     try:
-        from backend.engine.key_sessions_v1 import compute_key_status  # type: ignore
-    except ImportError:
-        compute_key_status = None
-    a294_error: Optional[str] = None
-    if compute_key_status is not None:
-        try:
-            res = compute_key_status(state, today.isoformat(), archived_weeks=archived_weeks,
-                                     outdoor_rows=outdoor_rows)
-        except Exception as exc:
-            a294_error = f"{type(exc).__name__}: {exc}"
-        else:
-            if isinstance(res, Mapping) and isinstance(res.get("requirements"), list):
-                out = dict(res)
-                out.setdefault("source", "a294")
-                return out
-            a294_error = "risultato in una forma non riconosciuta (manca la lista 'requirements')"
-    fb = _key_sessions_fallback(state, today, phase_id, archived_weeks, outdoor_rows, catalog)
-    if a294_error:
-        fb["a294_error"] = a294_error
-    return fb
+        return ks1.compute_key_status(state, today, archived_weeks=archived_weeks, outdoor_rows=outdoor_rows,
+                                      week_start=week_of, exercise_catalog=catalog,
+                                      with_proposals=with_proposals)
+    except Exception as exc:  # pragma: no cover - defensive: the context must render
+        ws = _monday(week_of or today)
+        return {"source": "error", "error": f"{type(exc).__name__}: {exc}", "week_start": ws.isoformat(),
+                "week_end": (ws + timedelta(days=6)).isoformat(), "requirements": [], "sessions": [],
+                "proposals": [], "conflicts": [], "summary": {}, "unknown_skips": [], "removed_unknown": 0}
 
 
 def _session_view(d: str, s: Mapping[str, Any]) -> Dict[str, Any]:
@@ -984,22 +753,23 @@ def _trips(state: Mapping[str, Any], today: date) -> List[Dict[str, Any]]:
 def _warnings(ctx: Mapping[str, Any]) -> List[Dict[str, Any]]:
     out: List[Dict[str, Any]] = []
     ks = ctx.get("key_sessions") or {}
-    if ks.get("source") == "fallback" and ks.get("a294_error"):
-        out.append({"code": "KEY_SESSIONS_A294_MISMATCH",
-                    "message": "A294 è presente ma non è integrato in athlete_context "
-                               f"({ks['a294_error']}): sessioni chiave dal fallback A293"})
-    elif ks.get("source") == "fallback":
-        out.append({"code": "KEY_SESSIONS_FALLBACK",
-                    "message": "sessioni chiave dal fallback A293 (A294 non ancora in main)"})
+    if ks.get("source") == "error":
+        out.append({"code": "KEY_SESSIONS_ERROR",
+                    "message": f"stato delle sessioni chiave non calcolabile ({ks.get('error')})"})
     for k in ks.get("unknown_skips") or []:
         out.append({"code": "SKIP_WITHOUT_ID", "message": f"sessione saltata il {k['date']} senza id"})
     if ks.get("removed_unknown"):
         out.append({"code": "REMOVED_UNKNOWN",
                     "message": f"{ks['removed_unknown']} remove_session senza id nella settimana"})
     for row in ks.get("requirements") or []:
-        if row.get("status") == "missing":
-            out.append({"code": "KEY_MISSING", "key": row["key"],
-                        "message": f"stimolo chiave mancante questa settimana: {row['label']}"})
+        if row.get("status") in ("missing", "partial"):
+            out.append({"code": "KEY_MISSING", "key": row["key"], "severity": row.get("severity"),
+                        "resolution": row.get("resolution"),
+                        "message": f"stimolo chiave mancante questa settimana: {row['label']}"
+                                   + (" (solo dose parziale)" if row.get("status") == "partial" else "")})
+    for c in ks.get("conflicts") or []:
+        out.append({"code": "KEY_CONFLICT", "conflict": c.get("code"), "date": c.get("date"),
+                    "message": c.get("message")})
     for w in ctx.get("working_loads") or []:
         for f in w.get("flags") or []:
             out.append({"code": f, "exercise_id": w["exercise_id"],
@@ -1057,7 +827,7 @@ def build_athlete_context(
         "maxima": _maxima(st, td, arch),
         "anchors": _anchors(st, td),
         "retest": _retest(st, td, arch, rows),
-        "key_sessions": _key_sessions(st, td, phase_id, arch, rows, cat),
+        "key_sessions": _key_sessions(st, td, arch, rows, cat),
         "key_sessions_next_week": None,
         "upcoming": _upcoming(st, td, arch),
         "recent": _recent(st, td, arch, rows),
@@ -1068,13 +838,12 @@ def build_athlete_context(
         "limits": _limits(st),
         "trips": _trips(st, td),
     }
-    if ctx["key_sessions"].get("source") == "fallback" and position.get("available"):
-        # Planning view: the next week too (only the fallback knows how; A294
-        # replaces both with its own status).
+    if position.get("available"):
+        # Planning view: the next week too (no proposals: they are only made
+        # for the current week).
         next_monday = _monday(td) + timedelta(days=7)
-        nxt = position_on(st.get("macrocycle"), next_monday) or {}
-        ctx["key_sessions_next_week"] = _key_sessions_fallback(
-            st, td, nxt.get("phase_id"), arch, rows, cat, week_of=next_monday)
+        ctx["key_sessions_next_week"] = _key_sessions(st, td, arch, rows, cat, week_of=next_monday,
+                                                      with_proposals=False)
     ctx["work_checks"] = _work_checks(st, td, position, ctx["guards"], arch)
     ctx["warnings"] = _warnings(ctx)
     return ctx
@@ -1120,30 +889,53 @@ def _anchor_line(ex: str, a: Mapping[str, Any]) -> str:
     return " ".join(parts)
 
 
+_RESOLUTION_IT = {
+    "proposal": "proposta", "deferred_next": "rimandata alla prossima chiave",
+    "deferred_fatigue": "niente recupero (fatica recente)", "let_go": "lasciala andare",
+    "missed": "persa",
+}
+
+
 def _render_keys(L: List[str], ks: Mapping[str, Any], label: str) -> None:
     src = ks.get("source")
-    if src == "fallback":
-        src_lbl = ("FALLBACK A293 — A294 presente ma NON integrato" if ks.get("a294_error")
-                   else "FALLBACK A293, A294 non in main")
-    else:
-        src_lbl = src
+    src_lbl = f"ERRORE: {ks.get('error')}" if src == "error" else f"A294 {ks.get('version') or ''}".strip()
     L.append(f"## Sessioni chiave, {label} — {ks.get('week_start')} → {ks.get('week_end')} "
              f"({ks.get('phase_id')}) [{src_lbl}]")
 
     def _refs(items: Iterable[Mapping[str, Any]]) -> str:
         return ", ".join(f"{x['date'][5:]} {x.get('session_id') or x.get('name')}"
-                         + (" (passata, non segnata)" if x.get("unmarked") else "") for x in items) or "—"
+                         + (" (passata, non segnata)" if x.get("unmarked") else "")
+                         + (" (dose parziale)" if x.get("dose") == "partial" else "") for x in items) or "—"
 
     for r in ks.get("requirements") or []:
         line = (f"  [{str(r.get('status', '')).upper():7}] {r.get('label')}: fatte {_refs(r.get('done') or [])} | "
                 f"pianificate {_refs(r.get('planned') or [])}")
+        if r.get("partial"):
+            line += f" | parziali {_refs(r['partial'])}"
         if r.get("skipped"):
             line += f" | saltate {_refs(r['skipped'])}"
         if r.get("due_by"):
-            line += f" | ultimo {r.get('last_done')}, entro {r['due_by']}"
+            line += f" | ultimo {r.get('last_full_date')}, entro {r['due_by']}"
         if r.get("status") == "not_due":
             line += " | non dovuto questa settimana (dentro il gap): NON aggiungerlo"
+        if r.get("debt"):
+            line += f" | debito {r['debt']}"
+            if r.get("resolution"):
+                line += f", {_RESOLUTION_IT.get(r['resolution'], r['resolution'])}"
+            if r.get("resolution") == "deferred_next" and r.get("next_key"):
+                line += f" ({str(r['next_key'].get('date'))[5:]} {r['next_key'].get('session_id')})"
+            if r.get("severity") == "critical":
+                line += " [CRITICA]"
+        if r.get("hint") and r.get("debt"):
+            line += f" — {r['hint']}"
         L.append(line)
+    for p in ks.get("proposals") or []:
+        side = "; ".join(f"{x['date'][5:]} {x['from']} → {x['to']}" for x in p.get("side_effects") or [])
+        L.append(f"  PROPOSTA ({', '.join(p.get('keys') or [])}): {p['date']} {p['slot']} {p['session_id']} "
+                 f"[{p.get('location')}]" + (f" | effetti: {side}" if side else " | nessun effetto collaterale")
+                 + (" | dose di rientro (niente campus)" if p.get("reduced_reentry_dose") else ""))
+    for c in ks.get("conflicts") or []:
+        L.append(f"  ! {c.get('code')}: {c.get('message')}")
     sm = ks.get("summary") or {}
     if sm:
         L.append(f"  Requisiti {sm.get('required')}: coperti {sm.get('covered')}, fatti {sm.get('done')}. "
@@ -1152,7 +944,7 @@ def _render_keys(L: List[str], ks: Mapping[str, Any], label: str) -> None:
 
 def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
                 source_line: Optional[str] = None) -> str:
-    """Italian rendering for Claude Code (fallback labels included)."""
+    """Italian rendering for Claude Code."""
     L: List[str] = []
     L.append(f"=== Contesto atleta — {ctx.get('as_of')} (versione {ctx.get('version')}) ===")
     if source_line:
@@ -1309,7 +1101,7 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
 
 __all__ = [
     "VERSION", "FINGER_GAP_H", "RETEST_BLOCK_H", "PULL_TEST_BLOCK_H", "HEAVY_PULL_MAX_PER_7D",
-    "OVERUSED_MIN", "VARIETY_WEEKS", "KEY_REQUIREMENTS", "TECHNIQUE_REQUIREMENT", "TRYHARD_REQUIREMENT",
+    "OVERUSED_MIN", "VARIETY_WEEKS",
     "ATHLETE_PLAN_PATH", "NOTES_BEGIN", "NOTES_END",
     "build_athlete_context", "render_text", "extract_plan_notes", "load_exercise_catalog",
     "key_requirements_for", "key_matches", "WARMUP_TECHNIQUE_DRILLS",

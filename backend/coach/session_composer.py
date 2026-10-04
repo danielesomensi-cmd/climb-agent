@@ -237,6 +237,9 @@ def build_pool(
         equipment = resolve_equipment_mode(equipment_set, user_state)
 
     banned = excluded_ids(catalog_by_id, intent.get("exclude") or [])
+    # A294 (A259 extension, decision 2026-10-04): near a finger key session or
+    # before a max test the engine drops the finger-hard / heavy-pull lines.
+    banned |= {str(x) for x in (intent.get("key_guard_exclude_ids") or [])}
 
     pool = [
         ex

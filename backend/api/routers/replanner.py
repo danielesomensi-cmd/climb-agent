@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend.api.deps import REPO_ROOT, assert_plan_not_paused, current_phase_and_week, get_user_id, is_past_week, load_state, require_active_subscription, save_state, week_num_to_phase_context
 from backend.api.models import EventsRequest, OverrideRequest, QuickAddRequest
+from backend.api.key_status import build_key_conflicts, build_key_status, resolve_today
 from backend.engine.outdoor_log import compute_outdoor_load_score, load_outdoor_sessions, remove_outdoor_session
 from backend.engine.planner_v2 import _SESSION_META
 from backend.engine.replanner_v1 import (
@@ -309,7 +310,10 @@ def override(req: OverrideRequest, user_id: Optional[str] = Depends(get_user_id)
             adjustments.extend(a.get("adjustments") or [])
             warnings.extend(a.get("warnings") or [])
 
-    return {"week_plan": updated, "adjustments": adjustments, "warnings": warnings}
+    return {"week_plan": updated, "adjustments": adjustments, "warnings": warnings,
+            # A294: sibling, never inside week_plan (nothing can persist it).
+            "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
+                                           today=req.today)}
 
 
 @router.get("/suggest-sessions")
@@ -401,7 +405,9 @@ def quick_add(req: QuickAddRequest, user_id: Optional[str] = Depends(get_user_id
 
     # B287/R-5: `adjustments` tells the client exactly what reconciliation changed
     # about the session it just added (empty list = nothing was touched).
-    return {"week_plan": updated, "warnings": warnings, "adjustments": adjustments}
+    return {"week_plan": updated, "warnings": warnings, "adjustments": adjustments,
+            "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"),
+                                           today=req.today)}
 
 
 @router.post("/events", dependencies=[Depends(require_active_subscription)])
@@ -444,7 +450,35 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     # the week-plan slot that add_custom_session copies carries what the real
     # guided player renders. Read-path only; replanner_v1 logic untouched.
     from backend.api.routers.custom_session import enrich_custom_sessions_for_play
-    custom_sessions = enrich_custom_sessions_for_play(state.get("custom_sessions") or [])
+    raw_customs = list(state.get("custom_sessions") or [])
+    if req.dry_run and req.custom_session_payload:
+        # A294: a custom that does not exist yet (builder / coach preview).
+        preview = dict(req.custom_session_payload)
+        preview.setdefault("id", "preview")
+        raw_customs = [c for c in raw_customs if c.get("id") != preview["id"]] + [preview]
+    custom_sessions = enrich_custom_sessions_for_play(raw_customs)
+
+    # A294: dry run — the events go through the same apply_events on a COPY;
+    # nothing below (outdoor store, outdoor log, closed loop, completion log,
+    # persist) runs, and the caller's events are not mutated.
+    if req.dry_run:
+        try:
+            res = build_key_conflicts(
+                state, user_id, plan=deepcopy(week_plan), events=deepcopy(req.events),
+                custom_sessions=custom_sessions, today=req.today,
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
+        except Exception as e:
+            logger.error("Events dry run failed: %s", e, exc_info=True)
+            raise HTTPException(status_code=500, detail="Events dry run failed. Please try again.")
+        return {
+            "dry_run": True,
+            "week_plan": res["week_plan"],
+            "adjustments": res["adjustments"],
+            "key_status": res["key_status"],
+            "key_conflicts": res["key_conflicts"],
+        }
 
     # For complete_outdoor events, compute the day's outdoor load score from
     # the JSONL/DB log. B341: a day can hold more than one crag — sum every
@@ -458,6 +492,7 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             if matching:
                 ev["outdoor_load_score"] = sum(compute_outdoor_load_score(s) for s in matching)
 
+    _n_adapt_before = len(week_plan.get("adaptations") or [])
     try:
         updated = apply_events(
             week_plan,
@@ -466,6 +501,12 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
             planning_prefs=planning_prefs,
             gyms=gyms,
             custom_sessions=custom_sessions,
+            # A294: the Sunday→Monday finger gap is checked on /events too
+            # (quick-add has done it since B287/R-5).
+            prev_days=_prev_week_days(state, week_plan.get("start_date")),
+            # A294 review: days before the athlete's today are immutable for
+            # that reconcile — a past session not ticked yet is never rewritten.
+            today=resolve_today(req.today),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -551,20 +592,40 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
 
     # --- B117: Persistent session completion log ---
     completion_log = state.setdefault("session_completion_log", [])
+
+    def _logged_session_id(ev: dict) -> str:
+        """A294: the event's session_ref, else the id of the session the event
+        actually hit (a slot-only event used to log '' — the key-session
+        status could not tell what was skipped)."""
+        if ev.get("session_ref"):
+            return ev["session_ref"]
+        day = next(
+            (d for w in updated.get("weeks", []) for d in w.get("days", []) if d.get("date") == ev.get("date")),
+            None,
+        )
+        for s in (day or {}).get("sessions") or []:
+            if ev.get("slot") and s.get("slot") != ev.get("slot"):
+                continue
+            if ev.get("event_type") == "mark_skipped" and s.get("skipped_session_id"):
+                return s["skipped_session_id"]
+            if ev.get("event_type") == "mark_done" and s.get("status") == "done":
+                return s.get("session_id") or ""
+        return ""
+
     for ev in req.events:
         evt = ev.get("event_type")
         ev_date = ev.get("date")
         if evt == "mark_done" and ev_date:
             completion_log.append({
                 "date": ev_date,
-                "session_id": ev.get("session_ref", ""),
+                "session_id": _logged_session_id(ev),
                 "status": "done",
                 "completed_at": datetime.now(timezone.utc).isoformat(),
             })
         elif evt == "mark_skipped" and ev_date:
             completion_log.append({
                 "date": ev_date,
-                "session_id": ev.get("session_ref", ""),
+                "session_id": _logged_session_id(ev),
                 "status": "skipped",
                 "completed_at": datetime.now(timezone.utc).isoformat(),
             })
@@ -582,4 +643,14 @@ def events(req: EventsRequest, user_id: Optional[str] = Depends(get_user_id)):
     # Auto-resolve all sessions so the frontend gets exercises inline
     _auto_resolve(updated, state, user_id)
 
-    return {"week_plan": updated}
+    # A294: what the final reconcile rewrote in THIS call (it used to be
+    # computed and discarded) and the key status, both siblings of week_plan.
+    adjustments: list = []
+    for a in (updated.get("adaptations") or [])[_n_adapt_before:]:
+        if a.get("type") == "reconcile":
+            adjustments.extend(a.get("adjustments") or [])
+    return {
+        "week_plan": updated,
+        "adjustments": adjustments,
+        "key_status": build_key_status(state, user_id, week_start=updated.get("start_date"), today=req.today),
+    }

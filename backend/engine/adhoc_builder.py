@@ -541,6 +541,8 @@ def compose_adhoc_session(
     # the ids from every pool up front — `used` is already the exclusion channel
     # every selection path honours, so this needs no change downstream.
     used |= excluded_ids(catalog_by_id, intent.get("exclude") or [])
+    # A294: the key-session guard (near a finger key / before a max test).
+    used |= {str(x) for x in (intent.get("key_guard_exclude_ids") or [])}
 
     # 1. Warmup (1) — phase-agnostic; equipment-fit; role=warmup. Keep it SHORT
     # (B281): a long mobility flow as the opener kills the session — prefer the

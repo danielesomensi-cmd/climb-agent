@@ -8,7 +8,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { sessionResolutionState } from "@/lib/session-resolution";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
 import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
-import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain } from "lucide-react";
+import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,7 +42,8 @@ import {
 import { ExerciseCard } from "@/components/training/exercise-card";
 import { FEEDBACK_CHIP } from "@/components/training/feedback-colors";
 import { getExercises, addExerciseToSession, removeExerciseFromSession, setSessionSurface, apiErrorDetail } from "@/lib/api";
-import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan } from "@/lib/types";
+import type { SessionSlot, GuidedSessionState, GuidedExercise, Exercise, WeekPlan, KeySessionRole } from "@/lib/types";
+import { formatSessionId, keyLabel } from "@/lib/key-sessions";
 import { expandEquipment, isExerciseCompatible } from "@/lib/equipment-filter";
 import { walkResolvedBlocks } from "@/lib/session-blocks";
 import { formatSessionName } from "@/lib/format";
@@ -69,6 +70,8 @@ interface SessionCardProps {
   onRemove?: () => void;
   onReplan?: () => void;
   onSessionUpdated?: (updatedWeekPlan?: WeekPlan) => void;
+  /** A294 — the session's role in the week's key stimuli (from key_status). */
+  keyRole?: KeySessionRole | null;
 }
 
 
@@ -654,6 +657,7 @@ export function SessionCard({
   onRemove,
   onReplan,
   onSessionUpdated,
+  keyRole,
 }: SessionCardProps) {
   const [expanded, setExpanded] = useState(false);
   // F6 — un secondo tap su Done/Skip prima che il primo abbia risposto partiva
@@ -906,6 +910,8 @@ export function SessionCard({
 
           {/* Badge row */}
           <div className="flex flex-wrap items-center gap-1.5 mt-1">
+            {/* A294 — key-session role */}
+            <KeyRoleBadge role={keyRole} />
             <Badge variant="secondary" className="text-[10px]">
               {locationLabel}
             </Badge>
@@ -1418,5 +1424,44 @@ export function SessionCard({
         />
       )}
     </>
+  );
+}
+
+
+/** A294 — Key / Supporting / Optional / Skipped key / Downgraded badge. */
+function KeyRoleBadge({ role }: { role?: KeySessionRole | null }) {
+  if (!role) return null;
+  if (role.role === "key") {
+    const done = role.status === "done";
+    const labels = role.keys.filter((k) => k !== "try_hard").map(keyLabel).join(" + ");
+    return (
+      <Badge
+        variant="outline"
+        className={`text-[10px] gap-1 ${done ? "border-success/40 bg-success/15 text-success" : "border-primary/40 bg-primary/15 text-primary"}`}
+        title={role.keys.map(keyLabel).join(", ")}
+      >
+        <Star className="size-2.5" aria-hidden="true" />
+        {done ? "Key ✓" : `Key · ${labels}`}
+      </Badge>
+    );
+  }
+  if (role.role === "skipped") {
+    return (
+      <Badge variant="outline" className="text-[10px] border-danger/30 bg-danger/15 text-danger">
+        Skipped key
+      </Badge>
+    );
+  }
+  if (role.role === "downgraded") {
+    return (
+      <Badge variant="outline" className="text-[10px] border-warning/30 bg-warning/15 text-warning">
+        Downgraded from {formatSessionId(role.downgraded_from)}
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="text-[10px] text-muted-foreground" title={role.supporting.map(keyLabel).join(", ")}>
+      {role.role === "optional" ? "Optional" : "Supporting"}
+    </Badge>
   );
 }

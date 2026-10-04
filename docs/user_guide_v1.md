@@ -178,6 +178,35 @@ Once you have a recent strength test (max hang or weighted pull-up, within the l
 
 To protect you from stacking fatigue, the heavy version steps down for that day if you did weighted pull-ups in the last 48 hours or have a limit/strength day tomorrow (a pulling session that steps down does not use up one of the two weekly heavy slots). If you did max hangs (or a finger test) in the last 72 hours, the finger block switches to sub-maximal hangs (long, light hangs with no max effort). It never gives you another max hang. Without a recent test nothing changes: exercises keep rotating as before.
 
+
+### Key sessions
+
+Each phase has a few **key stimuli** that matter more than everything else — the sessions that make the phase work:
+
+| Phase | Key sessions each week |
+|---|---|
+| Strength & Power | Finger max (a heavy hang session: home finger strength *or* the long strength session) · Limit (limit boulders / board / campus) · Max pulling (weighted pull-ups) |
+| Power Endurance | Power-endurance intervals · Finger maintenance · Limit at least every 12 days |
+| Performance | Project |
+| Every phase | Technique (feet and body positioning near your limit) |
+| Strength & Power, Power Endurance, Performance | Try-hard (falls practice / full commitment — it rides on the limit session, on the project session in Performance) |
+
+On **This Week** the grid shows a ★ on the days with a key session (red when it was skipped or turned into recovery), and each session card carries a badge: **Key · Finger max**, **Key ✓** once done, **Supporting** / **Optional** for the other sessions of the same stimulus (Optional in a re-entry week, when you have had fewer than two limit or finger sessions in the last three weeks), **Skipped key** or **Downgraded from …**.
+
+The **Key sessions this week** card lists every key stimulus with its status. A key session counts when it is done **at the dose of the phase**: a weighted pull-up or max hang well below your tested max shows as *only a partial dose* — it still helps, but the stimulus is not ticked. Outdoor days count too (a route near your redpoint is a finger-hard day and a try-hard day), and a free boulder session with at least two problems near your limit counts as limit and try-hard. An outdoor day does **not** tick the technique key: the app cannot tell whether you worked on your feet and positioning, so technique counts only for the technique session or at least two feet / positioning drills (pacing, breathing and route-reading drills do not count). The try-hard counts when a session holds a **fall-practice block** — the limit session being on the plan is not enough; the card tells you which session to add it to. In Power Endurance the limit stimulus can be proposed even though the phase's own plan has no limit session.
+
+When a key session is missed, the card tells you what to do:
+
+- **Re-schedule** — the app found a safe day this week (finger recovery gap, hard-day cap, upcoming tests, next week's key sessions and the heavy-pulling rules — no weighted pull-ups the day before a limit or long strength session, at most two heavy pulling sessions in 7 days — all checked). Tap **Add to my week**. When the card shows more than one proposal, each was checked with the earlier ones already in your week, so they never take the same slot. If the change eases another session (for example Sunday's finger maintenance becomes recovery), the card says so *before* you tap.
+- **Next key session on …** — catching up would sit too close to next week's key session: skip the catch-up, the plan already has the next one.
+- **No catch-up** — you logged a very hard session in the last 3 days: recovery comes first.
+- **Let it go** — no safe day left this week. A stimulus missed in a past week is gone, not a debt.
+
+At most one finger catch-up is proposed per week. On **Today** the card appears only when something is owed. You can hide a row for the week with ✕.
+
+**Adding a custom session** (from This Week, Today, the Coach or the body-part picker) first checks the key sessions: if it would turn a key session into recovery, land within 72 hours of a max test, or put finger-hard work inside the recovery gap of another finger-hard day (a key session you already did included), you get a warning with **Add anyway** / **Pick another day**. When the custom trains the same stimulus (for example your own max-hang session the day before the long strength session), the warning says it **replaces** the key session. It never blocks you.
+
+**Coach.** When you ask the coach for a session close to a finger key session — one you already did, one still to come, or one later the same day — (or within 72 hours of a max test), it leaves out the finger-hard exercises (and heavy pulls before a pull-up test) and tells you why on the session card. The coach's answers also know which sessions are key this week.
 ---
 
 ## 4. The Guided Session

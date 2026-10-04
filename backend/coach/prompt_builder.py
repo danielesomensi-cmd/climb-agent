@@ -19,6 +19,7 @@ detail. A warning is logged whenever truncation kicks in.
 from __future__ import annotations
 
 import logging
+import os
 from datetime import date, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
@@ -701,6 +702,51 @@ def _equipment_section(state: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def coach_athlete_context_enabled() -> bool:
+    """A294 review: the athlete-context blocks of the coach prompt sit behind
+    ``COACH_ATHLETE_CONTEXT`` (default ON; only the literal ``0`` turns them
+    off, like ``RATE_LIMIT_ENABLED``) — the flag DECISIONS #13 assigns to A297,
+    which will route every such block through one integration point. Read at
+    call time, so a Railway variable change is enough (no code deploy)."""
+    return os.getenv("COACH_ATHLETE_CONTEXT", "1").strip() != "0"
+
+
+def _key_section(state: Dict[str, Any], user_id: Optional[str], today_iso: str) -> Optional[str]:
+    """A294: the key sessions of the week (dynamic block — never in the cached
+    static instructions). Not truncatable by the budget guard: it is a handful
+    of lines and it is what stops the coach from proposing to drop the one
+    max-finger session of the week. None when the phase has no key stimulus,
+    ``COACH_ATHLETE_CONTEXT=0``, or anything fails."""
+    if not coach_athlete_context_enabled():
+        return None
+    try:
+        from backend.engine import storage
+        from backend.engine.key_sessions_v1 import compute_key_status, key_status_text
+
+        if not state.get("macrocycle"):
+            return None
+        today = date.fromisoformat(today_iso)
+        monday = today - timedelta(days=today.weekday())
+        try:
+            rows = storage.read_outdoor_logs(user_id, since_date=(monday - timedelta(days=10)).isoformat())
+        except Exception:
+            rows = None
+        status = compute_key_status(state, today_iso, outdoor_rows=rows)
+        text = key_status_text(status)
+        if not text:
+            return None
+        return (
+            "## Key sessions this week\n"
+            "(The sessions that carry this phase's key stimuli. Never suggest dropping or replacing a key "
+            "session without saying which stimulus is lost; a catch-up proposal is already validated "
+            "against the finger gap, the hard cap and upcoming tests.)\n"
+            + text
+        )
+    except Exception:
+        logger.warning("coach: key-session section failed", exc_info=True)
+        return None
+
+
 def build_user_context(
     state: Dict[str, Any], user_id: Optional[str], max_log_lines: Optional[int] = None,
     include_week_detail: bool = True,
@@ -722,6 +768,9 @@ def build_user_context(
     notes = _notes_section(state)
     if notes:
         sections.append(notes)
+    keys = _key_section(state, user_id, today_iso)
+    if keys:
+        sections.append(keys)
     if include_week_detail:
         sections.append(_week_section(state, user_id, today_iso))
         sections.append(_today_section(state, user_id, today_iso))

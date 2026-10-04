@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/layout/top-bar";
 import { Button } from "@/components/ui/button";
 import {
+  checkKeyConflicts,
   getBodyPartPickerOptions,
   getBodyPartEstimate,
   getWeek,
@@ -14,6 +15,9 @@ import {
   type BodyPartEquipmentOption,
   type BodyPartSession,
 } from "@/lib/api";
+import type { WeekPlan } from "@/lib/types";
+import { KeyConflictDialog } from "@/components/training/key-conflict-dialog";
+import { useKeyConflictGate } from "@/lib/hooks/use-key-conflict-gate";
 import { findDay, firstFreeSlot } from "@/lib/day-slots";
 import { invalidateWeekPlans } from "@/lib/invalidation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -52,6 +56,7 @@ export default function BodyPartPickerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const { gate: keyGateRun, dialogProps: keyDialogProps } = useKeyConflictGate();
 
   // Load options on mount
   useEffect(() => {
@@ -130,48 +135,10 @@ export default function BodyPartPickerPage() {
   const handleStart = useCallback(async () => {
     setError(null);
     setStarting(true);
-    try {
-      const d = new Date();
-      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      // A286 — lo slot era hardcodato a "evening": con la sera già occupata
-      // l'inserimento tornava 422. Stessa soluzione di B309 sul coach: si
-      // risolve client-side il primo slot libero del giorno.
-      let slot: string | undefined;
-      try {
-        const week = await getWeek(0);
-        const day = week.week_plan ? findDay(week.week_plan, today) : null;
-        if (day) {
-          const free = firstFreeSlot(day);
-          if (!free) {
-            throw new Error(
-              "Today is fully booked (morning, lunch and evening). Free a slot from This Week, then retry."
-            );
-          }
-          slot = free;
-        }
-      } catch (e) {
-        // Il piano settimanale non è indispensabile per generare la sessione:
-        // se manca lasciamo decidere il server (slot undefined). Rilanciamo
-        // solo il "giornata piena", che è un messaggio azionabile.
-        if (e instanceof Error && e.message.includes("fully booked")) throw e;
-      }
-      const result = await startBodyPartSession({
-        body_parts: Array.from(selectedParts),
-        equipment_mode: equipmentMode,
-        gym_id: gymId,
-        include_cooldown: includeCooldown,
-        target_date: today,
-        slot,
-        location: gymId ? "gym" : equipmentMode === "home" ? "home" : "home",
-      });
-      invalidateWeekPlans(qc);
-      const sid = result.session?.session_id;
-      if (sid) {
-        router.push(`/guided/${today}/${sid}`);
-      } else {
-        router.push("/today");
-      }
-    } catch (e) {
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const location = gymId ? "gym" : equipmentMode === "home" ? "home" : "home";
+    const fail = (e: unknown) => {
       const msg = e instanceof Error ? e.message : "Failed to start session";
       // A286 — il testo grezzo del motore ("Slot 'evening' already occupied")
       // non è azionabile per chi lo slot non l'ha mai scelto.
@@ -181,8 +148,84 @@ export default function BodyPartPickerPage() {
           : msg
       );
       setStarting(false);
+    };
+    // A286 — lo slot era hardcodato a "evening": con la sera già occupata
+    // l'inserimento tornava 422. Stessa soluzione di B309 sul coach: si
+    // risolve client-side il primo slot libero del giorno.
+    let slot: string | undefined;
+    let weekPlan: WeekPlan | null = null;
+    try {
+      const week = await getWeek(0);
+      weekPlan = week.week_plan ?? null;
+      const day = weekPlan ? findDay(weekPlan, today) : null;
+      if (day) {
+        const free = firstFreeSlot(day);
+        if (!free) {
+          throw new Error(
+            "Today is fully booked (morning, lunch and evening). Free a slot from This Week, then retry."
+          );
+        }
+        slot = free;
+      }
+    } catch (e) {
+      // Il piano settimanale non è indispensabile per generare la sessione:
+      // se manca lasciamo decidere il server (slot undefined). Rilanciamo
+      // solo il "giornata piena", che è un messaggio azionabile.
+      if (e instanceof Error && e.message.includes("fully booked")) {
+        fail(e);
+        return;
+      }
     }
-  }, [selectedParts, equipmentMode, gymId, includeCooldown, qc, router]);
+    const proceed = async () => {
+      try {
+        const result = await startBodyPartSession({
+          body_parts: Array.from(selectedParts),
+          equipment_mode: equipmentMode,
+          gym_id: gymId,
+          include_cooldown: includeCooldown,
+          target_date: today,
+          slot,
+          location,
+        });
+        invalidateWeekPlans(qc);
+        const sid = result.session?.session_id;
+        if (sid) {
+          router.push(`/guided/${today}/${sid}`);
+        } else {
+          router.push("/today");
+        }
+      } catch (e) {
+        fail(e);
+      }
+    };
+    // A294 review: the same key-session dry run as the week / today / coach
+    // insertions — a "fingers" session can turn a key session into recovery.
+    // Fail-open: no plan, no preview or a failed check → straight to /start.
+    if (!weekPlan || !preview || !slot) {
+      await proceed();
+      return;
+    }
+    const plan = weekPlan;
+    const chosenSlot = slot;
+    await keyGateRun(
+      () =>
+        checkKeyConflicts({
+          week_plan: plan,
+          events: [
+            {
+              event_type: "add_generated_session",
+              session_payload: preview,
+              target_date: today,
+              slot: chosenSlot,
+              location,
+              gym_id: gymId,
+            },
+          ],
+        }),
+      proceed,
+      () => setStarting(false),
+    );
+  }, [selectedParts, equipmentMode, gymId, includeCooldown, qc, router, preview, keyGateRun]);
 
   const canPreview = selectedParts.size > 0 && equipmentMode;
 
@@ -396,6 +439,7 @@ export default function BodyPartPickerPage() {
           </div>
         )}
       </main>
+      <KeyConflictDialog {...keyDialogProps} />
     </>
   );
 }

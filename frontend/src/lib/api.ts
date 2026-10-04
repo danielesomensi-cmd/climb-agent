@@ -31,7 +31,10 @@ import type {
   TestReminder,
   TestReminderOption,
   RetestStatus,
+  KeyStatus,
+  KeyConflict,
 } from "./types";
+import { localToday } from "./key-sessions";
 import type { EvidenceStyle, GradeEvidence } from "./grade-evidence";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -365,6 +368,8 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
   const params = new URLSearchParams();
   if (force) params.set("force", "true");
   if (preserveBefore) params.set("preserve_before", preserveBefore);
+  // A294: client-local day for the key-session status (the server is on UTC).
+  params.set("today", localToday());
   const qs = params.toString();
   // B257: a past week with no cached data fails closed — week_plan is null and
   // past_week_unavailable is true (past weeks are immutable, never regenerated).
@@ -389,6 +394,8 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
     test_reminder?: TestReminder;
     /** A289 — official max, confidence, trend and next test per tested axis. */
     retest_status?: RetestStatus;
+    /** A294 — key sessions of the week (sibling of week_plan, never persisted). */
+    key_status?: KeyStatus | null;
   }>(`/api/week/${weekNum}${qs ? `?${qs}` : ""}`);
 };
 
@@ -481,19 +488,52 @@ export const applyOverride = (data: {
 }) =>
   // B366: adjustments/warnings are additive — what the override rewrote
   // (its own reconcile downshift + the day+1/day+2 recovery ripple).
-  request<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[] }>("/api/replanner/override", {
+  request<{ week_plan: WeekPlan; adjustments?: QuickAddAdjustment[]; warnings?: string[]; key_status?: KeyStatus | null }>("/api/replanner/override", {
     method: "POST",
-    body: JSON.stringify(data),
+    // A294 review: client-local today for the key status (the server is UTC).
+    body: JSON.stringify({ ...data, today: localToday() }),
   });
+
+export type EventsResponse = {
+  week_plan: WeekPlan;
+  /** A294 — what the final reconcile rewrote in this call. */
+  adjustments?: QuickAddAdjustment[];
+  key_status?: KeyStatus | null;
+  /** A294 — dry run only. */
+  dry_run?: boolean;
+  key_conflicts?: KeyConflict[];
+};
 
 export const applyEvents = (data: {
   events: Array<Record<string, unknown>>;
   week_plan: WeekPlan;
+  /** A294 — apply on a copy and return the key conflicts; nothing is written. */
+  dry_run?: boolean;
+  /** A294 + dry_run — a custom session that does not exist yet. */
+  custom_session_payload?: Record<string, unknown>;
 }) =>
-  request<{ week_plan: WeekPlan }>("/api/replanner/events", {
+  request<EventsResponse>("/api/replanner/events", {
     method: "POST",
-    body: JSON.stringify(data),
+    body: JSON.stringify({ ...data, today: localToday() }),
   });
+
+/**
+ * A294 — would these events (typically one `add_custom_session`) take a key
+ * session away? Dry run: nothing is written. Fail-open: a network/server error
+ * returns no conflicts, so the warning can never block the user's own action.
+ */
+export async function checkKeyConflicts(data: {
+  events: Array<Record<string, unknown>>;
+  week_plan: WeekPlan;
+  custom_session_payload?: Record<string, unknown>;
+}): Promise<KeyConflict[]> {
+  try {
+    const res = await applyEvents({ ...data, dry_run: true });
+    return res.key_conflicts ?? [];
+  } catch {
+    return [];
+  }
+}
 
 // A265 — pitch ladder: generate from the athlete's own grades, then persist
 // (generated or hand-edited) onto the outdoor day.
@@ -635,11 +675,11 @@ export const quickAddSession = (data: {
   gym_id?: string;
   force?: boolean; // A254: keep the hard session past the finger gap / hard cap
 }) =>
-  request<{ week_plan: WeekPlan; warnings: string[]; adjustments: QuickAddAdjustment[] }>(
+  request<{ week_plan: WeekPlan; warnings: string[]; adjustments: QuickAddAdjustment[]; key_status?: KeyStatus | null }>(
     "/api/replanner/quick-add",
     {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, today: localToday() }),
     },
   );
 
@@ -1290,6 +1330,8 @@ export interface AdhocSessionPreview {
   explanation: string;
   effort_band: string | null;
   phase: string | null;
+  /** A294 — why finger-hard / heavy-pull lines were left out (near a key session or a test). */
+  key_warnings?: Array<{ code: string; message: string; date?: string }>;
   intent: {
     equipment_set: string;
     focus: string;
@@ -1303,7 +1345,8 @@ export interface AdhocSessionPreview {
 export const coachAdhocSession = (message: string) =>
   request<{ adhoc: boolean; session?: AdhocSessionPreview; summary?: string }>(
     "/api/coach/adhoc-session",
-    { method: "POST", body: JSON.stringify({ message }) },
+    // A294: target_date = client-local today (the key-session guard of the pool).
+    { method: "POST", body: JSON.stringify({ message, target_date: localToday() }) },
   );
 
 export const coachChat = (
