@@ -165,7 +165,7 @@ user_state.assessment + user_state.goal
 
 ## API endpoints
 
-93 endpoints total (91 router + 2 app-level: health check + stripe webhook). B320 retired `/api/user/recovery-code` and `/api/user/recover`.
+95 endpoints total (93 router + 2 app-level: health check + stripe webhook). B320 retired `/api/user/recovery-code` and `/api/user/recover`.
 
 | Method | Path | Description |
 |--------|------|-------------|
