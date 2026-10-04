@@ -524,6 +524,19 @@ Each entry tracks the last feedback and next suggested load for one exercise (op
 
 For `total_load` exercises (hangboard, weighted_pullup), entries also include `last_total_load_kg` and `next_total_load_kg`.
 
+#### Limit-boulder family entries (B365)
+
+Entries of the `climbing_limit_boulder` family (`limit_bouldering`, `board_limit_boulders`, `spray_wall_limit`, `system_board_limit`) are keyed `<exercise_id>|surface=<surface>` and carry `last_used_grade`, `next_target_grade` (Font) and `surface_selected`. The read side (`inject_targets`) treats the family as **one memory per surface**: the newest entry of any family exercise on the selected surface wins.
+
+- **Trust window:** 180 days (the rest of `working_loads` keeps the 60-day gate). An older entry is not read as a grade, but still proves the athlete has climbed limit on that surface.
+- **Re-entry:** if the newest entry is ≥14 days old (or older than 180 days), the target is `base − 1 half grade` for 2 sessions; `base` = the entry's `next_target_grade` (or the anchor, past 180 days). A first-ever limit session on a surface is the plain anchor, no re-entry.
+- **Additive re-entry fields**, written only by `apply_feedback`: `reentry_base_grade` (Font), `reentry_exposures` (1 or 2), `reentry_started_at`, `reentry_last_at` (YYYY-MM-DD). While re-entering, `next_target_grade` stays equal to the base (the discount is applied at read, never stored); the 2nd session closes the re-entry with `next_target_grade = base ± label delta`. An entry without these fields = no open re-entry (no migration).
+- **Anchor without memory:** `boulder_max_rp + grade_offset` on `gym_boulder`; 2 half grades lower on boards (`board_kilter`, `board_moonboard`, `board_other`, `spraywall`). Not applied to the Kilter benchmark fallback.
+- **Floor/ceiling:** the target stays within ±2 half grades of the best `next_target_grade`/`last_used_grade` on that surface in the last 180 days.
+- **Band:** `target_grade_low = target_grade − 2 half grades`, computed from the final target.
+
+`suggested_boulder_target` gains two additive fields: `target_source` (`anchor` | `memory` | `reentry`) and, while re-entering, `reentry: {base_grade, exposures_done, exposures_required, started_at}`. All the thresholds above are engineering constants (`LIMIT_*` in `progression_v1.py`), not literature values. Half-grade arithmetic here is local to the limit family; `step_grade` (whole letters, §2.10.1) is unchanged elsewhere.
+
 #### `working_loads.rules.adjustment_policy`
 
 Default values (used when user has no custom policy):
