@@ -183,7 +183,7 @@ def test_T2_end_to_end_undo_clears_ui_fields_across_fetches():
             "session_duration_seconds": 5100,
             "actual": {
                 "exercise_feedback_v1": [
-                    {"exercise_id": "deadhang_20mm", "feedback": "hard"},
+                    {"exercise_id": "deadhang_20mm", "feedback_label": "hard"},
                 ],
             },
         },

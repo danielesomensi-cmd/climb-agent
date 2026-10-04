@@ -512,9 +512,16 @@ function WeeklyReportContent() {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   <DifficultyBar distribution={report.difficulty.distribution} />
-                  <p className="text-xs text-muted-foreground">
-                    Average: {DIFFICULTY_LABELS[report.difficulty.avg_label] ?? report.difficulty.avg_label}
-                  </p>
+                  {report.difficulty.avg_label && (
+                    <p className="text-xs text-muted-foreground">
+                      Average: {DIFFICULTY_LABELS[report.difficulty.avg_label] ?? report.difficulty.avg_label}
+                    </p>
+                  )}
+                  {(report.difficulty.unrated_count ?? 0) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {report.difficulty.unrated_count} session{report.difficulty.unrated_count === 1 ? "" : "s"} not rated
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )}

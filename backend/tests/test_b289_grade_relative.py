@@ -152,11 +152,27 @@ def test_endurance_discordant_feedback_resets_streak():
 def test_endurance_ok_resets_streak_and_reanchors():
     state = _user_state()
     state = apply_feedback(_log("four_by_four_bouldering", "easy", "6B", date="2026-01-05"), state)
-    out = apply_feedback(_log("four_by_four_bouldering", "ok", "6C", date="2026-01-08"), state)
+    # A295: an explicit 'ok' (feedback_contract 2) is a rating.
+    log = _log("four_by_four_bouldering", "ok", "6C", date="2026-01-08")
+    log["feedback_contract"] = 2
+    out = apply_feedback(log, state)
     entry = next(e for e in _entries(out) if e["exercise_id"] == "four_by_four_bouldering")
     assert entry["next_target_grade"] == "6C"  # re-anchored to what was used
     assert entry["grade_streak_direction"] == 0
     assert entry["grade_streak_count"] == 0
+
+
+def test_endurance_unrated_leaves_the_streak_alone():
+    """A295: a legacy 'ok' (old default at zero input) is not rated — the target
+    follows the grade climbed, the concordance streak is untouched."""
+    state = _user_state()
+    state = apply_feedback(_log("four_by_four_bouldering", "easy", "6B", date="2026-01-05"), state)
+    out = apply_feedback(_log("four_by_four_bouldering", "ok", "6C", date="2026-01-08"), state)
+    entry = next(e for e in _entries(out) if e["exercise_id"] == "four_by_four_bouldering")
+    assert entry["next_target_grade"] == "6C"
+    assert entry["grade_streak_direction"] == 1
+    assert entry["grade_streak_count"] == 1
+    assert entry["last_rated"] is False
 
 
 def test_endurance_missing_grade_is_skipped():

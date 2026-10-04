@@ -633,7 +633,8 @@ export interface WeeklyReportLoad {
 
 export interface WeeklyReportDifficulty {
   distribution: Record<string, number>;
-  avg_label: string;
+  avg_label: string | null;   // A295: null when no session was rated
+  unrated_count?: number;     // A295: sessions closed without a rating
   hardest_session: { date: string; session_id: string; difficulty: string } | null;
   easiest_session: { date: string; session_id: string; difficulty: string } | null;
 }
@@ -895,6 +896,10 @@ export interface GuidedExercise {
     loadSource?: string;   // "estimated" if derived from grade/pullup (no real test)
     loadWarning?: string;  // "counterweight_required..." if external < 0
     loadNotes?: string[];  // B364: anchored-load notes (ceiling, fatigue, pain, re-entry)
+    // A295: which measure the athlete may record, and the double-progression target.
+    measure?: FeedbackMeasure;
+    targetReps?: number;
+    painFlag?: boolean;    // a pain block is active on this exercise's zone
     rightHand?: { externalLoadKg?: number };
     leftHand?: { externalLoadKg?: number };
   };
@@ -909,7 +914,12 @@ export interface GuidedExercise {
   limitationPrehabFor?: string;
 
   status: "pending" | "done" | "skipped";
-  feedbackLabel: string;
+  /** A295: null = not rated (nothing pre-selected; the server holds the load). */
+  feedbackLabel: string | null;
+  // A295 measured feedback (all optional, one tap each)
+  lastSetReps?: number;
+  hangMargin?: HangMargin;
+  hangHeldS?: number;
   usedLoadKg?: number;
   usedLoadKgRight?: number;
   usedLoadKgLeft?: number;
@@ -942,6 +952,17 @@ export interface GuidedSessionState {
   bodyweightKg?: number;
   submitStatus?: "in_progress" | "feedback_pending" | "completed";
   processCue?: { id: string; text: string };
+  /** A295: session pain 0-3 (+ zone from 2). Travels with the offline retry. */
+  pain?: SessionPain;
+}
+
+/** A295 — measured feedback (feedback_contract 2). */
+export type FeedbackMeasure = "last_set_reps" | "hang_margin" | "dp_reps";
+export type HangMargin = "failed" | "0-2" | "3-5" | ">5";
+export type PainSite = "fingers" | "elbow" | "shoulder" | "other";
+export interface SessionPain {
+  score: 0 | 1 | 2 | 3;
+  site: PainSite | null;
 }
 
 // -----------------------------------------------------------------------
@@ -970,6 +991,10 @@ export interface CustomSessionExercise {
   suggested_total_load_kg?: number;
   anchored?: Record<string, unknown>;
   ceiling_note?: string;
+  // A295: read-time measure metadata (never stored)
+  measure?: FeedbackMeasure;
+  target_reps?: number;
+  dp_range?: [number, number];
 }
 
 export interface CustomSession {
@@ -1184,7 +1209,7 @@ export interface TestReminder {
 export type RetestAxis = "finger" | "pulling";
 
 export interface RetestBlocker {
-  code: "very_hard" | "trip" | "recent_finger" | "heavy_pull" | string;
+  code: "very_hard" | "trip" | "recent_finger" | "heavy_pull" | "pain" | string;
   date?: string;
   session_id?: string | null;
   detail?: string | null;

@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { hasLoadInput, type FeedbackDialogExercise } from "@/lib/feedback-items";
+import type { MeasureValues } from "@/lib/measured-feedback";
+import type { SessionPain } from "@/lib/types";
+import { MeasureInput, PainPicker } from "@/components/training/measured-feedback-inputs";
 
 interface FeedbackDialogProps {
   open: boolean;
@@ -23,10 +26,17 @@ interface FeedbackDialogProps {
    * engine's load memory never updates for sessions completed from here — see
    * lib/feedback-items.ts.
    */
+  /**
+   * A295: `feedback` holds ONLY the exercises the user rated (untouched = not
+   * rated, never a silent "ok"); `measures` the optional last-set reps / hang
+   * margin; `pain` the session's "Any pain?" answer (null = not answered).
+   */
   onSubmit: (
     feedback: Record<string, string>,
     durationMinutes: number,
     loads: Record<string, number>,
+    measures: Record<string, MeasureValues>,
+    pain: SessionPain | null,
   ) => void;
   exercises: FeedbackDialogExercise[];
   /** Session slot — used to pre-fill duration estimate */
@@ -64,6 +74,21 @@ export function FeedbackDialog({
   // the guided player — submitting untouched confirms the proposed load, which
   // is what keeps the load memory alive instead of decaying to the fallback.
   const [loadStr, setLoadStr] = useState<Record<string, string>>({});
+  // A295: optional measures + session pain — nothing pre-selected.
+  const [measures, setMeasures] = useState<Record<string, MeasureValues>>({});
+  const [pain, setPain] = useState<SessionPain | null>(null);
+
+  function setMeasure(exerciseId: string, patch: MeasureValues) {
+    setMeasures((prev) => ({ ...prev, [exerciseId]: { ...(prev[exerciseId] ?? {}), ...patch } }));
+  }
+
+  function resetAll() {
+    setFeedback({});
+    setLoadStr({});
+    setMeasures({});
+    setPain(null);
+    setDurationStr(String(estimatedMin));
+  }
 
   function loadValue(ex: FeedbackDialogExercise): string {
     const typed = loadStr[ex.exercise_id];
@@ -76,10 +101,11 @@ export function FeedbackDialog({
   }
 
   function handleSubmit() {
-    // Default unrated exercises to "ok"
-    const complete: Record<string, string> = {};
+    // A295: only what was rated. An untouched exercise is "not rated" — the
+    // engine holds its load and the report/coach do not invent an "ok".
+    const rated: Record<string, string> = {};
     for (const ex of exercises) {
-      complete[ex.exercise_id] = feedback[ex.exercise_id] ?? "ok";
+      if (feedback[ex.exercise_id]) rated[ex.exercise_id] = feedback[ex.exercise_id];
     }
     const loads: Record<string, number> = {};
     for (const ex of exercises) {
@@ -94,18 +120,14 @@ export function FeedbackDialog({
     const dur = userEntered ? parsed : estimatedMin;
     // B217: duration_source dropped — was a Potemkin field (never persisted
     // server-side, read only with hard-coded default).
-    onSubmit(complete, dur, loads);
-    setFeedback({});
-    setLoadStr({});
-    setDurationStr(String(estimatedMin));
+    onSubmit(rated, dur, loads, measures, pain);
+    resetAll();
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       onClose();
-      setFeedback({});
-      setLoadStr({});
-      setDurationStr(String(estimatedMin));
+      resetAll();
     }
   }
 
@@ -115,7 +137,7 @@ export function FeedbackDialog({
         <DialogHeader>
           <DialogTitle>Session feedback</DialogTitle>
           <DialogDescription>
-            Rate the perceived difficulty for each exercise. Unrated exercises default to &quot;Ok&quot;.
+            Rate the exercises you want to. Untouched exercises are saved as not rated and don&apos;t change your loads.
           </DialogDescription>
         </DialogHeader>
 
@@ -125,6 +147,7 @@ export function FeedbackDialog({
               <p className="text-sm font-medium">{exercise.name}</p>
               <RadioGroup
                 value={feedback[exercise.exercise_id] ?? ""}
+                aria-label={`${exercise.name} difficulty`}
                 onValueChange={(v) =>
                   handleValueChange(exercise.exercise_id, v)
                 }
@@ -148,6 +171,20 @@ export function FeedbackDialog({
                   </div>
                 ))}
               </RadioGroup>
+
+              {/* A295: optional measure (last-set reps / hang margin) */}
+              {exercise.measure && (
+                <MeasureInput
+                  id={`${exercise.exercise_id}-measure`}
+                  measure={exercise.measure}
+                  prescribedReps={exercise.prescribedReps}
+                  targetReps={exercise.targetReps}
+                  lastSetReps={measures[exercise.exercise_id]?.lastSetReps}
+                  hangMargin={measures[exercise.exercise_id]?.hangMargin}
+                  onLastSetReps={(v) => setMeasure(exercise.exercise_id, { lastSetReps: v })}
+                  onHangMargin={(v) => setMeasure(exercise.exercise_id, { hangMargin: v })}
+                />
+              )}
 
               {/* B288: load actually used — the engine's only progression input */}
               {hasLoadInput(exercise) && (
@@ -179,6 +216,11 @@ export function FeedbackDialog({
               )}
             </div>
           ))}
+
+          {/* A295: session pain, one tap */}
+          <div className="border-t pt-4">
+            <PainPicker value={pain} onChange={setPain} />
+          </div>
 
           {/* B127: Duration input */}
           <div className="space-y-2 border-t pt-4">

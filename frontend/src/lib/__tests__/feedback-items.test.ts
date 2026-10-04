@@ -71,7 +71,8 @@ describe("buildDialogFeedbackItems", () => {
       { reverse_wrist_curl: 2 },
     );
     expect(items[0].used_external_load_kg).toBe(2);
-    expect(items[0].feedback_label).toBe("ok");
+    // A295: an untouched exercise is NOT RATED — no label at all, never "ok".
+    expect("feedback_label" in items[0]).toBe(false);
   });
 
   it("keeps a legitimate 0 kg", () => {
@@ -148,9 +149,17 @@ describe("buildGuidedFeedbackItems", () => {
     ]);
     expect(items[0]).toMatchObject({
       completed_sets: 3,
-      completed_reps: 3,
       notes: "left wrist twinge",
     });
+    // A295: completed_reps is no longer a copy of completed_sets…
+    expect(items[0].completed_reps).toBeUndefined();
+  });
+
+  it("keeps completed_reps for the repeater test only (B133)", () => {
+    const items = buildGuidedFeedbackItems([
+      { ...base, exerciseId: "test_repeater_7_3_to_failure", completedSets: 14 },
+    ]);
+    expect(items[0].completed_reps).toBe(14);
   });
 
   it("preserves the per-hand split that the old replay flattened", () => {
@@ -199,5 +208,87 @@ describe("hasLoadInput — B298 (loadable is always loggable, even first time)",
     expect(
       hasLoadInput({ exercise_id: "lp_max_lift_5s", name: "LP Max Lift", loadModel: "external_load", unilateral: true }),
     ).toBe(false);
+  });
+});
+
+describe("A295 measured feedback", () => {
+  const pull: GuidedExercise = {
+    exerciseId: "weighted_pullup",
+    name: "Weighted pull-up",
+    category: "main_strength",
+    blockUid: "",
+    loadModel: "total_load",
+    prescription: { sets: 4, reps: 3 },
+    suggested: { externalLoadKg: 30, totalLoadKg: 108, measure: "last_set_reps" },
+    status: "done",
+    feedbackLabel: null,
+  } as GuidedExercise;
+
+  it("omits the label of an untouched guided exercise", () => {
+    const items = buildGuidedFeedbackItems([{ ...pull, usedLoadKg: 30 }]);
+    expect("feedback_label" in items[0]).toBe(false);
+  });
+
+  it("sends last_set_reps only where the server asked for it", () => {
+    const items = buildGuidedFeedbackItems([
+      { ...pull, usedLoadKg: 30, lastSetReps: 7 },
+      { ...pull, exerciseId: "plank", suggested: {}, lastSetReps: 7 },
+    ]);
+    expect(items[0].last_set_reps).toBe(7);
+    expect(items[1].last_set_reps).toBeUndefined();
+  });
+
+  it("sends the hang margin and the timed hold, never on a skipped hang", () => {
+    const hang = {
+      ...pull,
+      exerciseId: "max_hang_7s",
+      suggested: { measure: "hang_margin" as const },
+      hangMargin: ">5" as const,
+      hangHeldS: 12.4,
+    };
+    const [done] = buildGuidedFeedbackItems([hang]);
+    expect(done).toMatchObject({ hang_margin: ">5", hang_held_s: 12.4 });
+    const [skipped] = buildGuidedFeedbackItems([{ ...hang, status: "skipped" }]);
+    expect(skipped.hang_margin).toBeUndefined();
+  });
+
+  it("double progression carries the target shown with the measured reps", () => {
+    const bench = {
+      ...pull,
+      exerciseId: "bench_press",
+      loadModel: "external_load",
+      suggested: { externalLoadKg: 34.5, measure: "dp_reps" as const, targetReps: 5 },
+      lastSetReps: 6,
+      usedLoadKg: 34.5,
+    };
+    expect(buildGuidedFeedbackItems([bench])[0]).toMatchObject({ last_set_reps: 6, target_reps: 5 });
+    const noMeasure = buildGuidedFeedbackItems([{ ...bench, lastSetReps: undefined }])[0];
+    expect(noMeasure.target_reps).toBeUndefined();
+  });
+
+  it("dialog: rated label + measures, untouched stays unrated", () => {
+    const items = buildDialogFeedbackItems(
+      [
+        { exercise_id: "weighted_pullup", name: "Pull", loadModel: "total_load", measure: "last_set_reps", prescribedReps: 3 },
+        { ...PREHAB },
+      ],
+      { weighted_pullup: "easy" },
+      {},
+      { weighted_pullup: { lastSetReps: 5 } },
+    );
+    expect(items[0]).toMatchObject({ feedback_label: "easy", last_set_reps: 5 });
+    expect("feedback_label" in items[1]).toBe(false);
+  });
+
+  it("extractFeedbackExercises reads measure and target from suggested", () => {
+    const out = extractFeedbackExercises({
+      resolved: { resolved_session: { exercise_instances: [{
+        exercise_id: "bench_press",
+        load_model: "external_load",
+        prescription: { sets: 3, reps: 4 },
+        suggested: { measure: "dp_reps", target_reps: 5, suggested_external_load_kg: 34.5 },
+      }] } },
+    });
+    expect(out[0]).toMatchObject({ measure: "dp_reps", targetReps: 5, prescribedReps: 4 });
   });
 });

@@ -169,6 +169,9 @@ def cases() -> Dict[str, Dict[str, Any]]:
     return {"no_tests_onboarding_baselines": onboarding, "stale_tests": stale}
 
 
+_A295_KEYS = ("measure", "target_reps", "dp_range")
+
+
 def _digest(obj: Any) -> str:
     return hashlib.sha256(json.dumps(obj, sort_keys=True, default=str).encode("utf-8")).hexdigest()
 
@@ -194,6 +197,14 @@ def compute(*, pass_week_plan: bool = False) -> Dict[str, Any]:
             )
             r.pop("generated_at", None)
             insts = r["resolved_session"]["exercise_instances"]
+            # A295 adds measure metadata (measure, target_reps, dp_range) to
+            # every athlete's instances: additive, never a load. Stripped so
+            # the golden keeps pinning the prescription bit for bit.
+            for i in insts:
+                for k in _A295_KEYS:
+                    (i.get("suggested") or {}).pop(k, None)
+                if i.get("suggested") == {}:
+                    i.pop("suggested")  # it held only A295 metadata
             out[f"{name}|{d}|{sid}"] = {
                 "exercise_ids": [i["exercise_id"] for i in insts],
                 "digest": _digest(r),

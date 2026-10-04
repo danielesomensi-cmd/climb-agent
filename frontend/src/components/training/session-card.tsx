@@ -7,6 +7,7 @@ import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { queryKeys } from "@/lib/query-keys";
 import { sessionResolutionState } from "@/lib/session-resolution";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
+import { asMeasure } from "@/lib/measured-feedback";
 import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,13 +143,17 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
       loadSource: suggested.load_source as string | undefined,
       loadWarning: suggested.load_warning as string | undefined,
       loadNotes: anchoredLoadNotes(suggested),
+      // A295: measured feedback — what the athlete may record on this exercise.
+      measure: asMeasure(suggested.measure),
+      targetReps: typeof suggested.target_reps === "number" ? suggested.target_reps : undefined,
+      painFlag: suggested.pain_flag === true,
       rightHand: rightHand ? { externalLoadKg: rightHand.suggested_external_load_kg as number | undefined } : undefined,
       leftHand: leftHand ? { externalLoadKg: leftHand.suggested_external_load_kg as number | undefined } : undefined,
     },
     videoUrl: (inst.video_url as string | undefined) ?? undefined,
     cues: (inst.cues as string[] | undefined) ?? undefined,
     status: "pending",
-    feedbackLabel: "ok",
+    feedbackLabel: null,  // A295: nothing pre-selected
     testField: (inst.attributes as Record<string, unknown> | undefined)?.test_field as string | undefined,
     testUnit: (inst.attributes as Record<string, unknown> | undefined)?.test_unit as string | undefined,
     limitationWarning: inst.limitation_warning as GuidedExercise["limitationWarning"],
@@ -182,7 +187,7 @@ function buildInstructionStep(block: Record<string, unknown>): GuidedExercise {
     prescription: {},
     suggested: {},
     status: "pending",
-    feedbackLabel: "ok",
+    feedbackLabel: null,  // A295: nothing pre-selected
   };
 }
 

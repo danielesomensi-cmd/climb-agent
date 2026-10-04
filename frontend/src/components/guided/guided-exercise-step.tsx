@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
-import type { GuidedExercise } from "@/lib/types";
+import type { GuidedExercise, HangMargin } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
+import { MeasureInput } from "@/components/training/measured-feedback-inputs";
+import { OVERHOLD_CAP_S, type MeasureValues } from "@/lib/measured-feedback";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { tapFeedback } from "@/lib/haptics";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
@@ -17,7 +19,8 @@ interface GuidedExerciseStepProps {
   exercise: GuidedExercise;
   isTestSession?: boolean;
   bodyweightKg?: number;
-  onDone: (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }) => void;
+  /** A295: `feedbackLabel` null = not rated; `measures` the optional last-set reps / hang margin / timed hold. */
+  onDone: (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues) => void;
   onSkip: () => void;
   onSetChange?: (completedSets: number) => void;
   onNotesChange?: (notes: string) => void;
@@ -92,7 +95,16 @@ export function GuidedExerciseStep({
   onSetChange,
   onNotesChange,
 }: GuidedExerciseStepProps) {
-  const [feedback, setFeedback] = useState(exercise.feedbackLabel || "ok");
+  // A295: nothing pre-selected — an untouched exercise is "not rated".
+  const [feedback, setFeedback] = useState<string | null>(exercise.feedbackLabel ?? null);
+  const [lastSetReps, setLastSetReps] = useState<number | undefined>(exercise.lastSetReps);
+  const [hangMargin, setHangMargin] = useState<HangMargin | undefined>(exercise.hangMargin);
+  const [hangHeldS, setHangHeldS] = useState<number | undefined>(exercise.hangHeldS);
+  const [overhold, setOverhold] = useState(false);
+  const measure = exercise.suggested.measure;
+  const measures: MeasureValues = { lastSetReps, hangMargin, hangHeldS };
+  /** Tap a selected chip again to clear it (back to "not rated"). */
+  const toggleFeedback = (value: string) => setFeedback((prev) => (prev === value ? null : value));
   const [loadInput, setLoadInput] = useState("");
   const [loadInputRight, setLoadInputRight] = useState("");
   const [loadInputLeft, setLoadInputLeft] = useState("");
@@ -260,7 +272,10 @@ export function GuidedExerciseStep({
     }
     setNotesInput(exercise.notes ?? "");
     setNotesExpanded(!!(exercise.notes));
-    setFeedback(exercise.feedbackLabel || "ok");
+    setFeedback(exercise.feedbackLabel ?? null);
+    setLastSetReps(exercise.lastSetReps);
+    setHangMargin(exercise.hangMargin);
+    setHangHeldS(exercise.hangHeldS);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, [exercise]);
 
@@ -330,7 +345,7 @@ export function GuidedExerciseStep({
             <Button
               size="sm"
               className="bg-green-600 hover:bg-green-700 text-white flex-1"
-              onClick={() => onDone("ok")}
+              onClick={() => onDone(null)}
             >
               <Check className="size-4 mr-1" />
               {isAlreadyDone ? "Done" : "Done"}
@@ -344,14 +359,14 @@ export function GuidedExerciseStep({
   function handleDone() {
     if (isTestMeasurement) {
       const val = measurementInput ? parseFloat(measurementInput) : undefined;
-      onDone("ok", undefined, undefined, undefined, val);
+      onDone(null, undefined, undefined, undefined, val);
       return;
     }
     // B128: unilateral test measurement (e.g. lp_duration_test — seconds per hand)
     if (isUnilateralTestMeasurement) {
       const right = loadInputRight ? parseFloat(loadInputRight) : undefined;
       const left = loadInputLeft ? parseFloat(loadInputLeft) : undefined;
-      onDone("ok", undefined, undefined, undefined, undefined, { right, left });
+      onDone(null, undefined, undefined, undefined, undefined, { right, left });
       return;
     }
     if (isRepeaterTest) {
@@ -398,12 +413,12 @@ export function GuidedExerciseStep({
     if (isPerHandLoad) {
       const right = loadInputRight ? parseFloat(loadInputRight) : undefined;
       const left = loadInputLeft ? parseFloat(loadInputLeft) : undefined;
-      onDone(feedback, undefined, undefined, undefined, undefined, { right, left });
+      onDone(feedback, undefined, undefined, undefined, undefined, { right, left }, measures);
       return;
     }
     const usedLoad = hasLoadField && loadInput ? parseFloat(loadInput) : undefined;
     const usedGrade = hasGradeField && gradeInput ? gradeInput : undefined;
-    onDone(feedback, usedLoad, usedGrade);
+    onDone(feedback, usedLoad, usedGrade, undefined, undefined, undefined, measures);
   }
 
   return (
@@ -628,7 +643,8 @@ export function GuidedExerciseStep({
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setFeedback(opt.value)}
+                    onClick={() => toggleFeedback(opt.value)}
+                    aria-pressed={feedback === opt.value}
                     onPointerDown={tapFeedback}
                     className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
                       feedback === opt.value
@@ -717,6 +733,43 @@ export function GuidedExerciseStep({
               </div>
             )}
 
+            {/* A295: pain block active on this zone */}
+            {exercise.suggested.painFlag && (
+              <div className="flex items-start gap-2 rounded-md px-3 py-2 text-xs bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                <AlertTriangle className="size-3.5 shrink-0 mt-0.5" />
+                <span>Pain reported recently — loads on this zone are reduced. Keep it sub-max.</span>
+              </div>
+            )}
+
+            {/* A295: opt-in timed overhold of the LAST rep of the LAST set
+                (max hangs only): the timer keeps running past the target, up
+                to +6 s, and records how long you really held. */}
+            {measure === "hang_margin" && (exercise.prescription.workSeconds ?? 0) > 0 && (
+              <label className="flex min-h-[44px] items-center gap-3 rounded-md border border-border px-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="size-5 accent-primary"
+                  checked={overhold}
+                  onChange={(e) => setOverhold(e.target.checked)}
+                />
+                <span>
+                  Overhold last rep
+                  <span className="block text-[11px] text-muted-foreground">
+                    Hold the final hang as long as you can (max +{OVERHOLD_CAP_S} s), tap the timer when you let go. No tap, nothing recorded.
+                  </span>
+                </span>
+              </label>
+            )}
+            {hangHeldS != null && (
+              <p className="text-xs text-muted-foreground">
+                Last hang held: <span className="font-semibold text-foreground">{hangHeldS.toFixed(1)} s</span>
+                {" "}
+                <button type="button" className="underline underline-offset-4" onClick={() => setHangHeldS(undefined)}>
+                  Clear
+                </button>
+              </p>
+            )}
+
             {/* Exercise timer — shown for timed exercises AND multi-set rep-based exercises */}
             {(((exercise.prescription.workSeconds ?? 0) > 0) ||
               ((exercise.prescription.sets ?? 1) > 1 && (exercise.prescription.restSeconds ?? 0) > 0)) && (
@@ -727,6 +780,8 @@ export function GuidedExerciseStep({
                 sets={exercise.prescription.sets ?? 1}
                 reps={typeof exercise.prescription.reps === "number" ? exercise.prescription.reps : 1}
                 altSides={exercise.altSides ?? false}
+                overholdLastRep={measure === "hang_margin" && overhold}
+                onOverholdResult={setHangHeldS}
                 initialSet={(() => {
                   const prescSets = exercise.prescription.sets ?? 1;
                   const totalSets = (exercise.altSides ?? false) ? prescSets * 2 : prescSets;
@@ -933,7 +988,8 @@ export function GuidedExerciseStep({
                   <button
                     key={opt.value}
                     type="button"
-                    onClick={() => setFeedback(opt.value)}
+                    onClick={() => toggleFeedback(opt.value)}
+                    aria-pressed={feedback === opt.value}
                     onPointerDown={tapFeedback}
                     className={`min-h-[44px] rounded-full px-4 text-sm font-medium transition-all active:scale-95 motion-reduce:active:scale-100 ${
                       feedback === opt.value
@@ -946,6 +1002,20 @@ export function GuidedExerciseStep({
                 ))}
               </div>
             </div>
+
+            {/* A295: optional measure — last-set reps / seconds left on the last hang */}
+            {!isTestSession && measure && (
+              <MeasureInput
+                id={`${exercise.exerciseId}-measure`}
+                measure={measure}
+                prescribedReps={typeof exercise.prescription.reps === "number" ? exercise.prescription.reps : undefined}
+                targetReps={exercise.suggested.targetReps}
+                lastSetReps={lastSetReps}
+                hangMargin={hangMargin}
+                onLastSetReps={setLastSetReps}
+                onHangMargin={setHangMargin}
+              />
+            )}
 
             {/* Test session: external load input with auto-computed total */}
             {isTestLoadExercise && (

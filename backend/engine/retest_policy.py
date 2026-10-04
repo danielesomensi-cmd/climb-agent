@@ -541,7 +541,8 @@ def is_heavy_pulling_session(
 # otherwise). Day blockers: ≤ PRE_TRIP_BLOCK_D days before a trip (or during
 # it), very_hard feedback in the VERY_HARD_BLOCK_D days before, a finger-hard
 # day < RETEST_BLOCK_H before a hang test, a heavy pull < PULL_TEST_BLOCK_H
-# before a pull-up test.
+# before a pull-up test, pain >= 2 on the axis zone in the PAIN_BLOCK_D days
+# before (or a pain block still running, A295).
 #
 # Hours → days: the planner works in whole days (one session per slot, slots
 # are not timed), so "< 72 h after X" means "fewer than 3 calendar days after
@@ -740,6 +741,34 @@ def trip_blocked(state: Mapping[str, Any], d: date) -> bool:
     return False
 
 
+#: A295 review (R4 hand-off): pain ≥ 2 on the axis zone in the PAIN_BLOCK_D
+#: days before a test — or a pain block still running on the test day — keeps
+#: the test of that axis off the day. Same zones as the anchored read side.
+PAIN_BLOCK_D = 7
+PAIN_AXIS_SITES: Dict[str, Tuple[str, ...]] = {
+    AXIS_FINGER: ("fingers", "other"), AXIS_PULLING: ("elbow", "shoulder", "other"),
+}
+
+
+def pain_blocked(state: Mapping[str, Any], axis: str, d: date) -> Optional[Dict[str, Any]]:
+    """The pain block that keeps a test of ``axis`` off day ``d``, or None."""
+    blocks = ((state.get("progression_counters") or {}).get("pain_blocks") or {})
+    if not isinstance(blocks, Mapping):
+        return None
+    for site in PAIN_AXIS_SITES.get(axis, ()):
+        b = blocks.get(site)
+        if not isinstance(b, Mapping):
+            continue
+        start, until = _parse_date(b.get("from")), _parse_date(b.get("until"))
+        score = _num(b.get("score")) or 0
+        if start is None or score < 2:
+            continue
+        end = max(until or start, start + timedelta(days=PAIN_BLOCK_D))
+        if start <= d <= end:
+            return {"site": site, "score": int(score), "from": start.isoformat(), "until": end.isoformat()}
+    return None
+
+
 def _very_hard_blocked(vh: Sequence[str], d: date) -> bool:
     lo = (d - timedelta(days=VERY_HARD_BLOCK_D)).isoformat()
     hi = (d - timedelta(days=1)).isoformat()
@@ -935,6 +964,8 @@ def _axis_week_decision(
             last_block = "blocked:trip"
         elif _very_hard_blocked(vh, d):
             last_block = "blocked:very_hard"
+        elif pain_blocked(state, axis, d) is not None:
+            last_block = "blocked:pain"
         else:
             allowed.append(d.isoformat())
         d += timedelta(days=1)
@@ -1088,6 +1119,9 @@ def test_day_blockers(
         out.append({"code": "very_hard", "detail": "very_hard feedback in the 3 days before"})
     if trip_blocked(state, d):
         out.append({"code": "trip", "detail": "within 10 days of a trip"})
+    pain = pain_blocked(state, axis, d)
+    if pain is not None:
+        out.append({"code": "pain", "date": pain["from"], "detail": f"pain {pain['score']}/3 on {pain['site']}"})
     if axis == AXIS_FINGER:
         # Whole calendar days, inclusive (same reading as PASS 3a, A289 review):
         # a finger-hard evening 3 days before a morning test is ~60 h < 72 h.
@@ -1267,5 +1301,5 @@ __all__ = [
     "STATUS_HORIZON_WEEKS", "TREND_STABLE_PCT", "TRIGGER_END_OF_PHASE", "TRIGGER_END_OF_PHASE_SLIPPED",
     "TRIGGER_CYCLE_START", "TRIGGER_MAINTENANCE", "TRIGGER_EARLY", "retest_gap_days",
     "axis_official", "axis_confidence", "axis_trend", "axis_signals", "very_hard_dates",
-    "trip_blocked", "retest_decisions", "test_day_blockers", "retest_status",
+    "trip_blocked", "pain_blocked", "retest_decisions", "test_day_blockers", "retest_status",
 ]

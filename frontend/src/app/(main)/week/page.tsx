@@ -48,7 +48,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain } from "@/lib/types";
+import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import { normalizeOtherActivities } from "@/lib/other-activity";
 import {
   Drawer,
@@ -540,6 +541,8 @@ export default function WeekPage() {
     feedback: Record<string, string>,
     durationMinutes: number,
     loads: Record<string, number>,
+    measures: Record<string, MeasureValues> = {},
+    pain: SessionPain | null = null,
   ) {
     if (!feedbackSessionId || !feedbackDate) return;
     try {
@@ -550,14 +553,16 @@ export default function WeekPage() {
         feedbackExercises,
         feedback,
         loads,
+        measures,
       );
       const body = {
-        log_entry: {
+        // A295: feedback_contract 2 — an omitted label means "not rated".
+        log_entry: withFeedbackContract({
           date: feedbackDate,
           session_id: feedbackSessionId,
           session_duration_seconds: durationMinutes * 60,
           actual: { exercise_feedback_v1: feedbackItems },
-        },
+        }, pain),
         status: "done",
       };
       try {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import os
 from copy import deepcopy
 from datetime import datetime, timedelta
@@ -768,6 +769,10 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 # feedback has no planned instance (custom sessions) — before,
                 # the key was absent and the fallback silently read {}.
                 "prescription_defaults": dict(e.get("prescription_defaults") or {}),
+                # A295: pain zones (stress_tags / contraindications) and the
+                # double-progression fatigue weight.
+                "stress_tags": dict(e.get("stress_tags") or {}),
+                "contraindications": list(e.get("contraindications") or []),
                 "loading_pin": "loading_pin" in (
                     (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
                 ),
@@ -1571,9 +1576,19 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
     benchmark_grade = _extract_grade_benchmark(user_state)
     catalog_lm = _load_catalog_load_models()  # ARCH-2: fallback for instances without load_model
 
+    from backend.engine import measured_feedback as mf
+    from backend.engine import retest_policy as _rp
+
+    # A295: the official 7 s hang max on this date (pain cap of finger hangs).
+    _om7 = _rp.official_max(persisted_state, _rp.PROTOCOL_HANG_7S, out.get("date") or "9999-12-31") if out.get("date") else None
+    official_hang_7s = float(_om7["total_kg"]) if _om7 and _om7.get("tested") and _om7.get("total_kg") else None
+
     for session in out.get("sessions") or []:
         intensity = _intensity_label(session)
         boulder_info = _boulder_target_info(session, user_state)
+        session_is_test = str(session.get("session_id") or "").startswith("test_") or bool(
+            (session.get("tags") or {}).get("test")
+        )
         session_ex_ids = [str(i.get("exercise_id") or "") for i in session.get("exercise_instances") or []]
         for inst in session.get("exercise_instances") or []:
             ex_id = str(inst.get("exercise_id") or "")
@@ -1873,6 +1888,38 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         suggested[f"{hand}_hand"]["suggested_external_load_kg"] = _round_half_step(
                             float(hand_entry["next_external_load_kg"])
                         )
+
+            # A295 (R4): which measure the client may ask for, the double-
+            # progression target, and the read-side pain block (anchored
+            # exercises already carry theirs from anchored_load).
+            kind = mf.measure_kind(ex_id, is_test=session_is_test)
+            if kind:
+                suggested["measure"] = kind
+                if kind == mf.MEASURE_DP_REPS:
+                    lo = mf.prescribed_reps_of(ex_id, prescription)
+                    if lo:
+                        dp_entry = _best_entry(
+                            user_state, ex_id, {}, out.get("date") or "",
+                            freshness_days=EXTERNAL_LOAD_FRESHNESS_DAYS,
+                        )
+                        target = mf.dp_target_for(dp_entry, lo)
+                        suggested["target_reps"] = target
+                        suggested["dp_range"] = list(mf.dp_range(lo))
+                        if target != lo:
+                            dp_sets = prescription.get("sets") or (prescription.get("sets_range") or [3])[0]
+                            suggested["suggested_rep_scheme"] = f"{dp_sets}x{target}"
+            if anch is not None and anch.get("pain"):
+                suggested["pain_flag"] = True
+                suggested["pain"] = dict(anch["pain"])
+            elif anch is None or session_is_test:
+                # A295 review: a test session gets the flag (a test is a max:
+                # never a cut load, but "pain reported" must show) — the retest
+                # policy also blocks a test of the zone (blocked:pain).
+                mf.pain_adjust_suggested(
+                    suggested, persisted_state, ex_id, out.get("date") or "",
+                    load_model=load_model, bodyweight=_get_bodyweight(user_state),
+                    official_hang_total=official_hang_7s, flag_only=session_is_test,
+                )
 
             if suggested:
                 inst["suggested"] = suggested
@@ -2328,6 +2375,9 @@ def _apply_weighted_pullup_feedback(
     feedback_label: str,
     date_value: str,
     bodyweight: float,
+    *,
+    rating: Optional[str] = "",
+    rated: Optional[bool] = None,
 ) -> None:
     """Weighted pull-up feedback of an UNTESTED athlete (pre-B364, bit for bit).
 
@@ -2342,7 +2392,17 @@ def _apply_weighted_pullup_feedback(
       * hard / very_hard: the reference goes DOWN by the adjustment policy %.
     The stored ``next_*`` fields are a convenience for legacy readers; the
     prescription itself is always recomputed by weighted_pullup_target().
+
+    A295 review: ``last_set_reps`` (AMRAP on the last set, stopping one short
+    of failure) is the measure the client shows for this exercise: when given
+    it replaces the label's reps-in-reserve guess (load × (reps + 1)). The
+    stored label is the RATING (``None`` = not rated, never a fake 'ok'), and
+    an active pain block on the zone never lets the reference go up.
     """
+    from backend.engine import measured_feedback as mf
+
+    if rating == "":
+        rating = feedback_label  # legacy call shape (tests, old callers)
     used_total = item.get("used_total_load_kg")
     used_external = item.get("used_external_load_kg")
     if used_total is None and used_external is not None:
@@ -2362,6 +2422,10 @@ def _apply_weighted_pullup_feedback(
     if reps_f <= 0:
         reps_f = float(PULLUP_DEFAULT_REPS)
     rir = PULLUP_RIR_BY_LABEL.get(feedback_label, 2)
+    last_set = item.get("last_set_reps")
+    measured_reps: Optional[float] = None
+    if isinstance(last_set, (int, float)) and not isinstance(last_set, bool) and last_set > 0:
+        measured_reps = float(last_set)
 
     existing = next(
         (e for e in _working_entries_ro(updated) if str(e.get("exercise_id") or "") == "weighted_pullup"
@@ -2377,7 +2441,8 @@ def _apply_weighted_pullup_feedback(
         if (
             date_value == existing_date
             and existing.get("last_total_load_kg") == _round_half_step(float(used_total))
-            and existing.get("last_feedback_label") == feedback_label
+            and existing.get("last_feedback_label") == rating
+            and existing.get("last_set_reps") == (int(measured_reps) if measured_reps is not None else None)
         ):
             return
     _, base_date = _pullup_baseline_2rm(updated)
@@ -2385,13 +2450,18 @@ def _apply_weighted_pullup_feedback(
         # Older than the current test: the test already supersedes it.
         return
 
-    set_2rm = _two_rm_from_1rm(estimate_1rm_from_reps(float(used_total), reps_f + rir))
+    if measured_reps is not None:
+        set_2rm = _two_rm_from_1rm(estimate_1rm_from_reps(float(used_total), measured_reps + 1))
+    else:
+        set_2rm = _two_rm_from_1rm(estimate_1rm_from_reps(float(used_total), reps_f + rir))
     reference = pullup_reference_2rm(updated)
     if feedback_label in {"hard", "very_hard"}:
         base = reference if reference else set_2rm
         new_2rm = _round_half_step(base * (1.0 + _rule_midpoint_pct(updated, feedback_label)))
     else:
         new_2rm = _round_half_step(max(reference or 0.0, set_2rm))
+    if reference and mf.active_pain_block(updated, mf.exercise_pain_sites("weighted_pullup"), date_value):
+        new_2rm = min(new_2rm, _round_half_step(reference))
 
     entry = _find_working_load_entry(updated, "weighted_pullup", {})
     entry.update({
@@ -2399,13 +2469,18 @@ def _apply_weighted_pullup_feedback(
         "key": "weighted_pullup",
         "setup": {},
         "last_completed": bool(item.get("completed", False)),
-        "last_feedback_label": feedback_label,
+        "last_feedback_label": rating,
+        "last_rated": bool(rated) if rated is not None else rating is not None,
         "last_external_load_kg": _round_half_step(float(used_external)),
         "last_total_load_kg": _round_half_step(float(used_total)),
         "last_reps": int(reps_f),
         "e2rm_total_kg": new_2rm,
         "updated_at": date_value,
     })
+    if measured_reps is not None:
+        entry["last_set_reps"] = int(measured_reps)
+    else:
+        entry.pop("last_set_reps", None)
     phase_id = _get_current_phase_id(updated, date_value)
     target = weighted_pullup_target(updated, phase_id, "hard")
     if target is not None:
@@ -2413,7 +2488,215 @@ def _apply_weighted_pullup_feedback(
         entry["next_external_load_kg"] = target["external"]
 
 
+_UNPAINED_DROP_PREFIXES = ("suggested_", "pain", "right_hand", "left_hand", "target_", "added_weight",
+                           "assistance", "anchored", "load_", "reference_2rm", "dp_", "measure")
+
+
+def _pain_reference_reads(
+    state: Dict[str, Any],
+    exercise_id: str,
+    session: Dict[str, Any],
+    planned_inst: Dict[str, Any],
+    item: Dict[str, Any],
+    date_value: str,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """A295 review — what the read side prescribes for this exercise on
+    ``date_value`` WITHOUT and WITH the pain block: the two references the
+    write side uses to undo the cut during a block (see
+    ``measured_feedback.pain_hold_next``). Pure: the same inject_targets on
+    the state with and without its pain blocks; stale load fields of the
+    planned instance are dropped first so they cannot leak into the result."""
+    from backend.engine import measured_feedback as mf
+
+    if planned_inst:
+        inst = deepcopy(planned_inst)
+    else:
+        presc = {}
+        for src, dst in (("prescribed_sets", "sets"), ("prescribed_reps", "reps"),
+                         ("prescribed_work_seconds", "work_seconds"), ("work_seconds", "work_seconds")):
+            if item.get(src) is not None:
+                presc[dst] = item[src]
+        inst = {"exercise_id": exercise_id, "prescription": presc}
+    inst["suggested"] = {k: v for k, v in (inst.get("suggested") or {}).items()
+                         if not str(k).startswith(_UNPAINED_DROP_PREFIXES)}
+    sess = {k: v for k, v in (session or {}).items() if k != "exercise_instances"}
+    sess.setdefault("session_id", "")
+    sess["exercise_instances"] = [inst]
+    try:
+        reads = []
+        for st in (mf.state_without_pain(state), state):
+            out = inject_targets({"date": date_value, "sessions": [deepcopy(sess)]}, st)
+            reads.append(out["sessions"][0]["exercise_instances"][0].get("suggested") or {})
+        return reads[0], reads[1]
+    except Exception:  # pragma: no cover — defensive: never break a feedback write
+        logger.warning("pain reference read failed for %s on %s", exercise_id, date_value, exc_info=True)
+        return {}, {}
+
+
+def _hang_seconds_of(planned_prescription: Dict[str, Any], item: Dict[str, Any], exercise_id: str) -> float:
+    return float(
+        _first_not_none(planned_prescription.get("work_seconds"), item.get("work_seconds"),
+                        item.get("prescribed_work_seconds"))
+        or ((_load_catalog_cache().get(exercise_id) or {}).get("prescription_defaults") or {}).get("work_seconds")
+        or 7
+    )
+
+
+def _hang_margin_step(
+    existing: Optional[Dict[str, Any]],
+    item: Dict[str, Any],
+    *,
+    rating: Optional[str],
+    used_total: float,
+    date_value: str,
+    planned_prescription: Dict[str, Any],
+    exercise_id: str,
+) -> Tuple[float, Dict[str, Any]]:
+    """A295 — measured hang outside the anchored path (untested max hangs,
+    max_hang_10s, horst_7_53): next total = used + the measured kg step.
+
+    Same bands as the anchored hang (B364 ``_hang_measured_step``: >5 s +4,
+    3-5 s +2, 0-2 s hold, failed −2 kg; a timed hold is read in seconds), one
+    step per exposure, and the total never rises more than FINGER_MAX_RISE_PCT
+    (5 %) over the rolling 7-day escalation anchor. A hard label never lets a
+    measure raise the load. Returns (next total, extra entry fields).
+    """
+    from backend.engine.anchored_load import (
+        FINGER_MAX_RISE_PCT,
+        FINGER_RISE_WINDOW_D,
+        _hang_measured_step,
+    )
+
+    t = _hang_seconds_of(planned_prescription, item, exercise_id)
+    step = _hang_measured_step(item, t) or 0.0
+    if rating in ("hard", "very_hard"):
+        step = min(step, 0.0)
+    if item.get("completed") is False:
+        step = min(step, 0.0)
+    anchor = (existing or {}).get("escalation_anchor")
+    anchor_d = _parse_day((anchor or {}).get("date"))
+    now_d = _parse_day(date_value)
+    if not isinstance(anchor, dict) or anchor_d is None or now_d is None or (now_d - anchor_d).days >= FINGER_RISE_WINDOW_D:
+        anchor = {"date": date_value, "total_kg": _round_half_step(used_total)}
+    rise_cap = math.floor((float(anchor["total_kg"]) * (1 + FINGER_MAX_RISE_PCT)) * 2 + 1e-9) / 2
+    next_total = min(_round_half_step(used_total + step), rise_cap)
+    extra: Dict[str, Any] = {"escalation_anchor": anchor, "last_work_seconds": t}
+    if item.get("hang_margin") is not None:
+        extra["last_hang_margin"] = item.get("hang_margin")
+    if item.get("hang_held_s") is not None:
+        extra["last_hang_held_s"] = item.get("hang_held_s")
+    return next_total, extra
+
+
+_DP_SNAPSHOT_FIELDS = ("dp_target_reps", "dp_range")
+
+
+def _dp_label_pct(user_state: Dict[str, Any], label: str) -> float:
+    """Label step of a double-progression accessory WITHOUT a measure.
+
+    A stored ``working_loads.rules.adjustment_policy`` entry still wins (an
+    explicit user choice, B344). Otherwise easy +5 % / very_easy +10 %
+    (DECISIONS 2026-10-04) and the default policy for ok / hard / very_hard.
+    """
+    from backend.engine import measured_feedback as mf
+
+    stored = (((user_state.get("working_loads") or {}).get("rules") or {}).get("adjustment_policy") or {})
+    if label in stored:
+        return _rule_midpoint_pct(user_state, label)
+    if label in mf.DP_LABEL_STEP_PCT:
+        return mf.DP_LABEL_STEP_PCT[label]
+    return _rule_midpoint_pct(user_state, label)
+
+
+def _apply_dp_feedback(
+    updated: Dict[str, Any],
+    entry: Dict[str, Any],
+    item: Dict[str, Any],
+    *,
+    exercise_id: str,
+    rating: Optional[str],
+    base: float,
+    date_value: str,
+    session_key: str,
+    planned_prescription: Dict[str, Any],
+    last_set_reps: Optional[int],
+) -> Tuple[float, Dict[str, Any]]:
+    """A295 (R4 §3c) — double progression of a reps accessory.
+
+    Returns (next load, fields to merge into the entry). ``base`` is the load
+    used (external for external_load, total for total_load); the caller turns
+    the result into its own next_* fields.
+
+    Measured success (last-set reps ≥ target, all prescribed sets done, label
+    not hard, no pain block on the zone) → target + 1 rep; at the top of the
+    range → load + 2.5 % (fingers + 1.25 %, B344 floor +0.5 kg) and target back
+    to lo. Without a measure the label policy applies (easy +5 %, very_easy
+    +10 %, hard / very_hard the adjustment policy); not rated → hold.
+
+    Idempotent: the entry keeps ``applied {key, base_before}``; the same
+    (date, session) recomputes from the snapshot, so a replay gives the same
+    result and a pencil correction takes effect.
+    """
+    from backend.engine import measured_feedback as mf
+
+    applied = entry.get("applied") if isinstance(entry.get("applied"), dict) else None
+    if applied and applied.get("key") == session_key:
+        before = dict(applied.get("base_before") or {})
+    else:
+        before = {k: deepcopy(entry.get(k)) for k in _DP_SNAPSHOT_FIELDS if entry.get(k) is not None}
+
+    lo_raw = mf.prescribed_reps_of(exercise_id, item, planned_prescription)
+    lo, hi = mf.dp_range(lo_raw or 1)
+    stored_target = mf.dp_target_for(before, lo)
+    shown = mf._int(item.get("target_reps"))
+    target = max(lo, min(hi, shown)) if shown else stored_target
+
+    completed = item.get("completed") is not False
+    done_sets = _first_not_none(item.get("completed_sets"))
+    presc_sets = _first_not_none(item.get("prescribed_sets"), planned_prescription.get("sets"))
+    sets_ok = not (
+        isinstance(done_sets, (int, float)) and isinstance(presc_sets, (int, float)) and done_sets < presc_sets
+    )
+    pain = mf.active_pain_block(updated, mf.exercise_pain_sites(exercise_id), date_value)
+    step_pct = mf.DP_FINGER_LOAD_STEP_PCT if mf.is_finger_loading(exercise_id) else mf.DP_LOAD_STEP_PCT
+
+    next_target = target
+    next_load = _round_half_step(base)
+    outcome = "hold"
+    if not completed:
+        outcome = "not_completed"
+    elif last_set_reps is not None:
+        success = last_set_reps >= target and sets_ok and rating not in ("hard", "very_hard") and pain is None
+        if success and target < hi:
+            next_target, outcome = target + 1, "reps_up"
+        elif success:
+            next_load, next_target, outcome = _next_external_load(base, step_pct), lo, "load_up"
+        elif rating in ("hard", "very_hard"):
+            next_load, outcome = _next_external_load(base, _rule_midpoint_pct(updated, rating)), "label_down"
+        elif pain is not None:
+            outcome = "pain_freeze"
+    elif rating is not None:
+        pct = _dp_label_pct(updated, rating)
+        if pct > 0 and pain is not None:
+            outcome = "pain_freeze"
+        elif pct != 0:
+            next_load = _next_external_load(base, pct)
+            outcome = "label_up" if pct > 0 else "label_down"
+
+    fields: Dict[str, Any] = {
+        "dp_target_reps": next_target,
+        "dp_range": [lo, hi],
+        "dp_last_outcome": outcome,
+        "applied": {"key": session_key, "base_before": before},
+    }
+    if last_set_reps is not None:
+        fields["last_set_reps"] = last_set_reps
+    return next_load, fields
+
+
 def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
+    from backend.engine import measured_feedback as mf
+
     updated = deepcopy(user_state)
     actual = log_entry.get("actual") or {}
     feedback_items = actual.get("exercise_feedback_v1") or []
@@ -2437,12 +2720,31 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
     counters.pop("max_hang_5s_easy_streak", None)
     # B364: the ONE persisted exposure registry (A288's view reads it).
     record_exposures(updated, log_entry)
+    # A295: feedback contract + pain. Pain is written BEFORE the items so a
+    # pain reported today already freezes today's upward steps and signals.
+    contract = mf.log_contract(log_entry)
+    mf.record_pain(updated, log_entry)
+    session_key = f"{date_value}|{str(log_entry.get('session_id') or '')}"
+    # Per-hand items of one exercise: the double progression reads the WEAKER
+    # hand (min of the last-set reps) before the single step.
+    min_last_set: Dict[str, int] = {}
+    for _it in feedback_items:
+        _eid = str(_it.get("exercise_id") or "").strip()
+        _r = _it.get("last_set_reps")
+        if _eid and isinstance(_r, (int, float)) and not isinstance(_r, bool):
+            min_last_set[_eid] = min(int(_r), min_last_set.get(_eid, int(_r)))
 
     for item in feedback_items:
         exercise_id = str(item.get("exercise_id") or "").strip()
         if not exercise_id:
             continue
-        feedback_label = canonical_feedback_label(item)
+        # A295: None = not rated (no label, or a legacy 'ok' — the old default
+        # at zero input). The load math reads it as 'ok' (hold the load used);
+        # the stored label stays None and last_rated tells the two apart.
+        rating = mf.feedback_rating(item, contract)
+        feedback_label = rating or "ok"
+        measure = mf.measure_kind(exercise_id, is_test=_is_test_log(log_entry))
+        rated = rating is not None or mf.has_measure(item)
 
         session, planned_inst = _lookup_planned_instance(log_entry, exercise_id)
         planned_prescription = (planned_inst.get("prescription") or {}) if planned_inst else {}
@@ -2480,17 +2782,19 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             if apply_anchored_feedback(
                 updated,
                 item,
-                feedback_label=feedback_label,
+                feedback_label=rating,
                 date_value=date_value,
                 planned_session=session or None,
                 planned_prescription=planned_prescription,
                 setup_source=setup_source,
+                session_key=session_key,
             ):
                 continue
 
         if exercise_id == "weighted_pullup":
             _apply_weighted_pullup_feedback(
                 updated, item, planned_prescription, feedback_label, date_value, bodyweight,
+                rating=rating, rated=rated,
             )
             continue
 
@@ -2504,26 +2808,98 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             if used_total is None and used_external is None:
                 continue
 
-            pct = _rule_midpoint_pct(updated, feedback_label)
-            next_total = _round_half_step(float(used_total) * (1.0 + pct))
-            next_external = _round_half_step(next_total - bodyweight)
             setup_source = dict(planned_prescription)
             setup_source.update(item)
             setup, setup_key = _progression_setup_and_key(exercise_id, setup_source)
+            existing_entry = next(
+                (e for e in _working_entries_ro(updated) if str(e.get("key") or "") == setup_key), None,
+            )
+            extra: Dict[str, Any] = {}
+            if measure == mf.MEASURE_HANG_MARGIN and mf.has_measure(item):
+                # A295: a measured hang (untested max hang, 10 s, Hörst) moves
+                # the working load in the same kg bands as the anchored hang
+                # (B364), inside a +5 % rise per rolling 7 days.
+                if existing_entry is not None and str(existing_entry.get("updated_at") or "") > date_value:
+                    continue  # a newer log already moved it: never rewrite it
+                next_total, extra = _hang_margin_step(
+                    existing_entry, item, rating=rating, used_total=float(used_total),
+                    date_value=date_value, planned_prescription=planned_prescription,
+                    exercise_id=exercise_id,
+                )
+            elif measure == mf.MEASURE_DP_REPS:
+                if existing_entry is not None and str(existing_entry.get("updated_at") or "") > date_value:
+                    continue
+                dp_entry = existing_entry if existing_entry is not None else {}
+                next_total, extra = _apply_dp_feedback(
+                    updated, dp_entry, item, exercise_id=exercise_id, rating=rating,
+                    base=float(used_total), date_value=date_value, session_key=session_key,
+                    planned_prescription=planned_prescription,
+                    last_set_reps=min_last_set.get(exercise_id),
+                )
+            elif measure == mf.MEASURE_LAST_SET_REPS and min_last_set.get(exercise_id) is not None:
+                # A295 review: an untested weighted chin-up with the measure
+                # the client asked for — the same kg bands as the anchored
+                # pull (B364), never up on a hard label or an unfinished set.
+                from backend.engine.anchored_load import PULL_MAX_STEP_KG, _pull_measured_step
+
+                if existing_entry is not None and str(existing_entry.get("updated_at") or "") > date_value:
+                    continue
+                pull_reps = int(_first_not_none(item.get("reps"), item.get("prescribed_reps"),
+                                                planned_prescription.get("reps")) or 0) \
+                    or mf.prescribed_reps_of(exercise_id) or 1
+                step = _pull_measured_step({"last_set_reps": min_last_set[exercise_id]}, pull_reps, float(used_total)) or 0.0
+                step = min(step, PULL_MAX_STEP_KG)
+                if rating in ("hard", "very_hard"):
+                    step = min(step, _round_half_step(float(used_total) * _rule_midpoint_pct(updated, rating)))
+                if item.get("completed") is False:
+                    step = min(step, 0.0)
+                next_total = _round_half_step(float(used_total) + step)
+                extra = {"last_set_reps": min_last_set[exercise_id], "last_reps": pull_reps}
+            else:
+                pct = _rule_midpoint_pct(updated, feedback_label)
+                next_total = _round_half_step(float(used_total) * (1.0 + pct))
+            if exercise_id in mf.HANG_MARGIN_EXERCISES:
+                # A295 review: a finger hang outside the anchored four never
+                # goes above the structural ceiling of a tested athlete.
+                from backend.engine.anchored_load import hang_write_cap
+
+                hang_cap = hang_write_cap(updated, _hang_seconds_of(planned_prescription, item, exercise_id), date_value)
+                if hang_cap is not None:
+                    next_total = min(next_total, hang_cap)
+            pain_blk = mf.active_pain_block(updated, mf.exercise_pain_sites(exercise_id), date_value)
+            if pain_blk is not None:
+                # A295 review: under a pain block nothing on the zone goes up,
+                # and the pain-reduced load is never stored as the new memory.
+                ref, cut = _pain_reference_reads(updated, exercise_id, session, planned_inst, item, date_value)
+                next_total, extra["pain_hold"] = mf.pain_hold_next(
+                    existing_entry, field="next_total_load_kg", used=float(used_total),
+                    computed_next=next_total, session_key=session_key, date_value=date_value,
+                    reference_before=ref.get("suggested_total_load_kg"), reference_cut=cut.get("suggested_total_load_kg"),
+                )
+                anchor = extra.get("escalation_anchor")
+                if isinstance(anchor, dict) and anchor.get("date") == date_value:
+                    extra["escalation_anchor"] = {
+                        "date": date_value, "total_kg": _round_half_step(max(next_total, float(used_total))),
+                    }
+            next_external = _round_half_step(next_total - bodyweight)
 
             entry = _find_working_load_entry(updated, exercise_id, setup)
+            if pain_blk is None:
+                entry.pop("pain_hold", None)
             entry.update(
                 {
                     "exercise_id": exercise_id,
                     "key": setup_key,
                     "setup": setup,
                     "last_completed": bool(item.get("completed", False)),
-                    "last_feedback_label": feedback_label,
+                    "last_feedback_label": rating,
+                    "last_rated": rated,
                     "last_external_load_kg": _round_half_step(float(used_external)),
                     "last_total_load_kg": _round_half_step(float(used_total)),
                     "next_external_load_kg": next_external,
                     "next_total_load_kg": next_total,
                     "updated_at": date_value,
+                    **extra,
                 }
             )
 
@@ -2539,19 +2915,45 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             if used_load is None:
                 continue
             base = float(used_load)
-            pct = _rule_midpoint_pct(updated, feedback_label)
-            next_load = _next_external_load(base, pct)
+            extra = {}
+            existing_entry = next(
+                (e for e in _working_entries_ro(updated) if str(e.get("key") or "") == exercise_id), None,
+            )
+            if measure == mf.MEASURE_DP_REPS:
+                if existing_entry is not None and str(existing_entry.get("updated_at") or "") > date_value:
+                    continue  # out-of-order log: the newer entry is never rewritten
+                next_load, extra = _apply_dp_feedback(
+                    updated, existing_entry if existing_entry is not None else {}, item,
+                    exercise_id=exercise_id, rating=rating, base=base, date_value=date_value,
+                    session_key=session_key, planned_prescription=planned_prescription,
+                    last_set_reps=min_last_set.get(exercise_id),
+                )
+            else:
+                pct = _rule_midpoint_pct(updated, feedback_label)
+                next_load = _next_external_load(base, pct)
+            pain_blk = mf.active_pain_block(updated, mf.exercise_pain_sites(exercise_id), date_value)
+            if pain_blk is not None:
+                ref, cut = _pain_reference_reads(updated, exercise_id, session, planned_inst, item, date_value)
+                next_load, extra["pain_hold"] = mf.pain_hold_next(
+                    existing_entry, field="next_external_load_kg", used=base,
+                    computed_next=next_load, session_key=session_key, date_value=date_value,
+                    reference_before=ref.get("suggested_external_load_kg"), reference_cut=cut.get("suggested_external_load_kg"),
+                )
             entry = _find_working_load_entry(updated, exercise_id, {})
+            if pain_blk is None:
+                entry.pop("pain_hold", None)
             entry.update(
                 {
                     "exercise_id": exercise_id,
                     "key": exercise_id,
                     "setup": {},
                     "last_completed": bool(item.get("completed", False)),
-                    "last_feedback_label": feedback_label,
+                    "last_feedback_label": rating,
+                    "last_rated": rated,
                     "last_external_load_kg": _round_half_step(base),
                     "next_external_load_kg": next_load,
                     "updated_at": date_value,
+                    **extra,
                 }
             )
 
@@ -2623,7 +3025,8 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     "key": setup_key,
                     "setup": setup,
                     "surface_selected": surface_selected,
-                    "last_feedback_label": feedback_label,
+                    "last_feedback_label": rating,
+                    "last_rated": rated,
                     "last_used_grade": used_grade,
                     "next_target_grade": next_grade,
                     "updated_at": date_value,
@@ -2663,7 +3066,12 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             entry = _find_working_load_entry(updated, exercise_id, {})
             prev_dir = int(entry.get("grade_streak_direction") or 0)
             prev_count = int(entry.get("grade_streak_count") or 0)
-            if direction == 0:
+            if rating is None:
+                # A295: not rated — the target follows the grade climbed and
+                # the concordance streak is left exactly as it was.
+                streak_dir, streak_count = prev_dir, prev_count
+                next_grade = used_grade
+            elif direction == 0:
                 streak_dir, streak_count = 0, 0
                 next_grade = used_grade
             else:
@@ -2679,7 +3087,8 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     "exercise_id": exercise_id,
                     "key": exercise_id,
                     "setup": {},
-                    "last_feedback_label": feedback_label,
+                    "last_feedback_label": rating,
+                    "last_rated": rated,
                     "last_used_grade": used_grade,
                     "next_target_grade": next_grade,
                     "grade_streak_direction": streak_dir,
@@ -2713,17 +3122,31 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 if str(e.get("key") or "") == hand_key:
                     entry = e
                     break
+            pain_blk = mf.active_pain_block(updated, mf.exercise_pain_sites(exercise_id), date_value)
+            hold_fields: Dict[str, Any] = {}
+            if pain_blk is not None:
+                ref, cut = _pain_reference_reads(updated, exercise_id, session, planned_inst, item, date_value)
+                next_load, hold_fields["pain_hold"] = mf.pain_hold_next(
+                    entry, field="next_external_load_kg", used=base,
+                    computed_next=next_load, session_key=session_key, date_value=date_value,
+                    reference_before=(ref.get(f"{hand}_hand") or {}).get("suggested_external_load_kg"),
+                    reference_cut=(cut.get(f"{hand}_hand") or {}).get("suggested_external_load_kg"),
+                )
             if entry is None:
                 entry = {"exercise_id": exercise_id, "key": hand_key, "hand": hand}
                 entries.append(entry)
                 entries.sort(key=lambda e: str(e.get("key") or ""))
+            if pain_blk is None:
+                entry.pop("pain_hold", None)
+            entry.update(hold_fields)
             entry.update(
                 {
                     "exercise_id": exercise_id,
                     "key": hand_key,
                     "hand": hand,
                     "last_completed": bool(item.get("completed", False)),
-                    "last_feedback_label": feedback_label,
+                    "last_feedback_label": rating,
+                    "last_rated": rated,
                     "last_external_load_kg": _round_half_step(base),
                     "next_external_load_kg": next_load,
                     "updated_at": date_value,

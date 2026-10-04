@@ -13,7 +13,8 @@
  * is silently discarded server-side. Dropping a field is never neutral.
  */
 
-import type { GuidedExercise } from "@/lib/types";
+import type { FeedbackMeasure, GuidedExercise } from "@/lib/types";
+import { asMeasure, measureFields, type MeasureValues } from "@/lib/measured-feedback";
 
 /** An exercise as the post-session FeedbackDialog needs to know it. */
 export interface FeedbackDialogExercise {
@@ -24,6 +25,10 @@ export interface FeedbackDialogExercise {
   suggestedExternalLoadKg?: number;
   suggestedTotalLoadKg?: number;
   allowLoadLogging?: boolean;
+  /** A295: measure the server asks for (suggested.measure), and its context. */
+  measure?: FeedbackMeasure;
+  targetReps?: number;
+  prescribedReps?: number;
 }
 
 /**
@@ -62,7 +67,9 @@ export function extractFeedbackExercises(
   return instances.map((ex) => {
     const suggested = (ex.suggested ?? {}) as Record<string, unknown>;
     const attributes = (ex.attributes ?? {}) as Record<string, unknown>;
+    const prescription = (ex.prescription ?? {}) as Record<string, unknown>;
     const exerciseId = (ex.exercise_id as string) ?? "";
+    const reps = typeof prescription.reps === "number" ? prescription.reps : undefined;
     return {
       exercise_id: exerciseId,
       name: (ex.name as string) ?? exerciseId.replace(/_/g, " "),
@@ -71,6 +78,9 @@ export function extractFeedbackExercises(
       suggestedExternalLoadKg: suggested.suggested_external_load_kg as number | undefined,
       suggestedTotalLoadKg: suggested.suggested_total_load_kg as number | undefined,
       allowLoadLogging: !!attributes.allow_load_logging,
+      measure: asMeasure(suggested.measure),
+      targetReps: typeof suggested.target_reps === "number" ? suggested.target_reps : undefined,
+      prescribedReps: reps,
     };
   });
 }
@@ -82,18 +92,28 @@ export function extractFeedbackExercises(
  * (pre-filled with the suggested value, exactly like the guided player — a user
  * who just taps Submit is confirming the proposed load, which is also what
  * keeps the memory from going stale).
+ *
+ * A295: `feedback_label` is sent ONLY when the user picked one — an untouched
+ * exercise is "not rated" (never a silent "ok", never null). `measures` holds
+ * the optional last-set reps / hang margin per exercise.
  */
 export function buildDialogFeedbackItems(
   exercises: FeedbackDialogExercise[],
   labels: Record<string, string>,
   loads: Record<string, number>,
+  measures: Record<string, MeasureValues> = {},
 ): Array<Record<string, unknown>> {
   return exercises.map((ex) => {
     const item: Record<string, unknown> = {
       exercise_id: ex.exercise_id,
-      feedback_label: labels[ex.exercise_id] ?? "ok",
       completed: true,
     };
+    const label = labels[ex.exercise_id];
+    if (label) item.feedback_label = label;
+    Object.assign(
+      item,
+      measureFields(ex.measure, { targetReps: ex.targetReps, ...(measures[ex.exercise_id] ?? {}) }),
+    );
     const load = loads[ex.exercise_id];
     if (hasLoadInput(ex) && load != null && !Number.isNaN(load)) {
       item.used_external_load_kg = load;
@@ -134,7 +154,7 @@ export function buildGuidedFeedbackItems(
           : ex.suggested.leftHand?.externalLoadKg;
         items.push({
           exercise_id: ex.exerciseId,
-          feedback_label: ex.feedbackLabel,
+          ...labelField(ex),
           completed: ex.status === "done",
           hand,
           [ex.testField]: measurement,
@@ -151,12 +171,13 @@ export function buildGuidedFeedbackItems(
         const reps = hand === "right" ? ex.completedRepsRight : ex.completedRepsLeft;
         const entry: Record<string, unknown> = {
           exercise_id: ex.exerciseId,
-          feedback_label: ex.feedbackLabel,
+          ...labelField(ex),
           completed: ex.status === "done",
           hand,
           used_external_load_kg: load,
         };
         if (reps != null) entry.completed_reps = reps;
+        Object.assign(entry, guidedMeasureFields(ex));
         items.push(entry);
       }
       continue;
@@ -164,7 +185,7 @@ export function buildGuidedFeedbackItems(
 
     const item: Record<string, unknown> = {
       exercise_id: ex.exerciseId,
-      feedback_label: ex.feedbackLabel,
+      ...labelField(ex),
       completed: ex.status === "done",
     };
     if (ex.usedTotalLoadKg != null) {
@@ -186,9 +207,12 @@ export function buildGuidedFeedbackItems(
     }
     if (ex.completedSets != null) {
       item.completed_sets = ex.completedSets;
-      // B133: new repeater test expects completed_reps
-      item.completed_reps = ex.completedSets;
+      // B133: the repeater test reads completed_reps (reps to failure). A295:
+      // ONLY there — elsewhere it was a copy of completed_sets that the
+      // engine could mistake for real reps.
+      if (REPEATER_TEST_IDS.has(ex.exerciseId)) item.completed_reps = ex.completedSets;
     }
+    Object.assign(item, guidedMeasureFields(ex));
     // Test measurement exercises: send the value as the field name directly
     if (ex.testField && ex.testMeasurement != null) {
       item[ex.testField] = ex.testMeasurement;
@@ -200,4 +224,27 @@ export function buildGuidedFeedbackItems(
   }
 
   return items;
+}
+
+/** B133: tests whose completed_reps is the number of reps to failure. */
+const REPEATER_TEST_IDS: ReadonlySet<string> = new Set([
+  "repeater_hang_7_3",
+  "test_repeater_7_3_to_failure",
+]);
+
+/** A295: the label only when the athlete picked one (never null, never "ok" by default). */
+function labelField(ex: GuidedExercise): { feedback_label?: string } {
+  return ex.feedbackLabel ? { feedback_label: ex.feedbackLabel } : {};
+}
+
+/** A295: measure fields of a guided exercise (only the ones the server asked for). */
+function guidedMeasureFields(ex: GuidedExercise): Record<string, unknown> {
+  // A skipped exercise carries no measure: nothing was done.
+  if (ex.status !== "done") return {};
+  return measureFields(ex.suggested.measure, {
+    lastSetReps: ex.lastSetReps,
+    hangMargin: ex.hangMargin,
+    hangHeldS: ex.hangHeldS,
+    targetReps: ex.suggested.targetReps,
+  });
 }

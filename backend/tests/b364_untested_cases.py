@@ -135,7 +135,10 @@ def cases() -> List[Tuple[str, Dict[str, Any], str]]:
 
 def _strip(sug: Dict[str, Any]) -> Dict[str, Any]:
     # Fields every version writes; nothing date-of-today dependent.
-    return {k: sug.get(k) for k in sorted(sug) if k != "schema_version"}
+    # A295 measure metadata (measure, target_reps, dp_range) is additive and
+    # never a load: left out so the golden keeps pinning the loads bit for bit.
+    return {k: sug.get(k) for k in sorted(sug)
+            if k not in ("schema_version", "measure", "target_reps", "dp_range")}
 
 
 def compute() -> Dict[str, Any]:

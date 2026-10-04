@@ -185,7 +185,11 @@ TESTED_NO_WARNING_D = 30
 
 #: Pain (decision 2026-10-04; written by R4 into progression_counters.pain_blocks,
 #: read here): score 2 → −10 % (+ hang ≤ 85 %); score 3 → −10 % and cap 80 %.
-PAIN_SITES: Dict[str, Tuple[str, ...]] = {AXIS_FINGER: ("fingers",), AXIS_PULLING: ("elbow", "shoulder")}
+#: A295: a pain reported on "other" (site not given) covers every loaded
+#: exercise, the anchored four included.
+PAIN_SITES: Dict[str, Tuple[str, ...]] = {
+    AXIS_FINGER: ("fingers", "other"), AXIS_PULLING: ("elbow", "shoulder", "other"),
+}
 PAIN_MULT = 0.90
 PAIN_CAP_SCORE2_HANG = 0.85
 PAIN_CAP_SCORE3 = 0.80
@@ -835,11 +839,12 @@ def apply_anchored_feedback(
     updated: Dict[str, Any],
     item: Mapping[str, Any],
     *,
-    feedback_label: str,
+    feedback_label: Optional[str],
     date_value: str,
     planned_session: Optional[Mapping[str, Any]],
     planned_prescription: Mapping[str, Any],
     setup_source: Mapping[str, Any],
+    session_key: Optional[str] = None,
 ) -> bool:
     """Working-load progression of an anchored exercise for a TESTED athlete.
 
@@ -884,8 +889,16 @@ def apply_anchored_feedback(
         return True  # a newer log already moved the working load
 
     axis = axis_of(exercise_id)
+    # A295: ``feedback_label`` None = not rated → hold (same as 'ok').
     label = feedback_label if feedback_label in HANG_LABEL_STEP_KG else "ok"
     completed = item.get("completed") is not False and str(item.get("feedback_label") or "") != "skipped"
+    # A295 (R4 §3a): fewer sets than prescribed may be a skipped set — never a
+    # reason to go up (a hard label can still bring the load down).
+    sets_done, sets_presc = _num(item.get("completed_sets")), (
+        _num(item.get("prescribed_sets")) or _num(planned_prescription.get("sets")))
+    all_sets = not (sets_done is not None and sets_presc is not None and sets_done < sets_presc)
+    # A295: a pain block on this axis freezes upward steps and retest signals.
+    pain_now = pain_for(updated, axis, on)
     phase = phase_on(updated, on)
     intensity = _intensity_label(dict(planned_session)) if planned_session else CUSTOM_INTENSITY
     counters = updated.setdefault("progression_counters", {})
@@ -904,7 +917,7 @@ def apply_anchored_feedback(
         if measured is not None:
             step = measured
         step = min(step, PULL_MAX_STEP_KG)
-        if not completed:
+        if not completed or not all_sets or pain_now is not None:
             step = min(step, 0.0)
         next_total = round_half(used_total + step)
         ratio = CHINUP_TO_PULLUP_RATIO if exercise_id == "weighted_chinup" else 1.0
@@ -915,11 +928,11 @@ def apply_anchored_feedback(
         last_set = _num(item.get("last_set_reps"))
         if last_set is not None:
             fields["last_set_reps"] = int(last_set)
-            if used_total * rep_factor(last_set + 1) > one_rm:
+            if used_total * rep_factor(last_set + 1) > one_rm and pain_now is None and all_sets:
                 _record_retest_signal(counters, exercise_id, date_value, str(om["date"]))
     else:
         t = float(_num(planned_prescription.get("work_seconds")) or _num(item.get("work_seconds"))
-                  or HANG_SECONDS[exercise_id])
+                  or _num(item.get("prescribed_work_seconds")) or HANG_SECONDS[exercise_id])
         official_t = float(om["total_kg"])
         proto_s = _PROTOCOL_SECONDS[om["protocol"]]
         if t != proto_s:
@@ -928,7 +941,7 @@ def apply_anchored_feedback(
         measured = _hang_measured_step(item, t)
         if measured is not None:
             step = measured
-        if not completed:
+        if not completed or not all_sets or pain_now is not None:
             step = min(step, 0.0)
         next_total = round_half(used_total + step)
         # Escalation: ≤ +5 % of the official max per rolling 7-day window.
@@ -946,13 +959,50 @@ def apply_anchored_feedback(
         if held is not None:
             fields["last_hang_held_s"] = held
             held_c = min(held, t + RETEST_HANG_OVERHOLD_CAP_S)
-            if held_c > t + RETEST_HANG_OVERHOLD_S and used_total >= RETEST_HANG_MIN_PCT * official_t:
+            if (held_c > t + RETEST_HANG_OVERHOLD_S and used_total >= RETEST_HANG_MIN_PCT * official_t
+                    and pain_now is None):
                 _record_retest_signal(counters, exercise_id, date_value, str(om["date"]))
+
+    # A295 review: under a pain block the read side prescribed −10 %; storing
+    # the reduced load as the new working load compounded the cut every
+    # session. Hold the pre-block working load (down steps still apply).
+    from backend.engine import measured_feedback as mf
+
+    if pain_now is not None:
+        # The pre-block reference: this date's prescription without the block
+        # (exact whether it came from the working load or the phase target).
+        read_kw = dict(
+            date=date_value, intensity=intensity,
+            sets=_num(planned_prescription.get("sets")) and int(_num(planned_prescription.get("sets"))),
+            reps=reps if axis == AXIS_PULLING else None,
+            work_seconds=t if axis != AXIS_PULLING else None,
+            session_exercise_ids=[str(i.get("exercise_id") or "") for i in
+                                  ((planned_session or {}).get("exercise_instances") or [])],
+            setup=setup,
+        )
+        unpained = anchored_load(mf.state_without_pain(updated), exercise_id, **read_kw)
+        pained = anchored_load(updated, exercise_id, **read_kw)
+        held_next, hold = mf.pain_hold_next(
+            existing, field="next_total_load_kg", used=used_total, computed_next=next_total,
+            session_key=session_key or f"{date_value}|", date_value=date_value,
+            reference_before=(unpained or {}).get("total"), reference_cut=(pained or {}).get("total"),
+        )
+        if axis == AXIS_PULLING:
+            held_next = min(held_next, floor_half(one_rm / rep_factor(reps + 2)))
+        else:
+            held_next = min(held_next, floor_half(official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S)))
+            if fields["escalation_anchor"].get("date") == date_value:
+                # A reset anchor must not sit on the pain-reduced load either.
+                fields["escalation_anchor"] = {"date": date_value, "total_kg": round_half(max(held_next, used_total))}
+        next_total = held_next
+        fields["pain_hold"] = hold
 
     if feedback_label in ("hard", "very_hard"):
         _record_hard_label(counters, axis, date_value)
 
     entry = _find_working_load_entry(updated, exercise_id, setup)
+    if pain_now is None:
+        entry.pop("pain_hold", None)
     for stale in ("e2rm_total_kg", "next_external_load_kg_legacy"):
         entry.pop(stale, None)
     entry.update({
@@ -961,6 +1011,8 @@ def apply_anchored_feedback(
         "setup": setup,
         "last_completed": bool(completed),
         "last_feedback_label": feedback_label,
+        "last_rated": feedback_label is not None or any(
+            item.get(k) is not None for k in ("last_set_reps", "hang_margin", "hang_held_s")),
         "last_total_load_kg": round_half(used_total),
         "last_external_load_kg": round_half(used_total - bw),
         "next_total_load_kg": next_total,
@@ -972,6 +1024,27 @@ def apply_anchored_feedback(
         **fields,
     })
     return True
+
+
+def hang_write_cap(state: Mapping[str, Any], work_seconds: float, date_value: Any) -> Optional[float]:
+    """A295 review — write-side cap of a measured or labelled finger hang
+    OUTSIDE the anchored four (max_hang_10s, horst_7_53): the same structural
+    ceiling as the anchored hang (3 s of reserve, phase cap) on the official
+    7 s max converted to ``work_seconds``. ``None`` for an untested athlete
+    (no official max → pre-B364 behaviour, only the 7-day rise limit)."""
+    on = _parse(date_value)
+    if on is None:
+        return None
+    om = rp.official_max(state, rp.PROTOCOL_HANG_7S, on)
+    if not om or not om.get("tested") or _num(om.get("total_kg")) is None:
+        return None
+    official_t = float(om["total_kg"])
+    t = float(work_seconds or _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S])
+    if t != _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S]:
+        official_t = rp.convert_hang_seconds(official_t, _PROTOCOL_SECONDS[rp.PROTOCOL_HANG_7S], t)
+    phase = phase_on(state, on)
+    return floor_half(min(official_t / (1 + rp.HANG_PCT_PER_S * RESERVE_S),
+                          HANG_PHASE_CAP.get(phase, HANG_PHASE_DEFAULT_CAP) * official_t))
 
 
 def record_exposures(updated: Dict[str, Any], log_entry: Mapping[str, Any]) -> None:
@@ -1045,5 +1118,5 @@ __all__ = [
     "rep_factor", "prilepin_cap", "phase_on", "official_for", "is_anchored_and_tested",
     "ramp_for", "working_entry", "anchored_load", "anchored_suggested_fields", "anchor_summary",
     "effective_load_mode", "resolve_custom_exercises", "apply_anchored_feedback",
-    "record_exposures", "fatigue_for", "pain_for",
+    "record_exposures", "fatigue_for", "pain_for", "hang_write_cap",
 ]

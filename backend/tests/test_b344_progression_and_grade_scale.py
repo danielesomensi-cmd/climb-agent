@@ -116,8 +116,14 @@ def test_stored_user_policy_still_wins():
     st = _state()
     st["working_loads"]["rules"] = {"adjustment_policy": {"ok": {"pct_range": [0.0, 0.05]}}}
     assert _rule_midpoint_pct(st, "ok") == pytest.approx(0.025)
-    out = apply_feedback(_log("bench_press", "ok", used_external=32.0), st)
+    # A295: an 'ok' counts as a rating only under feedback_contract 2 (a legacy
+    # 'ok' is the old zero-input default → not rated → the load is held).
+    log = _log("bench_press", "ok", used_external=32.0)
+    log["feedback_contract"] = 2
+    out = apply_feedback(log, st)
     assert _entry(out, "bench_press")["next_external_load_kg"] == 33.0
+    legacy = apply_feedback(_log("bench_press", "ok", used_external=32.0), st)
+    assert _entry(legacy, "bench_press")["next_external_load_kg"] == 32.0
 
 
 # ─── 2. 0 kg is not an absorbing state ───────────────────────────────────────

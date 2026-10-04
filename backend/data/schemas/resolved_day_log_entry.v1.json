@@ -125,6 +125,37 @@
       "items": {
         "$ref": "#/$defs/exerciseFeedback"
       }
+    },
+    "feedback_contract": {
+      "type": "integer",
+      "description": "A295: 2 = measured-feedback contract (an omitted label means not rated)."
+    },
+    "pain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score"
+      ],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "site": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "fingers",
+            "elbow",
+            "shoulder",
+            "other",
+            null
+          ]
+        }
+      }
     }
   },
   "$defs": {
@@ -133,7 +164,6 @@
       "additionalProperties": true,
       "required": [
         "exercise_id",
-        "feedback_label",
         "completed"
       ],
       "properties": {
@@ -149,7 +179,8 @@
             "ok",
             "hard",
             "very_hard"
-          ]
+          ],
+          "description": "A295: omitted when the athlete did not rate the exercise (not rated). Never null."
         },
         "completed": {
           "type": "boolean"
@@ -171,6 +202,49 @@
         },
         "notes": {
           "type": "string"
+        },
+        "last_set_reps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20,
+          "description": "A295: reps on the last set (pull-ups: AMRAP stopping one short of failure; double progression)."
+        },
+        "hang_margin": {
+          "type": "string",
+          "enum": [
+            "failed",
+            "0-2",
+            "3-5",
+            ">5"
+          ],
+          "description": "A295: seconds the athlete could still have held the last hang."
+        },
+        "hang_held_s": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 120,
+          "description": "A295: timed hold of the last rep (guided overhold, capped at target+6 s)."
+        },
+        "target_reps": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "A295: double-progression target the client showed."
+        },
+        "prescribed_sets": {
+          "type": "number",
+          "description": "A295: attached by the router."
+        },
+        "prescribed_work_seconds": {
+          "type": "number",
+          "description": "A295: attached by the router."
+        },
+        "completed_sets": {
+          "type": "number"
+        },
+        "completed_reps": {
+          "type": "number",
+          "description": "Repeater tests only (B133)."
         }
       }
     }

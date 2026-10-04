@@ -46,7 +46,15 @@ from backend.engine.adaptive_replan import (
 )
 from backend.engine.closed_loop_v1 import apply_day_result_to_user_state
 from backend.engine.load_score import compute_actual_load_score, fatigue_map_by_id
-from backend.engine.progression_v1 import apply_feedback, canonical_feedback_label
+from backend.engine.measured_feedback import (
+    derive_session_difficulty,
+    feedback_rating,
+    limitation_suggestion_for_pain,
+    log_contract,
+    sanitize_log_entry,
+    sanitize_pain,
+)
+from backend.engine.progression_v1 import apply_feedback
 from backend.engine.replanner_v1 import apply_events
 from backend.engine.resolve_session import normalize_limitations, _check_exercise_limitation
 
@@ -93,17 +101,31 @@ def _attach_prescribed_reps(log_entry: dict, state: dict, target_date, target_si
         return
 
     reps_by_id: dict = {}
+    # A295: the prescribed sets and work time travel with the reps (same three
+    # sources): the double progression and the pull-up step need "all sets
+    # done", the hang margin needs the prescribed seconds.
+    sets_by_id: dict = {}
+    work_by_id: dict = {}
 
     def _collect(exercises) -> None:
         for ex in exercises or []:
             if not isinstance(ex, dict):
                 continue
             eid = ex.get("exercise_id")
+            if not eid:
+                continue
+            presc = ex.get("prescription") or {}
             reps = ex.get("reps")
             if reps is None:
-                reps = (ex.get("prescription") or {}).get("reps")
-            if eid and isinstance(reps, (int, float)) and reps > 0 and eid not in reps_by_id:
+                reps = presc.get("reps")
+            if isinstance(reps, (int, float)) and reps > 0 and eid not in reps_by_id:
                 reps_by_id[eid] = reps
+            sets = ex.get("sets") if ex.get("sets") is not None else presc.get("sets")
+            if isinstance(sets, (int, float)) and sets > 0 and eid not in sets_by_id:
+                sets_by_id[eid] = sets
+            work = ex.get("work_seconds") if ex.get("work_seconds") is not None else presc.get("work_seconds")
+            if isinstance(work, (int, float)) and work > 0 and eid not in work_by_id:
+                work_by_id[eid] = work
 
     monday = _monday_for_date(target_date)
     plans = [(state.get("week_plans") or {}).get(monday) if monday else None, state.get("current_week_plan")]
@@ -128,6 +150,10 @@ def _attach_prescribed_reps(log_entry: dict, state: dict, target_date, target_si
         eid = item.get("exercise_id")
         if eid in reps_by_id and item.get("reps") is None and item.get("prescribed_reps") is None:
             item["prescribed_reps"] = reps_by_id[eid]
+        if eid in sets_by_id and item.get("prescribed_sets") is None:
+            item["prescribed_sets"] = sets_by_id[eid]
+        if eid in work_by_id and item.get("prescribed_work_seconds") is None and item.get("work_seconds") is None:
+            item["prescribed_work_seconds"] = work_by_id[eid]
 
 
 @router.post("", dependencies=[Depends(require_active_subscription)])
@@ -262,6 +288,11 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     # clients do not send them, and the weighted pull-up max is re-based from
     # (load, reps). Only fills items that carry no reps of their own.
     _attach_prescribed_reps(req.log_entry, state, target_date, target_sid)
+    # A295: the measured-feedback fields are cleaned by hand (the router does
+    # not validate the schema): an out-of-range value is dropped with a
+    # warning and the request still succeeds, so an outbox retry never sticks.
+    for _w in sanitize_log_entry(req.log_entry):
+        logger.warning("post_feedback A295 sanitize (date=%r, sid=%r): %s", target_date, target_sid, _w)
 
     # 2. Apply progression feedback (updates working loads)
     try:
@@ -417,8 +448,9 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
     limitation_map = normalize_limitations(state)
     if limitation_map:
         exercise_feedback = (req.log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
+        _contract = log_contract(req.log_entry)
         for item in exercise_feedback:
-            label = canonical_feedback_label(item)
+            label = feedback_rating(item, _contract)
             if label not in ("hard", "very_hard"):
                 continue
             ex_id = str(item.get("exercise_id") or "").strip()
@@ -432,17 +464,26 @@ def post_feedback(request: Request, req: FeedbackRequest, user_id: Optional[str]
                     "suggested_severity": "active",
                     "reason": f"{label} feedback on exercise with {lim['zone']} contraindication",
                 })
+    # A295: pain 3/3 → suggest the limitation even when none is set yet.
+    _pain_suggestion = limitation_suggestion_for_pain(req.log_entry, limitation_map or {})
+    if _pain_suggestion is not None:
+        limitation_suggestions.append(_pain_suggestion)
 
     # 7. Attach feedback to session completion log (B117)
     if target_date and target_sid:
         for entry in reversed(state.get("session_completion_log", [])):
             if entry.get("date") == target_date and entry.get("session_id") == target_sid:
-                # Compute overall difficulty from exercise feedback
+                # A295: the session difficulty comes only from what was
+                # rated, and only with ≥ 50 % fatigue-cost coverage — the same
+                # value the feedback log gets. A resubmit without a rating
+                # never erases a rated one.
                 fb_items = (req.log_entry.get("actual") or {}).get("exercise_feedback_v1") or []
-                labels = [canonical_feedback_label(f) for f in fb_items]
-                labels = [l for l in labels if l]
-                if labels:
-                    entry["difficulty"] = labels[-1] if len(set(labels)) > 1 else labels[0]
+                _difficulty = derive_session_difficulty(req.log_entry, exercises_by_id)
+                if _difficulty is not None:
+                    entry["difficulty"] = _difficulty
+                _pain = sanitize_pain(req.log_entry.get("pain"))
+                if _pain is not None:
+                    entry["pain"] = _pain
                 entry["exercise_count"] = len(fb_items)
                 # Garmin/health-vault export (2026-08): persist the REAL wall-clock
                 # start the guided player already measures. Until now the client

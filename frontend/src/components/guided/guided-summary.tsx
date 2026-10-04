@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, SkipForward, AlertTriangle, Send } from "lucide-react";
 import { SessionTimer } from "@/components/guided/session-timer";
-import type { GuidedExercise } from "@/lib/types";
+import type { GuidedExercise, SessionPain } from "@/lib/types";
+import { PainPicker } from "@/components/training/measured-feedback-inputs";
 
 interface GuidedSummaryProps {
   exercises: GuidedExercise[];
@@ -15,6 +16,9 @@ interface GuidedSummaryProps {
   onSkipRemaining: () => void;
   onSubmit: () => void;
   submitting: boolean;
+  /** A295: session pain (0-3, zone from 2). */
+  pain?: SessionPain | null;
+  onPainChange?: (pain: SessionPain | null) => void;
 }
 
 const FEEDBACK_STYLE: Record<string, string> = {
@@ -35,6 +39,8 @@ export function GuidedSummary({
   onSkipRemaining,
   onSubmit,
   submitting,
+  pain,
+  onPainChange,
 }: GuidedSummaryProps) {
   const pendingExercises = exercises.filter((ex) => ex.status === "pending");
   const nonWarmupPending = pendingExercises.filter(
@@ -88,12 +94,14 @@ export function GuidedSummary({
                     {ex.name || ex.exerciseId.replace(/_/g, " ")}
                   </span>
                 </div>
-                {ex.status !== "pending" && (
+                {ex.status !== "pending" && !ex.isInstructionOnly && (
                   <Badge
                     variant="outline"
-                    className={`text-[10px] shrink-0 ${FEEDBACK_STYLE[ex.feedbackLabel] ?? ""}`}
+                    className={`text-[10px] shrink-0 ${ex.feedbackLabel ? FEEDBACK_STYLE[ex.feedbackLabel] ?? "" : "text-muted-foreground"}`}
+                    aria-label={ex.feedbackLabel ? undefined : "Not rated"}
                   >
-                    {ex.feedbackLabel.replace(/_/g, " ")}
+                    {/* A295: not rated shows as "—", never as a fake "ok" */}
+                    {ex.feedbackLabel ? ex.feedbackLabel.replace(/_/g, " ") : "—"}
                   </Badge>
                 )}
               </div>
@@ -110,7 +118,7 @@ export function GuidedSummary({
               <AlertTriangle className="size-4 text-yellow-500 mt-0.5 shrink-0" />
               <p className="text-sm">
                 {nonWarmupPending.length} exercise{nonWarmupPending.length > 1 ? "s" : ""} not completed.
-                Mark remaining as:
+                Mark remaining as done (not rated) or skip them:
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -120,7 +128,7 @@ export function GuidedSummary({
                 onClick={onMarkRemainingOk}
               >
                 <Check className="size-4 mr-1" />
-                OK (done)
+                Done
               </Button>
               <Button
                 size="sm"
@@ -132,6 +140,15 @@ export function GuidedSummary({
                 Skip all
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* A295: one "Any pain?" row for the whole session */}
+      {onPainChange && (
+        <Card className="gap-0 py-0">
+          <CardContent className="py-4">
+            <PainPicker value={pain} onChange={onPainChange} />
           </CardContent>
         </Card>
       )}

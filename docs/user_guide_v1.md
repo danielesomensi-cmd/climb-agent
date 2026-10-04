@@ -242,7 +242,7 @@ Audio cues require one initial tap to activate (iOS requirement).
 
 ## 5. Giving Feedback
 
-After completing a session, you're asked for feedback on each exercise:
+After completing a session, you can rate each exercise:
 
 - **Very Easy** — Could do much more
 - **Easy** — Comfortable, could add load
@@ -250,7 +250,13 @@ After completing a session, you're asked for feedback on each exercise:
 - **Hard** — Struggled but completed
 - **Very Hard** — Barely completed or had to reduce
 
-**This feedback directly drives your progression.** The closed-loop system uses it to adjust loads for next time:
+**Nothing is pre-selected, and every answer is optional.** An exercise you don't
+touch is saved as **not rated** (shown as "—"): its load stays exactly at what you
+used, and the weekly report and the Coach don't pretend it felt "OK". Tap a
+selected rating again to clear it. Exercises you mark done from the summary
+("Mark remaining as done") are not rated either.
+
+**A rating drives your progression.** The closed-loop system uses it to adjust loads for next time:
 
 - "Very Easy" or "Easy" → loads increase next session
 - "OK" → loads stay the same
@@ -258,6 +264,62 @@ After completing a session, you're asked for feedback on each exercise:
 - "Very Hard" → loads decrease
 
 **Be honest.** The system only works if your feedback is accurate. There's no benefit to saying "OK" when it was "Very Hard" — you'll just get a harder session next time that's too much.
+
+The session's overall difficulty (used by the weekly report and by the automatic
+"take it easier tomorrow" rule) is computed only when the exercises you rated
+cover at least half of the session's effort: one "Very Hard" tapped on a warm-up
+does not make the whole session very hard.
+
+### Measuring instead of guessing (optional, one tap)
+
+Some exercises ask for a number as well — always optional:
+
+- **Weighted pull-ups / chin-ups — "Reps on your last set".** Do the prescribed
+  sets, and on the **last set only** do as many clean reps as you can, stopping one
+  short of failure. Enter that number. With 4 reps on a 4×3 at +30 kg the next
+  session goes to about +32.5 kg (never more than +5 kg in one session); with fewer
+  reps than prescribed it comes down. Doing fewer sets than prescribed never raises
+  the load. When your last set shows you are stronger than your tested max, twice,
+  the app notes it — the retest itself is still scheduled by the plan.
+- **Max hangs — "How much longer could you have held the last hang?"** Failed /
+  0–2 s / 3–5 s / >5 s. More margin raises the training load a little (within the
+  weekly limit), "Failed" lowers it.
+- **Overhold (guided player only, opt-in).** Tick **Overhold last rep** before a
+  max hang: on the very last rep of the last set the timer keeps running past the
+  target (at most +6 s) — tap it when you let go. One second is taken off for the
+  time it takes you to reach the phone, and if the +6 s run out without a tap
+  nothing is recorded (the set still counts). Only a timed hold of more than
+  5 s past the target at ≥ 90% of your max counts as evidence for an earlier
+  retest; the chip alone never does.
+- **Max hangs outside the four tested exercises** (10 s hangs, Hörst 7-53) never
+  go above the same ceiling as your 7 s max hang once you have a tested max.
+- **Accessories (bench, squats, curls, dips…) — "Reps on your last set (target N)".**
+  Double progression: when your last set reaches the target with all sets done,
+  the target goes up by one rep; at the top of the range (e.g. 4 → 6 reps) the
+  load goes up 2.5% and the target goes back to the bottom. Without a number,
+  "Easy" adds 5% and "Very Easy" 10%.
+
+### Any pain?
+
+At the end of a session there is one **"Any pain?"** row: 0 None · 1 Niggle · 2 Pain ·
+3 Had to stop. From 2 you pick where (fingers, elbow, shoulder, other).
+
+- **2** — for 7 days the loads on that zone drop by 10% (loading-pin lifts too, per
+  hand) and max hangs stay at or below 85% of your max; nothing on that zone goes
+  up meanwhile.
+- **3** — the same for 14 days, max hangs capped at 80%, and a message right after
+  you save suggests marking the zone as a limitation (**Review** opens Settings →
+  Injuries & Limitations; nothing changes until you decide).
+- **1** is only recorded. Your plan is never rearranged and past sessions are never
+  changed; the affected exercises show "Pain reported recently — keep it sub-max".
+- The reduction is applied **once**: lifting the lighter load during the block does
+  not lower your working load, and when the block ends you are back where you were
+  (a "Hard" during the block still brings it down a little).
+- A **test** of that zone is not scheduled while the pain is recent (7 days, or
+  until the block ends); a test already in your plan shows the warning instead.
+- **Tapped the wrong number?** Reopen the session with the pencil and set the
+  right pain (0 clears it): the block that session wrote is recomputed. Saving
+  without touching the pain row leaves it as it was.
 
 ### The load you actually used
 
@@ -273,8 +335,9 @@ Two things worth knowing:
 
 - Your remembered load does **not** expire. An exercise you only train every few
   months comes back with the weight you last used, not with the beginner default.
-- A remembered load only moves when your difficulty feedback says so ("Easy"
-  raises it, "Hard" lowers it). "OK" keeps it exactly where you put it.
+- A remembered load only moves when your feedback says so ("Easy" or a measured
+  set raises it, "Hard" lowers it). "OK" — or no rating at all — keeps it exactly
+  where you put it.
 
 ### Max hangs and weighted pull-ups: your max vs your training load
 

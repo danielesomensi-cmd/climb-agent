@@ -35,6 +35,7 @@ import type {
   KeyConflict,
 } from "./types";
 import { localToday } from "./key-sessions";
+import { notifyLimitationSuggestions, type LimitationSuggestion } from "./limitation-suggestions";
 import type { EvidenceStyle, GradeEvidence } from "./grade-evidence";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -692,11 +693,16 @@ export const postFeedback = (data: {
   request<{
     status: string;
     week_plan?: WeekPlan;
-    limitation_suggestions?: unknown[];
+    limitation_suggestions?: LimitationSuggestion[];
     warning?: string;
   }>("/api/feedback", {
     method: "POST",
     body: JSON.stringify(data),
+  }).then((res) => {
+    // A295 review: every feedback path (dialog, guided, custom player,
+    // offline outbox) surfaces the limitation suggestion in one place.
+    notifyLimitationSuggestions(res?.limitation_suggestions);
+    return res;
   });
 
 // Outdoor
