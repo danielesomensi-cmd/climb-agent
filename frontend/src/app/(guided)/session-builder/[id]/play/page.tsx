@@ -18,10 +18,10 @@ import { displaySetNumber, sideForSet, totalSetsWithSides } from "@/lib/alt-side
 import { unlockAudio } from "@/lib/audio-unlock";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { measureFields, withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
-import type { LimitProblem, SessionPain } from "@/lib/types";
+import type { LimitProblemDraft, SessionPain } from "@/lib/types";
 import { MeasureInput, PainPicker } from "@/components/training/measured-feedback-inputs";
 import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
-import { limitFeedbackFields } from "@/lib/limit-problems";
+import { limitFeedbackFields, limitTargetFor } from "@/lib/limit-problems";
 
 type Stage = "idle" | "exercise_active" | "resting" | "completed";
 
@@ -53,6 +53,8 @@ function ExerciseFeedbackCard({
   onMeasuresChange,
   problems,
   onProblemsChange,
+  surface,
+  onSurfaceChange,
 }: {
   name: string;
   prescriptionSummary: string;
@@ -69,9 +71,13 @@ function ExerciseFeedbackCard({
   measures: MeasureValues;
   onMeasuresChange: (patch: MeasureValues) => void;
   /** A296: limit problem log (limit-boulder family read with ?date=). */
-  problems: LimitProblem[];
-  onProblemsChange: (problems: LimitProblem[]) => void;
+  problems: LimitProblemDraft[];
+  onProblemsChange: (problems: LimitProblemDraft[]) => void;
+  /** A296 (review): the wall the athlete says he is on (null = server default). */
+  surface: string | null;
+  onSurfaceChange: (surface: string) => void;
 }) {
+  const limit = limitTargetFor(exercise, surface);
   return (
     <div className="rounded-lg border bg-muted/20 p-3 space-y-3 text-left">
       <div className="flex items-baseline justify-between gap-2">
@@ -117,10 +123,13 @@ function ExerciseFeedbackCard({
       {exercise.log_problems && (
         <LimitProblemLogger
           idPrefix={exercise.exercise_id}
-          target={exercise.target_grade}
-          targetLow={exercise.target_grade_low}
+          target={limit.target}
+          targetLow={limit.targetLow}
           problems={problems}
           onChange={onProblemsChange}
+          surfaceOptions={exercise.surface_options}
+          surface={limit.surface}
+          onSurfaceChange={onSurfaceChange}
         />
       )}
       {showLoadInput && !exercise.log_problems && (
@@ -233,7 +242,9 @@ export default function SessionPlayPage() {
   // A295: optional measures per exercise + session pain (nothing pre-selected).
   const [measuresByIndex, setMeasuresByIndex] = useState<Record<number, MeasureValues>>({});
   // A296: limit problem log per exercise (limit-boulder family).
-  const [problemsByIndex, setProblemsByIndex] = useState<Record<number, LimitProblem[]>>({});
+  const [problemsByIndex, setProblemsByIndex] = useState<Record<number, LimitProblemDraft[]>>({});
+  // A296 (review): a custom session has no gym — the athlete picks the wall.
+  const [surfaceByIndex, setSurfaceByIndex] = useState<Record<number, string>>({});
   const [pain, setPain] = useState<SessionPain | null>(null);
   useEffect(() => {
     if (startedAtRef.current === 0) startedAtRef.current = Date.now();
@@ -419,8 +430,9 @@ export default function SessionPlayPage() {
         if (ex.log_problems) {
           // A296: the limit is logged problem by problem; without problems the
           // day's target travels as the grade used (same as the guided player).
-          Object.assign(item, limitFeedbackFields(problemsByIndex[i], ex.target_grade));
-          if (ex.surface_selected) item.surface_selected = ex.surface_selected;
+          const limit = limitTargetFor(ex, surfaceByIndex[i]);
+          Object.assign(item, limitFeedbackFields(problemsByIndex[i], limit.target));
+          if (limit.surface) item.surface_selected = limit.surface;
           delete item.used_external_load_kg;
         }
         return item;
@@ -462,6 +474,7 @@ export default function SessionPlayPage() {
     setsByIndex,
     measuresByIndex,
     problemsByIndex,
+    surfaceByIndex,
     pain,
   ]);
 
@@ -679,6 +692,8 @@ export default function SessionPlayPage() {
                   }
                   problems={problemsByIndex[i] ?? []}
                   onProblemsChange={(rows) => setProblemsByIndex((prev) => ({ ...prev, [i]: rows }))}
+                  surface={surfaceByIndex[i] ?? null}
+                  onSurfaceChange={(sf) => setSurfaceByIndex((prev) => ({ ...prev, [i]: sf }))}
                 />
               ))}
               <p className="text-[11px] text-muted-foreground text-left">

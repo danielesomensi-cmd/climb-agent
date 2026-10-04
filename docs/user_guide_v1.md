@@ -412,7 +412,10 @@ gym 7A. It does not matter which limit exercise the session picked: a grade from
 session player, a limit exercise shows **Problems climbed** instead of a single grade
 field. Add a row for each problem you tried: grade (pre-filled with your target),
 number of tries (1–10) and the outcome — **Sent**, **High point** (you got further than
-before but did not top it) or **No progress**. When you log problems, they decide the
+before but did not top it) or **No progress**. A new row has **no outcome** until you pick
+one: a row left without an outcome is not counted (it is never read as a send). On a
+*High point* or *No progress* row you can also count the **crux moves** you did — crux
+moves on a problem at your target hold the target. When you log problems, they decide the
 next target instead of the effort chips:
 
 - **Up half a grade**: one send above the target, or two sends at the target.
@@ -423,7 +426,8 @@ next target instead of the effort chips:
   near the target, no high point).
 - Never more than half a grade per session.
 - More than **20 hard attempts** in one session (on problems at or near the target):
-  the target does not go up and the app reminds you to recover fully — that much hard
+  the target cannot go up (it can still come down after two sessions without progress)
+  and the app reminds you to recover fully — that much hard
   pulling on small holds is a finger-safety signal, not a performance.
 - A send **above your boulder redpoint** on the gym wall never changes your redpoint by
   itself: after saving you get a message suggesting you update it in Settings → Profile & Maxes
@@ -436,7 +440,9 @@ Not logging any problem keeps the old behaviour: the target grade is sent as the
 you climbed and the effort chip moves it.
 
 A limit exercise inside a **custom session** gets the same target as the plan on the day
-you play it, and its outcome counts. For the weekly **Limit** key session, a custom
+you play it, and its outcome counts. A custom session is not tied to a gym, so when you have
+more than one limit surface (Kilter, spray wall, boulder wall…) the player asks **Where are
+you climbing?**: the target shown and the memory updated are the ones of the wall you pick. For the weekly **Limit** key session, a custom
 session counts when you logged at least **two problems at your target** (sent or high
 point); a custom limit spent on easier problems shows as a partial dose. If you log no
 problems it counts as done, as before.

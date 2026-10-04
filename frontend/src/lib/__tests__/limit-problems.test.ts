@@ -6,7 +6,10 @@ import {
   describeLimitSummary,
   hardAttempts,
   limitFeedbackFields,
+  limitTargetFor,
   newProblem,
+  ratedProblems,
+  unratedCount,
 } from "../limit-problems";
 import type { LimitProblem } from "../types";
 
@@ -31,9 +34,39 @@ describe("A296 — limit problem log helpers", () => {
     expect(clampAttempts(Number.NaN)).toBe(1);
   });
 
-  it("pre-fills a new row with the target", () => {
-    expect(newProblem("7b")).toEqual({ grade: "7B", attempts: 1, outcome: "sent" });
+  it("pre-fills a new row with the target but NO outcome (not a send by default)", () => {
+    expect(newProblem("7b")).toEqual({ grade: "7B", attempts: 1, outcome: null });
     expect(newProblem("nope").grade).toBe("6C");
+  });
+
+  it("never sends an untouched row", () => {
+    const rows = [newProblem("7B"), { ...newProblem("7B"), attempts: 6 }];
+    expect(unratedCount(rows)).toBe(2);
+    expect(ratedProblems(rows)).toEqual([]);
+    // Untouched rows only: the old path (target as grade, unrated → holds).
+    expect(limitFeedbackFields(rows, "7B")).toEqual({ used_grade: "7B" });
+    const mixed = [{ ...newProblem("7B"), outcome: "no_progress" as const, crux_moves: 3 }, newProblem("7B")];
+    expect(limitFeedbackFields(mixed, "7B")).toEqual({
+      problems: [{ grade: "7B", attempts: 1, outcome: "no_progress", crux_moves: 3 }],
+    });
+  });
+
+  it("drops crux moves on a send", () => {
+    expect(ratedProblems([{ grade: "7B", attempts: 2, outcome: "sent", crux_moves: 2 }])).toEqual([
+      { grade: "7B", attempts: 2, outcome: "sent" },
+    ]);
+  });
+
+  it("reads the target of the surface the athlete picked", () => {
+    const ex = {
+      target_grade: "7A+",
+      surface_selected: "board_kilter",
+      surface_targets: { board_kilter: { target_grade: "7A+" }, spraywall: { target_grade: "7B", target_grade_low: "7A+" } },
+    };
+    expect(limitTargetFor(ex, null)).toEqual({ surface: "board_kilter", target: "7A+", targetLow: undefined });
+    expect(limitTargetFor(ex, "spraywall")).toEqual({ surface: "spraywall", target: "7B", targetLow: "7A+" });
+    expect(limitTargetFor(ex, "unknown").surface).toBe("board_kilter");
+    expect(limitTargetFor({ target_grade: "7B" }, "spraywall")).toEqual({ surface: undefined, target: "7B", targetLow: undefined });
   });
 
   it("builds the payload: problems win, the target travels only without them", () => {
@@ -57,5 +90,10 @@ describe("A296 — limit problem log helpers", () => {
     expect(rp?.description).toMatch(/above your boulder redpoint \(7C\)/);
     const guard = describeLimitSummary([{ step: 0, next_target_grade: "7B", warning: "hard_attempts_guard", hard_attempts: 25 }]);
     expect(guard?.description).toMatch(/25 hard attempts/);
+    // The guard only blocks a step up: a step down must not read "holds".
+    const guardDown = describeLimitSummary([{ step: -1, next_target_grade: "7A+", warning: "hard_attempts_guard", hard_attempts: 22 }]);
+    expect(guardDown?.title).toBe("Limit target down to 7A+");
+    expect(guardDown?.description).not.toMatch(/holds/);
+    expect(guardDown?.description).toMatch(/cannot go up/);
   });
 });

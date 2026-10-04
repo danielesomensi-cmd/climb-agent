@@ -783,6 +783,13 @@ is a fallback `source: "limit_log"` row, dropped when the week plan covers the d
 Read-time target outside the planner: `progression_v1.limit_grade_target` (custom `GET ?date=`,
 builder proposal `grade_target`, adhoc/composer previews) and `limit_target_on_surface` (free).
 `suggested_boulder_target.log_problems: true` tells the players to show the problem logger.
+`limit_grade_target` also returns `surface_targets: {surface: {target_grade, target_grade_low, reentry?}}`
+for every `surface_options` entry (review A296): a custom session has no gym, so the custom player
+shows a surface picker and posts the chosen `surface_selected`. In the players a problem row starts
+with **no outcome** (`LimitProblemDraft.outcome = null`) and an unrated row is never sent;
+`crux_moves` is editable on `high_point` / `no_progress` rows (dropped on a send). In one feedback
+the day target is fixed per surface by the first limit-family item, so a second limit exercise on
+the same surface is judged against the same target.
 
 ### 2.10.3 Test source taxonomy (`assessment.tests_source`)
 

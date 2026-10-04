@@ -11,11 +11,26 @@
  */
 import { toast } from "sonner";
 import { BOULDER_GRADE_OPTIONS } from "@/lib/gradeUtils";
-import type { LimitProblem, LimitProblemOutcome } from "@/lib/types";
+import type { LimitProblem, LimitProblemDraft, LimitProblemOutcome } from "@/lib/types";
 
 export const MAX_PROBLEMS = 8;
 export const MAX_ATTEMPTS = 10;
 export const HARD_ATTEMPTS_GUARD = 20;
+/** UI cap on the crux-moves stepper (server accepts 0..50). */
+export const MAX_CRUX_MOVES = 20;
+
+/** Limit surfaces, labelled (keys = progression_v1.SURFACE_PRIORITY). */
+export const SURFACE_LABELS: Readonly<Record<string, string>> = {
+  board_kilter: "Kilter",
+  board_moonboard: "MoonBoard",
+  board_other: "Board",
+  spraywall: "Spray wall",
+  gym_boulder: "Boulder wall",
+};
+
+export function surfaceLabel(surface: string): string {
+  return SURFACE_LABELS[surface] ?? surface.replace(/_/g, " ");
+}
 
 export const OUTCOME_OPTIONS: ReadonlyArray<{ value: LimitProblemOutcome; label: string }> = [
   { value: "sent", label: "Sent" },
@@ -28,27 +43,72 @@ function idx(grade: string | null | undefined): number {
   return BOULDER_GRADE_OPTIONS.indexOf(grade.trim().toUpperCase());
 }
 
-/** A new row, pre-filled with the target grade. */
-export function newProblem(target: string | null | undefined): LimitProblem {
+/** A new row, pre-filled with the target grade and NO outcome: an untouched
+ *  row is not a send (nothing is rated by default, A295). */
+export function newProblem(target: string | null | undefined): LimitProblemDraft {
   const t = idx(target);
-  return { grade: t >= 0 ? BOULDER_GRADE_OPTIONS[t] : "6C", attempts: 1, outcome: "sent" };
+  return { grade: t >= 0 ? BOULDER_GRADE_OPTIONS[t] : "6C", attempts: 1, outcome: null };
+}
+
+/**
+ * The limit target on the surface the athlete picked (custom player): the
+ * read carries one target per surface in `surface_targets`; without a pick,
+ * or without the map, the server's default (`surface_selected`).
+ */
+export function limitTargetFor(
+  ex: {
+    target_grade?: string;
+    target_grade_low?: string;
+    surface_selected?: string;
+    surface_targets?: Record<string, { target_grade?: string; target_grade_low?: string }>;
+  },
+  chosen?: string | null,
+): { surface?: string; target?: string; targetLow?: string } {
+  const surface = chosen && ex.surface_targets?.[chosen] ? chosen : ex.surface_selected;
+  const row = surface ? ex.surface_targets?.[surface] : undefined;
+  if (row) return { surface, target: row.target_grade, targetLow: row.target_grade_low };
+  return { surface, target: ex.target_grade, targetLow: ex.target_grade_low };
+}
+
+/** Rows the athlete has rated (an outcome picked), in payload shape. */
+export function ratedProblems(rows: LimitProblemDraft[] | undefined): LimitProblem[] {
+  const out: LimitProblem[] = [];
+  for (const r of rows ?? []) {
+    if (!r.outcome) continue;
+    const row: LimitProblem = { grade: r.grade, attempts: r.attempts, outcome: r.outcome };
+    if (r.outcome !== "sent" && r.crux_moves && r.crux_moves > 0) row.crux_moves = r.crux_moves;
+    if (r.name) row.name = r.name;
+    out.push(row);
+  }
+  return out;
+}
+
+/** Rows still waiting for an outcome (they will not be sent). */
+export function unratedCount(rows: LimitProblemDraft[] | undefined): number {
+  return (rows ?? []).filter((r) => !r.outcome).length;
 }
 
 /** Attempts on problems at ≥ target − 1 half grade (server: hard_attempts). */
-export function hardAttempts(problems: LimitProblem[], target: string | null | undefined): number {
+export function hardAttempts(problems: LimitProblemDraft[], target: string | null | undefined): number {
   const t = idx(target);
   if (t < 0) return 0;
   return problems.reduce((sum, p) => (idx(p.grade) >= t - 1 ? sum + p.attempts : sum), 0);
 }
 
 /** Hardest sent grade, or null. */
-export function bestSent(problems: LimitProblem[]): string | null {
+export function bestSent(problems: LimitProblemDraft[]): string | null {
   let best = -1;
   for (const p of problems) {
     if (p.outcome !== "sent") continue;
     best = Math.max(best, idx(p.grade));
   }
   return best >= 0 ? BOULDER_GRADE_OPTIONS[best] : null;
+}
+
+/** Clamp crux moves into 0..MAX_CRUX_MOVES. */
+export function clampCrux(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(MAX_CRUX_MOVES, Math.round(n)));
 }
 
 /** Clamp attempts into 1..MAX_ATTEMPTS. */
@@ -58,16 +118,17 @@ export function clampAttempts(n: number): number {
 }
 
 /**
- * Feedback fields of a limit exercise. With problems: `problems` plus
+ * Feedback fields of a limit exercise. With rated problems: `problems` plus
  * `used_grade` = the hardest send (omitted when nothing was sent — the server
- * reads the problems). Without problems: the old path, `used_grade` = what the
- * athlete left in the grade field (pre-filled with the target).
+ * reads the problems). Rows without an outcome are dropped. Without rated
+ * problems: the old path, `used_grade` = what the athlete left in the grade
+ * field (pre-filled with the target; unrated, the server holds the target).
  */
 export function limitFeedbackFields(
-  problems: LimitProblem[] | undefined,
+  problems: LimitProblemDraft[] | undefined,
   fallbackGrade: string | undefined,
 ): { problems?: LimitProblem[]; used_grade?: string } {
-  const rows = (problems ?? []).slice(0, MAX_PROBLEMS);
+  const rows = ratedProblems(problems).slice(0, MAX_PROBLEMS);
   if (rows.length === 0) return fallbackGrade ? { used_grade: fallbackGrade } : {};
   const top = bestSent(rows);
   return top ? { problems: rows, used_grade: top } : { problems: rows };
@@ -96,7 +157,7 @@ export function describeLimitSummary(raw: unknown): { title: string; description
   const parts: string[] = [];
   if (s.warning === "hard_attempts_guard") {
     parts.push(
-      `${s.hard_attempts ?? "Many"} hard attempts: the target holds this time. Give your fingers a full recovery before the next limit session.`,
+      `${s.hard_attempts ?? "Many"} hard attempts: the target cannot go up after a session like this. Give your fingers a full recovery before the next limit session.`,
     );
   }
   if (s.rp_proposal) {

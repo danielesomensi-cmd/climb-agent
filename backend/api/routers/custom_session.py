@@ -311,11 +311,16 @@ def get_blocks(user_id: Optional[str] = Depends(get_user_id)):
     return result
 
 
-_LIMIT_TARGET_FIELDS = ("target_grade", "target_grade_low", "target_source", "surface_selected", "surface_options", "log_problems", "reentry")
+_LIMIT_TARGET_FIELDS = ("target_grade", "target_grade_low", "target_source", "surface_selected", "surface_options", "surface_targets", "log_problems", "reentry")
 
 
 def attach_limit_targets(state: dict, exercises: list, day: str) -> list:
-    """A296: add the limit target of ``day`` to limit-family exercises (read-only)."""
+    """A296: add the limit target of ``day`` to limit-family exercises (read-only).
+
+    A custom session has no gym: ``surface_selected`` is only the first surface
+    by priority across all gyms, so ``surface_targets`` carries the target of
+    every option and the player asks which wall the athlete is on.
+    """
     out = []
     for ex in exercises:
         ex = dict(ex)

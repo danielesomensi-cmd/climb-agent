@@ -8,6 +8,11 @@
  * target on these rows — two sends at the target (or one above) step it up
  * half a grade; one session without progress never lowers it, two in a row
  * do. Grades are stored in Font; `gradeSystem` only changes what is shown.
+ *
+ * Review fixes: a new row has NO outcome (an untouched row is not a send and
+ * is never sent); "No progress"/"High point" rows can record crux moves (crux
+ * done at the target holds it); with `surfaceOptions` the athlete says which
+ * wall he is on (custom sessions have no gym).
  */
 import { AlertTriangle, ChevronLeft, ChevronRight, Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,21 +21,29 @@ import { BOULDER_GRADE_OPTIONS, displayBoulderGrade, type BoulderGradeSystem } f
 import {
   HARD_ATTEMPTS_GUARD,
   MAX_ATTEMPTS,
+  MAX_CRUX_MOVES,
   MAX_PROBLEMS,
   OUTCOME_OPTIONS,
   clampAttempts,
+  clampCrux,
   hardAttempts,
   newProblem,
+  surfaceLabel,
+  unratedCount,
 } from "@/lib/limit-problems";
-import type { LimitProblem } from "@/lib/types";
+import type { LimitProblemDraft } from "@/lib/types";
 
 interface LimitProblemLoggerProps {
   idPrefix: string;
   target?: string | null;
   targetLow?: string | null;
-  problems: LimitProblem[];
-  onChange: (problems: LimitProblem[]) => void;
+  problems: LimitProblemDraft[];
+  onChange: (problems: LimitProblemDraft[]) => void;
   gradeSystem?: BoulderGradeSystem;
+  /** Surfaces to choose from (shown only with more than one). */
+  surfaceOptions?: string[];
+  surface?: string | null;
+  onSurfaceChange?: (surface: string) => void;
 }
 
 function stepGrade(grade: string, delta: number): string {
@@ -47,17 +60,22 @@ export function LimitProblemLogger({
   problems,
   onChange,
   gradeSystem = "font",
+  surfaceOptions,
+  surface,
+  onSurfaceChange,
 }: LimitProblemLoggerProps) {
   const show = (g: string) => displayBoulderGrade(g, gradeSystem);
-  const update = (i: number, patch: Partial<LimitProblem>) =>
+  const update = (i: number, patch: Partial<LimitProblemDraft>) =>
     onChange(problems.map((p, k) => (k === i ? { ...p, ...patch } : p)));
   const remove = (i: number) => onChange(problems.filter((_, k) => k !== i));
   const add = () => {
     if (problems.length >= MAX_PROBLEMS) return;
     const last = problems[problems.length - 1];
-    onChange([...problems, last ? { ...newProblem(last.grade), outcome: "sent" } : newProblem(target)]);
+    onChange([...problems, newProblem(last ? last.grade : target)]);
   };
   const hard = hardAttempts(problems, target);
+  const unrated = unratedCount(problems);
+  const showSurfaces = !!onSurfaceChange && (surfaceOptions?.length ?? 0) > 1;
 
   return (
     <div className="space-y-2" id={`${idPrefix}-limit-log`}>
@@ -69,6 +87,31 @@ export function LimitProblemLogger({
           </span>
         )}
       </div>
+
+      {showSurfaces && (
+        <div className="space-y-1">
+          <p className="text-[11px] text-muted-foreground">Where are you climbing?</p>
+          <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Surface">
+            {surfaceOptions!.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                role="radio"
+                aria-checked={surface === opt}
+                onClick={() => onSurfaceChange!(opt)}
+                className={cn(
+                  "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors",
+                  surface === opt
+                    ? "bg-primary text-primary-foreground border-transparent"
+                    : "border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/60",
+                )}
+              >
+                {surfaceLabel(opt)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {problems.length === 0 && (
         <p className="text-[11px] text-muted-foreground">
@@ -146,7 +189,9 @@ export function LimitProblemLogger({
                 key={opt.value}
                 type="button"
                 aria-pressed={p.outcome === opt.value}
-                onClick={() => update(i, { outcome: opt.value })}
+                onClick={() =>
+                  update(i, opt.value === "sent" ? { outcome: opt.value, crux_moves: undefined } : { outcome: opt.value })
+                }
                 className={cn(
                   "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors",
                   p.outcome === opt.value
@@ -162,8 +207,42 @@ export function LimitProblemLogger({
               </button>
             ))}
           </div>
+          {p.outcome && p.outcome !== "sent" && (
+            <div className="flex items-center gap-1.5" aria-label={`Problem ${i + 1} crux moves`}>
+              <span className="text-[11px] text-muted-foreground">Crux moves done</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                aria-label="Fewer crux moves"
+                disabled={(p.crux_moves ?? 0) <= 0}
+                onClick={() => update(i, { crux_moves: clampCrux((p.crux_moves ?? 0) - 1) || undefined })}
+              >
+                <Minus className="size-3" />
+              </Button>
+              <span className="min-w-[20px] text-center text-xs tabular-nums">{p.crux_moves ?? 0}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-7 w-7"
+                aria-label="More crux moves"
+                disabled={(p.crux_moves ?? 0) >= MAX_CRUX_MOVES}
+                onClick={() => update(i, { crux_moves: clampCrux((p.crux_moves ?? 0) + 1) })}
+              >
+                <Plus className="size-3" />
+              </Button>
+            </div>
+          )}
         </div>
       ))}
+
+      {unrated > 0 && (
+        <p className="text-[11px] text-amber-500">
+          Pick an outcome for every problem — {unrated === 1 ? "a row" : `${unrated} rows`} without one {unrated === 1 ? "is" : "are"} not counted.
+        </p>
+      )}
 
       <Button
         type="button"
@@ -180,7 +259,7 @@ export function LimitProblemLogger({
       {hard > HARD_ATTEMPTS_GUARD && (
         <p className="flex items-start gap-1.5 text-[11px] text-amber-500">
           <AlertTriangle className="size-3.5 shrink-0 mt-px" />
-          {hard} hard attempts — a lot for your fingers. The target will hold this time; recover fully before the next limit session.
+          {hard} hard attempts — a lot for your fingers. The target cannot go up after this session; recover fully before the next limit session.
         </p>
       )}
     </div>

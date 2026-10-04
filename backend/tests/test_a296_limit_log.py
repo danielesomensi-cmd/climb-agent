@@ -536,3 +536,47 @@ def test_planned_target_ignored_when_the_athlete_switches_surface():
     entry = out["limit_log"][0]
     assert entry["surface"] == "gym_boulder"
     assert entry["target_grade"] == wall_target
+
+
+def test_two_limit_exercises_in_one_session_share_the_day_target():
+    """Review A296: a second limit-family item on the same surface is judged
+    against the target the athlete was shown, not the one the first item
+    just raised — never more than one half grade per session."""
+    st = _fresh_kilter_state("7B")
+    items = [
+        {"exercise_id": "limit_bouldering", "completed": True, "surface_selected": "board_kilter",
+         "problems": [P("7B+", "sent")]},
+        {"exercise_id": "spray_wall_limit", "completed": True, "surface_selected": "board_kilter",
+         "problems": [P("7C", "sent")]},
+    ]
+    log = {"date": "2026-10-05", "session_id": "custom_abc", "feedback_contract": 2,
+           "actual": {"exercise_feedback_v1": deepcopy(items)}}
+    out = apply_feedback(log, st)
+    rows = {e["exercise_id"]: e for e in out["limit_log"]}
+    assert rows["limit_bouldering"]["target_grade"] == "7B"
+    assert rows["spray_wall_limit"]["target_grade"] == "7B"
+    assert rows["spray_wall_limit"]["next_target_grade"] == "7B+"
+    assert _target(out, "2026-10-06")["target_grade"] == "7B+"
+    # Resubmission: same result.
+    again = apply_feedback(deepcopy(log), out)
+    assert _target(again, "2026-10-06")["target_grade"] == "7B+"
+
+
+def test_custom_limit_offers_every_surface_and_logs_the_chosen_one():
+    """Review A296: a custom session has no gym — the read carries the target
+    of every surface, and the wall the athlete picks is the one recorded."""
+    st = _fresh_kilter_state("7B")
+    t = limit_grade_target(st, "limit_bouldering", "2026-10-05")
+    assert set(t["surface_targets"]) == {"board_kilter", "spraywall", "gym_boulder"}
+    assert t["surface_targets"]["board_kilter"]["target_grade"] == "7B"
+    wall = t["surface_targets"]["gym_boulder"]["target_grade"]
+    item = {"exercise_id": "limit_bouldering", "completed": True, "surface_selected": "gym_boulder",
+            "problems": [P(wall, "sent"), P(wall, "sent")]}
+    log = {"date": "2026-10-05", "session_id": "custom_cs_w", "feedback_contract": 2,
+           "actual": {"exercise_feedback_v1": [item]}}
+    out = apply_feedback(log, st)
+    entry = out["limit_log"][0]
+    assert entry["surface"] == "gym_boulder" and entry["target_grade"] == wall
+    # The Kilter memory is untouched.
+    kilter = next(e for e in out["working_loads"]["entries"] if e["key"] == "spray_wall_limit|surface=board_kilter")
+    assert kilter["next_target_grade"] == "7B" and kilter["updated_at"] == "2026-10-01"

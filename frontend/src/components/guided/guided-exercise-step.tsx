@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Check, SkipForward, Lightbulb, Film, Info, Timer, Play, Square, MessageSquare } from "lucide-react";
-import type { GuidedExercise, HangMargin, LimitProblem } from "@/lib/types";
+import type { GuidedExercise, HangMargin, LimitProblem, LimitProblemDraft } from "@/lib/types";
 import { ExerciseTimer } from "@/components/guided/exercise-timer";
 import { MeasureInput } from "@/components/training/measured-feedback-inputs";
 import { OVERHOLD_CAP_S, type MeasureValues } from "@/lib/measured-feedback";
@@ -112,7 +112,7 @@ export function GuidedExerciseStep({
   const [loadInputLeft, setLoadInputLeft] = useState("");
   const [gradeInput, setGradeInput] = useState("");
   // A296: limit family — problem-by-problem log instead of the free grade field.
-  const [problems, setProblems] = useState<LimitProblem[]>(exercise.problems ?? []);
+  const [problems, setProblems] = useState<LimitProblemDraft[]>(exercise.problems ?? []);
   const [measurementInput, setMeasurementInput] = useState("");
   const [setsInput, setSetsInput] = useState("");
   const [repsInputRight, setRepsInputRight] = useState("");

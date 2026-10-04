@@ -967,6 +967,9 @@ export interface LimitProblem {
   crux_moves?: number;
   name?: string;
 }
+/** A296 (review): a row being edited — `outcome` null until the athlete picks
+ *  one. Rows without an outcome are never sent: nothing is rated by default. */
+export type LimitProblemDraft = Omit<LimitProblem, "outcome"> & { outcome: LimitProblemOutcome | null };
 
 /** A295 — measured feedback (feedback_contract 2). */
 export type FeedbackMeasure = "last_set_reps" | "hang_margin" | "dp_reps";
@@ -1011,6 +1014,10 @@ export interface CustomSessionExercise {
   target_grade?: string;
   target_grade_low?: string;
   surface_selected?: string;
+  /** A296 (review): every surface the athlete may be on, with its own target
+   *  (a custom session has no gym — the player asks which wall). */
+  surface_options?: string[];
+  surface_targets?: Record<string, { target_grade?: string; target_grade_low?: string }>;
   log_problems?: boolean;
 }
 

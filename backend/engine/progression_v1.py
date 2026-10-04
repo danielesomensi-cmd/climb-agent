@@ -1164,6 +1164,20 @@ def limit_grade_target(
     }
     if state["reentry"]:
         out["reentry"] = dict(state["reentry"])
+    # Without a known gym the surface is only a guess (first by priority over
+    # all the gyms): the target of EVERY option travels too, so a player can
+    # let the athlete say which wall he is on (review A296).
+    surface_targets: Dict[str, Dict[str, Any]] = {}
+    for opt in options:
+        opt_state = state if opt == surface else _limit_target_state(
+            user_state, presc, opt, date_value, _extract_grade_benchmark(user_state),
+        )
+        row: Dict[str, Any] = {"target_grade": opt_state["target"], "target_grade_low": opt_state["target_low"]}
+        if opt_state["reentry"]:
+            row["reentry"] = dict(opt_state["reentry"])
+        surface_targets[opt] = row
+    if surface_targets:
+        out["surface_targets"] = surface_targets
     return out
 
 
@@ -2793,6 +2807,11 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         _r = _it.get("last_set_reps")
         if _eid and isinstance(_r, (int, float)) and not isinstance(_r, bool):
             min_last_set[_eid] = min(int(_r), min_last_set.get(_eid, int(_r)))
+    # A296: the limit target of the day, per surface, fixed by the FIRST
+    # limit-family item of this feedback. A second limit exercise on the same
+    # surface must be judged against the target the athlete was shown, not the
+    # one the first item just moved (never more than one half grade per session).
+    limit_day_targets: Dict[str, str] = {}
 
     for item in feedback_items:
         exercise_id = str(item.get("exercise_id") or "").strip()
@@ -3081,6 +3100,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 (normalize_font_grade(planned_target.get("target_grade"))
                  if planned_surface in ("", surface_selected) else None)
                 or normalize_font_grade((prior_log or {}).get("target_grade"))
+                or limit_day_targets.get(surface_selected)
             )
             if day_target is None:
                 day_target = _limit_target_state(
@@ -3090,6 +3110,8 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     date_value,
                     _extract_grade_benchmark(updated),
                 )["target"]
+            if day_target:
+                limit_day_targets.setdefault(surface_selected, day_target)
 
             delta = _grade_delta_for_feedback(feedback_label)
             classification: Optional[Dict[str, Any]] = None
