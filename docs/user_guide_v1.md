@@ -250,7 +250,11 @@ gym 7A. It does not matter which limit exercise the session picked: a grade from
 - On a board you have never logged, the first target is one letter below your
   outdoor boulder redpoint (7C outdoors → 7B on the Kilter).
 - One bad session does not drop the target far below the best you climbed on that
-  surface in the last 6 months.
+  surface in the last 6 months. Several bad sessions in a row do bring it down, half
+  a grade at a time.
+- Away from a surface for more than 6 months, the comeback starts from the lower of
+  your last grade there and your outdoor-based anchor — never harder than a shorter
+  break would give you.
 
 ---
 

@@ -840,6 +840,46 @@ def _limit_anchor_target(
     return target
 
 
+def _limit_surface_band(
+    user_state: Dict[str, Any],
+    surface: str,
+    date_value: str,
+    latest: Optional[Dict[str, Any]],
+) -> Optional[Tuple[str, str]]:
+    """B365: (floor, ceiling) for the limit target on `surface`, or None.
+
+    Built from the best grade the athlete actually CLIMBED on the surface in
+    the trusted window (`last_used_grade` only — a `next_target_grade` is a
+    target not yet sent, review finding). ±2 half grades around it.
+
+    The floor softens after a bad session: when the newest entry was
+    hard/very_hard at grade X, the floor is at most X − 1 half grade. One bad
+    session is absorbed, a run of them walks the target down half a grade per
+    failure instead of pinning it for 180 days.
+    """
+    best_idx: Optional[int] = None
+    for item in _limit_family_entries(user_state, surface):
+        age = _days_between(item.get("updated_at"), date_value)
+        if age is None or age < 0 or age > LIMIT_MEMORY_FRESHNESS_DAYS:
+            continue
+        g = normalize_font_grade(item.get("last_used_grade"))
+        if g is not None:
+            idx = FONT_GRADE_TO_INDEX[g]
+            best_idx = idx if best_idx is None else max(best_idx, idx)
+    if best_idx is None:
+        return None
+    best = FONT_GRADES[best_idx]
+    floor = _step_font_half(best, -LIMIT_SURFACE_BAND_HALF_STEPS) or best
+    ceiling = _step_font_half(best, LIMIT_SURFACE_BAND_HALF_STEPS) or best
+    if latest is not None and str(latest.get("last_feedback_label") or "") in ("hard", "very_hard"):
+        failed = normalize_font_grade(latest.get("last_used_grade"))
+        if failed is not None:
+            below_failed = _step_font_half(failed, -1) or failed
+            if FONT_GRADE_TO_INDEX[below_failed] < FONT_GRADE_TO_INDEX[floor]:
+                floor = below_failed
+    return floor, ceiling
+
+
 def _limit_target_state(
     user_state: Dict[str, Any],
     prescription: Dict[str, Any],
@@ -849,17 +889,33 @@ def _limit_target_state(
 ) -> Dict[str, Any]:
     """B365 (R6.0): the limit target for `surface` on `date_value`.
 
-    Shared by inject_targets (read) and apply_feedback (write) so both sides
-    agree on whether a re-entry is open and on its base. Returns:
+    Shared by inject_targets (read), apply_feedback (write) and the read-only
+    consumers (coach prompt, weekly report — via `limit_next_target`) so all
+    of them agree on whether a re-entry is open, on its base and on the
+    prescribed grade. Returns:
       target, target_low, source (anchor|memory|reentry),
       reentry: None | {base_grade, exposures_done, exposures_required, started_at}
     Re-entry opens only when the athlete HAS climbed limit on this surface
     before (any age) and the newest entry is ≥14 days old; a first-ever
-    session is the plain anchor. An entry older than 180 days is not trusted
-    as a grade: the re-entry base is then the anchor.
+    session is the plain anchor. A new gap ≥14 days restarts an open
+    re-entry from zero. An entry older than 180 days is not trusted as a
+    grade: the re-entry base is then min(anchor, that stale grade), so a
+    longer absence never gives a harder target than a shorter one.
+
+    Order: the per-surface floor/ceiling clamps the BASE (memory or re-entry
+    base), then the re-entry discount is applied — the floor can never cancel
+    the discount or lift a re-entry above its base.
     """
     anchor = _limit_anchor_target(user_state, prescription, surface, benchmark_grade)
     latest = _limit_family_entry(user_state, surface, date_value)
+    band = _limit_surface_band(user_state, surface, date_value, latest)
+
+    def _clamped(grade: str) -> str:
+        norm = normalize_font_grade(grade) or grade
+        if band is None or normalize_font_grade(norm) is None:
+            return norm
+        return _clamp_font(norm, band[0], band[1])
+
     reentry: Optional[Dict[str, Any]] = None
     source = "anchor"
     target = anchor
@@ -870,40 +926,32 @@ def _limit_target_state(
         remembered = normalize_font_grade(latest.get("next_target_grade")) if trusted else None
         open_base = normalize_font_grade(latest.get("reentry_base_grade")) if trusted else None
         open_done = int(latest.get("reentry_exposures") or 0)
-        if open_base and open_done < LIMIT_REENTRY_EXPOSURES:
+        if age >= LIMIT_REENTRY_GAP_DAYS:
+            # A gap (new or during an open re-entry) restarts the ramp.
+            if remembered:
+                base = remembered
+            else:
+                stale = normalize_font_grade(latest.get("next_target_grade"))
+                base = anchor
+                if stale is not None and normalize_font_grade(anchor) is not None and FONT_GRADE_TO_INDEX[stale] < FONT_GRADE_TO_INDEX[normalize_font_grade(anchor)]:
+                    base = stale
+            reentry = {"base_grade": _clamped(base), "exposures_done": 0, "started_at": None}
+        elif open_base and open_done < LIMIT_REENTRY_EXPOSURES:
             reentry = {
-                "base_grade": open_base,
+                "base_grade": _clamped(open_base),
                 "exposures_done": open_done,
                 "started_at": latest.get("reentry_started_at"),
             }
-        elif age >= LIMIT_REENTRY_GAP_DAYS:
-            reentry = {"base_grade": remembered or anchor, "exposures_done": 0, "started_at": None}
         elif remembered:
-            target = remembered
+            target = _clamped(remembered)
             source = "memory"
 
     if reentry is not None:
         reentry["exposures_required"] = LIMIT_REENTRY_EXPOSURES
         target = _step_font_half(reentry["base_grade"], -LIMIT_REENTRY_HALF_STEPS) or reentry["base_grade"]
         source = "reentry"
-
-    # Floor/ceiling per surface: ±2 half grades around the best grade logged
-    # on this surface in the trusted window.
-    best_idx: Optional[int] = None
-    for item in _limit_family_entries(user_state, surface):
-        age = _days_between(item.get("updated_at"), date_value)
-        if age is None or age < 0 or age > LIMIT_MEMORY_FRESHNESS_DAYS:
-            continue
-        for field in ("next_target_grade", "last_used_grade"):
-            g = normalize_font_grade(item.get(field))
-            if g is not None:
-                idx = FONT_GRADE_TO_INDEX[g]
-                best_idx = idx if best_idx is None else max(best_idx, idx)
-    if best_idx is not None:
-        best = FONT_GRADES[best_idx]
-        floor = _step_font_half(best, -LIMIT_SURFACE_BAND_HALF_STEPS) or best
-        ceiling = _step_font_half(best, LIMIT_SURFACE_BAND_HALF_STEPS) or best
-        target = _clamp_font(normalize_font_grade(target) or best, floor, ceiling)
+    elif source == "anchor":
+        target = _clamped(target)
 
     # B365: the band low is computed from the FINAL target. It used to be
     # derived from the anchor before the memory override, so a 7A memory
@@ -915,6 +963,28 @@ def _limit_target_state(
         "source": source,
         "reentry": reentry,
     }
+
+
+def limit_next_target(
+    user_state: Dict[str, Any],
+    entry: Dict[str, Any],
+    date_value: str,
+) -> Optional[str]:
+    """B365: the limit grade the app would prescribe for `entry`'s surface.
+
+    For read-only consumers (coach prompt, weekly report) that used to quote
+    `next_target_grade` raw: during a re-entry, or when the floor/ceiling
+    clamps, the stored value is the BASE, not the prescribed target. Uses the
+    catalog default anchor (boulder_max_rp + 0). None when `entry` is not a
+    limit-family entry with a surface.
+    """
+    if not _is_limit_grade_exercise(str(entry.get("exercise_id") or "")):
+        return None
+    surface = str(((entry.get("setup") or {}).get("surface")) or entry.get("surface_selected") or "").strip().lower()
+    if not surface or _parse_day(date_value) is None:
+        return None
+    state = _limit_target_state(user_state, {}, surface, date_value, _extract_grade_benchmark(user_state))
+    return state["target"]
 
 
 def _intensity_label(session: Dict[str, Any]) -> str:
