@@ -631,6 +631,26 @@ def build_current_level(grades: Dict[str, Any]) -> Dict[str, Any]:
     return level
 
 
+def refresh_current_level_from_grades(state: Dict[str, Any]) -> None:
+    """Rebuild the grade-derived branches of ``performance.current_level``.
+
+    B272 did this inline in PUT /api/state; A292's onsight confirmation needs
+    the same rebuild, so it lives here. Only ``sport`` and ``boulder`` are
+    replaced — ``gym_reference`` and the rest of current_level are kept.
+    """
+    grades = (state.get("assessment") or {}).get("grades") or {}
+    rebuilt = build_current_level(grades)
+    performance = state.get("performance") or {}
+    current_level = performance.get("current_level") or {}
+    for branch in ("sport", "boulder"):
+        current_level.pop(branch, None)
+        if branch in rebuilt:
+            current_level[branch] = rebuilt[branch]
+    current_level["updated_at"] = date.today().isoformat()
+    performance["current_level"] = current_level
+    state["performance"] = performance
+
+
 # ---------------------------------------------------------------------------
 # Subscription guard dependency
 # ---------------------------------------------------------------------------

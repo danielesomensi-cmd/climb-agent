@@ -10,6 +10,12 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from backend.engine import storage
+from backend.engine.grade_evidence import (
+    chronological,
+    grade_rank,
+    is_first_go_send,
+    route_key,
+)
 
 
 REQUIRED_FIELDS = {"log_version", "date", "spot_name", "discipline", "duration_minutes", "routes"}
@@ -403,8 +409,14 @@ def compute_outdoor_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
     grade_counts: Dict[str, int] = {}
     grades_sent: List[str] = []
 
-    for session in sessions:
+    # A292: chronological, so "first appearance" means the same thing here as
+    # in grade_evidence (the shared predicate needs the routes seen so far).
+    seen_routes: set = set()
+    for session in chronological(sessions):
         for route in session.get("routes", []):
+            route_id = route_key(session, route)
+            first_go = is_first_go_send(route, route_id, seen_routes)
+            seen_routes.add(route_id)
             total_routes += 1
             grade = route.get("grade", "unknown")
             grade_counts[grade] = grade_counts.get(grade, 0) + 1
@@ -422,12 +434,17 @@ def compute_outdoor_stats(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
                     onsight_count += 1
                 elif style == "flash":
                     flash_count += 1
-                elif style is None and len(attempts) == 1 and attempts[0].get("result") == "sent":
-                    # Auto-detect: single attempt sent = potential onsight
+                elif style is None and first_go:
+                    # Auto-detect: single sent attempt at the route's FIRST
+                    # appearance = potential onsight. A292: the predicate is
+                    # shared with grade_evidence; before, every repeat of a
+                    # warm-up logged without a style counted as an onsight.
                     onsight_count += 1
 
-    # Top grade sent (lexicographic — works for Font/French scales approximately)
-    top_grade = max(grades_sent) if grades_sent else None
+    # A292: ranked on the grade ladder. max() on the strings was lexicographic
+    # and put "7c" above "7c+". Font grades rank by their letters (7A ≡ 7a);
+    # anything off the ladder ranks lowest, ties fall back to the string.
+    top_grade = max(grades_sent, key=lambda g: (grade_rank(g), str(g))) if grades_sent else None
 
     total_load = sum(compute_outdoor_load_score(s) for s in sessions)
     avg_load = round(total_load / len(sessions), 1) if sessions else 0.0

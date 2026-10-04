@@ -42,6 +42,8 @@ GRADE_TARGET_KEYS = (
     "grade_scale",
     "grade_source",
     "suggested_boulder_target",
+    # A292 (R6-PE): which grade produced the derived lead PE anchor.
+    "grade_anchor_from",
 )
 
 
@@ -54,6 +56,32 @@ def _catalog_session(session_id: str) -> Optional[Dict[str, Any]]:
             return json.load(f)
     except (OSError, ValueError):
         return None
+
+
+_EXERCISE_CATALOG = REPO_ROOT / "backend" / "catalog" / "exercises" / "v1" / "exercises.json"
+_GRADE_RX_CACHE: Optional[Dict[str, Dict[str, Any]]] = None
+
+
+def _catalog_grade_prescription(exercise_id: Any) -> Dict[str, Any]:
+    """``{grade_ref, grade_offset}`` of an exercise in the current catalog, or {}."""
+    global _GRADE_RX_CACHE
+    if _GRADE_RX_CACHE is None:
+        cache: Dict[str, Dict[str, Any]] = {}
+        try:
+            with open(_EXERCISE_CATALOG, encoding="utf-8") as f:
+                data = json.load(f)
+            exercises = data if isinstance(data, list) else data.get("exercises") or []
+            for ex in exercises:
+                rx = ex.get("prescription_defaults") or {}
+                if rx.get("grade_ref") is not None:
+                    cache[ex["id"]] = {
+                        "grade_ref": rx["grade_ref"],
+                        "grade_offset": rx.get("grade_offset", 0),
+                    }
+        except (OSError, ValueError, KeyError):
+            cache = {}
+        _GRADE_RX_CACHE = cache
+    return dict(_GRADE_RX_CACHE.get(str(exercise_id or "")) or {})
 
 
 def refresh_edited_session_targets(
@@ -100,6 +128,14 @@ def refresh_edited_session_targets(
         for key in GRADE_TARGET_KEYS:
             sugg.pop(key, None)
         inst["suggested"] = sugg
+        # A292 (R6-PE): the grade ANCHOR is a target input, not part of the
+        # exercise the user chose. Read it from the current catalog so an
+        # edited session follows a re-anchored drill (lead_max_os →
+        # lead_pe_anchor) like a fresh resolution does. Only on the probe:
+        # the stored prescription is not rewritten.
+        catalog_rx = _catalog_grade_prescription(inst.get("exercise_id"))
+        if catalog_rx:
+            inst["prescription"] = {**(inst.get("prescription") or {}), **catalog_rx}
         probe.append(inst)
 
     intent = catalog.get("intent") or {}

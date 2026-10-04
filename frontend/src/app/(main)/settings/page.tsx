@@ -21,6 +21,7 @@ import { EquipmentEditor } from "@/components/settings/equipment-editor";
 import { GoalEditor } from "@/components/settings/goal-editor";
 import { LimitationsEditor, LimitationsSummary } from "@/components/settings/limitations-editor";
 import { ProfileAssessmentEditor } from "@/components/settings/profile-assessment-editor";
+import { OnsightEvidenceCard } from "@/components/settings/onsight-evidence-card";
 import { StartNewMacrocycleDialog } from "@/components/settings/start-new-macrocycle-dialog";
 import { useCanStartNewCycle } from "@/lib/hooks/use-can-start-new-cycle";
 import { usePlanPause, formatPauseDate } from "@/lib/hooks/use-plan-pause";
@@ -469,6 +470,12 @@ export default function SettingsPage() {
                   label="Lead RP"
                   value={(assessment?.grades?.lead_max_rp as string) || "—"}
                 />
+                {assessment?.grades?.lead_max_os && (
+                  <InfoRow
+                    label="Lead OS"
+                    value={assessment.grades.lead_max_os as string}
+                  />
+                )}
                 {assessment?.grades?.boulder_max_rp && (
                   <InfoRow
                     label="Boulder RP"
@@ -477,6 +484,9 @@ export default function SettingsPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* ----- A292: onsight evidence from the outdoor log ----- */}
+            <OnsightEvidenceCard />
 
             {/* ----- Goal ----- */}
             <Card id="sec-goal" className="scroll-mt-32">

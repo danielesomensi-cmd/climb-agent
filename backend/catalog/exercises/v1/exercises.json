@@ -2701,8 +2701,8 @@
         "work_seconds": 60,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Climb route sections with timed rest. Grade 1 below onsight (~80% max). Focus sustained effort.",
-        "grade_ref": "lead_max_os",
+        "notes": "Climb route sections with timed rest. Grade 1 below your PE anchor (your onsight, or 3 half grades below your redpoint if that is higher). Focus sustained effort.",
+        "grade_ref": "lead_pe_anchor",
         "grade_offset": -1
       },
       "stress_tags": {
@@ -2812,8 +2812,8 @@
         "work_seconds": 120,
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 60,
-        "notes": "Just below onsight grade. Sustained effort. Moderate pump acceptable.",
-        "grade_ref": "lead_max_os",
+        "notes": "1 grade below your PE anchor (your onsight, or 3 half grades below your redpoint if that is higher). Sustained effort. Moderate pump acceptable.",
+        "grade_ref": "lead_pe_anchor",
         "grade_offset": -1
       },
       "stress_tags": {
@@ -2822,9 +2822,9 @@
         "cns": "medium",
         "skin": "medium"
       },
-      "description": "Sustained sub-onsight climbing on routes at moderate pump. Works the aerobic/anaerobic threshold — the highest intensity maintainable aerobically. Lead route setting at 1 grade below onsight level. Moderate pump acceptable and expected; deep forearm failure is too hard. 2:1 work:rest ratio for route climbing. (Hörst threshold endurance; Gresham training bible 2:1 intervals)",
+      "description": "Sustained sub-onsight climbing on routes at moderate pump. Works the aerobic/anaerobic threshold — the highest intensity maintainable aerobically. Lead route setting at 1 grade below the PE anchor: the onsight, or 3 half grades below the redpoint when that is higher (A292). Moderate pump acceptable and expected; deep forearm failure is too hard. 2:1 work:rest ratio for route climbing. (Hörst threshold endurance; Gresham training bible 2:1 intervals)",
       "cues": [
-        "Grade: 1 letter grade below your lead onsight — should feel hard but manageable",
+        "Grade: 1 letter below your PE anchor (lead onsight, or redpoint minus 3 half grades if higher) — should feel hard but manageable",
         "RPE 7-8/10 on the wall. Moderate pump is acceptable; cannot-hold-on pump = too hard",
         "120s per set: not a route lap, it's a timed effort. If route ends before 120s, downclimb",
         "60s rest: arms down, shake out actively, breathe. Not a full recovery — that is intentional",
@@ -10561,7 +10561,7 @@
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 480,
         "notes": "2-3 routes back-to-back at threshold intensity. Lower and immediately start the next.",
-        "grade_ref": "lead_max_os",
+        "grade_ref": "lead_pe_anchor",
         "grade_offset": -1
       },
       "stress_tags": {
@@ -10570,9 +10570,9 @@
         "cns": "medium",
         "skin": "medium"
       },
-      "description": "Climb 2-3 routes back-to-back at threshold intensity (1 grade below onsight max) with minimal rest between routes. Builds sustained power endurance and mental stamina for route climbing. (Lattice: linked route laps are a standard threshold/PE protocol; Hörst T4C: threshold climbing at the boundary of sustainable pump)",
+      "description": "Climb 2-3 routes back-to-back at threshold intensity (1 grade below the PE anchor: onsight, or redpoint minus 3 half grades if higher) with minimal rest between routes. Builds sustained power endurance and mental stamina for route climbing. (Lattice: linked route laps are a standard threshold/PE protocol; Hörst T4C: threshold climbing at the boundary of sustainable pump)",
       "cues": [
-        "Pick 2-3 routes at 1 grade below your onsight level",
+        "Pick 2-3 routes at 1 grade below your PE anchor (onsight, or redpoint minus 3 half grades if higher)",
         "Climb them back-to-back with only the walk to the next route as rest",
         "Focus on maintaining technique as pump builds",
         "Full rest (6-8 min) between sets of linked laps"
@@ -10613,7 +10613,7 @@
         "rest_between_reps_seconds": null,
         "rest_between_sets_seconds": 0,
         "notes": "Start a new route every 4-5 min. Rest = time remaining after finishing each route.",
-        "grade_ref": "lead_max_os",
+        "grade_ref": "lead_pe_anchor",
         "grade_offset": -1
       },
       "stress_tags": {
@@ -10622,10 +10622,10 @@
         "cns": "medium",
         "skin": "medium"
       },
-      "description": "Start a new route every X minutes regardless of when you finished the last one. Routes at threshold intensity (1-2 grades below onsight max). The fixed clock creates progressive fatigue. (Consuegra Performance Climbing Ch.8: on-the-minute variants for climbing-specific aerobic power development)",
+      "description": "Start a new route every X minutes regardless of when you finished the last one. Routes at threshold intensity (1-2 grades below the PE anchor: onsight, or redpoint minus 3 half grades if higher). The fixed clock creates progressive fatigue. (Consuegra Performance Climbing Ch.8: on-the-minute variants for climbing-specific aerobic power development)",
       "cues": [
         "Set a timer: start a route every 4-5 minutes (adjust to route length)",
-        "Routes at 1-2 grades below onsight max",
+        "Routes at 1-2 grades below your PE anchor (onsight, or redpoint minus 3 half grades if higher)",
         "Rest only the time remaining after finishing each route",
         "Stop the set if you fall twice on consecutive routes — recovery is failing",
         "Pump should reach 5-6/10 by end of each set — if higher, lower the grade",

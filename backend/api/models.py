@@ -26,6 +26,26 @@ class AssessmentRequest(BaseModel):
     goal: Dict[str, Any] = Field(default_factory=dict)
 
 
+class GradeEvidenceRouteAnswer(BaseModel):
+    """A292: the athlete's answer for one evidence route on the onsight card."""
+    key: str = Field(..., min_length=1, max_length=400)
+    style: Literal["onsight", "flash", "worked"]
+
+
+class ConfirmGradeRequest(BaseModel):
+    """Body for POST /api/assessment/confirm-grade (A292, R6b).
+
+    ``decision="confirm"`` writes the grade the confirmed routes support (or
+    ``grade`` when given, if they support it); ``"dismiss"`` declines the current
+    proposal so it is not asked again (a harder one still can be). Routes marked
+    ``worked`` leave the evidence for good either way.
+    """
+    field: Literal["lead_max_os"] = "lead_max_os"
+    decision: Literal["confirm", "dismiss"]
+    grade: Optional[str] = None
+    routes: List[GradeEvidenceRouteAnswer] = Field(default_factory=list, max_length=50)
+
+
 # --------------------------------------------------------------------------- #
 # Macrocycle
 # --------------------------------------------------------------------------- #
