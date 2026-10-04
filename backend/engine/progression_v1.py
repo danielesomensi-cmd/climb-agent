@@ -182,6 +182,37 @@ NOT_FINGER_MAX_TOTAL_LOAD: Tuple[str, ...] = (
     "one_arm_hang_assisted",
 )
 SURFACE_PRIORITY = ("board_kilter", "board_moonboard", "board_other", "spraywall", "gym_boulder")
+
+# B365 (R6.0) — limit-boulder grade memory per FAMILY + SURFACE.
+# All values below are ENGINEERING CONSTANTS (design choices, no published
+# source), documented in vocabulary §2.10.2:
+# - a limit grade memory is trusted for 180 days (the global 60-day gate made
+#   a Kilter grade from the summer vanish and the target jump back to the
+#   outdoor RP anchor);
+# - a gap of ≥14 days since the last limit session on a surface opens a
+#   re-entry (same gap as the programme-wide re-entry ramp, DECISIONS
+#   2026-10-04): the target is the pre-gap base minus one half grade for 2
+#   sessions, then the base again (± the label delta applied to the BASE, so
+#   the discount never becomes permanent);
+# - boards (Kilter, Moon, spray, system) with no memory anchor 2 half grades
+#   below the outdoor boulder RP — a Kilter 7A is not a gym 7A;
+# - floor/ceiling: the target stays within ±2 half grades of the best grade
+#   logged on that surface in the last 180 days; the band low is target − 2
+#   half grades (one letter).
+LIMIT_MEMORY_FRESHNESS_DAYS = 180
+LIMIT_REENTRY_GAP_DAYS = 14
+LIMIT_REENTRY_EXPOSURES = 2
+LIMIT_REENTRY_HALF_STEPS = 1
+LIMIT_BOARD_ANCHOR_HALF_STEPS = 2
+LIMIT_SURFACE_BAND_HALF_STEPS = 2
+LIMIT_TARGET_LOW_HALF_STEPS = 2
+LIMIT_BOARD_SURFACES = frozenset({"board_kilter", "board_moonboard", "board_other", "spraywall"})
+_LIMIT_REENTRY_FIELDS = (
+    "reentry_base_grade",
+    "reentry_exposures",
+    "reentry_started_at",
+    "reentry_last_at",
+)
 VALID_FEEDBACK = {"very_easy", "easy", "ok", "hard", "very_hard"}
 LEGACY_DIFFICULTY_MAP = {
     "too_easy": "very_easy",
@@ -722,6 +753,238 @@ def _select_surface(*, preferred: str | None, options: List[str], gym_id: str | 
         if surface in gym_equip:
             return surface
     return "gym_boulder"
+
+
+def _step_font_half(grade: str | None, half_steps: int) -> Optional[str]:
+    """B365: step a Font grade by HALF grades on FONT_GRADES ('+' survives).
+
+    Local to the limit memory until R6a generalises half-grade arithmetic;
+    `step_grade` (whole letters) stays the engine-wide helper. Unknown grade →
+    None so callers fall back instead of inventing a value. Clamped to the ends
+    of the scale.
+    """
+    norm = normalize_font_grade(grade)
+    if norm is None:
+        return None
+    idx = FONT_GRADE_TO_INDEX[norm] + int(half_steps)
+    idx = max(0, min(len(FONT_GRADES) - 1, idx))
+    return FONT_GRADES[idx]
+
+
+def _clamp_font(grade: str, low: str, high: str) -> str:
+    gi, lo, hi = FONT_GRADE_TO_INDEX[grade], FONT_GRADE_TO_INDEX[low], FONT_GRADE_TO_INDEX[high]
+    return FONT_GRADES[max(lo, min(hi, gi))]
+
+
+def _days_between(earlier: str | None, later: str | None) -> Optional[int]:
+    a, b = _parse_day(earlier), _parse_day(later)
+    if a is None or b is None:
+        return None
+    return (b - a).days
+
+
+def _limit_family_entries(user_state: Dict[str, Any], surface: str) -> List[Dict[str, Any]]:
+    """Every limit-family working_loads entry on `surface`, newest first.
+
+    Read-only (no setdefault). The family is climbing_limit_boulder:
+    limit_bouldering, board_limit_boulders, spray_wall_limit,
+    system_board_limit — a grade sent on the Kilter is the same signal
+    whichever of those exercises the session happened to pick.
+    """
+    entries = (user_state.get("working_loads") or {}).get("entries") or []
+    out: List[Dict[str, Any]] = []
+    for item in entries:
+        if not isinstance(item, dict):
+            continue
+        if not _is_limit_grade_exercise(str(item.get("exercise_id") or "")):
+            continue
+        item_surface = str(((item.get("setup") or {}).get("surface")) or item.get("surface_selected") or "").strip().lower()
+        if item_surface != surface:
+            continue
+        if _parse_day(item.get("updated_at")) is None:
+            continue
+        out.append(item)
+    out.sort(key=lambda e: (str(e.get("updated_at") or ""), str(e.get("key") or "")), reverse=True)
+    return out
+
+
+def _limit_family_entry(user_state: Dict[str, Any], surface: str, date_value: str) -> Optional[Dict[str, Any]]:
+    """B365: the newest family entry on `surface` dated on/before `date_value`."""
+    for item in _limit_family_entries(user_state, surface):
+        delta = _days_between(item.get("updated_at"), date_value)
+        if delta is not None and delta >= 0:
+            return item
+    return None
+
+
+def _limit_anchor_target(
+    user_state: Dict[str, Any],
+    prescription: Dict[str, Any],
+    surface: str,
+    benchmark_grade: str,
+) -> str:
+    """Target with no usable memory: catalog grade_ref (boulder_max_rp) + offset.
+
+    B260: anchored to the outdoor RP, the Kilter benchmark only as fallback.
+    B365: on a board the RP anchor drops 2 half grades. Not applied to the
+    benchmark fallback, which is already a board grade.
+    """
+    grades = ((user_state.get("assessment") or {}).get("grades") or {})
+    anchor_ref = prescription.get("grade_ref") or "boulder_max_rp"
+    anchor_raw = grades.get(anchor_ref)
+    from_assessment = anchor_raw is not None
+    anchor_grade = str(anchor_raw).strip().upper().replace(" ", "") if from_assessment else benchmark_grade
+    target = step_grade(anchor_grade, int(prescription.get("grade_offset") or 0))
+    if from_assessment and surface in LIMIT_BOARD_SURFACES:
+        target = _step_font_half(target, -LIMIT_BOARD_ANCHOR_HALF_STEPS) or target
+    return target
+
+
+def _limit_surface_band(
+    user_state: Dict[str, Any],
+    surface: str,
+    date_value: str,
+    latest: Optional[Dict[str, Any]],
+) -> Optional[Tuple[str, str]]:
+    """B365: (floor, ceiling) for the limit target on `surface`, or None.
+
+    Built from the best grade the athlete actually CLIMBED on the surface in
+    the trusted window (`last_used_grade` only — a `next_target_grade` is a
+    target not yet sent, review finding). ±2 half grades around it.
+
+    The floor softens after a bad session: when the newest entry was
+    hard/very_hard at grade X, the floor is at most X − 1 half grade. One bad
+    session is absorbed, a run of them walks the target down half a grade per
+    failure instead of pinning it for 180 days.
+    """
+    best_idx: Optional[int] = None
+    for item in _limit_family_entries(user_state, surface):
+        age = _days_between(item.get("updated_at"), date_value)
+        if age is None or age < 0 or age > LIMIT_MEMORY_FRESHNESS_DAYS:
+            continue
+        g = normalize_font_grade(item.get("last_used_grade"))
+        if g is not None:
+            idx = FONT_GRADE_TO_INDEX[g]
+            best_idx = idx if best_idx is None else max(best_idx, idx)
+    if best_idx is None:
+        return None
+    best = FONT_GRADES[best_idx]
+    floor = _step_font_half(best, -LIMIT_SURFACE_BAND_HALF_STEPS) or best
+    ceiling = _step_font_half(best, LIMIT_SURFACE_BAND_HALF_STEPS) or best
+    if latest is not None and str(latest.get("last_feedback_label") or "") in ("hard", "very_hard"):
+        failed = normalize_font_grade(latest.get("last_used_grade"))
+        if failed is not None:
+            below_failed = _step_font_half(failed, -1) or failed
+            if FONT_GRADE_TO_INDEX[below_failed] < FONT_GRADE_TO_INDEX[floor]:
+                floor = below_failed
+    return floor, ceiling
+
+
+def _limit_target_state(
+    user_state: Dict[str, Any],
+    prescription: Dict[str, Any],
+    surface: str,
+    date_value: str,
+    benchmark_grade: str,
+) -> Dict[str, Any]:
+    """B365 (R6.0): the limit target for `surface` on `date_value`.
+
+    Shared by inject_targets (read), apply_feedback (write) and the read-only
+    consumers (coach prompt, weekly report — via `limit_next_target`) so all
+    of them agree on whether a re-entry is open, on its base and on the
+    prescribed grade. Returns:
+      target, target_low, source (anchor|memory|reentry),
+      reentry: None | {base_grade, exposures_done, exposures_required, started_at}
+    Re-entry opens only when the athlete HAS climbed limit on this surface
+    before (any age) and the newest entry is ≥14 days old; a first-ever
+    session is the plain anchor. A new gap ≥14 days restarts an open
+    re-entry from zero. An entry older than 180 days is not trusted as a
+    grade: the re-entry base is then min(anchor, that stale grade), so a
+    longer absence never gives a harder target than a shorter one.
+
+    Order: the per-surface floor/ceiling clamps the BASE (memory or re-entry
+    base), then the re-entry discount is applied — the floor can never cancel
+    the discount or lift a re-entry above its base.
+    """
+    anchor = _limit_anchor_target(user_state, prescription, surface, benchmark_grade)
+    latest = _limit_family_entry(user_state, surface, date_value)
+    band = _limit_surface_band(user_state, surface, date_value, latest)
+
+    def _clamped(grade: str) -> str:
+        norm = normalize_font_grade(grade) or grade
+        if band is None or normalize_font_grade(norm) is None:
+            return norm
+        return _clamp_font(norm, band[0], band[1])
+
+    reentry: Optional[Dict[str, Any]] = None
+    source = "anchor"
+    target = anchor
+
+    if latest is not None:
+        age = _days_between(latest.get("updated_at"), date_value) or 0
+        trusted = age <= LIMIT_MEMORY_FRESHNESS_DAYS
+        remembered = normalize_font_grade(latest.get("next_target_grade")) if trusted else None
+        open_base = normalize_font_grade(latest.get("reentry_base_grade")) if trusted else None
+        open_done = int(latest.get("reentry_exposures") or 0)
+        if age >= LIMIT_REENTRY_GAP_DAYS:
+            # A gap (new or during an open re-entry) restarts the ramp.
+            if remembered:
+                base = remembered
+            else:
+                stale = normalize_font_grade(latest.get("next_target_grade"))
+                base = anchor
+                if stale is not None and normalize_font_grade(anchor) is not None and FONT_GRADE_TO_INDEX[stale] < FONT_GRADE_TO_INDEX[normalize_font_grade(anchor)]:
+                    base = stale
+            reentry = {"base_grade": _clamped(base), "exposures_done": 0, "started_at": None}
+        elif open_base and open_done < LIMIT_REENTRY_EXPOSURES:
+            reentry = {
+                "base_grade": _clamped(open_base),
+                "exposures_done": open_done,
+                "started_at": latest.get("reentry_started_at"),
+            }
+        elif remembered:
+            target = _clamped(remembered)
+            source = "memory"
+
+    if reentry is not None:
+        reentry["exposures_required"] = LIMIT_REENTRY_EXPOSURES
+        target = _step_font_half(reentry["base_grade"], -LIMIT_REENTRY_HALF_STEPS) or reentry["base_grade"]
+        source = "reentry"
+    elif source == "anchor":
+        target = _clamped(target)
+
+    # B365: the band low is computed from the FINAL target. It used to be
+    # derived from the anchor before the memory override, so a 7A memory
+    # under a 7C anchor gave low 7B > target 7A.
+    target_low = _step_font_half(target, -LIMIT_TARGET_LOW_HALF_STEPS) or target
+    return {
+        "target": target,
+        "target_low": target_low,
+        "source": source,
+        "reentry": reentry,
+    }
+
+
+def limit_next_target(
+    user_state: Dict[str, Any],
+    entry: Dict[str, Any],
+    date_value: str,
+) -> Optional[str]:
+    """B365: the limit grade the app would prescribe for `entry`'s surface.
+
+    For read-only consumers (coach prompt, weekly report) that used to quote
+    `next_target_grade` raw: during a re-entry, or when the floor/ceiling
+    clamps, the stored value is the BASE, not the prescribed target. Uses the
+    catalog default anchor (boulder_max_rp + 0). None when `entry` is not a
+    limit-family entry with a surface.
+    """
+    if not _is_limit_grade_exercise(str(entry.get("exercise_id") or "")):
+        return None
+    surface = str(((entry.get("setup") or {}).get("surface")) or entry.get("surface_selected") or "").strip().lower()
+    if not surface or _parse_day(date_value) is None:
+        return None
+    state = _limit_target_state(user_state, {}, surface, date_value, _extract_grade_benchmark(user_state))
+    return state["target"]
 
 
 def _intensity_label(session: Dict[str, Any]) -> str:
@@ -1266,33 +1529,28 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 # anchor to redpoint (band RP-1 -> RP), per Hörst et al. The board
                 # benchmark (~onsight level) is only a fallback when the assessment
                 # grade is missing. boulder_info still drives attempt/rest guidance.
-                grades = ((user_state.get("assessment") or {}).get("grades") or {})
-                anchor_ref = prescription.get("grade_ref") or "boulder_max_rp"
-                anchor_raw = grades.get(anchor_ref)
-                anchor_grade = (
-                    str(anchor_raw).strip().upper().replace(" ", "")
-                    if anchor_raw is not None
-                    else benchmark_grade
-                )
-                anchor_offset = int(prescription.get("grade_offset") or 0)
-                target_grade = step_grade(anchor_grade, anchor_offset)
-                target_grade_low = step_grade(anchor_grade, anchor_offset - 1)
-                grade_entry = _best_entry(
+                # B365 (R6.0): memory read across the whole family on the
+                # selected surface (180-day trust), re-entry after a ≥14-day
+                # gap, board anchor, per-surface floor/ceiling, band low from
+                # the final target — see _limit_target_state.
+                limit_state = _limit_target_state(
                     user_state,
-                    ex_id,
-                    {"surface": selected_surface},
+                    prescription,
+                    selected_surface,
                     out.get("date") or "",
+                    benchmark_grade,
                 )
-                if grade_entry and normalize_font_grade(grade_entry.get("next_target_grade")):
-                    target_grade = grade_entry["next_target_grade"]
                 boulder_target: Dict[str, Any] = {
                     "schema_version": "boulder_grade_font_v0",
                     "surface_options": options,
                     "surface_selected": selected_surface,
-                    "target_grade": target_grade,
-                    "target_grade_low": target_grade_low,
+                    "target_grade": limit_state["target"],
+                    "target_grade_low": limit_state["target_low"],
+                    "target_source": limit_state["source"],
                     "intensity_label": intensity,
                 }
+                if limit_state["reentry"]:
+                    boulder_target["reentry"] = dict(limit_state["reentry"])
                 if boulder_info.get("attempt_guidance"):
                     boulder_target["attempt_guidance"] = boulder_info["attempt_guidance"]
                 if boulder_info.get("rest_guidance"):
@@ -2055,7 +2313,51 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 gym_id=session.get("gym_id"),
                 user_state=updated,
             )
-            next_grade = step_grade(used_grade, _grade_delta_for_feedback(feedback_label))
+            # B365 (R6.0): is this session part of a re-entry? Evaluated on the
+            # state BEFORE this write, with the same function the read uses.
+            # Idempotent on a same-day resubmission (B197): an entry whose
+            # re-entry already counted today is recomputed, not re-counted.
+            prior = _limit_family_entry(updated, surface_selected, date_value)
+            reentry_fields: Optional[Dict[str, Any]] = None
+            if (
+                prior is not None
+                and normalize_font_grade(prior.get("reentry_base_grade"))
+                and str(prior.get("reentry_last_at") or "") == date_value
+            ):
+                reentry_fields = {
+                    "reentry_base_grade": normalize_font_grade(prior.get("reentry_base_grade")),
+                    "reentry_exposures": int(prior.get("reentry_exposures") or 1),
+                    "reentry_started_at": prior.get("reentry_started_at") or date_value,
+                    "reentry_last_at": date_value,
+                }
+            else:
+                limit_prescription = planned_prescription or (catalog_info.get("prescription_defaults") or {})
+                limit_state = _limit_target_state(
+                    updated,
+                    limit_prescription,
+                    surface_selected,
+                    date_value,
+                    _extract_grade_benchmark(updated),
+                )
+                if limit_state["reentry"]:
+                    reentry = limit_state["reentry"]
+                    reentry_fields = {
+                        "reentry_base_grade": reentry["base_grade"],
+                        "reentry_exposures": int(reentry["exposures_done"]) + 1,
+                        "reentry_started_at": reentry.get("started_at") or date_value,
+                        "reentry_last_at": date_value,
+                    }
+
+            delta = _grade_delta_for_feedback(feedback_label)
+            if reentry_fields is None:
+                next_grade = step_grade(used_grade, delta)
+            elif reentry_fields["reentry_exposures"] < LIMIT_REENTRY_EXPOSURES:
+                # Still re-entering: keep the BASE as the memory (the read
+                # applies the discount), never the discounted grade.
+                next_grade = reentry_fields["reentry_base_grade"]
+            else:
+                # Re-entry closes: progression relative to the base.
+                next_grade = _step_font_half(reentry_fields["reentry_base_grade"], 2 * delta) or reentry_fields["reentry_base_grade"]
             setup, setup_key = _progression_setup_and_key(exercise_id, {"surface": surface_selected})
             entry = _find_working_load_entry(updated, exercise_id, setup)
             entry.update(
@@ -2070,6 +2372,10 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     "updated_at": date_value,
                 }
             )
+            for field in _LIMIT_REENTRY_FIELDS:
+                entry.pop(field, None)
+            if reentry_fields is not None:
+                entry.update(reentry_fields)
 
         elif fb_load_model == "grade_relative" and _grade_relative_group(exercise_id) == "endurance":
             # B289 group B (intervals/continuous): the grade is an intensity

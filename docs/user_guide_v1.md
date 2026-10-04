@@ -236,6 +236,26 @@ Two things worth knowing:
 - A remembered load only moves when your difficulty feedback says so ("Easy"
   raises it, "Hard" lowers it). "OK" keeps it exactly where you put it.
 
+### Limit bouldering grades
+
+Limit bouldering remembers your grade **per surface** — the Kilter, the MoonBoard,
+the spray wall and the gym wall each keep their own, because a Kilter 7A is not a
+gym 7A. It does not matter which limit exercise the session picked: a grade from
+"board limit boulders" on the Kilter counts for "limit bouldering" on the Kilter too.
+
+- The grade is remembered for **6 months**.
+- **Coming back after two weeks or more** on a surface, the first **2 sessions** are
+  half a grade easier (e.g. 7A+ instead of 7B). After that you are back on your
+  grade — the easier sessions never lower it for good.
+- On a board you have never logged, the first target is one letter below your
+  outdoor boulder redpoint (7C outdoors → 7B on the Kilter).
+- One bad session does not drop the target far below the best you climbed on that
+  surface in the last 6 months. Several bad sessions in a row do bring it down, half
+  a grade at a time.
+- Away from a surface for more than 6 months, the comeback starts from the lower of
+  your last grade there and your outdoor-based anchor — never harder than a shorter
+  break would give you.
+
 ---
 
 ## 6. Test Sessions

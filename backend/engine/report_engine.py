@@ -428,6 +428,7 @@ def _build_stimulus_balance(
 def _build_progression(
     working_loads: Dict[str, Any],
     week_start: str,
+    user_state: Optional[Dict[str, Any]] = None,
 ) -> List[Dict[str, Any]]:
     """Build progression section from working_loads entries updated this week."""
     start = datetime.strptime(week_start, "%Y-%m-%d").date()
@@ -468,6 +469,11 @@ def _build_progression(
             # Grade-based progression
             prev_grade = entry.get("last_used_grade")
             next_grade = entry.get("next_target_grade")
+            if next_grade and user_state is not None:
+                # B365: limit family stores the BASE; report the grade the
+                # app prescribes next (re-entry discount / floor applied).
+                from backend.engine.progression_v1 import limit_next_target
+                next_grade = limit_next_target(user_state, entry, updated) or next_grade
             if prev_grade and next_grade:
                 result.append({
                     "exercise_id": exercise_id,
@@ -1018,7 +1024,7 @@ def generate_weekly_report(
         week_start,
     )
     progression = _build_progression(
-        user_state.get("working_loads") or {}, week_start
+        user_state.get("working_loads") or {}, week_start, user_state
     )
     outdoor = _build_outdoor(outdoor_filtered)
     days = _build_days(week_plan, outdoor_filtered, free_sessions, week_start)

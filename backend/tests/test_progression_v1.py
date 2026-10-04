@@ -191,7 +191,16 @@ def test_boulder_grade_progression_changes_next_target():
     new_grade = limit_2["suggested"]["suggested_boulder_target"]["target_grade"]
 
     assert normalize_font_grade(base_grade) is not None
-    assert new_grade == "6C"  # 7B - 2 whole grades (very_hard)
+    # very_hard still writes 7B - 2 whole grades = 6C to the memory, but B365's
+    # per-surface floor (best grade on the surface in 180 days - 2 half grades)
+    # keeps the prescribed target at 7A: one bad limit session on the Kilter
+    # does not drop it by two letters.
+    entry = next(
+        e for e in updated_state["working_loads"]["entries"]
+        if e["exercise_id"] == "limit_bouldering"
+    )
+    assert entry["next_target_grade"] == "6C"
+    assert new_grade == "7A"
 
 
 def test_working_load_update_from_feedback():
@@ -356,8 +365,27 @@ def test_b260_limit_bouldering_anchors_to_redpoint():
     limit = next(i for i in out["sessions"][0]["exercise_instances"]
                  if i["exercise_id"] == "limit_bouldering")
     bt = limit["suggested"]["suggested_boulder_target"]
-    assert bt["target_grade"] == "7C"      # boulder_max_rp + 0
-    assert bt["target_grade_low"] == "7B"  # boulder_max_rp - 1  => band 7B->7C
+    # B365: the fixture gym's first surface is the Kilter. A board anchors 2
+    # half grades under the outdoor RP (a Kilter 7A is not a gym 7A): 7C → 7B.
+    # Still anchored to boulder_max_rp, NOT the 7B Kilter benchmark.
+    assert bt["surface_selected"] == "board_kilter"
+    assert bt["target_grade"] == "7B"       # boulder_max_rp + 0 - 2 half (board)
+    assert bt["target_grade_low"] == "7A"   # target - 2 half grades
+    assert bt["target_source"] == "anchor"
+
+
+def test_b365_limit_bouldering_gym_boulder_anchor_is_redpoint():
+    """On the gym boulder wall the anchor stays boulder_max_rp + offset (7C)."""
+    us = _state_with_assessment_grades()
+    day = _resolved_day_for_progression()
+    for g in us["equipment"]["gyms"]:
+        g["equipment"] = [e for e in g.get("equipment", []) if not str(e).startswith("board_") and e != "spraywall"] + ["gym_boulder"]
+    out = inject_targets(day, us)
+    bt = next(i for i in out["sessions"][0]["exercise_instances"]
+              if i["exercise_id"] == "limit_bouldering")["suggested"]["suggested_boulder_target"]
+    assert bt["surface_selected"] == "gym_boulder"
+    assert bt["target_grade"] == "7C"
+    assert bt["target_grade_low"] == "7B"
 
 
 def test_b260_limit_bouldering_falls_back_to_benchmark_when_grade_missing():
@@ -376,7 +404,8 @@ def test_b260_other_limit_exercises_unchanged():
     """B260 regression, updated by B289 group A: the other 3 limit boulder
     exercises now share limit_bouldering's rich suggested_boulder_target path
     (surface-keyed memory) instead of the flat suggested_grade. Anchor is
-    unchanged: boulder_max_rp + 0 → 7C."""
+    unchanged: boulder_max_rp + 0 → 7C, and B365 drops it 2 half grades on a
+    board (the fixture gym selects the Kilter) → 7B, band low 7A."""
     us = _state_with_assessment_grades()
     for ex in ("board_limit_boulders", "spray_wall_limit", "system_board_limit"):
         day = {
@@ -393,8 +422,8 @@ def test_b260_other_limit_exercises_unchanged():
         sug = out["sessions"][0]["exercise_instances"][0]["suggested"]
         assert "suggested_grade" not in sug, ex  # B289: no more flat path
         bt = sug["suggested_boulder_target"]
-        assert bt["target_grade"] == "7C", ex
-        assert bt["target_grade_low"] == "7B", ex
+        assert bt["target_grade"] == "7B", ex
+        assert bt["target_grade_low"] == "7A", ex
 
 
 def test_b260_rich_boulder_target_payload_intact():
@@ -406,7 +435,7 @@ def test_b260_rich_boulder_target_payload_intact():
     assert bt["schema_version"] == "boulder_grade_font_v0"
     assert bt["surface_options"] == ["board_kilter", "spraywall"]
     assert bt["surface_selected"] == "board_kilter"
-    assert bt["target_grade"] == "7C" and bt["target_grade_low"] == "7B"
+    assert bt["target_grade"] == "7B" and bt["target_grade_low"] == "7A"  # B365 board anchor
     assert bt["intensity_label"] == "hard"
     assert bt["attempt_guidance"]  # intent=power -> guidance present
     assert bt["rest_guidance"]

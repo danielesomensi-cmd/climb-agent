@@ -261,7 +261,12 @@ def _baselines_section(state: Dict[str, Any]) -> str:
                 if entry.get(key) is not None:
                     load_bits.append(f"{label} {entry[key]} kg")
         if entry.get("next_target_grade"):
-            load_bits.append(f"next target grade {entry['next_target_grade']}")
+            # B365: for the limit-boulder family the stored grade is the BASE
+            # (re-entry discount and per-surface floor apply at read). Quote
+            # the grade the session card prescribes today instead.
+            from backend.engine.progression_v1 import limit_next_target
+            prescribed = limit_next_target(state, entry, date.today().isoformat())
+            load_bits.append(f"next target grade {prescribed or entry['next_target_grade']}")
         if not load_bits:
             continue
         lines.append(
