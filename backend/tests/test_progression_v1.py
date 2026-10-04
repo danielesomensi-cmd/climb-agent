@@ -191,15 +191,14 @@ def test_boulder_grade_progression_changes_next_target():
     new_grade = limit_2["suggested"]["suggested_boulder_target"]["target_grade"]
 
     assert normalize_font_grade(base_grade) is not None
-    # very_hard still writes 7B - 2 whole grades = 6C to the memory, but B365's
-    # per-surface floor (best grade on the surface in 180 days - 2 half grades)
-    # keeps the prescribed target at 7A: one bad limit session on the Kilter
-    # does not drop it by two letters.
+    # A291: very_hard writes 7B - 2 HALF grades = 7A to the memory (it was
+    # 7B - 2 whole letters = 6C). B365's per-surface floor (best grade on the
+    # surface in 180 days - 2 half grades) is 7A too, so the target is 7A.
     entry = next(
         e for e in updated_state["working_loads"]["entries"]
         if e["exercise_id"] == "limit_bouldering"
     )
-    assert entry["next_target_grade"] == "6C"
+    assert entry["next_target_grade"] == "7A"
     assert new_grade == "7A"
 
 

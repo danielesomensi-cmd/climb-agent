@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+from backend.engine.assessment_v1 import GRADE_ORDER as _LEAD_GRADE_ORDER
 from backend.engine.assessment_v1 import _FINGER_BENCHMARK
 
 FONT_GRADES: List[str] = [
@@ -18,7 +19,20 @@ FONT_GRADES: List[str] = [
 ]
 FONT_GRADE_TO_INDEX = {grade: idx for idx, grade in enumerate(FONT_GRADES)}
 
-# Whole-grade scale for step_grade (vocabulary §2.10.1: no half-grades).
+# A291 (R6a): the French lead ladder in the engine's canonical UPPERCASE
+# (contract B344 — the wire value is uppercase, `grade_scale` tells the client
+# which casing to render). Same half-grade ladder as assessment_v1.GRADE_ORDER,
+# which also covers 9A/9A+ (the Font list stops at 8C+).
+FRENCH_GRADES: List[str] = [g.upper() for g in _LEAD_GRADE_ORDER]
+FRENCH_GRADE_TO_INDEX = {grade: idx for idx, grade in enumerate(FRENCH_GRADES)}
+_GRADE_SCALES: Dict[str, Tuple[List[str], Dict[str, int]]] = {
+    "font": (FONT_GRADES, FONT_GRADE_TO_INDEX),
+    "french": (FRENCH_GRADES, FRENCH_GRADE_TO_INDEX),
+}
+
+# Whole-grade scale for the LEGACY step_grade. Since A291 no engine path calls
+# it any more (every prescription steps by half grades with step_grade_scaled);
+# kept only for compatibility, pinned by test_grade_arithmetic.py.
 WHOLE_FONT_GRADES: List[str] = [
     "5A", "5B", "5C",
     "6A", "6B", "6C",
@@ -590,10 +604,10 @@ def normalize_font_grade(grade: str | None) -> Optional[str]:
 def grade_scale_for_ref(grade_ref: str | None) -> str:
     """Which grade scale a `grade_ref` anchor is expressed in: french | font.
 
-    B344 (display only). `step_grade` works on a whole-grade LETTER scale that
-    happens to be shared by Font and French — 6a/6b/6c/7a is the same ladder as
-    6A/6B/6C/7A — so the arithmetic is correct for both (vocabulary §2.10.1).
-    What was wrong is the CASING it hands to the UI: a rope drill anchored to
+    B344 (display only); since A291 also the ladder `step_grade_scaled` steps
+    on (french = assessment_v1.GRADE_ORDER, up to 9A+; font = FONT_GRADES).
+    The letters are shared by Font and French — 6a/6b/6c/7a reads like
+    6A/6B/6C/7A — and what B344 fixed is the CASING handed to the UI: a rope drill anchored to
     `lead_max_os` came out as "6C", and uppercase 6C reads as a Font BOULDER
     grade (~7a+ French), i.e. far harder than the 6c French actually meant.
 
@@ -605,11 +619,51 @@ def grade_scale_for_ref(grade_ref: str | None) -> str:
     return "french" if str(grade_ref or "").startswith("lead_") else "font"
 
 
+def normalize_grade_on_scale(grade: str | None, scale: str) -> Optional[str]:
+    """A291: canonical uppercase grade on `scale` (font | french), or None.
+
+    Unknown scale names fall back to font. A grade that is not on the ladder
+    (e.g. "9a" on the Font scale, "V5", "") is None — never a silent default.
+    """
+    if grade is None:
+        return None
+    ladder, index = _GRADE_SCALES.get(scale) or _GRADE_SCALES["font"]
+    cleaned = str(grade).strip().upper().replace(" ", "")
+    return cleaned if cleaned in index else None
+
+
+def step_grade_half(grade: str | None, half_steps: int, scale: str) -> Optional[str]:
+    """A291 (R6a): step `grade` by HALF grades on `scale`; the '+' survives.
+
+    6c → +1 → 6C+, 7A+ → −1 → 7A. Clamped to the ends of the ladder
+    (font 5A..8C+, french 5A..9A+). Unknown grade → None plus a warning:
+    callers must not emit a prescription they cannot compute.
+    """
+    norm = normalize_grade_on_scale(grade, scale)
+    if norm is None:
+        logger.warning("step_grade_half: unknown grade %r on scale %r — no grade emitted", grade, scale)
+        return None
+    ladder, index = _GRADE_SCALES.get(scale) or _GRADE_SCALES["font"]
+    idx = max(0, min(len(ladder) - 1, index[norm] + int(half_steps)))
+    return ladder[idx]
+
+
+def step_grade_scaled(grade: str | None, letter_offset: int, scale: str) -> Optional[str]:
+    """A291 (R6a): apply a catalog `grade_offset` on the half-grade ladder.
+
+    The catalog unit stays ONE LETTER (vocabulary §2.10.1): an offset of −1
+    is 2 half grades, so 7a+ −1 → 6C+ (it used to strip the '+' first and
+    give 6C — B-LEAD-HALF-GRADE-ROUNDING, closed). Output is canonical
+    uppercase on `scale`; unknown grade → None (it used to become 6C).
+    """
+    return step_grade_half(grade, 2 * int(letter_offset), scale)
+
+
 def step_grade(grade: str, steps: int) -> str:
-    """Apply an integer offset on the whole-grade scale (vocabulary 2.10.1).
+    """LEGACY whole-grade step (pre-A291 §2.10.1). No engine caller since A291.
 
     Input + modifiers are stripped (rounded to the base whole grade).
-    Output is always a whole grade without +.
+    Output is always a whole grade without +. Use step_grade_scaled.
     """
     cleaned = str(grade).strip().upper().replace(' ', '').replace('+', '')
     if cleaned not in _WHOLE_GRADE_TO_INDEX:
@@ -661,6 +715,10 @@ def _load_catalog_cache() -> Dict[str, Dict[str, Any]]:
                 "role": e.get("role") or [],
                 # B363: category "test" marks test-only exercises (no memory).
                 "category": e.get("category"),
+                # A291: apply_feedback reads grade_ref from here when the
+                # feedback has no planned instance (custom sessions) — before,
+                # the key was absent and the fallback silently read {}.
+                "prescription_defaults": dict(e.get("prescription_defaults") or {}),
                 "loading_pin": "loading_pin" in (
                     (e.get("equipment_required") or []) + (e.get("equipment_required_any") or [])
                 ),
@@ -765,10 +823,9 @@ def _select_surface(*, preferred: str | None, options: List[str], gym_id: str | 
 def _step_font_half(grade: str | None, half_steps: int) -> Optional[str]:
     """B365: step a Font grade by HALF grades on FONT_GRADES ('+' survives).
 
-    Local to the limit memory until R6a generalises half-grade arithmetic;
-    `step_grade` (whole letters) stays the engine-wide helper. Unknown grade →
-    None so callers fall back instead of inventing a value. Clamped to the ends
-    of the scale.
+    The limit family is always Font. Same arithmetic as A291's
+    `step_grade_half(..., "font")` but silent: the limit callers already fall
+    back with `or`. Unknown grade → None. Clamped to the ends of the scale.
     """
     norm = normalize_font_grade(grade)
     if norm is None:
@@ -838,10 +895,14 @@ def _limit_anchor_target(
     """
     grades = ((user_state.get("assessment") or {}).get("grades") or {})
     anchor_ref = prescription.get("grade_ref") or "boulder_max_rp"
-    anchor_raw = grades.get(anchor_ref)
-    from_assessment = anchor_raw is not None
-    anchor_grade = str(anchor_raw).strip().upper().replace(" ", "") if from_assessment else benchmark_grade
-    target = step_grade(anchor_grade, int(prescription.get("grade_offset") or 0))
+    offset = int(prescription.get("grade_offset") or 0)
+    # A291: half-grade ladder, the '+' of the anchor survives (7B+ + 0 → 7B+,
+    # it used to become 7B). An anchor that is not a Font grade falls back to
+    # the benchmark instead of the old silent 6C.
+    target = step_grade_scaled(grades.get(anchor_ref), offset, "font") if grades.get(anchor_ref) is not None else None
+    from_assessment = target is not None
+    if target is None:
+        target = step_grade_scaled(benchmark_grade, offset, "font") or benchmark_grade
     if from_assessment and surface in LIMIT_BOARD_SURFACES:
         target = _step_font_half(target, -LIMIT_BOARD_ANCHOR_HALF_STEPS) or target
     return target
@@ -1604,23 +1665,29 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             if grade_ref and not _is_limit_grade_exercise(ex_id):
                 grades = ((user_state.get("assessment") or {}).get("grades") or {})
                 ref_grade_raw = grades.get(grade_ref)
+                ref_scale = grade_scale_for_ref(grade_ref)
                 if ref_grade_raw is not None:
-                    # Normalize: lead grades are lowercase French (e.g. "7a+"), convert to uppercase Font
-                    ref_grade_str = str(ref_grade_raw).strip().upper().replace(" ", "")
+                    # A291 (R6a): half-grade ladder of the anchor's own scale
+                    # (french for lead_*, font for boulder_*); the '+' of the
+                    # reference survives, output canonical uppercase (B344).
+                    # Unknown reference grade → no suggested_grade at all
+                    # (it used to come out as a silent 6C-relative value).
                     grade_offset = int(prescription.get("grade_offset") or 0)
-                    suggested_grade = step_grade(ref_grade_str, grade_offset)
-                    suggested["suggested_grade"] = suggested_grade
-                    suggested["grade_ref"] = grade_ref
-                    suggested["grade_offset"] = grade_offset
-                    suggested["grade_scale"] = grade_scale_for_ref(grade_ref)
+                    suggested_grade = step_grade_scaled(ref_grade_raw, grade_offset, ref_scale)
+                    if suggested_grade is not None:
+                        suggested["suggested_grade"] = suggested_grade
+                        suggested["grade_ref"] = grade_ref
+                        suggested["grade_offset"] = grade_offset
+                        suggested["grade_scale"] = ref_scale
                 # B289 group B: a remembered endurance target (written by
                 # apply_feedback after 2 concordant feedbacks) overrides the
                 # static assessment anchor. 60-day freshness gate as for every
                 # grade entry.
                 if _grade_relative_group(ex_id) == "endurance":
                     mem_entry = _best_entry(user_state, ex_id, {}, out.get("date") or "")
-                    if mem_entry and normalize_font_grade(mem_entry.get("next_target_grade")):
-                        suggested["suggested_grade"] = mem_entry["next_target_grade"]
+                    remembered = normalize_grade_on_scale((mem_entry or {}).get("next_target_grade"), ref_scale)
+                    if mem_entry and remembered:
+                        suggested["suggested_grade"] = remembered
                         suggested["grade_ref"] = grade_ref
                         suggested["grade_source"] = "working_loads"
                         suggested["grade_scale"] = grade_scale_for_ref(grade_ref)
@@ -1770,6 +1837,12 @@ def _rule_midpoint_pct(user_state: Dict[str, Any], label: str) -> float:
 
 
 def _grade_delta_for_feedback(label: str) -> int:
+    """Limit-family step per feedback label, in HALF grades (A291).
+
+    very_easy +2, easy +1, ok 0, hard −1, very_hard −2 half grades. Before
+    A291 the same numbers were whole letters (easy on 7A → 7B), a full grade
+    per session on a max-intensity target.
+    """
     return {
         "very_easy": 2,
         "easy": 1,
@@ -2468,14 +2541,16 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
 
             delta = _grade_delta_for_feedback(feedback_label)
             if reentry_fields is None:
-                next_grade = step_grade(used_grade, delta)
+                # A291: half grades, the '+' survives ('ok' on 7A+ stays 7A+;
+                # step_grade used to strip it to 7A).
+                next_grade = _step_font_half(used_grade, delta) or used_grade
             elif reentry_fields["reentry_exposures"] < LIMIT_REENTRY_EXPOSURES:
                 # Still re-entering: keep the BASE as the memory (the read
                 # applies the discount), never the discounted grade.
                 next_grade = reentry_fields["reentry_base_grade"]
             else:
                 # Re-entry closes: progression relative to the base.
-                next_grade = _step_font_half(reentry_fields["reentry_base_grade"], 2 * delta) or reentry_fields["reentry_base_grade"]
+                next_grade = _step_font_half(reentry_fields["reentry_base_grade"], delta) or reentry_fields["reentry_base_grade"]
             setup, setup_key = _progression_setup_and_key(exercise_id, {"surface": surface_selected})
             entry = _find_working_load_entry(updated, exercise_id, setup)
             entry.update(
@@ -2498,13 +2573,21 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
         elif fb_load_model == "grade_relative" and _grade_relative_group(exercise_id) == "endurance":
             # B289 group B (intervals/continuous): the grade is an intensity
             # target, not a max — one easy/hard session is noise. The target
-            # steps ±1 whole grade only after 2 CONSECUTIVE CONCORDANT
+            # steps ±1 HALF grade (A291; was a whole letter) only after 2
+            # CONSECUTIVE CONCORDANT
             # feedbacks (easy/very_easy up, hard/very_hard down); "ok" resets
             # the streak and re-anchors the target to the grade actually used.
             # Memory keyed on exercise_id alone (no setup: the circuit grade
             # is gym-relative, but per-surface splits would fragment the
             # little signal endurance work produces).
-            used_grade = normalize_font_grade(item.get("used_grade"))
+            # A291: the ladder follows the anchor's scale — planned grade_ref,
+            # else the catalog default (custom sessions send no planned
+            # instance). French covers 9A/9A+, which the Font list lacks.
+            endurance_scale = grade_scale_for_ref(
+                planned_prescription.get("grade_ref")
+                or (catalog_info.get("prescription_defaults") or {}).get("grade_ref")
+            )
+            used_grade = normalize_grade_on_scale(item.get("used_grade"), endurance_scale)
             if not used_grade:
                 continue
             if feedback_label in {"easy", "very_easy"}:
@@ -2522,7 +2605,7 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
             else:
                 streak_count = prev_count + 1 if direction == prev_dir else 1
                 if streak_count >= 2:
-                    next_grade = step_grade(used_grade, direction)
+                    next_grade = step_grade_half(used_grade, direction, endurance_scale) or used_grade
                     streak_dir, streak_count = 0, 0
                 else:
                     next_grade = used_grade

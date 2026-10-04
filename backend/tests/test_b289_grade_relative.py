@@ -73,14 +73,14 @@ def test_board_limit_writes_surface_keyed_entry():
     entry = next(e for e in _entries(out) if e["exercise_id"] == "board_limit_boulders")
     assert entry["key"] == "board_limit_boulders|surface=board_kilter"
     assert entry["last_used_grade"] == "7A"
-    assert entry["next_target_grade"] == "7B"  # easy → +1 whole grade
+    assert entry["next_target_grade"] == "7A+"  # A291: easy → +1 half grade
 
 
 def test_limit_family_very_hard_steps_down_two():
     state = _user_state()
     out = apply_feedback(_log("spray_wall_limit", "very_hard", "7B", surface_selected="spraywall"), state)
     entry = next(e for e in _entries(out) if e["exercise_id"] == "spray_wall_limit")
-    assert entry["next_target_grade"] == "6C"  # very_hard → -2 whole grades
+    assert entry["next_target_grade"] == "7A"  # A291: very_hard → -2 half grades
 
 
 def test_limit_family_memory_overrides_suggest_target():
@@ -95,7 +95,7 @@ def test_limit_family_memory_overrides_suggest_target():
     }
     out = inject_targets(day, state)
     target = out["sessions"][0]["exercise_instances"][0]["suggested"]["suggested_boulder_target"]
-    assert target["target_grade"] == "7B"  # from memory, not the 7A anchor
+    assert target["target_grade"] == "7A+"  # from memory (A291: easy = +1 half), not the 7A anchor
 
 
 def test_limit_bouldering_unchanged_regression():
@@ -104,7 +104,7 @@ def test_limit_bouldering_unchanged_regression():
     out = apply_feedback(_log("limit_bouldering", "very_hard", "7B", surface_selected="board_kilter"), state)
     entry = next(e for e in _entries(out) if e["exercise_id"] == "limit_bouldering")
     assert entry["key"] == "limit_bouldering|surface=board_kilter"
-    assert entry["next_target_grade"] == "6C"
+    assert entry["next_target_grade"] == "7A"  # A291: very_hard = −2 half grades
 
 
 # ─── Group B: endurance — streak rule ────────────────────────────────────
@@ -126,7 +126,7 @@ def test_endurance_two_concordant_easy_step_up():
     state = apply_feedback(_log("four_by_four_bouldering", "easy", "6B", date="2026-01-05"), state)
     out = apply_feedback(_log("four_by_four_bouldering", "very_easy", "6B", date="2026-01-08"), state)
     entry = next(e for e in _entries(out) if e["exercise_id"] == "four_by_four_bouldering")
-    assert entry["next_target_grade"] == "6C"  # 2 concordant → +1 (never ±2)
+    assert entry["next_target_grade"] == "6B+"  # A291: 2 concordant → +1 half grade (never ±2)
     assert entry["grade_streak_count"] == 0  # streak consumed
     assert entry["grade_streak_direction"] == 0
 
@@ -136,7 +136,7 @@ def test_endurance_two_concordant_hard_step_down():
     state = apply_feedback(_log("route_intervals", "hard", "6C", date="2026-01-05"), state)
     out = apply_feedback(_log("route_intervals", "very_hard", "6C", date="2026-01-08"), state)
     entry = next(e for e in _entries(out) if e["exercise_id"] == "route_intervals")
-    assert entry["next_target_grade"] == "6B"
+    assert entry["next_target_grade"] == "6B+"  # A291: −1 half grade
 
 
 def test_endurance_discordant_feedback_resets_streak():
@@ -181,7 +181,7 @@ def test_endurance_memory_overrides_static_suggestion():
     }
     out = inject_targets(day, state)
     suggested = out["sessions"][0]["exercise_instances"][0]["suggested"]
-    assert suggested["suggested_grade"] == "6C"  # memory, not 6B-1
+    assert suggested["suggested_grade"] == "6B+"  # memory (A291 half step), not 6B-1
     assert suggested["grade_source"] == "working_loads"
 
 

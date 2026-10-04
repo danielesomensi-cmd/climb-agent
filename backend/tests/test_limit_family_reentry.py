@@ -400,12 +400,12 @@ def test_three_sessions_ok_reentry_then_base():
 
 
 def test_reentry_closing_applies_label_delta_to_base():
-    """Second re-entry session 'easy' → base + 1 letter (2 half grades) = 7C,
-    regardless of the discounted grade that was actually climbed."""
+    """Second re-entry session 'easy' → base + 1 half grade (A291; was a whole
+    letter) = 7B+, regardless of the discounted grade that was actually climbed."""
     state = _feedback(_state(), "2026-10-05", "very_easy", "7A+")
     assert _entry(state, "limit_bouldering", "board_kilter")["next_target_grade"] == "7B"
     state = _feedback(state, "2026-10-12", "easy", "7A+")
-    assert _entry(state, "limit_bouldering", "board_kilter")["next_target_grade"] == "7C"
+    assert _entry(state, "limit_bouldering", "board_kilter")["next_target_grade"] == "7B+"
 
 
 def test_normal_progression_after_reentry_unchanged():
@@ -413,7 +413,7 @@ def test_normal_progression_after_reentry_unchanged():
     state = _feedback(state, "2026-10-12", "ok", "7A+")
     state = _feedback(state, "2026-10-19", "easy", "7B")
     e = _entry(state, "limit_bouldering", "board_kilter")
-    assert e["next_target_grade"] == "7C"  # step_grade(7B, +1) as before B365
+    assert e["next_target_grade"] == "7B+"  # A291: easy = +1 half grade
     assert "reentry_base_grade" not in e
 
 
@@ -431,7 +431,7 @@ def test_first_ever_feedback_has_no_reentry():
     state["working_loads"]["entries"] = []
     out = _feedback(state, "2026-10-05", "easy", "7A")
     e = _entry(out, "limit_bouldering", "board_kilter")
-    assert e["next_target_grade"] == "7B"
+    assert e["next_target_grade"] == "7A+"  # A291: easy = +1 half grade
     assert "reentry_base_grade" not in e
 
 

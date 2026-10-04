@@ -312,6 +312,22 @@ gym 7A. It does not matter which limit exercise the session picked: a grade from
 - Away from a surface for more than 6 months, the comeback starts from the lower of
   your last grade there and your outdoor-based anchor — never harder than a shorter
   break would give you.
+- Your feedback moves the target by **half a grade** at a time: *easy* +½ (7A → 7A+),
+  *very easy* +1, *ok* keeps it, *hard* −½, *very hard* −1. The `+` is never lost:
+  an *ok* at 7A+ stays 7A+.
+
+### Grades on endurance and technique drills
+
+Rope intervals, threshold laps, 4×4s and drills get a grade worked out from your
+onsight or redpoint (e.g. "one grade below your onsight"). Grades with a `+` keep it:
+with a 7a+ onsight, route intervals one grade below come out as **6c+** (before
+October 2026 the `+` was dropped and they came out as 6c). When your endurance
+feedback agrees twice in a row (two *easy* or two *hard*), the remembered grade moves
+by half a grade.
+
+A session you changed with the pencil keeps the exercises you chose, but its grade
+targets still follow these rules: from today on they are worked out again each time
+the week loads. Sessions you already did, skipped, or that are in the past stay exactly as they were.
 
 ---
 

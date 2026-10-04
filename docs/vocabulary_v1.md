@@ -423,12 +423,43 @@ Canonical values:
 
 Integer offset from the reference grade. Range: **-6 to +1**.
 
-Unit: whole Font/UIAA grades (no half-grades). Scale: 6a=0, 6b=1, 6c=2, 7a=3, 7b=4, 7c=5, 8a=6, ...
-The "+" modifier is not an increment — 6a+ falls between 6a and 6b.
+Unit: **one letter** (6a → 6b), i.e. **2 half grades** — the catalog values below
+are unchanged. Since A291 (R6a) the arithmetic runs on the **half-grade ladder**,
+where the "+" IS a step: `6a, 6a+, 6b, 6b+, …`. The ladder is the anchor's own
+scale (`grade_scale_for_ref`): `french` = `assessment_v1.GRADE_ORDER` (5a … 9a+) for
+`lead_*`, `font` = `FONT_GRADES` (5A … 8C+) for `boulder_*`. Results clamp to the
+ends of the ladder. Helper: `progression_v1.step_grade_scaled(grade, letter_offset,
+scale)` (`step_grade_half` for half-grade steps); output canonical uppercase (B344).
 
 Examples:
 - `lead_max_os=7c`, offset=-2 → prescribed grade: **7a**
+- `lead_max_os=7a+`, offset=-1 → **6c+** (before A291: 6c — the "+" was stripped first)
+- `lead_max_os=9a`, offset=-1 → **8c** (before A291: anything off the Font list became 6C-relative)
 - `boulder_max_rp=6A`, offset=-2 → prescribed grade: **5B**
+
+A reference grade that is not on its ladder (e.g. `V9`, an empty string) emits **no**
+`suggested_grade` (plus a log warning) — it used to fall back silently to 6C.
+`step_grade` (whole letters, strips the "+") is kept only as a legacy helper; no
+engine path calls it.
+
+**Pencil-edited sessions (A291, DECISIONS "Grades").** `_auto_resolve` never re-resolves a
+`_user_edited` session (B153b), so `engine/target_refresh.refresh_edited_session_targets`
+re-runs `inject_targets` on its engine-placed instances and copies back **only** the
+grade-target keys (`GRADE_TARGET_KEYS`: `suggested_grade`, `grade_ref`, `grade_offset`,
+`grade_scale`, `grade_source`, `suggested_boulder_target`; a key the fresh run no longer
+emits is removed). Exercises, prescriptions, loads and `user_added` instances do not move.
+Only pending sessions dated today or later: done/skipped/past sessions are never touched.
+
+**Units by module** (they differ on purpose — check before reusing a number):
+
+| where | unit |
+|-------|------|
+| `prescription_defaults.grade_offset` (exercise catalog) | letters (×2 half grades) |
+| limit-family feedback delta (`_grade_delta_for_feedback`) | half grades: very_easy +2, easy +1, ok 0, hard −1, very_hard −2 |
+| endurance memory step (B289 group B, 2 concordant feedbacks) | ±1 half grade |
+| limit memory (`LIMIT_*` constants, B365) | half grades |
+| free-session presets (`free_session.offset_grade`) | half grades, Font ladder |
+| outdoor pitch ladder (A265) | half grades |
 
 Reference values (from literature):
 
@@ -493,11 +524,10 @@ wire, the client picks the casing (`displayPrescribedGrade` in `gradeUtils.ts`).
 Nothing downstream branches on it, and an older cached payload without the field
 renders exactly as before.
 
-⚠️ **Not changed:** the `+` is still stripped from the reference grade before the
-offset is applied, so an athlete with `lead_max_os = 7a+` and offset −1 gets
-`6c`, not `6c+` — a half-grade rounded **down**. That is this spec's stated
-behaviour ("The '+' modifier is not an increment"), reaffirmed in B344, not an
-oversight. Changing it is a methodology decision, not a bug fix.
+✅ **Changed in A291 (R6a, decision Daniele 2026-10-04):** the `+` of the
+reference grade is no longer stripped before the offset — `lead_max_os = 7a+`
+and offset −1 gives `6C+` (rendered `6c+`), not `6C`. Closes
+B-LEAD-HALF-GRADE-ROUNDING, which B344 had left open as a methodology decision.
 
 ---
 
@@ -570,7 +600,7 @@ Entries of the `climbing_limit_boulder` family (`limit_bouldering`, `board_limit
 - **Read-only consumers** (coach prompt, weekly report progression) quote `limit_next_target()` — the grade the card prescribes — not the raw `next_target_grade`, which is the base during a re-entry.
 - **Band:** `target_grade_low = target_grade − 2 half grades`, computed from the final target.
 
-`suggested_boulder_target` gains two additive fields: `target_source` (`anchor` | `memory` | `reentry`) and, while re-entering, `reentry: {base_grade, exposures_done, exposures_required, started_at}`. All the thresholds above are engineering constants (`LIMIT_*` in `progression_v1.py`), not literature values. Half-grade arithmetic here is local to the limit family; `step_grade` (whole letters, §2.10.1) is unchanged elsewhere.
+`suggested_boulder_target` gains two additive fields: `target_source` (`anchor` | `memory` | `reentry`) and, while re-entering, `reentry: {base_grade, exposures_done, exposures_required, started_at}`. All the thresholds above are engineering constants (`LIMIT_*` in `progression_v1.py`), not literature values. Since A291 the limit feedback delta is in half grades too (easy on 7A → 7A+, it was 7B), and a re-entry that closes applies that half-grade delta to the base. The anchor keeps the "+" of `boulder_max_rp` (7B+ + 0 → 7B+).
 
 #### `working_loads.rules.adjustment_policy`
 
@@ -931,6 +961,22 @@ Defined once in `backend/engine/stimulus.py` and `backend/engine/retest_policy.p
 - `test_confidence(...)` → `confidence`: `high` | `low` (computed: < 2 exposure days in the 21 days before) | `None` (no family, e.g. repeater). The stored `confidence` field is informational only. From B364 the test log stores the computed value on `tests.*[]` (+ `confidence_basis {exposures, window_start, window_end, min_required}`, `delta_pct`, `trend`: `stable` (|Δ| < 5 %) | `up` | `down`, `previous_date`) and on the baseline (`baselines.hangboard[0].confidence`, `bodyweight_at_test_kg`; `baselines.pulling.confidence`).
 - `reentry_step(...)` → `{n, factor, gap_days, run_start, last_exposure, run_dates, in_reentry}`; gap `REENTRY_GAP_D` = 14; factor 0.90 (n ≤ 1) / 0.95 (n = 2) / 1.0 (n ≥ 3). `extra_dates` (B364) adds days the view cannot see (the `tests.*` dates).
 - Constants: `FINGER_GAP_H` 48, `RETEST_BLOCK_H` 72, `PULL_TEST_BLOCK_H` 48, `HEAVY_PULL_PCT_1RM` 0.85, `LOW_CONF_RETEST_D` 28, `VERY_HARD_BLOCK_D` 3, `PRE_TRIP_BLOCK_D` 10, `RETEST_BLOCKED_PHASES` (performance, deload), `HANG_PCT_PER_S` 0.015.
+
+### 4.4b Closed-loop stimulus categories (`stimulus_recency`, A291)
+
+`closed_loop_v1.STIMULUS_CATEGORIES` (closed set): `finger_strength` | `boulder_power` | `endurance` | `complementaries`. Written by `apply_day_result_to_user_state` into `stimulus_recency.<category>`; read by `report_engine` (stimulus balance) and `body_part_picker` — never by the planner. Not the same thing as the A288 stimulus **families** above.
+
+Since A291 a session's categories come from the session catalog's `intent.primary_goal` (planned sessions in the week plan carry `intent: null`, so the old intent branch never fired):
+
+| primary_goal | categories |
+|---|---|
+| `limit_projecting`, `contact_strength` | boulder_power + finger_strength |
+| `finger_max_strength`, `finger_strength_endurance` | finger_strength |
+| `power_endurance`, `aerobic_capacity`, `aerobic_endurance` | endurance |
+| `route_projecting` | endurance + complementaries |
+| anything else (technique_*, strength_general, core, regeneration, …) | complementaries |
+
+The 2 catalog sessions without a primary_goal are mapped explicitly: `finger_aerobic_base`, `finger_endurance_short` → finger_strength + endurance. The planner tag `finger` always adds finger_strength. Ids the catalog does not know (custom, ad-hoc, outdoor) use the legacy substring rule, where `power` no longer matches `power_endurance` (power_endurance_gym used to count as boulder_power).
 
 ### 4.5 Retest decisions and retest status (A289)
 

@@ -30,6 +30,7 @@ from backend.engine.planner_v2 import (
 )
 from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
+from backend.engine.target_refresh import refresh_edited_session_targets
 from backend.engine.weekly_override import merge_override_into_availability
 from backend.engine import retest_policy as _retest_policy
 
@@ -126,6 +127,10 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                     session_entry.get("_user_edited")
                     and session_entry.get("resolved")
                 ):
+                    # A291: an edited FUTURE pending session keeps its
+                    # exercises but its grade targets follow the current
+                    # ladder (no-op on done/skipped/past sessions).
+                    refresh_edited_session_targets(session_entry, day_entry.get("date"), state)
                     continue
 
                 session_id = session_entry.get("session_id", "")
