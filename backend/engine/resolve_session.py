@@ -463,6 +463,11 @@ def pick_best_exercise_p0(
     user_age: Optional[int] = None,
     experience_years: Optional[float] = None,
     variety_seed: Optional[str] = None,
+    rotation: Optional[Dict[str, Any]] = None,
+    session_local_ids: Optional[set] = None,
+    active_only: bool = False,
+    strict_test_exemption: bool = False,
+    dedup_after_filters: bool = False,
 ) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     P0: hard filters only:
@@ -478,6 +483,20 @@ def pick_best_exercise_p0(
     Deterministic tie-break: md5(exercise_id | variety_seed) when a seed is
     provided (B274 — weekly rotation, no alphabetical bias); exercise_id
     ascending otherwise (legacy, date-less callers).
+
+    A290 (tested athletes only — every new kwarg defaults to the pre-A290
+    behaviour, so untested callers are bit-for-bit unchanged):
+      - ``active_only``: Stage 0 drops ``active: false`` exercises.
+      - ``strict_test_exemption``: the D35 gate exempts a test exercise only
+        when the BLOCK asks for role ``test`` (max_hang_7s is role
+        ['main','test'] and used to slip through to beginners as a main).
+      - ``dedup_after_filters``: Stage 3b (history dedup) runs after Stage 6,
+        on a pool already narrowed by intensity/domain/pattern/limitations, so
+        a saturated history can no longer push the pick out of the target
+        (no more 'dip' as a pull, 'glute_bridge' as core).
+      - ``rotation``: a ``phase_anchor.plan_block`` plan. History is ignored
+        (no 3b, no recency score); only ``session_local_ids`` are avoided; the
+        pick follows the anchor list or the A/B alternation.
     """
     loc = norm_str(location)
     avail = set(norm_list_str(available_equipment))
@@ -491,6 +510,9 @@ def pick_best_exercise_p0(
     # Stage 0
     base0 = exercises[:]
     trace["counts"]["start"] = len(base0)
+    if active_only:
+        base0 = [e for e in base0 if e.get("active") is not False]
+        trace["counts"]["after_active"] = len(base0)
 
     # Stage 1: location_allowed
     base1 = [e for e in base0 if loc in set(ex_location_allowed(e))]
@@ -554,11 +576,21 @@ def pick_best_exercise_p0(
         "max_hang_ladder", "min_edge_hang", "one_arm_hang_assisted",
     }
     if experience_years is not None and experience_years < 2:
-        base2 = [
-            e for e in base2
-            if norm_str(e.get("id", "")) not in _ADVANCED_HANGBOARD_IDS
-            or "test" in [norm_str(r) for r in (e.get("role") or [])]
-        ]
+        if strict_test_exemption:
+            # A290: the exemption is for a TEST block, not for an exercise
+            # that merely also carries the test role.
+            _block_is_test = "test" in role_set
+            base2 = [
+                e for e in base2
+                if norm_str(e.get("id", "")) not in _ADVANCED_HANGBOARD_IDS
+                or (_block_is_test and "test" in [norm_str(r) for r in (e.get("role") or [])])
+            ]
+        else:
+            base2 = [
+                e for e in base2
+                if norm_str(e.get("id", "")) not in _ADVANCED_HANGBOARD_IDS
+                or "test" in [norm_str(r) for r in (e.get("role") or [])]
+            ]
     trace["counts"]["after_experience_gate"] = len(base2)
 
     # Stage 2f: generic experience_minimum_years gate (B159a/D43)
@@ -582,7 +614,9 @@ def pick_best_exercise_p0(
         return None, trace
 
     # Stage 3b: exclude already-used exercise IDs (soft constraint)
-    if exclude_ids:
+    # A290: skipped for rotation blocks (no history dependence) and moved after
+    # Stage 6 when dedup_after_filters is set.
+    if exclude_ids and rotation is None and not dedup_after_filters:
         base3_dedup = [e for e in base3 if norm_str(get_ex_id(e)) not in exclude_ids]
         if base3_dedup:  # only apply if alternatives exist
             base3 = base3_dedup
@@ -664,6 +698,27 @@ def pick_best_exercise_p0(
 
     if not base3:
         return None, trace
+
+    # A290: rotation blocks (phase_anchor / ab) pick from the filtered pool
+    # without any history dependence.
+    if rotation is not None:
+        from backend.engine.phase_anchor import select_from_pool
+
+        selected, info = select_from_pool(
+            base3, rotation,
+            get_id=lambda e: norm_str(get_ex_id(e)),
+            session_local_ids={norm_str(x) for x in (session_local_ids or set())},
+        )
+        trace["rotation"] = {**(rotation.get("trace") or {}), **info,
+                             "selected": norm_str(get_ex_id(selected)) if selected else None}
+        return selected, trace
+
+    # A290: Stage 3b after the target filters (tested athletes, free blocks).
+    if exclude_ids and dedup_after_filters:
+        base3_dedup = [e for e in base3 if norm_str(get_ex_id(e)) not in exclude_ids]
+        if base3_dedup:
+            base3 = base3_dedup
+        trace["counts"]["after_dedup_late"] = len(base3)
 
     # Deterministic pick: score_exercise for recency-aware tie-breaking,
     # then _variety_key for the final deterministic tie-break (B274)
@@ -818,6 +873,10 @@ def load_recent_exercise_ids(
     user_id: Optional[str] = None,
     user_state: Optional[Dict[str, Any]] = None,
     reference_date: Optional[str] = None,
+    *,
+    exclude_test_instances: bool = False,
+    include_custom: bool = False,
+    cap: Optional[int] = 100,
 ) -> List[str]:
     """Extract exercise_ids from completed sessions in recent week_plans.
 
@@ -845,6 +904,18 @@ def load_recent_exercise_ids(
     top-N AND before deciding whether to consult the archive — so the
     "< N hot weeks → read archive" decision counts PAST weeks only.
     ``reference_date`` (ISO, default today) defines the current week.
+
+    A290 opt-in kwargs (defaults = pre-A290 behaviour; the resolver passes them
+    only for tested athletes):
+    - ``exclude_test_instances``: in a test session (``tags.test`` or a
+      ``test_*`` id) only warm-up / cool-down instances enter the VARIETY list
+      — a max-hang test must not push the max-hang family out of the next
+      training session. Generic rule on ``source.template_id``, no template
+      list. (Fatigue is a separate, dated view: ``phase_anchor``.)
+    - ``include_custom``: done custom / generated sessions count too (their
+      logged entries, F0 ``stimulus.counted_entries`` rule).
+    - ``cap``: ``None`` keeps the whole window (the 100-id cap could cut the
+      oldest week of a full three-week window).
     """
     recent: List[str] = []
 
@@ -891,7 +962,20 @@ def load_recent_exercise_ids(
                             continue
                         resolved = sess.get("resolved") or {}
                         rs = resolved.get("resolved_session") or {}
-                        for inst in rs.get("exercise_instances") or []:
+                        instances = rs.get("exercise_instances") or []
+                        if include_custom and not instances and (
+                            sess.get("is_custom")
+                            or str(sess.get("session_id") or "").startswith(("custom_", "generated_"))
+                        ):
+                            from backend.engine.stimulus import counted_entries
+                            instances, _origin = counted_entries(sess)
+                        is_test_sess = exclude_test_instances and (
+                            str(sess.get("session_id") or "").startswith("test_")
+                            or bool((sess.get("tags") or {}).get("test"))
+                        )
+                        for inst in instances:
+                            if is_test_sess and not _is_warmup_or_cooldown_instance(inst):
+                                continue
                             ex_id = inst.get("exercise_id")
                             if ex_id:
                                 recent.append(norm_str(ex_id))
@@ -909,7 +993,15 @@ def load_recent_exercise_ids(
                 if ex_id:
                     recent.append(norm_str(ex_id))
 
-    return recent[-100:]
+    if cap is None:
+        return recent
+    return recent[-cap:]
+
+
+def _is_warmup_or_cooldown_instance(inst: Dict[str, Any]) -> bool:
+    """A290: an instance picked by a warm-up / cool-down template."""
+    tid = norm_str(((inst.get("source") or {}).get("template_id")) or "")
+    return tid == "general_warmup" or tid.startswith("warmup_") or tid.startswith("cooldown_")
 
 
 # ---------------------------
@@ -1040,6 +1132,8 @@ def _resolve_inline_block(
     user_age: Optional[int] = None,
     experience_years: Optional[float] = None,
     session_id: Optional[str] = None,
+    rot_ctx: Any = None,
+    session_local_ids: Optional[List[str]] = None,
 ) -> int:
     """Resolve an inline block (module with block_id + selection, no template_id).
 
@@ -1105,6 +1199,17 @@ def _resolve_inline_block(
                 explicit_ex_id, block_id,
             )
 
+    # A290: rotation plan from the module's TOP-LEVEL keys (never selection).
+    from backend.engine.phase_anchor import plan_block as _plan_block
+    rot_plan = _plan_block(rot_ctx, mod, session_id=str(session_id or ""), block_id=block_id)
+    _tested = rot_ctx is not None
+    if session_local_ids is None:
+        session_local_ids = []
+    if rot_plan and rot_plan.get("domain_req"):
+        domain_req = rot_plan["domain_req"]
+    if rot_plan and rot_plan.get("pattern_req"):
+        pattern_req = rot_plan["pattern_req"]
+
     if selected_ex is None and run_p0:
         if TRACE_RESOLVE:
             logger.warning(
@@ -1138,6 +1243,11 @@ def _resolve_inline_block(
                 user_age=user_age,
                 experience_years=experience_years,
                 variety_seed=_variety_seed_from_date(target_date),
+                rotation=rot_plan,
+                session_local_ids=set(session_local_ids),
+                active_only=_tested,
+                strict_test_exemption=_tested,
+                dedup_after_filters=_tested,
             )
 
         cascade_tier: Any = 1
@@ -1183,13 +1293,18 @@ def _resolve_inline_block(
         merged: Dict[str, Any] = {}
         if isinstance(ex_defaults, dict):
             merged.update(ex_defaults)
-        if isinstance(prescription, dict):
+        # A290: a max-hang step-down drops the block's max-intensity dose.
+        _drop_block_rx = bool(rot_plan and rot_plan.get("drop_block_prescription"))
+        if isinstance(prescription, dict) and not _drop_block_rx:
             merged.update(prescription)
         # B263: don't bleed device-specific prescription onto a non-device substitute
         _strip_device_prescription(merged, prescription, ex_defaults, selected_ex)
         # B174: selection.primary.prescription_overrides take highest priority
-        if isinstance(primary_overrides, dict):
+        if isinstance(primary_overrides, dict) and not _drop_block_rx:
             merged.update(primary_overrides)
+        # A290: phase-specific dose of a phase anchor (e.g. PE max hangs, 3 sets)
+        if rot_plan and chosen_by == "p0_inline_block" and rot_plan.get("prescription_overrides"):
+            merged.update(rot_plan["prescription_overrides"])
 
         merged = _apply_load_override(
             merged,
@@ -1226,6 +1341,7 @@ def _resolve_inline_block(
         _apply_limitation_to_instance(inst, selected_ex, limitation_map or {})
         exercise_instances.append(inst)
         recent_ex_ids.append(norm_str(ex_id))
+        session_local_ids.append(norm_str(ex_id))
 
         selected_list.append({
             "exercise_id": ex_id,
@@ -1367,7 +1483,15 @@ def resolve_session(
     phase: Optional[str] = None,
     equipment_override: Optional[List[str]] = None,
     extra_recent_ex_ids: Optional[List[str]] = None,
+    week_plan: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    """Resolve a catalog session into concrete exercise instances.
+
+    A290: ``week_plan`` (optional) is the plan the session belongs to — the
+    structural truth for the A/B occurrence index and the heavy-slot rank when
+    it is not yet (or not identically) in ``user_state["week_plans"]``. Only
+    read for tested athletes (``phase_anchor.build_rotation_context``).
+    """
     # --- Input validation ---
     if not session_path:
         raise ValueError("resolve_session: session_path must be a non-empty string")
@@ -1442,8 +1566,34 @@ def resolve_session(
         available_equipment.append("pullup_bar")
 
 
+    # A290: rotation context — None (pre-A290 behaviour, bit for bit) unless
+    # the athlete has a tested baseline on the finger or the pulling axis.
+    from backend.engine.phase_anchor import build_rotation_context, heavy_slot_session_ids, plan_block
+    rot_ctx = None
+    if user_state:
+        try:
+            rot_ctx = build_rotation_context(
+                user_state, target_date, phase,
+                week_plan=week_plan,
+                heavy_slot_sessions=heavy_slot_session_ids(
+                    os.path.dirname(os.path.abspath(full_session_path)),
+                    os.path.abspath(os.path.join(repo_root, templates_dir)),
+                ),
+            )
+        except Exception:  # never let the rotation layer break a resolution
+            logger.warning("resolve_session: rotation context failed — free selection", exc_info=True)
+            rot_ctx = None
+    _tested = rot_ctx is not None
+    session_local_ids: List[str] = []
+
     # recent history (B159b: reads from week_plans in user_state)
-    recent_ex_ids = load_recent_exercise_ids(user_id, user_state=user_state)
+    if _tested:
+        recent_ex_ids = load_recent_exercise_ids(
+            user_id, user_state=user_state,
+            exclude_test_instances=True, include_custom=True, cap=None,
+        )
+    else:
+        recent_ex_ids = load_recent_exercise_ids(user_id, user_state=user_state)
 
     # B268: exercises from EARLIER days' sessions already planned this week count
     # toward recency (same weight as completed history, appended as most-recent),
@@ -1521,6 +1671,8 @@ def resolve_session(
                 user_age=user_age,
                 experience_years=experience_years,
                 session_id=session_id,
+                rot_ctx=rot_ctx,
+                session_local_ids=session_local_ids,
             )
             continue
 
@@ -1582,6 +1734,8 @@ def resolve_session(
             selected_ex = None
             selected_list: List[Dict[str, Any]] = []
             chosen_by = None
+            # A290: rotation plan from the block's top-level keys
+            rot_plan = plan_block(rot_ctx, b, session_id=str(session_id or ""), block_id=str(block_id))
 
             pinned = None
             if explicit_ex_id:
@@ -1619,6 +1773,11 @@ def resolve_session(
                 role_req = b.get("role")   # P0 requires explicit block.role; block.type is NOT a selector input
                 domain_req = b.get("domain")
                 pattern_req = b.get("pattern")  # D158: template blocks can filter by pattern
+                # A290: a max-hang step-down selects in its own domain/pattern.
+                if rot_plan and rot_plan.get("domain_req"):
+                    domain_req = rot_plan["domain_req"]
+                if rot_plan and rot_plan.get("pattern_req"):
+                    pattern_req = rot_plan["pattern_req"]
 
                 trace = {}
                 if role_req is None:
@@ -1645,6 +1804,11 @@ def resolve_session(
                         user_age=user_age,
                         experience_years=experience_years,
                         variety_seed=_variety_seed_from_date(target_date),
+                        rotation=rot_plan,
+                        session_local_ids=set(session_local_ids),
+                        active_only=_tested,
+                        strict_test_exemption=_tested,
+                        dedup_after_filters=_tested,
                     )
                     chosen_by = "p0_hard_filters"
 
@@ -1661,10 +1825,14 @@ def resolve_session(
                 merged: Dict[str, Any] = {}
                 if isinstance(ex_defaults, dict):
                     merged.update(ex_defaults)
-                if isinstance(prescription, dict):
+                # A290: a max-hang step-down drops the block's max-intensity dose.
+                if isinstance(prescription, dict) and not (rot_plan and rot_plan.get("drop_block_prescription")):
                     merged.update(prescription)
                 # B263: don't bleed device-specific prescription onto a non-device substitute
                 _strip_device_prescription(merged, prescription, ex_defaults, selected_ex)
+                # A290: phase-specific dose of a phase anchor (e.g. PE max hangs, 3 sets)
+                if rot_plan and chosen_by == "p0_hard_filters" and rot_plan.get("prescription_overrides"):
+                    merged.update(rot_plan["prescription_overrides"])
 
                 merged = _apply_load_override(
                     merged,
@@ -1701,6 +1869,7 @@ def resolve_session(
                 _apply_limitation_to_instance(inst, selected_ex, limitation_map)
                 exercise_instances.append(inst)
                 recent_ex_ids.append(norm_str(ex_id))  # update "recent" inside this resolution too
+                session_local_ids.append(norm_str(ex_id))
 
                 selected_list.append({
                     "exercise_id": ex_id,

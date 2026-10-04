@@ -82,6 +82,12 @@
     },
     {
       "block_id": "main",
+      "rotation": "phase_anchor",
+      "anchor_axis": "finger",
+      "anchor_priority": {"tested": ["max_hang_7s", "lp_max_lift_7s", "max_hang_5s", "max_hang_ladder", "horst_7_53"], "untested": ["horst_7_53", "min_edge_hang", "max_hang_ladder", "pangullich_ladders_easy"]},
+      "anchor_exclude": {"tested": ["min_edge_hang"]},
+      "anchor_priority_by_phase": {"power_endurance": {"tested": ["max_hang_7s", "lp_max_lift_7s", "horst_7_53"], "tested_prescription_overrides": {"sets": 3, "sets_range": [3, 3]}}},
+      "spacing_step_down": {"domain": ["finger_strength_endurance", "finger_aerobic_endurance"], "pattern": ["isometric_hang", "repeater_hang"], "priority": ["lopez_subhangs", "long_duration_hang", "sub_max_capacity_hang"], "prescription_overrides": {"notes": ["Step-down: a max hang or finger test in the last 72 h. Sub-maximal hangs only, stop well before failure: no max efforts today."]}},
       "type": "main_set",
       "selection": {
         "primary": {

@@ -167,6 +167,7 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
                         user_id=user_id,
                         phase=phase,
                         extra_recent_ex_ids=planned_recent,  # B268
+                        week_plan=week_plan,  # A290: structural A/B + heavy-slot rank
                     )
                     # Re-append user-added exercises
                     if user_added:

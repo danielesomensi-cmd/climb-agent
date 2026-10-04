@@ -15,6 +15,10 @@
   "blocks": [
     {
       "block_id": "weighted_pullup_main",
+      "rotation": "phase_anchor",
+      "heavy_slot": true,
+      "anchor_axis": "pulling",
+      "anchor_priority": {"tested": ["weighted_pullup", "weighted_chinup", "one_arm_pullup_assisted", "archer_pullup"], "untested": ["pullup", "eccentric_pullup", "archer_pullup"]},
       "type": "main_set",
       "role": ["main"],
       "domain": ["strength_general"],
@@ -28,6 +32,8 @@
     },
     {
       "block_id": "lock_off_hold",
+      "rotation": "ab",
+      "unloaded_only": true,
       "type": "main_set",
       "role": ["main"],
       "domain": ["strength_general"],
@@ -41,6 +47,8 @@
     },
     {
       "block_id": "typewriter_unilateral",
+      "rotation": "ab",
+      "unloaded_only": true,
       "type": "main_set",
       "role": ["main"],
       "domain": ["strength_general"],

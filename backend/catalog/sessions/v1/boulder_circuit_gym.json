@@ -61,6 +61,9 @@
     },
     {
       "block_id": "pulling_maintenance",
+      "rotation": "ab",
+      "unloaded_only": true,
+      "ab_pool": ["power_pullups_explosive", "archer_pullup", "one_arm_pullup_assisted"],
       "required": false,
       "priority": 70,
       "module_role": "secondary",

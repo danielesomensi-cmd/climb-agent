@@ -55,6 +55,10 @@
     },
     {
       "block_id": "pulling_maintenance",
+      "rotation": "phase_anchor",
+      "heavy_slot": true,
+      "anchor_axis": "pulling",
+      "anchor_priority": {"tested": ["weighted_pullup", "weighted_chinup", "one_arm_pullup_assisted", "archer_pullup"], "untested": ["pullup", "eccentric_pullup", "archer_pullup"]},
       "required": false,
       "priority": 70,
       "module_role": "secondary",
