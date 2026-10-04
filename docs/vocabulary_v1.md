@@ -885,7 +885,7 @@ Defined once in `backend/engine/stimulus.py` and `backend/engine/retest_policy.p
 - `evidence`: `measured` (logged entry) | `planned` (done session without logged entries).
 - Exposures are counted in distinct **days**. Outdoor days are not family exposures.
 
-**Finger-hard day** (`stimulus.finger_hard_days`), `reason`: `finger_hard_session` (tags/`_SESSION_META` finger+hard, or a session delivering `finger_max`/`limit_power` — custom sessions included) | `outdoor_hard` | `free_limit`.
+**Finger-hard day** (`stimulus.finger_hard_days`), `reason`: `finger_hard_session` (tags/`_SESSION_META` finger+hard, or a session delivering `finger_max`/`limit_power` — custom sessions included — or carrying a `FINGER_FATIGUE_EXTRA_IDS` hang: min_edge_hang, max_hang_10s, lp_max_lift_10s, which are finger-hard but not `finger_max` exposures) | `outdoor_hard` (a route with no discipline in a `both`/unset outing is classified by grade scale: uppercase Font letter = boulder) | `free_limit` (finished free sessions only: `finished_at: None` is skipped). Logged entries count only when really done (`stimulus.counted_entries`), for heavy pulling too.
 
 **Hard-climb threshold** (OUTDOOR-HARD): redpoint − `HARD_CLIMB_GRADE_STEPS` (2) steps on the engine ladder, `+` grades included (lead 8a+ → 7c+, boulder 7C → 7B). A free boulder session is a `limit_power` exposure with ≥ `FREE_LIMIT_MIN_PROBLEMS` (2) climbs at/above it.
 

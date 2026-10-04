@@ -119,6 +119,17 @@ _POWER_ENDURANCE_IDS = (
     "route_on_the_minute",
 )
 
+# Finger FATIGUE is wider than the finger_max EXPOSURE family. These hangs are
+# deliberately kept out of finger_max (not a comparable max stimulus, see the
+# table comment above) but they still load the fingers at max/near-max
+# intensity, so a day with one of them IS a finger-hard day for the retest
+# blocker and the 48 h finger gap. Used ONLY by ``is_finger_hard_session``.
+FINGER_FATIGUE_EXTRA_IDS: Tuple[str, ...] = (
+    "min_edge_hang",
+    "max_hang_10s",
+    "lp_max_lift_10s",
+)
+
 EXERCISE_FAMILY: Dict[str, str] = {
     **{eid: FAMILY_FINGER_MAX for eid in _FINGER_MAX_IDS},
     **{eid: FAMILY_PULLING_MAX for eid in _PULLING_MAX_IDS},
@@ -313,6 +324,17 @@ def logged_entry_counts(entry: Mapping[str, Any], *, player_session: bool) -> bo
     )
 
 
+def counted_entries(session: Mapping[str, Any]) -> Tuple[List[Dict[str, Any]], str]:
+    """``session_exercise_entries`` with the "was it done" rule applied: logged
+    entries that are not real work (skipped, not completed, player pre-fill
+    with 0 sets/reps) are dropped. Planned entries are returned as they are."""
+    entries, origin = session_exercise_entries(session)
+    if origin != "actual":
+        return entries, origin
+    player = _is_player_session(session)
+    return [e for e in entries if logged_entry_counts(e, player_session=player)], origin
+
+
 def session_stimuli(session: Mapping[str, Any]) -> List[str]:
     """Sorted families a session delivers (planned or logged, see the rule)."""
     entries, origin = session_exercise_entries(session)
@@ -353,12 +375,17 @@ def is_finger_hard_session(session: Mapping[str, Any]) -> bool:
     True when the session is tagged (or catalogued in ``_SESSION_META``) both
     ``finger`` and ``hard``, OR when it delivers a finger_max / limit_power
     stimulus — the second clause is what makes custom sessions visible
-    (``_SESSION_META`` has no entry for ``custom_*``).
+    (``_SESSION_META`` has no entry for ``custom_*``) — OR when it carries a
+    ``FINGER_FATIGUE_EXTRA_IDS`` hang (min-edge / 10 s max hangs: not a
+    finger_max exposure, but a max-intensity finger load all the same).
     """
     if session_flag(session, "finger") and session_flag(session, "hard"):
         return True
     stimuli = session_stimuli(session)
-    return FAMILY_FINGER_MAX in stimuli or FAMILY_LIMIT_POWER in stimuli
+    if FAMILY_FINGER_MAX in stimuli or FAMILY_LIMIT_POWER in stimuli:
+        return True
+    entries, _origin = counted_entries(session)
+    return any(str(e.get("exercise_id") or "") in FINGER_FATIGUE_EXTRA_IDS for e in entries)
 
 
 def is_pulling_hard_session(session: Mapping[str, Any]) -> bool:
@@ -534,8 +561,13 @@ def exposures(
     # or above the hard-climb threshold is a limit_power exposure. Lead free
     # sessions are not classified (their grades are validated on the Font
     # scale, so a lead grade cannot be read honestly here).
+    # Only FINISHED free sessions count, like plan sessions only count when
+    # done: the router appends the session at /start with ``finished_at: None``.
+    # A row without the key at all (legacy shape) is read as finished.
     for fs in state.get("free_sessions") or []:
         if not isinstance(fs, Mapping):
+            continue
+        if "finished_at" in fs and fs.get("finished_at") is None:
             continue
         d = str(fs.get("date") or "")[:10]
         if not d or not _in_window(d, s_iso, u_iso):
@@ -644,6 +676,25 @@ def _outdoor_entries(
     return unique
 
 
+def _route_discipline(route: Mapping[str, Any], entry_discipline: str) -> str:
+    """'boulder' | 'lead' for one outdoor route.
+
+    The route's own discipline wins, then an explicit entry discipline
+    ('lead' / 'boulder'). When neither decides (entry 'both' — the router's
+    default — or missing), the grade scale does: an uppercase Font letter
+    (7B+) is boulder, a lowercase French letter (7b+) is lead. Without this a
+    Font grade would be lowercased into a lead grade and judged on the wrong
+    ladder.
+    """
+    for disc in (route.get("discipline"), entry_discipline):
+        if disc in ("lead", "boulder"):
+            return str(disc)
+    raw = str(route.get("grade") or "").split("/")[0]
+    if any(ch in "ABC" for ch in raw):
+        return "boulder"
+    return "lead"
+
+
 def outdoor_hard_days(
     state: Mapping[str, Any],
     *,
@@ -661,12 +712,11 @@ def outdoor_hard_days(
         d = str(entry.get("date"))[:10]
         if not _in_window(d, s_iso, u_iso):
             continue
-        disc_entry = str(entry.get("discipline") or "lead")
+        disc_entry = str(entry.get("discipline") or "")
         for route in entry.get("routes") or []:
             if not isinstance(route, Mapping):
                 continue
-            disc = str(route.get("discipline") or disc_entry)
-            disc = "boulder" if disc == "boulder" else "lead"
+            disc = _route_discipline(route, disc_entry)
             if not is_hard_climb(state, disc, route.get("grade")):
                 continue
             ladder = _LEAD_INDEX if disc == "lead" else _BOULDER_INDEX

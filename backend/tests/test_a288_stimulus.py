@@ -355,3 +355,51 @@ def test_finger_hard_days_sources_and_planned_switch():
         ("2026-10-06", "f1"), ("2026-10-07", "power_contact_gym")]
     # skipped never counts, even with include_planned
     assert all(r["date"] != "2026-10-02" for r in st.finger_hard_days(s, include_planned=True))
+
+
+# ---------------------------------------------------------------------------
+# Review fixes
+# ---------------------------------------------------------------------------
+
+def test_unfinished_free_session_is_not_an_exposure():
+    state = _state()
+    climbs = [{"grade": "7B"}, {"grade": "7B+"}]
+    state["free_sessions"] = [
+        {"id": "open", "date": "2026-10-06", "surface": "gym_boulder", "climbs": climbs,
+         "finished_at": None},
+        {"id": "done", "date": "2026-10-07", "surface": "gym_boulder", "climbs": climbs,
+         "finished_at": "2026-10-07T20:00:00"},
+    ]
+    rows = st.exposures(state, families=["limit_power"])
+    assert [r["session_id"] for r in rows] == ["done"]
+    free = [r for r in st.finger_hard_days(state) if r["source"] == "free"]
+    assert [r["session_id"] for r in free] == ["done"]
+
+
+@pytest.mark.parametrize("eid", list(st.FINGER_FATIGUE_EXTRA_IDS))
+def test_finger_fatigue_hangs_are_finger_hard_but_not_finger_max(eid):
+    assert eid in _catalog()
+    assert st.stimulus_of(eid) is None
+    cs = {"session_id": "custom_x", "is_custom": True, "status": "done",
+          "exercises": [{"exercise_id": eid, "sets": 5}]}
+    assert st.is_finger_hard_session(cs) is True
+    # a logged-but-skipped hang does not make the day hard
+    skipped = {"session_id": "custom_x", "is_custom": True, "status": "done",
+               "actual_exercises": [{"exercise_id": eid, "completed": True, "completed_sets": 0}]}
+    assert st.is_finger_hard_session(skipped) is False
+
+
+def test_outdoor_both_discipline_reads_grade_scale():
+    s = _state()
+    s["outdoor_log"] = [
+        {"date": "2026-10-01", "discipline": "both", "routes": [{"name": "p", "grade": "7B+"}]},
+        {"date": "2026-10-02", "routes": [{"name": "q", "grade": "7c+"}]},
+        {"date": "2026-10-03", "discipline": "both", "routes": [{"name": "r", "grade": "7b+"}]},
+    ]
+    got = st.outdoor_hard_days(s)
+    assert [(r["date"], r["discipline"], r["grade"]) for r in got] == [
+        ("2026-10-01", "boulder", "7B+"), ("2026-10-02", "lead", "7c+")]
+    # an explicit discipline still wins over the scale
+    s["outdoor_log"] = [{"date": "2026-10-01", "discipline": "lead",
+                         "routes": [{"name": "p", "grade": "7B+"}]}]
+    assert st.outdoor_hard_days(s) == []

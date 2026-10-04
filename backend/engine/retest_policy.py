@@ -44,10 +44,10 @@ from backend.engine.stimulus import (
     FAMILY_FINGER_MAX,
     FAMILY_PULLING_MAX,
     count_exposures,
+    counted_entries,
     exposure_dates,
     is_pulling_hard_session,
     session_flag,
-    session_exercise_entries,
     stimulus_of,
 )
 
@@ -451,7 +451,9 @@ def is_heavy_pulling_session(
     - Literal consequence, flagged for A289: ``power_endurance_gym`` is
       catalogued ``pulling: True, hard: True`` → heavy pulling.
     """
-    entries, _origin = session_exercise_entries(session)
+    # Same "was it done" rule as stimulus.py: a skipped / not-completed /
+    # 0-set logged pull is not a heavy pull.
+    entries, _origin = counted_entries(session)
     pulls = [e for e in entries if stimulus_of(e.get("exercise_id")) == FAMILY_PULLING_MAX]
     if pulls:
         om = official_max(state, PROTOCOL_PULLUP_2RM, as_of)

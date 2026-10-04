@@ -304,3 +304,21 @@ def test_exercise_protocol_family_matches_stimulus_table(eid):
     from backend.engine.stimulus import stimulus_of
 
     assert stimulus_of(eid) == rp.PROTOCOL_FAMILY[rp.EXERCISE_PROTOCOL[eid]]
+
+
+def test_skipped_logged_pull_is_not_heavy():
+    """Review fix: the player pre-fills completed + load even for a skipped
+    exercise; 0 sets/reps (or feedback_label skipped) is not a heavy pull."""
+    prefilled = {"session_id": "custom_cs_pull", "is_custom": True, "status": "done",
+                 "actual_exercises": [{"exercise_id": "weighted_pullup", "completed": True,
+                                       "completed_sets": 0, "completed_reps": 0,
+                                       "used_external_load_kg": 45}]}
+    assert rp.is_heavy_pulling_session(_state(), prefilled, "2026-10-04") is False
+    labelled = {"session_id": "custom_cs_pull", "is_custom": True, "status": "done",
+                "actual_exercises": [{"exercise_id": "weighted_pullup", "completed_sets": 3,
+                                      "feedback_label": "skipped", "used_external_load_kg": 45}]}
+    assert rp.is_heavy_pulling_session(_state(), labelled, "2026-10-04") is False
+    done = {"session_id": "custom_cs_pull", "is_custom": True, "status": "done",
+            "actual_exercises": [{"exercise_id": "weighted_pullup", "completed": True,
+                                  "completed_sets": 3, "used_external_load_kg": 45}]}
+    assert rp.is_heavy_pulling_session(_state(), done, "2026-10-04") is True
