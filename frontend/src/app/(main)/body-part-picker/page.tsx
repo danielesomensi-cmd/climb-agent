@@ -107,11 +107,16 @@ export default function BodyPartPickerPage() {
     setError(null);
     setLoading(true);
     try {
+      // B364: same local day /start uses, so the preview loads (freshness
+      // gate, phase %) match the session that gets inserted.
+      const d = new Date();
+      const previewDay = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const session = await previewBodyPartSession({
         body_parts: Array.from(selectedParts),
         equipment_mode: equipmentMode,
         gym_id: gymId,
         include_cooldown: includeCooldown,
+        target_date: previewDay,
       });
       setPreview(session);
       setStep("preview");
@@ -350,7 +355,7 @@ export default function BodyPartPickerPage() {
                       <div className="font-medium text-sm">
                         {ex.exercise_id.replace(/_/g, " ")}
                       </div>
-                      <ExercisePrescription prescription={ex.prescription} />
+                      <ExercisePrescription prescription={ex.prescription} suggestedLoad={ex.suggested_external_load_kg} />
                     </div>
                   ))}
                 </div>
@@ -373,7 +378,7 @@ export default function BodyPartPickerPage() {
                       <div className="font-medium text-sm">
                         {ex.exercise_id.replace(/_/g, " ")}
                       </div>
-                      <ExercisePrescription prescription={ex.prescription} />
+                      <ExercisePrescription prescription={ex.prescription} suggestedLoad={ex.suggested_external_load_kg} />
                     </div>
                   ))}
               </div>
@@ -395,14 +400,22 @@ export default function BodyPartPickerPage() {
   );
 }
 
-function ExercisePrescription({ prescription }: { prescription: Record<string, unknown> }) {
+function ExercisePrescription({
+  prescription,
+  suggestedLoad,
+}: {
+  prescription: Record<string, unknown>;
+  suggestedLoad?: number;
+}) {
   if (!prescription) return null;
   const bits: string[] = [];
   const sets = prescription.sets;
   const reps = prescription.reps;
   const workSec = prescription.work_seconds;
   const restSec = prescription.rest_between_sets_seconds;
-  const load = prescription.suggested_external_load_kg;
+  // B364: the engine puts the suggested load on the exercise, not inside
+  // prescription — the preview never showed the load the player would use.
+  const load = suggestedLoad ?? prescription.suggested_external_load_kg;
 
   if (sets) {
     if (reps) bits.push(`${sets} × ${reps} reps`);

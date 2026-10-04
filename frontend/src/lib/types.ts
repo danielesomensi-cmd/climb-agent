@@ -958,6 +958,14 @@ export interface CustomSessionExercise {
   notes: string;
   cues?: string[];
   alt_sides?: boolean;   // B324: run once per side (RIGHT/LEFT badge, doubled sets)
+  // B364: anchored exercises (weighted pull-up / chin-up, max hangs).
+  // "anchored" (default when missing) = the engine computes the load on the
+  // day played; "fixed" = the user's kg. Read-time fields from ?date=:
+  load_mode?: "anchored" | "fixed";
+  load_source?: "anchored" | "user_fixed";
+  stored_load_kg?: number;
+  suggested_external_load_kg?: number;
+  suggested_total_load_kg?: number;
 }
 
 export interface CustomSession {

@@ -32,7 +32,8 @@ IMPORTANT: always call these on the PERSISTED state, never on the output of
 ``progression_v1.estimate_missing_baselines``: that helper stamps
 ``source='test'`` with ``updated_at=today`` on estimated baselines (B364 §0).
 
-Nothing in production calls this module yet (A288 = no behaviour change).
+Production callers since B364: ``anchored_load`` (official max, tested gate,
+re-entry ramp) and ``progression_v1._update_test_from_log`` (confidence).
 """
 
 from __future__ import annotations
@@ -374,8 +375,14 @@ def reentry_step(
     *,
     archived_weeks: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
     include_current: bool = True,
+    extra_dates: Optional[Sequence[DateLike]] = None,
 ) -> Dict[str, Any]:
     """Where the athlete is on the re-entry ramp for ``family`` on ``as_of``.
+
+    ``extra_dates`` (B364): exposure days the view cannot see — the dates of
+    the ``tests.*`` entries of the family (a test counts as an exposure even
+    when its week was archived or the test was logged outside a plan session).
+    Only dates strictly before ``as_of`` are used; duplicates collapse.
 
     n = distinct exposure days strictly before ``as_of`` after the last gap of
     at least ``REENTRY_GAP_D`` days (tests included), plus 1 for the session
@@ -389,11 +396,16 @@ def reentry_step(
     - ``in_reentry``: ``factor < 1.0``.
     """
     on = _as_date(as_of)
-    dates = [
+    day_set = {
         _as_date(d) for d in exposure_dates(
             state, family, until=on - timedelta(days=1), archived_weeks=archived_weeks
         )
-    ]
+    }
+    for extra in extra_dates or ():
+        d = _parse_date(extra)
+        if d is not None and d < on:
+            day_set.add(d)
+    dates = sorted(day_set)
     run: List[date] = []
     prev = on
     gap_days: Optional[int] = None

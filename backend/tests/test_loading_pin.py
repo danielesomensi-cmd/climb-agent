@@ -478,43 +478,33 @@ class TestLPTestHandling:
 
 
 class TestLPTestScheduling:
-    """Test queue uses correct test_id based on finger_training_device."""
+    """B364: labels never schedule a test — for hangboard and loading-pin users
+    alike. Retests come only from retest_policy (measured evidence)."""
 
-    def test_hangboard_user_enqueues_hangboard_test(self):
+    def _two_hard(self, state):
+        for i in range(2):
+            log = {
+                "date": f"2026-03-{15+i}",
+                "actual": {
+                    "exercise_feedback_v1": [
+                        {"exercise_id": "max_hang_5s", "completed": True,
+                         "feedback_label": "hard", "used_total_load_kg": 92.0},
+                    ]
+                },
+            }
+            state = apply_feedback(log, state)
+        return state
+
+    def test_hangboard_user_two_hard_labels_enqueue_nothing(self):
         state = _base_state()
         state["baselines"] = {"hangboard": [{"max_total_load_kg": 100.0}]}
-        # Simulate 2 consecutive "hard" feedbacks on max_hang_5s
-        for i in range(2):
-            log = {
-                "date": f"2026-03-{15+i}",
-                "actual": {
-                    "exercise_feedback_v1": [
-                        {"exercise_id": "max_hang_5s", "completed": True,
-                         "feedback_label": "hard", "used_total_load_kg": 92.0},
-                    ]
-                },
-            }
-            state = apply_feedback(log, state)
-        queue = state.get("test_queue", [])
-        assert any(q["test_id"] == "max_hang_7s_total_load" for q in queue)
+        state = self._two_hard(state)
+        assert state.get("test_queue", []) == []
+        assert "max_hang_5s_hard_streak" not in state.get("progression_counters", {})
 
-    def test_lp_user_enqueues_lp_test(self):
-        state = _lp_state()
-        # Simulate 2 consecutive "hard" feedbacks on max_hang_5s
-        # (streak counter is still based on max_hang_5s for both devices)
-        for i in range(2):
-            log = {
-                "date": f"2026-03-{15+i}",
-                "actual": {
-                    "exercise_feedback_v1": [
-                        {"exercise_id": "max_hang_5s", "completed": True,
-                         "feedback_label": "hard", "used_total_load_kg": 92.0},
-                    ]
-                },
-            }
-            state = apply_feedback(log, state)
-        queue = state.get("test_queue", [])
-        assert any(q["test_id"] == "lp_max_test_5s" for q in queue)
+    def test_lp_user_two_hard_labels_enqueue_nothing(self):
+        state = self._two_hard(_lp_state())
+        assert state.get("test_queue", []) == []
 
 
 # ── Equipment filter: LP exercises need loading_pin ──────────────────────────

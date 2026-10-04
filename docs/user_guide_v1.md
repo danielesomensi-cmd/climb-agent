@@ -236,6 +236,47 @@ Two things worth knowing:
 - A remembered load only moves when your difficulty feedback says so ("Easy"
   raises it, "Hard" lowers it). "OK" keeps it exactly where you put it.
 
+### Max hangs and weighted pull-ups: your max vs your training load
+
+For **max hangs (5" and 7") and weighted pull-ups / chin-ups** the app keeps two
+separate numbers once you have a **recent test** (less than 90 days old):
+
+- **Your max** — the number from your last test. It changes **only when you test
+  again**. Feedback never moves it, and saying "Hard" never schedules a test.
+- **Your training load** — the weight you actually train with. It moves in small
+  steps from the load you used: pull-ups "Easy" +2.5 kg, "Very Easy" +5 kg, "Hard"
+  −2.5%, "Very Hard" −7.5%; max hangs ±2 kg ("Easy"/"Hard") or ±4 kg ("Very
+  Easy"/"Very Hard"). "OK" keeps it. Pull-ups never rise more than 5 kg in one
+  session, max hangs not more than 5% of your max in a week.
+
+The load you're given always stays **below your max**, with room to spare:
+
+- a 4×3 of weighted pull-ups never goes above about 85% of your estimated 1RM — to
+  train heavier, the scheme changes (e.g. 4×2), the 4×3 does not get heavier;
+- a max hang always leaves about three seconds in the tank (in Strength & Power at
+  most ~95% of your max).
+
+**Coming back after a break.** If you haven't done that kind of work for two weeks
+or more, the first session back is capped at 90% of the usual ceiling and the
+second at 95%; from the third session the full ceiling applies. Your test counts as
+a session.
+
+**Three hard sessions in two weeks** on the same exercise family bring the load
+down to the bottom of the phase range, with a fatigue note — the app does not
+lower your max for it.
+
+When you rate a session "Easy" but you are already at the ceiling of your tested
+max, the app tells you so: the next scheduled retest is what raises it.
+
+**Custom sessions follow the same numbers.** In a session you built (or one the
+Coach composed), these exercises are recalculated **on the day you play it**, from
+your max and your training load — the same weight a planned session would give
+you that day. The weight you typed when building the session is kept as a
+reference.
+
+If you haven't tested yet (or your test is older than 90 days), nothing changes
+for you: loads are worked out exactly as before.
+
 ### Limit bouldering grades
 
 Limit bouldering remembers your grade **per surface** — the Kilter, the MoonBoard,
@@ -284,7 +325,7 @@ If you only have a couple of training days a week, a test week can run out of ro
 
 **Why they matter**: Without fresh test data, the system keeps using your old baselines. Your loads won't progress accurately, and your plan won't adapt to your real improvements. Tests are not optional extras — they're the system recalibrating itself.
 
-**After a test session**: Your profile radar updates, working loads recalculate (a test result is a max, so it resets the training load to a percentage of the new max instead of becoming the next training load), and the remaining macrocycle adjusts its emphasis based on your new strengths and weaknesses.
+**After a test session**: Your profile radar updates, working loads recalculate (a test result is a max, so it resets the training load to a percentage of the new max instead of becoming the next training load), and the remaining macrocycle adjusts its emphasis based on your new strengths and weaknesses. Each max-hang and pull-up test is also compared with the previous one (a change under 5% is shown as **stable**) and marked as low-confidence when you hadn't trained that kind of strength in the three weeks before — a low-confidence test can be repeated sooner.
 
 ---
 
@@ -489,6 +530,8 @@ Reached from **Free Sessions**, the Session Builder is for a workout you want to
 Exercises that are performed **one side at a time** — Copenhagen plank, Pallof press, side-lying hip abduction and the like — are labelled **"per side"** wherever they appear, and the runner walks you through both: it counts a RIGHT bout and a LEFT bout for each prescribed set, showing which side you're on. So "3×20s" means three sets on each side, and the session's estimated duration accounts for all six.
 
 Custom sessions sit **outside the macrocycle**: running one logs the work and updates your working loads, but it does not feed the closed loop or alter your planned progression.
+
+Max hangs and weighted pull-ups / chin-ups in a custom session are **recalculated on the day you play it** (see *Max hangs and weighted pull-ups* in §5), so a session saved weeks ago never replays a stale weight.
 
 ---
 

@@ -486,6 +486,43 @@ separate adaptation module.
 > (`adjustments.per_exercise`, `compute_next_multiplier`, `apply_multiplier`)
 > from the same module for the same reason (zero production readers).
 
+### 8.1 Official max vs working load — `anchored_load.py` (B364)
+
+Two numbers, never mixed:
+
+- **Official max** — `tests.*` / `baselines`, written ONLY by
+  `_update_test_from_log`, read ONLY through `retest_policy.official_max` (the
+  freshest test, hang durations converted at 0.015/s). Feedback never moves it.
+  B156 fix: a `test_*` item added to a training session makes only the `test_*`
+  items measurements.
+- **Working load** — `working_loads.entries[]`, the load the athlete trains
+  with: `next = used + step` in kg (labels; measured `last_set_reps` /
+  `hang_held_s` / `hang_margin` first), with the phase and intensity of the log.
+
+`anchored_load(state, exercise_id, date=…)` is the ONE prescription of the four
+anchored exercises (weighted_pullup, weighted_chinup, max_hang_5s/7s) for a
+**tested** athlete (persisted state, test < 90 days); `None` otherwise and the
+pre-B364 branches run unchanged (golden-tested). Consumers: `inject_targets`,
+`body_part_picker.apply_resolver_light`, `adhoc_prescription` (builder proposal
+and A253 anchor), `session_composer._decorate_engine_fields`,
+`adhoc_builder`, custom sessions resolved at read (`resolve_custom_exercises`:
+`GET /api/custom-session/{id}?date=`, `GET /api/week` on a response copy), the
+coach prompt.
+
+Clamp order: start (working load converted by NON-rounded rep factor, seconds,
+phase/intensity; else phase target) → structural cap (pull: min(Prilepin band,
+(r+2)RM); hang: 3 s of reserve, phase cap) × re-entry factor
+(`retest_policy.reentry_step`, tests counted via `extra_dates`) → pain
+(`pain_blocks`, R4) → guards (2 heavy pulls / 7 days, same-session finger,
+finger-hard day in the 2 days before) → `floor_eff = min(floor, cap_eff)` →
+fatigue (3 hard / 14 days → floor). All engineering constants are labelled in
+the module.
+
+`apply_feedback` also writes the ONE exposure registry
+(`progression_counters.stimulus_exposures`, read by `stimulus.exposures`), the
+measured early-retest evidence (`retest_signals`, never an enqueue — labels no
+longer touch `test_queue`) and the fatigue days (`hard_labels`).
+
 ---
 
 ## 9. Replanner (`replanner_v1.py`)

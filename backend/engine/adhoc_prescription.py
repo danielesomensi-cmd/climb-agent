@@ -23,6 +23,12 @@ from __future__ import annotations
 from datetime import date as _date
 from typing import Any, Dict, Optional
 
+from backend.engine.anchored_load import (
+    ANCHORED_EXERCISES,
+    CUSTOM_INTENSITY,
+    anchor_summary,
+    anchored_load,
+)
 from backend.engine.progression_v1 import (
     PULLING_EXTERNAL_SCALING,
     _best_entry,
@@ -96,13 +102,27 @@ def propose_exercise_prescription(
         if isinstance(kg, (int, float)) and kg > 0:
             load_kg = float(kg)
 
+    # B364: the four anchored exercises of a TESTED athlete are prefilled by
+    # the single anchored_load on ``today`` — the same number the plan, the
+    # picker and the custom player show. ``last_logged`` keeps the true last
+    # value. An assisted hang (negative external) proposes 0 kg.
+    anchored: Optional[Dict[str, Any]] = None
+    if exercise_id in ANCHORED_EXERCISES:
+        anchored = anchored_load(
+            user_state, exercise_id, date=today, phase_id=phase, intensity=CUSTOM_INTENSITY,
+            sets=defaults.get("sets"), reps=defaults.get("reps"), work_seconds=defaults.get("work_seconds"),
+            catalog_intensity=(ex.get("attributes") or {}).get("intensity_pct"),
+        )
+        if anchored is not None:
+            load_kg = max(0.0, float(anchored["external"]))
+
     # B363: the weighted pull-up is prefilled from the 2RM reference as a % for
     # the phase, never from the raw memory — the last logged load may come from
     # a set with a different rep count, or be the 2RM test itself (+45 kg
     # proposed for a 4x3). ``last_logged`` still shows the true last value.
     # Without memory it fires only on a TESTED baseline (A253 boundary: a
     # grade-estimate is never surfaced as a number).
-    if exercise_id == "weighted_pullup":
+    if exercise_id == "weighted_pullup" and anchored is None:
         tested = str((_get_pulling_baseline(user_state) or {}).get("source") or "") in _TEST_BASELINE_SOURCES
         target = weighted_pullup_target(user_state, phase, "hard") if (load_kg > 0 or tested) else None
         if target is not None:
@@ -117,6 +137,7 @@ def propose_exercise_prescription(
         "load_kg": load_kg,                       # remembered value or 0 — never invented
         "effort_band": effort_band_for_phase(phase),
         "last_logged": last_logged,               # {load_kg, feedback_label, date} | null
+        **({"load_mode": "anchored", "anchored": anchor_summary(anchored)} if anchored is not None else {}),
     }
 
 
@@ -124,6 +145,10 @@ def anchor_adhoc_load(
     exercise: Dict[str, Any],
     user_state: Dict[str, Any],
     phase: Optional[str],
+    *,
+    today: Optional[str] = None,
+    reps: Optional[int] = None,
+    sets: Optional[int] = None,
 ) -> Optional[float]:
     """A253 — a *genuine* (max-derived) starting external load for an adhoc
     exercise the user has never logged, or None.
@@ -148,6 +173,18 @@ def anchor_adhoc_load(
     """
     eid = str(exercise.get("id") or "")
     load_model = exercise.get("load_model")
+
+    # ── B364: anchored exercises of a tested athlete → anchored_load ────────
+    if eid in ANCHORED_EXERCISES:
+        defaults = exercise.get("prescription_defaults") or {}
+        anch = anchored_load(
+            user_state, eid, date=today or _date.today().isoformat(), phase_id=phase,
+            intensity=CUSTOM_INTENSITY, sets=sets or defaults.get("sets"),
+            reps=reps or defaults.get("reps"), work_seconds=defaults.get("work_seconds"),
+            catalog_intensity=(exercise.get("attributes") or {}).get("intensity_pct"),
+        )
+        if anch is not None:
+            return float(anch["external"]) if anch["external"] > 0 else None
 
     # ── weighted-pull from the pulling test baseline ────────────────────────
     if eid == "weighted_pullup":

@@ -204,12 +204,13 @@ def test_boulder_grade_progression_changes_next_target():
 
 
 def test_working_load_update_from_feedback():
-    """B363: weighted_pullup feedback re-bases the 2RM reference (rep-aware),
-    instead of carrying the used load forward as the next load."""
+    """B364: weighted_pullup feedback moves the WORKING load in kg steps from
+    the load used; the tested 2RM (official max) never moves."""
     user_state = _base_user_state()
     user_state["baselines"]["pulling"] = {
         "weighted_pullup_2rm_total_kg": 117.0, "source": "test_session", "updated_at": "2026-01-01",
     }
+    bw = float(user_state["bodyweight_kg"])
     log_easy = {
         "date": "2026-01-05",
         "planned": [{"exercise_instances": [{"exercise_id": "weighted_pullup", "prescription": {"reps": 3}}]}],
@@ -217,9 +218,10 @@ def test_working_load_update_from_feedback():
     }
     updated_easy = apply_feedback(log_easy, user_state)
     easy = next(e for e in updated_easy["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")
-    # A light easy set never lowers the tested 2RM.
-    assert easy["e2rm_total_kg"] == 117.0
+    assert "e2rm_total_kg" not in easy
     assert easy["last_reps"] == 3
+    assert easy["next_total_load_kg"] == bw + 10.0 + 2.5  # easy → +2.5 kg
+    assert updated_easy["baselines"]["pulling"]["weighted_pullup_2rm_total_kg"] == 117.0
 
     log_hard = {
         "date": "2026-01-06",
@@ -228,11 +230,15 @@ def test_working_load_update_from_feedback():
     }
     updated_hard = apply_feedback(log_hard, user_state)
     hard = next(e for e in updated_hard["working_loads"]["entries"] if e["exercise_id"] == "weighted_pullup" and e.get("key") == "weighted_pullup")
-    # very_hard: reference down by the policy midpoint (-10%).
-    assert hard["e2rm_total_kg"] == 105.5
+    # very_hard: −7.5 % of the total used, to the half kilo.
+    used = bw + 10.0
+    assert hard["next_total_load_kg"] == round((used - used * 0.075) * 2) / 2
+    assert updated_hard["baselines"]["pulling"]["weighted_pullup_2rm_total_kg"] == 117.0
 
 
-def test_two_hard_feedbacks_enqueue_retest_and_retest_updates_official_test():
+def test_two_hard_feedbacks_never_enqueue_a_retest_and_a_test_updates_official_max():
+    """B364: labels never schedule a test (only retest_policy does, from
+    measured evidence). The test log still updates the official max."""
     user_state = _base_user_state()
     resolved_day = _resolved_day_for_progression()
     first = inject_targets(deepcopy(resolved_day), deepcopy(user_state))
@@ -261,10 +267,8 @@ def test_two_hard_feedbacks_enqueue_retest_and_retest_updates_official_test():
     log_hard_2 = deepcopy(log_hard_1)
     log_hard_2["date"] = "2026-01-06"
     after_2 = apply_feedback(log_hard_2, after_1)
-    queue = after_2.get("test_queue") or []
-    assert len(queue) == 1
-    assert queue[0]["test_id"] == "max_hang_7s_total_load"
-    assert queue[0]["recommended_by_date"] == "2026-01-13"
+    assert (after_2.get("test_queue") or []) == []
+    assert "max_hang_5s_hard_streak" not in after_2["progression_counters"]
 
     test_log = {
         "date": "2026-01-13",

@@ -350,7 +350,7 @@ def _to_custom_exercise(
     # fingers/hangboard + weighted-pull; read-only). Crude fallbacks stay empty
     # (B298). Memory always wins when present.
     if not load_val:
-        anchored = anchor_adhoc_load(ex, user_state, phase)
+        anchored = anchor_adhoc_load(ex, user_state, phase, today=today, sets=sets)
         if anchored:
             load_val = anchored
     return {
@@ -377,6 +377,10 @@ def _to_custom_exercise(
         # _enrich_exercise_display — emitting it here keeps the preview honest.
         "alt_sides": bool(ex.get("alt_sides")),
         "notes": "",
+        # B364: an anchored exercise (weighted pull/chin-up, max hangs) is
+        # recomputed by anchored_load on the day the session is played; the kg
+        # above is only the preview of today.
+        **({"load_mode": "anchored"} if p.get("load_mode") == "anchored" else {}),
     }
 
 

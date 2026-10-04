@@ -209,6 +209,32 @@ def _auto_resolve(week_plan: dict, state: dict, user_id: Optional[str] = None, p
             planned_recent.extend(day_ex_ids)
 
 
+def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
+    """B364: a copy of ``week_plan`` where every not-yet-played custom /
+    generated session carries the anchored loads of its own day
+    (``anchored_load.resolve_custom_exercises``). Done and skipped sessions are
+    returned exactly as stored (immutability); the stored plan is untouched."""
+    from backend.engine.anchored_load import resolve_custom_exercises
+
+    out = deepcopy(week_plan)
+    for week_block in out.get("weeks") or []:
+        for day_entry in week_block.get("days") or []:
+            day = day_entry.get("date")
+            if not day:
+                continue
+            for session_entry in day_entry.get("sessions") or []:
+                sid = str(session_entry.get("session_id") or "")
+                if not (session_entry.get("is_custom") or sid.startswith("custom_")):
+                    continue
+                if session_entry.get("status") in ("done", "skipped"):
+                    continue
+                if session_entry.get("exercises"):
+                    session_entry["exercises"] = resolve_custom_exercises(
+                        state, session_entry["exercises"], day,
+                    )
+    return out
+
+
 def _cache_completed_resolved(
     week_plan: dict, state: dict, week_start_key: str, is_current_week: bool
 ) -> bool:
@@ -617,7 +643,9 @@ def get_week(
     result = {
         "week_num": ctx["week_num"],
         "phase_id": ctx["phase_id"],
-        "week_plan": week_plan,
+        # B364: anchored loads of custom sessions are computed at read, on a
+        # copy — never persisted, never applied to done/skipped sessions.
+        "week_plan": _with_custom_anchored_loads(week_plan, state),
     }
     if test_reminder:
         result["test_reminder"] = test_reminder

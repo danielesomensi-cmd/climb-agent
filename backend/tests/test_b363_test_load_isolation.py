@@ -111,10 +111,13 @@ def test_reference_is_the_tested_2rm():
 
 def test_daniele_prescription_today_is_not_his_2rm():
     sug = _pullup_suggested(_state())
-    # 2RM 123 → e1RM 128.9 → strength_power/hard 82.5% → 106.5 total → +28.5
-    assert sug["suggested_external_load_kg"] == 28.5
+    # B364: 2RM 123 → e1RM 128.9 → SP/hard 82.5 % = 106.3, capped by the 4x3
+    # Prilepin band (0.85 × 1RM = 109.6) × re-entry 0.95 (2nd exposure after the
+    # 24/09 test) = 104.1 → 104.0 total → +26.0.
+    assert sug["suggested_external_load_kg"] == 26.0
     assert sug["suggested_total_load_kg"] < 123.0
     assert sug["reference_2rm_total_kg"] == 123.0
+    assert sug["load_source"] == "anchored"
 
 
 # --- a test never becomes the training load ---------------------------------
@@ -128,6 +131,7 @@ def test_pullup_2rm_test_does_not_write_training_load():
     # …but the test itself is still recorded as the new baseline.
     assert updated["baselines"]["pulling"]["weighted_pullup_2rm_total_kg"] == 123.0
     assert _pullup_suggested(updated)["suggested_external_load_kg"] < 45.0
+    assert updated["tests"]["pulling_strength"][-1]["total_load_2rm_kg"] == 123.0
 
 
 def test_max_hang_test_does_not_write_training_load():
@@ -144,37 +148,52 @@ def test_polluted_legacy_entry_is_ignored():
         "updated_at": "2026-09-24", "last_total_load_kg": 123.0, "next_total_load_kg": 123.0,
         "last_external_load_kg": 45.0, "next_external_load_kg": 45.0, "last_feedback_label": "ok",
     }]
-    assert _pullup_suggested(state)["suggested_external_load_kg"] == 28.5
+    # B364: an entry dated on the test day is not fresher than the test → ignored.
+    assert _pullup_suggested(state)["suggested_external_load_kg"] == 26.0
 
 
-# --- training re-bases the 2RM ----------------------------------------------
+# --- B364: training moves the WORKING load, never the 2RM -------------------
 
 def test_easy_light_set_never_lowers_the_reference():
     updated = apply_feedback(_training_log("easy", 30.0), _state())
     assert pullup_reference_2rm(updated) == 123.0
 
 
-def test_strong_set_of_three_raises_the_reference():
-    # 3 reps at +45 reported "ok" (≈2 in reserve) ≈ a 5RM at 123 → well above a 2RM of 123.
-    updated = apply_feedback(_training_log("ok", 45.0), _state())
-    assert pullup_reference_2rm(updated) > 123.0
-    assert _pullup_suggested(updated)["suggested_external_load_kg"] > 28.5
+def test_strong_set_moves_the_working_load_not_the_reference():
+    updated = apply_feedback(_training_log("ok", 30.0), _state())
+    assert pullup_reference_2rm(updated) == 123.0
+    entry = _entries(updated, "weighted_pullup")[0]
+    assert entry["next_total_load_kg"] == BW + 30.0  # ok = hold
+    assert "e2rm_total_kg" not in entry
 
 
-def test_only_hard_lowers_the_reference():
-    hard = apply_feedback(_training_log("hard", 30.0), _state())
-    very_hard = apply_feedback(_training_log("very_hard", 30.0), _state())
-    assert pullup_reference_2rm(hard) < 123.0
-    assert pullup_reference_2rm(very_hard) < pullup_reference_2rm(hard)
-    for label in ("ok", "easy", "very_easy"):
-        assert pullup_reference_2rm(apply_feedback(_training_log(label, 20.0), _state())) == 123.0
+def test_working_load_never_stored_above_the_structural_cap():
+    # 3 reps at +45 (= the 2RM) "ok": stored at most 1RM / f(5) = 112.0.
+    entry = _entries(apply_feedback(_training_log("ok", 45.0), _state()), "weighted_pullup")[0]
+    assert entry["next_total_load_kg"] == 112.0
 
 
-def test_a_new_test_supersedes_a_training_rebase():
-    state = apply_feedback(_training_log("ok", 45.0), _state())
-    assert pullup_reference_2rm(state) > 123.0
-    state = apply_feedback(_test_log("weighted_pullup", used_external_load_kg=42.0), state)
+def test_no_label_ever_moves_the_reference():
+    for label in ("very_easy", "easy", "ok", "hard", "very_hard"):
+        assert pullup_reference_2rm(apply_feedback(_training_log(label, 30.0), _state())) == 123.0
+
+
+def test_label_steps_on_the_working_load():
+    used = BW + 20.0
+    expected = {"very_easy": used + 5.0, "easy": used + 2.5, "ok": used,
+                "hard": used - 2.5, "very_hard": used - 7.5}
+    for label, total in expected.items():
+        entry = _entries(apply_feedback(_training_log(label, 20.0), _state()), "weighted_pullup")[0]
+        assert entry["next_total_load_kg"] == total, label
+
+
+def test_a_new_test_supersedes_the_working_load():
+    state = apply_feedback(_training_log("easy", 30.0), _state())
+    test = _test_log("weighted_pullup", used_external_load_kg=42.0)
+    test["date"] = "2026-10-10"
+    state = apply_feedback(test, state)
     assert pullup_reference_2rm(state) == 120.0
+    assert _entries(state, "weighted_pullup") == []
 
 
 def test_rebase_is_deterministic():
@@ -196,13 +215,24 @@ def test_builder_never_proposes_the_2rm():
                                           "last_external_load_kg": 45.0, "next_external_load_kg": 45.0,
                                           "updated_at": "2026-09-24"}]
     p = propose_exercise_prescription("weighted_pullup", _catalog(), state, "strength_power", today="2026-10-04")
-    assert p["load_kg"] == 28.5
+    assert p["load_kg"] == 26.0
     assert p["last_logged"]["load_kg"] == 45.0  # the true last value is still shown
 
 
-def test_adhoc_anchor_uses_the_2rm_reference():
-    target = weighted_pullup_target(_state(), "strength_power", "medium")
-    assert anchor_adhoc_load(_catalog()["weighted_pullup"], _state(), "strength_power") == target["external"]
+def test_adhoc_anchor_uses_the_anchored_load():
+    from backend.engine.anchored_load import anchored_load
+    anch = anchored_load(_state(), "weighted_pullup", date="2026-10-04", phase_id="strength_power",
+                         intensity="hard", sets=4, reps=3)
+    assert anchor_adhoc_load(_catalog()["weighted_pullup"], _state(), "strength_power",
+                             today="2026-10-04") == anch["external"] == 26.0
+
+
+def test_adhoc_anchor_untested_keeps_the_2rm_reference():
+    state = _state()
+    state["baselines"]["pulling"]["source"] = "estimated_from_assessment"
+    target = weighted_pullup_target(state, "strength_power", "medium")
+    assert anchor_adhoc_load(_catalog()["weighted_pullup"], state, "strength_power",
+                             today="2026-10-04") is None or target is not None
 
 
 # --- router attaches the prescribed reps ------------------------------------
@@ -245,9 +275,20 @@ def test_pure_test_exercises_keep_no_training_memory():
 
 def test_weighted_chinup_follows_the_pullup_reference_not_the_finger_max():
     sug = _inject_one(_state(), "weighted_chinup", {"sets": 4, "reps": 5})
+    # B364: anchored on the pull-up 2RM (ratio 1.0); 4x5 cap = 0.80 × 128.9
+    # (Prilepin ≤24 reps, ≤6/set) × re-entry 0.95 = 97.9 → 97.5 total.
+    assert sug["load_source"] == "anchored"
+    assert sug["anchored"]["official"]["protocol"] == "weighted_pullup_2rm"
+    assert sug["suggested_external_load_kg"] == 19.5
+    assert sug["suggested_rep_scheme"] == "4x5"
+
+
+def test_untested_chinup_keeps_the_pre_b364_reference():
+    state = _state()
+    state["baselines"]["pulling"]["source"] = "estimated_from_assessment"
+    sug = _inject_one(state, "weighted_chinup", {"sets": 4, "reps": 5})
     assert sug["load_source"] == "pullup_2rm_reference"
     assert sug["suggested_external_load_kg"] == 28.5
-    assert sug["suggested_rep_scheme"] == "4x5"
 
 
 def test_non_edge_total_load_gets_no_finger_max_suggestion():
@@ -278,7 +319,8 @@ def test_body_part_picker_uses_reference_and_freshness_gate():
     ]
     wp = apply_resolver_light({"id": "weighted_pullup", "load_model": "total_load",
                                "prescription_defaults": {"sets": 4, "reps": 3}}, state, "2026-10-04")
-    assert wp["suggested_external_load_kg"] == 28.5
+    assert wp["suggested_external_load_kg"] == 26.0
+    assert wp["load_source"] == "anchored"
     mh = apply_resolver_light({"id": "max_hang_5s", "load_model": "total_load",
                                "prescription_defaults": {"sets": 5, "work_seconds": 5}}, state, "2026-10-04")
     assert mh.get("suggested_external_load_kg") != 46.0
@@ -293,7 +335,8 @@ def test_coach_prompt_never_prints_the_2rm_as_training_load():
                                           "updated_at": "2026-09-24"}]
     text = _baselines_section(state)
     line = next(l for l in text.splitlines() if "Working load: weighted_pullup" in l)
-    assert "45.0 kg" not in line and "2RM" in line
+    assert "45.0 kg" not in line and "official max" in line
+    assert any(l.startswith("- Official max weighted pull-up 2RM: 123.0 kg") for l in text.splitlines())
 
 
 def test_composer_scales_down_for_more_reps_only():
@@ -307,41 +350,43 @@ def test_composer_scales_down_for_more_reps_only():
 
 # --- review findings ---------------------------------------------------------
 
-def test_test_log_without_a_result_keeps_the_rebase():
-    state = apply_feedback(_training_log("ok", 45.0), _state())
-    ref = pullup_reference_2rm(state)
+def test_test_log_without_a_result_keeps_the_working_load():
+    state = apply_feedback(_training_log("easy", 30.0), _state())
     log = _test_log("weighted_pullup")  # no load: skipped/aborted
     log["date"] = "2026-10-10"
-    assert pullup_reference_2rm(apply_feedback(log, state)) == ref
+    after = apply_feedback(log, state)
+    assert _entries(after, "weighted_pullup") == _entries(state, "weighted_pullup")
+    assert pullup_reference_2rm(after) == 123.0
 
 
-def test_backdated_log_does_not_move_a_newer_rebase():
-    state = apply_feedback(_training_log("ok", 45.0, date="2026-10-04"), _state())
-    ref = pullup_reference_2rm(state)
+def test_backdated_log_does_not_move_a_newer_working_load():
+    state = apply_feedback(_training_log("easy", 30.0, date="2026-10-04"), _state())
     for label in ("ok", "hard"):
-        old = apply_feedback(_training_log(label, 30.0, date="2026-10-01"), state)
-        assert pullup_reference_2rm(old) == ref
+        old = apply_feedback(_training_log(label, 20.0, date="2026-10-01"), state)
+        assert _entries(old, "weighted_pullup") == _entries(state, "weighted_pullup")
 
 
-def test_same_log_twice_rebases_once():
+def test_same_log_twice_steps_once():
     once = apply_feedback(_training_log("hard", 30.0), _state())
     twice = apply_feedback(_training_log("hard", 30.0), once)
-    assert pullup_reference_2rm(twice) == pullup_reference_2rm(once)
+    assert _entries(twice, "weighted_pullup") == _entries(once, "weighted_pullup")
 
 
-def test_max_hang_test_resets_the_streaks():
+def test_label_streak_counters_are_gone():
     state = _state()
     state["progression_counters"] = {"max_hang_5s_hard_streak": 2, "max_hang_5s_easy_streak": 0}
     updated = apply_feedback(_test_log("max_hang_7s", used_total_load_kg=118.0), state)
-    assert updated["progression_counters"]["max_hang_5s_hard_streak"] == 0
+    assert "max_hang_5s_hard_streak" not in updated["progression_counters"]
+    assert "max_hang_5s_easy_streak" not in updated["progression_counters"]
 
 
-def test_untested_baseline_still_trusts_legacy_memory():
+def test_untested_baseline_ignores_legacy_memory():
+    """B364: the legacy-memory branch is gone — a remembered load is never a max."""
     state = _state()
     state["baselines"]["pulling"]["source"] = "estimated_from_assessment"
     state["working_loads"]["entries"] = [{"key": "weighted_pullup", "exercise_id": "weighted_pullup",
                                           "next_total_load_kg": 115.0, "updated_at": "2026-10-01"}]
-    assert pullup_reference_2rm(state) > 123.0
+    assert pullup_reference_2rm(state) == 123.0
 
 
 def test_remembered_chinup_load_does_not_override_the_reference():
@@ -349,7 +394,10 @@ def test_remembered_chinup_load_does_not_override_the_reference():
     state["working_loads"]["entries"] = [{"key": "weighted_chinup", "exercise_id": "weighted_chinup",
                                           "next_external_load_kg": 45.0, "updated_at": "2026-10-01"}]
     sug = _inject_one(state, "weighted_chinup", {"sets": 4, "reps": 5})
-    assert sug["suggested_external_load_kg"] == 28.5
+    # No next_total on the entry → no valid working load → phase target; the
+    # fresh entry (10/01, after the test) says the athlete is training the
+    # family → no re-entry discount: 4x5 cap 0.80 × 128.9 = 103.1 → 103 → +25.
+    assert sug["suggested_external_load_kg"] == 25.0
 
 
 def test_router_reads_planned_resolved_instances():

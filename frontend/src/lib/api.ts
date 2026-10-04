@@ -1031,8 +1031,13 @@ export const createBillingPortal = () =>
 export const getCustomSessions = () =>
   request<{ sessions: CustomSessionSummary[]; count: number }>("/api/custom-session/list");
 
-export const getCustomSession = (id: string) =>
-  request<CustomSession>(`/api/custom-session/${id}`);
+// B364: with `date`, anchored exercises (weighted pull-up / chin-up, max hangs)
+// come back with the engine's load for that day in `load_kg` — what the player
+// prefills. Without it, the stored values (what the builder edits).
+export const getCustomSession = (id: string, date?: string) =>
+  request<CustomSession>(
+    `/api/custom-session/${id}${date ? `?date=${encodeURIComponent(date)}` : ""}`,
+  );
 
 export const createCustomSession = (data: {
   name: string;
@@ -1135,6 +1140,7 @@ export const previewBodyPartSession = (data: {
   gym_id?: string | null;
   include_cooldown?: boolean;
   seed?: number;
+  target_date?: string;
 }) =>
   request<BodyPartSession>("/api/body-part-picker/preview", {
     method: "POST",

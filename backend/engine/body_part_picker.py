@@ -21,6 +21,7 @@ from copy import deepcopy
 from datetime import date as _date
 from typing import Any, Dict, List, Optional, Sequence, Set
 
+from backend.engine.anchored_load import ANCHORED_EXERCISES, CUSTOM_INTENSITY, anchor_summary, anchored_load
 from backend.engine.equipment_utils import KNOWN_EQUIPMENT_KEYS, expand_equipment
 from backend.engine.progression_v1 import (
     EXTERNAL_LOAD_FRESHNESS_DAYS,
@@ -603,6 +604,23 @@ def apply_resolver_light(
     instance["notes"] = p.get("notes") or ""
 
     today = today or _date.today().isoformat()
+
+    # Step 3a0 — B364: the four anchored exercises of a TESTED athlete use the
+    # single anchored_load on the session day (same number as plan / builder /
+    # custom player). Untested → the pre-B364 steps below.
+    if ex_id in ANCHORED_EXERCISES:
+        anch = anchored_load(
+            user_state, ex_id, date=today, intensity=CUSTOM_INTENSITY,
+            sets=instance["sets"], reps=instance["reps"], work_seconds=instance["work_seconds"],
+            catalog_intensity=(exercise.get("attributes") or {}).get("intensity_pct"),
+        )
+        if anch is not None:
+            instance["suggested_external_load_kg"] = anch["external"]
+            instance["suggested_total_load_kg"] = anch["total"]
+            instance["load_source"] = "anchored"
+            instance["load_mode"] = "anchored"
+            instance["anchored"] = anchor_summary(anch)
+            return instance
 
     # Step 3a — B363: the weighted pull-up is a % of the 2RM reference, never
     # the raw memory (which may be the 2RM test itself).

@@ -417,6 +417,10 @@ class CustomSessionExerciseEntry(BaseModel):
     rest_between_reps_seconds: Optional[int] = Field(default=None, ge=0, le=300)
     load_kg: Optional[float] = Field(default=0, ge=0, le=200)
     notes: Optional[str] = Field(default=None, max_length=1000)
+    # B364: for the anchored exercises (weighted pull-up / chin-up, max hangs)
+    # 'anchored' (default when missing) recomputes the load on the day the
+    # session is played; 'fixed' keeps the user's kg. Ignored elsewhere.
+    load_mode: Optional[Literal["anchored", "fixed"]] = None
 
 
 class CustomSessionCreateRequest(BaseModel):

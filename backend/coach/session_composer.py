@@ -386,6 +386,7 @@ def _decorate_engine_fields(
         anchor_adhoc_load,
         propose_exercise_prescription,
     )
+    from backend.engine.anchored_load import ANCHORED_EXERCISES, CUSTOM_INTENSITY, anchored_load
 
     today = today or _date.today().isoformat()
     for entry in exercises:
@@ -396,6 +397,25 @@ def _decorate_engine_fields(
         # rule as the load. Without it a composed Copenhagen plank ran one-sided.
         entry["alt_sides"] = bool(ex.get("alt_sides"))
         load_val = 0.0
+        # B364: anchored exercises of a tested athlete take the load of the
+        # single anchored_load AT THE COMPOSED REPS — no _scale_load_for_reps on
+        # top (that would scale twice). Saved with load_mode 'anchored' so the
+        # custom player recomputes it on the day the session is played.
+        if entry["exercise_id"] in ANCHORED_EXERCISES:
+            try:
+                anch = anchored_load(
+                    user_state, entry["exercise_id"], date=today, phase_id=phase,
+                    intensity=CUSTOM_INTENSITY, sets=entry.get("sets"), reps=entry.get("reps"),
+                    work_seconds=entry.get("work_seconds"),
+                    catalog_intensity=(ex.get("attributes") or {}).get("intensity_pct"),
+                )
+            except Exception:
+                logger.exception("composer: anchored load failed for %s", entry["exercise_id"])
+                anch = None
+            if anch is not None:
+                entry["load_kg"] = max(0.0, float(anch["external"]))
+                entry["load_mode"] = "anchored"
+                continue
         try:
             p = propose_exercise_prescription(
                 entry["exercise_id"], catalog_by_id, user_state, phase, today=today
@@ -404,7 +424,7 @@ def _decorate_engine_fields(
             if isinstance(remembered, (int, float)):
                 load_val = float(remembered)
             if not load_val:
-                load_val = float(anchor_adhoc_load(ex, user_state, phase) or 0)
+                load_val = float(anchor_adhoc_load(ex, user_state, phase, today=today) or 0)
             load_val = _scale_load_for_reps(
                 load_val, ex, entry.get("reps"),
                 float(user_state.get("bodyweight_kg") or ((user_state.get("body") or {}).get("weight_kg") or 0.0)),

@@ -72,7 +72,11 @@ export const queryKeys = {
 
   // Custom sessions (A206)
   customSessions: ["custom-session", "list"] as const,
-  customSession: (id: string) => ["custom-session", "detail", id] as const,
+  // B364: the play view asks for the loads of a given day (?date=); the key
+  // keeps the date so two days never share a cache entry. Prefix-compatible
+  // with invalidations on ["custom-session", "detail", id].
+  customSession: (id: string, date?: string) =>
+    (date ? ["custom-session", "detail", id, date] : ["custom-session", "detail", id]) as readonly string[],
   customSessionAll: ["custom-session"] as const, // prefix
   builderExercises: (q: string, domain: string) => ["custom-session", "exercises", q, domain] as const,
   builderBlocks: ["custom-session", "blocks"] as const,
