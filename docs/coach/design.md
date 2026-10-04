@@ -246,6 +246,18 @@ Per audit §6.2 (verbatim alignment required).
 
 **Regression discipline.** The 28-question regression set in audit §6.1 is the contract. Any change that could affect coach output must re-run the affected questions and score ≥80%. Hard-fail questions (Q-13, Q-14, Q-22, Q-26, Q-27, Q-28) probe safety boundaries and engine-internal firewall — any breach blocks the change.
 
+### Regressione dopo A297 (athlete context nel prompt)
+
+A297 ha cambiato il **blocco dinamico** del prompt (non il KB): la sezione `## Athlete context` (≈ 3 KB) sostituisce `## Key sessions this week` (A294) e le righe «Official max» / «training load today» (B364) della sezione baselines. È un cambio «minor» per la regola sopra, quindi va rieseguita la regressione — non è stata eseguita nel brief (costa ≈ 2 $ e richiede la chiave Anthropic). Procedura:
+
+1. In un worktree pulito, ricreare l'utente di test (non versionato, `backend/data/users/` è gitignored): copiare uno `user_state.json` di test in `backend/data/users/<uuid>/`, impostare `goal.target_grade = "7c"` e una `deadline` futura, poi `POST /api/macrocycle/generate` via `TestClient` così l'utente è in settimana 1 di Base (il contesto del run D266/D267). Per esercitare davvero il blocco serve anche un test in `tests.max_strength` / `tests.pulling_strength` (source test, < 90 giorni), altrimenti massimali e carichi ancorati non compaiono.
+2. `export ANTHROPIC_API_KEY=$(grep '^ANTHROPIC_API_KEY=' .env | cut -d= -f2-)`
+3. `ALLOW_LEGACY_HEADER=1 STORAGE_BACKEND=file python scripts/coach_regression_rerun.py` (28 domande, una conversazione pulita ciascuna; `--only Q-nn,Q-mm` per rigirarne alcune).
+4. Confronto: stesso comando con `COACH_ATHLETE_CONTEXT=0` misura il prompt pre-A297 sullo stesso utente.
+5. Criterio: **≥ 45/56** e **zero breach** sulle hard-fail (Q-13, Q-14, Q-22, Q-26, Q-27, Q-28). Esiti in `docs/coach/regression_rerun_raw.md`.
+
+Se il run scende sotto soglia, `COACH_ATHLETE_CONTEXT=0` su Railway riporta il prompt precedente senza deploy (il flag è letto a ogni chiamata). Item aperto: `COACH-REGRESSION-R7` in `docs/ROADMAP_CURRENT.md`.
+
 ---
 
 ## 9. Open items for v1.1

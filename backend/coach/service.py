@@ -172,19 +172,31 @@ def handle_adhoc_compose(
     if guard.get("exclude_ids"):
         intent = {**intent, "key_guard_exclude_ids": list(guard["exclude_ids"])}
 
+    # A297: the engine's athlete context of the session day (maxima, anchored
+    # loads, pain, key sessions, recovery guards, variety, limit log) — one
+    # integration point, behind COACH_ATHLETE_CONTEXT. None (flag off or not
+    # buildable) → both composers behave exactly as before.
+    from backend.coach import athlete_block
+
+    session_day = (target_date or date.today().isoformat())[:10]
+    athlete_ctx = athlete_block.composer_context(state, user_id, session_day)
+    ctx_kwargs: Dict[str, Any] = (
+        {"today": session_day, "athlete_ctx": athlete_ctx} if athlete_ctx is not None else {}
+    )
+
     # A259: the LLM composes from an engine-built pool; the deterministic
     # builder is the fallback, not the default. It stays reachable on every
     # failure path (kill switch, tiny pool, provider error, validation) so the
     # coach can always answer with *a* session.
     session = None
     try:
-        session = session_composer.compose(message, intent, state, catalog)
+        session = session_composer.compose(message, intent, state, catalog, **ctx_kwargs)
     except llm_client.CoachConfigError:
         raise
     except Exception:
         logger.exception("adhoc: LLM composer failed — deterministic fallback")
     if session is None:
-        session = compose_adhoc_session(intent, state, catalog)
+        session = compose_adhoc_session(intent, state, catalog, **ctx_kwargs)
         session.setdefault("composed_by", "deterministic")
 
     if guard.get("warnings"):

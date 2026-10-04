@@ -138,6 +138,21 @@ _SYSTEM = (
     "explaining the shape of the session. No preamble, no bullet lists."
 )
 
+# A297 (R7b): appended to _SYSTEM only when an ATHLETE CONTEXT is present
+# (COACH_ATHLETE_CONTEXT on and the context built). With the flag off the
+# system prompt is byte-identical to the pre-A297 one.
+_SYSTEM_CONTEXT_RULES = (
+    "\n\nAn ATHLETE CONTEXT follows the request. The request decides WHAT is "
+    "trained; the context constrains HOW. Respect its guards — the engine removes "
+    "the lines they forbid anyway, so picking them only shortens the session. For "
+    "an athlete at the level the context shows, exercises with intensity=low or "
+    "very_low are activation or warm-up only, never the main work. 'Harder' means "
+    "intensity first (a harder variation, fewer reps in reserve), then density, "
+    "then volume. Never swap an [ANCHOR] exercise for a variant to change its load, "
+    "and prefer alternatives to exercises marked [OVERUSED]. Loads are never yours "
+    "to set: the engine sets them from the athlete's tested maxima and history."
+)
+
 _TOOL: Dict[str, Any] = {
     "name": "compose_session",
     "description": "Compose the session from the given exercise pool.",
@@ -189,8 +204,11 @@ _TOOL: Dict[str, Any] = {
 }
 
 
-def _pool_line(ex: Dict[str, Any]) -> str:
-    """One compact catalog line for the prompt."""
+def _pool_line(ex: Dict[str, Any], markers: Optional[Dict[str, Any]] = None) -> str:
+    """One compact catalog line for the prompt.
+
+    ``markers`` (A297, only with an athlete context): adds ``intensity=`` and
+    the ``[ANCHOR]`` / ``[OVERUSED n×]`` markers. None → the pre-A297 line."""
     p = ex.get("prescription_defaults") or {}
     bits = [f"{ex.get('id')}", f"\"{ex.get('name')}\""]
     doms = ",".join(_domains_of(ex)[:3])
@@ -211,7 +229,26 @@ def _pool_line(ex: Dict[str, Any]) -> str:
         default.append(f"{p['work_seconds']}s")
     if default:
         bits.append("default:" + "".join(default))
+    if markers is not None:
+        eid = str(ex.get("id"))
+        bits.append(f"intensity={ex.get('intensity_level') or '?'}")
+        if eid in (markers.get("anchors") or set()):
+            bits.append("[ANCHOR]")
+        over = (markers.get("overused") or {}).get(str(ex.get("recency_group") or eid))
+        if over:
+            bits.append(f"[OVERUSED {over}x]")
     return " | ".join(str(b) for b in bits)
+
+
+def _pool_markers(athlete_ctx: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """A297: the pool markers derived from the athlete context, or None."""
+    if not athlete_ctx:
+        return None
+    anchors = {ex for ex, a in ((athlete_ctx.get("anchors") or {}).get("exercises") or {}).items() if a}
+    variety = athlete_ctx.get("variety") or {}
+    overused = set(variety.get("overused") or [])
+    counts = {g["group"]: g["count"] for g in variety.get("groups") or [] if g.get("group") in overused}
+    return {"anchors": anchors, "overused": counts}
 
 
 def build_pool(
@@ -240,6 +277,9 @@ def build_pool(
     # A294 (A259 extension, decision 2026-10-04): near a finger key session or
     # before a max test the engine drops the finger-hard / heavy-pull lines.
     banned |= {str(x) for x in (intent.get("key_guard_exclude_ids") or [])}
+    # A297: the athlete-context guards of the session day (finger gap, heavy
+    # pulling window, pre-limit, deload, hard cap) — same exclusion channel.
+    banned |= {str(x) for x in (intent.get("athlete_guard_exclude_ids") or [])}
 
     pool = [
         ex
@@ -374,6 +414,7 @@ def _decorate_engine_fields(
     user_state: Dict[str, Any],
     phase: Optional[str],
     today: Optional[str] = None,
+    session_exercise_ids: Optional[List[str]] = None,
 ) -> None:
     """Add display name, load_model and the remembered load, in place.
 
@@ -411,6 +452,9 @@ def _decorate_engine_fields(
                     intensity=CUSTOM_INTENSITY, sets=entry.get("sets"), reps=entry.get("reps"),
                     work_seconds=entry.get("work_seconds"),
                     catalog_intensity=(ex.get("attributes") or {}).get("intensity_pct"),
+                    # A297: the same-session guards of anchored_load (a weighted
+                    # pull next to a max hang is capped) — only with a context.
+                    session_exercise_ids=session_exercise_ids,
                 )
             except Exception:
                 logger.exception("composer: anchored load failed for %s", entry["exercise_id"])
@@ -449,8 +493,16 @@ def compose(
     intent: Dict[str, Any],
     user_state: Dict[str, Any],
     catalog_by_id: Dict[str, Dict[str, Any]],
+    *,
+    today: Optional[str] = None,
+    athlete_ctx: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """Compose via the LLM, or return None so the caller falls back.
+
+    ``today`` (A297): the session day — loads and guards are read on it.
+    ``athlete_ctx`` (A297): the engine's athlete context of that day
+    (``backend.coach.athlete_block.composer_context``). None — flag off or not
+    buildable — composes exactly as before A297.
 
     None means "this did not produce a session worth showing" — never a partial
     or a guess. Every provider error is caught here for the same reason: the
@@ -463,6 +515,13 @@ def compose(
     minutes = _clamp(intent.get("minutes"), MIN_MINUTES, MAX_MINUTES) or 45
     energy = intent.get("energy") if intent.get("energy") in ADHOC_ENERGY else "medium"
     phase = _current_phase(user_state)
+    guard_view: Optional[Dict[str, Any]] = None
+    if athlete_ctx:
+        from backend.engine.athlete_context import composer_guard_view
+
+        guard_view = composer_guard_view(user_state, athlete_ctx, today, catalog_by_id)
+        if guard_view.get("exclude_ids"):
+            intent = {**intent, "athlete_guard_exclude_ids": list(guard_view["exclude_ids"])}
     pool = build_pool(intent, user_state, catalog_by_id)
     if len(pool) < MIN_EXERCISES:
         logger.warning("composer: pool too small (%d) — falling back", len(pool))
@@ -479,12 +538,21 @@ def compose(
             "Refused by the athlete (already removed from the pool): "
             + ", ".join(intent["exclude"])
         )
+    markers = _pool_markers(athlete_ctx)
+    system = _SYSTEM
+    if athlete_ctx:
+        from backend.engine.athlete_context import render_composer_block
+
+        block = render_composer_block(athlete_ctx, state=user_state, day=today)
+        if block:
+            context += ["", block]
+            system = _SYSTEM + _SYSTEM_CONTEXT_RULES
     context += ["", f"EXERCISE POOL ({len(pool)} options):"]
-    context += [_pool_line(ex) for ex in pool]
+    context += [_pool_line(ex, markers) for ex in pool]
 
     base_content = "\n".join(context)
     try:
-        proposal = llm_client.extract(_SYSTEM, base_content, _TOOL)
+        proposal = llm_client.extract(system, base_content, _TOOL)
         exercises, dropped = validate(proposal, pool, minutes)
 
         # One corrective round when the session is well short of the ask. The
@@ -504,7 +572,7 @@ def compose(
                 "priorities and the same refusals. Target 85-100% of "
                 f"{minutes} minutes."
             )
-            retry = llm_client.extract(_SYSTEM, retry_content, _TOOL)
+            retry = llm_client.extract(system, retry_content, _TOOL)
             retry_ex, retry_dropped = validate(retry, pool, minutes)
             if estimate_custom_session_duration(retry_ex) > filled:
                 proposal, exercises, dropped = retry, retry_ex, retry_dropped
@@ -513,6 +581,15 @@ def compose(
     except Exception:
         logger.exception("composer: LLM call failed — falling back")
         return None
+
+    if guard_view is not None:
+        # A297: deterministic post-validation guard. The pool already lost the
+        # finger-hard / front-lever lines of a guarded day; what is left to
+        # check is the weighted pull at the reps the MODEL chose.
+        from backend.engine.athlete_context import drop_heavy_pulls
+
+        dropped = list(guard_view.get("dropped") or []) + dropped
+        dropped += drop_heavy_pulls(user_state, exercises, guard_view)
 
     logger.info(
         "composer: proposed=%d kept=%d dropped=%s",
@@ -527,7 +604,11 @@ def compose(
     # (A253), exactly as the deterministic path builds them. A composed max-hang
     # session without kilos would be useless, and a composed one with INVENTED
     # kilos would be worse — this is the line between the two.
-    _decorate_engine_fields(exercises, catalog_by_id, user_state, phase)
+    if athlete_ctx:
+        _decorate_engine_fields(exercises, catalog_by_id, user_state, phase, today=today,
+                                session_exercise_ids=[e["exercise_id"] for e in exercises])
+    else:
+        _decorate_engine_fields(exercises, catalog_by_id, user_state, phase)
 
     ids = [e["exercise_id"] for e in exercises]
     name = str(proposal.get("name") or "").strip()[:80] or "Ad-hoc session"
@@ -541,7 +622,12 @@ def compose(
             + (f", fase {phase}." if phase else ".")
         )
 
-    return {
+    effort_band = effort_band_for_phase(phase)
+    if guard_view is not None:
+        from backend.engine.adhoc_prescription import effort_band_for
+
+        effort_band = effort_band_for(phase, energy, guard_view)
+    session: Dict[str, Any] = {
         "adhoc": True,
         "name": name,
         "tags": [t for t in [intent.get("focus"), intent.get("equipment_set")] if t],
@@ -549,7 +635,7 @@ def compose(
         "estimated_load_score": compute_custom_session_load(ids, catalog_by_id),
         "estimated_duration_minutes": estimate_custom_session_duration(exercises),
         "explanation": rationale,
-        "effort_band": effort_band_for_phase(phase),
+        "effort_band": effort_band,
         "phase": phase,
         # Audit trail (A259): which path composed this, and what the validator
         # threw away. Without it a bad session is only ever "the AI got it
@@ -566,4 +652,21 @@ def compose(
             "minutes": minutes,
             "energy": energy,
         },
+    }
+    if athlete_ctx:
+        session["athlete_context_version"] = athlete_ctx.get("version")
+    if guard_view is not None and guard_view.get("day"):
+        session["athlete_guards"] = _guards_payload(guard_view)
+    return session
+
+
+def _guards_payload(view: Dict[str, Any]) -> Dict[str, Any]:
+    """A297: the guard verdict of the session day for the preview (additive,
+    optional; old clients ignore it)."""
+    return {
+        "day": view.get("day"),
+        "finger_max_ok": bool(view.get("finger_max_ok")),
+        "heavy_pull_ok": bool(view.get("heavy_pull_ok")),
+        "hiit_ok": bool(view.get("hiit_ok")),
+        "reasons": dict(view.get("reasons") or {}),
     }

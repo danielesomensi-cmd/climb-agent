@@ -26,6 +26,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from backend.engine.anchored_load import HANG_SECONDS, REENTRY_MAX_HANG_SETS
 from backend.engine.adhoc_prescription import (
     anchor_adhoc_load,
+    effort_band_for,
     effort_band_for_phase,
     propose_exercise_prescription,
 )
@@ -287,6 +288,42 @@ def _rank_key(ex: Dict[str, Any], phase: Optional[str]) -> tuple:
     )
 
 
+# A297 (R7b) — ranking with the athlete context (COACH_ATHLETE_CONTEXT on).
+# ENGINEERING CONSTANTS (design choices, no published source): the intensity
+# level a phase asks of an ad-hoc session, shifted one step by the energy.
+INTENSITY_LEVELS: Dict[str, int] = {"very_low": 0, "low": 1, "medium": 2, "high": 3, "max": 4}
+PHASE_TARGET_INTENSITY: Dict[str, int] = {
+    "base": 2, "strength_power": 3, "power_endurance": 3, "performance": 3, "deload": 1,
+}
+ENERGY_INTENSITY_SHIFT: Dict[str, int] = {"low": -1, "medium": 0, "high": 1}
+#: An anchored exercise (max hangs, weighted pulls) is admissible again once
+#: this many days have passed since its last done session (the 48 h finger gap).
+ANCHOR_REUSE_MIN_DAYS = 2
+#: "Never used in the window" ranks as this many days ago.
+NEVER_USED_DAYS = 9999
+
+
+def target_intensity(phase: Optional[str], energy: Optional[str]) -> int:
+    base = PHASE_TARGET_INTENSITY.get(str(phase or ""), 2)
+    return max(0, min(4, base + ENERGY_INTENSITY_SHIFT.get(str(energy or "medium"), 0)))
+
+
+def _rank_key_ctx(
+    ex: Dict[str, Any], phase: Optional[str], target_level: int, days_since_last_use: int,
+) -> tuple:
+    """A297: phase affinity, then distance from the intensity the phase/energy
+    asks, then the least recently used (variety collector), then id.
+
+    Kept separate from ``_rank_key`` so the flag-off path is unchanged."""
+    level = INTENSITY_LEVELS.get(str(ex.get("intensity_level") or ""), 2)
+    return (
+        not _phase_match(ex, phase),
+        abs(level - target_level),
+        -int(days_since_last_use),
+        str(ex.get("id") or ""),
+    )
+
+
 def _candidates(
     catalog_by_id: Dict[str, Dict[str, Any]],
     *,
@@ -482,8 +519,15 @@ def compose_adhoc_session(
     catalog: Dict[str, Any],
     *,
     today: Optional[str] = None,
+    athlete_ctx: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Compose an adhoc custom_session preview (NOT persisted, no id).
+
+    ``athlete_ctx`` (A297): the engine's athlete context of the session day.
+    With it, recency comes from the variety collector (custom sessions
+    included) and only PENALISES (an anchored exercise is excluded only within
+    48 h of its last use), candidates rank on the intensity the phase asks, and
+    the day's recovery guards narrow the pool. None → pre-A297 behaviour.
 
     ``intent``: {equipment_set, focus, secondary_focus?, body_parts?, minutes,
     energy}. When ``body_parts`` (a subset of the closed body-part taxonomy) is
@@ -546,7 +590,35 @@ def compose_adhoc_session(
     else:
         equipment = resolve_equipment_mode(equipment_set, user_state)
     phase = _current_phase(user_state)
-    recent = set(_recent_exercise_ids(user_state))
+    guard_view: Optional[Dict[str, Any]] = None
+    if athlete_ctx:
+        from datetime import datetime as _dt
+
+        from backend.engine.anchored_load import ANCHORED_EXERCISES
+        from backend.engine.athlete_context import composer_guard_view
+
+        guard_view = composer_guard_view(user_state, athlete_ctx, today, catalog_by_id)
+        today_d = _dt.strptime(today[:10], "%Y-%m-%d").date()
+        days_since: Dict[str, int] = {}
+        for eid, last in ((athlete_ctx.get("variety") or {}).get("exercise_last_date") or {}).items():
+            try:
+                days_since[str(eid)] = (today_d - _dt.strptime(str(last)[:10], "%Y-%m-%d").date()).days
+            except (TypeError, ValueError):
+                continue
+        target_level = target_intensity(phase, energy)
+        # Only an anchored exercise is held out, and only inside the 48 h gap;
+        # every other recent exercise stays a candidate and ranks lower.
+        recent = {eid for eid, n in days_since.items()
+                  if eid in ANCHORED_EXERCISES and n < ANCHOR_REUSE_MIN_DAYS}
+        recent |= set(guard_view.get("builder_exclude_ids") or [])
+
+        def rank(e: Dict[str, Any]) -> tuple:
+            return _rank_key_ctx(e, phase, target_level, days_since.get(str(e.get("id")), NEVER_USED_DAYS))
+    else:
+        recent = set(_recent_exercise_ids(user_state))
+
+        def rank(e: Dict[str, Any]) -> tuple:
+            return _rank_key(e, phase)
 
     chosen: List[Dict[str, Any]] = []
     used: set = set(recent)  # avoid recents AND avoid duplicates within the session
@@ -601,7 +673,7 @@ def compose_adhoc_session(
             catalog_by_id, domains=FOCUS_DOMAINS[focus_key], equipment=equipment, exclude=used
         )
         pool = [e for e in pool if not ({"warmup", "cooldown", "test"} & set(_roles_of(e)))]
-        pool.sort(key=lambda e: _rank_key(e, phase))
+        pool.sort(key=rank)
         return pool
 
     def _estimate(exs: List[Dict[str, Any]]) -> int:
@@ -639,7 +711,7 @@ def compose_adhoc_session(
                 and _exercise_fits_equipment(e, equipment)
                 and not ({"warmup", "cooldown", "test"} & set(_roles_of(e)))
             ]
-            pool.sort(key=lambda e: _rank_key(e, phase))
+            pool.sort(key=rank)
             return pool
 
         part_pools = {p: _bodypart_candidates(p) for p in body_parts}
@@ -732,7 +804,7 @@ def compose_adhoc_session(
     # muscle-level mode (A252) — appending core to a "chest + triceps" request
     # would be padding an unrequested muscle group.
     finishers = _candidates(catalog_by_id, categories=["core"], equipment=equipment, exclude=used)
-    finishers.sort(key=lambda e: _rank_key(e, phase))
+    finishers.sort(key=rank)
     if (
         not use_body_parts
         and focus != "core"
@@ -834,7 +906,7 @@ def compose_adhoc_session(
     if harmonization:
         explanation += " " + harmonization
 
-    return {
+    session: Dict[str, Any] = {
         "adhoc": True,
         "name": f"Adhoc {combo_label} @ {place_label}" if gym_label else f"Adhoc {combo_label} ({equipment_set})",
         "tags": tags,
@@ -843,7 +915,8 @@ def compose_adhoc_session(
         "estimated_duration_minutes": estimate_custom_session_duration(exercises),
         # Display metadata for the coach card (not part of the stored session).
         "explanation": explanation,
-        "effort_band": effort_band_for_phase(phase),
+        "effort_band": (effort_band_for(phase, energy, guard_view) if guard_view is not None
+                        else effort_band_for_phase(phase)),
         "phase": phase,
         "intent": {
             "equipment_set": equipment_set,
@@ -855,3 +928,20 @@ def compose_adhoc_session(
             "energy": energy,
         },
     }
+    if athlete_ctx:
+        session["athlete_context_version"] = athlete_ctx.get("version")
+    if guard_view is not None and guard_view.get("day"):
+        # A297: what the day's guards took out, with the reason (audit trail,
+        # same field the LLM composer fills).
+        session["dropped"] = list(guard_view.get("dropped") or [])
+        if set(guard_view.get("builder_exclude_ids") or []) - set(guard_view.get("exclude_ids") or []):
+            session["dropped"].append("guard: weighted pulls at >=85% 1RM left out — "
+                                      + str((guard_view.get("reasons") or {}).get("pull") or "recovery guard"))
+        session["athlete_guards"] = {
+            "day": guard_view.get("day"),
+            "finger_max_ok": bool(guard_view.get("finger_max_ok")),
+            "heavy_pull_ok": bool(guard_view.get("heavy_pull_ok")),
+            "hiit_ok": bool(guard_view.get("hiit_ok")),
+            "reasons": dict(guard_view.get("reasons") or {}),
+        }
+    return session

@@ -19,7 +19,6 @@ detail. A warning is logged whenever truncation kicks in.
 from __future__ import annotations
 
 import logging
-import os
 from datetime import date, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Optional
@@ -202,11 +201,16 @@ def _profile_section(state: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _baselines_section(state: Dict[str, Any]) -> str:
+def _baselines_section(state: Dict[str, Any], *, context_in_block: bool = False) -> str:
     """Test maximals + current working loads (B-COACH-CONTEXT-FIX).
 
     Sources: baselines.hangboard / baselines.pulling, assessment.tests,
     working_loads.entries (capped at 15, most recently updated first).
+
+    ``context_in_block`` (A297): the official maxima and the anchored training
+    loads are rendered by the ``## Athlete context`` block (with the COMPUTED
+    test confidence), so they are left out here instead of being said twice.
+    An anchored exercise without a tested max keeps its pre-A297 line.
     """
     lines = ["## Baselines & working loads"]
     baselines = state.get("baselines") or {}
@@ -232,7 +236,8 @@ def _baselines_section(state: Dict[str, Any]) -> str:
     for key, value in tests.items():
         if value not in (None, "", []):
             lines.append(f"- Test {key}: {value}")
-    lines.extend(_official_max_lines(state))
+    if not context_in_block:
+        lines.extend(_official_max_lines(state))
     entries = (state.get("working_loads") or {}).get("entries") or []
     entries = sorted(entries, key=lambda e: str(e.get("updated_at") or ""),
                      reverse=True)[:15]
@@ -242,6 +247,8 @@ def _baselines_section(state: Dict[str, Any]) -> str:
                                if v not in (None, "", []))
         load_bits = []
         anchored_line = _anchored_line(state, str(entry.get("exercise_id") or ""), entry)
+        if anchored_line and context_in_block:
+            continue
         if anchored_line:
             load_bits.append(anchored_line)
         elif entry.get("exercise_id") == "weighted_pullup":
@@ -703,12 +710,13 @@ def _equipment_section(state: Dict[str, Any]) -> str:
 
 
 def coach_athlete_context_enabled() -> bool:
-    """A294 review: the athlete-context blocks of the coach prompt sit behind
-    ``COACH_ATHLETE_CONTEXT`` (default ON; only the literal ``0`` turns them
-    off, like ``RATE_LIMIT_ENABLED``) — the flag DECISIONS #13 assigns to A297,
-    which will route every such block through one integration point. Read at
-    call time, so a Railway variable change is enough (no code deploy)."""
-    return os.getenv("COACH_ATHLETE_CONTEXT", "1").strip() != "0"
+    """``COACH_ATHLETE_CONTEXT`` (default ON; only the literal ``0`` turns it
+    off, like ``RATE_LIMIT_ENABLED``). Owned by A297, which routes every
+    athlete-context block through ``backend.coach.athlete_block``. Read at call
+    time, so a Railway variable change is enough (no code deploy)."""
+    from backend.coach import athlete_block
+
+    return athlete_block.enabled()
 
 
 def _key_section(state: Dict[str, Any], user_id: Optional[str], today_iso: str) -> Optional[str]:
@@ -758,19 +766,31 @@ def build_user_context(
     """
     today = date.today()
     today_iso = today.isoformat()
+    # A297: the single integration point of the engine's athlete data (maxima,
+    # anchored loads, pain/fatigue, key sessions, guards, retest, limit log).
+    # When it cannot be built the pre-A297 sections stand in (B364 lines in the
+    # baselines + the A294 key block), so a failure never empties the prompt.
+    athlete = None
+    if coach_athlete_context_enabled():
+        from backend.coach import athlete_block
+
+        athlete = athlete_block.chat_block(state, user_id, today_iso)
     sections = [
         "=== USER CONTEXT (read-only snapshot, generated "
         f"{today_iso}) ===",
         _profile_section(state),
-        _baselines_section(state),
+        _baselines_section(state, context_in_block=athlete is not None),
         _plan_section(state),
     ]
     notes = _notes_section(state)
     if notes:
         sections.append(notes)
-    keys = _key_section(state, user_id, today_iso)
-    if keys:
-        sections.append(keys)
+    if athlete is not None:
+        sections.append(athlete)
+    else:
+        keys = _key_section(state, user_id, today_iso)
+        if keys:
+            sections.append(keys)
     if include_week_detail:
         sections.append(_week_section(state, user_id, today_iso))
         sections.append(_today_section(state, user_id, today_iso))
