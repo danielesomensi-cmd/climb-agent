@@ -31,6 +31,7 @@ from backend.engine.planner_v2 import (
 from backend.engine.replanner_v1 import merge_prev_week_sessions, regenerate_preserving_completed
 from backend.engine.resolve_session import resolve_session
 from backend.engine.weekly_override import merge_override_into_availability
+from backend.engine import retest_policy as _retest_policy
 
 logger = logging.getLogger(__name__)
 
@@ -353,6 +354,82 @@ def _is_servable_plan(plan: Optional[dict], week_start_key: str) -> bool:
     )
 
 
+# ---------------------------------------------------------------------------
+# A289 — retest policy inputs (archived weeks, outdoor days) and live status
+# ---------------------------------------------------------------------------
+
+#: Archived weeks read for the retest policy: the confidence window of a test
+#: up to 90 days old (21 days before it) plus the blocker look-back.
+_RETEST_ARCHIVE_LOOKBACK_D = 90 + 21 + 7
+#: Outdoor days read for the retest blockers (finger-hard days before a test).
+_RETEST_OUTDOOR_LOOKBACK_D = 14
+
+
+def _retest_archived_weeks(user_id: Optional[str], ref_iso: str) -> Optional[dict]:
+    """Archived weeks around ``ref_iso`` (A221 cold store), or None on failure.
+
+    Fail-soft: the policy then counts the hot weeks + the persisted exposure
+    registry only (an under-estimate of past exposures, never a crash)."""
+    try:
+        from backend.api import deps as _deps
+
+        ref = datetime.strptime(ref_iso[:10], "%Y-%m-%d").date()
+        start = (ref - timedelta(days=_RETEST_ARCHIVE_LOOKBACK_D)).isoformat()
+        return _deps._storage.read_archived_weeks_in_range(user_id, start, ref.isoformat())
+    except Exception:
+        logger.warning("A289: archived weeks unavailable for the retest policy", exc_info=True)
+        return None
+
+
+def _retest_outdoor_rows(user_id: Optional[str], ref_iso: str) -> Optional[list]:
+    try:
+        from backend.api import deps as _deps
+
+        ref = datetime.strptime(ref_iso[:10], "%Y-%m-%d").date()
+        since = (ref - timedelta(days=_RETEST_OUTDOOR_LOOKBACK_D)).isoformat()
+        return _deps._storage.read_outdoor_logs(user_id, since)
+    except Exception:
+        logger.warning("A289: outdoor logs unavailable for the retest policy", exc_info=True)
+        return None
+
+
+def _status_needs_archive(state: dict, today_iso: str, finger_device: Optional[str]) -> bool:
+    """retest_status needs the cold store only when a covered test has no
+    stored, computed confidence (pre-B364 tests not yet migrated)."""
+    for axis in _retest_policy.RETEST_AXES:
+        om = _retest_policy.axis_official(state, axis, today_iso, finger_device=finger_device)
+        if not om or not om.get("tested"):
+            continue
+        entry = _retest_policy._find_test_entry(state, om)
+        if entry is None or not isinstance(entry.get("confidence_basis"), dict):
+            return True
+    return False
+
+
+def _compute_retest_status(state: dict, user_id: Optional[str]) -> Optional[dict]:
+    """Live retest status (A289). Never breaks GET /api/week: None on error."""
+    try:
+        today_iso = datetime.now().strftime("%Y-%m-%d")
+        finger_device = (state.get("preferences") or {}).get("finger_training_device")
+        archived = (
+            _retest_archived_weeks(user_id, today_iso)
+            if _status_needs_archive(state, today_iso, finger_device) else None
+        )
+        # Outdoor days only matter for the live blockers of a planned hang test.
+        planned_hang = _retest_policy._planned_axis_tests(
+            state, _retest_policy.AXIS_FINGER,
+            since=datetime.strptime(today_iso, "%Y-%m-%d").date(),
+        )
+        status = _retest_policy.retest_status(
+            state, today_iso, finger_device=finger_device, archived_weeks=archived,
+            outdoor_rows=_retest_outdoor_rows(user_id, today_iso) if planned_hang else None,
+        )
+        return status if status.get("axes") else None
+    except Exception:
+        logger.warning("A289: retest_status failed", exc_info=True)
+        return None
+
+
 @router.get("/{week_num}")
 def get_week(
     week_num: int,
@@ -553,6 +630,21 @@ def get_week(
             prev_start = (datetime.strptime(ctx["start_date"], "%Y-%m-%d") - timedelta(weeks=1)).strftime("%Y-%m-%d")
             _prev_week_plan = week_plans.get(prev_start)
 
+            # A289: the retest policy decides the tests of the TESTED axes for
+            # this week; only on generation (a cached week keeps its tests).
+            # None for an untested athlete → planner byte-identical.
+            _retest_decisions = None
+            try:
+                _real_today = datetime.now().strftime("%Y-%m-%d")
+                _retest_decisions = _retest_policy.retest_decisions(
+                    state, ctx["start_date"], today=_real_today, finger_device=finger_device,
+                    archived_weeks=_retest_archived_weeks(user_id, ctx["start_date"]),
+                    outdoor_rows=_retest_outdoor_rows(user_id, ctx["start_date"]),
+                )
+            except Exception:
+                logger.warning("A289: retest decisions failed — legacy PASS 3", exc_info=True)
+                _retest_decisions = None
+
             week_plan = generate_phase_week(
                 phase_id=ctx["phase_id"],
                 domain_weights=ctx["domain_weights"],
@@ -581,6 +673,7 @@ def get_week(
                 # read only by the legacy planner_v1, which nothing imports.
                 test_queue=state.get("test_queue"),
                 taper_volume=taper_volume if taper_volume else None,
+                retest_decisions=_retest_decisions,
             )
         except Exception as e:
             logger.error("Week generation failed: %s", e, exc_info=True)
@@ -637,8 +730,15 @@ def get_week(
     # A141: attach process cues to each session
     _attach_process_cues(week_plan, user_id or "default")
 
-    # Check for periodic test reminder
+    # A289: live retest status (official max, confidence, trend, next test).
+    retest_status = _compute_retest_status(state, user_id)
+
+    # Check for periodic test reminder. A289: derived from the retest policy —
+    # when the policy covers an axis it schedules the tests itself, so the
+    # manual 6-week reminder is shown only to athletes it does not cover.
     test_reminder = should_show_test_reminder(state, ctx["week_num"])
+    if test_reminder and retest_status and retest_status.get("covered_axes"):
+        test_reminder = None
 
     result = {
         "week_num": ctx["week_num"],
@@ -649,6 +749,8 @@ def get_week(
     }
     if test_reminder:
         result["test_reminder"] = test_reminder
+    if retest_status:
+        result["retest_status"] = retest_status
 
     return result
 

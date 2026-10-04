@@ -525,6 +525,31 @@ the module.
 measured early-retest evidence (`retest_signals`, never an enqueue — labels no
 longer touch `test_queue`) and the fatigue days (`hard_labels`).
 
+### 8.2 Retest policy — who schedules a test (A289)
+
+Only `retest_policy.retest_decisions(state, week_start, ...)` schedules tests of
+a **covered** axis (finger with a hangboard, pulling; covered = a test < 90
+days). `GET /api/week` computes it when it GENERATES a week (archived weeks and
+outdoor rows read fail-soft) and passes it to `generate_phase_week(retest_decisions=...)`:
+
+```
+retest_decisions  → week-level: trigger (end_of_phase | end_of_phase_slipped |
+                    cycle_start | maintenance | early_retest), gap by confidence
+                    (28 / 42 d), phase / trip / very_hard day blockers,
+                    external finger-hard + heavy-pull days, already-scheduled
+planner PASS 3a   → day-level against the week's own sessions: < 72 h finger-hard
+                    (hang), < 48 h heavy pull (pull-up), 48 h finger gap, hard cap;
+                    paired day, hang slot before pull-up slot
+planner PASS 3    → historical, only for the axes the policy does not cover
+retest_status     → live on every GET: official max, confidence, trend (±5 %),
+                    next test (planned with reason | projected), live blockers
+```
+
+`None` (untested athlete) leaves the planner byte-identical and `GET /api/week`
+without `retest_status`. A cached week is never regenerated for the policy; the
+live status flags a planned test that became too close to a hard session
+instead of moving it.
+
 ---
 
 ## 9. Replanner (`replanner_v1.py`)
@@ -869,7 +894,8 @@ stimulus.py                           (A288 — family table + exposure views, r
   ├── assessment_v1.GRADE_ORDER, free_session.FONT_GRADES
   └── planner_v2._SESSION_META  (lazy import)
 
-retest_policy.py                      (A288 — official_max / test_confidence / reentry_step)
+retest_policy.py                      (A288 — official_max / test_confidence / reentry_step;
+                                       A289 — retest_decisions / retest_status)
   ├── stimulus.{exposure_dates, count_exposures, session_flag, ...}
   └── progression_v1.estimate_1rm_from_2rm  (lazy import)
 ```

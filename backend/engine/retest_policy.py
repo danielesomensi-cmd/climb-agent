@@ -32,6 +32,9 @@ IMPORTANT: always call these on the PERSISTED state, never on the output of
 ``progression_v1.estimate_missing_baselines``: that helper stamps
 ``source='test'`` with ``updated_at=today`` on estimated baselines (B364 §0).
 
+A289 adds the scheduling half: ``retest_decisions`` (what planner PASS 3 must
+place, week by week) and ``retest_status`` (the live payload for the UI).
+
 Production callers since B364: ``anchored_load`` (official max, tested gate,
 re-entry ramp) and ``progression_v1._update_test_from_log`` (confidence).
 """
@@ -39,7 +42,7 @@ re-entry ramp) and ``progression_v1._update_test_from_log`` (confidence).
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 from backend.engine.stimulus import (
     FAMILY_FINGER_MAX,
@@ -499,6 +502,663 @@ def is_heavy_pulling_session(
     return session_flag(session, "pulling") and session_flag(session, "hard")
 
 
+# ---------------------------------------------------------------------------
+# A289 — retest DECISIONS (planner PASS 3) and retest STATUS (UI)
+# ---------------------------------------------------------------------------
+#
+# Only this module schedules a test of a tested axis (decision 2026-10-04:
+# "only retest_policy schedules tests"). It answers, for one week, "is a test
+# of axis X due here, from which day, and which days are blocked before the
+# planner even looks at its own sessions". The planner then places the test
+# against its in-week sessions with the SAME blocker definitions (finger-hard
+# day, heavy pulling) — see ``planner_v2`` PASS 3.
+#
+# Scope: an axis is COVERED only when the athlete has a tested official max
+# for it on the week start (``official_max(...)["tested"]``: source
+# test/test_session, < 90 days). Untested axes, stale tests and loading-pin
+# finger users are not covered: the legacy PASS 3 keeps scheduling them bit
+# for bit. ``retest_decisions`` returns ``None`` when nothing is covered, and
+# the planner is byte-identical to the pre-A289 one with ``None``.
+#
+# Triggers (one test per axis per trigger; the first that applies wins):
+#   end_of_phase           last week of strength_power
+#   end_of_phase_slipped   the week after it, when the gap since the last test
+#                          kept the whole end-of-phase week out of reach (ONE
+#                          slip of one week — "option B", decision 2026-10-04)
+#   cycle_start            first week of a macrocycle
+#   maintenance            MAINTENANCE_RETEST_D since the last test
+#   early_retest           EARLY_RETEST_SIGNALS measured sessions above the max
+#                          (``progression_counters.retest_signals``, B364)
+# Week blockers: performance / deload phase, gap since the last test
+# (LOW_CONF_RETEST_D when the test had low confidence, HIGH_CONF_RETEST_D
+# otherwise). Day blockers: ≤ PRE_TRIP_BLOCK_D days before a trip (or during
+# it), very_hard feedback in the VERY_HARD_BLOCK_D days before, a finger-hard
+# day < RETEST_BLOCK_H before a hang test, a heavy pull < PULL_TEST_BLOCK_H
+# before a pull-up test.
+#
+# Hours → days: the planner works in whole days (one session per slot, slots
+# are not timed), so "< 72 h after X" means "fewer than 3 calendar days after
+# the day of X" and "< 48 h" means "fewer than 2". A session two days earlier
+# in the same slot is exactly 48 h away and does NOT block a pull-up test.
+
+AXIS_FINGER = "finger"
+AXIS_PULLING = "pulling"
+RETEST_AXES = (AXIS_FINGER, AXIS_PULLING)
+
+#: Test session the policy schedules per axis (hangboard users; loading-pin
+#: users are not covered on the finger axis).
+AXIS_TEST_SESSION: Dict[str, str] = {
+    AXIS_FINGER: "test_max_hang_7s",
+    AXIS_PULLING: "test_max_weighted_pullup",
+}
+AXIS_PROTOCOL: Dict[str, str] = {
+    AXIS_FINGER: PROTOCOL_HANG_7S,
+    AXIS_PULLING: PROTOCOL_PULLUP_2RM,
+}
+#: Sessions that test an axis (for "is a test already planned").
+AXIS_TEST_SESSIONS_ALL: Dict[str, Tuple[str, ...]] = {
+    AXIS_FINGER: ("test_max_hang_7s", "test_max_hang_5s", "test_lp_max_5s"),
+    AXIS_PULLING: ("test_max_weighted_pullup", "test_pullup_bw"),
+}
+#: Exercises whose measured sessions feed ``retest_signals`` per axis.
+AXIS_SIGNAL_EXERCISES: Dict[str, Tuple[str, ...]] = {
+    AXIS_FINGER: ("max_hang_7s", "max_hang_5s"),
+    AXIS_PULLING: ("weighted_pullup", "weighted_chinup"),
+}
+
+#: Gap after a high-confidence test (the planner's historical 42-day freshness).
+HIGH_CONF_RETEST_D = 42
+#: A tested axis is re-measured at the latest after 12 weeks (same as the
+#: planner's MAX_WEEKS_UNTESTED; after 90 days the axis is no longer "tested"
+#: and the legacy schedule takes over).
+MAINTENANCE_RETEST_D = 84
+#: Measured sessions above the official max needed for an early retest.
+EARLY_RETEST_SIGNALS = 2
+#: ENGINEERING CONSTANT: how far ahead ``retest_status`` projects the next test.
+STATUS_HORIZON_WEEKS = 16
+#: |Δ| below this (percent) between two tests of one protocol = "stable".
+TREND_STABLE_PCT = 5.0
+
+TRIGGER_END_OF_PHASE = "end_of_phase"
+TRIGGER_END_OF_PHASE_SLIPPED = "end_of_phase_slipped"
+TRIGGER_CYCLE_START = "cycle_start"
+TRIGGER_MAINTENANCE = "maintenance"
+TRIGGER_EARLY = "early_retest"
+
+_TRIGGER_TEXT: Dict[str, str] = {
+    TRIGGER_END_OF_PHASE: "End of the strength phase: measure what the block built.",
+    TRIGGER_END_OF_PHASE_SLIPPED: (
+        "End-of-strength retest moved one week: the last test needs {gap} days "
+        "before it can be repeated ({confidence} confidence)."
+    ),
+    TRIGGER_CYCLE_START: "New cycle: a fresh baseline for the loads.",
+    TRIGGER_MAINTENANCE: "12 weeks since the last test: keep the max honest.",
+    TRIGGER_EARLY: "Two measured sessions above your tested max: time to raise it.",
+}
+
+_DAY_NAMES = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+
+def _monday(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def retest_gap_days(confidence: Optional[str]) -> int:
+    """Days before a test of the same axis may be repeated."""
+    return LOW_CONF_RETEST_D if confidence == "low" else HIGH_CONF_RETEST_D
+
+
+def axis_official(
+    state: Mapping[str, Any], axis: str, as_of: DateLike, *, finger_device: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
+    """The official max the policy reads for ``axis`` (``None`` = not covered
+    by tests at all). Loading-pin users have no hang protocol → ``None``."""
+    if axis == AXIS_FINGER and finger_device == "loading_pin":
+        return None
+    return official_max(state, AXIS_PROTOCOL[axis], as_of)
+
+
+def _find_test_entry(state: Mapping[str, Any], om: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
+    key = "pulling_strength" if om.get("protocol") == PROTOCOL_PULLUP_2RM else "max_strength"
+    for t in ((state.get("tests") or {}).get(key) or []):
+        if (isinstance(t, Mapping) and str(t.get("date") or "")[:10] == om.get("date")
+                and t.get("test_id") == om.get("test_id")):
+            return t
+    return None
+
+
+def axis_confidence(
+    state: Mapping[str, Any],
+    om: Mapping[str, Any],
+    *,
+    archived_weeks: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
+) -> Dict[str, Any]:
+    """Confidence of the test behind ``om``.
+
+    A confidence COMPUTED and stored by a test log or by the B364 migration
+    (it carries ``confidence_basis``) wins — the migration computed it with
+    the archived weeks. Otherwise (pre-B364 constant ``"high"``, baseline-only
+    maxes) it is computed here with ``test_confidence``.
+    """
+    entry = _find_test_entry(state, om)
+    if entry is not None and isinstance(entry.get("confidence_basis"), Mapping) \
+            and entry.get("confidence") in ("low", "high"):
+        basis = entry["confidence_basis"]
+        return {"confidence": entry["confidence"], "exposures": basis.get("exposures"),
+                "min_required": basis.get("min_required", LOW_CONF_MIN_EXPOSURES), "basis": "stored"}
+    conf = test_confidence(state, {"protocol": om.get("protocol"), "date": om.get("date")},
+                           archived_weeks=archived_weeks)
+    return {"confidence": conf.get("confidence") or "high", "exposures": conf.get("exposures"),
+            "min_required": conf.get("min_required"), "basis": "computed"}
+
+
+def axis_trend(state: Mapping[str, Any], om: Mapping[str, Any]) -> Dict[str, Any]:
+    """Δ vs the previous test of the same protocol (stored by B364 when present).
+
+    ``{trend: stable|up|down|None, delta_pct, previous_date}``; |Δ| <
+    ``TREND_STABLE_PCT`` → stable. Same rule as ``progression_v1._trend``.
+    """
+    entry = _find_test_entry(state, om)
+    if entry is not None and entry.get("trend") in ("stable", "up", "down"):
+        return {"trend": entry["trend"], "delta_pct": _num(entry.get("delta_pct")),
+                "previous_date": entry.get("previous_date")}
+    if entry is None:
+        return {"trend": None, "delta_pct": None, "previous_date": None}
+    pulling = om.get("protocol") == PROTOCOL_PULLUP_2RM
+    key = "pulling_strength" if pulling else "max_strength"
+    value_key = "total_load_2rm_kg" if pulling else "total_load_kg"
+    value = _num(entry.get(value_key))
+    prev = [t for t in ((state.get("tests") or {}).get(key) or [])
+            if isinstance(t, Mapping) and t.get("test_id") == entry.get("test_id")
+            and str(t.get("date") or "")[:10] < str(om.get("date")) and _num(t.get(value_key))]
+    if value is None or not prev:
+        return {"trend": None, "delta_pct": None, "previous_date": None}
+    prev.sort(key=lambda t: str(t.get("date") or ""))
+    before = float(_num(prev[-1].get(value_key)) or 0)
+    if before <= 0:
+        return {"trend": None, "delta_pct": None, "previous_date": None}
+    delta = round((value - before) / before * 100, 1)
+    trend = "stable" if abs(delta) < TREND_STABLE_PCT else ("up" if delta > 0 else "down")
+    return {"trend": trend, "delta_pct": delta, "previous_date": str(prev[-1].get("date"))[:10]}
+
+
+def axis_signals(state: Mapping[str, Any], axis: str, om: Mapping[str, Any]) -> Dict[str, Any]:
+    """Measured early-retest evidence for ``axis`` against the CURRENT official
+    max (signals recorded against an older test do not count).
+
+    Distinct days across the axis exercises: ``{count, last_date, dates, needed}``.
+    """
+    sig = ((state.get("progression_counters") or {}).get("retest_signals") or {})
+    days: set = set()
+    if isinstance(sig, Mapping):
+        for ex in AXIS_SIGNAL_EXERCISES[axis]:
+            row = sig.get(ex)
+            if not isinstance(row, Mapping):
+                continue
+            if str(row.get("official_date") or "")[:10] != str(om.get("date")):
+                continue
+            for d in row.get("dates") or []:
+                pd = _parse_date(d)
+                if pd is not None:
+                    days.add(pd)
+    dates = sorted(days)
+    return {"count": len(dates), "last_date": dates[-1].isoformat() if dates else None,
+            "dates": [d.isoformat() for d in dates], "needed": EARLY_RETEST_SIGNALS}
+
+
+def very_hard_dates(state: Mapping[str, Any]) -> List[str]:
+    """Days with a very_hard feedback (session difficulty or any exercise label)."""
+    out: set = set()
+    for e in state.get("feedback_log") or []:
+        if not isinstance(e, Mapping) or not e.get("date"):
+            continue
+        labels = [e.get("difficulty")] + list((e.get("exercise_feedback") or {}).values()) \
+            if isinstance(e.get("exercise_feedback"), Mapping) else [e.get("difficulty")]
+        if "very_hard" in labels:
+            out.add(str(e["date"])[:10])
+    return sorted(out)
+
+
+def trip_blocked(state: Mapping[str, Any], d: date) -> bool:
+    """``d`` falls ≤ PRE_TRIP_BLOCK_D days before a trip, or during it."""
+    for trip in state.get("trips") or []:
+        if not isinstance(trip, Mapping):
+            continue
+        start = _parse_date(trip.get("start_date"))
+        if start is None:
+            continue
+        end = _parse_date(trip.get("end_date")) or start
+        if start - timedelta(days=PRE_TRIP_BLOCK_D) <= d <= end:
+            return True
+    return False
+
+
+def _very_hard_blocked(vh: Sequence[str], d: date) -> bool:
+    lo = (d - timedelta(days=VERY_HARD_BLOCK_D)).isoformat()
+    hi = (d - timedelta(days=1)).isoformat()
+    return any(lo <= v <= hi for v in vh)
+
+
+def _planned_axis_tests(
+    state: Mapping[str, Any], axis: str, *, since: date, exclude_week: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Not-yet-done, not-skipped tests of ``axis`` dated ≥ ``since`` in the hot
+    week plans (``exclude_week`` = the week being regenerated)."""
+    from backend.engine.stimulus import iter_plan_sessions
+
+    sids = AXIS_TEST_SESSIONS_ALL[axis]
+    rows = []
+    for d, session, _src in iter_plan_sessions(state):
+        if d < since.isoformat():
+            continue
+        if exclude_week and _monday(_as_date(d)).isoformat() == exclude_week:
+            continue
+        if session.get("session_id") not in sids:
+            continue
+        if session.get("status") in ("done", "skipped"):
+            continue
+        rows.append({"date": d, "session_id": session.get("session_id"), "slot": session.get("slot")})
+    return sorted(rows, key=lambda r: (r["date"], str(r["slot"] or "")))
+
+
+def _trigger_for_week(
+    macrocycle: Mapping[str, Any],
+    ws: date,
+    last: date,
+    earliest: date,
+    signals: Mapping[str, Any],
+) -> Tuple[Optional[str], Optional[date]]:
+    """(trigger, trigger_earliest) for the week starting ``ws``, or (None, None).
+
+    ``trigger_earliest`` is the first day the trigger itself allows (the
+    early retest waits for the day after its last signal); the gap since the
+    last test is applied by the caller.
+    """
+    from backend.engine.macro_position import position_on
+
+    we = ws + timedelta(days=6)
+    pos = position_on(dict(macrocycle), ws.isoformat())
+    if not pos or pos["before_start"] or pos["after_end"]:
+        return None, None
+    if pos["phase_id"] == "strength_power" and pos["is_last_week_of_phase"] and last < ws:
+        return TRIGGER_END_OF_PHASE, ws
+    prev_ws = ws - timedelta(days=7)
+    prev = position_on(dict(macrocycle), prev_ws.isoformat())
+    if (prev and not prev["before_start"] and prev["phase_id"] == "strength_power"
+            and prev["is_last_week_of_phase"] and last < prev_ws
+            and earliest > prev_ws + timedelta(days=6) and earliest <= we):
+        return TRIGGER_END_OF_PHASE_SLIPPED, ws
+    if pos["abs_week"] == 1 and last < ws:
+        return TRIGGER_CYCLE_START, ws
+    if signals.get("count", 0) >= EARLY_RETEST_SIGNALS and signals.get("last_date"):
+        t_e = _as_date(signals["last_date"]) + timedelta(days=1)
+        if t_e <= we:
+            return TRIGGER_EARLY, t_e
+    maint = last + timedelta(days=MAINTENANCE_RETEST_D)
+    if maint <= we:
+        return TRIGGER_MAINTENANCE, maint
+    return None, None
+
+
+def _axis_week_decision(
+    state: Mapping[str, Any],
+    axis: str,
+    ws: date,
+    *,
+    today: Optional[date],
+    finger_device: Optional[str],
+    archived_weeks: Any,
+    check_already_scheduled: bool,
+) -> Optional[Dict[str, Any]]:
+    """Week-level decision for one axis. ``None`` = axis not covered."""
+    from backend.engine.macro_position import position_on
+
+    om = axis_official(state, axis, ws, finger_device=finger_device)
+    if om is None or not om.get("tested"):
+        return None
+    macrocycle = state.get("macrocycle") or {}
+    last = _as_date(om["date"])
+    conf = axis_confidence(state, om, archived_weeks=archived_weeks)
+    gap = retest_gap_days(conf["confidence"])
+    earliest = last + timedelta(days=gap)
+    signals = axis_signals(state, axis, om)
+    base = {
+        "axis": axis,
+        "session_id": AXIS_TEST_SESSION[axis],
+        "protocol": AXIS_PROTOCOL[axis],
+        "last_test_date": last.isoformat(),
+        "confidence": conf["confidence"],
+        "gap_days": gap,
+        "earliest_date": earliest.isoformat(),
+    }
+    trigger, t_earliest = _trigger_for_week(macrocycle, ws, last, earliest, signals)
+    if trigger is None:
+        return {**base, "status": "not_due"}
+    if trigger == TRIGGER_EARLY:
+        # Measured evidence says the max is too low: the confidence of the old
+        # test no longer matters, only the low-confidence floor applies.
+        earliest = last + timedelta(days=LOW_CONF_RETEST_D)
+        base["earliest_date"] = earliest.isoformat()
+    we = ws + timedelta(days=6)
+    first = max(earliest, t_earliest or ws, ws)
+    reason = _TRIGGER_TEXT[trigger].format(gap=gap, confidence=conf["confidence"])
+    out = {**base, "trigger": trigger, "reason": reason}
+    pos = position_on(dict(macrocycle), ws.isoformat()) or {}
+    if pos.get("phase_id") in RETEST_BLOCKED_PHASES:
+        return {**out, "status": "skipped", "skip_reason": "blocked:phase"}
+    if first > we:
+        # The end-of-phase week that cannot reach the gap slips once.
+        nxt_we = we + timedelta(days=7)
+        if trigger == TRIGGER_END_OF_PHASE and earliest <= nxt_we:
+            return {**out, "status": "skipped", "skip_reason": "slipped:gap",
+                    "slipped_to_week": (ws + timedelta(days=7)).isoformat()}
+        return {**out, "status": "skipped", "skip_reason": "blocked:gap"}
+    if check_already_scheduled:
+        planned = _planned_axis_tests(state, axis, since=today or ws, exclude_week=ws.isoformat())
+        if planned:
+            return {**out, "status": "already_scheduled", "scheduled_date": planned[0]["date"]}
+    vh = very_hard_dates(state)
+    allowed: List[str] = []
+    last_block = None
+    d = first
+    while d <= we:
+        if today is not None and d < today:
+            d += timedelta(days=1)
+            continue
+        if trip_blocked(state, d):
+            last_block = "blocked:trip"
+        elif _very_hard_blocked(vh, d):
+            last_block = "blocked:very_hard"
+        else:
+            allowed.append(d.isoformat())
+        d += timedelta(days=1)
+    if not allowed:
+        return {**out, "status": "skipped", "skip_reason": last_block or "blocked:past"}
+    return {**out, "status": "due", "first_date": first.isoformat(), "allowed_dates": allowed}
+
+
+def _external_blockers(
+    state: Mapping[str, Any],
+    ws: date,
+    *,
+    archived_weeks: Any,
+    outdoor_rows: Optional[Sequence[Mapping[str, Any]]],
+) -> Dict[str, List[str]]:
+    """Blocking days the planner cannot see in its own week: everything before
+    the week (planned or done, custom sessions included, outdoor-hard days,
+    free-session limit days) plus what is already DONE inside the week (a
+    mid-week regeneration preserves done sessions after generating)."""
+    from backend.engine.stimulus import finger_hard_days, iter_plan_sessions
+
+    we = ws + timedelta(days=6)
+    look = ws - timedelta(days=max(RETEST_BLOCK_H, PULL_TEST_BLOCK_H) // 24)
+    finger: set = set()
+    for row in finger_hard_days(state, since=look, until=we, archived_weeks=archived_weeks,
+                                outdoor_rows=outdoor_rows, include_planned=True):
+        d = _as_date(row["date"])
+        if d < ws or row.get("status") == "done":
+            finger.add(row["date"])
+    heavy: set = set()
+    for d_iso, session, _src in iter_plan_sessions(state, archived_weeks):
+        d = _as_date(d_iso)
+        if d < look or d > we or session.get("status") == "skipped":
+            continue
+        if d >= ws and session.get("status") != "done":
+            continue
+        if is_heavy_pulling_session(state, session, d):
+            heavy.add(d_iso)
+    return {"finger_hard_dates": sorted(finger), "heavy_pull_dates": sorted(heavy)}
+
+
+def retest_decisions(
+    state: Mapping[str, Any],
+    week_start: DateLike,
+    *,
+    today: Optional[DateLike] = None,
+    finger_device: Optional[str] = None,
+    archived_weeks: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
+    outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
+) -> Optional[Dict[str, Any]]:
+    """The retest decisions for the week starting ``week_start`` (a Monday).
+
+    Returns ``None`` when no axis is covered (untested athlete → the planner
+    stays byte-identical). Otherwise::
+
+        {
+          "version": 1, "week_start", "covered_axes": [...],
+          "required_sessions": [            # what PASS 3 must place
+            {kind: "test", axis, session_id, protocol, trigger, reason,
+             earliest_date, allowed_dates, required: True, order, paired_with,
+             last_test_date, confidence, gap_days}
+          ],
+          "skipped": [{axis, session_id, trigger, reason, skip_reason, ...}],
+          "already_scheduled": [{axis, date, trigger}],
+          "axes": {axis: <week-level decision>},
+          "finger_hard_dates": [...], "heavy_pull_dates": [...],
+          "block_hours": {"hang": 72, "pull": 48},
+        }
+
+    Pure: everything derives from the state (macrocycle, tests, trips,
+    feedback_log, progression_counters, week plans), the archived weeks and
+    outdoor rows passed in, and ``today`` — never ``date.today()``.
+    """
+    ws = _monday(_as_date(week_start))
+    td = _as_date(today) if today else None
+    axes: Dict[str, Dict[str, Any]] = {}
+    for axis in RETEST_AXES:
+        dec = _axis_week_decision(state, axis, ws, today=td, finger_device=finger_device,
+                                  archived_weeks=archived_weeks, check_already_scheduled=True)
+        if dec is not None:
+            axes[axis] = dec
+    if not axes:
+        return None
+    due = [axes[a] for a in RETEST_AXES if a in axes and axes[a]["status"] == "due"]
+    required: List[Dict[str, Any]] = []
+    for i, dec in enumerate(due):
+        required.append({
+            "kind": "test",
+            "axis": dec["axis"],
+            "session_id": dec["session_id"],
+            "protocol": dec["protocol"],
+            "trigger": dec["trigger"],
+            "reason": dec["reason"],
+            "earliest_date": dec["first_date"],
+            "allowed_dates": list(dec["allowed_dates"]),
+            "required": True,
+            "order": i + 1,
+            "paired_with": None,
+            "last_test_date": dec["last_test_date"],
+            "confidence": dec["confidence"],
+            "gap_days": dec["gap_days"],
+        })
+    if len(required) == 2:
+        # Paired test day: hang first, then the pull-up (decision 2026-10-04).
+        required[0]["paired_with"] = required[1]["session_id"]
+        required[1]["paired_with"] = required[0]["session_id"]
+    skipped = [
+        {k: dec.get(k) for k in ("axis", "session_id", "trigger", "reason", "skip_reason",
+                                 "earliest_date", "slipped_to_week") if dec.get(k) is not None}
+        for dec in axes.values() if dec["status"] == "skipped"
+    ]
+    already = [{"axis": dec["axis"], "date": dec["scheduled_date"], "trigger": dec.get("trigger")}
+               for dec in axes.values() if dec["status"] == "already_scheduled"]
+    ext = _external_blockers(state, ws, archived_weeks=archived_weeks, outdoor_rows=outdoor_rows) \
+        if required else {"finger_hard_dates": [], "heavy_pull_dates": []}
+    return {
+        "version": 1,
+        "week_start": ws.isoformat(),
+        "covered_axes": [a for a in RETEST_AXES if a in axes],
+        "required_sessions": required,
+        "skipped": skipped,
+        "already_scheduled": already,
+        "axes": axes,
+        "finger_hard_dates": ext["finger_hard_dates"],
+        "heavy_pull_dates": ext["heavy_pull_dates"],
+        "block_hours": {"hang": RETEST_BLOCK_H, "pull": PULL_TEST_BLOCK_H},
+    }
+
+
+def test_day_blockers(
+    state: Mapping[str, Any],
+    axis: str,
+    on: DateLike,
+    *,
+    archived_weeks: Any = None,
+    outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
+) -> List[Dict[str, Any]]:
+    """Live blockers of a test of ``axis`` planned on ``on``, with the SAME
+    definitions the planner used — but over the plan as it is NOW (custom
+    sessions added after generation, a very_hard logged since). Used for the
+    "flag on the test card" (decision 2026-10-04: no auto-shift)."""
+    from backend.engine.stimulus import finger_hard_days, iter_plan_sessions
+
+    d = _as_date(on)
+    out: List[Dict[str, Any]] = []
+    if _very_hard_blocked(very_hard_dates(state), d):
+        out.append({"code": "very_hard", "detail": "very_hard feedback in the 3 days before"})
+    if trip_blocked(state, d):
+        out.append({"code": "trip", "detail": "within 10 days of a trip"})
+    if axis == AXIS_FINGER:
+        lo = d - timedelta(days=RETEST_BLOCK_H // 24 - 1)
+        for row in finger_hard_days(state, since=lo, until=d - timedelta(days=1),
+                                    archived_weeks=archived_weeks, outdoor_rows=outdoor_rows,
+                                    include_planned=True):
+            out.append({"code": "recent_finger", "date": row["date"],
+                        "session_id": row.get("session_id"), "detail": row.get("reason")})
+    else:
+        lo = d - timedelta(days=PULL_TEST_BLOCK_H // 24 - 1)
+        for d_iso, session, _src in iter_plan_sessions(state, archived_weeks):
+            sd = _as_date(d_iso)
+            if sd < lo or sd >= d or session.get("status") == "skipped":
+                continue
+            if is_heavy_pulling_session(state, session, sd):
+                out.append({"code": "heavy_pull", "date": d_iso,
+                            "session_id": session.get("session_id")})
+    return out
+
+
+def retest_status(
+    state: Mapping[str, Any],
+    today: DateLike,
+    *,
+    finger_device: Optional[str] = None,
+    archived_weeks: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
+    outdoor_rows: Optional[Sequence[Mapping[str, Any]]] = None,
+    horizon_weeks: int = STATUS_HORIZON_WEEKS,
+) -> Dict[str, Any]:
+    """Live, read-only retest status per axis for the UI (computed on every
+    GET, so it is right for cached weeks too).
+
+    Per axis::
+
+        {axis, covered, official_total_kg, test_date, age_days, protocol,
+         confidence, confidence_exposures, trend, delta_pct, previous_date,
+         earliest_retest, signals: {count, needed}, fatigue,
+         next_test: {date, session_id, source: planned|projected, trigger,
+                     reason, blockers: [...]} | None,
+         next_test_reason}       # why there is no next test, when None
+
+    ``covered`` False → the axis is scheduled by the legacy planner rules
+    (untested, test older than 90 days, loading pin).
+    """
+    td = _as_date(today)
+    out_axes: Dict[str, Dict[str, Any]] = {}
+    for axis in RETEST_AXES:
+        om = axis_official(state, axis, td, finger_device=finger_device)
+        if om is None:
+            continue
+        row: Dict[str, Any] = {
+            "axis": axis,
+            "covered": bool(om.get("tested")),
+            "protocol": om.get("protocol"),
+            "official_total_kg": om.get("total_kg"),
+            "test_date": om.get("date"),
+            "age_days": om.get("age_days"),
+        }
+        conf = axis_confidence(state, om, archived_weeks=archived_weeks)
+        row.update({"confidence": conf["confidence"], "confidence_exposures": conf["exposures"],
+                    "confidence_min_exposures": conf["min_required"]})
+        row.update(axis_trend(state, om))
+        gap = retest_gap_days(conf["confidence"])
+        row["earliest_retest"] = (_as_date(om["date"]) + timedelta(days=gap)).isoformat()
+        sig = axis_signals(state, axis, om)
+        row["signals"] = {"count": sig["count"], "needed": sig["needed"]}
+        try:
+            from backend.engine.anchored_load import fatigue_for
+
+            row["fatigue"] = fatigue_for(state, axis, td)
+        except Exception:  # pragma: no cover - defensive: status must never break GET /week
+            row["fatigue"] = None
+        row["next_test"] = None
+        row["next_test_reason"] = None
+        if not row["covered"]:
+            row["next_test_reason"] = "not_tested_recently"
+            out_axes[axis] = row
+            continue
+        planned = _planned_axis_tests(state, axis, since=td)
+        if planned:
+            p = planned[0]
+            trig, reason = _planned_reason(state, axis, p)
+            if trig is None:
+                # A test placed before A289 (or by hand): explain it with the
+                # policy's own reading of that week when the policy agrees.
+                pdec = _axis_week_decision(state, axis, _monday(_as_date(p["date"])), today=None,
+                                           finger_device=finger_device, archived_weeks=archived_weeks,
+                                           check_already_scheduled=False)
+                if pdec and pdec.get("status") == "due" and p["date"] in pdec["allowed_dates"]:
+                    trig, reason = pdec["trigger"], pdec["reason"]
+            row["next_test"] = {
+                "date": p["date"], "session_id": p["session_id"], "source": "planned",
+                "trigger": trig, "reason": reason,
+                "blockers": test_day_blockers(state, axis, p["date"], archived_weeks=archived_weeks,
+                                              outdoor_rows=outdoor_rows),
+            }
+            out_axes[axis] = row
+            continue
+        ws = _monday(td)
+        last_skip = None
+        for k in range(max(1, horizon_weeks)):
+            wk = ws + timedelta(days=7 * k)
+            dec = _axis_week_decision(state, axis, wk, today=td, finger_device=finger_device,
+                                      archived_weeks=archived_weeks, check_already_scheduled=False)
+            if dec is None:
+                last_skip = "not_tested_recently"
+                break
+            if dec["status"] == "due":
+                row["next_test"] = {
+                    "date": dec["allowed_dates"][0], "session_id": dec["session_id"],
+                    "source": "projected", "trigger": dec["trigger"], "reason": dec["reason"],
+                    "week_start": wk.isoformat(), "blockers": [],
+                }
+                break
+            if dec["status"] == "skipped":
+                last_skip = dec["skip_reason"]
+        if row["next_test"] is None:
+            row["next_test_reason"] = last_skip or "not_due_within_horizon"
+        out_axes[axis] = row
+    return {
+        "as_of": td.isoformat(),
+        "stable_band_pct": TREND_STABLE_PCT,
+        "axes": out_axes,
+        "covered_axes": [a for a in RETEST_AXES if out_axes.get(a, {}).get("covered")],
+    }
+
+
+def _planned_reason(state: Mapping[str, Any], axis: str, planned: Mapping[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    """Trigger + reason the planner stored for a planned test
+    (``profile_snapshot.retest_decisions``), else (None, None)."""
+    ws = _monday(_as_date(planned["date"])).isoformat()
+    plan = (state.get("week_plans") or {}).get(ws)
+    if not isinstance(plan, Mapping):
+        cur = state.get("current_week_plan")
+        plan = cur if isinstance(cur, Mapping) and cur.get("start_date") == ws else None
+    snap = ((plan or {}).get("profile_snapshot") or {}).get("retest_decisions") or {}
+    for req in snap.get("required_sessions") or []:
+        if isinstance(req, Mapping) and req.get("axis") == axis:
+            return req.get("trigger"), req.get("reason")
+    return None, None
+
+
 __all__ = [
     "TEST_FRESH_DAYS", "LOW_CONF_MIN_EXPOSURES", "LOW_CONF_WINDOW_D", "LOW_CONF_RETEST_D",
     "REENTRY_GAP_D", "REENTRY_FACTORS", "REENTRY_FULL_FACTOR", "HANG_PCT_PER_S",
@@ -508,4 +1168,11 @@ __all__ = [
     "EXERCISE_PROTOCOL", "convert_hang_seconds", "official_max", "is_tested",
     "test_confidence", "reentry_factor", "reentry_step", "is_heavy_pulling_session",
     "is_pulling_hard_session",
+    # A289
+    "AXIS_FINGER", "AXIS_PULLING", "RETEST_AXES", "AXIS_TEST_SESSION", "AXIS_PROTOCOL",
+    "AXIS_TEST_SESSIONS_ALL", "HIGH_CONF_RETEST_D", "MAINTENANCE_RETEST_D", "EARLY_RETEST_SIGNALS",
+    "STATUS_HORIZON_WEEKS", "TREND_STABLE_PCT", "TRIGGER_END_OF_PHASE", "TRIGGER_END_OF_PHASE_SLIPPED",
+    "TRIGGER_CYCLE_START", "TRIGGER_MAINTENANCE", "TRIGGER_EARLY", "retest_gap_days",
+    "axis_official", "axis_confidence", "axis_trend", "axis_signals", "very_hard_dates",
+    "trip_blocked", "retest_decisions", "test_day_blockers", "retest_status",
 ]

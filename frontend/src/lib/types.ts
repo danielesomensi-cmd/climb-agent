@@ -1173,3 +1173,58 @@ export interface TestReminder {
   message: string;
   options: TestReminderOption[];
 }
+
+/**
+ * A289 — live retest status attached to `GET /api/week/{n}` as `retest_status`.
+ *
+ * Shape mirrors `retest_policy.retest_status()` in `backend/engine/retest_policy.py`.
+ * Computed on every GET from the state (never cached with the week), so it is
+ * right for cached weeks too. Absent when the athlete has no test at all.
+ */
+export type RetestAxis = "finger" | "pulling";
+
+export interface RetestBlocker {
+  code: "very_hard" | "trip" | "recent_finger" | "heavy_pull" | string;
+  date?: string;
+  session_id?: string | null;
+  detail?: string | null;
+}
+
+export interface RetestNextTest {
+  date: string;
+  session_id: string;
+  /** planned = already in a week plan; projected = earliest day the policy allows. */
+  source: "planned" | "projected";
+  trigger: string | null;
+  reason: string | null;
+  week_start?: string;
+  blockers: RetestBlocker[];
+}
+
+export interface RetestAxisStatus {
+  axis: RetestAxis;
+  /** false → test missing/older than 90 days: the legacy planner rules schedule it. */
+  covered: boolean;
+  protocol: string;
+  official_total_kg: number;
+  test_date: string;
+  age_days: number;
+  confidence: "low" | "high";
+  confidence_exposures: number | null;
+  confidence_min_exposures: number | null;
+  trend: "stable" | "up" | "down" | null;
+  delta_pct: number | null;
+  previous_date: string | null;
+  earliest_retest: string;
+  signals: { count: number; needed: number };
+  fatigue: { axis: string; hard_days: string[]; since: string } | null;
+  next_test: RetestNextTest | null;
+  next_test_reason: string | null;
+}
+
+export interface RetestStatus {
+  as_of: string;
+  stable_band_pct: number;
+  axes: Partial<Record<RetestAxis, RetestAxisStatus>>;
+  covered_axes: RetestAxis[];
+}

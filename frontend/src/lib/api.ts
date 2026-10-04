@@ -30,6 +30,7 @@ import type {
   Weather,
   TestReminder,
   TestReminderOption,
+  RetestStatus,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -367,6 +368,8 @@ export const getWeek = (weekNum: number, force?: boolean, preserveBefore?: strin
      * is new user-facing surface and is tracked as A-TEST-REMINDER-UI.
      */
     test_reminder?: TestReminder;
+    /** A289 — official max, confidence, trend and next test per tested axis. */
+    retest_status?: RetestStatus;
   }>(`/api/week/${weekNum}${qs ? `?${qs}` : ""}`);
 };
 

@@ -126,6 +126,15 @@ _TEST_QUEUE_SESSION: Dict[str, str] = {
     "lp_max_test_5s": "test_lp_max_5s",
 }
 
+# A289: axis of each test session, for the retest-policy split of PASS 3 (the
+# policy owns the tested axes; the historical PASS 3 keeps the others).
+_TEST_SID_AXIS: Dict[str, str] = {
+    "test_max_hang_5s": "finger", "test_max_hang_7s": "finger", "test_lp_max_5s": "finger",
+    "test_repeater_7_3": "repeater", "test_lp_repeater": "repeater",
+    "test_max_weighted_pullup": "pulling", "test_pullup_bw": "pulling",
+}
+_RD_PULL_TEST_SIDS = frozenset({"test_max_weighted_pullup", "test_pullup_bw"})
+
 
 def _validate_session_meta_equipment() -> None:
     """D172-17: warn if _SESSION_META.required_equipment differs from session JSON files.
@@ -675,6 +684,7 @@ def generate_phase_week(
     prev_week_plan: Optional[Dict[str, Any]] = None,
     test_queue: Optional[List[Dict[str, Any]]] = None,
     taper_volume: Optional[Dict[str, float]] = None,
+    retest_decisions: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Generate a single week plan within a macrocycle phase.
 
@@ -684,6 +694,7 @@ def generate_phase_week(
       PASS 2:   Fill remaining days with complementary sessions.
       PASS 2.2: Fill extra slots on multi-slot days (B121).
       PASS 2.5: Ensure PE phase has at least 1 finger maintenance session.
+      PASS 3a:  (A289) Place the tests the retest policy decided (tested axes).
       PASS 3:   (optional) Inject test sessions when inject_tests=True.
 
     Args:
@@ -707,6 +718,11 @@ def generate_phase_week(
             and applied to the resolved prescription, never to the session
             selection: intensity and training days stay untouched.
             Hard/max sessions are blocked on these dates.
+        retest_decisions: A289 — output of ``retest_policy.retest_decisions``
+            for this week. The policy owns the tests of the axes it covers
+            (tested < 90 days); PASS 3a places them, the historical PASS 3 keeps
+            the other axes. ``None`` (default) → byte-identical to pre-A289.
+            Ignored for placement when ``inject_tests`` (explicit request wins).
 
     Returns:
         Week plan dict compatible with planner.v1 format.
@@ -1622,6 +1638,275 @@ def generate_phase_week(
                     ),
                 })
 
+    # ── PASS 3a (A289): tests decided by the retest policy ──
+    #
+    # `retest_policy.retest_decisions` owns the tests of every TESTED axis
+    # (official max from a test < 90 days): it says which test is due this week,
+    # from which day, and which days are blocked by things outside this week
+    # (trips, very_hard feedback, finger-hard / heavy-pull days before Monday,
+    # custom sessions and outdoor days included). Here those tests meet the
+    # sessions this week just got, with the same blocker definitions:
+    #   - hang test: no finger-hard day in the RETEST_BLOCK_H before, and the
+    #     historical 48 h finger gap on both sides (unless it replaces a finger
+    #     session, which is neutral);
+    #   - pull-up test: no heavy pulling (pulling + hard) in the PULL_TEST_BLOCK_H
+    #     before;
+    #   - hard cap and hard spacing as in the historical PASS 3.
+    # A paired decision puts both tests on ONE day, hang in an earlier slot than
+    # the pull-up. If the hang finds no day, the pull-up is skipped with the
+    # same reason and does not fall back to B297's empty-day pass on its own.
+    # With retest_decisions=None nothing here runs (byte-identical week).
+    _rd_active = bool(retest_decisions) and not inject_tests
+    _rd_covered: set = set()
+    _rd_skipped: List[Dict[str, Any]] = []
+    _rd_placed_offsets: set = set()
+    _rd_outcomes: List[Dict[str, Any]] = []
+    if _rd_active:
+        from backend.engine.stimulus import is_finger_hard_session, is_pulling_hard_session
+
+        _rd_covered = set(retest_decisions.get("covered_axes") or [])
+        _block_h = retest_decisions.get("block_hours") or {}
+        _hang_block_d = max(int(_block_h.get("hang", 72)) // 24, finger_gap_days + 1)
+        _pull_block_d = int(_block_h.get("pull", 48)) // 24
+
+        def _offset_of(d_iso: str) -> int:
+            return (_parse_date(d_iso) - start).days
+
+        _ext_finger = [_offset_of(d) for d in retest_decisions.get("finger_hard_dates") or []]
+        _ext_pull = [_offset_of(d) for d in retest_decisions.get("heavy_pull_dates") or []]
+        _prev_finger = [o for o in finger_day_offsets if o < 0]
+        _prev_hard = [o for o in hard_day_offsets if o < 0]
+        _slot_rank = {s: i for i, s in enumerate(SLOTS)}
+
+        def _sessions_without(offset: int, victims: set) -> List[Dict[str, Any]]:
+            return [e for i, e in enumerate(day_sessions[offset]) if i not in victims]
+
+        def _test_day_ok(offset: int, sid: str, victims: set) -> bool:
+            meta = _SESSION_META[sid]
+            survivors = _sessions_without(offset, victims)
+            victim_finger = any(
+                _SESSION_META.get(day_sessions[offset][i].get("session_id", ""), {}).get("finger")
+                for i in victims
+            )
+            if meta.get("finger"):
+                # Same day: a finger-hard session that stays on the day (not a
+                # test placed this pass) is a max finger load next to the test.
+                if any(is_finger_hard_session(e) and not (e.get("tags") or {}).get("test")
+                       for e in survivors):
+                    return False
+                fh = list(_ext_finger)
+                for o in range(7):
+                    if o != offset and any(is_finger_hard_session(e) for e in day_sessions[o]):
+                        fh.append(o)
+                if any(0 < offset - o < _hang_block_d for o in fh):
+                    return False
+                if not victim_finger:
+                    fo_all = list(_prev_finger) + [
+                        o for o in range(7) if o != offset
+                        and any(_SESSION_META.get(e.get("session_id", ""), {}).get("finger") for e in day_sessions[o])
+                    ]
+                    if any(abs(offset - o) <= finger_gap_days for o in fo_all):
+                        return False
+            if sid in _RD_PULL_TEST_SIDS:
+                if any(is_pulling_hard_session(e) and not (e.get("tags") or {}).get("test")
+                       for e in survivors):
+                    return False
+                hp = list(_ext_pull)
+                for o in range(7):
+                    if o == offset:
+                        continue
+                    if any(is_pulling_hard_session(e) for e in day_sessions[o]):
+                        hp.append(o)
+                if any(0 < offset - o < _pull_block_d for o in hp):
+                    return False
+            return True
+
+        def _hard_ok(offset: int, victims: set) -> bool:
+            survivors = _sessions_without(offset, victims)
+            if any((e.get("tags") or {}).get("hard") for e in survivors):
+                return True  # already a hard day: the tests add no hard day
+            if any(
+                (day_sessions[offset][i].get("tags") or {}).get("hard") for i in victims
+            ):
+                return True  # replaces a hard session: neutral
+            hard_now = sum(
+                1 for o in range(7)
+                if o != offset and any((e.get("tags") or {}).get("hard") for e in day_sessions[o])
+            )
+            if hard_now >= effective_hard_cap:
+                return False
+            ho_all = list(_prev_hard) + [
+                o for o in range(7) if o != offset
+                and any((e.get("tags") or {}).get("hard") for e in day_sessions[o])
+            ]
+            return not any(abs(offset - o) <= hard_gap_days for o in ho_all)
+
+        def _victim_cost(entry: Optional[Dict[str, Any]], test_sid: str) -> float:
+            # Lower is better. Replacing the week's finger session with the hang
+            # test is the intended swap (the test is that week's finger stimulus).
+            if entry is None:
+                return 1.5  # free slot: one more session on the day
+            meta = _SESSION_META.get(entry.get("session_id", ""), {})
+            if _SESSION_META[test_sid].get("finger") and is_finger_hard_session(entry):
+                return 0.0
+            if not _is_primary_session(meta):
+                return 1.0
+            return 2.0
+
+        def _plan_day(offset: int, sids: List[str]) -> Optional[List[Tuple[str, Dict[str, Any], Optional[int]]]]:
+            """Best assignment of ``sids`` (in order) to strictly increasing
+            slots of the day, or None."""
+            day_avail = normalized[day_keys[offset]]
+            slot_entry: Dict[str, int] = {}
+            for i, e in enumerate(day_sessions[offset]):
+                if e.get("slot"):
+                    slot_entry.setdefault(e["slot"], i)
+            usable = [s for s in SLOTS if day_avail[s]["available"]]
+            best = None
+            best_key = None
+
+            def _rec(k: int, start_rank: int, chosen: List[Tuple[str, Dict[str, Any], Optional[int]]]) -> None:
+                nonlocal best, best_key
+                if k == len(sids):
+                    victims = {v for _s, _i, v in chosen if v is not None}
+                    if not _hard_ok(offset, victims):
+                        return
+                    if not all(_test_day_ok(offset, sid, victims) for sid in sids):
+                        return
+                    cost = sum(
+                        _victim_cost(day_sessions[offset][v] if v is not None else None, sid)
+                        for (_s, _i, v), sid in zip(chosen, sids)
+                    )
+                    key = (cost, tuple(_slot_rank[s] for s, _i, _v in chosen))
+                    if best_key is None or key < best_key:
+                        best, best_key = list(chosen), key
+                    return
+                sid = sids[k]
+                for s in usable:
+                    if _slot_rank[s] < start_rank:
+                        continue
+                    others = set(SLOTS) - {s}
+                    res = _find_best_slot(day_avail, _SESSION_META[sid], locations, prefer_evening=True,
+                                          home_equipment=home_equipment, gyms=gyms,
+                                          default_gym_id=default_gym_id, occupied_slots=others)
+                    if res is None:
+                        continue
+                    _rec(k + 1, _slot_rank[s] + 1, chosen + [(s, res[1], slot_entry.get(s))])
+
+            _rec(0, 0, [])
+            return best
+
+        def _candidate_offsets(allowed: List[str]) -> List[int]:
+            allowed_set = set(allowed)
+            offs = []
+            for o in range(7):
+                if day_dates[o].isoformat() not in allowed_set:
+                    continue
+                if today_date is not None and day_dates[o] < today_date:
+                    continue
+                if day_is_outdoor[o] or day_dates[o] in pretrip_set:
+                    continue
+                if o in _rd_placed_offsets:
+                    continue
+                if not any(normalized[day_keys[o]][s]["available"] for s in SLOTS):
+                    continue
+                offs.append(o)
+
+            def _day_key(o: int) -> Tuple[int, int]:
+                if any(is_finger_hard_session(e) for e in day_sessions[o]):
+                    return (0, o)
+                return (1 if day_sessions[o] else 2, o)
+
+            return sorted(offs, key=_day_key)
+
+        def _commit(offset: int, plan: List[Tuple[str, Dict[str, Any], Optional[int]]],
+                    reqs: List[Dict[str, Any]]) -> None:
+            nonlocal hard_days
+            new_entries = []
+            for (slot, slot_info, _v), req in zip(plan, reqs):
+                sid = req["session_id"]
+                entry = _make_session_entry(
+                    slot, sid, _SESSION_META[sid], slot_info, locations,
+                    phase_id, day_keys[offset], default_gym_id, gyms or [],
+                    "pass3:retest_policy", home_equipment=home_equipment,
+                )
+                entry["explain"].append(f"retest:{req.get('trigger')}")
+                if req.get("reason"):
+                    entry["explain"].append(str(req["reason"]))
+                if req.get("paired_with"):
+                    entry["explain"].append(f"paired_with={req['paired_with']}")
+                new_entries.append(entry)
+            victims = {v for _s, _i, v in plan if v is not None}
+            kept = [e for i, e in enumerate(day_sessions[offset]) if i not in victims]
+            kept.extend(new_entries)
+            kept.sort(key=lambda e: _slot_rank.get(e.get("slot"), 99))
+            day_sessions[offset] = kept
+            for e in new_entries:
+                meta = _SESSION_META[e["session_id"]]
+                if meta.get("finger") and offset not in finger_day_offsets:
+                    finger_day_offsets.append(offset)
+                if meta.get("hard") and offset not in hard_day_offsets:
+                    hard_day_offsets.append(offset)
+            hard_days = sum(1 for o in range(7) if any((e.get("tags") or {}).get("hard") for e in day_sessions[o]))
+            _rd_placed_offsets.add(offset)
+
+        def _place(reqs: List[Dict[str, Any]], allowed: List[str]) -> Optional[int]:
+            for o in _candidate_offsets(allowed):
+                plan = _plan_day(o, [r["session_id"] for r in reqs])
+                if plan is not None:
+                    _commit(o, plan, reqs)
+                    return o
+            return None
+
+        def _outcome(req: Dict[str, Any], offset: Optional[int], reason: Optional[str]) -> None:
+            row = {k: req.get(k) for k in ("axis", "session_id", "trigger", "reason", "earliest_date",
+                                           "paired_with", "order", "confidence", "last_test_date")}
+            if offset is not None:
+                row["status"] = "placed"
+                row["placed_date"] = day_dates[offset].isoformat()
+                row["placed_slot"] = next(
+                    (e.get("slot") for e in day_sessions[offset] if e.get("session_id") == req["session_id"]),
+                    None,
+                )
+            else:
+                row["status"] = "skipped"
+                row["skip_reason"] = reason
+                _rd_skipped.append({
+                    "test_id": req["session_id"], "axis": req["axis"], "reason": reason,
+                    "required": True, "source": "retest_policy", "trigger": req.get("trigger"),
+                })
+            _rd_outcomes.append(row)
+
+        _reqs = [r for r in retest_decisions.get("required_sessions") or []
+                 if r.get("session_id") in _SESSION_META]
+        _reqs.sort(key=lambda r: int(r.get("order") or 0))
+        if len(_reqs) == 2 and _reqs[0].get("paired_with") == _reqs[1]["session_id"]:
+            _hang, _pull = _reqs
+            _both = [d for d in _hang.get("allowed_dates") or [] if d in set(_pull.get("allowed_dates") or [])]
+            _off = _place([_hang, _pull], _both)
+            if _off is not None:
+                _outcome(_hang, _off, None)
+                _outcome(_pull, _off, None)
+            else:
+                _off_h = _place([_hang], _hang.get("allowed_dates") or [])
+                _outcome(_hang, _off_h, None if _off_h is not None else "no_placement_slot")
+                if _off_h is None:
+                    _outcome(_pull, None, "no_placement_slot")
+                else:
+                    _off_p = _place([_pull], [d for d in _pull.get("allowed_dates") or []
+                                              if d > day_dates[_off_h].isoformat()])
+                    _outcome(_pull, _off_p, None if _off_p is not None else "blocked:no_paired_slot")
+        else:
+            for _r in _reqs:
+                _o = _place([_r], _r.get("allowed_dates") or [])
+                _outcome(_r, _o, None if _o is not None else "no_placement_slot")
+        for _sk in retest_decisions.get("skipped") or []:
+            _rd_skipped.append({
+                "test_id": _sk.get("session_id"), "axis": _sk.get("axis"),
+                "reason": _sk.get("skip_reason"), "required": True, "source": "retest_policy",
+                "trigger": _sk.get("trigger"),
+            })
+
     # ── PASS 3 (optional): Inject test sessions ──
     # Triggers on: last week of base/strength_power, OR explicitly via inject_tests
     skipped_tests: list = []  # B191: populated by phase-gating logic below
@@ -1636,6 +1921,8 @@ def generate_phase_week(
         _rec_by = _item.get("recommended_by_date")
         if not _sid or not isinstance(_rec_by, str):
             continue
+        if _rd_active and _TEST_SID_AXIS.get(_sid) in _rd_covered:
+            continue  # A289: the retest policy owns this axis
         if _rec_by <= _week_end_iso and _sid not in _queued_test_sids:
             _queued_test_sids.append(_sid)
 
@@ -1683,6 +1970,8 @@ def generate_phase_week(
         skipped_tests: list = []
         for test_sid, _required in _test_schedule:
             test_type = _test_type_map.get(test_sid)
+            if _rd_active and test_type in _rd_covered:
+                continue  # A289: decided (and reported) by the retest policy
 
             # 1. Phase-aware gate (D92): skip axes not stimulated by this phase,
             #    unless inject_tests=True (explicit assessment) or axis untested 12+ weeks.
@@ -1725,7 +2014,7 @@ def generate_phase_week(
                     logger.warning("Invalid test date '%s' for %s — scheduling normally", last_date_str, test_sid)
             _filtered_schedule.append((test_sid, _required))
 
-        test_placed_offsets: set = set()
+        test_placed_offsets: set = set(_rd_placed_offsets)
         # B297 (D211-F9): pass 1 below is the historical replace-only logic,
         # untouched — weeks it can serve stay byte-identical. Tests it cannot
         # place land in _unplaced_tests for pass 2 / skipped_tests reporting.
@@ -1883,6 +2172,9 @@ def generate_phase_week(
                 "required": _required,
             })
 
+    if _rd_skipped:
+        skipped_tests = list(skipped_tests) + _rd_skipped
+
     # ── A281: no-hard sweep (closes B-PRETRIP-PASS1-ONLY) ──
     #
     # The pre-trip gate lived in PASS 1 only (`:953`), so every later pass could
@@ -2001,6 +2293,19 @@ def generate_phase_week(
         # took months to surface.
         "unmet_stimulus": unmet_stimulus + _unmet_floor,
     }
+
+    if retest_decisions:
+        # A289: what the policy decided for this week and what PASS 3a did with
+        # it. retest_status reads the trigger/reason of a planned test from here.
+        week_plan["profile_snapshot"]["retest_decisions"] = {
+            "version": retest_decisions.get("version", 1),
+            "week_start": retest_decisions.get("week_start"),
+            "applied": _rd_active,
+            "covered_axes": list(retest_decisions.get("covered_axes") or []),
+            "required_sessions": _rd_outcomes,
+            "skipped": list(retest_decisions.get("skipped") or []),
+            "already_scheduled": list(retest_decisions.get("already_scheduled") or []),
+        }
 
     if phase_id == "deload":
         week_plan = apply_deload_week(week_plan)
