@@ -10,7 +10,17 @@ re-runs it on the current code and compares.
 One INTENDED exception, decided 2026-10-04 and tested separately: an untested
 athlete with a pre-B363 weighted pull-up memory used to have that memory read
 as a max (``pullup_reference_2rm`` legacy branch). The branch is removed — a
-remembered load is never a max — so that case is not in the golden.
+remembered load is never a max — so that case is not in the golden. The B363
+``e2rm_total_kg`` re-base is NOT an exception: it is the untested athlete's
+only pull-up progression and stays bit for bit (``progression`` leg below).
+
+Review B364: ``onboarding_measured_persisted`` is the shape onboarding really
+saves (``estimate_missing_baselines`` stamps the self-reported max as
+``source='test'`` with the onboarding day). A self-report is not a test log,
+so the athlete stays untested.
+
+Regenerating the golden: copy this file into a checkout of origin/main @ 61ecfd4
+and dump ``json.dumps(compute(), sort_keys=True, indent=1)``.
 
 Pure data + one function, importable by the generator without pytest.
 """
@@ -18,6 +28,7 @@ Pure data + one function, importable by the generator without pytest.
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import date as _date, timedelta as _td
 from typing import Any, Dict, List, Tuple
 
 _MACRO = {
@@ -103,12 +114,22 @@ def cases() -> List[Tuple[str, Dict[str, Any], str]]:
         },
         "working_loads": {"entries": [], "rules": {}},
     }
+    # What onboarding.py:431 / assessment.py:41 really persist for the same
+    # answers (estimate_missing_baselines on the saved state), with a fixed day.
+    onboarding_persisted = deepcopy(onboarding_measured)
+    onboarding_persisted["baselines"] = {
+        "hangboard": [{"max_total_load_kg": 105.0, "source": "test", "hang_seconds": 7, "edge_mm": 20,
+                       "grip": "half_crimp", "updated_at": "2026-10-01"}],
+        "pulling": {"weighted_pullup_1rm_total_kg": 110.0, "bodyweight_kg": 72.0, "max_external_load_kg": 38.0,
+                    "source": "test", "updated_at": "2026-10-01"},
+    }
     return [
         ("estimated_baselines_sp", estimated, "2026-10-09"),
         ("estimated_baselines_pe", estimated, "2026-10-21"),
         ("stale_tests", stale, "2026-10-09"),
         ("no_baselines", no_baselines, "2026-10-09"),
         ("onboarding_measured", onboarding_measured, "2026-10-09"),
+        ("onboarding_measured_persisted", onboarding_persisted, "2026-10-09"),
     ]
 
 
@@ -165,5 +186,29 @@ def compute() -> Dict[str, Any]:
             ),
             key=lambda e: str(e.get("key")),
         )
+        # Review B364: feedback must keep moving the untested prescription —
+        # three pull-up logs (easy / very_easy / easy at +30 x3), a very_easy
+        # hang and an ok chin-up over the week before, then the day's targets.
+        state_p = deepcopy(state)
+        d0 = _date.fromisoformat(day)
+        bw = float(state_p.get("bodyweight_kg") or 0.0)
+        for offset, label in ((7, "easy"), (5, "very_easy"), (3, "easy")):
+            log_p = {"date": (d0 - _td(days=offset)).isoformat(), "session_id": "strength_long",
+                     "planned": [{"session_id": "strength_long", "tags": {}, "exercise_instances": _instances()}],
+                     "actual": {"exercise_feedback_v1": [
+                         {"exercise_id": "weighted_pullup", "completed": True, "feedback_label": label,
+                          "used_external_load_kg": 30.0, "reps": 3},
+                         {"exercise_id": "max_hang_7s", "completed": True, "feedback_label": "very_easy",
+                          "used_total_load_kg": round(bw + 22.5, 1)},
+                         {"exercise_id": "weighted_chinup", "completed": True, "feedback_label": "ok",
+                          "used_external_load_kg": 20.0},
+                     ]}}
+            state_p = apply_feedback(log_p, state_p)
+        injected_p = inject_targets(_day(day), deepcopy(state_p))
+        res["progression"] = {
+            inst["exercise_id"]: _strip(inst.get("suggested") or {})
+            for inst in injected_p["sessions"][0]["exercise_instances"]
+            if inst["exercise_id"] in ("weighted_pullup", "weighted_chinup", "max_hang_7s")
+        }
         out[name] = res
     return out

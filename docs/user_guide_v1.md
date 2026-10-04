@@ -262,20 +262,25 @@ second at 95%; from the third session the full ceiling applies. Your test counts
 a session.
 
 **Three hard sessions in two weeks** on the same exercise family bring the load
-down to the bottom of the phase range, with a fatigue note — the app does not
-lower your max for it.
+down to the bottom of the phase range — the app does not lower your max for it.
 
 When you rate a session "Easy" but you are already at the ceiling of your tested
-max, the app tells you so: the next scheduled retest is what raises it.
+max, the load stays where it is: the next scheduled retest is what raises it.
+
+These notes — fatigue, ceiling, a reported pain, the comeback cap — are shown
+under the suggested load, in the exercise details and in the guided session.
 
 **Custom sessions follow the same numbers.** In a session you built (or one the
-Coach composed), these exercises are recalculated **on the day you play it**, from
-your max and your training load — the same weight a planned session would give
-you that day. The weight you typed when building the session is kept as a
-reference.
+Coach composed), these exercises are on **Auto** by default: they are
+recalculated **on the day you play it**, from your max and your training load —
+the same weight a planned session would give you that day (the session view
+shows today's numbers). Choose **Fixed kg** in the builder when you want your own
+weight every time; on Auto, the kg you type is used only if you have no recent
+test. During a comeback, max hangs are also capped at 5 sets.
 
 If you haven't tested yet (or your test is older than 90 days), nothing changes
-for you: loads are worked out exactly as before.
+for you: loads are worked out exactly as before. A max you typed in during
+onboarding counts as a starting point, not as a test.
 
 ### Limit bouldering grades
 
@@ -325,7 +330,7 @@ If you only have a couple of training days a week, a test week can run out of ro
 
 **Why they matter**: Without fresh test data, the system keeps using your old baselines. Your loads won't progress accurately, and your plan won't adapt to your real improvements. Tests are not optional extras — they're the system recalibrating itself.
 
-**After a test session**: Your profile radar updates, working loads recalculate (a test result is a max, so it resets the training load to a percentage of the new max instead of becoming the next training load), and the remaining macrocycle adjusts its emphasis based on your new strengths and weaknesses. Each max-hang and pull-up test is also compared with the previous one (a change under 5% is shown as **stable**) and marked as low-confidence when you hadn't trained that kind of strength in the three weeks before — a low-confidence test can be repeated sooner.
+**After a test session**: Your profile radar updates, working loads recalculate (a test result is a max, so it resets the training load to a percentage of the new max instead of becoming the next training load), and the remaining macrocycle adjusts its emphasis based on your new strengths and weaknesses. Each max-hang and pull-up test is also compared with the previous one (a change under 5% counts as **stable**) and marked as low-confidence when you hadn't trained that kind of strength in the three weeks before. Both are recorded with the test and the Coach sees them; they are not yet shown on a screen of their own.
 
 ---
 
@@ -531,7 +536,7 @@ Exercises that are performed **one side at a time** — Copenhagen plank, Pallof
 
 Custom sessions sit **outside the macrocycle**: running one logs the work and updates your working loads, but it does not feed the closed loop or alter your planned progression.
 
-Max hangs and weighted pull-ups / chin-ups in a custom session are **recalculated on the day you play it** (see *Max hangs and weighted pull-ups* in §5), so a session saved weeks ago never replays a stale weight.
+Max hangs and weighted pull-ups / chin-ups in a custom session are **recalculated on the day you play it** (see *Max hangs and weighted pull-ups* in §5), so a session saved weeks ago never replays a stale weight. To keep your own weight instead, open the exercise in the builder and pick **Fixed kg**.
 
 ---
 

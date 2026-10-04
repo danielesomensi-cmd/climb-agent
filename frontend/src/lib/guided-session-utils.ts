@@ -1,4 +1,5 @@
 import type { GuidedExercise, GuidedSessionState } from "@/lib/types";
+import { anchoredLoadNotes } from "@/lib/anchored-load";
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -244,6 +245,7 @@ export function buildGuidedStateFromExercises(
           (loadKg != null && loadKg > 0 ? loadKg : undefined),
         totalLoadKg: ex.suggested_total_load_kg as number | undefined,
         loadSource: ex.load_source as string | undefined,
+        loadNotes: anchoredLoadNotes(ex),
       },
       cues: (ex.cues as string[] | undefined) ?? undefined,
       videoUrl: (ex.video_url as string | undefined) ?? undefined,

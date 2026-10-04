@@ -502,7 +502,9 @@ Two numbers, never mixed:
 `anchored_load(state, exercise_id, date=…)` is the ONE prescription of the four
 anchored exercises (weighted_pullup, weighted_chinup, max_hang_5s/7s) for a
 **tested** athlete (persisted state, test < 90 days); `None` otherwise and the
-pre-B364 branches run unchanged (golden-tested). Consumers: `inject_targets`,
+pre-B364 branches run unchanged (golden-tested, B363 `e2rm_total_kg` re-base
+included; "tested" = a `tests.*` entry or a `test_session` baseline — an
+onboarding self-report persisted as `source: test` does not count). Consumers: `inject_targets`,
 `body_part_picker.apply_resolver_light`, `adhoc_prescription` (builder proposal
 and A253 anchor), `session_composer._decorate_engine_fields`,
 `adhoc_builder`, custom sessions resolved at read (`resolve_custom_exercises`:
@@ -513,7 +515,7 @@ Clamp order: start (working load converted by NON-rounded rep factor, seconds,
 phase/intensity; else phase target) → structural cap (pull: min(Prilepin band,
 (r+2)RM); hang: 3 s of reserve, phase cap) × re-entry factor
 (`retest_policy.reentry_step`, tests counted via `extra_dates`) → pain
-(`pain_blocks`, R4) → guards (2 heavy pulls / 7 days, same-session finger,
+(`pain_blocks`, R4; the phase floor is cut by the same 0.90) → guards (2 heavy pulls / 7 days, same-session finger,
 finger-hard day in the 2 days before) → `floor_eff = min(floor, cap_eff)` →
 fatigue (3 hard / 14 days → floor). All engineering constants are labelled in
 the module.

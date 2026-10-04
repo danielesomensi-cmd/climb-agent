@@ -7,8 +7,10 @@ by the main loop after the deploy, never by the implementing session.
 What it changes, per user (all deterministic, all idempotent):
 
 (a) working_loads: every entry carrying the B363 ``e2rm_total_kg`` re-base
-    gets ``next_total = last_total + step(last_feedback_label)`` (the B364 kg
+    of a TESTED athlete (official max from a test log, < 90 days) gets
+    ``next_total = last_total + step(last_feedback_label)`` (the B364 kg
     steps, at the entry's own ``last_reps``) and ``e2rm_total_kg`` is popped.
+    Untested athletes keep it: it is their pre-B364 progression.
     Daniele 2026-10-04: 4x3 at +30 "ok" → next 108 kg total (@3).
 (b) progression_counters.stimulus_exposures: the ONE exposure registry is
     seeded from the hot week plans + ``week_archive`` (A221 moved past weeks
@@ -95,12 +97,20 @@ def _bw(state: Dict[str, Any]) -> float:
     return float(state.get("bodyweight_kg") or ((state.get("body") or {}).get("weight_kg") or 0.0))
 
 
-def _step_e2rm_entries(state: Dict[str, Any], log: List[str]) -> None:
+def _step_e2rm_entries(state: Dict[str, Any], today: date, log: List[str]) -> None:
     bw = _bw(state)
     for e in ((state.get("working_loads") or {}).get("entries") or []):
         if not isinstance(e, dict) or "e2rm_total_kg" not in e:
             continue
         eid = str(e.get("exercise_id") or "")
+        protocol = rp.EXERCISE_PROTOCOL.get(eid)
+        if protocol is None or not rp.is_tested(state, protocol, today):
+            # Untested athlete: the e2rm re-base IS their pull-up progression
+            # (pre-B364 path, kept bit for bit) — popping it would freeze the
+            # prescription back to the baseline. Left untouched.
+            log.append(f"(a) working_loads[{e.get('key')}]: untested on {today.isoformat()} — "
+                       f"e2rm_total_kg={e.get('e2rm_total_kg')} kept (pre-B364 path)")
+            continue
         last_total = e.get("last_total_load_kg")
         if not isinstance(last_total, (int, float)) and isinstance(e.get("last_external_load_kg"), (int, float)):
             last_total = float(e["last_external_load_kg"]) + bw
@@ -242,7 +252,7 @@ def migrate_state(state: Dict[str, Any], archived: Any, today: date) -> Tuple[Di
     """Pure: returns (migrated copy, human-readable change log). Idempotent."""
     out = deepcopy(state)
     log: List[str] = []
-    _step_e2rm_entries(out, log)
+    _step_e2rm_entries(out, today, log)
     _seed_registry(out, archived, today, log)
     _recompute_tests(out, archived, log)
     _fix_customs(out, today, log)

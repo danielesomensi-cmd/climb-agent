@@ -325,6 +325,19 @@ def _is_pure_test_exercise(exercise_id: str) -> bool:
     return str(_load_catalog_cache().get(exercise_id, {}).get("category") or "") == "test"
 
 
+# Feedback label → reps in reserve, used to read a training set as an
+# estimate of the max. Coarse by design: the app has no RIR field.
+# B364: UNTESTED athletes only — the B363 2RM re-base is kept for them bit for
+# bit (DECISIONS: "untested users unchanged"). A tested athlete's feedback goes
+# through anchored_load.apply_anchored_feedback and never re-bases anything.
+PULLUP_RIR_BY_LABEL: Dict[str, int] = {
+    "very_hard": 0,
+    "hard": 1,
+    "ok": 2,
+    "easy": 3,
+    "very_easy": 4,
+}
+
 # Default reps for a weighted pull-up set when neither the feedback item nor
 # the planned instance carries them (catalog prescription_defaults.reps).
 PULLUP_DEFAULT_REPS = 3
@@ -374,12 +387,32 @@ def pullup_official_2rm(user_state: Dict[str, Any]) -> Tuple[Optional[float], st
 
 
 def pullup_reference_2rm(user_state: Dict[str, Any]) -> Optional[float]:
-    """The athlete's pull-up reference as a 2RM total load (kg): the baseline.
+    """The pull-up reference of the pre-B364 path, as a 2RM total load (kg).
 
-    B364: no training re-base, no legacy-memory branch — the 2RM moves only
-    when a test is logged (see ``pullup_official_2rm``).
+    Read ONLY where anchored_load does not apply — an untested athlete: no
+    test, an onboarding self-report, or a test older than 90 days. There the
+    B363 behaviour is kept bit for bit: the baseline 2RM, unless a training log
+    written AFTER it re-based it (``e2rm_total_kg``, written only by
+    ``_apply_weighted_pullup_feedback`` on the untested path). Without it the
+    untested pull prescription could never progress (review B364).
+
+    A tested athlete never reads this: the prescription comes from
+    ``anchored_load`` and the official max (``pullup_official_2rm``) moves only
+    with a test. The pre-B363 legacy-memory branch stays removed (decided
+    2026-10-04): a remembered load is never read as a max.
     """
-    return pullup_official_2rm(user_state)[0]
+    base_2rm, base_date = _pullup_baseline_2rm(user_state)
+    entry_2rm: Optional[float] = None
+    entry_date = ""
+    for e in _working_entries_ro(user_state):
+        if str(e.get("exercise_id") or "") != "weighted_pullup":
+            continue
+        val = e.get("e2rm_total_kg")
+        if isinstance(val, (int, float)) and val > 0 and str(e.get("updated_at") or "") >= entry_date:
+            entry_2rm, entry_date = float(val), str(e.get("updated_at") or "")
+    if entry_2rm is not None and (base_2rm is None or entry_date >= base_date):
+        return entry_2rm
+    return base_2rm
 
 
 def weighted_pullup_target(
@@ -2159,13 +2192,19 @@ def _apply_weighted_pullup_feedback(
     date_value: str,
     bodyweight: float,
 ) -> None:
-    """Working-load memory of a weighted pull-up for an UNTESTED athlete.
+    """Weighted pull-up feedback of an UNTESTED athlete (pre-B364, bit for bit).
 
-    B364: the B363 2RM re-base is gone (a training set never moves the max).
-    Tested athletes go through ``anchored_load.apply_anchored_feedback``; this
-    branch only keeps a dated memory (used load, reps, label, next = used ×
-    adjustment policy) — the untested prescription still comes from the
-    baseline 2RM, exactly as before, so it is unaffected.
+    B364: a tested athlete never reaches this — apply_anchored_feedback handles
+    it and the official max moves only with a test. An untested athlete has no
+    official max: the B363 2RM re-base below is their only progression, so it
+    is kept unchanged (DECISIONS 2026-10-04, "untested users unchanged").
+
+    The set is read as an estimate of the max: load × (reps done + reps in
+    reserve, from the feedback label) → estimated 1RM → 2RM equivalent.
+      * not hard: the reference only goes UP (max(reference, estimate));
+      * hard / very_hard: the reference goes DOWN by the adjustment policy %.
+    The stored ``next_*`` fields are a convenience for legacy readers; the
+    prescription itself is always recomputed by weighted_pullup_target().
     """
     used_total = item.get("used_total_load_kg")
     used_external = item.get("used_external_load_kg")
@@ -2185,17 +2224,39 @@ def _apply_weighted_pullup_feedback(
         reps_f = float(PULLUP_DEFAULT_REPS)
     if reps_f <= 0:
         reps_f = float(PULLUP_DEFAULT_REPS)
+    rir = PULLUP_RIR_BY_LABEL.get(feedback_label, 2)
 
     existing = next(
-        (e for e in _working_entries_ro(updated) if str(e.get("key") or "") == "weighted_pullup"),
+        (e for e in _working_entries_ro(updated) if str(e.get("exercise_id") or "") == "weighted_pullup"
+         and isinstance(e.get("e2rm_total_kg"), (int, float))),
         None,
     )
-    if existing is not None and date_value < str(existing.get("updated_at") or ""):
-        return  # a newer log already wrote the memory
+    if existing is not None:
+        existing_date = str(existing.get("updated_at") or "")
+        # A log older than the stored re-base must not move it, up or down.
+        if date_value < existing_date:
+            return
+        # Idempotent: the same log applied twice re-bases once.
+        if (
+            date_value == existing_date
+            and existing.get("last_total_load_kg") == _round_half_step(float(used_total))
+            and existing.get("last_feedback_label") == feedback_label
+        ):
+            return
+    _, base_date = _pullup_baseline_2rm(updated)
+    if base_date and date_value < base_date:
+        # Older than the current test: the test already supersedes it.
+        return
 
-    next_total = _round_half_step(float(used_total) * (1.0 + _rule_midpoint_pct(updated, feedback_label)))
+    set_2rm = _two_rm_from_1rm(estimate_1rm_from_reps(float(used_total), reps_f + rir))
+    reference = pullup_reference_2rm(updated)
+    if feedback_label in {"hard", "very_hard"}:
+        base = reference if reference else set_2rm
+        new_2rm = _round_half_step(base * (1.0 + _rule_midpoint_pct(updated, feedback_label)))
+    else:
+        new_2rm = _round_half_step(max(reference or 0.0, set_2rm))
+
     entry = _find_working_load_entry(updated, "weighted_pullup", {})
-    entry.pop("e2rm_total_kg", None)
     entry.update({
         "exercise_id": "weighted_pullup",
         "key": "weighted_pullup",
@@ -2205,10 +2266,14 @@ def _apply_weighted_pullup_feedback(
         "last_external_load_kg": _round_half_step(float(used_external)),
         "last_total_load_kg": _round_half_step(float(used_total)),
         "last_reps": int(reps_f),
-        "next_total_load_kg": next_total,
-        "next_external_load_kg": _round_half_step(next_total - bodyweight),
+        "e2rm_total_kg": new_2rm,
         "updated_at": date_value,
     })
+    phase_id = _get_current_phase_id(updated, date_value)
+    target = weighted_pullup_target(updated, phase_id, "hard")
+    if target is not None:
+        entry["next_total_load_kg"] = target["total"]
+        entry["next_external_load_kg"] = target["external"]
 
 
 def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:

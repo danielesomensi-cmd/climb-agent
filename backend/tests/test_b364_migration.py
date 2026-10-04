@@ -74,6 +74,18 @@ def test_e2rm_entries_get_a_kg_step_and_lose_the_rebase():
     assert any(line.startswith("(a)") for line in log)
 
 
+def test_untested_athlete_keeps_the_e2rm_rebase():
+    """Review B364: for an untested athlete e2rm_total_kg IS the pull-up
+    progression (pre-B364 path); popping it would drop them to the baseline."""
+    state, archived = _prod_like()
+    state["tests"] = {}
+    state["baselines"]["pulling"]["source"] = "estimated_from_assessment"
+    out, log = migrate_state(state, archived, TODAY)
+    e = out["working_loads"]["entries"][0]
+    assert e["e2rm_total_kg"] == 123.0 and e["next_total_load_kg"] == 106.5
+    assert any("kept (pre-B364 path)" in line for line in log)
+
+
 def test_registry_seeded_from_archive_hot_weeks_and_tests():
     state, archived = _prod_like()
     reg = migrate_state(state, archived, TODAY)[0]["progression_counters"]["stimulus_exposures"]

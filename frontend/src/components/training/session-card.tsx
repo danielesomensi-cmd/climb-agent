@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useSubmitLock } from "@/lib/hooks/use-submit-lock";
 import { queryKeys } from "@/lib/query-keys";
 import { sessionResolutionState } from "@/lib/session-resolution";
+import { anchoredLoadNotes } from "@/lib/anchored-load";
 import { buildGuidedStateFromExercises, guidedStorageKey, hasSavedProgress } from "@/lib/guided-session-utils";
 import { ChevronDown, Check, X, Undo2, Play, ArrowRightLeft, Trash2, Pencil, Plus, Search, RefreshCw, Mountain } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -137,6 +138,7 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
       restGuidance: boulderTarget.rest_guidance as string | undefined,
       loadSource: suggested.load_source as string | undefined,
       loadWarning: suggested.load_warning as string | undefined,
+      loadNotes: anchoredLoadNotes(suggested),
       rightHand: rightHand ? { externalLoadKg: rightHand.suggested_external_load_kg as number | undefined } : undefined,
       leftHand: leftHand ? { externalLoadKg: leftHand.suggested_external_load_kg as number | undefined } : undefined,
     },

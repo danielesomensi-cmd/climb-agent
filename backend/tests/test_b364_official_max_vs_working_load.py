@@ -139,6 +139,59 @@ def test_estimated_baseline_stamped_test_today_is_not_tested():
     assert sug.get("load_source") != "anchored"
 
 
+def test_onboarding_self_report_as_persisted_is_not_tested():
+    """Review B364: onboarding SAVES the output of estimate_missing_baselines
+    (source='test', updated_at=onboarding day). A self-report is not a test
+    log: the gate stays closed and the pre-B364 path prescribes."""
+    from backend.engine.progression_v1 import estimate_missing_baselines
+
+    state = {"bodyweight_kg": 72.0, "macrocycle": _daniele()["macrocycle"],
+             "assessment": {"tests": {"max_hang_20mm_7s_total_kg": 105.0, "weighted_pullup_1rm_total_kg": 110.0},
+                            "tests_source": {"max_hang_20mm_7s_total_kg": "measured",
+                                             "weighted_pullup_1rm_total_kg": "measured"}}}
+    estimate_missing_baselines(state)
+    assert state["baselines"]["hangboard"][0]["source"] == "test"
+    state["baselines"]["hangboard"][0]["updated_at"] = "2026-10-01"
+    state["baselines"]["pulling"]["updated_at"] = "2026-10-01"
+    for ex in ("max_hang_7s", "max_hang_5s", "weighted_pullup", "weighted_chinup"):
+        assert _al(state, ex, "2026-10-09") is None, ex
+    log = _log("2026-10-05", [{"exercise_id": "max_hang_7s", "completed": True, "feedback_label": "very_easy",
+                               "used_total_load_kg": 94.5}])
+    after = apply_feedback(log, state)
+    day = {"date": "2026-10-09", "sessions": [{"session_id": "s", "intent": "strength", "tags": {},
+           "exercise_instances": [{"exercise_id": "max_hang_7s", "load_model": "total_load",
+                                   "prescription": {"sets": 5, "work_seconds": 7}}]}]}
+    sug = inject_targets(day, after)["sessions"][0]["exercise_instances"][0]["suggested"]
+    assert sug.get("load_source") != "anchored"
+    assert sug["suggested_total_load_kg"] == 108.5  # pre-B364 % policy memory (origin/main value)
+
+
+def test_untested_pullup_keeps_progressing_from_feedback():
+    """Review B364: the B363 e2rm re-base is the untested athlete's only pull-up
+    progression — three easy-ish logs must move the prescription (main: 105.5
+    → 107.5 total on the stale-test case)."""
+    from backend.tests.b364_untested_cases import _day, _instances, cases
+
+    state = deepcopy(next(c for c in cases() if c[0] == "stale_tests")[1])
+
+    def _pull(st):
+        out = inject_targets(_day("2026-10-09"), deepcopy(st))
+        return next(i for i in out["sessions"][0]["exercise_instances"]
+                    if i["exercise_id"] == "weighted_pullup")["suggested"]["suggested_total_load_kg"]
+
+    before = _pull(state)
+    for day, label in (("2026-10-02", "easy"), ("2026-10-04", "very_easy"), ("2026-10-06", "easy")):
+        state = apply_feedback({"date": day, "session_id": "strength_long",
+                                "planned": [{"session_id": "strength_long", "tags": {},
+                                             "exercise_instances": _instances()}],
+                                "actual": {"exercise_feedback_v1": [
+                                    {"exercise_id": "weighted_pullup", "completed": True, "feedback_label": label,
+                                     "used_external_load_kg": 30.0, "reps": 3}]}}, state)
+    assert (before, _pull(state)) == (105.5, 107.5)
+    assert _entry(state, "weighted_pullup")["e2rm_total_kg"] == 124.5
+    assert state["baselines"]["pulling"]["weighted_pullup_2rm_total_kg"] == 122.0  # baseline untouched
+
+
 # --- (2) pulling caps and working load -------------------------------------
 
 def test_pullup_caps_by_volume_with_daniele_1rm():
@@ -461,6 +514,37 @@ def test_pain_block_caps_before_the_floor():
     assert anch["pain"]["score"] == 3
     assert anch["cap"] <= 0.80 * 116.0
     assert anch["floor"] <= anch["cap"]
+
+
+def test_pain_cut_is_not_undone_by_the_phase_floor():
+    """Review B364: working load near the SP floor (95 kg = 0.82 of 116). Pain
+    score 2 must cut ~10 %, not be lifted back to the phase floor (93 kg)."""
+    entries = [{"exercise_id": "max_hang_7s", "key": "max_hang_7s", "setup": {}, "last_work_seconds": 7,
+                "last_total_load_kg": 95.0, "next_total_load_kg": 95.0, "last_feedback_label": "ok",
+                "updated_at": "2026-10-02", "phase_id_at_log": "strength_power", "intensity_at_log": "hard"}]
+    registry = {"finger_max": [{"date": d, "exercise_id": "max_hang_7s"} for d in
+                               ("2026-09-24", "2026-09-29", "2026-10-02")], "pulling_max": []}
+    base = _al(_daniele(entries=entries, registry=registry), "max_hang_7s", "2026-10-06")
+    assert base["total"] == 95.0 and base["clamped"] is None
+    for score in (2, 3):
+        state = _daniele(entries=entries, registry=registry)
+        state["progression_counters"]["pain_blocks"] = {
+            "fingers": {"score": score, "from": "2026-10-05", "until": "2026-10-19"}}
+        anch = _al(state, "max_hang_7s", "2026-10-06")
+        assert anch["total"] <= 86.0, (score, anch["total"])  # 95 × 0.90 = 85.5
+        assert anch["clamped"] != "floor", score
+
+
+def test_custom_reentry_caps_max_hang_sets():
+    """Review B364: during re-entry max hangs are capped at 5 sets — in custom /
+    ad-hoc sessions too, not only in the returned dict."""
+    ex = [{"exercise_id": "max_hang_7s", "sets": 6, "work_seconds": 7, "load_kg": 20.0}]
+    out = resolve_custom_exercises(_daniele(), ex, "2026-10-13")[0]  # n=1 after the gap
+    assert out["sets"] == 5 and out["stored_sets"] == 6
+    assert ex[0]["sets"] == 6
+    full = _daniele(registry={"finger_max": [{"date": d, "exercise_id": "max_hang_7s"} for d in
+                                             ("2026-10-06", "2026-10-08", "2026-10-10")], "pulling_max": []})
+    assert resolve_custom_exercises(full, ex, "2026-10-13")[0]["sets"] == 6  # n≥3: no cap
 
 
 # --- (14) determinism, untested regression ---------------------------------

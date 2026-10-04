@@ -538,7 +538,7 @@ For the four **anchored** exercises (`weighted_pullup`, `weighted_chinup`, `max_
 | `escalation_anchor` | `{date, total_kg}` — start of the rolling 7-day window of the finger rise limit (≤ +5 % of the max) |
 | `anchored` | `true` |
 
-**Removed:** `e2rm_total_kg` (the B363 training re-base of the 2RM; `scripts/migrate_b364.py` pops it). An entry is read only if `updated_at` is strictly after the official test date and ≤ 60 days old.
+**`e2rm_total_kg`** (the B363 training re-base of the 2RM) is no longer written or read for a TESTED athlete (`scripts/migrate_b364.py` pops it there). For an untested athlete it stays the pre-B364 pull-up progression (written by `_apply_weighted_pullup_feedback`, read by `pullup_reference_2rm`), bit for bit. An entry is read only if `updated_at` is strictly after the official test date and ≤ 60 days old.
 
 #### Anchored prescription (`suggested.anchored`, B364)
 
@@ -554,7 +554,9 @@ For the four **anchored** exercises (`weighted_pullup`, `weighted_chinup`, `max_
 
 #### Custom session exercise `load_mode` (B364)
 
-`custom_sessions[].exercises[].load_mode`: `anchored` | `fixed`, only meaningful for the anchored exercises; missing = `anchored`. `anchored` → the load is recomputed by `anchored_load` on the day played (`GET /api/custom-session/{id}?date=`, `GET /api/week`), with `stored_load_kg`, `load_source: anchored`, `suggested_external_load_kg`, `suggested_total_load_kg` added at read; `fixed` → the user's kg, `load_source: user_fixed`.
+`custom_sessions[].exercises[].load_mode`: `anchored` | `fixed`, only meaningful for the anchored exercises; missing = `anchored`. `anchored` → the load is recomputed by `anchored_load` on the day played (`GET /api/custom-session/{id}?date=`, `GET /api/week`), with `stored_load_kg`, `load_source: anchored`, `suggested_external_load_kg`, `suggested_total_load_kg` added at read (plus `anchored`, `ceiling_note`, and `stored_sets` when the re-entry ramp caps max hangs at 5 sets); `fixed` → the user's kg, `load_source: user_fixed`. The builder exposes the choice as «Auto / Fixed kg» and saves it.
+
+**Tested gate (B364).** `retest_policy.official_max(...).tested` is true only for a `tests.*` entry (written by a test log) or, as fallback, a baseline with `source: test_session`, younger than 90 days. A baseline-only `source: test` is an onboarding/assessment self-report persisted by `estimate_missing_baselines` (`from_baseline: true`) and is NOT tested.
 
 #### Limit-boulder family entries (B365)
 

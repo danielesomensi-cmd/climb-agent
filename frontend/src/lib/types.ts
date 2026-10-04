@@ -894,6 +894,7 @@ export interface GuidedExercise {
     restGuidance?: string;     // A-B7: e.g. "3-5 min between problems"
     loadSource?: string;   // "estimated" if derived from grade/pullup (no real test)
     loadWarning?: string;  // "counterweight_required..." if external < 0
+    loadNotes?: string[];  // B364: anchored-load notes (ceiling, fatigue, pain, re-entry)
     rightHand?: { externalLoadKg?: number };
     leftHand?: { externalLoadKg?: number };
   };
@@ -964,8 +965,11 @@ export interface CustomSessionExercise {
   load_mode?: "anchored" | "fixed";
   load_source?: "anchored" | "user_fixed";
   stored_load_kg?: number;
+  stored_sets?: number;          // re-entry capped the sets (max hangs, 5)
   suggested_external_load_kg?: number;
   suggested_total_load_kg?: number;
+  anchored?: Record<string, unknown>;
+  ceiling_note?: string;
 }
 
 export interface CustomSession {

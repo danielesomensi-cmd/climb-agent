@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { CustomSessionExercise } from "@/lib/types";
+import { isAnchoredExercise } from "@/lib/anchored-load";
 import { ChevronUp, ChevronDown, Pencil, Trash2 } from "lucide-react";
 
 function formatPrescription(ex: CustomSessionExercise): string {
@@ -12,7 +13,9 @@ function formatPrescription(ex: CustomSessionExercise): string {
   else if (ex.work_seconds != null) parts.push(`${ex.sets}\u00d7${ex.work_seconds}s${perSide}`);
   else parts.push(`${ex.sets} sets${perSide}`);
 
-  if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
+  // B364: an anchored exercise in "Auto" gets its kg on the day it is played.
+  if (isAnchoredExercise(ex.exercise_id) && ex.load_mode !== "fixed") parts.push("Auto load");
+  else if (ex.load_kg > 0) parts.push(`${ex.load_kg}kg`);
   if (ex.rest_between_sets_seconds != null) parts.push(`Rest ${ex.rest_between_sets_seconds}s`);
   return parts.join(" \u00b7 ");
 }

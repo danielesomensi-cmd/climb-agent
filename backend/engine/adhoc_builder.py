@@ -23,6 +23,7 @@ from __future__ import annotations
 from datetime import date as _date
 from typing import Any, Dict, List, Optional, Sequence
 
+from backend.engine.anchored_load import HANG_SECONDS, REENTRY_MAX_HANG_SETS
 from backend.engine.adhoc_prescription import (
     anchor_adhoc_load,
     effort_band_for_phase,
@@ -345,6 +346,14 @@ def _to_custom_exercise(
         sets = max(1, sets - 1)
     elif energy == "high" and not is_warmup:
         sets = min(6, sets + 1)
+    # B364 review: re-entry caps max hangs at 5 sets — energy 'high' must not
+    # push an anchored hang past it (the player re-applies the same cap).
+    if (
+        p.get("load_mode") == "anchored"
+        and eid in HANG_SECONDS
+        and float(((p.get("anchored") or {}).get("ramp") or {}).get("factor", 1.0)) < 1.0
+    ):
+        sets = min(sets, REENTRY_MAX_HANG_SETS)
     load_val = float(load) if isinstance((load := p.get("load_kg")), (int, float)) else 0
     # A253: no remembered load → try a GENUINE max-derived anchor (scoped to
     # fingers/hangboard + weighted-pull; read-only). Crude fallbacks stay empty

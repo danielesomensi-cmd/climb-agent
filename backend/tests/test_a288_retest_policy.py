@@ -113,9 +113,17 @@ def test_pullup_1rm_estimated_when_not_saved():
 def test_baseline_fallback_only_without_tests_and_source_matters():
     s = _state(tests={})
     om = rp.official_max(s, rp.PROTOCOL_HANG_7S, "2026-10-13")
-    assert om["source"] == "test" and om["total_kg"] == 116.0 and om["tested"] is True
+    # B364 review: a baseline-only source='test' is what estimate_missing_
+    # baselines persists from an onboarding self-report — not a test log.
+    assert om["source"] == "test" and om["total_kg"] == 116.0 and om["from_baseline"] is True
+    assert om["tested"] is False
     pull = rp.official_max(s, rp.PROTOCOL_PULLUP_2RM, "2026-10-13")
     assert pull["source"] == "test_session" and pull["tested"] is True
+    s["baselines"]["hangboard"][0]["source"] = "test_session"
+    assert rp.official_max(s, rp.PROTOCOL_HANG_7S, "2026-10-13")["tested"] is True
+    s["baselines"]["pulling"]["source"] = "test"  # onboarding self-report shape
+    assert rp.official_max(s, rp.PROTOCOL_PULLUP_2RM, "2026-10-13")["tested"] is False
+    s["baselines"]["hangboard"][0]["source"] = "test"
     s["baselines"]["hangboard"][0]["source"] = "estimated"
     om = rp.official_max(s, rp.PROTOCOL_HANG_7S, "2026-10-13")
     assert om is not None and om["tested"] is False

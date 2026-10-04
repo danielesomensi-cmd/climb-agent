@@ -58,6 +58,8 @@ from backend.engine.stimulus import (
 ANCHORED_EXERCISES: Tuple[str, ...] = ("weighted_pullup", "weighted_chinup", "max_hang_5s", "max_hang_7s")
 PULL_EXERCISES: Tuple[str, ...] = ("weighted_pullup", "weighted_chinup")
 HANG_SECONDS: Dict[str, int] = {"max_hang_7s": 7, "max_hang_5s": 5}
+# R3: max hang sets during the re-entry ramp. ENGINEERING CONSTANT.
+REENTRY_MAX_HANG_SETS = 5
 #: Catalog rep scheme each pull is calibrated on (prescription_defaults.reps).
 CATALOG_REPS: Dict[str, int] = {"weighted_pullup": 3, "weighted_chinup": 5}
 #: Catalog intensity of the cold-start hang target (attributes.intensity_pct).
@@ -191,7 +193,6 @@ PAIN_CAP_SCORE3 = 0.80
 #: Registry of exposures: entries older than this are pruned.
 REGISTRY_KEEP_D = 120
 
-_TESTED_SOURCES = ("test", "test_session")
 _NO_DATE_AS_OF = "9999-12-31"
 
 
@@ -299,7 +300,7 @@ def official_for(state: Mapping[str, Any], exercise_id: str, on: Optional[date])
         if om is None:
             return None
         om = dict(om)
-        om["tested"] = om.get("source") in _TESTED_SOURCES
+        om["tested"] = rp._cand_tested(om)
         om["age_days"] = None
         om["fresh"] = None
         return om
@@ -328,14 +329,16 @@ def _test_dates(state: Mapping[str, Any], family: str) -> List[str]:
             if isinstance(b, Mapping) and b.get("source") == "test" and b.get("updated_at"):
                 out.append(str(b["updated_at"])[:10])
         hb = (state.get("baselines") or {}).get("hangboard") or []
-        if hb and isinstance(hb[0], Mapping) and hb[0].get("source") in _TESTED_SOURCES and hb[0].get("updated_at"):
+        # Baselines only when a test log wrote them (an onboarding self-report
+        # is persisted as source='test' with the onboarding day — not a test).
+        if hb and isinstance(hb[0], Mapping) and hb[0].get("source") in rp._BASELINE_TESTED_SOURCES and hb[0].get("updated_at"):
             out.append(str(hb[0]["updated_at"])[:10])
     elif family == FAMILY_PULLING_MAX:
         for t in tests.get("pulling_strength") or []:
             if isinstance(t, Mapping) and t.get("test_id") == rp.PROTOCOL_PULLUP_2RM and t.get("date"):
                 out.append(str(t["date"])[:10])
         pb = (state.get("baselines") or {}).get("pulling") or {}
-        if isinstance(pb, Mapping) and pb.get("source") in _TESTED_SOURCES and pb.get("updated_at"):
+        if isinstance(pb, Mapping) and pb.get("source") in rp._BASELINE_TESTED_SOURCES and pb.get("updated_at"):
             out.append(str(pb["updated_at"])[:10])
     return sorted(set(out))
 
@@ -561,9 +564,9 @@ def anchored_load(
             total0 = float(intensity_pct) * float(om7["total_kg"])
             source = "phase_target"
         # R3: 5 sets in re-entry, never more.
-        if ramp["factor"] < 1.0 and n_sets > 5:
-            n_sets = 5
-            guards.append({"guard": "reentry_sets", "sets": 5})
+        if ramp["factor"] < 1.0 and n_sets > REENTRY_MAX_HANG_SETS:
+            n_sets = REENTRY_MAX_HANG_SETS
+            guards.append({"guard": "reentry_sets", "sets": REENTRY_MAX_HANG_SETS})
         rep_scheme = f"{n_sets}x{int(t) if float(t).is_integer() else t}s"
         dose = {"work_seconds": t}
 
@@ -573,6 +576,11 @@ def anchored_load(
     if pain is not None:
         cap_eff *= PAIN_MULT
         total0 *= PAIN_MULT
+        # B364 review: the phase floor moves down with the pain cut. Otherwise
+        # floor_eff = min(floor, cap after pain) stays at the phase floor
+        # whenever the cap is above it, and a working load near the floor is
+        # lifted straight back up: score 2 → −2 % instead of −10 %.
+        floor *= PAIN_MULT
         pain_cap = PAIN_CAP_SCORE3 if pain["score"] >= 3 else (PAIN_CAP_SCORE2_HANG if axis == AXIS_FINGER else None)
         if pain_cap is not None:
             cap_eff = min(cap_eff, pain_cap * ref)
@@ -701,7 +709,8 @@ def resolve_custom_exercises(
     - anchored exercise, mode 'anchored', tested athlete → ``load_kg`` is the
       external load of ``anchored_load`` on that date (≥ 0; an assisted hang
       shows 0 + ``suggested_external_load_kg`` < 0), the stored kg moves to
-      ``stored_load_kg``;
+      ``stored_load_kg``; when the re-entry ramp caps the sets (max hangs, 5),
+      ``sets`` is lowered too and the stored count moves to ``stored_sets``;
     - mode 'fixed' → the user's kg, untouched, ``load_source: 'user_fixed'``;
     - untested athlete → stored kg untouched (pre-B364 behaviour).
     Never mutates the input.
@@ -732,6 +741,15 @@ def resolve_custom_exercises(
             copy["suggested_total_load_kg"] = anch["total"]
             copy["load_source"] = "anchored"
             copy["anchored"] = anchor_summary(anch)
+            if anch.get("ceiling_note"):
+                copy["ceiling_note"] = anch["ceiling_note"]
+            # Re-entry: anchored_load caps max hangs at 5 sets (guard
+            # reentry_sets) — the set count is part of the prescription, not
+            # only the load (B364 review: a 6-set ad-hoc hang kept 6 sets).
+            stored_sets = _int(copy.get("sets"))
+            if stored_sets is not None and int(anch["sets"]) < stored_sets:
+                copy["stored_sets"] = stored_sets
+                copy["sets"] = int(anch["sets"])
         out.append(copy)
     return out
 
@@ -1023,7 +1041,7 @@ def record_exposures(updated: Dict[str, Any], log_entry: Mapping[str, Any]) -> N
 
 __all__ = [
     "ANCHORED_EXERCISES", "PULL_EXERCISES", "CHINUP_TO_PULLUP_RATIO", "PRILEPIN_BANDS",
-    "RESERVE_S", "HANG_PHASE_CAP", "HANG_PHASE_FLOOR", "HANG_PHASE_PCT", "CUSTOM_INTENSITY",
+    "RESERVE_S", "REENTRY_MAX_HANG_SETS", "HANG_PHASE_CAP", "HANG_PHASE_FLOOR", "HANG_PHASE_PCT", "CUSTOM_INTENSITY",
     "rep_factor", "prilepin_cap", "phase_on", "official_for", "is_anchored_and_tested",
     "ramp_for", "working_entry", "anchored_load", "anchored_suggested_fields", "anchor_summary",
     "effective_load_mode", "resolve_custom_exercises", "apply_anchored_feedback",

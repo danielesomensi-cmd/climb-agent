@@ -127,6 +127,20 @@ EXERCISE_PROTOCOL: Dict[str, str] = {
 
 _TESTED_SOURCES = ("test", "test_session")
 
+# B364 review: the baseline fallback is "tested" only when a TEST LOG wrote it.
+# ``_update_test_from_log`` always appends a ``tests.*`` entry (so the fallback
+# is not even reached) and stamps the pulling baseline ``test_session``. A
+# baseline-only ``source='test'`` is what ``estimate_missing_baselines``
+# persists at onboarding / assessment from a SELF-REPORTED measured value —
+# not an official max written by a test log, so it does not open the gate.
+_BASELINE_TESTED_SOURCES = ("test_session",)
+
+
+def _cand_tested(cand: Mapping[str, Any]) -> bool:
+    if cand.get("from_baseline"):
+        return cand.get("source") in _BASELINE_TESTED_SOURCES
+    return cand.get("source") in _TESTED_SOURCES
+
 
 def _as_date(value: DateLike) -> date:
     if isinstance(value, datetime):
@@ -200,7 +214,7 @@ def _hang_candidates(state: Mapping[str, Any], as_of: date) -> List[Dict[str, An
                 "date": d, "total": total, "seconds": int(_num(b.get("hang_seconds")) or 7),
                 "source": str(b.get("source") or "unknown"), "test_id": None,
                 "bodyweight_kg": _num(b.get("bodyweight_at_test_kg") or b.get("bodyweight_kg")),
-                "stored_confidence": None,
+                "stored_confidence": None, "from_baseline": True,
             })
     return cands
 
@@ -232,7 +246,7 @@ def _pull_candidates(state: Mapping[str, Any], as_of: date) -> List[Dict[str, An
                 "test_id": None,
                 "one_rm": _num(b.get("weighted_pullup_1rm_total_kg") or b.get("weighted_pullup_1rm_estimated_kg")),
                 "bodyweight_kg": _num(b.get("bodyweight_at_test_kg") or b.get("bodyweight_kg")),
-                "stored_confidence": None,
+                "stored_confidence": None, "from_baseline": True,
             })
     return cands
 
@@ -250,7 +264,9 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
       test wins over a converted one.
     - ``tests.*`` entries are the source (``source: "test"``). The persisted
       baseline is read only when ``tests.*`` has nothing (its own ``source``
-      is reported as-is: only test/test_session count as tested).
+      is reported as-is, ``from_baseline: True``; only ``test_session`` counts
+      as tested there — a baseline-only ``test`` is an onboarding self-report
+      persisted by ``estimate_missing_baselines``, B364 review).
     - ``stored_confidence`` is informational: use ``test_confidence``.
     """
     on = _as_date(as_of)
@@ -272,7 +288,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "date": best["date"].isoformat(),
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
-            "tested": best["source"] in _TESTED_SOURCES and age < TEST_FRESH_DAYS,
+            "tested": _cand_tested(best) and age < TEST_FRESH_DAYS,
+            "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
             "seconds": target_s,
@@ -298,7 +315,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "date": best["date"].isoformat(),
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
-            "tested": best["source"] in _TESTED_SOURCES and age < TEST_FRESH_DAYS,
+            "tested": _cand_tested(best) and age < TEST_FRESH_DAYS,
+            "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
             "bodyweight_kg": best["bodyweight_kg"],
