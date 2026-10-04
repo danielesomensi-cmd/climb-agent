@@ -733,6 +733,57 @@ Proposal: highest G with ≥ `MIN_ROUTES` (2) routes ≥ G on ≥ 2 distinct dat
 supporting route inside a declared trip) is reported, not enforced. The outdoor log is never rewritten.
 Confirm answer per route: `onsight` | `flash` | `worked`.
 
+### 2.10.2c Limit log (A296, R6c)
+
+`user_state.limit_log[]` — top level, append-only, capped at `LIMIT_LOG_CAP` (200, oldest dropped).
+Written **only** by `progression_v1.apply_feedback` (limit-boulder family) and by
+`POST /api/free-session/{id}/finish`; **not** in the `PUT /api/state` allowlist. A resubmitted
+`(date, session_id, exercise_id)` replaces its entry (B197). Module: `backend/engine/limit_log.py`.
+
+| field | shape |
+|-------|-------|
+| `date`, `session_id`, `exercise_id` | key of the entry (`exercise_id: null` for a free session) |
+| `surface` | limit surface (`board_kilter`, `gym_boulder`, …) |
+| `target_grade` | Font target prescribed that day (planned instance → this entry on resubmit → `_limit_target_state`) |
+| `problems[]` | `{grade (Font), attempts 1-10, outcome: "sent" \| "high_point" \| "no_progress", sent_on_attempt?, crux_moves?, surface?, name?}`, max 8 per item (invalid rows dropped one by one) |
+| `source` | `planned` \| `custom` (`custom_*`) \| `adhoc` (`generated_*`) \| `free` |
+| `feedback_label`, `used_grade`, `next_target_grade` | what the item carried and the memory written |
+| `reference_grade`, `step` (−1/0/+1), `step_reason`, `hard_attempts`, `warning?` | present when problems decided the step |
+| `qualifies` | ≥ 2 problems at ≥ target (sent or high point) |
+| `rp_proposal?` | `{grade, current}`: a send above `boulder_max_rp` on a non-board surface — proposed, **never written** |
+| `qualifying`, `reason` | free entries only (`threshold` \| `toggle`) |
+
+`step_reason` ∈ `sent_above_target` | `two_sends_at_target` | `progress_at_target` |
+`first_session_without_progress` | `two_sessions_without_progress` | `hard_attempts_guard` | `reentry`.
+
+Feedback item field `problems[]` (`exercise_feedback_v1`, limit family): with at least one valid row
+the problems decide the step at reference R (the day's target; the re-entry BASE when the session
+closes a B365 re-entry; during an open re-entry the memory stays the base): +1 half grade with ≥ 1
+send at ≥ R+1 half or ≥ 2 sends at ≥ R; hold on any progress (send at ≥ R−1 half, high point at ≥ R,
+crux moves at ≥ R); −1 half grade **only** when this session and the previous non-free entry on the
+same surface both made no progress; never more than one half grade; more than
+`HARD_ATTEMPTS_GUARD` (20) attempts at ≥ R−1 half → never up, `warning: hard_attempts_guard`.
+Without problems the label path of §2.10.2 applies unchanged. All thresholds are ENGINEERING
+CONSTANTS (no published source).
+
+Free sessions: `free_sessions[].limit_session = {counted, reason: threshold | toggle | below_threshold
+| no_target, target_grade, qualifying, toggled}` is stamped at finish on boulder surfaces
+(`FreeSessionFinishRequest.is_limit_session` = the toggle). Climbs map to problems as
+flash/sent → `sent`, attempted → `high_point`. Counted (≥ 2 climbs at ≥ the limit target of that
+surface, or the toggle) → a `source: free` entry. A free entry never moves the target, never writes
+`stimulus_recency` (A240/A213). Deleting the free session removes its entry.
+
+Consumers: `stimulus.exposures` (a free entry IS the free `limit_power` exposure for a stamped
+session — legacy unstamped sessions keep the RP − 2 threshold rule; a non-free entry with problems
+is a fallback `source: "limit_log"` row, dropped when the week plan covers the day);
+`stimulus.finger_hard_days` (a stamped free session that did not count is still finger-hard with
+≥ 2 climbs at the OUTDOOR-HARD threshold); `key_sessions_v1.session_dose` (`dose: "limit_log"` on
+`limit_power`: a custom/adhoc session with problems is full only when it `qualifies`, else partial
+`limit_log_below_target`; catalog sessions and unlogged customs stay full on presence).
+Read-time target outside the planner: `progression_v1.limit_grade_target` (custom `GET ?date=`,
+builder proposal `grade_target`, adhoc/composer previews) and `limit_target_on_surface` (free).
+`suggested_boulder_target.log_problems: true` tells the players to show the problem logger.
+
 ### 2.10.3 Test source taxonomy (`assessment.tests_source`)
 
 Every scalar in `assessment.tests.*` has a companion entry in `assessment.tests_source` recording whether the value came from a real measurement or an estimate. The sidecar shape is parallel to `assessment.tests`: same keys, one of two string values.

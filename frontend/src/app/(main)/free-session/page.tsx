@@ -376,12 +376,13 @@ function FreeSessionContent() {
     setStep("summary");
   }, []);
 
-  const handleSaveSummary = useCallback(async (feel?: string, notes?: string) => {
+  const handleSaveSummary = useCallback(async (feel?: string, notes?: string, isLimit?: boolean) => {
     if (!activeSession) return;
     try {
       const result = await finishFreeSession(activeSession.sessionId, {
         overall_feel: feel,
         notes: notes,
+        ...(isLimit ? { is_limit_session: true } : {}),
       });
       setFinishedData({
         summary: result.summary,

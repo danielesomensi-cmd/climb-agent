@@ -23,7 +23,8 @@ interface SessionSummaryProps {
   summary?: SummaryData | null;
   climbs: Array<{ grade: string; status: string }>;
   startedAt?: number; // Date.now() when session started
-  onSave: (feel?: string, notes?: string) => void;
+  /** A296: `isLimit` = "it was a limit session" (boulder surfaces only). */
+  onSave: (feel?: string, notes?: string, isLimit?: boolean) => void;
   gradeSystem?: BoulderGradeSystem;
 }
 
@@ -41,6 +42,10 @@ export function SessionSummary({
 }: SessionSummaryProps) {
   const [feel, setFeel] = useState<string | undefined>();
   const [notes, setNotes] = useState("");
+  // A296: boulder surfaces only — counts as the week's limit stimulus even
+  // with fewer than 2 problems at your limit target.
+  const [isLimit, setIsLimit] = useState(false);
+  const canBeLimit = ["gym_boulder", "board_kilter", "board_moonboard", "board_other"].includes(surface);
   const [saving, setSaving] = useState(false);
 
   // Client-side summary from climbs
@@ -94,7 +99,7 @@ export function SessionSummary({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave(feel, notes || undefined);
+      await onSave(feel, notes || undefined, canBeLimit && isLimit ? true : undefined);
     } finally {
       setSaving(false);
     }
@@ -211,6 +216,25 @@ export function SessionSummary({
           ))}
         </div>
       </div>
+
+      {/* A296: limit-session toggle */}
+      {canBeLimit && (
+        <label className="flex items-start gap-3 rounded-xl border p-3 text-sm">
+          <input
+            type="checkbox"
+            checked={isLimit}
+            onChange={(e) => setIsLimit(e.target.checked)}
+            className="mt-0.5 size-4 accent-primary"
+          />
+          <span>
+            <span className="font-medium">It was a limit session</span>
+            <span className="block text-xs text-muted-foreground">
+              Counts as this week&apos;s limit session. Without it, it counts only with at least 2 problems at your limit target.
+              Free sessions never change your target.
+            </span>
+          </span>
+        </label>
+      )}
 
       {/* Notes */}
       <textarea

@@ -18,8 +18,10 @@ import { displaySetNumber, sideForSet, totalSetsWithSides } from "@/lib/alt-side
 import { unlockAudio } from "@/lib/audio-unlock";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
 import { measureFields, withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
-import type { SessionPain } from "@/lib/types";
+import type { LimitProblem, SessionPain } from "@/lib/types";
 import { MeasureInput, PainPicker } from "@/components/training/measured-feedback-inputs";
+import { LimitProblemLogger } from "@/components/training/limit-problem-logger";
+import { limitFeedbackFields } from "@/lib/limit-problems";
 
 type Stage = "idle" | "exercise_active" | "resting" | "completed";
 
@@ -49,6 +51,8 @@ function ExerciseFeedbackCard({
   exercise,
   measures,
   onMeasuresChange,
+  problems,
+  onProblemsChange,
 }: {
   name: string;
   prescriptionSummary: string;
@@ -64,6 +68,9 @@ function ExerciseFeedbackCard({
   exercise: CustomSessionExercise;
   measures: MeasureValues;
   onMeasuresChange: (patch: MeasureValues) => void;
+  /** A296: limit problem log (limit-boulder family read with ?date=). */
+  problems: LimitProblem[];
+  onProblemsChange: (problems: LimitProblem[]) => void;
 }) {
   return (
     <div className="rounded-lg border bg-muted/20 p-3 space-y-3 text-left">
@@ -107,7 +114,16 @@ function ExerciseFeedbackCard({
           onHangMargin={(v) => onMeasuresChange({ hangMargin: v })}
         />
       )}
-      {showLoadInput && (
+      {exercise.log_problems && (
+        <LimitProblemLogger
+          idPrefix={exercise.exercise_id}
+          target={exercise.target_grade}
+          targetLow={exercise.target_grade_low}
+          problems={problems}
+          onChange={onProblemsChange}
+        />
+      )}
+      {showLoadInput && !exercise.log_problems && (
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="shrink-0">Used load</span>
           <input
@@ -216,6 +232,8 @@ export default function SessionPlayPage() {
   const [kgByIndex, setKgByIndex] = useState<Record<number, string>>({});
   // A295: optional measures per exercise + session pain (nothing pre-selected).
   const [measuresByIndex, setMeasuresByIndex] = useState<Record<number, MeasureValues>>({});
+  // A296: limit problem log per exercise (limit-boulder family).
+  const [problemsByIndex, setProblemsByIndex] = useState<Record<number, LimitProblem[]>>({});
   const [pain, setPain] = useState<SessionPain | null>(null);
   useEffect(() => {
     if (startedAtRef.current === 0) startedAtRef.current = Date.now();
@@ -398,6 +416,13 @@ export default function SessionPlayPage() {
         if (!Number.isNaN(kg) && kg > 0) item.used_external_load_kg = kg;
         const sets = setsByIndex[i];
         if (sets != null) item.completed_sets = sets;
+        if (ex.log_problems) {
+          // A296: the limit is logged problem by problem; without problems the
+          // day's target travels as the grade used (same as the guided player).
+          Object.assign(item, limitFeedbackFields(problemsByIndex[i], ex.target_grade));
+          if (ex.surface_selected) item.surface_selected = ex.surface_selected;
+          delete item.used_external_load_kg;
+        }
         return item;
       });
       await postFeedback({
@@ -436,6 +461,7 @@ export default function SessionPlayPage() {
     kgByIndex,
     setsByIndex,
     measuresByIndex,
+    problemsByIndex,
     pain,
   ]);
 
@@ -651,6 +677,8 @@ export default function SessionPlayPage() {
                   onMeasuresChange={(patch) =>
                     setMeasuresByIndex((prev) => ({ ...prev, [i]: { ...(prev[i] ?? {}), ...patch } }))
                   }
+                  problems={problemsByIndex[i] ?? []}
+                  onProblemsChange={(rows) => setProblemsByIndex((prev) => ({ ...prev, [i]: rows }))}
                 />
               ))}
               <p className="text-[11px] text-muted-foreground text-left">

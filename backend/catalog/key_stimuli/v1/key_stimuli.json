@@ -29,7 +29,7 @@
       "session_ids": ["limit_boulder_gym", "power_contact_gym"],
       "propose": ["limit_boulder_gym", "power_contact_gym"],
       "reentry_excluded": ["power_contact_gym"],
-      "dose": "presence",
+      "dose": "limit_log",
       "finger_hard": true,
       "free_limit_counts": true
     },

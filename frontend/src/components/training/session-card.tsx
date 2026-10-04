@@ -139,6 +139,7 @@ function buildGuidedExercise(inst: Record<string, unknown>): GuidedExercise {
       repScheme: suggested.suggested_rep_scheme as string | undefined,
       surface: boulderTarget.surface_selected as string | undefined,
       attemptGuidance: boulderTarget.attempt_guidance as string | undefined,
+      logProblems: boulderTarget.log_problems === true,
       restGuidance: boulderTarget.rest_guidance as string | undefined,
       loadSource: suggested.load_source as string | undefined,
       loadWarning: suggested.load_warning as string | undefined,

@@ -193,7 +193,7 @@ Each phase has a few **key stimuli** that matter more than everything else — t
 
 On **This Week** the grid shows a ★ on the days with a key session (red when it was skipped or turned into recovery), and each session card carries a badge: **Key · Finger max**, **Key ✓** once done, **Supporting** / **Optional** for the other sessions of the same stimulus (Optional in a re-entry week, when you have had fewer than two limit or finger sessions in the last three weeks), **Skipped key** or **Downgraded from …**.
 
-The **Key sessions this week** card lists every key stimulus with its status. A key session counts when it is done **at the dose of the phase**: a weighted pull-up or max hang well below your tested max shows as *only a partial dose* — it still helps, but the stimulus is not ticked. Outdoor days count too (a route near your redpoint is a finger-hard day and a try-hard day), and a free boulder session with at least two problems near your limit counts as limit and try-hard. An outdoor day does **not** tick the technique key: the app cannot tell whether you worked on your feet and positioning, so technique counts only for the technique session or at least two feet / positioning drills (pacing, breathing and route-reading drills do not count). The try-hard counts when a session holds a **fall-practice block** — the limit session being on the plan is not enough; the card tells you which session to add it to. In Power Endurance the limit stimulus can be proposed even though the phase's own plan has no limit session.
+The **Key sessions this week** card lists every key stimulus with its status. A key session counts when it is done **at the dose of the phase**: a weighted pull-up or max hang well below your tested max shows as *only a partial dose* — it still helps, but the stimulus is not ticked. Outdoor days count too (a route near your redpoint is a finger-hard day and a try-hard day), and a free boulder session with at least two problems at your limit target (or marked *It was a limit session*) counts as limit and try-hard. An outdoor day does **not** tick the technique key: the app cannot tell whether you worked on your feet and positioning, so technique counts only for the technique session or at least two feet / positioning drills (pacing, breathing and route-reading drills do not count). The try-hard counts when a session holds a **fall-practice block** — the limit session being on the plan is not enough; the card tells you which session to add it to. In Power Endurance the limit stimulus can be proposed even though the phase's own plan has no limit session.
 
 When a key session is missed, the card tells you what to do:
 
@@ -407,6 +407,39 @@ gym 7A. It does not matter which limit exercise the session picked: a grade from
 - Your feedback moves the target by **half a grade** at a time: *easy* +½ (7A → 7A+),
   *very easy* +1, *ok* keeps it, *hard* −½, *very hard* −1. The `+` is never lost:
   an *ok* at 7A+ stays 7A+.
+
+**Logging problem by problem (recommended).** In the guided session and in the custom
+session player, a limit exercise shows **Problems climbed** instead of a single grade
+field. Add a row for each problem you tried: grade (pre-filled with your target),
+number of tries (1–10) and the outcome — **Sent**, **High point** (you got further than
+before but did not top it) or **No progress**. When you log problems, they decide the
+next target instead of the effort chips:
+
+- **Up half a grade**: one send above the target, or two sends at the target.
+- **Stays**: one send at the target, a high point at the target, or crux moves done —
+  a session spent working one hard problem without topping it never lowers your
+  target.
+- **Down half a grade** only after **two sessions in a row** without progress (no send
+  near the target, no high point).
+- Never more than half a grade per session.
+- More than **20 hard attempts** in one session (on problems at or near the target):
+  the target does not go up and the app reminds you to recover fully — that much hard
+  pulling on small holds is a finger-safety signal, not a performance.
+- A send **above your boulder redpoint** on the gym wall never changes your redpoint by
+  itself: after saving you get a message suggesting you update it in Settings → Profile & Maxes
+  if it was a real send.
+- In a re-entry (the 2 easier sessions after a break) the problems are logged but the
+  target stays on your pre-break grade; the session that closes the re-entry is judged
+  against that grade.
+
+Not logging any problem keeps the old behaviour: the target grade is sent as the grade
+you climbed and the effort chip moves it.
+
+A limit exercise inside a **custom session** gets the same target as the plan on the day
+you play it, and its outcome counts. For the weekly **Limit** key session, a custom
+session counts when you logged at least **two problems at your target** (sent or high
+point); a custom limit spent on easier problems shows as a partial dose. If you log no
+problems it counts as done, as before.
 
 ### Grades on endurance and technique drills
 
@@ -632,6 +665,17 @@ Each preset shows a **phase compatibility badge** (recommended / caution / not r
 ### Logging Climbs
 
 For each climb, you log: grade (Fontainebleau), status (Flash / Sent / Attempted), and number of attempts. For lead routes, additionally: style (Onsight / Flash / Redpoint / Project) and whether you topped out.
+
+### Free boulder sessions as limit sessions
+
+On a boulder surface (gym wall, Kilter, MoonBoard, other board) the summary screen has a
+**It was a limit session** switch. A free boulder session counts as this week's **Limit**
+key session when you climbed at least **two problems at or above your limit target for
+that surface** (sent or tried), or when you turn the switch on. It never changes your
+limit target and never feeds the plan's progression — free sessions stay off-plan. Even
+when it does not count as a limit session, two or more climbs near your redpoint still
+count as a hard finger day for the finger-recovery and test rules. Deleting the free
+session removes it from the count.
 
 ### Context
 

@@ -16,7 +16,7 @@ import { guidedStorageKey } from "@/lib/guided-session-utils";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
-import type { GuidedSessionState, GuidedExercise, SessionPain, WeekPlan } from "@/lib/types";
+import type { GuidedSessionState, GuidedExercise, LimitProblem, SessionPain, WeekPlan } from "@/lib/types";
 import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 
 // ---------------------------------------------------------------------------
@@ -203,7 +203,7 @@ export default function GuidedSessionPage() {
   );
 
   const handleDone = useCallback(
-    (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues) => {
+    (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues, problems?: LimitProblem[]) => {
       if (!state) return;
       const idx = state.currentIndex;
       const exercise = state.exercises[idx];
@@ -234,6 +234,8 @@ export default function GuidedSessionPage() {
           lastSetReps: measures?.lastSetReps,
           hangMargin: measures?.hangMargin,
           hangHeldS: measures?.hangHeldS,
+          // A296: limit problem log (undefined = not logged)
+          problems: problems && problems.length > 0 ? problems : undefined,
         });
       }
 

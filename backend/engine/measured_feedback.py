@@ -632,6 +632,16 @@ def sanitize_log_entry(log_entry: Dict[str, Any]) -> List[str]:
                 item.pop("hang_held_s", None)
             else:
                 item["hang_held_s"] = v
+        if "problems" in item:
+            # A296: limit problem log — invalid rows dropped one by one.
+            from backend.engine.limit_log import sanitize_problems
+
+            clean, problem_warnings = sanitize_problems(item.get("problems"))
+            warnings.extend(f"{eid}: {w}" for w in problem_warnings)
+            if clean:
+                item["problems"] = clean
+            else:
+                item.pop("problems", None)
     return warnings
 
 

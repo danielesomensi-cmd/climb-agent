@@ -892,6 +892,7 @@ export interface GuidedExercise {
     repScheme?: string;
     surface?: string;
     attemptGuidance?: string;  // A-B7: e.g. "1 serious attempt per problem"
+    logProblems?: boolean;     // A296: limit family — log problem by problem
     restGuidance?: string;     // A-B7: e.g. "3-5 min between problems"
     loadSource?: string;   // "estimated" if derived from grade/pullup (no real test)
     loadWarning?: string;  // "counterweight_required..." if external < 0
@@ -927,6 +928,7 @@ export interface GuidedExercise {
   completedRepsLeft?: number;
   usedTotalLoadKg?: number;
   usedGrade?: string;
+  problems?: LimitProblem[];  // A296: limit problem log
   completedSets?: number;  // sets completed within this exercise (for timer resume)
 
   // Test measurement exercises (category=test_measurement): single value input
@@ -954,6 +956,16 @@ export interface GuidedSessionState {
   processCue?: { id: string; text: string };
   /** A295: session pain 0-3 (+ zone from 2). Travels with the offline retry. */
   pain?: SessionPain;
+}
+
+/** A296 — one problem of a limit session (grade always Font). */
+export type LimitProblemOutcome = "sent" | "high_point" | "no_progress";
+export interface LimitProblem {
+  grade: string;
+  attempts: number;
+  outcome: LimitProblemOutcome;
+  crux_moves?: number;
+  name?: string;
 }
 
 /** A295 — measured feedback (feedback_contract 2). */
@@ -995,6 +1007,11 @@ export interface CustomSessionExercise {
   measure?: FeedbackMeasure;
   target_reps?: number;
   dp_range?: [number, number];
+  // A296: read-time limit target for limit-family exercises (?date=, never stored)
+  target_grade?: string;
+  target_grade_low?: string;
+  surface_selected?: string;
+  log_problems?: boolean;
 }
 
 export interface CustomSession {

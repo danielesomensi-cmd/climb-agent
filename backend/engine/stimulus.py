@@ -509,7 +509,7 @@ def exposures(
         {date, family, exercise_id, session_id, source, evidence, is_test,
          sets_done, sets_prescribed, used_total_load_kg, used_external_load_kg}
 
-    ``source`` ∈ week_plan | archive | free | registry. ``evidence`` ∈
+    ``source`` ∈ week_plan | archive | free | limit_log | registry (A296). ``evidence`` ∈
     measured | planned. Only ``status == "done"`` sessions count. Rows are
     de-duplicated on (date, family, exercise_id); a registry row is dropped
     when a derived row already covers the same (date, family).
@@ -565,10 +565,15 @@ def exposures(
     # Only FINISHED free sessions count, like plan sessions only count when
     # done: the router appends the session at /start with ``finished_at: None``.
     # A row without the key at all (legacy shape) is read as finished.
+    # A296: a free session finished after A296 carries ``limit_session`` (the
+    # decision taken at finish against the LIMIT TARGET, or the toggle) — its
+    # exposure comes from the limit log below, not from this legacy rule.
     for fs in state.get("free_sessions") or []:
         if not isinstance(fs, Mapping):
             continue
         if "finished_at" in fs and fs.get("finished_at") is None:
+            continue
+        if isinstance(fs.get("limit_session"), Mapping):
             continue
         d = str(fs.get("date") or "")[:10]
         if not d or not _in_window(d, s_iso, u_iso):
@@ -585,8 +590,45 @@ def exposures(
                 "used_total_load_kg": None, "used_external_load_kg": None,
             })
 
+    # A296: the limit log. A free entry (written only when the session
+    # counted) IS the free limit_power exposure, ``source: "free"`` like the
+    # legacy rule. A planned / custom / adhoc entry with logged problems is a
+    # fallback source (``source: "limit_log"``), dropped below when the week
+    # plan already covers that day — e.g. when the caller passes no archive.
+    free_ids = {str(fs.get("id")) for fs in (state.get("free_sessions") or []) if isinstance(fs, Mapping)}
+    for e in state.get("limit_log") or []:
+        if not isinstance(e, Mapping):
+            continue
+        d = str(e.get("date") or "")[:10]
+        if not d or not _in_window(d, s_iso, u_iso):
+            continue
+        if e.get("source") == "free":
+            if str(e.get("session_id")) not in free_ids:
+                continue  # the free session was deleted
+            rows.append({
+                "date": d, "family": FAMILY_LIMIT_POWER, "exercise_id": None,
+                "session_id": e.get("session_id"), "source": "free", "evidence": "measured",
+                "is_test": False, "sets_done": e.get("qualifying"), "sets_prescribed": None,
+                "used_total_load_kg": None, "used_external_load_kg": None,
+            })
     seen = {(r["date"], r["family"], r["exercise_id"]) for r in rows}
     covered = {(r["date"], r["family"]) for r in rows}
+    for e in state.get("limit_log") or []:
+        if not isinstance(e, Mapping) or e.get("source") == "free" or not e.get("problems"):
+            continue
+        d = str(e.get("date") or "")[:10]
+        if not d or not _in_window(d, s_iso, u_iso) or (d, FAMILY_LIMIT_POWER) in covered:
+            continue
+        if stimulus_of(e.get("exercise_id")) != FAMILY_LIMIT_POWER:
+            continue
+        covered.add((d, FAMILY_LIMIT_POWER))
+        seen.add((d, FAMILY_LIMIT_POWER, e.get("exercise_id")))
+        rows.append({
+            "date": d, "family": FAMILY_LIMIT_POWER, "exercise_id": e.get("exercise_id"),
+            "session_id": e.get("session_id"), "source": "limit_log", "evidence": "measured",
+            "is_test": False, "sets_done": len(e.get("problems") or []), "sets_prescribed": None,
+            "used_total_load_kg": None, "used_external_load_kg": None,
+        })
     for r in _registry_entries(state):
         if not _in_window(r["date"], s_iso, u_iso):
             continue
@@ -770,8 +812,27 @@ def finger_hard_days(
     for o in outdoor_hard_days(state, since=since, until=until, outdoor_rows=outdoor_rows):
         rows.append({"date": o["date"], "source": "outdoor", "session_id": None,
                      "reason": "outdoor_hard", "status": "done"})
+    free_rows = set()
     for r in exposures(state, since=since, until=until, families=[FAMILY_LIMIT_POWER]):
         if r["source"] == "free":
+            free_rows.add(str(r["session_id"]))
             rows.append({"date": r["date"], "source": "free", "session_id": r["session_id"],
+                         "reason": "free_limit", "status": "done"})
+    # A296: a free session decided by the limit log that did NOT count as a
+    # limit session still loaded the fingers hard when it had ≥ 2 climbs at the
+    # OUTDOOR-HARD threshold — fatigue is not the same question as "was it the
+    # limit stimulus". Same rule the exposure view applied before A296.
+    for fs in state.get("free_sessions") or []:
+        if not isinstance(fs, Mapping) or not isinstance(fs.get("limit_session"), Mapping):
+            continue
+        if str(fs.get("id")) in free_rows or fs.get("finished_at") is None and "finished_at" in fs:
+            continue
+        d = str(fs.get("date") or "")[:10]
+        if not d or not _in_window(d, s_iso, u_iso) or fs.get("surface") not in BOULDER_SURFACES:
+            continue
+        hard = [c for c in (fs.get("climbs") or []) if isinstance(c, Mapping)
+                and is_hard_climb(state, "boulder", c.get("grade"))]
+        if len(hard) >= FREE_LIMIT_MIN_PROBLEMS:
+            rows.append({"date": d, "source": "free", "session_id": fs.get("id"),
                          "reason": "free_limit", "status": "done"})
     return sorted(rows, key=lambda r: (r["date"], r["source"], str(r["session_id"] or "")))

@@ -36,6 +36,7 @@ import type {
 } from "./types";
 import { localToday } from "./key-sessions";
 import { notifyLimitationSuggestions, type LimitationSuggestion } from "./limitation-suggestions";
+import { notifyLimitSummary, type LimitSummary } from "./limit-problems";
 import type { EvidenceStyle, GradeEvidence } from "./grade-evidence";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -694,6 +695,7 @@ export const postFeedback = (data: {
     status: string;
     week_plan?: WeekPlan;
     limitation_suggestions?: LimitationSuggestion[];
+    limit_summary?: LimitSummary[];
     warning?: string;
   }>("/api/feedback", {
     method: "POST",
@@ -702,6 +704,9 @@ export const postFeedback = (data: {
     // A295 review: every feedback path (dialog, guided, custom player,
     // offline outbox) surfaces the limitation suggestion in one place.
     notifyLimitationSuggestions(res?.limitation_suggestions);
+    // A296: what the limit log made of a limit session (target step, the
+    // hard-attempts warning, a send above the boulder RP to confirm).
+    notifyLimitSummary(res?.limit_summary);
     return res;
   });
 
@@ -965,6 +970,8 @@ export const finishFreeSession = (sessionId: string, data: {
     completed_entries: Array<{ id: string; name: string; hold_seconds?: number }>;
     completed_count: number;
   };
+  /** A296: "it was a limit session" (boulder surfaces). */
+  is_limit_session?: boolean;
 }) =>
   request<{
     summary: {
@@ -978,6 +985,14 @@ export const finishFreeSession = (sessionId: string, data: {
     };
     duration_minutes: number | null;
     load_score: number | null;
+    /** A296: limit-session decision (boulder surfaces only). */
+    limit_session?: {
+      counted: boolean;
+      reason: string;
+      target_grade: string | null;
+      qualifying: number;
+      toggled: boolean;
+    };
   }>(`/api/free-session/${sessionId}/finish`, {
     method: "POST",
     body: JSON.stringify(data),

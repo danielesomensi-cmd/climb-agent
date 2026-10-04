@@ -292,3 +292,34 @@ describe("A295 measured feedback", () => {
     expect(out[0]).toMatchObject({ measure: "dp_reps", targetReps: 5, prescribedReps: 4 });
   });
 });
+
+describe("A296 — limit problem log in guided feedback items", () => {
+  const limit = {
+    exerciseId: "limit_bouldering",
+    name: "Limit bouldering",
+    category: "climbing",
+    blockUid: "",
+    loadModel: "grade_relative",
+    prescription: {},
+    suggested: { grade: "7B", surface: "board_kilter", logProblems: true },
+    status: "done",
+    feedbackLabel: null,
+  } as GuidedExercise;
+
+  it("sends the problems with the surface and the hardest send", () => {
+    const problems = [
+      { grade: "7B", attempts: 3, outcome: "sent" as const },
+      { grade: "7B+", attempts: 5, outcome: "high_point" as const },
+    ];
+    const [item] = buildGuidedFeedbackItems([{ ...limit, usedGrade: "7B", problems }]);
+    expect(item).toMatchObject({ exercise_id: "limit_bouldering", used_grade: "7B", surface_selected: "board_kilter", problems });
+    expect(item.feedback_label).toBeUndefined();
+  });
+
+  it("never sends problems for a skipped exercise", () => {
+    const [item] = buildGuidedFeedbackItems([
+      { ...limit, status: "skipped", problems: [{ grade: "7B", attempts: 1, outcome: "sent" }] },
+    ]);
+    expect(item.problems).toBeUndefined();
+  });
+});

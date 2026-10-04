@@ -438,6 +438,9 @@ class FreeSessionFinishRequest(BaseModel):
     notes: Optional[str] = None
     circuit: Optional[Dict[str, Any]] = None  # circuit session data
     mobility: Optional[Dict[str, Any]] = None  # mobility session data (A230)
+    # A296: "it was a limit session" toggle (boulder surfaces). Without it the
+    # session counts as limit only with ≥ 2 climbs at or above the target.
+    is_limit_session: Optional[bool] = None
 
 
 # --------------------------------------------------------------------------- #
