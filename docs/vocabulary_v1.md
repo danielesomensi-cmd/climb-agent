@@ -866,6 +866,38 @@ Current canonical `test_id` values:
 - `lp_max_lift_5s`
 - `lp_repeater_7_3`
 
+### 4.4 Stimulus families, exposures and the retest primitives (A288)
+
+Defined once in `backend/engine/stimulus.py` and `backend/engine/retest_policy.py`
+(pure, read-only). Every later brief imports these values instead of redefining them.
+
+**Stimulus family** (`stimulus.EXERCISE_FAMILY`, one family per exercise, derived from the catalog):
+
+| Family | Rule | Members |
+|---|---|---|
+| `finger_max` | domain `finger_max_strength` on a defined edge | max_hang_5s, max_hang_7s, max_hang_ladder, horst_7_53, one_arm_hang_assisted, lp_max_lift_5s, lp_max_lift_7s, lp_short_lifts, lp_max_test_5s (NOT min_edge_hang, max_hang_10s, lp_max_lift_10s) |
+| `pulling_max` | externally loaded vertical pulls | weighted_pullup, weighted_chinup |
+| `limit_power` | pattern `climbing_limit_boulder` (no warm-up) + `campus_ladder` (no campus_sprint_endurance) | limit_bouldering, board_limit_boulders, spray_wall_limit, system_board_limit, campus_* |
+| `power_endurance` | domain `power_endurance` | four_by_four_bouldering, linked_boulders(_circuit), route_intervals, threshold_climbing, emom/otm_bouldering, thirty_thirty_intervals, route_linked_laps, route_on_the_minute |
+
+**Exposure row** (`stimulus.exposures`): `{date, family, exercise_id, session_id, source, evidence, is_test, sets_done, sets_prescribed, used_total_load_kg, used_external_load_kg}`.
+- `source`: `week_plan` | `archive` (A221 `week_archive`) | `free` | `registry` (`progression_counters.stimulus_exposures`, written from B364 on).
+- `evidence`: `measured` (logged entry) | `planned` (done session without logged entries).
+- Exposures are counted in distinct **days**. Outdoor days are not family exposures.
+
+**Finger-hard day** (`stimulus.finger_hard_days`), `reason`: `finger_hard_session` (tags/`_SESSION_META` finger+hard, or a session delivering `finger_max`/`limit_power` — custom sessions included) | `outdoor_hard` | `free_limit`.
+
+**Hard-climb threshold** (OUTDOOR-HARD): redpoint − `HARD_CLIMB_GRADE_STEPS` (2) steps on the engine ladder, `+` grades included (lead 8a+ → 7c+, boulder 7C → 7B). A free boulder session is a `limit_power` exposure with ≥ `FREE_LIMIT_MIN_PROBLEMS` (2) climbs at/above it.
+
+**Retest primitives** (`retest_policy`):
+- Protocols: `max_hang_7s_total_load`, `max_hang_5s_total_load`, `weighted_pullup_2rm`.
+- `official_max(...)` → `{protocol, family, total_kg, date, age_days, fresh, tested, source, test_id, seconds, source_seconds, converted, one_rm_kg, bodyweight_kg, edge_mm, grip, stored_confidence}`. `tested` = source `test`/`test_session` and age < `TEST_FRESH_DAYS` (90).
+- `test_confidence(...)` → `confidence`: `high` | `low` (computed: < 2 exposure days in the 21 days before) | `None` (no family, e.g. repeater). The stored `confidence` field is informational only.
+- `reentry_step(...)` → `{n, factor, gap_days, run_start, last_exposure, run_dates, in_reentry}`; gap `REENTRY_GAP_D` = 14; factor 0.90 (n ≤ 1) / 0.95 (n = 2) / 1.0 (n ≥ 3).
+- Constants: `FINGER_GAP_H` 48, `RETEST_BLOCK_H` 72, `PULL_TEST_BLOCK_H` 48, `HEAVY_PULL_PCT_1RM` 0.85, `LOW_CONF_RETEST_D` 28, `VERY_HARD_BLOCK_D` 3, `PRE_TRIP_BLOCK_D` 10, `RETEST_BLOCKED_PHASES` (performance, deload), `HANG_PCT_PER_S` 0.015.
+
+**Macrocycle position** (`backend/engine/macro_position.position_on`): `{phase_index, phase_id, week_in_phase, phase_weeks, abs_week, total_weeks, phase_start, phase_end, is_last_week_of_phase, next_phase_id, before_start, after_end, paused}` — pause-aware (A223), same rule as `deps.current_phase_and_week`.
+
 ### 3.1 Template structure
 
 Required fields:
