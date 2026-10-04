@@ -327,6 +327,9 @@ def _is_pure_test_exercise(exercise_id: str) -> bool:
 
 # Feedback label → reps in reserve, used to read a training set as an
 # estimate of the max. Coarse by design: the app has no RIR field.
+# B364: UNTESTED athletes only — the B363 2RM re-base is kept for them bit for
+# bit (DECISIONS: "untested users unchanged"). A tested athlete's feedback goes
+# through anchored_load.apply_anchored_feedback and never re-bases anything.
 PULLUP_RIR_BY_LABEL: Dict[str, int] = {
     "very_hard": 0,
     "hard": 1,
@@ -371,13 +374,32 @@ def _pullup_baseline_2rm(user_state: Dict[str, Any]) -> Tuple[Optional[float], s
     return (float(two_rm) if two_rm else None), str(pulling.get("updated_at") or "")
 
 
-def pullup_reference_2rm(user_state: Dict[str, Any]) -> Optional[float]:
-    """The athlete's current pull-up reference, as a 2RM total load (kg).
+def pullup_official_2rm(user_state: Dict[str, Any]) -> Tuple[Optional[float], str, str]:
+    """(2RM total kg, date, source) of the persisted pulling baseline.
 
-    The tested 2RM, unless a training log written AFTER that test re-based it
-    (``e2rm_total_kg`` on the working_loads entry, see apply_feedback). A
-    legacy entry without ``e2rm_total_kg`` is ignored — it may be a test load
-    copied in as a training load, which is exactly the B363 defect.
+    B364: the official max changes ONLY with a test. Training logs never
+    re-base it (the B363 ``e2rm_total_kg`` re-base is gone) and a remembered
+    working load is never read as a max.
+    """
+    two_rm, base_date = _pullup_baseline_2rm(user_state)
+    source = str((_get_pulling_baseline(user_state) or {}).get("source") or "")
+    return two_rm, base_date, source
+
+
+def pullup_reference_2rm(user_state: Dict[str, Any]) -> Optional[float]:
+    """The pull-up reference of the pre-B364 path, as a 2RM total load (kg).
+
+    Read ONLY where anchored_load does not apply — an untested athlete: no
+    test, an onboarding self-report, or a test older than 90 days. There the
+    B363 behaviour is kept bit for bit: the baseline 2RM, unless a training log
+    written AFTER it re-based it (``e2rm_total_kg``, written only by
+    ``_apply_weighted_pullup_feedback`` on the untested path). Without it the
+    untested pull prescription could never progress (review B364).
+
+    A tested athlete never reads this: the prescription comes from
+    ``anchored_load`` and the official max (``pullup_official_2rm``) moves only
+    with a test. The pre-B363 legacy-memory branch stays removed (decided
+    2026-10-04): a remembered load is never read as a max.
     """
     base_2rm, base_date = _pullup_baseline_2rm(user_state)
     entry_2rm: Optional[float] = None
@@ -390,21 +412,6 @@ def pullup_reference_2rm(user_state: Dict[str, Any]) -> Optional[float]:
             entry_2rm, entry_date = float(val), str(e.get("updated_at") or "")
     if entry_2rm is not None and (base_2rm is None or entry_date >= base_date):
         return entry_2rm
-    # Legacy memory (pre-B363, no e2rm) is trusted only against an UNTESTED
-    # baseline: against a tested one it may be the 2RM test copied in as a
-    # training load. Read as a 3-rep set with ~2 in reserve.
-    pulling = _get_pulling_baseline(user_state) or {}
-    if str(pulling.get("source") or "") not in ("test", "test_session"):
-        legacy = [
-            e for e in _working_entries_ro(user_state)
-            if str(e.get("exercise_id") or "") == "weighted_pullup"
-            and e.get("e2rm_total_kg") is None
-            and isinstance(e.get("next_total_load_kg"), (int, float))
-            and str(e.get("updated_at") or "") >= base_date
-        ]
-        if legacy:
-            legacy.sort(key=lambda e: str(e.get("updated_at") or ""), reverse=True)
-            return _two_rm_from_1rm(estimate_1rm_from_reps(float(legacy[0]["next_total_load_kg"]), PULLUP_DEFAULT_REPS + 2))
     return base_2rm
 
 
@@ -1441,7 +1448,13 @@ def _estimate_pulling_baseline(user_state: Dict[str, Any]) -> None:
 
 
 def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> Dict[str, Any]:
+    from backend.engine.anchored_load import ANCHORED_EXERCISES, anchored_load, anchored_suggested_fields
+
     out = deepcopy(resolved_day)
+    # B364: the official max and the tested gate are read on the PERSISTED
+    # state — estimate_missing_baselines stamps source='test' with today's date
+    # on estimated baselines, which would make an untested user look tested.
+    persisted_state = user_state
     user_state = deepcopy(user_state)  # Work on a local copy — don't mutate caller state
     estimate_missing_baselines(user_state)  # Fill missing hangboard + pulling baselines
     out["targets_schema_version"] = "progression_targets.v1"
@@ -1451,10 +1464,36 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
     for session in out.get("sessions") or []:
         intensity = _intensity_label(session)
         boulder_info = _boulder_target_info(session, user_state)
+        session_ex_ids = [str(i.get("exercise_id") or "") for i in session.get("exercise_instances") or []]
         for inst in session.get("exercise_instances") or []:
             ex_id = str(inst.get("exercise_id") or "")
             prescription = inst.get("prescription") or {}
             suggested: Dict[str, Any] = dict(inst.get("suggested") or {})
+
+            # B364: the four anchored exercises of a TESTED athlete get their
+            # load from the single anchored_load (official max + working load,
+            # caps, re-entry ramp, guards). None → the pre-B364 branches below,
+            # bit for bit (untested athletes).
+            anch: Optional[Dict[str, Any]] = None
+            if ex_id in ANCHORED_EXERCISES:
+                anchor_source = dict(prescription)
+                anchor_source.update(inst.get("suggested") or {})
+                anch_setup, _ = _progression_setup_and_key(ex_id, anchor_source)
+                attrs = inst.get("attributes") or {}
+                anch = anchored_load(
+                    persisted_state,
+                    ex_id,
+                    date=out.get("date") or "",
+                    intensity=intensity,
+                    sets=prescription.get("sets") or (prescription.get("sets_range") or [None])[0],
+                    reps=prescription.get("reps") or (prescription.get("reps_range") or [None])[0],
+                    work_seconds=prescription.get("work_seconds") or prescription.get("hang_seconds"),
+                    session_exercise_ids=session_ex_ids,
+                    setup=anch_setup,
+                    catalog_intensity=prescription.get("intensity_pct_of_total_load") or attrs.get("intensity_pct"),
+                )
+            if anch is not None:
+                suggested.update(anchored_suggested_fields(anch))
 
             load_model = inst.get("load_model") or catalog_lm.get(ex_id)
             # C-LOADMODEL-MISTAG: per-hand load routing keys on genuine finger
@@ -1463,7 +1502,9 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             is_loading_pin = _load_catalog_cache().get(ex_id, {}).get("loading_pin", False)
 
             # --- total_load: special-case exercises with unique logic ---
-            if ex_id in ("max_hang_5s", "max_hang_7s"):
+            if anch is not None:
+                pass
+            elif ex_id in ("max_hang_5s", "max_hang_7s"):
                 suggested.update(_max_hang_suggested(user_state, prescription, exercise_attrs=inst.get("attributes")))
                 inject_source = dict(prescription)
                 inject_source.update(inst.get("suggested") or {})
@@ -1640,7 +1681,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 })
 
             # Hangboard total_load exercises (repeaters, density hangs, etc.) — data-driven (ARCH-2)
-            if load_model == "total_load" and ex_id == "weighted_chinup":
+            if load_model == "total_load" and ex_id == "weighted_chinup" and anch is None:
                 # B363: chin-up follows the pull-up 2RM reference.
                 target = weighted_pullup_target(
                     user_state, _get_current_phase_id(user_state, out.get("date") or ""), intensity,
@@ -1655,7 +1696,7 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         "suggested_rep_scheme": f"{sets}x{reps}",
                         "load_source": "pullup_2rm_reference",
                     })
-            if load_model == "total_load" and ex_id not in ("max_hang_5s", "max_hang_7s", "weighted_pullup") and not (
+            if load_model == "total_load" and anch is None and ex_id not in ("max_hang_5s", "max_hang_7s", "weighted_pullup") and not (
                 ex_id == "weighted_chinup" and suggested.get("load_source") == "pullup_2rm_reference"
             ):
                 if ex_id not in NOT_FINGER_MAX_TOTAL_LOAD:
@@ -1675,9 +1716,14 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                     suggested.pop("load_source", None)  # Overridden by working_loads
                 # Warn if counterweight is required (external load is negative)
                 if (suggested.get("suggested_external_load_kg") or 0) < 0:
-                    suggested["load_warning"] = (
-                        "counterweight_required — consider re-running max_hang_7s test"
-                    )
+                    if _hang_recently_tested(persisted_state, out.get("date") or ""):
+                        # B364 (R3 §8): a max tested < 30 days ago is not stale —
+                        # an assisted hang is just assisted, not a re-test cue.
+                        suggested["load_assist_kg"] = -float(suggested["suggested_external_load_kg"])
+                    else:
+                        suggested["load_warning"] = (
+                            "counterweight_required — consider re-running max_hang_7s test"
+                        )
 
             # Loading pin exercises (unilateral, external_load) — data-driven (ARCH-2)
             if load_model == "external_load" and is_loading_pin:
@@ -1701,6 +1747,17 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                 inst["suggested"] = suggested
 
     return out
+
+
+def _hang_recently_tested(user_state: Dict[str, Any], date_value: str) -> bool:
+    """A tested 7 s hang max younger than TESTED_NO_WARNING_D days on ``date_value``."""
+    from backend.engine.anchored_load import TESTED_NO_WARNING_D, official_for, _parse
+
+    on = _parse(date_value)
+    if on is None:
+        return False
+    om = official_for(user_state, "max_hang_7s", on)
+    return bool(om and om.get("tested") and (om.get("age_days") or 0) < TESTED_NO_WARNING_D)
 
 
 def _rule_midpoint_pct(user_state: Dict[str, Any], label: str) -> float:
@@ -1842,6 +1899,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
     planned_sessions = log_entry.get("planned") or []
     feedback_items = ((log_entry.get("actual") or {}).get("exercise_feedback_v1") or [])
     test_sessions = [s for s in planned_sessions if str(s.get("session_id") or "").startswith("test_") or bool((s.get("tags") or {}).get("test"))]
+    measurements_only = False
     if not test_sessions:
         top_session_id = str(log_entry.get("session_id") or "")
         # B156: also process if any feedback item is a test_measurement exercise
@@ -1852,6 +1910,11 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
         )
         if not top_session_id.startswith("test_") and not has_test_measurement:
             return
+        # B364 (B156 fix): a test_* item added to a TRAINING session makes only
+        # the test_* items measurements. A training max_hang_7s / weighted
+        # pull-up logged in the same session is a working set — it must never
+        # write the official max.
+        measurements_only = not top_session_id.startswith("test_")
     date_str = str(log_entry.get("date") or "")
     assessment = updated.setdefault("assessment", {})
     at = assessment.setdefault("tests", {})
@@ -1862,8 +1925,39 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
         for k in keys:
             at_src[k] = "measured"
 
+    from backend.engine.retest_policy import test_confidence
+
+    def _trend(history: List[Dict[str, Any]], test_id: str, value_key: str, value: float) -> Dict[str, Any]:
+        """B364: delta vs the previous test of the same protocol; |Δ| < 5 % = stable."""
+        prev = [h for h in history if h.get("test_id") == test_id and str(h.get("date") or "") < date_str
+                and isinstance(h.get(value_key), (int, float))]
+        if not prev:
+            return {}
+        prev.sort(key=lambda h: str(h.get("date") or ""))
+        before = float(prev[-1][value_key])
+        if before <= 0:
+            return {}
+        delta = round((value - before) / before * 100, 1)
+        trend = "stable" if abs(delta) < 5.0 else ("up" if delta > 0 else "down")
+        return {"delta_pct": delta, "trend": trend, "previous_date": prev[-1].get("date")}
+
+    def _confidence(test_id: str) -> Dict[str, Any]:
+        """B364: computed confidence (exposures in the 21 days before the test),
+        never a constant. Engine-side it sees the hot weeks + the registry;
+        the migration recomputes it with the archived weeks."""
+        conf = test_confidence(updated, {"test_id": test_id, "date": date_str})
+        if conf.get("confidence") is None:
+            return {"confidence": "high"}
+        return {
+            "confidence": conf["confidence"],
+            "confidence_basis": {"exposures": conf["exposures"], "window_start": conf["window_start"],
+                                 "window_end": conf["window_end"], "min_required": conf["min_required"]},
+        }
+
     for item in feedback_items:
         exercise_id = str(item.get("exercise_id") or "")
+        if measurements_only and not exercise_id.startswith("test_") and not _is_pure_test_exercise(exercise_id):
+            continue
 
         # --- Max hang 7s (D85 — primary test) ---
         if exercise_id == "max_hang_7s":
@@ -1883,7 +1977,8 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "external_load_kg": external,
                 "setup": {"hang_seconds": 7},
                 "freshness_policy": {"stale_after_days": 90},
-                "confidence": "high",
+                **_confidence("max_hang_7s_total_load"),
+                **_trend(max_strength, "max_hang_7s_total_load", "total_load_kg", total),
             }
             max_strength.append(entry)
             max_strength.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
@@ -1898,6 +1993,8 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 baselines[0]["hang_seconds"] = 7
                 baselines[0]["edge_mm"] = 20
                 baselines[0]["grip"] = "half_crimp"
+                baselines[0]["bodyweight_at_test_kg"] = bodyweight
+                baselines[0]["confidence"] = entry["confidence"]
             # Write scalar to assessment.tests (both keys for compat)
             at["max_hang_20mm_7s_total_kg"] = total
             at["max_hang_20mm_5s_total_kg"] = total  # legacy compat: assessment_v1 reads this key
@@ -1921,7 +2018,8 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "external_load_kg": external,
                 "setup": {"hang_seconds": 5},
                 "freshness_policy": {"stale_after_days": 90},
-                "confidence": "high",
+                **_confidence("max_hang_5s_total_load"),
+                **_trend(max_strength, "max_hang_5s_total_load", "total_load_kg", total),
             }
             max_strength.append(entry)
             max_strength.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
@@ -1936,6 +2034,8 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 baselines[0]["hang_seconds"] = 5
                 baselines[0]["edge_mm"] = 20
                 baselines[0]["grip"] = "half_crimp"
+                baselines[0]["bodyweight_at_test_kg"] = bodyweight
+                baselines[0]["confidence"] = entry["confidence"]
             # Write scalar to assessment.tests (legacy key)
             at["max_hang_20mm_5s_total_kg"] = total
             _mark_measured(*_TEST_EXERCISE_SCALARS[exercise_id])
@@ -2001,6 +2101,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
             pulling_ratio = round((total_2rm / bodyweight) * 100, 1) if bodyweight > 0 else 0.0
             tests = updated.setdefault("tests", {})
             pull_history = tests.setdefault("pulling_strength", [])
+            pull_conf = _confidence("weighted_pullup_2rm")
             pull_history.append({
                 "test_id": "weighted_pullup_2rm",
                 "date": date_str,
@@ -2011,7 +2112,8 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "estimated_1rm_kg": estimated_1rm,
                 "pulling_ratio_pct": pulling_ratio,
                 "freshness_policy": {"stale_after_days": 90},
-                "confidence": "high",
+                **pull_conf,
+                **_trend(pull_history, "weighted_pullup_2rm", "total_load_2rm_kg", total_2rm),
             })
             pull_history.sort(key=lambda x: (str(x.get("date") or ""), str(x.get("test_id") or "")))
             # Write scalars to assessment.tests
@@ -2033,6 +2135,7 @@ def _update_test_from_log(log_entry: Dict[str, Any], updated: Dict[str, Any], bo
                 "pulling_ratio_pct": pulling_ratio,
                 "source": "test_session",
                 "updated_at": date_str,
+                "confidence": pull_conf["confidence"],
             }
 
         # --- Bodyweight pull-up max reps test (D84b) ---
@@ -2089,12 +2192,16 @@ def _apply_weighted_pullup_feedback(
     date_value: str,
     bodyweight: float,
 ) -> None:
-    """B363: training feedback re-bases the 2RM reference, rep-aware.
+    """Weighted pull-up feedback of an UNTESTED athlete (pre-B364, bit for bit).
+
+    B364: a tested athlete never reaches this — apply_anchored_feedback handles
+    it and the official max moves only with a test. An untested athlete has no
+    official max: the B363 2RM re-base below is their only progression, so it
+    is kept unchanged (DECISIONS 2026-10-04, "untested users unchanged").
 
     The set is read as an estimate of the max: load × (reps done + reps in
     reserve, from the feedback label) → estimated 1RM → 2RM equivalent.
-      * not hard: the reference only goes UP (max(reference, estimate)) — a
-        comfortable 4x3 must never lower the max measured in a test;
+      * not hard: the reference only goes UP (max(reference, estimate));
       * hard / very_hard: the reference goes DOWN by the adjustment policy %.
     The stored ``next_*`` fields are a convenience for legacy readers; the
     prescription itself is always recomputed by weighted_pullup_target().
@@ -2176,13 +2283,23 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
     date_value = str(log_entry.get("date") or "")
     bodyweight = _get_bodyweight(updated)
 
+    from backend.engine.anchored_load import (
+        ANCHORED_EXERCISES,
+        apply_anchored_feedback,
+        record_exposures,
+    )
+
     counters = updated.setdefault("progression_counters", {})
     if not isinstance(counters, dict):
         counters = {}
         updated["progression_counters"] = counters
     _ensure_test_queue(updated)
-    max_hang_hard = int(counters.get("max_hang_5s_hard_streak") or 0)
-    max_hang_easy = int(counters.get("max_hang_5s_easy_streak") or 0)
+    # B364: labels never schedule a test. The max-hang label streaks that fed
+    # the label enqueue are gone with it (DECISIONS 2026-10-04).
+    counters.pop("max_hang_5s_hard_streak", None)
+    counters.pop("max_hang_5s_easy_streak", None)
+    # B364: the ONE persisted exposure registry (A288's view reads it).
+    record_exposures(updated, log_entry)
 
     for item in feedback_items:
         exercise_id = str(item.get("exercise_id") or "").strip()
@@ -2216,12 +2333,23 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     e for e in (wl.get("entries") or [])
                     if str(e.get("exercise_id") or "") != exercise_id
                 ]
-                if exercise_id in ("max_hang_5s", "max_hang_7s"):
-                    # A fresh max makes the hard/easy streak meaningless —
-                    # before B363 the test reset it through the total_load branch.
-                    max_hang_hard = 0
-                    max_hang_easy = 0
             continue
+
+        # B364: anchored exercises of a TESTED athlete — working load moves in
+        # kg steps from the load used, inside the cap; the max never moves.
+        if exercise_id in ANCHORED_EXERCISES:
+            setup_source = dict(planned_prescription)
+            setup_source.update(item)
+            if apply_anchored_feedback(
+                updated,
+                item,
+                feedback_label=feedback_label,
+                date_value=date_value,
+                planned_session=session or None,
+                planned_prescription=planned_prescription,
+                setup_source=setup_source,
+            ):
+                continue
 
         if exercise_id == "weighted_pullup":
             _apply_weighted_pullup_feedback(
@@ -2262,16 +2390,6 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                 }
             )
 
-            if exercise_id in ("max_hang_5s", "max_hang_7s"):
-                if feedback_label in {"hard", "very_hard"}:
-                    max_hang_hard += 1
-                    max_hang_easy = 0
-                elif feedback_label in {"easy", "very_easy"}:
-                    max_hang_easy += 1
-                    max_hang_hard = 0
-                else:
-                    max_hang_hard = 0
-                    max_hang_easy = 0
 
         elif fb_load_model == "external_load" and not fb_loading_pin:
             # B288: `a or b` treated a legitimate 0kg as missing and dropped the
@@ -2464,30 +2582,6 @@ def apply_feedback(log_entry: Dict[str, Any], user_state: Dict[str, Any]) -> Dic
                     "updated_at": date_value,
                 }
             )
-
-    counters["max_hang_5s_hard_streak"] = max_hang_hard
-    counters["max_hang_5s_easy_streak"] = max_hang_easy
-
-    # Determine which test to enqueue based on finger device preference
-    finger_device = ((updated.get("preferences") or {}).get("finger_training_device"))
-    test_id_for_retest = "lp_max_test_5s" if finger_device == "loading_pin" else "max_hang_7s_total_load"
-
-    if max_hang_hard >= 2:
-        _enqueue_test(
-            updated,
-            test_id=test_id_for_retest,
-            date_value=date_value,
-            offset_days=7,
-            reason="two_recent_hard_feedback_on_max_hang",
-        )
-    elif max_hang_easy >= 2:
-        _enqueue_test(
-            updated,
-            test_id=test_id_for_retest,
-            date_value=date_value,
-            offset_days=14,
-            reason="two_recent_easy_feedback_on_max_hang",
-        )
 
     _update_test_from_log(log_entry, updated, bodyweight)
     _prune_test_queue(updated)

@@ -1,0 +1,574 @@
+{
+ "estimated_baselines_pe": {
+  "feedback_entries": [
+   {
+    "exercise_id": "max_hang_7s",
+    "key": "max_hang_7s",
+    "last_external_load_kg": 25.0,
+    "last_feedback_label": "easy",
+    "last_total_load_kg": 100.0,
+    "next_external_load_kg": 32.5,
+    "next_total_load_kg": 107.5,
+    "updated_at": "2026-10-21"
+   },
+   {
+    "exercise_id": "weighted_chinup",
+    "key": "weighted_chinup",
+    "last_external_load_kg": 20.0,
+    "last_feedback_label": "hard",
+    "last_total_load_kg": 95.0,
+    "next_external_load_kg": 17.5,
+    "next_total_load_kg": 92.5,
+    "updated_at": "2026-10-21"
+   }
+  ],
+  "inject": {
+   "horst_7_53": {
+    "load_source": "estimated",
+    "suggested_external_load_kg": 24.0,
+    "suggested_rep_scheme": "3x7s",
+    "suggested_total_load_kg": 99.0
+   },
+   "max_hang_5s": {
+    "suggested_external_load_kg": 26.0,
+    "suggested_rep_scheme": "5x5s",
+    "suggested_total_load_kg": 101.0
+   },
+   "max_hang_7s": {
+    "suggested_external_load_kg": 25.0,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 100.0
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 15.0,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 90.0
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 114.5,
+    "suggested_external_load_kg": 15.0,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 90.0
+   }
+  },
+  "picker": {
+   "max_hang_7s": {
+    "load_source": "working_loads",
+    "suggested_external_load_kg": 25.0,
+    "suggested_total_load_kg": 100.0
+   },
+   "weighted_chinup": {
+    "load_source": "working_loads",
+    "suggested_external_load_kg": 20.0,
+    "suggested_total_load_kg": 95.0
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 15.0,
+    "suggested_total_load_kg": 90.0
+   }
+  },
+  "progression": {
+   "max_hang_7s": {
+    "suggested_external_load_kg": 37.0,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 112.0
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 21.0,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 96.0
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 122.0,
+    "suggested_external_load_kg": 21.0,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 96.0
+   }
+  },
+  "propose": {
+   "max_hang_7s": 0.0,
+   "weighted_chinup": 0.0,
+   "weighted_pullup": 0.0
+  }
+ },
+ "estimated_baselines_sp": {
+  "feedback_entries": [
+   {
+    "exercise_id": "max_hang_7s",
+    "key": "max_hang_7s",
+    "last_external_load_kg": 25.0,
+    "last_feedback_label": "easy",
+    "last_total_load_kg": 100.0,
+    "next_external_load_kg": 32.5,
+    "next_total_load_kg": 107.5,
+    "updated_at": "2026-10-09"
+   },
+   {
+    "exercise_id": "weighted_chinup",
+    "key": "weighted_chinup",
+    "last_external_load_kg": 20.0,
+    "last_feedback_label": "hard",
+    "last_total_load_kg": 95.0,
+    "next_external_load_kg": 17.5,
+    "next_total_load_kg": 92.5,
+    "updated_at": "2026-10-09"
+   }
+  ],
+  "inject": {
+   "horst_7_53": {
+    "load_source": "estimated",
+    "suggested_external_load_kg": 24.0,
+    "suggested_rep_scheme": "3x7s",
+    "suggested_total_load_kg": 99.0
+   },
+   "max_hang_5s": {
+    "suggested_external_load_kg": 26.0,
+    "suggested_rep_scheme": "5x5s",
+    "suggested_total_load_kg": 101.0
+   },
+   "max_hang_7s": {
+    "suggested_external_load_kg": 25.0,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 100.0
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 24.0,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 99.0
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 114.5,
+    "suggested_external_load_kg": 24.0,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 99.0
+   }
+  },
+  "picker": {
+   "max_hang_7s": {
+    "load_source": "working_loads",
+    "suggested_external_load_kg": 25.0,
+    "suggested_total_load_kg": 100.0
+   },
+   "weighted_chinup": {
+    "load_source": "working_loads",
+    "suggested_external_load_kg": 20.0,
+    "suggested_total_load_kg": 95.0
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 24.0,
+    "suggested_total_load_kg": 99.0
+   }
+  },
+  "progression": {
+   "max_hang_7s": {
+    "suggested_external_load_kg": 37.0,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 112.0
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 30.5,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 105.5
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 122.0,
+    "suggested_external_load_kg": 30.5,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 105.5
+   }
+  },
+  "propose": {
+   "max_hang_7s": 0.0,
+   "weighted_chinup": 0.0,
+   "weighted_pullup": 0.0
+  }
+ },
+ "no_baselines": {
+  "feedback_entries": [
+   {
+    "exercise_id": "max_hang_7s",
+    "key": "max_hang_7s",
+    "last_external_load_kg": 30.0,
+    "last_feedback_label": "easy",
+    "last_total_load_kg": 100.0,
+    "next_external_load_kg": 37.5,
+    "next_total_load_kg": 107.5,
+    "updated_at": "2026-10-09"
+   },
+   {
+    "exercise_id": "weighted_chinup",
+    "key": "weighted_chinup",
+    "last_external_load_kg": 20.0,
+    "last_feedback_label": "hard",
+    "last_total_load_kg": 90.0,
+    "next_external_load_kg": 18.0,
+    "next_total_load_kg": 88.0,
+    "updated_at": "2026-10-09"
+   }
+  ],
+  "inject": {
+   "horst_7_53": {
+    "load_source": "estimated",
+    "suggested_external_load_kg": 17.5,
+    "suggested_rep_scheme": "3x7s",
+    "suggested_total_load_kg": 87.5
+   },
+   "max_hang_5s": {
+    "suggested_external_load_kg": 19.0,
+    "suggested_rep_scheme": "5x5s",
+    "suggested_total_load_kg": 89.0
+   },
+   "max_hang_7s": {
+    "suggested_external_load_kg": 17.5,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 87.5
+   },
+   "weighted_chinup": {},
+   "weighted_pullup": {
+    "suggested_external_load_kg": 0.0,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 70.0
+   }
+  },
+  "picker": {
+   "max_hang_7s": {
+    "load_source": "unset",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   },
+   "weighted_chinup": {
+    "load_source": "unset",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   },
+   "weighted_pullup": {
+    "load_source": "unset",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   }
+  },
+  "progression": {
+   "max_hang_7s": {
+    "suggested_external_load_kg": 36.5,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 106.5
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 30.0,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 100.0
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 116.0,
+    "suggested_external_load_kg": 30.0,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 100.0
+   }
+  },
+  "propose": {
+   "max_hang_7s": 0.0,
+   "weighted_chinup": 0.0,
+   "weighted_pullup": 0.0
+  }
+ },
+ "onboarding_measured": {
+  "feedback_entries": [
+   {
+    "exercise_id": "max_hang_7s",
+    "key": "max_hang_7s",
+    "last_external_load_kg": 28.0,
+    "last_feedback_label": "easy",
+    "last_total_load_kg": 100.0,
+    "next_external_load_kg": 35.5,
+    "next_total_load_kg": 107.5,
+    "updated_at": "2026-10-09"
+   },
+   {
+    "exercise_id": "weighted_chinup",
+    "key": "weighted_chinup",
+    "last_external_load_kg": 20.0,
+    "last_feedback_label": "hard",
+    "last_total_load_kg": 92.0,
+    "next_external_load_kg": 17.5,
+    "next_total_load_kg": 89.5,
+    "updated_at": "2026-10-09"
+   }
+  ],
+  "inject": {
+   "horst_7_53": {
+    "suggested_external_load_kg": 22.5,
+    "suggested_rep_scheme": "3x7s",
+    "suggested_total_load_kg": 94.5
+   },
+   "max_hang_5s": {
+    "suggested_external_load_kg": 24.5,
+    "suggested_rep_scheme": "5x5s",
+    "suggested_total_load_kg": 96.5
+   },
+   "max_hang_7s": {
+    "suggested_external_load_kg": 22.5,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 94.5
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 19.0,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 91.0
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 105.0,
+    "suggested_external_load_kg": 19.0,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 91.0
+   }
+  },
+  "picker": {
+   "max_hang_7s": {
+    "load_source": "hangboard_baseline",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   },
+   "weighted_chinup": {
+    "load_source": "unset",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   },
+   "weighted_pullup": {
+    "load_source": "unset",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   }
+  },
+  "progression": {
+   "max_hang_7s": {
+    "suggested_external_load_kg": 36.5,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 108.5
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 30.5,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 102.5
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 118.5,
+    "suggested_external_load_kg": 30.5,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 102.5
+   }
+  },
+  "propose": {
+   "max_hang_7s": 0.0,
+   "weighted_chinup": 0.0,
+   "weighted_pullup": 0.0
+  }
+ },
+ "onboarding_measured_persisted": {
+  "feedback_entries": [
+   {
+    "exercise_id": "max_hang_7s",
+    "key": "max_hang_7s",
+    "last_external_load_kg": 28.0,
+    "last_feedback_label": "easy",
+    "last_total_load_kg": 100.0,
+    "next_external_load_kg": 35.5,
+    "next_total_load_kg": 107.5,
+    "updated_at": "2026-10-09"
+   },
+   {
+    "exercise_id": "weighted_chinup",
+    "key": "weighted_chinup",
+    "last_external_load_kg": 20.0,
+    "last_feedback_label": "hard",
+    "last_total_load_kg": 92.0,
+    "next_external_load_kg": 17.5,
+    "next_total_load_kg": 89.5,
+    "updated_at": "2026-10-09"
+   }
+  ],
+  "inject": {
+   "horst_7_53": {
+    "suggested_external_load_kg": 22.5,
+    "suggested_rep_scheme": "3x7s",
+    "suggested_total_load_kg": 94.5
+   },
+   "max_hang_5s": {
+    "suggested_external_load_kg": 24.5,
+    "suggested_rep_scheme": "5x5s",
+    "suggested_total_load_kg": 96.5
+   },
+   "max_hang_7s": {
+    "suggested_external_load_kg": 22.5,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 94.5
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 19.0,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 91.0
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 105.0,
+    "suggested_external_load_kg": 19.0,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 91.0
+   }
+  },
+  "picker": {
+   "max_hang_7s": {
+    "load_source": "hangboard_baseline",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   },
+   "weighted_chinup": {
+    "load_source": "unset",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 19.0,
+    "suggested_total_load_kg": 91.0
+   }
+  },
+  "progression": {
+   "max_hang_7s": {
+    "suggested_external_load_kg": 36.5,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 108.5
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 30.5,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 102.5
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 118.5,
+    "suggested_external_load_kg": 30.5,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 102.5
+   }
+  },
+  "propose": {
+   "max_hang_7s": 0.0,
+   "weighted_chinup": 0.0,
+   "weighted_pullup": 19.0
+  }
+ },
+ "stale_tests": {
+  "feedback_entries": [
+   {
+    "exercise_id": "max_hang_7s",
+    "key": "max_hang_7s",
+    "last_external_load_kg": 23.0,
+    "last_feedback_label": "easy",
+    "last_total_load_kg": 100.0,
+    "next_external_load_kg": 30.5,
+    "next_total_load_kg": 107.5,
+    "updated_at": "2026-10-09"
+   },
+   {
+    "exercise_id": "weighted_chinup",
+    "key": "weighted_chinup",
+    "last_external_load_kg": 20.0,
+    "last_feedback_label": "hard",
+    "last_total_load_kg": 97.0,
+    "next_external_load_kg": 17.5,
+    "next_total_load_kg": 94.5,
+    "updated_at": "2026-10-09"
+   }
+  ],
+  "inject": {
+   "horst_7_53": {
+    "suggested_external_load_kg": 33.0,
+    "suggested_rep_scheme": "3x7s",
+    "suggested_total_load_kg": 110.0
+   },
+   "max_hang_5s": {
+    "suggested_external_load_kg": 35.0,
+    "suggested_rep_scheme": "5x5s",
+    "suggested_total_load_kg": 112.0
+   },
+   "max_hang_7s": {
+    "suggested_external_load_kg": 33.0,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 110.0
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 28.5,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 105.5
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 122.0,
+    "suggested_external_load_kg": 28.5,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 105.5
+   }
+  },
+  "picker": {
+   "max_hang_7s": {
+    "load_source": "hangboard_baseline",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   },
+   "weighted_chinup": {
+    "load_source": "unset",
+    "suggested_external_load_kg": null,
+    "suggested_total_load_kg": null
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 28.5,
+    "suggested_total_load_kg": 105.5
+   }
+  },
+  "progression": {
+   "max_hang_7s": {
+    "suggested_external_load_kg": 37.5,
+    "suggested_rep_scheme": "5x7s",
+    "suggested_total_load_kg": 114.5
+   },
+   "weighted_chinup": {
+    "load_source": "pullup_2rm_reference",
+    "suggested_external_load_kg": 30.5,
+    "suggested_rep_scheme": "4x5",
+    "suggested_total_load_kg": 107.5
+   },
+   "weighted_pullup": {
+    "load_source": "pullup_2rm_reference",
+    "reference_2rm_total_kg": 124.5,
+    "suggested_external_load_kg": 30.5,
+    "suggested_rep_scheme": "4x3",
+    "suggested_total_load_kg": 107.5
+   }
+  },
+  "propose": {
+   "max_hang_7s": 0.0,
+   "weighted_chinup": 0.0,
+   "weighted_pullup": 28.5
+  }
+ }
+}

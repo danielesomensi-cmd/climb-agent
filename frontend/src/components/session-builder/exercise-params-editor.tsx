@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { CustomSessionExercise } from "@/lib/types";
+import { isAnchoredExercise } from "@/lib/anchored-load";
 import { Minus, Plus } from "lucide-react";
 
 interface StepperProps {
@@ -88,6 +89,10 @@ export function ExerciseParamsEditor({
   const update = (patch: Partial<CustomSessionExercise>) =>
     setDraft((d) => ({ ...d, ...patch }));
 
+  // B364: missing load_mode on an anchored exercise means "anchored" (backend default).
+  const anchored = isAnchoredExercise(draft.exercise_id);
+  const fixed = anchored && draft.load_mode === "fixed";
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
@@ -128,8 +133,42 @@ export function ExerciseParamsEditor({
             />
           )}
 
+          {anchored && (
+            <div className="space-y-1.5">
+              <Label className="text-sm">Load</Label>
+              {/* B364: anchored exercises follow your tested max unless you fix the kg. */}
+              <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Load mode">
+                <Button
+                  type="button"
+                  role="radio"
+                  aria-checked={!fixed}
+                  variant={fixed ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => update({ load_mode: "anchored" })}
+                >
+                  Auto
+                </Button>
+                <Button
+                  type="button"
+                  role="radio"
+                  aria-checked={fixed}
+                  variant={fixed ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => update({ load_mode: "fixed" })}
+                >
+                  Fixed kg
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {fixed
+                  ? "The kg below is used every time you play this session."
+                  : "With a recent test, the app sets the kg on the day you play it (from your max and training load). The kg below is used only without a recent test."}
+              </p>
+            </div>
+          )}
+
           <Stepper
-            label="Load"
+            label={anchored && !fixed ? "Kg without a recent test" : "Load"}
             value={draft.load_kg}
             onChange={(v) => update({ load_kg: v ?? 0 })}
             min={0}

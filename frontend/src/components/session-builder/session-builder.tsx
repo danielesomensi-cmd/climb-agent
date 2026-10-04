@@ -238,6 +238,8 @@ export function SessionBuilder({ sessionId, onDirtyChange }: SessionBuilderProps
         rest_between_sets_seconds: e.exercise.rest_between_sets_seconds ?? undefined,
         rest_between_reps_seconds: e.exercise.rest_between_reps_seconds ?? undefined,
         load_kg: e.exercise.load_kg || undefined,
+        // B364: keep the user's load mode (missing = "anchored" on the server).
+        load_mode: e.exercise.load_mode ?? undefined,
         notes: e.exercise.notes || undefined,
       })),
     };

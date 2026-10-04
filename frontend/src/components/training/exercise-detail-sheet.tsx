@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Film } from "lucide-react";
 import { displayPrescribedGrade } from "@/lib/gradeUtils";
+import { anchoredLoadNotes } from "@/lib/anchored-load";
 
 interface ExerciseDetailSheetProps {
   open: boolean;
@@ -140,6 +141,9 @@ function buildSuggested(ex: Record<string, unknown>): string[] {
   if (s.load_warning) {
     lines.push(String(s.load_warning));
   }
+
+  // B364: anchored-load notes (ceiling of the tested max, fatigue, pain, re-entry)
+  lines.push(...anchoredLoadNotes(s));
 
   return lines;
 }

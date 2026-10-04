@@ -19,11 +19,12 @@ export function useCustomSessions(enabled = true) {
   });
 }
 
-/** Get full custom session detail. */
-export function useCustomSession(id: string | null) {
+/** Get full custom session detail. B364: pass `date` to get the anchored
+ * loads of that day (play view); omit it to edit the stored values. */
+export function useCustomSession(id: string | null, date?: string) {
   return useQuery({
-    queryKey: queryKeys.customSession(id ?? ""),
-    queryFn: () => getCustomSession(id!),
+    queryKey: queryKeys.customSession(id ?? "", date || undefined),
+    queryFn: () => getCustomSession(id!, date || undefined),
     enabled: !!id,
   });
 }

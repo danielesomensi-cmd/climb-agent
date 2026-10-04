@@ -524,6 +524,40 @@ Each entry tracks the last feedback and next suggested load for one exercise (op
 
 For `total_load` exercises (hangboard, weighted_pullup), entries also include `last_total_load_kg` and `next_total_load_kg`.
 
+#### Anchored entries (B364)
+
+For the four **anchored** exercises (`weighted_pullup`, `weighted_chinup`, `max_hang_5s`, `max_hang_7s`) of a **tested** athlete the entry is the WORKING load, never a max. `next_total_load_kg = last_total_load_kg + step` (kg label steps, measured fields first), plus the additive fields:
+
+| Field | Meaning |
+|---|---|
+| `last_reps` | reps per set of the logged session (pulls) |
+| `last_set_reps` | measured reps of the last set (AMRAP, stop one before failure), when given |
+| `last_work_seconds` | hang duration of the logged session (hangs) |
+| `last_hang_held_s` | measured hold of the last hang, when given |
+| `phase_id_at_log`, `intensity_at_log` | phase and session intensity of the log — the read normalises the working load to today's phase/intensity |
+| `escalation_anchor` | `{date, total_kg}` — start of the rolling 7-day window of the finger rise limit (≤ +5 % of the max) |
+| `anchored` | `true` |
+
+**`e2rm_total_kg`** (the B363 training re-base of the 2RM) is no longer written or read for a TESTED athlete (`scripts/migrate_b364.py` pops it there). For an untested athlete it stays the pre-B364 pull-up progression (written by `_apply_weighted_pullup_feedback`, read by `pullup_reference_2rm`), bit for bit. An entry is read only if `updated_at` is strictly after the official test date and ≤ 60 days old.
+
+#### Anchored prescription (`suggested.anchored`, B364)
+
+`inject_targets` (and every other consumer through `anchored_load`) writes `load_source: "anchored"` and `anchored: {source: working_load|phase_target, phase_id, intensity, floor, cap, clamped: cap|floor|fatigue_floor|null, pct_of_official, ramp: {n, factor, gap_days, source}, official: {protocol, total, one_rm?, total_at_duration?, date, source, age_days, confidence, converted}, guards: [{guard: heavy_pull_week|same_session_finger|finger_hard_recent|reentry_sets, …}], pain?, fatigue?, no_date}`, plus `ceiling_note` when an easy label hits the cap. The resolver fields `target_total_load_kg` / `added_weight_kg` / `assistance_kg` are overwritten with the same numbers. A tested athlete's assisted hang (non-anchored, tested < 30 days) gets `load_assist_kg` instead of the "re-test" `load_warning`.
+
+#### `progression_counters` (B364)
+
+- `stimulus_exposures: {finger_max|pulling_max|limit_power|power_endurance: [{date, exercise_id, session_id, total_kg, sets_done, sets_prescribed, is_test, evidence}]}` — the ONE persisted exposure registry, written by `apply_feedback`, one row per (date, exercise_id), pruned to 120 days.
+- `retest_signals: {exercise_id: {count, last_date, dates, official_date}}` — measured early-retest evidence since the official test (reset when the test changes). Never enqueues a test.
+- `hard_labels: {pulling|finger: [YYYY-MM-DD]}` — hard/very_hard days on anchored exercises (28 days kept); 3 in 14 days = fatigue → load at the phase floor.
+- `pain_blocks: {fingers|elbow|shoulder: {score, from, until}}` — read here, written by A295.
+- **Removed:** `max_hang_5s_hard_streak`, `max_hang_5s_easy_streak` (labels never schedule tests).
+
+#### Custom session exercise `load_mode` (B364)
+
+`custom_sessions[].exercises[].load_mode`: `anchored` | `fixed`, only meaningful for the anchored exercises; missing = `anchored`. `anchored` → the load is recomputed by `anchored_load` on the day played (`GET /api/custom-session/{id}?date=`, `GET /api/week`), with `stored_load_kg`, `load_source: anchored`, `suggested_external_load_kg`, `suggested_total_load_kg` added at read (plus `anchored`, `ceiling_note`, and `stored_sets` when the re-entry ramp caps max hangs at 5 sets); `fixed` → the user's kg, `load_source: user_fixed`. The builder exposes the choice as «Auto / Fixed kg» and saves it.
+
+**Tested gate (B364).** `retest_policy.official_max(...).tested` is true only for a `tests.*` entry (written by a test log) or, as fallback, a baseline with `source: test_session`, younger than 90 days. A baseline-only `source: test` is an onboarding/assessment self-report persisted by `estimate_missing_baselines` (`from_baseline: true`) and is NOT tested.
+
 #### Limit-boulder family entries (B365)
 
 Entries of the `climbing_limit_boulder` family (`limit_bouldering`, `board_limit_boulders`, `spray_wall_limit`, `system_board_limit`) are keyed `<exercise_id>|surface=<surface>` and carry `last_used_grade`, `next_target_grade` (Font) and `surface_selected`. The read side (`inject_targets`) treats the family as **one memory per surface**: the newest entry of any family exercise on the selected surface wins.
@@ -858,6 +892,8 @@ When present, `user_state.test_queue[]` entries use canonical keys:
 - `reason`
 - `created_at` (`YYYY-MM-DD`, derived from feedback/log date; no wall-clock)
 
+**B364:** feedback labels no longer write this queue (the two-hard / two-easy max-hang enqueue is removed); only the retest policy (A289) schedules tests, from `progression_counters.retest_signals` and the calendar.
+
 Current canonical `test_id` values:
 - `max_hang_7s_total_load` (D85: was `max_hang_5s_total_load`)
 - `weighted_pullup_2rm` (D84: was `weighted_pullup_1rm`)
@@ -892,8 +928,8 @@ Defined once in `backend/engine/stimulus.py` and `backend/engine/retest_policy.p
 **Retest primitives** (`retest_policy`):
 - Protocols: `max_hang_7s_total_load`, `max_hang_5s_total_load`, `weighted_pullup_2rm`.
 - `official_max(...)` → `{protocol, family, total_kg, date, age_days, fresh, tested, source, test_id, seconds, source_seconds, converted, one_rm_kg, bodyweight_kg, edge_mm, grip, stored_confidence}`. `tested` = source `test`/`test_session` and age < `TEST_FRESH_DAYS` (90).
-- `test_confidence(...)` → `confidence`: `high` | `low` (computed: < 2 exposure days in the 21 days before) | `None` (no family, e.g. repeater). The stored `confidence` field is informational only.
-- `reentry_step(...)` → `{n, factor, gap_days, run_start, last_exposure, run_dates, in_reentry}`; gap `REENTRY_GAP_D` = 14; factor 0.90 (n ≤ 1) / 0.95 (n = 2) / 1.0 (n ≥ 3).
+- `test_confidence(...)` → `confidence`: `high` | `low` (computed: < 2 exposure days in the 21 days before) | `None` (no family, e.g. repeater). The stored `confidence` field is informational only. From B364 the test log stores the computed value on `tests.*[]` (+ `confidence_basis {exposures, window_start, window_end, min_required}`, `delta_pct`, `trend`: `stable` (|Δ| < 5 %) | `up` | `down`, `previous_date`) and on the baseline (`baselines.hangboard[0].confidence`, `bodyweight_at_test_kg`; `baselines.pulling.confidence`).
+- `reentry_step(...)` → `{n, factor, gap_days, run_start, last_exposure, run_dates, in_reentry}`; gap `REENTRY_GAP_D` = 14; factor 0.90 (n ≤ 1) / 0.95 (n = 2) / 1.0 (n ≥ 3). `extra_dates` (B364) adds days the view cannot see (the `tests.*` dates).
 - Constants: `FINGER_GAP_H` 48, `RETEST_BLOCK_H` 72, `PULL_TEST_BLOCK_H` 48, `HEAVY_PULL_PCT_1RM` 0.85, `LOW_CONF_RETEST_D` 28, `VERY_HARD_BLOCK_D` 3, `PRE_TRIP_BLOCK_D` 10, `RETEST_BLOCKED_PHASES` (performance, deload), `HANG_PCT_PER_S` 0.015.
 
 **Macrocycle position** (`backend/engine/macro_position.position_on`): `{phase_index, phase_id, week_in_phase, phase_weeks, abs_week, total_weeks, phase_start, phase_end, is_last_week_of_phase, next_phase_id, before_start, after_end, paused}` — pause-aware (A223), same rule as `deps.current_phase_and_week`.

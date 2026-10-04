@@ -231,6 +231,7 @@ def _baselines_section(state: Dict[str, Any]) -> str:
     for key, value in tests.items():
         if value not in (None, "", []):
             lines.append(f"- Test {key}: {value}")
+    lines.extend(_official_max_lines(state))
     entries = (state.get("working_loads") or {}).get("entries") or []
     entries = sorted(entries, key=lambda e: str(e.get("updated_at") or ""),
                      reverse=True)[:15]
@@ -239,7 +240,10 @@ def _baselines_section(state: Dict[str, Any]) -> str:
         setup_bits = ", ".join(f"{k}={v}" for k, v in setup.items()
                                if v not in (None, "", []))
         load_bits = []
-        if entry.get("exercise_id") == "weighted_pullup":
+        anchored_line = _anchored_line(state, str(entry.get("exercise_id") or ""), entry)
+        if anchored_line:
+            load_bits.append(anchored_line)
+        elif entry.get("exercise_id") == "weighted_pullup":
             # B363: never print a raw remembered pull-up load — it may be the
             # 2RM test itself. Print the 2RM-derived training load instead.
             from backend.engine.progression_v1 import (
@@ -281,6 +285,55 @@ def _baselines_section(state: Dict[str, Any]) -> str:
             "numbers — suggest running the assessment tests instead."
         )
     return "\n".join(lines)
+
+
+def _official_max_lines(state: Dict[str, Any]) -> List[str]:
+    """B364: the OFFICIAL maxes (tests only) with date, confidence and trend —
+    distinct from the working loads. Feedback never moves these numbers."""
+    from backend.engine import retest_policy as rp
+
+    today = date.today().isoformat()
+    out: List[str] = []
+    for protocol, label in ((rp.PROTOCOL_HANG_7S, "max hang 7s 20mm"),
+                            (rp.PROTOCOL_PULLUP_2RM, "weighted pull-up 2RM")):
+        om = rp.official_max(state, protocol, today)
+        if not om:
+            continue
+        history = ((state.get("tests") or {}).get(
+            "max_strength" if protocol != rp.PROTOCOL_PULLUP_2RM else "pulling_strength") or [])
+        last = next((t for t in sorted(history, key=lambda t: str(t.get("date") or ""), reverse=True)
+                     if isinstance(t, dict) and str(t.get("date") or "") == om["date"]), {})
+        bits = [f"{om['total_kg']} kg total", f"tested {om['date']}" if om.get("tested") else f"from {om['date']} (stale or not a test)"]
+        if last.get("confidence"):
+            bits.append(f"confidence {last['confidence']}")
+        if last.get("trend"):
+            bits.append(f"trend {last['trend']} ({last.get('delta_pct')}%)")
+        out.append(f"- Official max {label}: " + ", ".join(bits)
+                   + " — changes ONLY with a test, never with feedback")
+    return out
+
+
+def _anchored_line(state: Dict[str, Any], exercise_id: str, entry: Dict[str, Any]) -> str:
+    """B364: the prescription of an anchored exercise today (same anchored_load
+    the plan uses), instead of the raw remembered number."""
+    from backend.engine.anchored_load import ANCHORED_EXERCISES, anchored_load
+
+    if exercise_id not in ANCHORED_EXERCISES:
+        return ""
+    anch = anchored_load(state, exercise_id, date=date.today().isoformat(), intensity="hard")
+    if anch is None:
+        return ""
+    off = anch["official"]
+    text = (f"training load today {anch['external']} kg added ({anch['total']} kg total, "
+            f"{anch['rep_scheme']}, {anch['source'].replace('_', ' ')}, "
+            f"cap {anch['cap']} / floor {anch['floor']} kg, re-entry n={anch['ramp']['n']}) "
+            f"from an official max of {off['total']} kg tested {off['date']} — "
+            "the max is never a training load")
+    if anch.get("fatigue"):
+        text += "; FATIGUE flag: 3 hard sessions in 14 days → load at the phase floor"
+    if anch.get("ceiling_note"):
+        text += "; at the ceiling of the tested max — the next retest will raise it"
+    return text
 
 
 def _plan_section(state: Dict[str, Any]) -> str:

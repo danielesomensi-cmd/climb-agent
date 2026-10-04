@@ -19,6 +19,7 @@ from backend.api.deps import (
 )
 from backend.api.models import CustomSessionCreateRequest, CustomSessionUpdateRequest
 from backend.engine.adhoc_prescription import propose_exercise_prescription
+from backend.engine.anchored_load import resolve_custom_exercises
 from backend.engine.custom_session import compute_custom_session_load, estimate_custom_session_duration
 
 
@@ -102,6 +103,24 @@ def _enrich_exercise_display(ex: dict, catalog: dict) -> dict:
     return ex
 
 
+def _dump_exercise(ex) -> dict:
+    """Stored shape of a custom exercise. B364: ``load_mode`` is stored only when
+    set (missing = 'anchored' for the anchored exercises, see anchored_load)."""
+    d = ex.model_dump()
+    if d.get("load_mode") is None:
+        d.pop("load_mode", None)
+    return d
+
+
+def _parse_date_param(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid date: {value!r} — expected YYYY-MM-DD")
+
+
 def _build_session(
     session_id: str,
     name: str,
@@ -112,7 +131,7 @@ def _build_session(
 ) -> dict:
     """Build a full custom session dict with computed fields."""
     now = datetime.now(timezone.utc).isoformat()
-    ex_dicts = [_enrich_exercise_display(ex.model_dump(), catalog) for ex in exercises]
+    ex_dicts = [_enrich_exercise_display(_dump_exercise(ex), catalog) for ex in exercises]
     exercise_ids = [ex.exercise_id for ex in exercises]
     return {
         "id": session_id,
@@ -156,11 +175,13 @@ def list_exercises(
     q: Optional[str] = Query(None, description="Search name/description"),
     domain: Optional[str] = Query(None, description="Filter by domain"),
     equipment: Optional[bool] = Query(None, description="Filter by user equipment"),
+    date: Optional[str] = Query(None, description="B364: day the proposal is for (YYYY-MM-DD); default server today"),
     user_id: Optional[str] = Depends(get_user_id),
 ):
     """Exercise catalog for the builder picker."""
     catalog = _load_exercises_catalog()
     exercises = list(catalog.values())
+    proposal_day = _parse_date_param(date)
 
     # A242: always load state (read-only) — the per-exercise proposal reads
     # working_loads (last logged load) and the current macrocycle phase.
@@ -215,7 +236,7 @@ def list_exercises(
             # "per side" before the session is ever saved.
             "alt_sides": bool(ex.get("alt_sides")),
             # A242: deterministic starting proposal + last-logged memory (C.2/C.3).
-            "proposal": propose_exercise_prescription(ex["id"], catalog, state, phase),
+            "proposal": propose_exercise_prescription(ex["id"], catalog, state, phase, today=proposal_day),
         })
 
     # Sort by domain (first entry), then name
@@ -311,14 +332,30 @@ def enrich_custom_sessions_for_play(sessions: list) -> list:
 
 
 @router.get("/{session_id}", dependencies=[Depends(require_active_subscription)])
-def get_session(session_id: str, user_id: Optional[str] = Depends(get_user_id)):
-    """Get full custom session detail."""
+def get_session(
+    session_id: str,
+    date: Optional[str] = Query(None, description="B364: resolve anchored loads for this day (YYYY-MM-DD)"),
+    user_id: Optional[str] = Depends(get_user_id),
+):
+    """Get full custom session detail.
+
+    B364: with ``?date=`` the anchored exercises (weighted pull-up / chin-up,
+    max hangs) in mode 'anchored' carry the load of ``anchored_load`` on that
+    day in ``load_kg`` (stored value in ``stored_load_kg``) — what the player
+    prefills. Without a date the stored values are returned untouched (the
+    builder edits what was saved). Read-only: nothing is persisted.
+    """
+    day = _parse_date_param(date)
     state = load_state(user_id)
     sessions = _get_custom_sessions(state)
     for s in sessions:
         if s.get("id") == session_id:
             # B283: backfill display fields for pre-enrichment saves.
-            return enrich_custom_sessions_for_play([s])[0]
+            out = enrich_custom_sessions_for_play([s])[0]
+            if day:
+                out["exercises"] = resolve_custom_exercises(state, out.get("exercises") or [], day)
+                out["resolved_for_date"] = day
+            return out
     raise HTTPException(status_code=404, detail=f"Custom session not found: {session_id}")
 
 

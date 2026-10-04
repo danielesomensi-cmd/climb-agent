@@ -167,7 +167,9 @@ export default function SessionPlayPage() {
     if (!subLoading && !canInteract) router.replace("/subscribe");
   }, [canInteract, subLoading, router]);
 
-  const { data: session, isLoading, error: fetchError } = useCustomSession(id);
+  // B364: the loads of the day being played (anchored exercises follow the
+  // official max + working load on that date, like the planned sessions).
+  const { data: session, isLoading, error: fetchError } = useCustomSession(id, date);
   const { data: catalogData } = useBuilderExercises("", "");
 
   const catalogNameMap = useMemo(() => {

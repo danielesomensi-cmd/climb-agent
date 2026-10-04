@@ -32,7 +32,8 @@ IMPORTANT: always call these on the PERSISTED state, never on the output of
 ``progression_v1.estimate_missing_baselines``: that helper stamps
 ``source='test'`` with ``updated_at=today`` on estimated baselines (B364 §0).
 
-Nothing in production calls this module yet (A288 = no behaviour change).
+Production callers since B364: ``anchored_load`` (official max, tested gate,
+re-entry ramp) and ``progression_v1._update_test_from_log`` (confidence).
 """
 
 from __future__ import annotations
@@ -126,6 +127,20 @@ EXERCISE_PROTOCOL: Dict[str, str] = {
 
 _TESTED_SOURCES = ("test", "test_session")
 
+# B364 review: the baseline fallback is "tested" only when a TEST LOG wrote it.
+# ``_update_test_from_log`` always appends a ``tests.*`` entry (so the fallback
+# is not even reached) and stamps the pulling baseline ``test_session``. A
+# baseline-only ``source='test'`` is what ``estimate_missing_baselines``
+# persists at onboarding / assessment from a SELF-REPORTED measured value —
+# not an official max written by a test log, so it does not open the gate.
+_BASELINE_TESTED_SOURCES = ("test_session",)
+
+
+def _cand_tested(cand: Mapping[str, Any]) -> bool:
+    if cand.get("from_baseline"):
+        return cand.get("source") in _BASELINE_TESTED_SOURCES
+    return cand.get("source") in _TESTED_SOURCES
+
 
 def _as_date(value: DateLike) -> date:
     if isinstance(value, datetime):
@@ -199,7 +214,7 @@ def _hang_candidates(state: Mapping[str, Any], as_of: date) -> List[Dict[str, An
                 "date": d, "total": total, "seconds": int(_num(b.get("hang_seconds")) or 7),
                 "source": str(b.get("source") or "unknown"), "test_id": None,
                 "bodyweight_kg": _num(b.get("bodyweight_at_test_kg") or b.get("bodyweight_kg")),
-                "stored_confidence": None,
+                "stored_confidence": None, "from_baseline": True,
             })
     return cands
 
@@ -231,7 +246,7 @@ def _pull_candidates(state: Mapping[str, Any], as_of: date) -> List[Dict[str, An
                 "test_id": None,
                 "one_rm": _num(b.get("weighted_pullup_1rm_total_kg") or b.get("weighted_pullup_1rm_estimated_kg")),
                 "bodyweight_kg": _num(b.get("bodyweight_at_test_kg") or b.get("bodyweight_kg")),
-                "stored_confidence": None,
+                "stored_confidence": None, "from_baseline": True,
             })
     return cands
 
@@ -249,7 +264,9 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
       test wins over a converted one.
     - ``tests.*`` entries are the source (``source: "test"``). The persisted
       baseline is read only when ``tests.*`` has nothing (its own ``source``
-      is reported as-is: only test/test_session count as tested).
+      is reported as-is, ``from_baseline: True``; only ``test_session`` counts
+      as tested there — a baseline-only ``test`` is an onboarding self-report
+      persisted by ``estimate_missing_baselines``, B364 review).
     - ``stored_confidence`` is informational: use ``test_confidence``.
     """
     on = _as_date(as_of)
@@ -271,7 +288,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "date": best["date"].isoformat(),
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
-            "tested": best["source"] in _TESTED_SOURCES and age < TEST_FRESH_DAYS,
+            "tested": _cand_tested(best) and age < TEST_FRESH_DAYS,
+            "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
             "seconds": target_s,
@@ -297,7 +315,8 @@ def official_max(state: Mapping[str, Any], protocol: str, as_of: DateLike) -> Op
             "date": best["date"].isoformat(),
             "age_days": age,
             "fresh": age < TEST_FRESH_DAYS,
-            "tested": best["source"] in _TESTED_SOURCES and age < TEST_FRESH_DAYS,
+            "tested": _cand_tested(best) and age < TEST_FRESH_DAYS,
+            "from_baseline": bool(best.get("from_baseline")),
             "source": best["source"],
             "test_id": best["test_id"],
             "bodyweight_kg": best["bodyweight_kg"],
@@ -374,8 +393,14 @@ def reentry_step(
     *,
     archived_weeks: Optional[Union[Mapping[str, Any], Sequence[Mapping[str, Any]]]] = None,
     include_current: bool = True,
+    extra_dates: Optional[Sequence[DateLike]] = None,
 ) -> Dict[str, Any]:
     """Where the athlete is on the re-entry ramp for ``family`` on ``as_of``.
+
+    ``extra_dates`` (B364): exposure days the view cannot see — the dates of
+    the ``tests.*`` entries of the family (a test counts as an exposure even
+    when its week was archived or the test was logged outside a plan session).
+    Only dates strictly before ``as_of`` are used; duplicates collapse.
 
     n = distinct exposure days strictly before ``as_of`` after the last gap of
     at least ``REENTRY_GAP_D`` days (tests included), plus 1 for the session
@@ -389,11 +414,16 @@ def reentry_step(
     - ``in_reentry``: ``factor < 1.0``.
     """
     on = _as_date(as_of)
-    dates = [
+    day_set = {
         _as_date(d) for d in exposure_dates(
             state, family, until=on - timedelta(days=1), archived_weeks=archived_weeks
         )
-    ]
+    }
+    for extra in extra_dates or ():
+        d = _parse_date(extra)
+        if d is not None and d < on:
+            day_set.add(d)
+    dates = sorted(day_set)
     run: List[date] = []
     prev = on
     gap_days: Optional[int] = None

@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useCustomSession, useBuilderExercises } from "@/lib/hooks/queries";
 import { useState, useMemo } from "react";
 import { Pencil } from "lucide-react";
+import { toISODateLocal } from "@/lib/dates";
 
 function formatPrescription(ex: { sets: number; reps: number | null; work_seconds: number | null; load_kg: number; rest_between_sets_seconds: number | null; alt_sides?: boolean }): string {
   const parts: string[] = [];
@@ -23,7 +24,10 @@ export default function SessionViewPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
-  const { data: session, isLoading } = useCustomSession(id);
+  // B364: the loads of today, like the player (anchored exercises follow the
+  // official max + training load) — the stored kg would disagree with play.
+  const today = useMemo(() => toISODateLocal(new Date()), []);
+  const { data: session, isLoading } = useCustomSession(id, today);
   const { data: catalogData } = useBuilderExercises("", "");
   const [checked, setChecked] = useState<Set<number>>(new Set());
 

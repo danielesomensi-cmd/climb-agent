@@ -708,6 +708,11 @@ export function GuidedExerciseStep({
                       ⚠ Suggested load requires counterweight — consider re-testing your max hang.
                     </p>
                   )}
+                  {(exercise.suggested.loadNotes ?? []).map((note) => (
+                    <p key={note} className="text-xs text-muted-foreground mt-1">
+                      {note}
+                    </p>
+                  ))}
                 </div>
               </div>
             )}
