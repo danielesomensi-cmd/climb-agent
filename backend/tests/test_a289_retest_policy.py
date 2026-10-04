@@ -271,6 +271,10 @@ class TestOtherTriggers:
             "weighted_pullup": {"count": 2, "dates": ["2026-10-27", "2026-10-30"],
                                 "last_date": "2026-10-30", "official_date": "2026-09-24"},
         }}
+        # The current week (26/10) is already generated: the early retest whose
+        # signals end on 30/10 is not deferred to it (A289 review).
+        st["week_plans"] = {"2026-10-26": _plan_with_tests("2026-10-26")}
+        st["week_plans"]["2026-10-26"]["weeks"][0]["days"][0]["sessions"] = []
         dec = _decision(st, "2026-11-02", today="2026-11-01")
         req = {r["axis"]: r for r in dec["required_sessions"]}
         assert set(req) == {"pulling"}
@@ -409,16 +413,17 @@ class TestPlanner:
 
     def test_heavy_pull_two_days_before_is_allowed_one_day_blocks(self):
         dec = deepcopy(_decision(_daniele(), "2026-10-19"))
-        # Restrict to Thu 22 and Sat 24 so the outcome is readable.
+        # Restrict to Sun 25 so the outcome is readable (Sat 24 is inside the
+        # 72 h hang block of the plan's own finger-hard Wednesday, A289 review).
         for r in dec["required_sessions"]:
-            r["allowed_dates"] = ["2026-10-24"]
-        dec["heavy_pull_dates"] = ["2026-10-22"]  # 48 h before Saturday: allowed
+            r["allowed_dates"] = ["2026-10-25"]
+        dec["heavy_pull_dates"] = ["2026-10-23"]  # 48 h before Sunday: allowed
         plan = generate_phase_week(**_pe_week(retest_decisions=dec))
-        assert _test_days(plan)["test_max_weighted_pullup"][0] == "2026-10-24"
-        dec["heavy_pull_dates"] = ["2026-10-23"]  # 24 h before: blocked
+        assert _test_days(plan)["test_max_weighted_pullup"][0] == "2026-10-25"
+        dec["heavy_pull_dates"] = ["2026-10-24"]  # 24 h before: blocked
         plan = generate_phase_week(**_pe_week(retest_decisions=dec))
         tests = _test_days(plan)
-        assert tests["test_max_hang_7s"][0] == "2026-10-24"
+        assert tests["test_max_hang_7s"][0] == "2026-10-25"
         assert "test_max_weighted_pullup" not in tests
         skipped = {s["test_id"]: s["reason"] for s in plan["skipped_tests"]}
         assert skipped["test_max_weighted_pullup"] == "blocked:no_paired_slot"
@@ -636,3 +641,191 @@ class TestReminderDerivation:
         # covered athletes (see TestApi).
         assert should_show_test_reminder({}, 5) is not None
         assert should_show_test_reminder({}, 4) is None
+
+
+# ---------------------------------------------------------------------------
+# A289 review fixes
+# ---------------------------------------------------------------------------
+
+def _estimated_baselines_state() -> dict:
+    """Never tested: only the baselines estimated at onboarding."""
+    return _daniele(tests={}, baselines={
+        "hangboard": [{"max_total_load_kg": 90, "source": "estimated", "updated_at": "2026-09-01"}],
+        "pulling": {"weighted_pullup_2rm_total_kg": 100, "source": "estimated",
+                    "updated_at": "2026-09-01"},
+    })
+
+
+class TestReviewFixes:
+    def test_estimated_baselines_never_shown_as_tested_maxes(self):
+        st = _estimated_baselines_state()
+        status = rp.retest_status(st, "2026-10-04")
+        assert status["axes"] == {} and status["covered_axes"] == []
+        from backend.api.routers.week import _compute_retest_status
+        assert _compute_retest_status(st, None) is None
+
+    def test_stale_real_test_still_reported(self):
+        # A real test older than 90 days is still a tested max (uncovered).
+        status = rp.retest_status(_daniele(), "2027-01-10")
+        assert status["axes"]["finger"]["covered"] is False
+
+    def test_hang_block_is_inclusive_three_days(self):
+        # Finger-hard Wed 21 evening → Sat 24 morning is ~60 h < 72 h: blocked.
+        dec = deepcopy(_decision(_daniele(), "2026-10-19"))
+        dec["finger_hard_dates"] = ["2026-10-21"]
+        for r in dec["required_sessions"]:
+            r["allowed_dates"] = ["2026-10-24"]
+        plan = generate_phase_week(**_pe_week(retest_decisions=dec))
+        assert "test_max_hang_7s" not in _test_days(plan)
+        live = rp.test_day_blockers(_daniele(week_plans={"2026-10-19": _plan_with_tests(
+            "2026-10-24", extra_sessions=[("2026-10-21", {
+                "session_id": "finger_strength_home", "slot": "evening",
+                "tags": {"hard": True, "finger": True}})])}), "finger", "2026-10-24")
+        assert {b["code"] for b in live} == {"recent_finger"}
+
+    def test_no_finger_hard_session_planned_in_hang_test_window(self):
+        # Plan-wide invariant: no finger-hard session in the 3 days before the hang test.
+        from backend.engine.stimulus import is_finger_hard_session
+        dec = _decision(_daniele(), "2026-10-19")
+        plan = generate_phase_week(**_pe_week(retest_decisions=dec))
+        hd = date.fromisoformat(_test_days(plan)["test_max_hang_7s"][0])
+        for d, s in _sessions(plan):
+            gap = (hd - date.fromisoformat(d)).days
+            if 0 < gap <= 3:
+                assert not is_finger_hard_session(s), (d, s["session_id"])
+
+    def test_legacy_pass3_keeps_finger_tests_out_of_hang_window(self):
+        st = _daniele()
+        for k in ("max_strength", "pulling_strength"):
+            st["tests"][k][-1]["date"] = "2026-08-20"
+            st["tests"][k][-1].pop("confidence", None)
+        dec = deepcopy(rp.retest_decisions(st, "2026-10-12", today="2026-10-12",
+                                           finger_device="hangboard"))
+        for r in dec["required_sessions"]:
+            r["allowed_dates"] = ["2026-10-16"]
+        days = [d for d in _DAYS if d not in ("thu", "sat")]
+        kw = _kwargs("strength_power", "2026-10-12", is_last_week_of_phase=True,
+                     availability=_avail(days=days))
+        tests = _test_days(generate_phase_week(**kw, retest_decisions=dec))
+        assert tests["test_max_hang_7s"][0] == "2026-10-16"
+        rep = tests.get("test_repeater_7_3")
+        if rep:
+            gap = (date(2026, 10, 16) - date.fromisoformat(rep[0])).days
+            assert not 0 < gap <= 3
+
+    def test_locked_slots_of_old_plan_are_not_used(self):
+        # The old plan has a session skipped in advance on Sun 25 morning: the
+        # merge puts it back over that slot, so PASS 3a must not use it
+        # (unlocked, the hang lands exactly there and is overwritten).
+        st = _daniele()
+        old = _plan_with_tests("2026-10-25")
+        for d in old["weeks"][0]["days"]:
+            d["sessions"] = []
+            if d["date"] == "2026-10-25":
+                d["sessions"] = [{"session_id": "finger_strength_home", "slot": "morning",
+                                  "status": "skipped", "tags": {"hard": True, "finger": True}}]
+        st["week_plans"] = {"2026-10-19": old}
+        dec = deepcopy(_decision(st, "2026-10-19", today="2026-10-19"))
+        assert dec["locked_slots"] == [{"date": "2026-10-25", "slot": "morning"}]
+        for r in dec["required_sessions"]:
+            r["allowed_dates"] = ["2026-10-25"]
+        fresh = generate_phase_week(**_pe_week(retest_decisions=dec, today="2026-10-19"))
+        merged = regenerate_preserving_completed(old, fresh, preserve_before="2026-10-19")
+        rows = fresh["profile_snapshot"]["retest_decisions"]["required_sessions"]
+        assert [r["status"] for r in rows] == ["placed", "placed"]
+        merged_tests = _test_days(merged)
+        for row in rows:
+            assert merged_tests[row["session_id"]] == (row["placed_date"], row["placed_slot"])
+        assert merged_tests["test_max_hang_7s"] == ("2026-10-25", "lunch")
+
+    def test_today_with_done_session_is_locked(self):
+        # Today (Thu 22) holds a done session: the merge copies the day
+        # wholesale, so a test placed there would vanish.
+        st = _daniele()
+        old = _plan_with_tests("2026-10-25")
+        for d in old["weeks"][0]["days"]:
+            d["sessions"] = []
+            if d["date"] == "2026-10-22":
+                d["sessions"] = [{"session_id": "technique_focus_gym", "slot": "morning",
+                                  "status": "done", "tags": {}}]
+        st["week_plans"] = {"2026-10-19": old}
+        dec = deepcopy(_decision(st, "2026-10-19", today="2026-10-22"))
+        assert dec["locked_dates"] == ["2026-10-22"]
+        for r in dec["required_sessions"]:
+            r["allowed_dates"] = ["2026-10-22"]
+        plan = generate_phase_week(**_pe_week(retest_decisions=dec, today="2026-10-22"))
+        assert _test_days(plan) == {} or all(d != "2026-10-22" for d, _s in _test_days(plan).values())
+        reasons = {s["test_id"]: s["reason"] for s in plan["skipped_tests"]
+                   if s.get("source") == "retest_policy"}
+        assert reasons["test_max_hang_7s"] == "no_placement_slot"
+
+    def test_projection_skips_a_generated_week_without_the_test(self):
+        # The slipped week 19/10 is already generated without tests (PASS 3a
+        # skipped them): no "next test from 22/10" promise.
+        st = _daniele()
+        plan = _plan_with_tests("2026-10-25")
+        for d in plan["weeks"][0]["days"]:
+            d["sessions"] = []
+        plan["profile_snapshot"] = {"retest_decisions": {"required_sessions": [
+            {"axis": "finger", "status": "skipped", "skip_reason": "no_placement_slot"},
+            {"axis": "pulling", "status": "skipped", "skip_reason": "no_placement_slot"},
+        ]}}
+        st["week_plans"] = {"2026-10-19": plan}
+        status = rp.retest_status(st, "2026-10-19")
+        for axis in ("finger", "pulling"):
+            nt = status["axes"][axis]["next_test"]
+            assert nt is None or nt["week_start"] > "2026-10-19"
+        # Not generated → still projected there.
+        st["week_plans"] = {}
+        assert rp.retest_status(st, "2026-10-19")["axes"]["finger"]["next_test"]["date"] == "2026-10-22"
+
+    def test_order_of_generation_does_not_move_the_test(self):
+        # Maintenance (24/09 + 84 d = 17/12) with no phase trigger: a long PE phase.
+        mc = {"start_date": "2026-09-07", "phases": [
+            {"phase_id": "base", "duration_weeks": 2},
+            {"phase_id": "strength_power", "duration_weeks": 2},
+            {"phase_id": "power_endurance", "duration_weeks": 16},
+        ]}
+        st = _daniele(macrocycle=mc)
+        w, w1 = "2026-12-14", "2026-12-21"
+        # W+1 opened first while W is not generated: deferred to W.
+        d1 = _decision(st, w1, today="2026-12-14")
+        assert d1["required_sessions"] == []
+        assert {s["skip_reason"] for s in d1["skipped"]} == {"deferred:earlier_week"}
+        # W generated (empty) first, then W+1: W places; W+1 sees it scheduled.
+        dw = _decision(st, w, today="2026-12-14")
+        assert {r["trigger"] for r in dw["required_sessions"]} == {rp.TRIGGER_MAINTENANCE}
+
+
+class TestReminderPartialCoverage:
+    def test_reminder_kept_when_only_pulling_is_covered(self, isolated_state):
+        _seed_current(tested=True)
+        state = deps.load_state(None)
+        state["preferences"] = {"finger_training_device": "loading_pin"}
+        deps.save_state(state, None)
+        body = client.get("/api/week/0").json()
+        assert body["retest_status"]["covered_axes"] == ["pulling"]
+        state = deps.load_state(None)
+        state["test_reminder_postponed_to"] = body["week_num"]
+        deps.save_state(state, None)
+        body = client.get("/api/week/0").json()
+        assert body.get("test_reminder") is not None
+
+    def test_reminder_hidden_when_every_axis_is_covered(self, isolated_state):
+        _seed_current(tested=True)
+        body = client.get("/api/week/0").json()
+        state = deps.load_state(None)
+        state["test_reminder_postponed_to"] = body["week_num"]
+        deps.save_state(state, None)
+        body = client.get("/api/week/0").json()
+        assert body["retest_status"]["covered_axes"] == ["finger", "pulling"]
+        assert "test_reminder" not in body
+
+    def test_untested_with_estimated_baselines_gets_no_status(self, isolated_state):
+        _seed_current(tested=False)
+        state = deps.load_state(None)
+        state["baselines"] = _estimated_baselines_state()["baselines"]
+        state["tests"] = {}
+        deps.save_state(state, None)
+        body = client.get("/api/week/0").json()
+        assert "retest_status" not in body

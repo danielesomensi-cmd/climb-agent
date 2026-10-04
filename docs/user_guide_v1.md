@@ -317,9 +317,9 @@ Tests re-measure your baseline numbers and update your 5-axis profile. Your max 
 
 A test is never repeated too soon: **4 weeks** if the last one came after little recent max-strength work (low confidence), **6 weeks** otherwise. If that gap pushes the end-of-strength test past the end of the phase, it moves **one week** later. No tests in the performance and deload phases, in the 10 days before a trip, or within 3 days of a session you rated *very hard*. The finger test needs **72 hours** without hard finger work before it (limit bouldering, max hangs, a hard day outdoors — custom sessions count too) and the pull-up test **48 hours** without heavy pulling. When both are due they share a day: **max hang first, pull-up after**, in a later slot.
 
-**Week** shows a **"Your tested maxes"** card: each max with its test date and confidence, how it moved since the previous test (under 5% counts as *stable*), and the next test with the reason. If something lands too close to a planned test after the plan was made (a very hard session, a finger session you added), the card tells you — the test is not moved automatically; move it yourself if you are not fresh.
+**Week** shows a **"Your tested maxes"** card: each max with its test date and confidence, how it moved since the previous test (under 5% counts as *stable*), and the next test with the reason. Only numbers from a real test appear there — an estimate made at onboarding is never shown as a tested max. If something lands too close to a planned test after the plan was made (a very hard session, a finger session you added), the card tells you — the test is not moved automatically; move it yourself if you are not fresh.
 
-**If you have not tested yet** (or your last test is older than 90 days), every **~6 weeks** a **"Time to retest"** card appears on **Today** with three choices:
+**Until the plan schedules both tests itself** — you have not tested yet, only one of the two tests is recent, your last test is older than 90 days, or you train fingers on a loading pin — every **~6 weeks** a **"Time to retest"** card appears on **Today** with three choices:
 
 - **Schedule test week** — a test session is added to next week's plan
 - **Next week** — you'll be asked again in 7 days

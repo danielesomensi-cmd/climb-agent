@@ -538,7 +538,8 @@ retest_decisions  → week-level: trigger (end_of_phase | end_of_phase_slipped |
                     (28 / 42 d), phase / trip / very_hard day blockers,
                     external finger-hard + heavy-pull days, already-scheduled
 planner PASS 3a   → day-level against the week's own sessions: < 72 h finger-hard
-                    (hang), < 48 h heavy pull (pull-up), 48 h finger gap, hard cap;
+                    (hang; 3 calendar days, inclusive), never a slot the regen
+                    merge refills (locked_slots / locked_dates), < 48 h heavy pull (pull-up), 48 h finger gap, hard cap;
                     paired day, hang slot before pull-up slot
 planner PASS 3    → historical, only for the axes the policy does not cover
 retest_status     → live on every GET: official max, confidence, trend (±5 %),

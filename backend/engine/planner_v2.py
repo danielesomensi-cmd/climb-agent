@@ -1661,13 +1661,33 @@ def generate_phase_week(
     _rd_skipped: List[Dict[str, Any]] = []
     _rd_placed_offsets: set = set()
     _rd_outcomes: List[Dict[str, Any]] = []
+    # A289 review: offsets of the policy's hang tests + the hang block window,
+    # read by the legacy PASS 3 below so it never puts another finger test in
+    # the RETEST_BLOCK_H before a policy hang test.
+    _rd_hang_offsets: List[int] = []
+    _hang_block_d = 0
     if _rd_active:
         from backend.engine.stimulus import is_finger_hard_session, is_pulling_hard_session
 
         _rd_covered = set(retest_decisions.get("covered_axes") or [])
         _block_h = retest_decisions.get("block_hours") or {}
-        _hang_block_d = max(int(_block_h.get("hang", 72)) // 24, finger_gap_days + 1)
+        # A289 review: the windows are counted in whole calendar days and the
+        # slot is ignored, so the conservative reading is INCLUSIVE — a
+        # finger-hard evening 3 days before a morning hang test is ~60 h, inside
+        # the 72 h block (DECISIONS: "hang test blocked <72 h after a finger-hard
+        # session"). The 48 h heavy-pull block stays exclusive (day d−2 allowed):
+        # that is the reading Daniele's 24/10 test day was decided on.
+        _hang_block_d = max(int(_block_h.get("hang", 72)) // 24, finger_gap_days)
         _pull_block_d = int(_block_h.get("pull", 48)) // 24
+        # A289 review: slots the regeneration merge will fill with the old
+        # plan's done/skipped sessions (regenerate_preserving_completed), and
+        # whole days it copies wholesale (today with a done session): a test
+        # placed there would be silently overwritten after generation.
+        _rd_locked_slots: Dict[str, set] = {}
+        for _ls in retest_decisions.get("locked_slots") or []:
+            if isinstance(_ls, dict) and _ls.get("date"):
+                _rd_locked_slots.setdefault(str(_ls["date"]), set()).add(_ls.get("slot"))
+        _rd_locked_dates = set(retest_decisions.get("locked_dates") or [])
 
         def _offset_of(d_iso: str) -> int:
             return (_parse_date(d_iso) - start).days
@@ -1698,7 +1718,7 @@ def generate_phase_week(
                 for o in range(7):
                     if o != offset and any(is_finger_hard_session(e) for e in day_sessions[o]):
                         fh.append(o)
-                if any(0 < offset - o < _hang_block_d for o in fh):
+                if any(0 < offset - o <= _hang_block_d for o in fh):
                     return False
                 if not victim_finger:
                     fo_all = list(_prev_finger) + [
@@ -1761,7 +1781,8 @@ def generate_phase_week(
             for i, e in enumerate(day_sessions[offset]):
                 if e.get("slot"):
                     slot_entry.setdefault(e["slot"], i)
-            usable = [s for s in SLOTS if day_avail[s]["available"]]
+            _locked = _rd_locked_slots.get(day_dates[offset].isoformat(), set())
+            usable = [s for s in SLOTS if day_avail[s]["available"] and s not in _locked]
             best = None
             best_key = None
 
@@ -1808,6 +1829,8 @@ def generate_phase_week(
                     continue
                 if o in _rd_placed_offsets:
                     continue
+                if day_dates[o].isoformat() in _rd_locked_dates:
+                    continue
                 if not any(normalized[day_keys[o]][s]["available"] for s in SLOTS):
                     continue
                 offs.append(o)
@@ -1849,6 +1872,8 @@ def generate_phase_week(
                     hard_day_offsets.append(offset)
             hard_days = sum(1 for o in range(7) if any((e.get("tags") or {}).get("hard") for e in day_sessions[o]))
             _rd_placed_offsets.add(offset)
+            if any(_SESSION_META[e["session_id"]].get("finger") for e in new_entries):
+                _rd_hang_offsets.append(offset)
 
         def _place(reqs: List[Dict[str, Any]], allowed: List[str]) -> Optional[int]:
             for o in _candidate_offsets(allowed):
@@ -1906,6 +1931,12 @@ def generate_phase_week(
                 "reason": _sk.get("skip_reason"), "required": True, "source": "retest_policy",
                 "trigger": _sk.get("trigger"),
             })
+
+    def _rd_blocks_finger_test(offset: int) -> bool:
+        """A289 review: a finger test the legacy PASS 3 would place inside the
+        hang block window before a test PASS 3a placed (the 72 h rule of the
+        policy; PASS 3a cannot see it, the legacy pass runs after)."""
+        return any(0 < h - offset <= _hang_block_d for h in _rd_hang_offsets)
 
     # ── PASS 3 (optional): Inject test sessions ──
     # Triggers on: last week of base/strength_power, OR explicitly via inject_tests
@@ -2033,6 +2064,8 @@ def generate_phase_week(
                     continue
                 if not day_sessions[offset]:
                     continue
+                if test_meta["finger"] and _rd_blocks_finger_test(offset):
+                    continue  # A289 review: 72 h before a policy hang test
 
                 # B359 — la vittima si sceglie PRIMA dello slot, non dopo.
                 #
@@ -2125,6 +2158,8 @@ def generate_phase_week(
                         continue
                     if day_sessions[offset]:
                         continue  # pass 2 targets empty days only
+                    if test_meta["finger"] and _rd_blocks_finger_test(offset):
+                        continue  # A289 review: 72 h before a policy hang test
                     if day_is_outdoor[offset]:
                         continue
                     if day_dates[offset] in pretrip_set:

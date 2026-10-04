@@ -145,6 +145,13 @@ def _cand_tested(cand: Mapping[str, Any]) -> bool:
     return cand.get("source") in _TESTED_SOURCES
 
 
+def _om_is_test(om: Mapping[str, Any]) -> bool:
+    """The official max comes from a real test (any age) — not from a baseline
+    estimated or self-reported at onboarding (A289 review: those must never be
+    shown as "tested maxes")."""
+    return _cand_tested(om)
+
+
 def _as_date(value: DateLike) -> date:
     if isinstance(value, datetime):
         return value.date()
@@ -739,6 +746,49 @@ def _very_hard_blocked(vh: Sequence[str], d: date) -> bool:
     return any(lo <= v <= hi for v in vh)
 
 
+def _hot_plan(state: Mapping[str, Any], ws_iso: str) -> Optional[Mapping[str, Any]]:
+    """The generated (hot) plan of the week starting ``ws_iso``, or None."""
+    plan = (state.get("week_plans") or {}).get(ws_iso)
+    if isinstance(plan, Mapping):
+        return plan
+    cur = state.get("current_week_plan")
+    if isinstance(cur, Mapping) and cur.get("start_date") == ws_iso:
+        return cur
+    return None
+
+
+def _plan_days(plan: Optional[Mapping[str, Any]]) -> List[Mapping[str, Any]]:
+    weeks = (plan or {}).get("weeks") or []
+    if not weeks or not isinstance(weeks[0], Mapping):
+        return []
+    return [d for d in (weeks[0].get("days") or []) if isinstance(d, Mapping)]
+
+
+def _locked_by_merge(state: Mapping[str, Any], ws: date, today: Optional[date]) -> Dict[str, Any]:
+    """What ``regenerate_preserving_completed`` will put back over a freshly
+    generated week (A289 review): the old plan's done/skipped sessions take
+    their slot, and today is copied wholesale when it holds a done session.
+    A test placed there would be silently overwritten after generation."""
+    slots: List[Dict[str, Any]] = []
+    dates: List[str] = []
+    for day in _plan_days(_hot_plan(state, ws.isoformat())):
+        d_iso = str(day.get("date") or "")[:10]
+        d = _parse_date(d_iso)
+        if d is None or (today is not None and d < today):
+            continue
+        sessions = [x for x in (day.get("sessions") or []) if isinstance(x, Mapping)]
+        if today is not None and d == today and (
+            any(x.get("status") == "done" for x in sessions)
+            or day.get("outdoor_session_status") == "done"
+        ):
+            dates.append(d_iso)
+            continue
+        for x in sessions:
+            if x.get("status") in ("done", "skipped") and x.get("slot"):
+                slots.append({"date": d_iso, "slot": x.get("slot")})
+    return {"locked_slots": slots, "locked_dates": dates}
+
+
 def _planned_axis_tests(
     state: Mapping[str, Any], axis: str, *, since: date, exclude_week: Optional[str] = None
 ) -> List[Dict[str, Any]]:
@@ -810,7 +860,12 @@ def _axis_week_decision(
     archived_weeks: Any,
     check_already_scheduled: bool,
 ) -> Optional[Dict[str, Any]]:
-    """Week-level decision for one axis. ``None`` = axis not covered."""
+    """Week-level decision for one axis. ``None`` = axis not covered.
+
+    With ``check_already_scheduled`` (the planner's call) a test that was
+    already due in an EARLIER week (from the current week on) that is not
+    generated yet is deferred to that week: the week it lands in does not
+    depend on which week the athlete opens first (A289 review)."""
     from backend.engine.macro_position import position_on
 
     om = axis_official(state, axis, ws, finger_device=finger_device)
@@ -857,6 +912,17 @@ def _axis_week_decision(
         planned = _planned_axis_tests(state, axis, since=today or ws, exclude_week=ws.isoformat())
         if planned:
             return {**out, "status": "already_scheduled", "scheduled_date": planned[0]["date"]}
+        floor = _monday(today) if today is not None else ws
+        natural = max(earliest, t_earliest or ws)
+        wk = max(_monday(natural), floor)
+        while wk < ws:
+            if _hot_plan(state, wk.isoformat()) is None:
+                prior = _axis_week_decision(state, axis, wk, today=today, finger_device=finger_device,
+                                            archived_weeks=archived_weeks, check_already_scheduled=False)
+                if prior and prior.get("status") == "due":
+                    return {**out, "status": "skipped", "skip_reason": "deferred:earlier_week",
+                            "deferred_to_week": wk.isoformat()}
+            wk += timedelta(days=7)
     vh = very_hard_dates(state)
     allowed: List[str] = []
     last_block = None
@@ -977,13 +1043,15 @@ def retest_decisions(
         required[1]["paired_with"] = required[0]["session_id"]
     skipped = [
         {k: dec.get(k) for k in ("axis", "session_id", "trigger", "reason", "skip_reason",
-                                 "earliest_date", "slipped_to_week") if dec.get(k) is not None}
+                                 "earliest_date", "slipped_to_week", "deferred_to_week")
+         if dec.get(k) is not None}
         for dec in axes.values() if dec["status"] == "skipped"
     ]
     already = [{"axis": dec["axis"], "date": dec["scheduled_date"], "trigger": dec.get("trigger")}
                for dec in axes.values() if dec["status"] == "already_scheduled"]
     ext = _external_blockers(state, ws, archived_weeks=archived_weeks, outdoor_rows=outdoor_rows) \
         if required else {"finger_hard_dates": [], "heavy_pull_dates": []}
+    locked = _locked_by_merge(state, ws, td) if required else {"locked_slots": [], "locked_dates": []}
     return {
         "version": 1,
         "week_start": ws.isoformat(),
@@ -994,6 +1062,8 @@ def retest_decisions(
         "axes": axes,
         "finger_hard_dates": ext["finger_hard_dates"],
         "heavy_pull_dates": ext["heavy_pull_dates"],
+        "locked_slots": locked["locked_slots"],
+        "locked_dates": locked["locked_dates"],
         "block_hours": {"hang": RETEST_BLOCK_H, "pull": PULL_TEST_BLOCK_H},
     }
 
@@ -1019,7 +1089,9 @@ def test_day_blockers(
     if trip_blocked(state, d):
         out.append({"code": "trip", "detail": "within 10 days of a trip"})
     if axis == AXIS_FINGER:
-        lo = d - timedelta(days=RETEST_BLOCK_H // 24 - 1)
+        # Whole calendar days, inclusive (same reading as PASS 3a, A289 review):
+        # a finger-hard evening 3 days before a morning test is ~60 h < 72 h.
+        lo = d - timedelta(days=RETEST_BLOCK_H // 24)
         for row in finger_hard_days(state, since=lo, until=d - timedelta(days=1),
                                     archived_weeks=archived_weeks, outdoor_rows=outdoor_rows,
                                     include_planned=True):
@@ -1065,8 +1137,8 @@ def retest_status(
     out_axes: Dict[str, Dict[str, Any]] = {}
     for axis in RETEST_AXES:
         om = axis_official(state, axis, td, finger_device=finger_device)
-        if om is None:
-            continue
+        if om is None or not _om_is_test(om):
+            continue  # never tested: nothing to show (an estimate is not a max)
         row: Dict[str, Any] = {
             "axis": axis,
             "covered": bool(om.get("tested")),
@@ -1124,6 +1196,12 @@ def retest_status(
             if dec is None:
                 last_skip = "not_tested_recently"
                 break
+            if dec["status"] == "due" and _hot_plan(state, wk.isoformat()) is not None:
+                # The week is already generated and holds no planned test of
+                # this axis: cached weeks are never regenerated, so projecting
+                # it there would promise a test that never comes (A289 review).
+                last_skip = _generated_week_skip(state, axis, wk, td)
+                continue
             if dec["status"] == "due":
                 row["next_test"] = {
                     "date": dec["allowed_dates"][0], "session_id": dec["session_id"],
@@ -1144,14 +1222,29 @@ def retest_status(
     }
 
 
+def _generated_week_skip(state: Mapping[str, Any], axis: str, wk: date, today: date) -> str:
+    """Why a generated week has no upcoming test of ``axis`` although the
+    policy would call it due: what PASS 3a recorded, else ``not_in_plan``
+    (week generated before A289, or the slot was lost to a regeneration)."""
+    snap = ((_hot_plan(state, wk.isoformat()) or {}).get("profile_snapshot") or {}).get("retest_decisions") or {}
+    for req in snap.get("required_sessions") or []:
+        if not isinstance(req, Mapping) or req.get("axis") != axis:
+            continue
+        if req.get("status") == "skipped" and req.get("skip_reason"):
+            return str(req["skip_reason"])
+        if req.get("status") == "placed" and str(req.get("placed_date") or "") < today.isoformat():
+            return "missed"
+    for sk in snap.get("skipped") or []:
+        if isinstance(sk, Mapping) and sk.get("axis") == axis and sk.get("skip_reason"):
+            return str(sk["skip_reason"])
+    return "not_in_plan"
+
+
 def _planned_reason(state: Mapping[str, Any], axis: str, planned: Mapping[str, Any]) -> Tuple[Optional[str], Optional[str]]:
     """Trigger + reason the planner stored for a planned test
     (``profile_snapshot.retest_decisions``), else (None, None)."""
     ws = _monday(_as_date(planned["date"])).isoformat()
-    plan = (state.get("week_plans") or {}).get(ws)
-    if not isinstance(plan, Mapping):
-        cur = state.get("current_week_plan")
-        plan = cur if isinstance(cur, Mapping) and cur.get("start_date") == ws else None
+    plan = _hot_plan(state, ws)
     snap = ((plan or {}).get("profile_snapshot") or {}).get("retest_decisions") or {}
     for req in snap.get("required_sessions") or []:
         if isinstance(req, Mapping) and req.get("axis") == axis:

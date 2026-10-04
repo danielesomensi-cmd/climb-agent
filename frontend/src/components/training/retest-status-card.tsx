@@ -37,6 +37,11 @@ const NO_TEST_TEXT: Record<string, string> = {
   "blocked:trip": "trip window: the test waits until after",
   "blocked:very_hard": "waiting for 3 easier days",
   not_due_within_horizon: "not due in the coming weeks",
+  no_placement_slot: "this week's plan had no day that fit it",
+  "blocked:no_paired_slot": "no day after the hang test could take the pull-up",
+  not_in_plan: "this week's plan was built without it",
+  missed: "the planned test this week was not done",
+  "deferred:earlier_week": "it belongs to an earlier week",
 };
 
 function trendText(s: RetestAxisStatus): string | null {

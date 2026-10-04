@@ -734,10 +734,14 @@ def get_week(
     retest_status = _compute_retest_status(state, user_id)
 
     # Check for periodic test reminder. A289: derived from the retest policy —
-    # when the policy covers an axis it schedules the tests itself, so the
-    # manual 6-week reminder is shown only to athletes it does not cover.
+    # the policy schedules the tests of the axes it covers, so the manual
+    # 6-week reminder is hidden only when it covers EVERY axis the reminder's
+    # "confirm" path would test (finger + pulling; a loading-pin athlete's
+    # finger axis is never covered, so they keep it). One covered axis is not
+    # enough: the reminder is the only off-phase route to the others.
     test_reminder = should_show_test_reminder(state, ctx["week_num"])
-    if test_reminder and retest_status and retest_status.get("covered_axes"):
+    _covered = set((retest_status or {}).get("covered_axes") or [])
+    if test_reminder and set(_retest_policy.RETEST_AXES) <= _covered:
         test_reminder = None
 
     result = {
