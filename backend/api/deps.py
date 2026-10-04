@@ -14,6 +14,7 @@ from typing import Any, Dict, Optional, Tuple
 
 from fastapi import Depends, HTTPException, Request
 
+from backend.engine import macro_position as _macro_position
 from backend.engine import storage as _storage
 
 logger = logging.getLogger(__name__)
@@ -488,29 +489,23 @@ def compute_pause_offset(paused_at: str, resume_date: str) -> int:
     return max(0, (r_mon - p_mon).days)
 
 
-def _effective_anchor(macrocycle: Dict[str, Any]) -> Tuple[date, date]:
+def _effective_anchor(
+    macrocycle: Dict[str, Any], today: Optional[date] = None
+) -> Tuple[date, date]:
     """Return ``(effective_start, effective_today)`` accounting for pause (A223).
 
     - ``effective_start = start_date + pause.offset_days`` (cumulative completed
       pauses). Used so the forward position does not include paused time.
     - ``effective_today``: while a pause is active, frozen at ``active_since`` so
-      the position stops advancing during the pause; otherwise ``date.today()``.
+      the position stops advancing during the pause; otherwise ``today``
+      (default ``date.today()``).
 
     No pause → ``(start_date, today)`` exactly.
+
+    A288: the logic lives in ``backend.engine.macro_position.effective_anchor``
+    (pure, date passed in); this wrapper only supplies ``date.today()``.
     """
-    mc_start = datetime.strptime(macrocycle["start_date"], "%Y-%m-%d").date()
-    pause = macrocycle.get("pause") or {}
-    offset_days = int(pause.get("offset_days") or 0)
-    effective_start = mc_start + timedelta(days=offset_days)
-    eff_today = date.today()
-    active_since = pause.get("active_since")
-    if active_since:
-        try:
-            frozen = datetime.strptime(active_since, "%Y-%m-%d").date()
-            eff_today = min(frozen, eff_today)
-        except ValueError:
-            pass
-    return effective_start, eff_today
+    return _macro_position.effective_anchor(macrocycle, today or date.today())
 
 
 def is_plan_paused(state: Dict[str, Any]) -> bool:
@@ -549,7 +544,9 @@ def pause_intervals(macrocycle: Dict[str, Any], today_iso: Optional[str] = None)
     return out
 
 
-def current_phase_and_week(macrocycle: Dict[str, Any]) -> Tuple[int, int]:
+def current_phase_and_week(
+    macrocycle: Dict[str, Any], today: Optional[date] = None
+) -> Tuple[int, int]:
     """Given a macrocycle dict, find which phase and week-within-phase today falls in.
 
     Returns (phase_index, week_within_phase) both 0-based.
@@ -559,26 +556,11 @@ def current_phase_and_week(macrocycle: Dict[str, Any]) -> Tuple[int, int]:
     A223: reads the *effective* anchor (start_date + pause offset) and a
     pause-frozen "today" so a paused plan holds its position. No pause →
     identical to the pre-A223 behavior.
+
+    A288: delegates to ``backend.engine.macro_position.phase_and_week_on``;
+    ``today`` defaults to ``date.today()`` (every existing caller).
     """
-    phases = macrocycle.get("phases") or []
-    if not phases:
-        return (0, 0)
-
-    mc_start, today = _effective_anchor(macrocycle)
-    cumulative_week = 0
-
-    for pi, phase in enumerate(phases):
-        duration = phase.get("duration_weeks", 1)
-        phase_start = mc_start + timedelta(weeks=cumulative_week)
-        phase_end = phase_start + timedelta(weeks=duration)
-        if today < phase_end:
-            weeks_into = max(0, (today - phase_start).days // 7)
-            return (pi, min(weeks_into, duration - 1))
-        cumulative_week += duration
-
-    # Past end — return last phase, last week
-    last = phases[-1]
-    return (len(phases) - 1, last.get("duration_weeks", 1) - 1)
+    return _macro_position.phase_and_week_on(macrocycle, today or date.today())
 
 
 def week_num_to_phase_context(macrocycle: Dict[str, Any], week_num: int) -> Dict[str, Any]:

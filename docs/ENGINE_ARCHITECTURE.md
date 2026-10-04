@@ -822,6 +822,17 @@ exercise_ordering.py
 
 assessment_v1.py
   └── (no engine imports — standalone)
+
+macro_position.py                     (A288 — pure; backend.api.deps delegates to it)
+  └── (no engine imports — standalone)
+
+stimulus.py                           (A288 — family table + exposure views, read-only)
+  ├── assessment_v1.GRADE_ORDER, free_session.FONT_GRADES
+  └── planner_v2._SESSION_META  (lazy import)
+
+retest_policy.py                      (A288 — official_max / test_confidence / reentry_step)
+  ├── stimulus.{exposure_dates, count_exposures, session_flag, ...}
+  └── progression_v1.estimate_1rm_from_2rm  (lazy import)
 ```
 
 ### Shared constants
