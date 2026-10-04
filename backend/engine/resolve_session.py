@@ -1205,6 +1205,10 @@ def _resolve_inline_block(
     _tested = rot_ctx is not None
     if session_local_ids is None:
         session_local_ids = []
+    if rot_plan and rot_plan.get("domain_req"):
+        domain_req = rot_plan["domain_req"]
+    if rot_plan and rot_plan.get("pattern_req"):
+        pattern_req = rot_plan["pattern_req"]
 
     if selected_ex is None and run_p0:
         if TRACE_RESOLVE:
@@ -1289,12 +1293,14 @@ def _resolve_inline_block(
         merged: Dict[str, Any] = {}
         if isinstance(ex_defaults, dict):
             merged.update(ex_defaults)
-        if isinstance(prescription, dict):
+        # A290: a max-hang step-down drops the block's max-intensity dose.
+        _drop_block_rx = bool(rot_plan and rot_plan.get("drop_block_prescription"))
+        if isinstance(prescription, dict) and not _drop_block_rx:
             merged.update(prescription)
         # B263: don't bleed device-specific prescription onto a non-device substitute
         _strip_device_prescription(merged, prescription, ex_defaults, selected_ex)
         # B174: selection.primary.prescription_overrides take highest priority
-        if isinstance(primary_overrides, dict):
+        if isinstance(primary_overrides, dict) and not _drop_block_rx:
             merged.update(primary_overrides)
         # A290: phase-specific dose of a phase anchor (e.g. PE max hangs, 3 sets)
         if rot_plan and chosen_by == "p0_inline_block" and rot_plan.get("prescription_overrides"):
@@ -1767,6 +1773,11 @@ def resolve_session(
                 role_req = b.get("role")   # P0 requires explicit block.role; block.type is NOT a selector input
                 domain_req = b.get("domain")
                 pattern_req = b.get("pattern")  # D158: template blocks can filter by pattern
+                # A290: a max-hang step-down selects in its own domain/pattern.
+                if rot_plan and rot_plan.get("domain_req"):
+                    domain_req = rot_plan["domain_req"]
+                if rot_plan and rot_plan.get("pattern_req"):
+                    pattern_req = rot_plan["pattern_req"]
 
                 trace = {}
                 if role_req is None:
@@ -1814,7 +1825,8 @@ def resolve_session(
                 merged: Dict[str, Any] = {}
                 if isinstance(ex_defaults, dict):
                     merged.update(ex_defaults)
-                if isinstance(prescription, dict):
+                # A290: a max-hang step-down drops the block's max-intensity dose.
+                if isinstance(prescription, dict) and not (rot_plan and rot_plan.get("drop_block_prescription")):
                     merged.update(prescription)
                 # B263: don't bleed device-specific prescription onto a non-device substitute
                 _strip_device_prescription(merged, prescription, ex_defaults, selected_ex)

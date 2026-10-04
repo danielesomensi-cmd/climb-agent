@@ -27,8 +27,10 @@ list), the others become ``ab`` without external load. A heavy occurrence is
 also downgraded by the spacing guards (real, done fatigue): a weighted pull in
 the last 48 h, two heavy-pull days in the last 7, or a limit / strength_long
 session tomorrow (decision 2026-10-04: no ≥85 % pull or front lever within
-24 h before limit/strength_long). The max-hang anchor drops to the untested
-list after a max-hang exposure in the last 72 h.
+24 h before limit/strength_long). Only occurrences that stayed heavy use a
+slot. After a max-hang exposure in the last 72 h the finger block steps down
+to its declared sub-maximal hangs (``spacing_step_down``), with a HARD
+exclusion of every max-load finger exercise.
 
 SCOPE (DECISIONS 2026-10-04): all of this applies ONLY to an athlete with a
 TESTED baseline (``retest_policy.is_tested`` on the finger or the pulling
@@ -56,8 +58,10 @@ from typing import Any, Dict, FrozenSet, List, Mapping, Optional, Sequence, Tupl
 from backend.engine import retest_policy as rp
 from backend.engine.macro_position import effective_anchor
 from backend.engine.stimulus import (
+    EXERCISE_FAMILY,
     FAMILY_FINGER_MAX,
     FAMILY_PULLING_MAX,
+    FINGER_FATIGUE_EXTRA_IDS,
     exposure_dates,
     iter_plan_sessions,
 )
@@ -79,6 +83,7 @@ ROTATION_KEYS: Tuple[str, ...] = (
     "ab_pool",
     "unloaded_only",
     "rotation_exclude",
+    "spacing_step_down",
 )
 
 AXIS_FINGER = "finger"
@@ -116,6 +121,23 @@ FRONT_LEVER_IDS: FrozenSet[str] = frozenset({"front_lever_one_leg", "front_lever
 
 #: Load models that make a pull "heavy" (external load on the body).
 LOADED_MODELS: FrozenSet[str] = frozenset({"total_load", "external_load"})
+
+#: Exercises that are NEVER a max-hang step-down: the whole finger_max exposure
+#: family plus the finger-fatigue hangs kept out of it (min-edge, 10 s max
+#: hangs). Single source: ``stimulus``.
+FINGER_MAX_LOAD_IDS: FrozenSet[str] = frozenset(
+    {eid for eid, fam in EXERCISE_FAMILY.items() if fam == FAMILY_FINGER_MAX}
+) | frozenset(FINGER_FATIGUE_EXTRA_IDS)
+
+
+def is_max_finger_load(ex: Mapping[str, Any]) -> bool:
+    """A hang that loads the fingers maximally: excluded from the step-down."""
+    eid = str(ex.get("id") or ex.get("exercise_id") or "")
+    if eid in FINGER_MAX_LOAD_IDS:
+        return True
+    if str(ex.get("intensity_level") or "") == "max":
+        return True
+    return str((ex.get("stress_tags") or {}).get("fingers") or "") == "high"
 
 # Session id prefixes whose done instances count as max-hang / heavy-pull
 # exposure even when the family table has nothing (legacy test logs).
@@ -275,6 +297,17 @@ class RotationContext:
     finger_max_days: List[date] = field(default_factory=list)
     pulling_max_days: List[date] = field(default_factory=list)
     heavy_slot_sessions: FrozenSet[str] = frozenset()
+    #: heavy-slot occurrences earlier in the ISO week that WERE heavy (not
+    #: downgraded by a spacing guard) — computed by ``build_rotation_context``.
+    prior_heavy: int = 0
+    #: where ``tomorrow_session_ids`` comes from: ``plan`` (a plan covers the
+    #: day) or ``weekday_proxy`` (no plan yet: same weekday of the target week).
+    tomorrow_source: str = "plan"
+
+    @property
+    def advanced(self) -> bool:
+        """Above a tested threshold on at least one axis (core floor, decisions)."""
+        return self.finger_tested or self.pulling_tested
 
     @property
     def finger_tested(self) -> bool:
@@ -301,9 +334,13 @@ class RotationContext:
         return sum(1 for d, _o, sid in self.week_sessions if sid == session_id and d < t)
 
     def heavy_rank(self) -> int:
-        """Heavy-slot sessions earlier in the ISO week (status agnostic)."""
-        t = self.target_date.isoformat()
-        return sum(1 for d, _o, sid in self.week_sessions if sid in self.heavy_slot_sessions and d < t)
+        """Heavy-slot occurrences earlier in the ISO week that were really heavy.
+
+        Status agnostic (a skipped Monday still used its slot), but an
+        occurrence a spacing guard turned light does NOT use one of the
+        ``HEAVY_SLOTS_PER_WEEK``: the budget counts heavy pulls, not sessions.
+        """
+        return self.prior_heavy
 
     def heavy_slots(self) -> int:
         return HEAVY_SLOTS_PER_WEEK.get(self.phase_id, DEFAULT_HEAVY_SLOTS_PER_WEEK)
@@ -346,6 +383,37 @@ def _sessions_on(state: Mapping[str, Any], week_plan: Optional[Mapping[str, Any]
                     out.extend(s for s in day.get("sessions") or [] if isinstance(s, dict))
         return out
     return [s for dd, s, _src in iter_plan_sessions(state) if dd == iso]
+
+
+def _plan_range_covers(plan: Optional[Mapping[str, Any]], d: date) -> bool:
+    """``d`` falls inside the plan's weeks (a rest day has no session but is
+    still a known day), or the plan lists it explicitly."""
+    if not isinstance(plan, Mapping):
+        return False
+    if _plan_covers(plan, d):
+        return True
+    start = _as_date(plan.get("start_date"))
+    if start is None:
+        return False
+    n_weeks = max(1, len(plan.get("weeks") or []))
+    return start <= d < start + timedelta(weeks=n_weeks)
+
+
+def _day_covered(state: Mapping[str, Any], week_plan: Optional[Mapping[str, Any]], d: date) -> bool:
+    if _plan_range_covers(week_plan, d):
+        return True
+    iso = d.isoformat()
+    for p in (state.get("week_plans") or {}).values():
+        if _plan_range_covers(p, d):
+            return True
+    return any(dd == iso for dd, _s, _src in iter_plan_sessions(state))
+
+
+def _planned_ids_on(state: Mapping[str, Any], week_plan: Optional[Mapping[str, Any]], d: date) -> FrozenSet[str]:
+    return frozenset(
+        str(s.get("session_id") or "") for s in _sessions_on(state, week_plan, d)
+        if s.get("status") != "skipped"
+    )
 
 
 def _done_test_days(state: Mapping[str, Any], prefixes: Sequence[str], since: date, until: date) -> List[date]:
@@ -399,20 +467,53 @@ def build_rotation_context(
         week_sessions.sort()
 
     tomorrow = target_date + timedelta(days=1)
-    tomorrow_ids = frozenset(
-        str(s.get("session_id") or "") for s in _sessions_on(state, week_plan, tomorrow)
-        if s.get("status") != "skipped"
-    )
+    tomorrow_source = "plan"
+    if _day_covered(state, week_plan, tomorrow):
+        tomorrow_ids = _planned_ids_on(state, week_plan, tomorrow)
+    else:
+        # Sunday → Monday of a week not generated yet (and, once generated, the
+        # Sunday session is past and immutable — the guard would never see it).
+        # Proxy: the same weekday of the target's own ISO week. The planner
+        # lays sessions out by weekday availability, so within a phase the
+        # weeks repeat. Deterministic; reported in the trace.
+        tomorrow_ids = _planned_ids_on(state, week_plan, tomorrow - timedelta(days=7))
+        tomorrow_source = "weekday_proxy"
 
     since = target_date - timedelta(days=7)
     finger_days = {
         _as_date(d) for d in exposure_dates(state, FAMILY_FINGER_MAX, since=since, until=target_date)
     }
     finger_days.update(_done_test_days(state, _FINGER_TEST_PREFIXES, since, target_date))
+    # Pull days reach back 14 days: the heavy-slot budget re-evaluates the
+    # guards of the week's earlier occurrences (each looks back 7 days).
+    pull_since = target_date - timedelta(days=14)
     pull_days = {
-        _as_date(d) for d in exposure_dates(state, FAMILY_PULLING_MAX, since=since, until=target_date)
+        _as_date(d) for d in exposure_dates(state, FAMILY_PULLING_MAX, since=pull_since, until=target_date)
     }
-    pull_days.update(_done_test_days(state, _PULL_TEST_PREFIXES, since, target_date))
+    pull_days.update(_done_test_days(state, _PULL_TEST_PREFIXES, pull_since, target_date))
+    pull_sorted = sorted(d for d in pull_days if d is not None)
+
+    # Heavy-slot budget: walk the week's earlier heavy-slot occurrences in
+    # order and keep only those the guards left heavy. Each is judged on the
+    # fatigue known BEFORE its day (strictly earlier pull days — its own
+    # weighted pull, once done, must not reclassify it) and on its own
+    # tomorrow.
+    slots = HEAVY_SLOTS_PER_WEEK.get(phase_id, DEFAULT_HEAVY_SLOTS_PER_WEEK)
+    t_iso = target_date.isoformat()
+    prior_heavy = 0
+    for d_iso, _o, sid in week_sessions:
+        if d_iso >= t_iso or sid not in heavy_slot_sessions:
+            continue
+        d_i = _as_date(d_iso)
+        if d_i is None:
+            continue
+        reason = _downgrade_reason(
+            rank=prior_heavy, slots=slots, on=d_i,
+            pull_days=[p for p in pull_sorted if p < d_i],
+            tomorrow_ids=_planned_ids_on(state, week_plan, d_i + timedelta(days=1)),
+        )
+        if reason is None:
+            prior_heavy += 1
 
     return RotationContext(
         target_date=target_date,
@@ -424,8 +525,10 @@ def build_rotation_context(
         week_sessions=week_sessions,
         tomorrow_session_ids=tomorrow_ids,
         finger_max_days=sorted(d for d in finger_days if d is not None),
-        pulling_max_days=sorted(d for d in pull_days if d is not None),
+        pulling_max_days=pull_sorted,
         heavy_slot_sessions=heavy_slot_sessions,
+        prior_heavy=prior_heavy,
+        tomorrow_source=tomorrow_source,
     )
 
 
@@ -459,18 +562,27 @@ def _days_since(days: Sequence[date], on: date) -> List[int]:
     return [(on - d).days for d in days if d <= on]
 
 
-def heavy_downgrade_reason(ctx: RotationContext, session_id: str) -> Optional[str]:
-    """Why a heavy-slot occurrence is NOT heavy, or ``None`` (heavy)."""
-    if ctx.heavy_rank() >= ctx.heavy_slots():
+def _downgrade_reason(
+    *, rank: int, slots: int, on: date, pull_days: Sequence[date], tomorrow_ids: FrozenSet[str]
+) -> Optional[str]:
+    if rank >= slots:
         return "not_heavy_occurrence"
-    if any(0 <= n < HEAVY_PULL_SPACING_D for n in _days_since(ctx.pulling_max_days, ctx.target_date)):
+    since = _days_since(pull_days, on)
+    if any(0 <= n < HEAVY_PULL_SPACING_D for n in since):
         return "heavy_pull_48h"
-    recent = [n for n in _days_since(ctx.pulling_max_days, ctx.target_date) if 1 <= n <= 6]
-    if len(recent) >= HEAVY_PULL_MAX_PER_7D:
+    if len([n for n in since if 1 <= n <= 6]) >= HEAVY_PULL_MAX_PER_7D:
         return "heavy_pull_7d_cap"
-    if ctx.tomorrow_session_ids & PRE_LIMIT_SESSIONS:
+    if tomorrow_ids & PRE_LIMIT_SESSIONS:
         return "pre_limit_24h"
     return None
+
+
+def heavy_downgrade_reason(ctx: RotationContext, session_id: str) -> Optional[str]:
+    """Why a heavy-slot occurrence is NOT heavy, or ``None`` (heavy)."""
+    return _downgrade_reason(
+        rank=ctx.heavy_rank(), slots=ctx.heavy_slots(), on=ctx.target_date,
+        pull_days=ctx.pulling_max_days, tomorrow_ids=ctx.tomorrow_session_ids,
+    )
 
 
 def max_hang_spacing_violated(ctx: RotationContext) -> bool:
@@ -491,6 +603,10 @@ def plan_block(
         {mode: phase_anchor|ab, order: [ids], exclude: [ids], pool: [ids],
          unloaded_only: bool, soft_exclude: [ids], seed: str, choice: int,
          prescription_overrides: {...}, trace: {...}}
+
+    The max-hang step-down adds ``hard_exclude_max_finger``, ``domain_req`` /
+    ``pattern_req`` (the resolver selects in that domain/pattern) and
+    ``drop_block_prescription``.
     """
     if ctx is None:
         return None
@@ -499,12 +615,20 @@ def plan_block(
     if mode not in ROTATION_CLASSES and not heavy:
         return None
 
+    lists = _lists_for_phase(cfg, ctx.phase_id)
+    by_phase = cfg.get("anchor_priority_by_phase") or {}
+    if (mode == ROTATION_PHASE_ANCHOR and not heavy and "anchor_priority" not in cfg
+            and by_phase and ctx.phase_id not in by_phase):
+        # A block anchored only in some phases (SP campus) is free elsewhere.
+        return None
+
     trace: Dict[str, Any] = {"phase_seed": ctx.phase_seed, "week_idx": ctx.week_idx}
-    soft_exclude: List[str] = list(cfg.get("rotation_exclude") or [])
+    # Core intensity floor: advanced athletes only (above a tested threshold).
+    soft_exclude: List[str] = list(cfg.get("rotation_exclude") or []) if ctx.advanced else []
     pre_limit = bool(ctx.tomorrow_session_ids & PRE_LIMIT_SESSIONS)
     if pre_limit:
         soft_exclude.extend(sorted(FRONT_LEVER_IDS))
-    lists = _lists_for_phase(cfg, ctx.phase_id)
+        trace["pre_limit_source"] = ctx.tomorrow_source
     axis = cfg.get("anchor_axis") or (AXIS_PULLING if heavy else None)
 
     if heavy:
@@ -516,6 +640,8 @@ def plan_block(
         else:
             mode = ROTATION_AB
             trace["spacing_downgrade"] = reason
+            if reason == "pre_limit_24h":
+                trace["pre_limit_source"] = ctx.tomorrow_source
 
     occ = ctx.occurrence_idx(session_id)
     if mode == ROTATION_AB:
@@ -535,12 +661,35 @@ def plan_block(
             "trace": trace,
         }
 
+    # Max-hang spacing (< 72 h after a finger_max exposure): a real STEP-DOWN,
+    # not another list of max hangs. The block switches to its declared
+    # sub-maximal hangs (other domain/pattern), every max-load finger exercise
+    # is a HARD exclusion (no candidate → the block is skipped, never a max
+    # hang), and the block's max-intensity prescription is dropped.
+    step = cfg.get("spacing_step_down")
+    if isinstance(step, Mapping) and max_hang_spacing_violated(ctx):
+        trace.update({"rotation": ROTATION_PHASE_ANCHOR, "anchor_list": "spacing",
+                      "anchor_axis": axis, "spacing_downgrade": "max_hang_72h"})
+        return {
+            "mode": ROTATION_PHASE_ANCHOR,
+            "order": list(step.get("priority") or []),
+            "exclude": [],
+            "hard_exclude_max_finger": True,
+            "domain_req": list(step.get("domain") or []) or None,
+            "pattern_req": list(step.get("pattern") or []) or None,
+            "drop_block_prescription": True,
+            "pool": [],
+            "unloaded_only": False,
+            "soft_exclude": soft_exclude,
+            "seed": ctx.phase_seed,
+            "choice": 0,
+            "prescription_overrides": dict(step.get("prescription_overrides") or {}),
+            "trace": trace,
+        }
+
     # phase_anchor
     tested = ctx.axis_tested(axis)
     list_name = "tested" if tested else "untested"
-    if axis == AXIS_FINGER and tested and max_hang_spacing_violated(ctx):
-        list_name = "untested"
-        trace["spacing_downgrade"] = "max_hang_72h"
     order = list(lists.get(list_name) or [])
     exclude = list(((lists.get("exclude") or {}).get(list_name)) or [])
     overrides = dict(lists.get(f"{list_name}_prescription_overrides") or {})
@@ -580,6 +729,10 @@ def select_from_pool(
         return kept if kept else cands
 
     cands = list(pool)
+    if plan.get("hard_exclude_max_finger"):
+        # HARD (not soft): a step-down that finds only max hangs skips the block.
+        cands = [e for e in cands if not is_max_finger_load(e)]
+        info["hard_excluded_max_finger"] = len(pool) - len(cands)
     if not cands:
         return None, info
     if plan.get("exclude"):

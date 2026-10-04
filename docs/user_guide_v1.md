@@ -173,10 +173,10 @@ Once you have a recent strength test (max hang or weighted pull-up, within the l
 
 - **Finger strength** — max hangs on the 20 mm edge (half crimp) if your tested level is high enough, otherwise a submaximal variant. In Power Endurance the finger session becomes a short maintenance dose (3 sets).
 - **Weighted pull-ups** — in the first **two** pulling-strength sessions of the week during Strength & Power (one in the other phases). The other sessions, and the pulling block after a limit or power day, use pull-up variations without added weight.
-- **Limit bouldering** on the wall and on the board, and the campus exercise, also stay the same for the phase.
-- **Core and shoulder accessories** alternate between two exercises (A one week, B the next), so they change but stay recognisable.
+- **Limit bouldering** on the wall and on the board also stays the same for the phase, and so does the campus exercise during Strength & Power. If your finger test is below the strength threshold (or you have not tested your fingers), you get the gentler campus drills and wall limit bouldering instead of the hardest board and campus variants.
+- **Core and shoulder accessories** alternate between two exercises (A one week, B the next), so they change but stay recognisable. If your tested level is high, the easiest core exercises (plank, dead bug, plank shoulder taps) are left out when there is an alternative.
 
-To protect you from stacking fatigue, the heavy version steps down for that day if you did weighted pull-ups in the last 48 hours, did max hangs (or a finger test) in the last 72 hours, or have a limit/strength day tomorrow. Without a recent test nothing changes: exercises keep rotating as before.
+To protect you from stacking fatigue, the heavy version steps down for that day if you did weighted pull-ups in the last 48 hours or have a limit/strength day tomorrow (a pulling session that steps down does not use up one of the two weekly heavy slots). If you did max hangs (or a finger test) in the last 72 hours, the finger block switches to sub-maximal hangs (long, light hangs with no max effort). It never gives you another max hang. Without a recent test nothing changes: exercises keep rotating as before.
 
 ---
 

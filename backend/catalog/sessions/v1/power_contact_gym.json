@@ -31,7 +31,8 @@
     {
       "block_id": "limit_bouldering",
       "rotation": "phase_anchor",
-      "anchor_priority": ["system_board_limit", "board_limit_boulders", "spray_wall_limit", "limit_bouldering"],
+      "anchor_axis": "finger",
+      "anchor_priority": {"tested": ["system_board_limit", "board_limit_boulders", "spray_wall_limit", "limit_bouldering"], "untested": ["spray_wall_limit", "limit_bouldering", "board_limit_boulders", "system_board_limit"]},
       "required": true,
       "priority": 90,
       "module_role": "primary",
@@ -49,7 +50,8 @@
     {
       "block_id": "campus_power",
       "rotation": "phase_anchor",
-      "anchor_priority": ["campus_max_ladders", "campus_laddering_feet_off", "campus_bumps", "campus_touches", "campus_laddering_feet_on"],
+      "anchor_axis": "finger",
+      "anchor_priority_by_phase": {"strength_power": {"tested": ["campus_max_ladders", "campus_laddering_feet_off", "campus_bumps", "campus_touches", "campus_laddering_feet_on"], "untested": ["campus_laddering_feet_on", "campus_touches", "campus_laddering_feet_off"], "anchor_exclude": {"untested": ["campus_max_ladders", "campus_double_dyno", "campus_bumps", "campus_switches", "campus_laddering_down"]}}},
       "required": false,
       "priority": 80,
       "module_role": "secondary",

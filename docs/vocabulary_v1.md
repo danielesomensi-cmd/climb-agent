@@ -1044,11 +1044,15 @@ Top-level keys of a template block or an inline session module — **never insid
 - `anchor_exclude`: `{tested?: [ids], untested?: [ids]}` (soft: ignored if it would empty the block).
 - `heavy_slot`: `true` on the weighted-pull blocks (weekly heavy-pull slot).
 - `ab_pool`: `[ids]` preferred A/B pool; `unloaded_only`: `true` → no `total_load` / `external_load` exercise.
-- `rotation_exclude`: `[ids]` soft exclusion for tested athletes (core floor: plank, dead_bug, plank_shoulder_tap).
+- `rotation_exclude`: `[ids]` soft exclusion for athletes above a tested threshold on either axis (core floor: plank, dead_bug, plank_shoulder_tap).
+- `spacing_step_down`: `{domain: [..], pattern: [..], priority: [ids], prescription_overrides?}` — the sub-maximal
+  selection used after a max-hang exposure < 72 h (finger_max_strength main). Max-load finger exercises are a hard
+  exclusion there; the block prescription is dropped.
 
 Trace `blocks[].p0_trace.rotation.spacing_downgrade` (closed set):
 `not_heavy_occurrence` | `heavy_pull_48h` | `heavy_pull_7d_cap` | `pre_limit_24h` | `max_hang_72h`.
-`anchor_list`: `tested` | `untested`. `ab_slot`: `A` | `B`.
+`anchor_list`: `tested` | `untested` | `spacing`. `ab_slot`: `A` | `B`.
+`pre_limit_source`: `plan` | `weekday_proxy` (no plan covers tomorrow: same weekday of the target's week).
 
 ---
 

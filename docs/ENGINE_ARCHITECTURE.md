@@ -454,14 +454,34 @@ template block or of an inline session module (never inside `selection`):
   `finger_strength_home.pulling_maintenance`,
   `pulling_strength_compound.weighted_pullup_main`): heavy (phase_anchor on
   the weighted list) only for the first 2 heavy-slot sessions of the ISO week
-  in strength_power, 1 elsewhere. A heavy occurrence is downgraded to `ab`
+  in strength_power, 1 elsewhere — counting only the earlier occurrences that
+  were really heavy (one a spacing guard turned light does not use a slot;
+  each is re-judged on the pull days strictly before its own day and on its
+  own tomorrow). A heavy occurrence is downgraded to `ab`
   without external load (`load_model` not total/external) when: a weighted
   pull was done < 48 h before (`heavy_pull_48h`), 2 heavy-pull days in the
   last 7 (`heavy_pull_7d_cap`), or a limit_boulder / power_contact /
   strength_long is planned tomorrow (`pre_limit_24h`; the core also drops
-  front levers that day).
+  front levers that day). When no plan covers tomorrow (Sunday, next week not
+  generated — and once it is, the Sunday session is past and immutable) the
+  same weekday of the target's own ISO week stands in (`pre_limit_source:
+  weekday_proxy` in the trace).
 - **Max-hang spacing:** a finger_max exposure (tests included) < 72 h before
-  drops the finger anchor to the `untested` list (`max_hang_72h`).
+  switches a block that declares `spacing_step_down` (the finger_max_strength
+  main) to a real step-down (`anchor_list: spacing`, `max_hang_72h`): its own
+  domain/pattern (sub-maximal hangs: lopez_subhangs, long_duration_hang,
+  sub_max_capacity_hang), a HARD exclusion of every max-load finger exercise
+  (`phase_anchor.FINGER_MAX_LOAD_IDS` = the finger_max family + the
+  finger-fatigue hangs, plus `intensity_level: max` / fingers stress `high`;
+  nothing left → block skipped, never a max hang) and the block's
+  max-intensity prescription dropped.
+- **Finger level on finger-loaded anchors:** the limit and campus blocks
+  declare `anchor_axis: finger` with a tested/untested split (untested: wall
+  limit first, gentlest campus drills, campus_max_ladders excluded). Campus is
+  anchored in strength_power only: a block with only
+  `anchor_priority_by_phase` is free in the phases it does not list.
+- **Core floor** (`rotation_exclude`): only for an athlete above a tested
+  threshold on either axis (`RotationContext.advanced`).
   Fatigue = done sessions only (F0 `stimulus.exposure_dates`, custom sessions
   with logged sets included); a skipped session never counts.
 - **P0 fixes for tested athletes:** Stage 0 drops `active: false`; Stage 2e
@@ -475,7 +495,8 @@ template block or of an inline session module (never inside `selection`):
   `anchored_load` gives the 85-90 % load).
 - Trace: `blocks[].p0_trace.rotation` `{rotation, anchor_list, anchor_axis,
   anchor_rank, phase_seed, week_idx, ab_slot, occurrence_idx, ab_pair,
-  heavy_slot, heavy_rank, spacing_downgrade, selected}` (additive).
+  heavy_slot, heavy_rank, spacing_downgrade, pre_limit_source,
+  hard_excluded_max_finger, selected}` (additive).
 - `resolve_session(..., week_plan=...)`: the plan being resolved (week and
   replanner `_auto_resolve` pass it) is the structural truth for occurrences;
   without it the state's hot week plans are read.

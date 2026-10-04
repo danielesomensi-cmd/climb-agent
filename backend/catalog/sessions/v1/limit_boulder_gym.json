@@ -31,7 +31,8 @@
     {
       "block_id": "limit_projecting",
       "rotation": "phase_anchor",
-      "anchor_priority": ["limit_bouldering", "spray_wall_limit", "board_limit_boulders"],
+      "anchor_axis": "finger",
+      "anchor_priority": {"tested": ["limit_bouldering", "spray_wall_limit", "board_limit_boulders"], "untested": ["limit_bouldering", "spray_wall_limit", "board_limit_boulders"]},
       "required": true,
       "priority": 90,
       "module_role": "primary",
