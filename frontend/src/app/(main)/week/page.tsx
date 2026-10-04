@@ -12,6 +12,10 @@ import { WeekSkeleton } from "@/components/training/week-skeleton";
 import { DayCard } from "@/components/training/day-card";
 import { SkippedTestsCard } from "@/components/training/skipped-tests-card";
 import { RetestStatusCard } from "@/components/training/retest-status-card";
+import { KeySessionsCard } from "@/components/training/key-sessions-card";
+import { KeyConflictDialog } from "@/components/training/key-conflict-dialog";
+import { useKeyConflictGate } from "@/lib/hooks/use-key-conflict-gate";
+import { keyDays } from "@/lib/key-sessions";
 import { UnmetStimulusCard } from "@/components/training/unmet-stimulus-card";
 const QuickAddDialog = dynamic(() => import("@/components/training/quick-add-dialog").then((m) => m.QuickAddDialog), { ssr: false });
 const ReplanDialog = dynamic(() => import("@/components/training/replan-dialog").then((m) => m.ReplanDialog), { ssr: false });
@@ -24,7 +28,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, BarChart3, Check } from "lucide
 const FeedbackDialog = dynamic(() => import("@/components/training/feedback-dialog").then((m) => m.FeedbackDialog), { ssr: false });
 import { useRouter } from "next/navigation";
 import { applyOverride, quickAddSession, describeQuickAddAdjustments, describeOverrideAdjustments, quickAddHasFingerRisk,
-  quickAddCanForce, applyEvents, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
+  quickAddCanForce, applyEvents, checkKeyConflicts, postFeedback, getOutdoorSpots, getOutdoorLogByDate, deleteFreeSession, getPitchLadder, setOutdoorPlan } from "@/lib/api";
 import { ForceHardDialog } from "@/components/training/force-hard-dialog";
 import { useUserState } from "@/lib/hooks/queries/use-user-state";
 import { useWeekPlan } from "@/lib/hooks/queries/use-week-plan";
@@ -33,7 +37,7 @@ import { useOutdoorDoneDays } from "@/lib/hooks/queries/use-outdoor-sessions";
 import { useWeekEvents } from "@/lib/hooks/use-week-events";
 import { queueOrWarn } from "@/lib/outbox-feedback";
 import { queryKeys } from "@/lib/query-keys";
-import { writeWeekCache } from "@/lib/week-cache";
+import { keyStatusOf, writeWeekCache } from "@/lib/week-cache";
 import { buildDialogFeedbackItems, extractFeedbackExercises } from "@/lib/feedback-items";
 import { resolveOutdoorLogTarget } from "@/lib/outdoor-log-target";
 import { toast } from "sonner";
@@ -44,7 +48,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder } from "@/lib/types";
+import type { WeekPlan, DayPlan, Macrocycle, OutdoorSpot, OutdoorSession, Phase, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal } from "@/lib/types";
 import { normalizeOtherActivities } from "@/lib/other-activity";
 import {
   Drawer,
@@ -106,15 +110,19 @@ export default function WeekPage() {
 
   /** Update the cached week plan after a mutation. */
   const updateWeekCache = useCallback(
-    (newWeekPlan: WeekPlan) => {
+    (newWeekPlan: WeekPlan, keyStatus?: KeyStatus | null) => {
       // A245 G-2 (F34): keeps week(0) and week(<server num>) in step.
-      writeWeekCache(qc, weekNum, newWeekPlan);
+      // A294: and the key status the response carried (undefined = keep).
+      writeWeekCache(qc, weekNum, newWeekPlan, keyStatus);
     },
     [qc, weekNum],
   );
 
   /** F6 — done/skip/undo passano da qui: coda FIFO + snapshot fresco. */
   const runWeekEvents = useWeekEvents(weekNum);
+  /** A294 — confirm before a custom session takes a key session's place. */
+  const keyGate = useKeyConflictGate();
+  const keyStatus: KeyStatus | null = weekQuery.data?.key_status ?? null;
 
   /** Force refetch of state + current week. */
   const refetchAll = useCallback(() => {
@@ -251,7 +259,7 @@ export default function WeekPage() {
         spot_id: rdata.spot_id,
         spot_name: rdata.spot_name,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
       // B366: an override's rewrites (ripple, downshift) are never silent.
       if (result.warnings && result.warnings.length > 0) {
         setError(result.warnings.join("; "));
@@ -290,7 +298,7 @@ export default function WeekPage() {
     };
     try {
       const result = await quickAddSession({ ...baseArgs, week_plan: preAddPlan });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
       if (result.warnings?.length > 0) {
         setError(result.warnings.join("; "));
       }
@@ -299,7 +307,7 @@ export default function WeekPage() {
         const doForce = async () => {
           try {
             const forced = await quickAddSession({ ...baseArgs, week_plan: preAddPlan, force: true });
-            updateWeekCache(forced.week_plan);
+            updateWeekCache(forced.week_plan, keyStatusOf(forced));
             toast("Hard session added", { description: "Train smart — listen to your body.", duration: 6000 });
           } catch (err) {
             setError(err instanceof Error ? err.message : "Couldn't add the hard session.");
@@ -339,30 +347,47 @@ export default function WeekPage() {
   }) {
     if (!weekPlan || !quickAddDate) return;
     setError(null);
+    const plan = weekPlan;
+    const event = {
+      event_type: "add_custom_session",
+      custom_session_id: rdata.custom_session_id,
+      target_date: quickAddDate,
+      slot: rdata.slot,
+      location: rdata.location,
+      gym_id: rdata.gym_id,
+    };
+    setQuickAddDate(null);
+    // A294: dry run first — a custom that takes a key session's place asks
+    // for a confirm (never a block).
+    await keyGate.gate(
+      () => checkKeyConflicts({ events: [event], week_plan: plan }),
+      async () => {
+        try {
+          const result = await applyEvents({ events: [event], week_plan: plan });
+          updateWeekCache(result.week_plan, keyStatusOf(result));
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : "Failed to add custom session";
+          if (msg.includes("already occupied")) {
+            setError("That time slot is already taken. Try a different slot or day.");
+          } else {
+            setError(msg);
+          }
+        }
+      },
+    );
+  }
+
+  /** A294: one-tap re-schedule of a missed key session (validated server-side). */
+  async function handleApplyKeyProposal(p: KeyProposal) {
+    setError(null);
     try {
-      const result = await applyEvents({
-        events: [
-          {
-            event_type: "add_custom_session",
-            custom_session_id: rdata.custom_session_id,
-            target_date: quickAddDate,
-            slot: rdata.slot,
-            location: rdata.location,
-            gym_id: rdata.gym_id,
-          },
-        ],
-        week_plan: weekPlan,
+      await runWeekEvents([p.apply.event]);
+      toast("Key session re-scheduled", {
+        description: `${p.session_name} on ${p.date}`,
+        duration: 6000,
       });
-      updateWeekCache(result.week_plan);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to add custom session";
-      if (msg.includes("already occupied")) {
-        setError("That time slot is already taken. Try a different slot or day.");
-      } else {
-        setError(msg);
-      }
-    } finally {
-      setQuickAddDate(null);
+      setError(e instanceof Error ? e.message : "Failed to re-schedule the key session");
     }
   }
 
@@ -383,7 +408,7 @@ export default function WeekPage() {
         ],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to move session");
     } finally {
@@ -401,7 +426,7 @@ export default function WeekPage() {
         events: [ev],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to complete activity");
     }
@@ -416,7 +441,7 @@ export default function WeekPage() {
         events: [{ event_type: "edit_other_activity", date, ...(slot ? { slot } : {}), ...fields }],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to edit activity");
     }
@@ -431,7 +456,7 @@ export default function WeekPage() {
         events: [undoOtherActivityEvent(date, slot)],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo");
     }
@@ -446,7 +471,7 @@ export default function WeekPage() {
         events: [removeOtherActivityEvent(date, slot)],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove activity");
     }
@@ -504,7 +529,7 @@ export default function WeekPage() {
         events: [{ event_type: "remove_session", date, session_ref: sessionId }],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove session");
     }
@@ -570,7 +595,7 @@ export default function WeekPage() {
         ],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to change location");
     } finally {
@@ -599,7 +624,7 @@ export default function WeekPage() {
         ],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add outdoor session");
     } finally {
@@ -622,7 +647,7 @@ export default function WeekPage() {
         ],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to add activity");
     } finally {
@@ -666,7 +691,7 @@ export default function WeekPage() {
         events: [{ event_type: "complete_outdoor", date: outdoorLogDate }],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to mark outdoor as done");
     } finally {
@@ -682,7 +707,7 @@ export default function WeekPage() {
         events: [undoOutdoorEvent(date)],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to undo outdoor");
     }
@@ -696,7 +721,7 @@ export default function WeekPage() {
         events: [removeOutdoorEvent(date)],
         week_plan: weekPlan,
       });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove outdoor session");
     }
@@ -712,7 +737,7 @@ export default function WeekPage() {
     try {
       const ladder = await getPitchLadder({ day_type: dayType });
       const result = await setOutdoorPlan({ date, plan: ladder, week_plan: weekPlan });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate the plan");
     } finally {
@@ -726,7 +751,7 @@ export default function WeekPage() {
     setOutdoorPlanBusy(date);
     try {
       const result = await setOutdoorPlan({ date, plan, week_plan: weekPlan });
-      updateWeekCache(result.week_plan);
+      updateWeekCache(result.week_plan, keyStatusOf(result));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to save the plan");
     } finally {
@@ -855,7 +880,13 @@ export default function WeekPage() {
             weekPlan={weekPlan}
             currentDate={today}
             onDayClick={handleDayClick}
+            keyDays={keyDays(keyStatus)}
           />
+        )}
+
+        {/* A294 — key sessions of the week: what is covered, what is owed. */}
+        {!loading && !error && (
+          <KeySessionsCard status={keyStatus} onApplyProposal={handleApplyKeyProposal} />
         )}
 
         {/* B297 (D211-F9): tests the planner couldn't fit this week */}
@@ -907,6 +938,7 @@ export default function WeekPage() {
               >
                 <DayCard
                   day={day}
+                  keyStatus={keyStatus}
                   gyms={gyms}
                   homeEquipment={homeEquipment}
                   outdoorRoutes={outdoorRoutesMap[day.date]}
@@ -1007,6 +1039,9 @@ export default function WeekPage() {
         onOpenChange={(v) => { if (!v) setForceRetry(null); }}
         onConfirm={() => { forceRetry?.(); setForceRetry(null); }}
       />
+
+      {/* A294 — a custom session that takes a key session's place */}
+      <KeyConflictDialog {...keyGate.dialogProps} />
 
       {/* Move session dialog */}
       {weekPlan && (

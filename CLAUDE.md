@@ -70,7 +70,8 @@ Whenever Daniele asks for a session ("fammi un allenamento", "sessione custom / 
 - **Loads come only from `anchored_load`.** Every custom session that is not pure recovery carries a technique or try-hard block with one measurable target.
 - **Before any write, simulate it** (`--simulate`). If a key session would be downgraded, change the day or the content.
 - **Show the preview and wait for Daniele's explicit OK, then write.**
-- The key-session section is an A293 fallback until A294 lands. `key_sessions_v1.compute_key_status` is used only if it returns a `requirements` list; any other signature or shape keeps the fallback and prints `KEY_SESSIONS_A294_MISMATCH`, so A294 must wire itself into `athlete_context._key_sessions`.
+- The key-session section comes from A294's `key_sessions_v1.compute_key_status` (the A293 fallback is gone): debt, resolution (proposal / deferred_next / deferred_fatigue / let_go), roles, conflicts. The `--simulate` output also prints the A294 insertion check (`key_removed` / `key_replaced` / `test_downgraded` / pre-test / finger-gap) — the same check the app runs as a `/events` dry run before adding a custom session.
+- **Any prod write through `/api/replanner/events` uses `session_ref` and is preceded by a `dry_run: true` call** (A294): the dry run returns `key_conflicts` and the reconcile `adjustments` without writing anything.
 
 ## Execution model
 
@@ -202,14 +203,14 @@ user_state.assessment + user_state.goal
 | POST | `/api/macrocycle/start-new-cycle` | Start fresh macrocycle (atomic: archive → goal review → generate → flag tests). Subscription-gated. |
 | POST | `/api/plan/pause` | Pause active plan (A223 — records pause start; idempotent) |
 | POST | `/api/plan/resume` | Resume paused plan (A223 — shift future weeks by whole-week offset, extend end_date; idempotent) |
-| GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions) |
+| GET | `/api/week/{week_num}` | Generate week plan (auto-resolves sessions). **A294**: `key_status` sibling of `week_plan` (key sessions of the phase, debt, validated re-schedule proposal, conflicts — derived at read, never persisted); optional client-local `?today=` |
 | POST | `/api/week/test-reminder-response` | Handle periodic test reminder |
 | POST | `/api/session/resolve` | Resolve a single session to exercises |
 | POST | `/api/session/add-exercise` | Add exercise to resolved session |
 | POST | `/api/session/remove-exercise` | Remove exercise from resolved session |
 | POST | `/api/session/surface-override` | B313: adapt a rope session to the boulder wall for the day (`surface: "boulder"`), or revert (`surface: null`). Writes the adapted session onto the slot (`surface_override` + `_user_edited`) so card, guided player and feedback read one source. Server picks the mechanism: catalog `boulder_fallback` swap, else same session re-resolved without `gym_routes` — the rope is stripped from the equipment in **both** cases. 422 if the location has no boulder wall or the primary block does not survive. |
 | POST | `/api/replanner/override` | Apply day override (intent-based, equipment-aware) |
-| POST | `/api/replanner/events` | Apply events (done/skipped) to week plan |
+| POST | `/api/replanner/events` | Apply events (done/skipped) to week plan. **A294**: `prev_days` seeded (Sunday→Monday finger gap), returns `adjustments` (final reconcile) + `key_status` sibling; `dry_run: true` applies on a copy and returns `{week_plan, adjustments, key_status, key_conflicts}` with zero writes (`custom_session_payload` checks a custom that does not exist yet); new event `add_planned_session` (catalog session, no ripple — the key-session re-schedule); optional client-local `today` |
 | GET | `/api/replanner/suggest-sessions` | Suggest sessions for quick-add |
 | POST | `/api/replanner/quick-add` | Add extra session to a day (B287: runs `_reconcile` — 48h finger gap + hard cap enforced, seeded with the previous week's trailing days; returns `adjustments[]` describing any downshift) |
 | POST | `/api/feedback` | Submit session feedback |

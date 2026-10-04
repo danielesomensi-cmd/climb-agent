@@ -9,7 +9,7 @@ Supabase REST API, every run (decision 2026-10-04: no mirror, read live).
 What it prints (Italian, for Claude Code): position in the macrocycle,
 official maxima with computed confidence, the anchored loads of the day
 (B364 ``anchored_load`` — the only load numbers to use), key-session status
-of the week (A293 fallback until A294), retest status (A289), per-day guards
+of the week (A294 key_sessions_v1), retest status (A289), per-day guards
 (48 h finger gap, heavy pulling, HIIT), upcoming sessions, variety, try-hard
 outcomes, limits, and the athlete notes block of docs/training/athlete_plan.md.
 
@@ -237,7 +237,8 @@ SIM_SESSION_ID = "cs_simulated_a293"
 
 def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slot: str,
              *, replace: bool = False, location: Optional[str] = None,
-             gym_id: Optional[str] = None) -> Dict[str, Any]:
+             gym_id: Optional[str] = None, archived_weeks: Any = None,
+             outdoor_rows: Any = None, today: Optional[str] = None) -> Dict[str, Any]:
     """What POST /api/replanner/events would do with this draft. Read-only."""
     from backend.engine.anchored_load import resolve_custom_exercises
     from backend.engine.macro_position import position_on
@@ -278,6 +279,9 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
     if gym_id:
         add["gym_id"] = gym_id
     events.append(add)
+    prev_plan = (state.get("week_plans") or {}).get(
+        (datetime.strptime(str(plan.get("start_date"))[:10], "%Y-%m-%d").date() - timedelta(days=7)).isoformat())
+    prev_days = ((prev_plan or {}).get("weeks") or [{}])[0].get("days") if prev_plan else None
     try:
         updated = apply_events(
             deepcopy(plan), events,
@@ -285,6 +289,7 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
             planning_prefs=deepcopy(state.get("planning_prefs")),
             gyms=deepcopy((state.get("equipment") or {}).get("gyms")),
             custom_sessions=pool,
+            prev_days=deepcopy(prev_days),  # A294: same seed as /events
         )
     except ValueError as exc:
         result["error"] = f"il replanner rifiuterebbe gli eventi: {exc}"
@@ -311,13 +316,25 @@ def simulate(state: Dict[str, Any], draft: Dict[str, Any], target_date: str, slo
                                "anchored")}
         for e in resolve_custom_exercises(state, cs["exercises"], target_date)
     ]
+    # A294: the key-session view of the same insertion (what the app's dry run
+    # shows before adding a custom): key_removed / key_replaced / pre-test /
+    # finger-gap conflicts.
+    try:
+        from backend.engine.key_sessions_v1 import check_insertion
+
+        chk = check_insertion(state, today or target_date, plan=plan, events=events, custom_sessions=pool,
+                              archived_weeks=archived_weeks, outdoor_rows=outdoor_rows)
+        result["key_conflicts"] = chk["key_conflicts"]
+    except Exception as exc:  # pragma: no cover - the simulation must still print
+        result["key_conflicts"] = []
+        result["warnings"].append(f"controllo sessioni chiave non riuscito: {exc}")
     if any(dg["key"] for dg in result["downgrades"]):
         result["warnings"].append("una sessione CHIAVE verrebbe declassata: cambia giorno o contenuto")
     if any(r["key"] for r in result["removed"]):
         result["warnings"].append("--replace toglierebbe una sessione CHIAVE")
     result["warnings"].append(
-        "la simulazione riproduce /api/replanner/events; quick-add e override seguono percorsi diversi "
-        "(prev_days della settimana precedente) e il lunedì dopo una domenica dita non è visto da /events"
+        "la simulazione riproduce /api/replanner/events (con prev_days dal 2026-10, A294); "
+        "quick-add e override seguono percorsi diversi"
     )
     return result
 
@@ -356,6 +373,8 @@ def render_simulation(sim: Dict[str, Any]) -> str:
         for dg in sim.get("downgrades") or []:
             L.append(f"  {dg['date']} {dg['slot']}: {dg['from']} → {dg['to'] or 'rimossa'}"
                      + (f" — CHIAVE {','.join(dg['key'])}" if dg["key"] else ""))
+        for c in sim.get("key_conflicts") or []:
+            L.append(f"  CHIAVE [{c.get('code')}] {c.get('message')}")
         for e in sim.get("resolved_exercises") or []:
             if e.get("load_source"):
                 L.append(_play_line(e))
@@ -412,7 +431,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     sim = None
     if args.simulate:
         sim = simulate(state, _read_json(args.simulate) or {}, args.target_date, args.slot,
-                       replace=args.replace, location=args.location, gym_id=args.gym_id)
+                       replace=args.replace, location=args.location, gym_id=args.gym_id,
+                       archived_weeks=data.get("archived_weeks"), outdoor_rows=data.get("outdoor_rows"),
+                       today=str(today))
     if args.json:
         payload: Dict[str, Any] = {"context": ctx, "source": {"updated_at": data.get("updated_at"),
                                                                "file": args.state_file}}

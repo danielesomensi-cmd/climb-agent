@@ -5,9 +5,9 @@ Covers ``backend/engine/athlete_context.py``:
 - position (pause-aware, via macro_position), maxima per PROTOCOL with the
   COMPUTED confidence (stored "high" ignored), anchored loads taken verbatim
   from ``anchored_load`` (no local formula);
-- key-session fallback (until A294): current week only, no carried debt,
+- key sessions (A294 ``key_sessions_v1``, switched from the A293 fallback): current week only, no carried debt,
   skipped ids recovered from ``session_completion_log`` by date, unknown ids,
-  technique + try-hard in every phase (try-hard not in deload), A294 hook;
+  technique + try-hard in every phase (try-hard not in deload);
 - guards from session PROPERTIES (finger gap, hang-test block, pre-limit pull
   / front lever, heavy pulls per 7 days, HIIT, hard cap), never a load score;
 - variety (actual_exercises not the union, tests excluded, 3 Monday weeks),
@@ -256,13 +256,13 @@ class TestPositionMaximaAnchors:
 
 
 # ---------------------------------------------------------------------------
-# Key sessions (fallback until A294)
+# Key sessions (A294 key_sessions_v1)
 # ---------------------------------------------------------------------------
 
 class TestKeySessions:
-    def test_fallback_labelled_and_current_week_only(self):
+    def test_a294_source_and_current_week_only(self):
         ks = _ctx()["key_sessions"]
-        assert ks["source"] == "fallback"
+        assert ks["source"] == "a294"
         assert ks["week_start"] == "2026-09-28" and ks["week_end"] == "2026-10-04"
         # The limit skipped on 23/09 (previous week) is NOT carried as debt.
         assert all(s["date"] >= "2026-09-28" for r in ks["requirements"] for s in r["skipped"])
@@ -272,7 +272,7 @@ class TestKeySessions:
         fm, lp, pm = _req(ctx, "finger_max"), _req(ctx, "limit_power"), _req(ctx, "pulling_max")
         assert fm["status"] == "missing"
         # mark_skipped replaced it with regeneration_easy: recovered from the log by date.
-        assert fm["skipped"] == [{"date": "2026-09-30", "session_id": "finger_strength_home"}]
+        assert fm["skipped"] == [{"date": "2026-09-30", "slot": None, "session_id": "finger_strength_home"}]
         assert lp["status"] == "missing"
         assert pm["status"] == "done" and pm["done"][0]["session_id"] == "custom_cs_pull"
 
@@ -284,7 +284,7 @@ class TestKeySessions:
 
     def test_unknown_skip_id_reported(self):
         ctx = _ctx()
-        assert ctx["key_sessions"]["unknown_skips"] == [{"date": "2026-09-29", "session_id": None}]
+        assert ctx["key_sessions"]["unknown_skips"] == [{"date": "2026-09-29", "slot": None, "session_id": None}]
         assert any(w["code"] == "SKIP_WITHOUT_ID" for w in ctx["warnings"])
 
     def test_next_week_counts_planned(self):
@@ -309,12 +309,6 @@ class TestKeySessions:
         assert not any(w.get("key") == "technique" for w in ctx["warnings"])
         assert "## Sessioni chiave, settimana prossima" in ac.render_text(ctx)
 
-    def test_no_next_week_view_when_a294_present(self, monkeypatch):
-        mod = types.ModuleType("backend.engine.key_sessions_v1")
-        mod.compute_key_status = lambda state, today, **kw: {"requirements": []}
-        monkeypatch.setitem(sys.modules, "backend.engine.key_sessions_v1", mod)
-        assert _ctx()["key_sessions_next_week"] is None
-
     def test_base_has_only_technique_and_try_hard(self):
         ctx = ac.build_athlete_context(_state(), "2026-09-10")
         assert [r["key"] for r in ctx["key_sessions"]["requirements"]] == ["technique", "try_hard"]
@@ -326,7 +320,7 @@ class TestKeySessions:
         st = _state()
         ctx = ac.build_athlete_context(st, "2026-10-21")  # PE week 1
         lp = _req(ctx, "limit_power")
-        assert lp["label"].startswith("limit") and "due_by" in lp
+        assert lp["label"].lower().startswith("limit") and "due_by" in lp
 
     def test_free_boulder_at_limit_counts_as_limit(self):
         st = _state(free_sessions=[{"id": "free_1", "date": "2026-10-01", "surface": "gym_boulder",
@@ -342,14 +336,6 @@ class TestKeySessions:
                                     "climbs": [{"grade": "6C"}, {"grade": "7A"}]}],
                     performance={"current_level": {"boulder": {"worked": {"grade": "7C"}}}})
         assert _req(ac.build_athlete_context(st, TODAY), "limit_power")["status"] == "missing"
-
-    def test_a294_hook_wins(self, monkeypatch):
-        mod = types.ModuleType("backend.engine.key_sessions_v1")
-        mod.compute_key_status = lambda state, today, **kw: {"requirements": [], "week_start": "x"}
-        monkeypatch.setitem(sys.modules, "backend.engine.key_sessions_v1", mod)
-        ctx = _ctx()
-        assert ctx["key_sessions"]["source"] == "a294"
-        assert not any(w["code"] == "KEY_SESSIONS_FALLBACK" for w in ctx["warnings"])
 
     def test_key_matches(self):
         assert ac.key_matches({"session_id": "power_contact_gym"}, "strength_power") == ["limit_power"]
@@ -481,7 +467,7 @@ class TestRender:
         txt = ac.render_text(_ctx(), plan_notes="PIEDI: P2", source_line="Fonte: test")
         for needle in ("## Posizione", "## Massimali ufficiali", "## Carichi ancorati oggi",
                        "## Sessioni chiave, questa settimana",
-                       "FALLBACK A293", "## Retest", "## Guardie", "## Prossimi 14 giorni",
+                       "[A294", "## Retest", "## Guardie", "## Prossimi 14 giorni",
                        "## Varietà", "## Note atleta", "PIEDI: P2", "Fonte: test",
                        "mai working_loads grezzi"):
             assert needle in txt, needle
@@ -639,29 +625,6 @@ class TestReviewFixes:
         st["week_plans"]["2026-10-05"]["weeks"][0]["days"][2]["sessions"][1]["status"] = "skipped"
         ctx = ac.build_athlete_context(st, "2026-10-20")  # last limit 05/10 → due 17/10
         assert _req(ctx, "limit_power")["status"] == "missing"
-
-    def test_a294_incompatible_signature_is_reported(self, monkeypatch):
-        mod = types.ModuleType("backend.engine.key_sessions_v1")
-
-        def compute_key_status(state, *, plans, outdoor_logs):  # the R5 shape
-            return {"stimuli": []}
-
-        mod.compute_key_status = compute_key_status
-        monkeypatch.setitem(sys.modules, "backend.engine.key_sessions_v1", mod)
-        ctx = _ctx()
-        assert ctx["key_sessions"]["source"] == "fallback"
-        assert "TypeError" in ctx["key_sessions"]["a294_error"]
-        assert any(w["code"] == "KEY_SESSIONS_A294_MISMATCH" for w in ctx["warnings"])
-        assert not any(w["code"] == "KEY_SESSIONS_FALLBACK" for w in ctx["warnings"])
-        assert "A294 presente ma NON integrato" in ac.render_text(ctx)
-
-    def test_a294_unknown_shape_is_reported(self, monkeypatch):
-        mod = types.ModuleType("backend.engine.key_sessions_v1")
-        mod.compute_key_status = lambda state, today, **kw: {"stimuli": []}
-        monkeypatch.setitem(sys.modules, "backend.engine.key_sessions_v1", mod)
-        ks = _ctx()["key_sessions"]
-        assert ks["source"] == "fallback" and "requirements" in ks["a294_error"]
-        assert ks["requirements"]  # the fallback rows, not an empty section
 
     def test_hiit_work_on_guard_day_warned(self):
         ctx = _ctx()

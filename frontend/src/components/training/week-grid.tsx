@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import type { WeekPlan, DayPlan } from "@/lib/types";
@@ -9,6 +10,8 @@ interface WeekGridProps {
   weekPlan: WeekPlan;
   currentDate?: string;
   onDayClick?: (date: string) => void;
+  /** A294 — days carrying a key session ("lost" = skipped / downgraded). */
+  keyDays?: Record<string, "key" | "lost">;
 }
 
 /** Map English weekday name to abbreviated label */
@@ -41,7 +44,7 @@ function getStatusColor(status: DayPlan["status"]): string {
   }
 }
 
-export function WeekGrid({ weekPlan, currentDate, onDayClick }: WeekGridProps) {
+export function WeekGrid({ weekPlan, currentDate, onDayClick, keyDays }: WeekGridProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Flatten: take the first week (or all if needed)
@@ -110,6 +113,18 @@ export function WeekGrid({ weekPlan, currentDate, onDayClick }: WeekGridProps) {
                 </span>
               )}
             </div>
+            {/* A294 — key session marker (red when the key was lost) */}
+            {keyDays?.[day.date] && (
+              <div className="flex justify-center" title={keyDays[day.date] === "lost" ? "Key session lost" : "Key session"}>
+                <Star
+                  className={cn(
+                    "size-3",
+                    keyDays[day.date] === "lost" ? "text-danger" : "text-primary fill-primary/40",
+                  )}
+                  aria-label={keyDays[day.date] === "lost" ? "Key session lost" : "Key session"}
+                />
+              </div>
+            )}
           </Card>
         );
       })}

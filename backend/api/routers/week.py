@@ -441,6 +441,7 @@ def get_week(
     week_num: int,
     force: bool = False,
     preserve_before: Optional[str] = None,
+    today: Optional[str] = None,
     user_id: Optional[str] = Depends(get_user_id),
 ):
     """Generate the plan for a given week (1-based). week_num=0 → current week.
@@ -761,6 +762,17 @@ def get_week(
         result["test_reminder"] = test_reminder
     if retest_status:
         result["retest_status"] = retest_status
+
+    # A294: key-session status of this week — a sibling of week_plan, never
+    # inside it (nothing can persist it). Client-local ``?today=``.
+    from backend.api.key_status import build_key_status
+
+    key_status = build_key_status(
+        state, user_id, week_start=week_start_key, today=today,
+        extra_archived={week_start_key: week_plan} if served_from_archive else None,
+    )
+    if key_status:
+        result["key_status"] = key_status
 
     return result
 

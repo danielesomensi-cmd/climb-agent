@@ -12,6 +12,7 @@ import { TopBar } from "@/components/layout/top-bar";
 import {
   ApiError,
   applyEvents,
+  checkKeyConflicts,
   coachAdhocSession,
   coachChat,
   createCustomSession,
@@ -26,6 +27,7 @@ import { MarkdownLite } from "@/components/shared/markdown-lite";
 import { buildGuidedStateFromExercises, saveGuidedState } from "@/lib/guided-session-utils";
 import { shouldRouteToAdhoc } from "@/lib/adhoc-gate";
 import { findDay, firstFreeSlot } from "@/lib/day-slots";
+import { blockingConflicts } from "@/lib/key-sessions";
 
 const PAGE_SIZE = 50;
 
@@ -76,6 +78,13 @@ function AdhocSessionCard({
         <p className="text-[11px] text-muted-foreground">
           <span className="font-medium text-foreground/80">This phase:</span> {session.effort_band}
         </p>
+      )}
+      {session.key_warnings && session.key_warnings.length > 0 && (
+        <ul className="space-y-1 rounded-md border border-warning/30 bg-warning/10 px-2 py-1.5">
+          {session.key_warnings.map((w, i) => (
+            <li key={`${w.code}-${i}`} className="text-[11px] text-warning">{w.message}</li>
+          ))}
+        </ul>
       )}
       <ul className="space-y-1.5">
         {session.exercises.map((ex, i) => (
@@ -304,6 +313,21 @@ export default function CoachPage() {
           throw new Error(
             "Today is fully booked (morning, lunch and evening). Free a slot from This Week, then retry."
           );
+        }
+        // A294: dry run BEFORE creating anything (no orphan customs) — a
+        // session that would take a key session's place asks for a confirm.
+        const conflicts = blockingConflicts(
+          await checkKeyConflicts({
+            events: [{ event_type: "add_custom_session", custom_session_id: "preview", target_date: today, slot }],
+            week_plan: week.week_plan,
+            custom_session_payload: { id: "preview", name: session.name, exercises: session.exercises },
+          }),
+        );
+        if (conflicts.length > 0 && !window.confirm(
+          `${conflicts.map((c) => c.message).join("\n\n")}\n\nAdd it anyway?`,
+        )) {
+          setAddingAdhoc(false);
+          return;
         }
         const created = await createCustomSession({
           name: session.name,

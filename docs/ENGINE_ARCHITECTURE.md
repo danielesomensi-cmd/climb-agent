@@ -629,6 +629,18 @@ instead of moving it.
 
 ---
 
+### 8.3 Key sessions — `key_sessions_v1.py` (A294)
+
+The single owner of "which sessions of the week carry the phase's key stimuli". **Derived at read, never persisted**: `compute_key_status(state, today, ...)` reads the week plan (hot + archived), the outdoor logs, the free sessions and the completion log, and returns a status that the API attaches as `key_status` **beside** `week_plan` (so nothing can write it back). Data: `backend/catalog/key_stimuli/v1/key_stimuli.json`.
+
+- **Satisfied by dose, not presence.** For `finger_max` / `pulling_max` a session counts as full only when the main exercise reaches the anchored floor of the phase on that day (`anchored_load(...).floor`) with ≥ 4 sets; otherwise it is `partial` (no ✓, debt stays). Everything else counts on presence.
+- **Debt** = target − full-dose days − valid future planned days, current week only (a past week's miss is lost, not carried).
+- **Proposals** are validated, not guessed: the candidate goes through the replanner's own `apply_events` on a deep copy (new event `add_planned_session`, catalog session, no day+1 ripple), then the 7 days are diffed. A proposal that downshifts itself or touches a key / custom / forced / done / skipped session is dropped; any other change is shown as a side effect. The finger gap is checked on a unified timeline (plan + outdoor-hard days + free limit sessions, previous and next week), 72 h before a pending max test is off-limits, and a catch-up that would sit next to next week's key becomes `deferred_next`. Very hard feedback or an adaptive replan in the last 72 h → `deferred_fatigue`, no proposal.
+- **Insertion check** (`check_insertion`): what a custom / generated session would do to the keys, behind `POST /api/replanner/events` `dry_run: true` — used by the app before adding a custom (confirm, never block) and by `scripts/athlete_context.py --simulate`.
+- **Coach**: a compact `## Key sessions this week` block in the dynamic prompt (never the cached static block), and `composer_guard` drops finger-hard lines near a finger key / heavy pulls before a pull-up test from the composer pool (A259 extension).
+- **Replanner additions** (additive): `apply_events(prev_days=)` + a `reconcile` adaptation with the downshifts it used to discard; `downshifted_from` stamped by every downshift; `mark_skipped` stubs keep `skipped_session_id` / `skipped_tags`.
+- Known divergence: `closed_loop_v1.stimulus_recency` still classifies by session id/tags; the key status reads the A288 exposure view. Not unified in A294.
+
 ## 9. Replanner (`replanner_v1.py`)
 
 Handles runtime modifications to the week plan after initial generation.

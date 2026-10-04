@@ -2,14 +2,22 @@
 
 import type { QueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import type { WeekPlan } from "@/lib/types";
+import type { KeyStatus, WeekPlan } from "@/lib/types";
 
 export type WeekCacheEntry = {
   week_num?: number;
   phase_id?: string | null;
   week_plan: WeekPlan;
   past_week_unavailable?: boolean;
+  /** A294 — sibling of week_plan; refreshed by every replanner response that carries it. */
+  key_status?: KeyStatus | null;
 };
+
+/** A294 — the key status a mutation response carries, if any (undefined = keep the cached one). */
+export function keyStatusOf(result: unknown): KeyStatus | null | undefined {
+  if (!result || typeof result !== "object" || !("key_status" in result)) return undefined;
+  return (result as { key_status?: KeyStatus | null }).key_status;
+}
 
 /**
  * A245 G-2 (F34) — the current week lives under TWO cache keys.
@@ -28,10 +36,14 @@ export function writeWeekCache(
   qc: QueryClient,
   weekNum: number,
   weekPlan: WeekPlan,
+  keyStatus?: KeyStatus | null,
 ): void {
+  // A294: `keyStatus === undefined` (a response without it) keeps the cached
+  // status; a value (null included) replaces it.
+  const ks = keyStatus === undefined ? {} : { key_status: keyStatus };
   const apply = (key: readonly unknown[], fallbackNum: number) =>
     qc.setQueryData(key, (old: WeekCacheEntry | undefined) =>
-      old ? { ...old, week_plan: weekPlan } : { week_num: fallbackNum, week_plan: weekPlan },
+      old ? { ...old, week_plan: weekPlan, ...ks } : { week_num: fallbackNum, week_plan: weekPlan, ...ks },
     );
 
   apply(queryKeys.week(weekNum), weekNum);

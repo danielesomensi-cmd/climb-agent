@@ -281,6 +281,7 @@ def apply_adaptive_replan(
                     sessions[i] = {
                         "slot": session.get("slot", "evening"),
                         "session_id": "complementary_conditioning",
+                        "downshifted_from": session.get("session_id"),  # A294
                         "location": session.get("location", "home"),
                         "gym_id": session.get("gym_id"),
                         "intensity": "medium",

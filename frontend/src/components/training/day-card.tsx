@@ -17,7 +17,9 @@ import type {
   OutdoorPitchLadder,
   OutdoorRoute,
   WeekPlan,
+  KeyStatus,
 } from "@/lib/types";
+import { keyRoleFor } from "@/lib/key-sessions";
 import { normalizeOtherActivities, hasOtherActivity } from "@/lib/other-activity";
 import { formatDateShort } from "@/lib/format";
 
@@ -29,6 +31,8 @@ interface Gym {
 
 interface DayCardProps {
   day: DayPlan;
+  /** A294 — key-session status of the week (badges on the session cards). */
+  keyStatus?: KeyStatus | null;
   gyms?: Gym[];
   homeEquipment?: string[];
   // F6 — restituiscono la promise della mutation: la SessionCard la attende per
@@ -368,6 +372,7 @@ function OtherActivityBlock({
 
 export function DayCard({
   day,
+  keyStatus,
   gyms,
   homeEquipment,
   onMarkDone,
@@ -685,6 +690,7 @@ export function DayCard({
                       : undefined
                   }
                   onSessionUpdated={onSessionUpdated}
+                  keyRole={keyRoleFor(keyStatus, day.date, session.slot)}
                 />
               ))}
 

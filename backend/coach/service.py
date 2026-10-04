@@ -118,8 +118,27 @@ def suggested_questions(user_id: Optional[str]) -> List[str]:
     return suggestions[:MAX_SUGGESTIONS]
 
 
+def _key_guard(state: Dict[str, Any], user_id: Optional[str], target_date: Optional[str]) -> Dict[str, Any]:
+    """A294: the key-session guard of the composer pool, fail-soft."""
+    try:
+        from datetime import date as _date, timedelta as _td
+
+        from backend.engine.key_sessions_v1 import composer_guard
+
+        day = (target_date or _date.today().isoformat())[:10]
+        d = _date.fromisoformat(day)
+        try:
+            rows = storage.read_outdoor_logs(user_id, since_date=(d - _td(days=10)).isoformat())
+        except Exception:
+            rows = None
+        return composer_guard(state, day, outdoor_rows=rows)
+    except Exception:
+        logger.warning("adhoc: key guard failed — composing without it", exc_info=True)
+        return {"exclude_ids": [], "warnings": []}
+
+
 def handle_adhoc_compose(
-    user_id: Optional[str], message: str
+    user_id: Optional[str], message: str, target_date: Optional[str] = None,
 ) -> Optional[Dict[str, Any]]:
     """A243 — extract intent, deterministically compose an adhoc session preview.
 
@@ -147,6 +166,12 @@ def handle_adhoc_compose(
     state = load_state(user_id)
     catalog = load_exercises_by_id()
 
+    # A294: near a finger key session / before a max test the pool loses the
+    # finger-hard (and pre-pull-test heavy pull) lines, and the preview says so.
+    guard = _key_guard(state, user_id, target_date)
+    if guard.get("exclude_ids"):
+        intent = {**intent, "key_guard_exclude_ids": list(guard["exclude_ids"])}
+
     # A259: the LLM composes from an engine-built pool; the deterministic
     # builder is the fallback, not the default. It stays reachable on every
     # failure path (kill switch, tiny pool, provider error, validation) so the
@@ -162,6 +187,8 @@ def handle_adhoc_compose(
         session = compose_adhoc_session(intent, state, catalog)
         session.setdefault("composed_by", "deterministic")
 
+    if guard.get("warnings"):
+        session["key_warnings"] = guard["warnings"]
     storage.append_coach_message(user_id, "user", message)
     summary = build_adhoc_summary(session, intent)
     # B306: persist the composed payload with the turn so the history endpoint

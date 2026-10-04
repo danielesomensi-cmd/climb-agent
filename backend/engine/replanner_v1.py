@@ -963,6 +963,8 @@ def _protected_neighbor_guard(
             previous_id = added.get("session_id")
             added.update(
                 {
+                    # A294: the key-session status reads what was lost.
+                    "downshifted_from": previous_id,
                     "session_id": "regeneration_easy",
                     "intensity": recovery_meta["intensity"],
                     "tags": {"hard": False, "finger": False},
@@ -1037,6 +1039,10 @@ def _apply_ripple_to_day(
             next_sessions.append(session)
             continue
         replacement, reason = result
+        # A294: stamp what the ripple replaced (additive; the key-session
+        # status reads it to explain a lost key stimulus).
+        if isinstance(replacement, dict) and session.get("session_id") != replacement.get("session_id"):
+            replacement.setdefault("downshifted_from", session.get("session_id"))
         next_sessions.append(replacement)
         adjustments.append(_adjustment(day_date, replacement, session.get("session_id"), reason))
     day["sessions"] = next_sessions
@@ -1217,6 +1223,7 @@ def _enforce_caps(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
                     _previous_id = session.get("session_id")
                     session.update(
                         {
+                            "downshifted_from": _previous_id,  # A294
                             "session_id": "regeneration_easy",
                             "intensity": recovery_meta["intensity"],
                             "tags": {"hard": False, "finger": False},
@@ -1293,6 +1300,7 @@ def _enforce_no_consecutive_finger(
                 _previous_id = session.get("session_id")
                 session.update(
                     {
+                        "downshifted_from": _previous_id,  # A294
                         "session_id": "regeneration_easy",
                         "intensity": recovery_meta["intensity"],
                         "tags": {"hard": False, "finger": False},
@@ -1337,7 +1345,16 @@ def apply_events(
     planning_prefs: Optional[Dict[str, Any]] = None,
     gyms: Optional[List[Dict[str, Any]]] = None,
     custom_sessions: Optional[List[Dict[str, Any]]] = None,
+    prev_days: Optional[Sequence[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
+    """Apply *events* to a copy of *plan*.
+
+    A294: *prev_days* (the trailing days of the preceding week) seeds the final
+    reconcile so the Sunday→Monday finger gap is checked here too, and every
+    downshift that reconcile makes is recorded as a ``{"type": "reconcile",
+    "adjustments": [...]}`` adaptation (only when non-empty) — it used to be
+    computed and thrown away.
+    """
     updated = deepcopy(plan)
     updated.setdefault("adaptations", [])
 
@@ -1400,6 +1417,11 @@ def apply_events(
             slot = removed.get("slot") or event.get("slot") or "evening"
             recovery = _build_fill_session(updated, day, slot, kind="recovery")
             recovery["status"] = "skipped"
+            # A294: the stub keeps the id and tags of what was skipped — the
+            # key-session status needs them, and the completion log has no slot.
+            if removed.get("session_id"):
+                recovery["skipped_session_id"] = removed.get("session_id")
+                recovery["skipped_tags"] = dict(removed.get("tags") or {})
             day.setdefault("sessions", []).append(recovery)
             _recompute_day_status(day)
 
@@ -1838,6 +1860,54 @@ def apply_events(
                 )
             )
 
+        elif event_type == "add_planned_session":
+            # A294: put a CATALOG session on a day exactly as the planner would
+            # have placed it — the re-schedule proposal of a missed key
+            # session. Unlike quick-add there is no day+1 ripple (the proposal
+            # validator already checked the neighbours, and a ripple would
+            # rewrite sessions the user was shown as untouched); the final
+            # _reconcile below still enforces the finger gap and the hard cap,
+            # and its downshifts are reported. Unlike add_generated_session the
+            # session is NOT custom: it feeds the closed loop like any planned
+            # catalog session.
+            session_id = event.get("session_id")
+            target_date = event.get("target_date")
+            slot = event.get("slot") or "evening"
+            if not session_id or session_id not in _SESSION_META:
+                raise ValueError(f"add_planned_session: unknown session_id '{session_id}'")
+            if not target_date:
+                raise ValueError("add_planned_session requires 'target_date'")
+            day = _find_day(updated, target_date)
+            for existing in day.get("sessions", []):
+                if existing.get("slot") == slot:
+                    raise ValueError(f"Slot '{slot}' already occupied on {target_date}")
+            if slot in other_activity_slots(day):
+                raise ValueError(f"Slot '{slot}' already occupied by other activity on {target_date}")
+            meta = _meta_for(session_id)
+            location = event.get("location") or ("gym" if "gym" in (meta.get("location") or ()) else "home")
+            phase = event.get("phase_id") or (updated.get("profile_snapshot") or {}).get("phase_id", "base")
+            new_session = {
+                "slot": slot,
+                "session_id": session_id,
+                "location": location,
+                "gym_id": event.get("gym_id") if location == "gym" else None,
+                "phase_id": phase,
+                "intensity": meta["intensity"],
+                "estimated_load_score": _INTENSITY_TO_LOAD.get(meta["intensity"], 40),
+                "constraints_applied": ["key_reschedule"],
+                "tags": {"hard": meta["hard"], "finger": meta["finger"],
+                         **({"test": True} if meta.get("test") else {})},
+                "explain": ["key session re-scheduled", f"added_session={session_id}"],
+            }
+            day.setdefault("sessions", []).append(new_session)
+            day["sessions"].sort(
+                key=lambda s: (
+                    SLOTS.index(s.get("slot") if s.get("slot") in SLOTS else "evening"),
+                    s.get("priority", 99),
+                    s.get("session_id", ""),
+                )
+            )
+
         elif event_type == "add_generated_session":
             # A213: add a session generated inline (body-part picker, etc.).
             # Unlike add_custom_session, the payload IS the session — no
@@ -1918,7 +1988,9 @@ def apply_events(
 
         updated["adaptations"].append({"type": "event", "event": event})
 
-    _reconcile(updated)
+    _adj = _reconcile(updated, prev_days=prev_days)
+    if _adj:
+        updated["adaptations"].append({"type": "reconcile", "adjustments": _adj})
     updated["plan_revision"] = int(updated.get("plan_revision") or 1) + 1
     return updated
 

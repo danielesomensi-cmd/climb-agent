@@ -35,6 +35,9 @@ class ChatRequest(BaseModel):
     # A-COACH-V1b: optional current location → weather in the coach context.
     lat: Optional[float] = Field(None, ge=-90.0, le=90.0)
     lon: Optional[float] = Field(None, ge=-180.0, le=180.0)
+    # A294: client-local day the ad-hoc session is for (the key-session guard
+    # of the composer pool). Ignored by /chat.
+    target_date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
 
 @router.post("/chat", dependencies=[Depends(require_active_subscription)])
@@ -105,7 +108,7 @@ def coach_adhoc_session(
         )
 
     try:
-        result = service.handle_adhoc_compose(user_id, message)
+        result = service.handle_adhoc_compose(user_id, message, target_date=req.target_date)
     except CoachConfigError as exc:
         logger.error("Coach misconfigured: %s", exc)
         raise HTTPException(
