@@ -10,8 +10,8 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from backend.api.deps import (
-    EMPTY_TEMPLATE, build_current_level, ensure_monday, get_user_id,
-    invalidate_future_week_cache, load_state, save_state,
+    EMPTY_TEMPLATE, ensure_monday, get_user_id,
+    invalidate_future_week_cache, load_state, refresh_current_level_from_grades, save_state,
 )
 from backend.api.rate_limit import limiter
 from backend.engine import storage
@@ -109,6 +109,7 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
                 goal_patch["target_boulder_grade"] = goal_patch.get(
                     "target_grade", existing_target,
                 )
+    previous_os = ((state.get("assessment") or {}).get("grades") or {}).get("lead_max_os")
     _deep_merge(state, patch)
     # B272: grade edits must refresh performance.current_level — progression
     # benchmarks (e.g. kilter fallback on current_level.boulder.worked.grade)
@@ -136,18 +137,19 @@ def put_state(request: Request, patch: Dict[str, Any], user_id: Optional[str] = 
         assessment["tests_source"] = source
 
     if isinstance(asmt_patch, dict) and isinstance(asmt_patch.get("grades"), dict):
-        merged_grades = (state.get("assessment") or {}).get("grades") or {}
-        rebuilt = build_current_level(merged_grades)
-        performance = state.get("performance") or {}
-        current_level = performance.get("current_level") or {}
         # Replace only the grade-derived branches; keep gym_reference & co.
-        for branch in ("sport", "boulder"):
-            current_level.pop(branch, None)
-            if branch in rebuilt:
-                current_level[branch] = rebuilt[branch]
-        current_level["updated_at"] = date.today().isoformat()
-        performance["current_level"] = current_level
-        state["performance"] = performance
+        refresh_current_level_from_grades(state)
+        # A292: a hand edit of the onsight replaces an outdoor confirmation —
+        # the provenance must say so, or it would keep claiming evidence for a
+        # number the athlete has since typed over.
+        new_os = asmt_patch["grades"].get("lead_max_os")
+        if "lead_max_os" in asmt_patch["grades"] and new_os != previous_os:
+            assessment = state.setdefault("assessment", {})
+            sources = assessment.get("grades_source")
+            if not isinstance(sources, dict):
+                sources = {}
+            sources["lead_max_os"] = {"source": "manual", "date": date.today().isoformat(), "previous": previous_os}
+            assessment["grades_source"] = sources
     # B151: availability change → invalidate future week cache so they
     # regenerate with the new slots.  Current week is handled by the
     # frontend via GET /api/week/0?force=true.

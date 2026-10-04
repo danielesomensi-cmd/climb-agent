@@ -25,6 +25,12 @@ output if the scope gate leaked.
 Regenerating the golden: copy this file into a checkout of origin/main @
 3fdfdd1 and dump ``json.dumps(compute(), sort_keys=True, indent=1)``.
 
+A292 (R6-PE) re-anchored four lead PE exercises in the CATALOG (grade_ref
+``lead_max_os`` → ``lead_pe_anchor`` plus their texts). The two
+``power_endurance_gym`` digests were regenerated after checking that, with the
+pre-A292 catalog and the A292 code, the whole golden still matched bit for bit:
+the change is catalog data, not resolver behaviour (exercise_ids unchanged).
+
 Pure data + one function, importable by the generator without pytest.
 """
 

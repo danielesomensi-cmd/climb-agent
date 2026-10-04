@@ -32,6 +32,7 @@ import type {
   TestReminderOption,
   RetestStatus,
 } from "./types";
+import type { EvidenceStyle, GradeEvidence } from "./grade-evidence";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -217,6 +218,11 @@ export function apiErrorDetail(err: unknown, fallback: string): string {
     try {
       const detail = (JSON.parse(body[0]) as { detail?: unknown }).detail;
       if (typeof detail === "string" && detail) return detail;
+      // A292: structured details ({code, message}) carry their own sentence.
+      if (detail && typeof detail === "object") {
+        const message = (detail as { message?: unknown }).message;
+        if (typeof message === "string" && message) return message;
+      }
     } catch {
       /* not JSON — fall through */
     }
@@ -293,6 +299,19 @@ export const computeAssessment = (
     method: "POST",
     body: JSON.stringify({ assessment, goal }),
   });
+
+// A292 (R6b) — onsight evidence from the outdoor log
+export const getGradeEvidence = () =>
+  request<GradeEvidence>("/api/assessment/grade-evidence");
+export const confirmGrade = (body: {
+  decision: "confirm" | "dismiss";
+  grade?: string;
+  routes: Array<{ key: string; style: EvidenceStyle }>;
+}) =>
+  request<{ decision: "confirm" | "dismiss"; field: string; grade?: string; dismissed?: string }>(
+    "/api/assessment/confirm-grade",
+    { method: "POST", body: JSON.stringify({ field: "lead_max_os", ...body }) },
+  );
 
 // Macrocycle
 export const generateMacrocycle = (

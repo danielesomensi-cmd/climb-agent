@@ -52,6 +52,9 @@ export const queryKeys = {
   reportsWeekly: (weekStart: string) => ["reports", "weekly", weekStart] as const,
   reportsHeatmap: (month: string) => ["reports", "heatmap", month] as const,
 
+  // A292 — onsight evidence card (Settings)
+  gradeEvidence: ["assessment", "grade-evidence"] as const,
+
   // Milestones (A239)
   milestones: ["milestones"] as const,
 

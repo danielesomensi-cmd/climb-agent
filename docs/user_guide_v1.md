@@ -325,6 +325,14 @@ October 2026 the `+` was dropped and they came out as 6c). When your endurance
 feedback agrees twice in a row (two *easy* or two *hard*), the remembered grade moves
 by half a grade.
 
+**Power-endurance work on routes** (route intervals, linked laps, routes on the
+minute, threshold climbing) is anchored a little differently: to your onsight **or**
+to three half grades below your redpoint, whichever is harder. If your onsight is
+far behind your redpoint — a 7a+ onsight with an 8a+ redpoint — the intervals are
+sized from the redpoint side (7c, so one grade below is **7b**) instead of from an
+onsight that would make them too easy. If your onsight is within three half grades
+of your redpoint nothing changes. Aerobic laps and ARC still follow your onsight.
+
 A session you changed with the pencil keeps the exercises you chose, but its grade
 targets still follow these rules: from today on they are worked out again each time
 the week loads. Sessions you already did, skipped, or that are in the past stay exactly as they were.
@@ -664,6 +672,19 @@ Tap the kind of day you're having — **Onsight**, **Project**, **Volume** or **
 The rests are the part worth reading. On an onsight day the closing pitch gets a deliberately **short** rest — climbing it already pumped is the point, and it's the number most people get wrong when they're tired.
 
 Everything is editable: the pencil opens the list, where you can change any grade, burn count or rest, add pitches and delete them. Once you've edited it by hand the plan is marked **Edited**, and regenerating asks before overwriting your version. Completed outdoor days show their plan read-only — like every past session, they can't be changed.
+
+### Your onsight, from your log
+
+If your outdoor log shows harder onsights than the one you declared, **Settings**
+shows a card: *"Your log says onsight 7b"*. It lists the routes behind it — lead
+routes you sent in one try the first time they appear in your log — and asks, for
+each one, whether it really was **Onsight**, **Flash** or **Worked** (a route you had
+tried on a day you never logged looks exactly like an onsight). It takes at least two
+onsight or flash routes at that grade, on two different days or at two different
+crags. **Confirm** updates your onsight; **Not now** stops the card asking about that
+grade (a harder one will still be proposed). A route you mark *Worked* is never
+counted again. Nothing in your outdoor log is changed — to change a route's style
+there, edit the session.
 
 ### Stats
 

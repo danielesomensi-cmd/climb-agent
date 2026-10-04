@@ -659,6 +659,38 @@ def step_grade_scaled(grade: str | None, letter_offset: int, scale: str) -> Opti
     return step_grade_half(grade, 2 * int(letter_offset), scale)
 
 
+# A292 (R6-PE): derived grade_ref for the lead power-endurance work.
+# The PE drills used to hang off `lead_max_os` alone, so a climber whose onsight
+# lags the redpoint by more than a letter and a half (Daniele: OS 7a+ declared,
+# RP 8a+) trained power endurance on terrain sized for a much weaker climber.
+# The anchor is max(OS, RP − 3 half grades); the catalog `grade_offset` is then
+# applied to it exactly as before. A climber whose OS is within 3 half grades
+# of the RP gets the same anchor as before (the OS), bit for bit.
+PE_ANCHOR_GRADE_REF = "lead_pe_anchor"
+# ENGINEERING CONSTANT (no published source; DECISIONS 2026-10-04, R6-PE):
+# 3 half grades below the redpoint is where the anchor stops following the OS.
+PE_ANCHOR_RP_HALF_STEPS = -3
+
+
+def lead_pe_anchor(grades: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
+    """A292: the lead PE anchor and which grade produced it.
+
+    Returns ``(grade, source)`` with ``grade`` canonical uppercase French and
+    ``source`` ``"lead_max_os"`` or ``"lead_max_rp"``; ``(None, None)`` when
+    neither grade is on the ladder. A tie goes to the OS (no behaviour change).
+    """
+    grades = grades or {}
+    os_grade = normalize_grade_on_scale(grades.get("lead_max_os"), "french")
+    rp_grade = normalize_grade_on_scale(grades.get("lead_max_rp"), "french")
+    rp_floor = step_grade_half(rp_grade, PE_ANCHOR_RP_HALF_STEPS, "french") if rp_grade else None
+    _, index = _GRADE_SCALES["french"]
+    if os_grade and (rp_floor is None or index[os_grade] >= index[rp_floor]):
+        return os_grade, "lead_max_os"
+    if rp_floor:
+        return rp_floor, "lead_max_rp"
+    return None, None
+
+
 def step_grade(grade: str, steps: int) -> str:
     """LEGACY whole-grade step (pre-A291 §2.10.1). No engine caller since A291.
 
@@ -1664,7 +1696,12 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
             grade_ref = prescription.get("grade_ref")
             if grade_ref and not _is_limit_grade_exercise(ex_id):
                 grades = ((user_state.get("assessment") or {}).get("grades") or {})
-                ref_grade_raw = grades.get(grade_ref)
+                anchor_from: Optional[str] = None
+                if grade_ref == PE_ANCHOR_GRADE_REF:
+                    # A292 (R6-PE): derived anchor max(OS, RP − 3 half grades).
+                    ref_grade_raw, anchor_from = lead_pe_anchor(grades)
+                else:
+                    ref_grade_raw = grades.get(grade_ref)
                 ref_scale = grade_scale_for_ref(grade_ref)
                 if ref_grade_raw is not None:
                     # A291 (R6a): half-grade ladder of the anchor's own scale
@@ -1679,6 +1716,8 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         suggested["grade_ref"] = grade_ref
                         suggested["grade_offset"] = grade_offset
                         suggested["grade_scale"] = ref_scale
+                        if anchor_from:
+                            suggested["grade_anchor_from"] = anchor_from
                 # B289 group B: a remembered endurance target (written by
                 # apply_feedback after 2 concordant feedbacks) overrides the
                 # static assessment anchor. 60-day freshness gate as for every
@@ -1691,6 +1730,8 @@ def inject_targets(resolved_day: Dict[str, Any], user_state: Dict[str, Any]) -> 
                         suggested["grade_ref"] = grade_ref
                         suggested["grade_source"] = "working_loads"
                         suggested["grade_scale"] = grade_scale_for_ref(grade_ref)
+                        # The remembered grade is not the anchor's any more.
+                        suggested.pop("grade_anchor_from", None)
 
             # External load exercises — data-driven from load_model (ARCH-2)
             if load_model == "external_load" and not is_loading_pin:

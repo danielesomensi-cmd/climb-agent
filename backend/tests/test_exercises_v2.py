@@ -148,7 +148,8 @@ def test_intensity_pct_only_in_attributes(exercise_list):
 
 # --- grade_ref / grade_offset validation ---
 
-VALID_GRADE_REFS = {"boulder_max_rp", "boulder_max_os", "lead_max_os", "lead_max_rp"}
+# A292: lead_pe_anchor is derived (max(OS, RP − 3 half grades)), not a stored grade.
+VALID_GRADE_REFS = {"boulder_max_rp", "boulder_max_os", "lead_max_os", "lead_max_rp", "lead_pe_anchor"}
 
 CAMPUS_IDS = {
     "pangullich_ladders_easy", "campus_laddering_feet_off",
@@ -170,7 +171,7 @@ def test_grade_relative_non_campus_have_grade_ref(exercise_list):
 
 
 def test_grade_ref_canonical_values(exercise_list):
-    """grade_ref must be one of the 4 canonical values when present."""
+    """grade_ref must be one of the 5 canonical values when present."""
     for e in exercise_list:
         pd = e.get("prescription_defaults", {})
         gr = pd.get("grade_ref")
