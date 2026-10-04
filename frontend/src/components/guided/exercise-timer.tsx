@@ -7,6 +7,7 @@ import { unlockAudio } from "@/lib/audio-unlock";
 import { confirmFeedback, tapFeedback } from "@/lib/haptics";
 import { countdownTick, transitionBeep } from "@/lib/beep";
 import { speakPhaseTransition } from "@/lib/voice-cues";
+import { OVERHOLD_CAP_S } from "@/lib/measured-feedback";
 import {
   PHASE_RING,
   PHASE_TEXT,
@@ -26,9 +27,18 @@ interface ExerciseTimerProps {
   initialSet?: number;
   altSides?: boolean;               // alternate RIGHT/LEFT each set; internally doubles set count
   onSetChange?: (completedSets: number) => void;
+  /**
+   * A295 — opt-in timed overhold. When the LAST rep of the LAST set reaches its
+   * target under our eyes, the timer does not stop: it keeps counting up to
+   * `workSeconds + OVERHOLD_CAP_S` and the athlete taps when they let go.
+   * `onOverholdResult` receives the seconds really held (capped). Never on a
+   * rep-based (manual) exercise, never after an unwatched expiry.
+   */
+  overholdLastRep?: boolean;
+  onOverholdResult?: (heldSeconds: number) => void;
 }
 
-type Phase = "idle" | "get_ready" | "work" | "rep_rest" | "set_rest" | "complete";
+type Phase = "idle" | "get_ready" | "work" | "overhold" | "rep_rest" | "set_rest" | "complete";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -56,6 +66,7 @@ function playerPhaseOf(phase: Phase): PlayerPhase {
   switch (phase) {
     case "get_ready": return "prepare";
     case "work": return "work";
+    case "overhold": return "work";
     case "rep_rest":
     case "set_rest": return "rest";
     case "complete": return "done";
@@ -145,6 +156,8 @@ function ExerciseTimerImpl({
   initialSet = 1,
   altSides = false,
   onSetChange,
+  overholdLastRep = false,
+  onOverholdResult,
 }: ExerciseTimerProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [currentSet, setCurrentSet] = useState(initialSet);
@@ -174,6 +187,13 @@ function ExerciseTimerImpl({
   const lastBeepedSecRef = useRef<number>(-1);
   const onSetChangeRef = useRef(onSetChange);
   useEffect(() => { onSetChangeRef.current = onSetChange; }, [onSetChange]);
+  // A295: overhold — the toggle can change mid-exercise, so read it via a ref.
+  const overholdRef = useRef(overholdLastRep);
+  useEffect(() => { overholdRef.current = overholdLastRep; }, [overholdLastRep]);
+  const onOverholdResultRef = useRef(onOverholdResult);
+  useEffect(() => { onOverholdResultRef.current = onOverholdResult; }, [onOverholdResult]);
+  /** Wall-clock instant the last rep hit its target (start of the overhold). */
+  const overholdStartRef = useRef<number>(0);
 
   // Voice cue: store the phase at transition time so the transitionId effect can speak it
   const pendingVoiceCueRef = useRef<Phase | null>(null);
@@ -201,6 +221,7 @@ function ExerciseTimerImpl({
     switch (phase) {
       case "get_ready": return GET_READY_SECONDS;
       case "work": return workSeconds;
+      case "overhold": return OVERHOLD_CAP_S;
       case "rep_rest": return restBetweenRepsSeconds;
       case "set_rest": return restBetweenSetsSeconds;
       default: return 0;
@@ -269,6 +290,22 @@ function ExerciseTimerImpl({
     setOverdue(false);
     setOverdueSeconds(0);
   }, []);
+
+  /**
+   * A295 — close the overhold: report the seconds really held (target +
+   * overhold, capped) and finish the set exactly like a normal last rep.
+   */
+  const finishOverhold = useCallback((overSeconds?: number) => {
+    const over = overSeconds ?? Math.max(0, (Date.now() - overholdStartRef.current) / 1000);
+    const capped = Math.min(OVERHOLD_CAP_S, Math.max(0, over));
+    onOverholdResultRef.current?.(Math.round((workSeconds + capped) * 10) / 10);
+    clearTimer();
+    onSetChangeRef.current?.(currentSet);
+    setPhase("complete");
+    pendingVoiceCueRef.current = "complete";
+    setTransitionId((id) => id + 1);
+    setSecondsLeft(0);
+  }, [workSeconds, currentSet, clearTimer]);
 
   // Main tick — wall-clock based so iOS background suspension doesn't freeze countdown.
   // Instead of decrementing a counter, each tick computes remaining = endTime - Date.now().
@@ -350,6 +387,16 @@ function ExerciseTimerImpl({
             startCountdown(workSeconds);
             return;
           }
+          // A295: last rep of the last set, watched live, overhold on →
+          // keep the clock running past the target instead of stopping.
+          if (currentSet >= totalSets && overholdRef.current && !isManual) {
+            overholdStartRef.current = phaseEndTimeRef.current;
+            setPhase("overhold");
+            pendingVoiceCueRef.current = null; // beep only: the athlete is still hanging
+            setTransitionId((id) => id + 1);
+            startCountdown(OVERHOLD_CAP_S);
+            return;
+          }
           // End of set
           onSetChangeRef.current?.(currentSet);
           if (currentSet >= totalSets) {
@@ -374,6 +421,12 @@ function ExerciseTimerImpl({
           pendingVoiceCueRef.current = "work";
           setTransitionId((id) => id + 1);
           if (isManual) { setSecondsLeft(0); } else { startCountdown(workSeconds); }
+          return;
+        }
+
+        // A295: the overhold reached its cap — record target + cap.
+        if (phase === "overhold") {
+          finishOverhold(OVERHOLD_CAP_S);
           return;
         }
 
@@ -422,7 +475,7 @@ function ExerciseTimerImpl({
     }, 200);
 
     return clearTimer;
-  }, [phase, paused, currentSet, currentRep, sets, reps, totalSets, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, hasManualRepLoop, clearTimer, startCountdown]);
+  }, [phase, paused, currentSet, currentRep, sets, reps, totalSets, workSeconds, restBetweenRepsSeconds, restBetweenSetsSeconds, isManual, hasRepLoop, hasManualRepLoop, clearTimer, startCountdown, finishOverhold]);
 
   // Immediate recalc when PWA returns to foreground (iOS suspends setInterval in background).
   useEffect(() => {
@@ -512,6 +565,11 @@ function ExerciseTimerImpl({
   }
 
   function handleCircleTap() {
+    // A295: during the overhold the circle is "I let go".
+    if (phase === "overhold") {
+      finishOverhold();
+      return;
+    }
     // B332: while held, the circle IS the continue button — pausing an already
     // expired phase would be meaningless.
     if (overdue) {
@@ -530,6 +588,10 @@ function ExerciseTimerImpl({
   /** Skip to the next phase in the timer sequence. */
   function handlePhaseForward() {
     if (phase === "idle" || phase === "complete") return;
+    if (phase === "overhold") {
+      finishOverhold();
+      return;
+    }
     const wasRunning = !paused;
     clearHold(); // B332
 
@@ -588,6 +650,10 @@ function ExerciseTimerImpl({
   /** Go back: restart current phase if >2s elapsed, else go to previous phase. */
   function handlePhaseBack() {
     if (phase === "idle" || phase === "complete") return;
+    if (phase === "overhold") {
+      finishOverhold();
+      return;
+    }
     const wasRunning = !paused;
     clearHold(); // B332
     const elapsed = totalForPhase - secondsLeft;
@@ -649,6 +715,10 @@ function ExerciseTimerImpl({
     !(phase === "work" && isManual);
 
   const isActive = phase !== "idle" && phase !== "complete";
+  // A295: during the overhold the clock shows the seconds PAST the target.
+  const timeText = phase === "overhold"
+    ? `+${Math.max(0, OVERHOLD_CAP_S - secondsLeft)}`
+    : formatSeconds(secondsLeft);
 
   // --- Enlarged mode ---
   // A286 — B11: la preferenza sopravvive al remount fra un esercizio e l'altro.
@@ -686,6 +756,7 @@ function ExerciseTimerImpl({
     switch (phase) {
       case "get_ready": return "GET READY";
       case "work": return isManual ? (hasManualRepLoop ? "DO REP" : "DO SET") : "WORK";
+      case "overhold": return "HOLD ON — TAP WHEN YOU LET GO";
       case "rep_rest": return "HOLD";
       case "set_rest": return "REST";
       case "complete": return "DONE";
@@ -729,7 +800,7 @@ function ExerciseTimerImpl({
             onKeyDown={(e) => {
               if (e.key === " " || e.key === "Enter") handleCircleTap();
             }}
-            aria-label={paused ? "Resume timer" : "Pause timer"}
+            aria-label={phase === "overhold" ? "I let go" : paused ? "Resume timer" : "Pause timer"}
           >
             {/* Phase label */}
             <span className={cn("text-lg font-bold uppercase tracking-[0.2em]", phaseColor)}>
@@ -772,7 +843,7 @@ function ExerciseTimerImpl({
                 "text-[120px] leading-none font-bold tabular-nums",
                 isCountdown && "animate-pulse"
               )}>
-                {formatSeconds(secondsLeft)}
+                {timeText}
               </span>
             )}
 
@@ -910,7 +981,9 @@ function ExerciseTimerImpl({
             if (e.key === " " || e.key === "Enter") handleCircleTap();
           }}
           aria-label={
-            overdue
+            phase === "overhold"
+              ? "I let go"
+              : overdue
               ? overdueCta
               : phase === "work" && isManual
               ? (hasManualRepLoop ? "Complete rep" : "Complete set")
@@ -982,12 +1055,26 @@ function ExerciseTimerImpl({
             {!overdue && phase === "work" && !isManual && (
               <>
                 <span className={cn("text-5xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
-                  {formatSeconds(secondsLeft)}
+                  {timeText}
                 </span>
                 <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.work)}>
                   Work
                 </span>
                 {paused && <Pause className="size-5 text-muted-foreground mt-1" />}
+              </>
+            )}
+
+            {phase === "overhold" && (
+              <>
+                <span className={cn("text-5xl font-bold tabular-nums", PHASE_TEXT.work)}>
+                  {timeText}s
+                </span>
+                <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.work)}>
+                  Overhold
+                </span>
+                <span className="text-xs text-muted-foreground mt-0.5">
+                  Tap when you let go
+                </span>
               </>
             )}
 
@@ -1018,7 +1105,7 @@ function ExerciseTimerImpl({
             {!overdue && phase === "rep_rest" && (
               <>
                 <span className={cn("text-5xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
-                  {formatSeconds(secondsLeft)}
+                  {timeText}
                 </span>
                 <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.rest)}>
                   Rest
@@ -1030,7 +1117,7 @@ function ExerciseTimerImpl({
             {!overdue && phase === "set_rest" && (
               <>
                 <span className={cn("text-5xl font-bold tabular-nums", isCountdown && "animate-pulse")}>
-                  {formatSeconds(secondsLeft)}
+                  {timeText}
                 </span>
                 <span className={cn("text-xs font-semibold uppercase tracking-wider mt-0.5", PHASE_TEXT.rest)}>
                   Rest

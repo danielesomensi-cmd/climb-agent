@@ -16,7 +16,8 @@ import { guidedStorageKey } from "@/lib/guided-session-utils";
 import { unlockAudio, getAudioContext } from "@/lib/audio-unlock";
 import { useSubscription } from "@/lib/hooks/use-subscription";
 import { useWakeLock } from "@/lib/hooks/use-wake-lock";
-import type { GuidedSessionState, GuidedExercise, WeekPlan } from "@/lib/types";
+import type { GuidedSessionState, GuidedExercise, SessionPain, WeekPlan } from "@/lib/types";
+import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 
 // ---------------------------------------------------------------------------
 // localStorage helpers
@@ -202,7 +203,7 @@ export default function GuidedSessionPage() {
   );
 
   const handleDone = useCallback(
-    (feedbackLabel: string, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }) => {
+    (feedbackLabel: string | null, usedLoad?: number, usedGrade?: string, usedTotalLoad?: number, testMeasurement?: number, perHand?: { right?: number; left?: number; right_reps?: number; left_reps?: number }, measures?: MeasureValues) => {
       if (!state) return;
       const idx = state.currentIndex;
       const exercise = state.exercises[idx];
@@ -229,6 +230,10 @@ export default function GuidedSessionPage() {
           usedLoadKgLeft: perHand?.left,
           completedRepsRight: perHand?.right_reps,
           completedRepsLeft: perHand?.left_reps,
+          // A295: optional measures (undefined = not measured)
+          lastSetReps: measures?.lastSetReps,
+          hangMargin: measures?.hangMargin,
+          hangHeldS: measures?.hangHeldS,
         });
       }
 
@@ -278,7 +283,8 @@ export default function GuidedSessionPage() {
     if (!state) return;
     const idx = state.currentIndex;
 
-    updateExercise(idx, { status: "skipped", feedbackLabel: "ok" });
+    // A295: a skipped exercise is not rated (it used to ship as "ok").
+    updateExercise(idx, { status: "skipped", feedbackLabel: null });
     const nextIdx = idx + 1;
     if (nextIdx >= state.exercises.length) {
       setState((prev) => prev ? { ...prev, currentIndex: idx } : prev);
@@ -358,7 +364,9 @@ export default function GuidedSessionPage() {
         const usedLoadKg =
           ex.usedLoadKg ??
           (ex.loadModel !== "bodyweight_only" ? ex.suggested.externalLoadKg : undefined);
-        return { ...ex, status: "done" as const, feedbackLabel: "ok", usedLoadKg };
+        // A295: "done" but NOT rated — marking the rest as done must not sign
+        // an "ok" on exercises nobody looked at.
+        return { ...ex, status: "done" as const, feedbackLabel: null, usedLoadKg };
       });
       return { ...prev, exercises };
     });
@@ -404,7 +412,8 @@ export default function GuidedSessionPage() {
       const durationSeconds = Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000));
 
       try {
-        const logEntry: Record<string, unknown> = {
+        // A295: feedback_contract 2 + the session's "Any pain?" answer.
+        const logEntry: Record<string, unknown> = withFeedbackContract({
           date: state.date,
           session_id: state.sessionId,
           // Real wall-clock start the timer already runs on (health-vault export).
@@ -413,7 +422,7 @@ export default function GuidedSessionPage() {
           actual: {
             exercise_feedback_v1: exerciseFeedback,
           },
-        };
+        }, state.pain ?? null);
         if (state.isTestSession) {
           logEntry.planned = [{
             session_id: state.sessionId,
@@ -461,6 +470,12 @@ export default function GuidedSessionPage() {
       setSubmitting(false);
     }
   }, [state, router, qc]);
+
+  // A295: session pain (0-3, zone from 2) — saved with the state, so the
+  // offline retry from /today replays it.
+  const handlePainChange = useCallback((pain: SessionPain | null) => {
+    setState((prev) => (prev ? { ...prev, pain: pain ?? undefined } : prev));
+  }, []);
 
   const handleSetChange = useCallback(
     (completedSets: number) => {
@@ -586,6 +601,8 @@ export default function GuidedSessionPage() {
               startedAt={state.startedAt}
               onMarkRemainingOk={handleMarkRemainingOk}
               onSkipRemaining={handleSkipRemaining}
+              pain={state.pain ?? null}
+              onPainChange={handlePainChange}
               onSubmit={handleSubmit}
               submitting={submitting}
             />

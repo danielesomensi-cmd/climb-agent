@@ -348,7 +348,8 @@ class TestDifficulty:
         report = generate_weekly_report(state, None, WEEK_START)
         diff = report["difficulty"]
         assert diff["distribution"] == {}
-        assert diff["avg_label"] == "ok"  # default
+        assert diff["avg_label"] is None  # A295: no fake "ok" default
+        assert diff["unrated_count"] == 0
         assert diff["hardest_session"] is None
         assert diff["easiest_session"] is None
 

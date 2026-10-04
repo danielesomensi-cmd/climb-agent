@@ -52,31 +52,17 @@ def load_exercises_by_id() -> Dict[str, Dict[str, Any]]:
 def _derive_session_difficulty(
     log_entry: Dict[str, Any],
     exercises_by_id: Dict[str, Dict[str, Any]],
-) -> str:
-    """Fatigue-cost-weighted average of exercise feedback labels."""
-    actual = log_entry.get("actual") or {}
-    feedback_items = actual.get("exercise_feedback_v1") or []
+) -> Optional[str]:
+    """Fatigue-cost-weighted average of the RATED exercise labels.
 
-    if not feedback_items:
-        return "ok"
+    A295 (R4 §3e): ``None`` when nothing was rated or the rated exercises
+    cover less than half of the session's fatigue cost — an untouched dialog
+    is not an "ok" session, and one very_hard tapped on a warm-up is not a
+    very_hard session. See measured_feedback.derive_session_difficulty.
+    """
+    from backend.engine.measured_feedback import derive_session_difficulty
 
-    total_weighted_score = 0.0
-    total_weight = 0.0
-
-    for item in feedback_items:
-        label = canonical_feedback_label(item)
-        score = _LABEL_TO_SCORE.get(label, 3)
-        exercise_id = str(item.get("exercise_id") or "")
-        exercise = exercises_by_id.get(exercise_id, {})
-        fatigue_cost = float(exercise.get("fatigue_cost", 5))
-        total_weighted_score += score * fatigue_cost
-        total_weight += fatigue_cost
-
-    if total_weight == 0:
-        return "ok"
-
-    avg = total_weighted_score / total_weight
-    return _score_to_label(avg)
+    return derive_session_difficulty(log_entry, exercises_by_id)
 
 
 def append_feedback_log(
@@ -104,12 +90,11 @@ def append_feedback_log(
     # Build per-exercise feedback map for UI display (B35 / FR-3)
     actual = log_entry.get("actual") or {}
     feedback_items = actual.get("exercise_feedback_v1") or []
-    exercise_feedback: Dict[str, str] = {}
-    for item in feedback_items:
-        eid = str(item.get("exercise_id") or "")
-        label = canonical_feedback_label(item)
-        if eid:
-            exercise_feedback[eid] = label
+    # A295: only what the athlete actually rated (no fake 'ok').
+    from backend.engine.measured_feedback import rated_exercise_feedback, sanitize_pain
+
+    exercise_feedback: Dict[str, str] = rated_exercise_feedback(log_entry)
+    pain = sanitize_pain(log_entry.get("pain"))
 
     feedback_log: List[Dict[str, Any]] = state.setdefault("feedback_log", [])
     duration = log_entry.get("session_duration_seconds")
@@ -125,7 +110,11 @@ def append_feedback_log(
             break
 
     if existing is not None:
-        existing["difficulty"] = difficulty
+        # A295: a resubmit without a rating never erases a rated difficulty.
+        if difficulty is not None:
+            existing["difficulty"] = difficulty
+        if pain is not None:
+            existing["pain"] = pain
         if exercise_feedback:
             existing["exercise_feedback"] = exercise_feedback
         if duration is not None:
@@ -137,8 +126,11 @@ def append_feedback_log(
         entry: Dict[str, Any] = {
             "date": date,
             "session_id": session_id,
-            "difficulty": difficulty,
         }
+        if difficulty is not None:
+            entry["difficulty"] = difficulty
+        if pain is not None:
+            entry["pain"] = pain
         if exercise_feedback:
             entry["exercise_feedback"] = exercise_feedback
         if duration is not None:

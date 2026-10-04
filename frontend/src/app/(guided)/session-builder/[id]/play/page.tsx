@@ -17,6 +17,9 @@ import { CustomRestTimer } from "@/components/session-play/custom-rest-timer";
 import { displaySetNumber, sideForSet, totalSetsWithSides } from "@/lib/alt-sides";
 import { unlockAudio } from "@/lib/audio-unlock";
 import { FEEDBACK_OPTIONS } from "@/lib/format";
+import { measureFields, withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
+import type { SessionPain } from "@/lib/types";
+import { MeasureInput, PainPicker } from "@/components/training/measured-feedback-inputs";
 
 type Stage = "idle" | "exercise_active" | "resting" | "completed";
 
@@ -43,17 +46,24 @@ function ExerciseFeedbackCard({
   showLoadInput,
   onFeedbackChange,
   onLoadChange,
+  exercise,
+  measures,
+  onMeasuresChange,
 }: {
   name: string;
   prescriptionSummary: string;
   setsCompleted: number;
   totalSets: number;
   altSides?: boolean;
-  feedbackLabel: string;
+  /** A295: undefined = not rated (nothing pre-selected). */
+  feedbackLabel: string | undefined;
   loadKg: string;
   showLoadInput: boolean;
-  onFeedbackChange: (label: string) => void;
+  onFeedbackChange: (label: string | undefined) => void;
   onLoadChange: (kg: string) => void;
+  exercise: CustomSessionExercise;
+  measures: MeasureValues;
+  onMeasuresChange: (patch: MeasureValues) => void;
 }) {
   return (
     <div className="rounded-lg border bg-muted/20 p-3 space-y-3 text-left">
@@ -71,7 +81,8 @@ function ExerciseFeedbackCard({
           <button
             key={opt.value}
             type="button"
-            onClick={() => onFeedbackChange(opt.value)}
+            onClick={() => onFeedbackChange(feedbackLabel === opt.value ? undefined : opt.value)}
+            aria-pressed={feedbackLabel === opt.value}
             className={cn(
               "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors",
               feedbackLabel === opt.value
@@ -83,6 +94,19 @@ function ExerciseFeedbackCard({
           </button>
         ))}
       </div>
+      {/* A295: optional measure (last-set reps / hang margin) */}
+      {exercise.measure && (
+        <MeasureInput
+          id={`${exercise.exercise_id}-measure`}
+          measure={exercise.measure}
+          prescribedReps={exercise.reps ?? undefined}
+          targetReps={exercise.target_reps}
+          lastSetReps={measures.lastSetReps}
+          hangMargin={measures.hangMargin}
+          onLastSetReps={(v) => onMeasuresChange({ lastSetReps: v })}
+          onHangMargin={(v) => onMeasuresChange({ hangMargin: v })}
+        />
+      )}
       {showLoadInput && (
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="shrink-0">Used load</span>
@@ -190,6 +214,9 @@ export default function SessionPlayPage() {
   const [setsByIndex, setSetsByIndex] = useState<Record<number, number>>({});
   const [feedbackByIndex, setFeedbackByIndex] = useState<Record<number, string>>({});
   const [kgByIndex, setKgByIndex] = useState<Record<number, string>>({});
+  // A295: optional measures per exercise + session pain (nothing pre-selected).
+  const [measuresByIndex, setMeasuresByIndex] = useState<Record<number, MeasureValues>>({});
+  const [pain, setPain] = useState<SessionPain | null>(null);
   useEffect(() => {
     if (startedAtRef.current === 0) startedAtRef.current = Date.now();
   }, []);
@@ -356,11 +383,16 @@ export default function SessionPlayPage() {
             ? Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000))
             : 0;
       const exerciseFeedback = exercises.map((ex, i) => {
+        // A295: the label only when picked — untouched = not rated.
         const item: Record<string, unknown> = {
           exercise_id: ex.exercise_id,
-          feedback_label: feedbackByIndex[i] ?? "ok",
           completed: true,
         };
+        if (feedbackByIndex[i]) item.feedback_label = feedbackByIndex[i];
+        Object.assign(
+          item,
+          measureFields(ex.measure, { targetReps: ex.target_reps, ...(measuresByIndex[i] ?? {}) }),
+        );
         const rawKg = kgByIndex[i] ?? (ex.load_kg > 0 ? String(ex.load_kg) : "");
         const kg = parseFloat(rawKg);
         if (!Number.isNaN(kg) && kg > 0) item.used_external_load_kg = kg;
@@ -369,7 +401,7 @@ export default function SessionPlayPage() {
         return item;
       });
       await postFeedback({
-        log_entry: {
+        log_entry: withFeedbackContract({
           date,
           session_id: `custom_${id}`,
           // Real wall-clock start (ms ref → ISO) for the health-vault export.
@@ -378,7 +410,7 @@ export default function SessionPlayPage() {
             : {}),
           session_duration_seconds: durationSeconds,
           actual: { exercise_feedback_v1: exerciseFeedback },
-        },
+        }, pain),
         status: "done",
       });
 
@@ -403,6 +435,8 @@ export default function SessionPlayPage() {
     feedbackByIndex,
     kgByIndex,
     setsByIndex,
+    measuresByIndex,
+    pain,
   ]);
 
   // --- Render ---
@@ -600,15 +634,31 @@ export default function SessionPlayPage() {
                   setsCompleted={setsByIndex[i] ?? 0}
                   totalSets={totalSetsWithSides(ex.sets, ex.alt_sides === true)}
                   altSides={ex.alt_sides === true}
-                  feedbackLabel={feedbackByIndex[i] ?? "ok"}
+                  feedbackLabel={feedbackByIndex[i]}
                   loadKg={kgByIndex[i] ?? (ex.load_kg > 0 ? String(ex.load_kg) : "")}
                   showLoadInput
                   onFeedbackChange={(label) =>
-                    setFeedbackByIndex((prev) => ({ ...prev, [i]: label }))
+                    setFeedbackByIndex((prev) => {
+                      const next = { ...prev };
+                      if (label) next[i] = label;
+                      else delete next[i];
+                      return next;
+                    })
                   }
                   onLoadChange={(kg) => setKgByIndex((prev) => ({ ...prev, [i]: kg }))}
+                  exercise={ex}
+                  measures={measuresByIndex[i] ?? {}}
+                  onMeasuresChange={(patch) =>
+                    setMeasuresByIndex((prev) => ({ ...prev, [i]: { ...(prev[i] ?? {}), ...patch } }))
+                  }
                 />
               ))}
+              <p className="text-[11px] text-muted-foreground text-left">
+                Untouched exercises are saved as not rated and don&apos;t change your loads.
+              </p>
+              <div className="rounded-lg border bg-muted/20 p-3 text-left">
+                <PainPicker value={pain} onChange={setPain} />
+              </div>
             </div>
 
             <div className="flex gap-3 justify-center pt-2">

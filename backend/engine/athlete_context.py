@@ -1062,7 +1062,7 @@ def render_text(ctx: Mapping[str, Any], *, plan_notes: Optional[str] = None,
         for w in wl:
             L.append(f"  {w['exercise_id']}: ultimo {_fmt_kg(w.get('last_external_load_kg'))} kg "
                      f"× {w.get('last_reps') or w.get('last_work_seconds') or '—'} ({w.get('updated_at')}, "
-                     f"{w.get('last_feedback_label')}) {' '.join(w['flags'])}".rstrip())
+                     f"{w.get('last_feedback_label') or 'non valutato'}) {' '.join(w['flags'])}".rstrip())
 
     th = ctx.get("try_hard") or {}
     L.append("")

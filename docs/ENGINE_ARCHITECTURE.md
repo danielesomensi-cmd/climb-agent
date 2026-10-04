@@ -642,6 +642,16 @@ The single owner of "which sessions of the week carry the phase's key stimuli". 
 - **Review fixes (A294):** `/events` passes `today` to `apply_events` → `_reconcile(frozen_before=today)`: past days are counted, never rewritten (the Sunday→Monday seed used to downshift an unticked past Monday). Proposals are validated cumulatively and against the heavy-pulling rules (24 h before limit / strength_long, ≤ 2 per 7 days); candidates outside the phase pool are allowed after the in-pool ones. Try-hard needs a fall-practice block (or outdoor-hard / free limit), technique needs feet / positioning drills (outdoor no longer counts) and can turn critical. The coach block sits behind `COACH_ATHLETE_CONTEXT`.
 - Known divergence: `closed_loop_v1.stimulus_recency` still classifies by session id/tags; the key status reads the A288 exposure view. Not unified in A294.
 
+### 8.4 Measured feedback — `measured_feedback.py` (A295)
+
+Feedback that measures something instead of a default "ok". `log_entry.feedback_contract: 2`: an untouched exercise has no `feedback_label` and is **not rated** (a legacy `ok` without the contract too). `apply_feedback` reads `feedback_rating(item, contract)`; `None` holds the load used and stays out of difficulty, feedback log, fatigue labels and the endurance streak.
+
+- **Measures** (allowlists in `measure_kind`, exposed as `suggested.measure`): `last_set_reps` on pulls (consumed by `anchored_load.apply_anchored_feedback`, which already had the bands and the `retest_signals` rule from B364; A295 adds "fewer sets than prescribed never raises" and the pain freeze), `hang_margin` / `hang_held_s` on max hangs (anchored path, plus a mirror for the non-anchored hangs — untested max hangs, 10 s, Hörst — with the same kg bands and a +5 % rolling-7-day rise cap), `dp_reps` on reps accessories.
+- **Double progression** (`progression_v1._apply_dp_feedback`): measured success → target +1 rep, at the top of the range → load +2.5 % (fingers +1.25 %) and back to `lo`; no measure → easy +5 % / very_easy +10 % (a stored `adjustment_policy` still wins); per-hand items read the weaker hand. Idempotent via `applied {key, base_before}`.
+- **Pain** (`record_pain` at write, `pain_adjust_suggested` / `anchored_load.pain_for` at read, by date): `progression_counters.pain_blocks[site]`; −10 % on the zone, hang caps 0.85 / 0.80, upward steps and retest signals frozen. Nothing is removed from the plan.
+- **Difficulty** (`derive_session_difficulty`): rated items only, ≥ 50 % of the fatigue cost, else absent — `check_adaptive_replan` rule 2 cannot fire on one tapped warm-up.
+- **Clamp order** stays the single one of §8.1 (pain before the floor).
+
 ## 9. Replanner (`replanner_v1.py`)
 
 Handles runtime modifications to the week plan after initial generation.

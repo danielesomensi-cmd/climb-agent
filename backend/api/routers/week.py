@@ -222,6 +222,7 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
     (``anchored_load.resolve_custom_exercises``). Done and skipped sessions are
     returned exactly as stored (immutability); the stored plan is untouched."""
     from backend.engine.anchored_load import resolve_custom_exercises
+    from backend.engine.measured_feedback import attach_measure_fields
 
     out = deepcopy(week_plan)
     for week_block in out.get("weeks") or []:
@@ -237,6 +238,11 @@ def _with_custom_anchored_loads(week_plan: dict, state: dict) -> dict:
                     continue
                 if session_entry.get("exercises"):
                     session_entry["exercises"] = resolve_custom_exercises(
+                        state, session_entry["exercises"], day,
+                    )
+                    # A295: which measure the player may ask for, and the
+                    # double-progression target of the day.
+                    session_entry["exercises"] = attach_measure_fields(
                         state, session_entry["exercises"], day,
                     )
     return out
@@ -305,7 +311,9 @@ def _attach_feedback(week_plan: dict, feedback_log: list) -> None:
                 key = (day_date, session_entry.get("session_id", ""))
                 fb = fb_index.get(key)
                 if fb:
-                    session_entry["feedback_summary"] = fb["difficulty"]
+                    # A295: difficulty is optional (unrated / low coverage).
+                    if fb.get("difficulty"):
+                        session_entry["feedback_summary"] = fb["difficulty"]
                     if fb.get("exercise_feedback"):
                         session_entry["exercise_feedback"] = fb["exercise_feedback"]
                     if fb.get("session_duration_seconds") is not None:

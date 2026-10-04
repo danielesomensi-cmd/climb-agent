@@ -1,5 +1,6 @@
 import type { GuidedExercise, GuidedSessionState } from "@/lib/types";
 import { anchoredLoadNotes } from "@/lib/anchored-load";
+import { asMeasure } from "@/lib/measured-feedback";
 
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
@@ -246,11 +247,14 @@ export function buildGuidedStateFromExercises(
         totalLoadKg: ex.suggested_total_load_kg as number | undefined,
         loadSource: ex.load_source as string | undefined,
         loadNotes: anchoredLoadNotes(ex),
+        // A295: read-time measure metadata (custom / ad-hoc / body-part rows).
+        measure: asMeasure(ex.measure),
+        targetReps: typeof ex.target_reps === "number" ? (ex.target_reps as number) : undefined,
       },
       cues: (ex.cues as string[] | undefined) ?? undefined,
       videoUrl: (ex.video_url as string | undefined) ?? undefined,
       status: "pending",
-      feedbackLabel: "ok",
+      feedbackLabel: null,  // A295: nothing pre-selected
     };
   });
 

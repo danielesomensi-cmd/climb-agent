@@ -169,12 +169,13 @@ def test_e2e_bench_press_loop():
     print(f"S1 suggested: ext={s1['suggested_external_load_kg']}")
     assert s1["suggested_external_load_kg"] == 30.0
 
-    # Feedback "easy" → pct 0.075 → 30×1.075 = 32.25 → 32.0
+    # Feedback "easy" without a measure on a double-progression accessory →
+    # A295 (DECISIONS 2026-10-04) +5 % → 30×1.05 = 31.5
     log1 = _feedback_log("2026-02-01", "bench_press", "easy", used_external=30.0)
     us = apply_feedback(log1, us)
     e1 = _get_entry(us, "bench_press")
     print(f"After easy: next_ext={e1['next_external_load_kg']}")
-    assert e1["next_external_load_kg"] == 32.0
+    assert e1["next_external_load_kg"] == 31.5
 
     # S2: from history
     day2 = _day_with_instance("bench_press", {"sets": 3, "reps": 8})
@@ -182,7 +183,7 @@ def test_e2e_bench_press_loop():
     day2 = inject_targets(day2, us)
     s2 = day2["sessions"][0]["exercise_instances"][0]["suggested"]
     print(f"S2 suggested: ext={s2['suggested_external_load_kg']}")
-    assert s2["suggested_external_load_kg"] == 32.0
+    assert s2["suggested_external_load_kg"] == 31.5
 
     # B344 (was: "ok" → pct 0.025 → 33.0). `ok` is now NEUTRAL: the load must
     # stay put. This fixture carries `rules: {}`, so it exercises the DEFAULT
@@ -203,10 +204,10 @@ def test_e2e_bench_press_loop():
     print(f"S3 suggested: ext={s3['suggested_external_load_kg']}")
     assert s3["suggested_external_load_kg"] == 32.0
 
-    # ...and "easy" still moves it, so the loop is not frozen: 32 × 1.075 = 34.4 → 34.5
+    # ...and "easy" still moves it, so the loop is not frozen: 32 × 1.05 = 33.6 → 33.5
     log3 = _feedback_log("2026-02-05", "bench_press", "easy", used_external=32.0)
     us = apply_feedback(log3, us)
-    assert _get_entry(us, "bench_press")["next_external_load_kg"] == 34.5
+    assert _get_entry(us, "bench_press")["next_external_load_kg"] == 33.5
 
 
 # ─── B4: turkish_getup  (external_load, reads constant) ──────────────────────

@@ -158,6 +158,8 @@ def test_bulgarian_closed_loop_single_key():
             "feedback_label": "ok",
             "used_external_load_kg": 20.0,
         }]},
+        # A295: an explicit 'ok' is a rating only under contract 2.
+        "feedback_contract": 2,
     }
     updated = apply_feedback(log, st)
     entries = updated["working_loads"]["entries"]

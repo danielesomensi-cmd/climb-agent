@@ -927,7 +927,26 @@ Legacy compatibility is deterministic and one-way (`difficulty` is legacy, `feed
 - `too_hard` -> `very_hard`
 - `fail` -> `very_hard`
 - legacy booleans (`too_hard=true` or `fail=true`) -> `very_hard`
-- unknown/missing feedback -> `ok`
+- unknown/missing feedback -> `ok` **for display only** (`canonical_feedback_label`). A295: progression, difficulty, feedback log, report and coach read `measured_feedback.feedback_rating(item, contract)` instead, where missing feedback is **not rated** (`None`).
+
+**Feedback contract (A295, R4)** — `log_entry.feedback_contract`:
+- `2` (every current client): `feedback_label` is OMITTED when the athlete did not rate the exercise (never `null`, never a default `ok`). The router drops `null` / unknown labels with a warning.
+- absent (legacy client): a legacy `ok` is the old zero-input default and counts as **not rated**; other labels keep their meaning.
+- **Not rated** = working load held at the load used (`next = used`), `last_feedback_label: null`, `last_rated: false`; left out of the session difficulty, `feedback_log.exercise_feedback`, fatigue `hard_labels`, the endurance grade streak and the report distribution.
+
+**Measured fields per item (optional, A295)**: `last_set_reps` (int 0..20; pull-ups: AMRAP stopping one short of failure on the last set; double progression), `hang_margin` (`failed` | `0-2` | `3-5` | `>5` seconds left on the last hang), `hang_held_s` (number, guided player only: timed overhold of the last rep, capped client-side at target + 6 s), `target_reps` (int, the double-progression target the client showed). Router-attached: `prescribed_sets`, `prescribed_work_seconds` (with `prescribed_reps`, same three sources). `completed_reps` is sent only by the repeater tests (B133) — no longer a copy of `completed_sets`. Out-of-range values are dropped with a warning (200, never a 4xx: an outbox retry must not stick).
+
+**Measure kind** (`measured_feedback.measure_kind`, explicit allowlists; exposed as `suggested.measure` by `inject_targets` and as `exercise.measure` on custom / generated rows at read time, never stored):
+- `last_set_reps`: `weighted_pullup`, `weighted_chinup` (not in a test session);
+- `hang_margin`: `max_hang_5s`, `max_hang_7s`, `max_hang_10s`, `horst_7_53` (not in a test session);
+- `dp_reps` (double progression): external_load / total_load prescribed in reps without a work time, not a hang pattern, not loading-pin, not a test, not the pulls above. Never: `pinch_block_training`, `one_arm_hang_assisted`, `max_hang_ladder`.
+- `dp_reps` also exposes `suggested.target_reps` + `suggested.dp_range [lo, hi]` (`lo` = prescribed reps, `hi = lo + max(2, round(0.25·lo))`) and `suggested_rep_scheme` `"{sets}x{target}"` when the target is above `lo`.
+
+**Session pain (A295)** — `log_entry.pain = {score: 0..3, site: fingers | elbow | shoulder | other | null}` (site only from score 2; null → `other`). Written to `progression_counters.pain_blocks[site] = {score, from, until}`: score 2 → 7 days, score 3 → 14 days (a milder later report never shortens a block); score 1 is only recorded (`session_completion_log[].pain`, `feedback_log[].pain`). Zones: `fingers` = `stress_tags.fingers` medium/high (limit bouldering included), `elbow` = `stress_tags.elbow` medium/high, `shoulder` = `shoulder_sensitive` contraindication + weighted pull-up / chin-up / dip, `other` = every loaded exercise (the anchored four included). Read side (by date, deterministic): −10 % on the zone's suggested load, finger hangs ≤ 85 % (score 2) / 80 % (score 3) of the official 7 s max, `suggested.pain_flag: true` + `suggested.pain`; anchored exercises through `anchored_load` (pain before the floor). Upward double-progression steps, upward anchored steps and `retest_signals` are frozen on the zone. Score 3 adds a `limitation_suggestions[]` row with `source: "pain"` (B38 mechanism).
+
+**Working-load entry fields added by A295**: `last_rated`, `last_set_reps`, `dp_target_reps`, `dp_range`, `dp_last_outcome` (`reps_up` | `load_up` | `hold` | `label_up` | `label_down` | `pain_freeze` | `not_completed`), `applied {key: "date|session_id", base_before}` (idempotency: the same session recomputes from the snapshot, so a replay is a no-op and a pencil correction applies), `last_hang_margin`, `last_hang_held_s`, `escalation_anchor` (non-anchored hangs too). An out-of-order log (older than the entry) never rewrites a measured entry.
+
+**Session difficulty (A295)** — `measured_feedback.derive_session_difficulty`: fatigue-cost-weighted mean of the **rated** items only, written only when they cover ≥ 50 % of the session's fatigue cost (skipped items excluded); otherwise `difficulty` is absent from `feedback_log[]` / `session_completion_log[]`, `GET /api/week` sets no `feedback_summary`, and a resubmit without a rating never erases a rated one. Weekly report: `difficulty.avg_label` is `null` when nothing was rated, `difficulty.unrated_count` counts the sessions without a difficulty; monthly `feedback_summary` uses the bucket `unrated` instead of a fake `ok`.
 
 ### 4.2 Grade surfaces
 

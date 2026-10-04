@@ -343,12 +343,17 @@ def _build_difficulty(
     hardest_score = 0.0
     easiest_session: Optional[Dict[str, str]] = None
     easiest_score = 6.0
+    unrated = 0
 
     for entry in feedback_log:
         d = entry.get("date", "")
         if not (since <= d <= until):
             continue
-        label = entry.get("difficulty", "ok")
+        label = entry.get("difficulty")
+        if not label:
+            # A295: a session nobody rated is counted as such, never as "ok".
+            unrated += 1
+            continue
         distribution[label] = distribution.get(label, 0) + 1
         score = _LABEL_TO_SCORE.get(label, 3)
         scores.append(score)
@@ -360,12 +365,12 @@ def _build_difficulty(
             easiest_score = score
             easiest_session = info
 
-    avg_score = sum(scores) / len(scores) if scores else 3.0
-    avg_label = _score_to_label(avg_score)
+    avg_label = _score_to_label(sum(scores) / len(scores)) if scores else None
 
     return {
         "distribution": distribution,
         "avg_label": avg_label,
+        "unrated_count": unrated,
         "hardest_session": hardest_session,
         "easiest_session": easiest_session,
     }
@@ -1103,7 +1108,8 @@ def generate_monthly_report(
     # Feedback summary
     feedback_labels: Dict[str, int] = {}
     for s in indoor:
-        label = s.get("overall_feeling") or s.get("feedback_label", "ok")
+        # A295: no fake "ok" for a session without a rating.
+        label = s.get("overall_feeling") or s.get("feedback_label") or "unrated"
         feedback_labels[label] = feedback_labels.get(label, 0) + 1
 
     # Total volume

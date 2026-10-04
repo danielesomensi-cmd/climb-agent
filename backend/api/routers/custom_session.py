@@ -20,6 +20,7 @@ from backend.api.deps import (
 from backend.api.models import CustomSessionCreateRequest, CustomSessionUpdateRequest
 from backend.engine.adhoc_prescription import propose_exercise_prescription
 from backend.engine.anchored_load import resolve_custom_exercises
+from backend.engine.measured_feedback import attach_measure_fields, measure_kind
 from backend.engine.custom_session import compute_custom_session_load, estimate_custom_session_duration
 
 
@@ -325,6 +326,12 @@ def enrich_custom_sessions_for_play(sessions: list) -> list:
             # already stored. Sessions saved between B283 and B324 carry cues but
             # no alt_sides, so the skip above left them one-sided forever.
             ex["alt_sides"] = bool((catalog.get(ex.get("exercise_id") or "") or {}).get("alt_sides"))
+            # A295: the measure the player may ask for (last-set reps, hang
+            # margin, double progression) — derived at read, never stored.
+            ex.pop("measure", None)
+            kind = measure_kind(str(ex.get("exercise_id") or ""))
+            if kind:
+                ex["measure"] = kind
             exercises.append(ex)
         s["exercises"] = exercises
         out.append(s)
@@ -355,6 +362,8 @@ def get_session(
             if day:
                 out["exercises"] = resolve_custom_exercises(state, out.get("exercises") or [], day)
                 out["resolved_for_date"] = day
+            # A295: measure kind (+ double-progression target with a date).
+            out["exercises"] = attach_measure_fields(state, out.get("exercises") or [], day)
             return out
     raise HTTPException(status_code=404, detail=f"Custom session not found: {session_id}")
 

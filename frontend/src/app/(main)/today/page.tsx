@@ -61,7 +61,8 @@ import {
 } from "@/components/ui/dialog";
 import { getInProgressSession, clearSavedSession, getKeyPrefix, type InProgressSession } from "@/lib/guided-session-utils";
 import { getBoulderPhaseTip } from "@/lib/boulder-phase-tips";
-import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, GuidedExercise, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal } from "@/lib/types";
+import type { WeekPlan, DayPlan, OutdoorSpot, OutdoorSession, GuidedExercise, OutdoorDayType, OutdoorPitchLadder, KeyStatus, KeyProposal, SessionPain } from "@/lib/types";
+import { withFeedbackContract, type MeasureValues } from "@/lib/measured-feedback";
 import { hasOtherActivity } from "@/lib/other-activity";
 import { completeOtherActivityEvent, removeOtherActivityEvent, removeOutdoorEvent, undoOtherActivityEvent, undoOutdoorEvent } from "@/lib/week-events";
 
@@ -322,7 +323,7 @@ function TodayContent() {
       try {
         const raw = localStorage.getItem(key);
         if (!raw) continue;
-        const saved = JSON.parse(raw) as { startedAt?: string; submitStatus?: string; date?: string; sessionId?: string; exercises?: Array<Record<string, unknown>> };
+        const saved = JSON.parse(raw) as { startedAt?: string; submitStatus?: string; date?: string; sessionId?: string; exercises?: Array<Record<string, unknown>>; pain?: SessionPain; isTestSession?: boolean };
 
         // Cleanup sessions older than 24h that are completed
         if (saved.startedAt) {
@@ -343,12 +344,19 @@ function TodayContent() {
           const feedbackItems = buildGuidedFeedbackItems(
             saved.exercises as unknown as GuidedExercise[],
           );
+          // A295: the retry carries the contract and the session pain too —
+          // a replay must never be poorer than the original POST.
+          const retryEntry: Record<string, unknown> = {
+            date: saved.date ?? "",
+            session_id: saved.sessionId ?? "",
+            ...(saved.startedAt ? { started_at: saved.startedAt } : {}),
+            actual: { exercise_feedback_v1: feedbackItems },
+          };
+          if (saved.isTestSession) {
+            retryEntry.planned = [{ session_id: saved.sessionId ?? "", tags: { test: true }, exercise_instances: [] }];
+          }
           postFeedback({
-            log_entry: {
-              date: saved.date ?? "",
-              session_id: saved.sessionId ?? "",
-              actual: { exercise_feedback_v1: feedbackItems },
-            },
+            log_entry: withFeedbackContract(retryEntry, saved.pain ?? null),
             status: "done",
           }).then(() => {
             localStorage.removeItem(key);
@@ -1044,6 +1052,8 @@ function TodayContent() {
     feedback: Record<string, string>,
     durationMinutes: number,
     loads: Record<string, number>,
+    measures: Record<string, MeasureValues> = {},
+    pain: SessionPain | null = null,
   ) {
     if (!feedbackSessionId) return;
     try {
@@ -1054,16 +1064,18 @@ function TodayContent() {
         feedbackExercises,
         feedback,
         loads,
+        measures,
       );
       const body = {
-        log_entry: {
+        // A295: feedback_contract 2 — an omitted label means "not rated".
+        log_entry: withFeedbackContract({
           date: targetDate,
           session_id: feedbackSessionId,
           session_duration_seconds: durationMinutes * 60,
           actual: {
             exercise_feedback_v1: feedbackItems,
           },
-        },
+        }, pain),
         status: "done",
       };
       try {
